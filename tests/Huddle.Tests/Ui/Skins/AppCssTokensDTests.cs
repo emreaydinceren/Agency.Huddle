@@ -146,6 +146,76 @@ public sealed class AppCssTokensDTests
         Assert.DoesNotContain("lines-default", body, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A surface trait's outlined-button rule that paints a background skips toggle items: MudToggleGroup draws an
+    /// unselected segment as an outlined button, and a raised ground there turned every unselected segment of the
+    /// segmented control (List | Kanban) into a white tile on the sunk track.
+    /// </summary>
+    [Fact]
+    public void SurfaceOutlinedButtonBackgrounds_SkipToggleItems()
+    {
+        string css = StripComments(File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css")));
+        List<string> offenders = [];
+        int checkedRules = 0;
+
+        foreach (string rule in css.Split('}'))
+        {
+            int open = rule.IndexOf('{', StringComparison.Ordinal);
+            if (open < 0)
+            {
+                continue;
+            }
+
+            string body = rule[(open + 1)..];
+            if (!body.Contains("background", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            foreach (string selector in rule[..open].Split(','))
+            {
+                string trimmed = selector.Trim();
+                // A toggle item is always Color.Default, so an Error-coloured outlined rule can never reach one.
+                if (trimmed.StartsWith(":root:has([data-hu-surface=", StringComparison.Ordinal) && trimmed.Contains(".mud-button-outlined", StringComparison.Ordinal)
+                    && !trimmed.Contains(".mud-button-outlined-error", StringComparison.Ordinal))
+                {
+                    checkedRules++;
+                    if (!trimmed.Contains(":not(.mud-toggle-item)", StringComparison.Ordinal))
+                    {
+                        offenders.Add(trimmed);
+                    }
+                }
+            }
+        }
+
+        Assert.True(checkedRules > 0, "No surface outlined-button background rule found; the scan no longer matches app.css.");
+        Assert.Empty(offenders);
+    }
+
+    /// <summary>The stylesheet with every <c>/* */</c> comment removed, so a comment above a rule is not read as part of its selector.</summary>
+    /// <param name="css">The stylesheet text.</param>
+    /// <returns>The text without comments.</returns>
+    private static string StripComments(string css)
+    {
+        System.Text.StringBuilder builder = new(css.Length);
+        int at = 0;
+        while (at < css.Length)
+        {
+            int start = css.IndexOf("/*", at, StringComparison.Ordinal);
+            if (start < 0)
+            {
+                builder.Append(css, at, css.Length - at);
+                break;
+            }
+
+            builder.Append(css, at, start - at);
+            int end = css.IndexOf("*/", start + 2, StringComparison.Ordinal);
+            at = end < 0 ? css.Length : end + 2;
+        }
+
+        return builder.ToString();
+    }
+
     /// <summary>The recipes the tokens replaced no longer appear in this range; only the sites the architecture leaves literal remain.</summary>
     [Fact]
     public void Range_HasNoReplacedRecipeLeft()

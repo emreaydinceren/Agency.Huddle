@@ -48,9 +48,9 @@ public sealed class TasksPageTests
         Assert.Equal("All Tasks", NormalizeWhitespace(document.Title ?? string.Empty));
     }
 
-    /// <summary>The header row follows the wireframe: open, need-you and all counts on the left; Group by, List | Kanban and New task on the right; and the toolbar row below no longer carries a Group menu.</summary>
+    /// <summary>The header row follows the wireframe: List | Kanban, then the open, need-you and all counts, on the left; New task on the right; and Group by is the toolbar row's last control, with no Group menu.</summary>
     [Fact]
-    public async Task TasksPage_HeaderRow_HasCountsGroupByKanbanAndNewTask_AndToolbarHasNoGroupMenu()
+    public async Task TasksPage_HeaderRow_HasKanbanThenCountsAndNewTask_AndGroupByEndsTheToolbarRow()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
@@ -62,13 +62,22 @@ public sealed class TasksPageTests
         IDocument document = new HtmlParser().ParseDocument(html);
         IElement header = document.QuerySelector(".tasks-header .task-toolbar-header") ?? throw new InvalidOperationException("No header row in the response.");
 
+        // T2's left side: List | Kanban first, then the counts.
+        Assert.Contains("task-toolbar-kind", header.Children[0].ClassList);
+        Assert.Contains("tasks-counts", header.Children[1].ClassList);
         Assert.EndsWith("open", NormalizeWhitespace(header.QuerySelector(".tasks-count-open")?.TextContent ?? string.Empty), StringComparison.Ordinal);
         Assert.EndsWith("need you", NormalizeWhitespace(header.QuerySelector(".tasks-count-need-you")?.TextContent ?? string.Empty), StringComparison.Ordinal);
         Assert.EndsWith("all", NormalizeWhitespace(header.QuerySelector(".tasks-count-all")?.TextContent ?? string.Empty), StringComparison.Ordinal);
-        Assert.StartsWith("Group by:", NormalizeWhitespace(header.QuerySelector(".task-toolbar-group")?.TextContent ?? string.Empty), StringComparison.Ordinal);
-        Assert.Equal(["List", "Board"], header.QuerySelectorAll(".task-toolbar-kind .mud-toggle-item").Select(item => NormalizeWhitespace(item.TextContent)));
-        Assert.Null(header.QuerySelector(".btn-action-tight")); // "New task" is the page header's create action now (audit B1)
-        Assert.Equal("New task", NormalizeWhitespace(document.QuerySelector(".page-header .page-header-create")?.TextContent ?? string.Empty));
+        Assert.Equal(["List", "Kanban"], header.QuerySelectorAll(".task-toolbar-kind .mud-toggle-item").Select(item => NormalizeWhitespace(item.TextContent)));
+
+        // Group by left the header row and ends the filter row (T3c).
+        Assert.Null(header.QuerySelector(".task-toolbar-group"));
+        IElement toolbar = document.QuerySelector(".tasks-header .task-toolbar") ?? throw new InvalidOperationException("No toolbar row in the response.");
+        Assert.Contains("task-toolbar-group", toolbar.Children[^1].ClassList);
+        Assert.StartsWith("Group by:", NormalizeWhitespace(toolbar.Children[^1].TextContent), StringComparison.Ordinal);
+        Assert.Null(header.QuerySelector(".btn-action-tight")); // the one-row toolbar's "+ New task" is the Team tab's, not this page's
+        Assert.Equal("New task", NormalizeWhitespace(header.QuerySelector(".tasks-new-task")?.TextContent ?? string.Empty));
+        Assert.Null(document.QuerySelector(".page-header")); // T2: no visible page header
         Assert.Empty(document.QuerySelectorAll(".task-toolbar .task-toolbar-group-sort, .task-toolbar .task-toolbar-grouping"));
     }
 
@@ -328,6 +337,7 @@ public sealed class TasksPageTests
         ctx.Services.AddSingleton<Agency.Huddle.App.Data.ITeamDirectory>(new Agency.Huddle.App.Data.SqliteTeamDirectory(dir.Options()));
         ctx.Services.AddSingleton(Options.Create(new TeamOptions()));
         ctx.Services.AddSingleton<Agency.Huddle.App.Profile.IHumanIdentity>(new Agency.Huddle.App.Profile.ConfiguredHumanIdentity("You"));
+        ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
         // 14.5.i: the page always hosts WakeToasts (Spec §13.8), which @injects TaskActivity.
         ctx.Services.AddSingleton<TaskActivity>();
 

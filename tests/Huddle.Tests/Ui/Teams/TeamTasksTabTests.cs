@@ -69,7 +69,7 @@ public sealed class TeamTasksTabTests
         Rig rig = Render(ctx, harness, "Business");
 
         TaskView view = rig.Board.View;
-        Assert.Equal(ViewKind.Board, view.Kind);
+        Assert.Equal(ViewKind.Kanban, view.Kind);
         Assert.Equal("team:Business", view.Id);
         Assert.Equal("Business", view.Name);
         Assert.Equal(ViewScope.Active, view.Scope);
@@ -122,7 +122,7 @@ public sealed class TeamTasksTabTests
         Rig rig = Render(ctx, harness, "Business", "Marketing");
 
         TaskView view = rig.Board.View;
-        Assert.Equal(ViewKind.Board, view.Kind);
+        Assert.Equal(ViewKind.Kanban, view.Kind);
         Assert.Equal("team:Business/Marketing", view.Id);
         Assert.Equal("Marketing", view.Name);
         string[] teams = ["Business"];

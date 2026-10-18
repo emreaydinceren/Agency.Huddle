@@ -1169,7 +1169,7 @@ others: *"… to track work as Tasks and hand it to a Teammate …"*.
 ### 12.1 Records
 
 ```csharp
-public enum ViewKind { List, Board }
+public enum ViewKind { List, Kanban } // saved as "list" / "kanban"; the old "board" still reads
 public enum ViewScope { Active, Closed }
 public enum TaskGroupField { Team, Project, Assignee, State }       // Board: State is invalid
 public enum SortDirection { Ascending, Descending }
@@ -1217,7 +1217,7 @@ public sealed record BoardColumn(string Label, IReadOnlyList<TaskState> States, 
   "version": 1,
   "views": [
     { "id": "3f2a9c…", "name": "Platform board", "description": "Engineering work in flight",
-      "kind": "board", "scope": "active",
+      "kind": "kanban", "scope": "active",
       "fields": ["assignee", "priority", "due_date"],
       "filter": { "teams": ["Platform"], "priorities": ["High", "Urgent"],
                   "projects": [{ "team": "Platform", "project": "Auth v2" }, { "team": "Platform", "project": null }],
@@ -1437,7 +1437,7 @@ separates the view controls from **+ New task**. Don't write flex CSS for it.
 | Filter | `MudMenu` showing the active filters as a `MudChipSet` of closable chips | Saved to the View as it is changed. Filters that are set also show as `TaskFilterChip`s with a clear button |
 | Group, Sort | `MudMenu` | Group by is a `TaskFilterChip` in the header row; saved to the View as it is changed |
 | Search | `MudTextField Immediate="true" DebounceInterval="200" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"` | `SearchField`. Never saved. Matches are highlighted with `MudHighlighter` in the List's title cells and on cards |
-| List / Board | `MudToggleGroup<ViewKind>` | Saved to the View as it is changed; switching to Board applies the default columns if there are none |
+| List / Kanban | `MudToggleGroup<ViewKind>` | Saved to the View as it is changed; switching to Kanban applies the default columns if there are none |
 | View ⋮ menu | `MudMenu` | **Rename** and **Fields…** open the dialogs of §13.5; **Delete view** (not for built-ins) asks first |
 | + New task | `MudButton Variant.Filled` | Opens `TaskDetail` in create mode, with the Team and Project defaulting from the View's filter when it names exactly one |
 
@@ -1525,7 +1525,7 @@ This is the first drag-and-drop in the app. Start from MudBlazor's own kanban,
                   ItemsSelector="@((item, zone) => this.ZoneOf(item) == zone)"
                   CanDrop="@((item, zone) => this.CanDrop(item, zone))"
                   ItemDropped="@this.OnDroppedAsync"
-                  ApplyDropClassesOnDragStarted="true" CanDropClass="task-zone-can" NoDropClass="task-zone-no"
+                  ApplyDropClassesOnDragStarted="false" CanDropClass="task-zone-can" NoDropClass="task-zone-no"
                   ItemDraggingClass="task-card-dragging">
   <ChildContent> … one MudDropZone per (lane, column) … </ChildContent>
   <ItemRenderer> <TaskCard Task="@context" … /> </ItemRenderer>

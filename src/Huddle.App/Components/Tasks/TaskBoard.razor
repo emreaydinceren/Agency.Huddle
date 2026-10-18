@@ -88,7 +88,7 @@
 
     <MudDropContainer T="TaskItem" @key="@this.View.Id" @ref="this.container" Items="@this.Tasks"
                       ItemsSelector="@this.IsInZone" CanDrop="@this.CanDrop" ItemDropped="@this.OnDroppedAsync"
-                      ApplyDropClassesOnDragStarted="true" CanDropClass="task-zone-can" NoDropClass="task-zone-no"
+                      ApplyDropClassesOnDragStarted="false" CanDropClass="task-zone-can" NoDropClass="task-zone-no"
                       ItemDraggingClass="task-card-dragging">
         <ChildContent>
             @foreach (BoardLane lane in this.model.Lanes)
@@ -309,7 +309,7 @@
     private async Task ChangeColumnAsync(int visibleIndex, Func<BoardColumn, BoardColumn> change)
     {
         int index = this.FullIndexOf(visibleIndex);
-        if (this.ViewStore.Get(this.View.Id) is { Kind: ViewKind.Board } saved && index < saved.Columns.Count)
+        if (this.ViewStore.Get(this.View.Id) is { Kind: ViewKind.Kanban } saved && index < saved.Columns.Count)
         {
             List<BoardColumn> columns = [.. saved.Columns];
             columns[index] = change(columns[index]);

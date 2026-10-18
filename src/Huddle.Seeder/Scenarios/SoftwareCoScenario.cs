@@ -15,7 +15,7 @@ internal sealed class SoftwareCoScenario : IScenario
             {
               "id": "platform-board",
               "name": "Platform board",
-              "kind": "board",
+              "kind": "kanban",
               "scope": "active",
               "fields": ["priority", "assignee", "due_date"],
               "filter": { "teams": ["Platform"] },

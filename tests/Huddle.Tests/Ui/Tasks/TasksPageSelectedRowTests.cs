@@ -82,7 +82,7 @@ public sealed class TasksPageSelectedRowTests
         using TaskToolHarness harness = new();
         _ = CreateTask(harness, "Alpha");
         _ = CreateTask(harness, "Bravo");
-        TaskView board = new() { Id = "board-sel", Name = "Board", Kind = ViewKind.Board, Columns = BoardLayout.DefaultColumns };
+        TaskView board = new() { Id = "board-sel", Name = "Board", Kind = ViewKind.Kanban, Columns = BoardLayout.DefaultColumns };
         Assert.True(harness.Views.Save(board).Saved);
 
         await using MudBunitContext ctx = NewContext(harness);

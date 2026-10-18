@@ -256,15 +256,15 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.Contains(plan.Rooms, r => r.Members.Count > 1 && r.Messages.Any(m => m.Text.Contains('@', StringComparison.Ordinal)));
     }
 
-    /// <summary>Every view id is unique and a saved View exists for a list, a board and a closed scope.</summary>
+    /// <summary>Every view id is unique and a saved View exists for a list, a kanban and a closed scope.</summary>
     [Fact]
-    public void Plan_ViewsCoverListBoardAndClosed()
+    public void Plan_ViewsCoverListKanbanAndClosed()
     {
         using System.Text.Json.JsonDocument views = System.Text.Json.JsonDocument.Parse(Plan().ViewsJson);
         System.Text.Json.JsonElement[] items = [.. views.RootElement.GetProperty("views").EnumerateArray()];
 
         Assert.Equal(items.Length, items.Select(v => v.GetProperty("id").GetString()).Distinct(StringComparer.Ordinal).Count());
-        Assert.Contains(items, v => v.GetProperty("kind").GetString() == "board");
+        Assert.Contains(items, v => v.GetProperty("kind").GetString() == "kanban");
         Assert.Contains(items, v => v.GetProperty("kind").GetString() == "list");
         Assert.Contains(items, v => v.GetProperty("scope").GetString() == "closed");
     }

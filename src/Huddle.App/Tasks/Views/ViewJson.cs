@@ -13,10 +13,10 @@ internal static class ViewJson
     // ProtocolJson.Options (traps.md) with UnsafeRelaxedJsonEscaping rather than the default
     // encoder: an escaped em-dash or angle bracket in a saved View name would read as corruption.
     // ProtocolJson.Options already carries a JsonStringEnumConverter(CamelCase), which is right
-    // for ViewKind, ViewScope, TaskGroupField and SortDirection ("board", "descending", ...).
+    // for ViewScope, TaskGroupField and SortDirection ("active", "descending", ...).
     // TaskState and TaskPriority do not follow a camelCase-of-the-identifier shape on the wire
-    // ("In Progress", not "inProgress"), so their own converters are inserted ahead of the
-    // generic one to win the match.
+    // ("In Progress", not "inProgress"), and ViewKind still reads its old name "board", so their
+    // own converters are inserted ahead of the generic one to win the match.
     /// <summary>Options used to serialise and deserialise Views.</summary>
     public static JsonSerializerOptions Options { get; } = CreateOptions();
 
@@ -30,6 +30,7 @@ internal static class ViewJson
         };
         options.Converters.Insert(0, new TaskPriorityJsonConverter());
         options.Converters.Insert(0, new TaskStateJsonConverter());
+        options.Converters.Insert(0, new ViewKindJsonConverter());
         options.TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { OmitEmptySprints } };
         return options;
     }
@@ -100,5 +101,36 @@ internal sealed class TaskPriorityJsonConverter : JsonConverter<TaskPriority>
     {
         ArgumentNullException.ThrowIfNull(writer);
         writer.WriteStringValue(value.ToWire());
+    }
+}
+
+/// <summary>
+/// Converts <see cref="ViewKind"/> to and from its wire name ("list", "kanban"). <see cref="ViewKind.Kanban"/> was
+/// <c>Board</c> and was saved as "board", so that name is still read; it is never written again.
+/// </summary>
+internal sealed class ViewKindJsonConverter : JsonConverter<ViewKind>
+{
+    /// <summary>Reads a wire name, ignoring case, into a <see cref="ViewKind"/>.</summary>
+    public override ViewKind Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        string? wire = reader.GetString();
+        return wire?.ToUpperInvariant() switch
+        {
+            "LIST" => ViewKind.List,
+            "KANBAN" or "BOARD" => ViewKind.Kanban,
+            _ => throw new JsonException($"Unknown view kind '{wire}'."),
+        };
+    }
+
+    /// <summary>Writes a <see cref="ViewKind"/> as its wire name.</summary>
+    public override void Write(Utf8JsonWriter writer, ViewKind value, JsonSerializerOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteStringValue(value switch
+        {
+            ViewKind.List => "list",
+            ViewKind.Kanban => "kanban",
+            _ => throw new JsonException($"Unknown view kind '{value}'."),
+        });
     }
 }

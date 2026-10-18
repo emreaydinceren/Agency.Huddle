@@ -71,7 +71,7 @@ public sealed class TaskBoardRefusalActionTests
         {
             Id = "board-test",
             Name = "Board",
-            Kind = ViewKind.Board,
+            Kind = ViewKind.Kanban,
             Columns = [new BoardColumn("To do", [TaskState.ToDo]), new BoardColumn("In progress", [TaskState.InProgress]), new BoardColumn("Done", [TaskState.Done])],
         };
         IRenderedComponent<TaskBoard> board = ctx.Render<TaskBoard>(p =>

@@ -210,7 +210,7 @@ public sealed class TaskRouteAndCopyTests
         var cut = ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<TaskBoard>(0);
-            builder.AddAttribute(1, nameof(TaskBoard.View), new TaskView { Id = "board-test", Name = "Board", Kind = ViewKind.Board, Columns = BoardLayout.DefaultColumns });
+            builder.AddAttribute(1, nameof(TaskBoard.View), new TaskView { Id = "board-test", Name = "Board", Kind = ViewKind.Kanban, Columns = BoardLayout.DefaultColumns });
             builder.AddAttribute(2, nameof(TaskBoard.Tasks), (IReadOnlyList<TaskItem>)[task]);
             builder.AddAttribute(3, nameof(TaskBoard.OnCopyId), EventCallback.Factory.Create<TaskId>(this, OnCopyId));
             builder.CloseComponent();

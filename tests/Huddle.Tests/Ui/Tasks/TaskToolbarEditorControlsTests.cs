@@ -92,7 +92,7 @@ public sealed class TaskToolbarEditorControlsTests
         using TaskToolHarness harness = new();
         using ViewStore store = new(dir.Options(), NullLogger<ViewStore>.Instance);
         await using MudBunitContext ctx = NewToolbarContext(harness, store);
-        TaskView board = ListView() with { Kind = ViewKind.Board, Columns = [new BoardColumn("Backlog", [TaskState.Backlog])] };
+        TaskView board = ListView() with { Kind = ViewKind.Kanban, Columns = [new BoardColumn("Backlog", [TaskState.Backlog])] };
         (IRenderedComponent<ContainerFragment> root, _) = RenderToolbar(ctx, board);
 
         await OpenGroupSortAsync(root);

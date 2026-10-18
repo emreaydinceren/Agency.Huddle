@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using Agency.Huddle.App.Components.Tasks;
+using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.Tests.Acp.Tools;
@@ -283,9 +284,9 @@ public sealed class R3TasksTests
 
     // ---- B1, E2: the page header and document title ----
 
-    /// <summary>The page opens with a PageHeader: the View's display name is the h1 and New task is its filled create action; the toolbar rows carry no New task (audit B1).</summary>
+    /// <summary>The page has no visible PageHeader (T2): the View's display name is a visually hidden h1, and New task is the header row's filled button, the page's one primary action (audit B1).</summary>
     [Fact]
-    public async Task Page_HasAPageHeader_WithTheViewNameAndAFilledNewTask()
+    public async Task Page_HasNoVisibleHeader_HiddenViewNameH1_AndAFilledNewTaskInTheHeaderRow()
     {
         using TaskToolHarness harness = new();
         Assert.True(harness.Views.Save(new TaskView { Id = "platform-board", Name = "Platform board", Kind = ViewKind.List }).Saved);
@@ -293,11 +294,43 @@ public sealed class R3TasksTests
 
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "platform-board");
 
-        Assert.Equal("Platform board", cut.Find(".page-header h1").TextContent.Trim());
-        IElement create = cut.Find(".page-header .page-header-create");
+        Assert.Empty(cut.FindAll(".page-header"));
+        IElement heading = cut.Find("h1.tasks-view-heading");
+        Assert.Equal("Platform board", heading.TextContent.Trim());
+        Assert.Contains("visually-hidden", heading.ClassList);
+        IElement create = cut.Find(".tasks-header .task-toolbar-header .tasks-new-task");
         Assert.Equal("New task", create.TextContent.Trim());
         Assert.Contains("mud-button-filled", create.ClassList);
         Assert.Empty(cut.FindAll(".tasks-header .btn-action-tight"));
+    }
+
+    /// <summary>
+    /// With no visible h1, the page names its View in the shell breadcrumb (S1a): the Tab's trail is "Tasks › {View name}", the
+    /// display name rather than the slug, with only "Tasks" a link. The URL alone would give just "Tasks".
+    /// </summary>
+    [Fact]
+    public async Task Breadcrumb_IsTasksThenTheViewsDisplayName()
+    {
+        using TaskToolHarness harness = new();
+        Assert.True(harness.Views.Save(new TaskView { Id = "platform-board", Name = "Platform board", Kind = ViewKind.List }).Saved);
+        await using MudBunitContext ctx = NewContext(harness);
+        Tab tab = harness.Tabs.Open("/tasks/platform-board");
+        Assert.Equal([new TrailCrumb("Tasks", "/tasks", "tasks")], harness.Tabs.Trail(tab));
+
+        ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<CascadingValue<TabPageContext>>(0);
+            builder.AddAttribute(1, nameof(CascadingValue<TabPageContext>.Value), new TabPageContext(tab.Url, tab.Id));
+            builder.AddAttribute(2, nameof(CascadingValue<TabPageContext>.ChildContent), (RenderFragment)(static page =>
+            {
+                page.OpenComponent<TasksPage>(0);
+                page.AddAttribute(1, nameof(TasksPage.ViewId), "platform-board");
+                page.CloseComponent();
+            }));
+            builder.CloseComponent();
+        });
+
+        Assert.Equal([new TrailCrumb("Tasks", "/tasks", "tasks"), new TrailCrumb("Platform board", null, string.Empty)], harness.Tabs.Trail(tab));
     }
 
     /// <summary>The document title follows the Tab's title: a Task's item route is "Task {id}" and a View's route is the View's name, never the stale "All Tasks" (audit E2).</summary>
@@ -342,7 +375,7 @@ public sealed class R3TasksTests
         await cut.InvokeAsync(() => host.Show("platform-board"));
 
         cut.WaitForAssertion(() => Assert.Equal("Platform board", cut.Find("title").TextContent.Trim()));
-        Assert.Equal("Platform board", cut.Find(".page-header-h1").TextContent.Trim());
+        Assert.Equal("Platform board", cut.Find(".tasks-view-heading").TextContent.Trim());
     }
 
     /// <summary>Following a View link from the Tasks Tab re-points the preview Tab, and the document title follows (audit E2, round 3).</summary>
@@ -368,7 +401,7 @@ public sealed class R3TasksTests
 
         await cut.InvokeAsync(() => nav.NavigateTo("/tasks/platform-board"));
 
-        cut.WaitForAssertion(() => Assert.Equal("Platform board", cut.Find(".page-header-h1").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("Platform board", cut.Find(".tasks-view-heading").TextContent.Trim()));
         Assert.Equal("Platform board", cut.Find("title").TextContent.Trim());
     }
 
@@ -400,7 +433,7 @@ public sealed class R3TasksTests
             builder.CloseComponent();
         });
 
-        cut.WaitForAssertion(() => Assert.Equal(["Platform board", "Other"], cut.FindAll(".page-header-h1").Select(h => h.TextContent.Trim()).ToArray()));
+        cut.WaitForAssertion(() => Assert.Equal(["Platform board", "Other"], cut.FindAll(".tasks-view-heading").Select(h => h.TextContent.Trim()).ToArray()));
         Assert.Equal("Platform board", cut.Find("title").TextContent.Trim());
 
         await cut.InvokeAsync(() => tabs.FocusGroup(tabs.Groups[1].Id));
@@ -496,7 +529,7 @@ public sealed class R3TasksTests
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
-        await cut.InvokeAsync(() => cut.Find(".page-header-create").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".tasks-new-task").ClickAsync());
 
         IRenderedComponent<MudTextField<string>> title = cut.FindComponent<TaskDetail>().FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-title", StringComparison.Ordinal));
         Assert.True(title.Instance.AutoFocus);
@@ -815,9 +848,9 @@ public sealed class R3TasksTests
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("height: 28px;", chip, StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("background-color: var(--hu-selected-background);", RuleBody(css, ".task-filter-chip-set"), StringComparison.Ordinal);
+        Assert.Contains("background-color: transparent;", RuleBody(css, ".task-filter-chip-set"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("height: 28px;", RuleBody(css, ".task-toolbar .mud-icon-button,\n.task-toolbar-header .mud-icon-button"), StringComparison.Ordinal);
+        Assert.Contains("height: 28px;", RuleBody(css, ".task-toolbar .mud-icon-button:not(.mud-switch-base),\n.task-toolbar-header .mud-icon-button:not(.mud-switch-base)"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("color: var(--hu-selected-foreground);", RuleBody(css, ".task-filter-chip-set .task-filter-chip-button"), StringComparison.Ordinal);
     }
@@ -877,7 +910,7 @@ public sealed class R3TasksTests
     {
         Id = "board-r3",
         Name = "Board",
-        Kind = ViewKind.Board,
+        Kind = ViewKind.Kanban,
         Columns = BoardLayout.DefaultColumns,
         Grouping = grouping ?? [],
         Fields = [],

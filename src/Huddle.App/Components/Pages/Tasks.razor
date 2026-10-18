@@ -53,6 +53,7 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject NavigationManager Navigation
+@inject TabService Tabs
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
     <WakeToasts OnOpenTask="this.OnOpenTaskAsync" />
@@ -78,10 +79,10 @@
     }
     else
     {
-        @* The page header: the View's display name is the h1 (the breadcrumb holds only "Tasks"), and "New task" is its create action,
-           filled because it is the page's one primary action (audit B1). The document title follows the Tab's title instead (audit E2). *@
-        <PageHeader Title="@this.effectiveView.Name" CreateText="New task" CreateIcon="@Icons.Material.Filled.Add"
-                    OnCreate="this.OnCreateClickedAsync" SetPageTitle="false" />
+        @* No visible page header (T2): the sidebar row and the Tab already name the View, so the toolbar rows lead the page and
+           "New task" sits at the right of the first one. The h1 stays for assistive tech, which navigates by heading.
+           The document title follows the Tab's title instead (audit E2). *@
+        <MudText Typo="Typo.h5" HtmlTag="h1" Class="visually-hidden tasks-view-heading">@this.effectiveView.Name</MudText>
         <FocusedPageTitle Title="@this.DocumentTitle" />
 
         @if (this.Views.LoadError is { } loadError)
@@ -140,6 +141,9 @@
                     <AiReactingChip Watched="this.WatchedTaskIds" />
                 </HeaderActions>
                 <HeaderTrailing>
+                    @* Filled because it is the page's one primary action (audit B1). *@
+                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="this.OnCreateClickedAsync" Class="tasks-new-task">New task</MudButton>
                     @* The View's own actions (T2a), the same MoreVert menu as the sidebar row: Rename and Fields for every
                        View, Delete only for a non-built-in one (ViewStore.Delete refuses the two built-ins).
                        Disabled while views.json cannot be read, since the store refuses every write then. *@
@@ -266,6 +270,7 @@
         this.Events.TaskChanged -= this.OnTaskChanged;
         this.Views.ViewsChanged -= this.OnViewsChanged;
         this.Sprints.SprintsChanged -= this.OnSprintsChanged;
+        this.Tabs.SetTrail(this.TabKey, null);
     }
 
     /// <summary>Resolves the effective View from the route's ViewId, then (Spec §13.13.3) the item route's <see cref="TaskIdText"/>, every time either changes.</summary>
@@ -422,6 +427,8 @@
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        this.SyncTrail();
+
         if (firstRender && this.ViewId is null && this.TaskIdText is null && this.Options.Value.Tasks.Enabled)
         {
             await this.TryNavigateToLastViewAsync();
@@ -622,6 +629,20 @@
     /// <c>TabKeys.Describe</c> names it; every other route is the View's display name, which is the Tab's title too.
     /// </summary>
     private string DocumentTitle => this.TaskIdText is { } id ? $"Task {id}" : this.effectiveView.Name;
+
+    /// <summary>The key of the Tab showing this page, from its own address (the browser URL names only the focused group's Tab).</summary>
+    private string TabKey => TabKeys.Describe(this.Page?.Url ?? this.Navigation.Uri).Key;
+
+    /// <summary>
+    /// Sets the shell breadcrumb (<c>S1a</c>) to <c>Tasks › {View}</c>: the page has no visible h1 (T2), so the trail names the View
+    /// the way the Library's names its open file. The item route keeps the trail its URL implies. <see cref="TabService.SetTrail"/>
+    /// ignores an unchanged trail, so calling this after every render publishes only a real change.
+    /// </summary>
+    private void SyncTrail()
+    {
+        bool showsView = this.Options.Value.Tasks.Enabled && this.TaskIdText is null && !this.viewNotFound;
+        this.Tabs.SetTrail(this.TabKey, showsView ? [new TrailCrumb("Tasks", "/tasks", "tasks"), new TrailCrumb(this.effectiveView.Name, null, string.Empty)] : null);
+    }
 
     /// <summary>
     /// <see cref="TaskDetail"/> only loads its <see cref="TaskDetail.Id"/>/<see cref="TaskDetail.Draft"/>
