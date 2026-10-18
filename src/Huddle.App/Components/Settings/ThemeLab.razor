@@ -1,0 +1,247 @@
+@page "/settings/theme-lab"
+@implements IAsyncDisposable
+@using System.Globalization
+@using Agency.Huddle.App.Themes.Skins
+@using Microsoft.Extensions.Hosting
+@using Microsoft.JSInterop
+@inject IWebHostEnvironment Environment
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+@*
+    The Theme lab: a development-only page for authoring a skin (decision P5-D5). It is routable but answers only in
+    the Development environment; anywhere else it draws nothing and sends the visitor back to Settings.
+
+    One input per palette key and per token, grouped as the registry groups them. An accepted edit is previewed at once
+    by theme-lab.js, which replaces the layout's hu-skin style block and sets the MudBlazor palette variables inline for
+    this browser tab; nothing is saved, and leaving the page puts the page back. The contrast badges re-measure the
+    SkinContrastTests pairs on every edit. Inspect shows, for the hovered element, which --hu-* tokens its rules read.
+    Export JSON copies only the keys that differ from the base skin, as the palette and tokens objects of a skin file.
+
+    The model (ThemeLabModel) owns every rule about what an edit may be; this file only draws it. A refused edit keeps
+    the typed text in the field with the reason beneath it, and the preview keeps the last accepted value.
+
+    A MudColorPicker is used only for a plain six-digit hex colour, bound by Text (docs/engineering/traps.md: Value
+    has no null state). Any other colour text (a short hex, an rgba) gets a text field, because the picker would
+    rewrite it.
+*@
+
+@if (this.available)
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="page-reading pa-4 theme-lab">
+        <PageHeader Title="Theme lab" Subtitle="Development only. Edits preview on this tab and are never saved. Export JSON copies what differs from the base Theme." />
+
+        <div class="theme-lab-controls">
+            <MudSelect T="string" Label="Base Theme" Margin="Margin.Dense" Variant="Variant.Outlined"
+                       Value="@this.model.Skin.Id" ValueChanged="this.OnSkinChangedAsync">
+                @foreach (Skin skin in this.skins)
+                {
+                    <MudSelectItem T="string" Value="@skin.Id">@skin.Label</MudSelectItem>
+                }
+            </MudSelect>
+            <MudSwitch T="bool" id="theme-lab-inspect-toggle" Label="Inspect" Color="Color.Primary"
+                       Value="@this.inspecting" ValueChanged="this.OnInspectChangedAsync" />
+            <MudButton id="theme-lab-export" Size="Size.Small" Variant="Variant.Outlined" OnClick="this.ExportAsync">Export JSON</MudButton>
+            <MudButton id="theme-lab-reset" Size="Size.Small" Variant="Variant.Text" OnClick="this.ResetAsync">Reset edits</MudButton>
+            <span role="status" class="theme-lab-status">@this.status</span>
+        </div>
+
+        <pre id="theme-lab-inspect-output" class="theme-lab-inspect" aria-live="polite"></pre>
+
+        <MudText Typo="Typo.subtitle2" HtmlTag="h2" Class="mt-4">Contrast</MudText>
+        <div class="theme-lab-badges">
+            @foreach (ThemeLabContrast result in this.model.Contrast())
+            {
+                <StatusChip Class="theme-lab-contrast" Color="@BadgeColour(result)" Icon="@BadgeIcon(result)">
+                    @result.Pair.Name @BadgeText(result)
+                </StatusChip>
+            }
+        </div>
+
+        <MudText Typo="Typo.subtitle2" HtmlTag="h2" Class="mt-4">Palette</MudText>
+        <p class="theme-lab-note">The preview sets the colours MudBlazor reads; its derived shades (hover, darken, lighten) keep the base values.</p>
+        <div class="theme-lab-grid">
+            @foreach (string key in SkinLoader.PaletteKeys)
+            {
+                <div data-palette-key="@key">
+                    @if (IsPlainHex(this.model.Palette[key]))
+                    {
+                        <MudColorPicker Label="@key" ColorPickerMode="ColorPickerMode.HEX" ShowAlpha="false" Margin="Margin.Dense"
+                                        Text="@this.PaletteText(key)" TextChanged="@(value => this.OnPaletteChangedAsync(key, value))" />
+                    }
+                    else
+                    {
+                        <MudTextField T="string" Label="@key" Margin="Margin.Dense" Immediate="true" Variant="Variant.Outlined"
+                                      Value="@this.PaletteText(key)" ValueChanged="@(value => this.OnPaletteChangedAsync(key, value))"
+                                      Error="@this.errors.ContainsKey(key)" ErrorText="@this.ErrorFor(key)" />
+                    }
+                </div>
+            }
+        </div>
+
+        @foreach (IGrouping<string, Token> group in SkinTokens.All.GroupBy(static token => ThemeLabModel.GroupOf(token.Key), StringComparer.Ordinal))
+        {
+            <MudText Typo="Typo.subtitle2" HtmlTag="h2" Class="mt-4">Tokens: @group.Key</MudText>
+            <div class="theme-lab-grid">
+                @foreach (Token token in group)
+                {
+                    <div data-token-key="@token.Key">
+                        <MudTextField T="string" Label="@token.Key" Margin="Margin.Dense" Immediate="true" Variant="Variant.Outlined"
+                                      HelperText="@token.Description"
+                                      Value="@this.TokenText(token.Key)" ValueChanged="@(value => this.OnTokenChangedAsync(token.Key, value))"
+                                      Error="@this.errors.ContainsKey(token.Key)" ErrorText="@this.ErrorFor(token.Key)" />
+                    </div>
+                }
+            </div>
+        }
+    </MudContainer>
+}
+
+@code {
+    private const string ModulePath = "./theme-lab.js";
+
+    private readonly IReadOnlyList<Skin> skins = SkinLoader.LoadAll();
+    private readonly Dictionary<string, string> typed = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> errors = new(StringComparer.Ordinal);
+
+    private IJSObjectReference? module;
+    private ThemeLabModel model = new(SkinLoader.LoadAll()[0]);
+    private bool available;
+    private bool inspecting;
+    private string status = string.Empty;
+
+    /// <summary>Starts on the first skin, or sends a visitor outside Development back to Settings.</summary>
+    protected override void OnInitialized()
+    {
+        this.available = this.Environment.IsDevelopment();
+        if (!this.available)
+        {
+            this.Navigation.NavigateTo("/settings", replace: true);
+        }
+    }
+
+    /// <summary>Puts the page back as it rendered: the style block and palette variables, and Inspect off.</summary>
+    public async ValueTask DisposeAsync()
+    {
+        if (this.module is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await this.module.InvokeVoidAsync("reset");
+            await this.module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is already gone, and with it the page the preview was changing.
+        }
+    }
+
+    private static string BadgeText(ThemeLabContrast result) =>
+        result.Ratio is { } ratio
+            ? string.Create(CultureInfo.InvariantCulture, $"{ratio:0.00}:1 (needs {result.Pair.Minimum:0.0})")
+            : "not measurable";
+
+    private static Color BadgeColour(ThemeLabContrast result)
+    {
+        if (result.Ratio is null)
+        {
+            return Color.Default;
+        }
+
+        return result.Passes ? Color.Success : Color.Error;
+    }
+
+    private static string BadgeIcon(ThemeLabContrast result)
+    {
+        if (result.Ratio is null)
+        {
+            return Icons.Material.Filled.HelpOutline;
+        }
+
+        return result.Passes ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error;
+    }
+
+    private static bool IsPlainHex(string value) =>
+        value.Length == 7 && value[0] == '#' && value.Skip(1).All(Uri.IsHexDigit);
+
+    private string PaletteText(string key) => this.typed.TryGetValue(key, out string? text) ? text : this.model.Palette[key];
+
+    private string TokenText(string key) => this.typed.TryGetValue(key, out string? text) ? text : this.model.Tokens[key];
+
+    private string? ErrorFor(string key) => this.errors.TryGetValue(key, out string? message) ? message : null;
+
+    private async Task<IJSObjectReference> ModuleAsync() =>
+        this.module ??= await this.JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
+
+    private async Task ApplyAsync()
+    {
+        IJSObjectReference loaded = await this.ModuleAsync();
+        await loaded.InvokeVoidAsync("apply", this.model.StyleCss, this.model.PaletteVariables);
+    }
+
+    private async Task OnPaletteChangedAsync(string key, string? value)
+    {
+        string text = value ?? string.Empty;
+        string? error = this.model.SetPalette(key, text);
+        await this.AfterEditAsync(key, text, error);
+    }
+
+    private async Task OnTokenChangedAsync(string key, string? value)
+    {
+        string text = value ?? string.Empty;
+        string? error = this.model.SetToken(key, text);
+        await this.AfterEditAsync(key, text, error);
+    }
+
+    private async Task AfterEditAsync(string key, string text, string? error)
+    {
+        this.status = string.Empty;
+        if (error is not null)
+        {
+            this.typed[key] = text;
+            this.errors[key] = error;
+            return;
+        }
+
+        _ = this.typed.Remove(key);
+        _ = this.errors.Remove(key);
+        await this.ApplyAsync();
+    }
+
+    private async Task OnSkinChangedAsync(string? skinId)
+    {
+        Skin? skin = this.skins.FirstOrDefault(candidate => string.Equals(candidate.Id, skinId, StringComparison.Ordinal));
+        if (skin is null)
+        {
+            return;
+        }
+
+        this.model = new ThemeLabModel(skin);
+        this.typed.Clear();
+        this.errors.Clear();
+        this.status = string.Empty;
+        await this.ApplyAsync();
+    }
+
+    private async Task ResetAsync()
+    {
+        await this.OnSkinChangedAsync(this.model.Skin.Id);
+    }
+
+    private async Task OnInspectChangedAsync(bool enabled)
+    {
+        this.inspecting = enabled;
+        IJSObjectReference loaded = await this.ModuleAsync();
+        await loaded.InvokeVoidAsync("inspect", enabled, "theme-lab-inspect-output");
+    }
+
+    private async Task ExportAsync()
+    {
+        IJSObjectReference loaded = await this.ModuleAsync();
+        await loaded.InvokeVoidAsync("copy", this.model.ExportJson());
+        this.status = "Copied to the clipboard.";
+    }
+}
