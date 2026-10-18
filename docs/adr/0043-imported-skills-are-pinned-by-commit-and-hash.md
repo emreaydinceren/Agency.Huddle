@@ -1,13 +1,15 @@
 ---
-status: accepted
+status: partly superseded
 date: 2026-10-08
+superseded-by: 0058
+superseded-on: 2026-10-18
 ---
 
 # Imported skills are pinned by commit and hash
 
 > **Partly superseded by [ADR-0058](0058-skills-and-packs-are-fetched-by-the-humans-ai-tool.md):** pinning,
 > hashing and the review checks stay; the download goes. The Human's AI tool fetches, and Huddle follows local
-> pointers.
+> pointers. Built on 2026-10-18: the importer, the downloader and the built-in Packs are gone from the code.
 
 A Skill can be imported from a public GitHub repository, from the built-in catalog or from a
 URL the Human pastes. The import is pinned to one **commit**, the files are recorded by a

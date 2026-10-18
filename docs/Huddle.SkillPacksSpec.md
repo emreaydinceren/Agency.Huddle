@@ -7,17 +7,18 @@ turns this vision into requirements and a specification, and for reviewers who w
 feature before it is designed.
 
 > [!NOTE]
-> **Status: envisioned 2026-10-17, not designed, not built.** Nothing here is a commitment
-> yet. The wireframes are sketches; their codes are proposals that move into
-> [wireframes.md](engineering/wireframes.md) only when the design is accepted. What Packs
-> and Skills do **today** is in the [User Guide](Huddle.UserGuide.md#giving-teammates-skills).
+> **Status: envisioned 2026-10-17. Requirements met by [Huddle.SkillPacks-Specifications.md](Huddle.SkillPacks-Specifications.md)**,
+> built 2026-10-18. Where this page and the specification differ, the specification wins; the corrections
+> it made are folded in here (the update card, the catalog's count, the Skills repository, **Learn more**
+> and the move's Source ids). What Packs and Skills do now is in the
+> [User Guide](Huddle.UserGuide.md#giving-teammates-skills).
 
 This page does not cover writing your own Skill, or Theme style packs, which are a different
 feature that shares the word.
 
 ## Executive summary
 
-**The problem.** Huddle ships two Packs and a catalog of 265 Skills inside the app, so they go
+**The problem.** Huddle ships two Packs and a catalog of 263 Skills inside the app, so they go
 stale between releases and cannot be retired. Huddle downloads Skills itself, only from public
 GitHub, because it has no browser and no way to sign in anywhere. And adding a Pack means
 writing JSON by hand.
@@ -105,7 +106,7 @@ Settled while envisioning, 2026-10-17. Requirements start from these.
 | Today | Envisioned |
 | --- | --- |
 | Two Packs ship inside the app, in `TeamTypes/Builtin/SkillPacks/`, and change only with a Huddle release | Packs are rows in SKILLS.md. The two shipped Packs become rows on first run (see [the move](#plan-moving-todays-packs-and-skills)) |
-| A catalog of 265 Skills ships inside the app as `SkillsCatalog.json` | It becomes six `.skillcatalog.json` files, one per repository, each a row in the Catalogs table. Its Skills show as **Not downloaded** until your AI tool fetches them |
+| A catalog of 263 Skills ships inside the app as `SkillsCatalog.json` | It becomes six `.skillcatalog.json` files, one per repository, each a row in the Catalogs table. Its Skills show as **Not downloaded** until your AI tool fetches them |
 | Huddle downloads Skills from public GitHub: on **Import skill**, and during **Approve & hire** | Huddle downloads nothing. Both places build a prompt for your AI tool, which can reach anything you can sign in to |
 | To add a Pack you write a JSON file in `SkillPacks/` by hand | You paste a prompt into your AI tool. It fetches, writes the Pack file, checks it and adds the row |
 | A Pack never says it is out of date; `_packs` records a version nobody compares | When the files at a pointer differ from what Teammates use, cards show **Update available** |
@@ -207,7 +208,7 @@ The rules:
 | **Every state chip and every button has a one-sentence explanation**, shown on hover, on keyboard focus and in Details (`G6`). The chip text uses the [states table](#the-skills-page-at-a-glance) meanings | A chip such as **Not downloaded** means nothing without its cause |
 | **Each task in the prompt dialog (`G5a`) has a line under it** saying what the AI tool will do | People pick the right task without reading the prompt |
 | **Problems say which check failed, in which file, and what fixes it**, with the code (`S004`) last, for whoever reads the validator output | A code alone means nothing to most people |
-| **Every intro ends with a link** to the matching section of the User Guide | Detail lives in one place |
+| **Every intro ends with Learn more**, which opens the matching User Guide section in an in-app dialog, not a link out of Huddle | Detail lives in one place, and reading it does not leave the page |
 | **Nothing essential lives only in a tooltip** | Tooltips are hard to reach on touch screens and easy to miss |
 
 This is UI text, so it lives in the components, not in Settings › Prompts.
@@ -255,13 +256,13 @@ gives you a ready prompt, and the prompt carries the path.
 │ 2. Paste the prompt into Claude Code, Codex or a similar tool.     │
 │ 3. Come back here; what it added is ready to use.                  │
 │                                                                    │
-│ [ Add with your AI tool ]   [ Copy path ▾ ]        What is this?   │
+│ [ Add with your AI tool ]   [ Copy path ▾ ]           Learn more   │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
 | Code (proposed) | Container | What it holds |
 | --- | --- | --- |
-| `G4d` | Packs empty state | Shown while SKILLS.md lists no Packs: a short explanation, three numbered steps, **Add with your AI tool**, **Copy path ▾** and **What is this?**, which opens this part of the User Guide |
+| `G4d` | Packs empty state | Shown while SKILLS.md lists no Packs: a short explanation, three numbered steps, **Add with your AI tool**, **Copy path ▾** and **Learn more**, which opens this part of the User Guide in an in-app dialog |
 
 ### The prompt dialog
 
@@ -414,10 +415,10 @@ Every Pack and Skill this Huddle knows about. Each row points at a file on this 
 | --- | --- | --- | --- |
 | catalogs/dotnet-skills.skillcatalog.json | https://github.com/dotnet/skills | 2026-10-17 | From SkillsCatalog.json; 106 Skills, 1 downloaded |
 | catalogs/garrytan-gstack.skillcatalog.json | https://github.com/garrytan/gstack | 2026-10-17 | From SkillsCatalog.json; 61 Skills |
-| catalogs/mattpocock-skills.skillcatalog.json | https://github.com/mattpocock/skills | 2026-10-17 | From SkillsCatalog.json; 38 Skills |
+| catalogs/mattpocock-skills.skillcatalog.json | https://github.com/mattpocock/skills | 2026-10-17 | From SkillsCatalog.json; 37 Skills |
 | catalogs/addyosmani-agent-skills.skillcatalog.json | https://github.com/addyosmani/agent-skills | 2026-10-17 | From SkillsCatalog.json; 25 Skills, 1 downloaded |
 | catalogs/anthropics-skills.skillcatalog.json | https://github.com/anthropics/skills | 2026-10-17 | From SkillsCatalog.json; 20 Skills |
-| catalogs/obra-superpowers.skillcatalog.json | https://github.com/obra/superpowers | 2026-10-17 | From SkillsCatalog.json; 15 Skills |
+| catalogs/obra-superpowers.skillcatalog.json | https://github.com/obra/superpowers | 2026-10-17 | From SkillsCatalog.json; 14 Skills |
 | E:\Clones\team-skills\huddle.skillcatalog.json | https://git.example.com/team/skills | 2026-10-17 | Our team's own Skills, cloned by Codex |
 ```
 
@@ -575,17 +576,20 @@ does it when you ask.
 ┌ Update: MSBuild Authoring  1.0.0 → 1.1.0 ────────────────────── G7 ┐
 │ repos/skills · updated 2026-10-17                                  │
 │                                                                    │
-│ Skills                                                             │
+│ Skill files that change for everyone                               │
+│   ~ target-authoring   a660de8 → 4c1e9a2   3 files changed         │
+│     Used by Jane and Omar. Their copy changes; no restart.         │
+│                                                                    │
+│ Skills added or removed                                            │
 │   + incremental-build      dotnet/skills @ 4c1e9a2   MIT           │
-│   ~ target-authoring       a660de8 → 4c1e9a2   3 files changed     │
 │                                                                    │
 │ Consult when adds                                                  │
 │   ".csproj, .props or .targets changes, build failures"            │
 │   → "… build failures, slow incremental builds"                    │
 │                                                                    │
-│ Teammates whose copies differ                                      │
-│   [x] Jane   Developer          restarts                           │
-│   [x] Omar   Release engineer   restarts                           │
+│ Take the new list (restarts each one ticked)                       │
+│   [x] Jane   Developer                                             │
+│   [x] Omar   Release engineer                                      │
 │                                                                    │
 │                                         [ Not now ]   [ Update 2 ] │
 └────────────────────────────────────────────────────────────────────┘
@@ -593,10 +597,11 @@ does it when you ask.
 
 | Code (proposed) | Container | What it holds |
 | --- | --- | --- |
-| `G7` | Update card | The version change; Skills added (`+`), removed (`−`) and changed (`~`, with how many files); the `consult_when` change; and a checklist of the Teammates whose copies differ. Huddle works it out on disk |
+| `G7` | Update card | The version change; **Skill files that change for everyone** (`~`, with how many files and who uses it), shared by every holder and with no checkbox; Skills added (`+`) or removed (`−`); the `consult_when` change; and a checkbox per Teammate for the **membership** change only. Huddle works it out on disk ([the specification](Huddle.SkillPacks-Specifications.md) §8.4) |
 
-- **Update N** copies the new files into `Skills/`, rewrites each checked Teammate's `skills:`,
-  `consult_when:` and `_packs:` lines, and restarts those Teammates.
+- **Update N** first copies the changed Skill files into `Skills/` for every holder, which needs no
+  restart, then rewrites each ticked Teammate's `skills:`, `consult_when:` and `_packs:` lines and
+  restarts those Teammates. With nobody ticked the button reads **Update files**.
 - **Not now** changes nothing. Unchecked Teammates keep their copies and keep showing
   **Update available**.
 
@@ -933,7 +938,7 @@ one way in. No Teammate restarts, no Teammate file changes, and nothing is downl
 | `TeamTypes/Builtin/SkillPacks/msbuild-authoring.json` (embedded) | MSBuild Authoring 1.0.0: `target-authoring` from `dotnet/skills`, path `plugins/dotnet-msbuild/skills/target-authoring`; for developer and release-engineer | `SkillPackStore` |
 | `TeamTypes/Builtin/SkillPacks/code-review-and-quality.json` (embedded) | Code Review and Quality 1.0.0: `code-review-and-quality` from `addyosmani/agent-skills`, path `skills/code-review-and-quality`; for reviewer | `SkillPackStore` |
 | `App_Data/SkillPacks/*.json` | Your own Packs; one with a built-in's id replaces it | `SkillPackStore` |
-| `Skills/SkillsCatalog.json` (embedded) | 265 Skills from six repositories, each pinned to a commit, with licence, category and sub-category: dotnet/skills (106), garrytan/gstack (61), mattpocock/skills (38), addyosmani/agent-skills (25), anthropics/skills (20) and obra/superpowers (15) | `SkillsCatalogIndex`, used by Import skill, the role form, Build a team, the Teammate card and `ImportingSkillInstaller` |
+| `Skills/SkillsCatalog.json` (embedded) | 263 Skills from six repositories (this page first said 265; `retro` and `test-driven-development` are each in two repositories and are kept once), each pinned to a commit, with licence, category and sub-category: dotnet/skills (106), garrytan/gstack (61), mattpocock/skills (37), addyosmani/agent-skills (25), anthropics/skills (20) and obra/superpowers (14) | `SkillsCatalogIndex`, used by Import skill, the role form, Build a team, the Teammate card and `ImportingSkillInstaller` |
 | `hiringpool.json` | `developer` and `release-engineer` suggest `msbuild-authoring`; `reviewer` suggests `code-review-and-quality` | `CardResolver` |
 | Each Teammate's `<Name>.md` | `_packs: ['msbuild-authoring@1.0.0']` and the Skills the Pack added | `PersonaFrontmatter`, `TeammateCard` |
 | `App_Data/Skills/<name>/.source.json` | Skills already imported, from the catalog or a GitHub link, with repository, path, commit and hash | `SkillStore` |
@@ -953,18 +958,18 @@ commit. The catalog already pins both Pack Skills: `target-authoring` at `a660de
    Huddle version, and one catalog file, such as `catalogs/dotnet-skills.skillcatalog.json`,
    holding every entry from that repository with its fields, its tree URL at the pinned commit
    as `origin`, and an empty `path`. That is six files and six Catalogs rows, noted "From
-   SkillsCatalog.json"; all 265 Skills show as **Not downloaded** until someone asks.
+   SkillsCatalog.json"; all 263 Skills show as **Not downloaded** until someone asks.
 
 3. **Point at the skills repository.** The two Packs Huddle shipped no longer live in Huddle.
    They are kept as `.skillpack.json` files in a skills repository, at `E:\Repos\skills` on this
-   computer, with its notes in `sources/skills/`. Each of their Skills names its catalog entry
+   computer, with its notes in `sources/local/skills/` (the Source `local/skills`). Each of their Skills names its catalog entry
    instead of giving a path, such as `{ "name": "target-authoring", "catalog": "dotnet-skills" }`,
    so the Pack and the catalog share one copy. The move adds a Packs row for each, with this
-   computer's entry pointing into the folder set as **Skills repository** on the Sources tab
-   (`E:\Repos\skills` here). On a computer where that folder is not set or does not hold them,
+   computer's entry pointing into the folder the configuration key `Team:SkillsRepositoryDir` names,
+   read once, by the move (`E:\Repos\skills` here); the Sources tab only shows it. On a computer where that key is not set or its folder does not hold them,
    the rows are **Not downloaded**, with **Copy prompt** to clone the repository.
 4. **Bring your own Packs.** Each valid file in `App_Data/SkillPacks/` becomes a `.skillpack.json` in
-   `packs/`, in a `local` Source named `my-packs`. A file whose id matched a shipped Pack
+   `packs/`, in the Source `local/my-packs`, under `sources/local/my-packs/`. A file whose id matched a shipped Pack
    replaced it before, so the move keeps yours and hides the shipped one. A file that fails to
    load today is listed in the move's report and not moved. `App_Data/SkillPacks/` is left as
    it is, so an older Huddle still finds it.

@@ -38,7 +38,7 @@ subtree, and root files are shared — announce changes before making them.
 | --- | --- | --- |
 | Source | `src/Huddle.Acp`, `src/Huddle.Console` | `src/Huddle.App`, `src/Huddle.Contracts`, `src/Huddle.MockAdapter`, `src/Huddle.SkillPacks`, `src/Huddle.Packs` |
 | Tests | `tests/Huddle.Acp.Tests` | `tests/Huddle.Tests` |
-| Docs | `docs/engineering/acp-*.md`, `README.md` | `docs/Huddle.EngineeringGuide.md`, `docs/engineering/**` (except `acp-*.md`), `docs/adr/**`, `docs/Huddle.Adapters-*.md` |
+| Docs | `docs/engineering/acp-*.md`, `README.md` | `docs/Huddle.EngineeringGuide.md`, `docs/engineering/**` (except `acp-*.md`), `docs/adr/**`, `docs/Huddle.Adapters-*.md`, `docs/Huddle.SkillPacks*.md` |
 
 `src/Huddle.MockAdapter` (assembly `mock-acp`) is the one place the two subtrees touch by
 design: it **links** `FakeAcpAgent.cs`, `PromptContext.cs` and `FakeRpcError.cs` out of

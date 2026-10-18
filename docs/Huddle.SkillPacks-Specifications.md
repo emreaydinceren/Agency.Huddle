@@ -1,6 +1,6 @@
 # Huddle.SkillPacks — Design Specification
 
-**Date:** 2026-10-17 · **Status:** Draft, not built · **Vision:**
+**Date:** 2026-10-17 · **Status:** Built 2026-10-18 on `feat/skill-packs`; the manual tests (SKILLPACKS-01 to -07) not yet run by a person · **Vision:**
 [Huddle.SkillPacksSpec.md](Huddle.SkillPacksSpec.md) · **Decision record:** a successor to
 [ADR-0043](adr/0043-imported-skills-are-pinned-by-commit-and-hash.md), to be written before
 any code (Appendix A, task P0) · **Vocabulary:** [language.md](engineering/language.md)

@@ -577,6 +577,14 @@ from `Skill.FolderPath`, which the store computed, never from UI input.
 
 **V1 vs V2.** V2: in-app editing with validation (the Prompts pattern) and "New Skill".
 
+> [!NOTE]
+> **Superseded in part on 2026-10-18.** Settings › Skills is now three tabs (Skills, Packs, Sources),
+> and Skills from outside Huddle arrive through `SKILLS.md`, written by the Human's own AI tool, and
+> are copied into `{DataDir}/Skills/` when a Teammate needs them. The Teammate card's select also
+> offers those copyable Skills. Huddle no longer imports or downloads a Skill. See
+> [Huddle.SkillPacks-Specifications.md](Huddle.SkillPacks-Specifications.md) §6.9 and §6.10. This
+> section still describes the built-in, overridden and hand-written Skills, which work as before.
+
 ---
 
 ### 6.8 CandidateChecker and `validate_teammate` (S2)
@@ -1000,6 +1008,7 @@ No new database table. Everything is a file the Human owns, or memory a restart 
 | Shipped Skill defaults | Assembly, `Skills/Defaults/**` | Code | ✅ | ✅ |
 | Chief of Staff default | Assembly, `Builtin/chief-of-staff.md` | Code | ✅ | ✅ |
 | Skill overrides and the Human's Skills | `{DataDir}/Skills/<name>/*.md` | Human | ✅ | ✅ (`-Clean` deletes only `team.db` and `Teams/`) |
+| A copied Skill's provenance | `{DataDir}/Skills/<name>/.source.json`: the **Source** id it came from, its origin, `copiedFrom` (the pointer folder), commit and folder hash ([Skill Packs](Huddle.SkillPacks-Specifications.md) §6.6) | App (`SkillCopier`) | ✅ | ✅ |
 | A Persona's Skills | `skills:` in its `.md` | Human | ✅ | ❌ |
 | Built-in marker | `_builtin:` in its `.md` | Human (written by the seeder) | ✅ | ❌ (re-seeded) |
 | Pending Proposals | `ProposalStore`, memory | App | ❌ | ❌ |
