@@ -71,6 +71,39 @@ public static class SkillFolderHash
         return Compute(files);
     }
 
+    /// <summary>Each file's SHA-256 by relative path (with <c>/</c>), normalised as <see cref="Compute"/> normalises it, with
+    /// <c>.source.json</c> and any <c>.git</c> folder left out; empty for a folder that does not exist.</summary>
+    public static IReadOnlyDictionary<string, string> FileHashes(IFileReader reader, string folder)
+    {
+        ArgumentNullException.ThrowIfNull(reader);
+        ArgumentException.ThrowIfNullOrWhiteSpace(folder);
+        Dictionary<string, string> hashes = new(StringComparer.Ordinal);
+        if (!reader.DirectoryExists(folder))
+        {
+            return hashes;
+        }
+
+        foreach (string file in reader.EnumerateFiles(folder, recursive: true))
+        {
+            string relative = Path.GetRelativePath(folder, file).Replace('\\', '/');
+            if (!IsInGitFolder(relative) && !string.Equals(relative, SourceFileName, StringComparison.Ordinal))
+            {
+                hashes[relative] = Convert.ToHexStringLower(SHA256.HashData(Normalize(relative, reader.ReadAllBytes(file))));
+            }
+        }
+
+        return hashes;
+    }
+
+    /// <summary>How many files differ between two folders: changed content, plus files on one side only.</summary>
+    public static int ChangedFiles(IReadOnlyDictionary<string, string> before, IReadOnlyDictionary<string, string> after)
+    {
+        ArgumentNullException.ThrowIfNull(before);
+        ArgumentNullException.ThrowIfNull(after);
+        int changed = before.Count(pair => !after.TryGetValue(pair.Key, out string? hash) || !string.Equals(hash, pair.Value, StringComparison.Ordinal));
+        return changed + after.Keys.Count(key => !before.ContainsKey(key));
+    }
+
     /// <summary>Whether a relative path lies in a <c>.git</c> folder, for a Skill that is the root of its own clone.</summary>
     private static bool IsInGitFolder(string relative)
     {

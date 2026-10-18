@@ -129,6 +129,16 @@ internal sealed class RegistryHost : IDisposable
         return this.Registry.ReloadAsync(TestContext.Current.CancellationToken);
     }
 
+    /// <summary>Writes a pack file with several Skills, each with a folder or an empty path, and a phrase.</summary>
+    public void PackOf(string id, string version, params (string Name, string? Folder)[] skills)
+    {
+        IEnumerable<string> entries = skills.Select(static skill =>
+            $$"""{ "name": "{{skill.Name}}", "path": "{{(skill.Folder ?? string.Empty).Replace("\\", "\\\\", StringComparison.Ordinal)}}", "origin": "https://github.com/o/r/tree/0123456789abcdef0123456789abcdef01234567/skills/{{skill.Name}}" }""");
+        Write(this.Dir, $"packs/{id}.skillpack.json", $$"""
+            { "schemaVersion": 1, "id": "{{id}}", "version": "{{version}}", "title": "{{id}} title", "source": "local/test", "appliesTo": ["dev"], "consultWhenAdds": "when {{id}} applies", "skills": [{{string.Join(",", entries)}}] }
+            """);
+    }
+
     /// <summary>Writes SKILLS.md with the given Packs and Catalogs rows.</summary>
     public void SkillsMd(string[] packs, string[]? catalogs = null)
     {

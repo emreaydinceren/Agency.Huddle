@@ -2516,6 +2516,8 @@ Layout (the vision's wireframe, with §8.4 applied):
 | **Single Skill** | Opened with `SkillName`, the dialog has the Skill files section only, titled *"Update: {name}"* |
 | **Deprecated or Withdrawn** | A one-line `MudAlert` above everything: *"{Source} marks this Pack {Deprecated\|Withdrawn}: {reason}."* |
 
+**`Removed` is always empty.** Huddle keeps no earlier copy of a Pack file, so it cannot tell which Skills a Pack has stopped listing. A Skill the Pack dropped stays on its holders until the Human removes it on the card. Guessing from the Teammate file would risk taking off a Skill the Human gave by hand.
+
 #### 6.9.9 The New chip and the snackbar
 
 **New.** The registry decides ([§6.5](#65-skillregistry-and-registrywatcher), "The 'New' overlay"): `seen`

@@ -59,6 +59,12 @@
         }
 
         <div class="d-flex align-center gap-2 mt-2">
+            @if (view.State == ItemState.UpdateAvailable)
+            {
+                <MudTooltip Text="@SkillGuide.For("Review update")" ShowOnFocus="true">
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="pack-card-review-update" OnClick="@(() => SkillDialogs.OpenUpdateAsync(this.DialogService, view.Title, view.Pack.Id))">Review update</MudButton>
+                </MudTooltip>
+            }
             @if (view.CanCopyFix)
             {
                 <MudTooltip Text="@SkillGuide.For("Copy fix prompt")" ShowOnFocus="true">
@@ -89,6 +95,7 @@
     internal const string Divider = "—";
 
     private const string DetailsItem = "Details";
+    private const string ReviewUpdateItem = "Review update";
     private const string CopyFixItem = "Copy fix prompt";
     private const string HideItem = "Hide";
     private const string UnhideItem = "Unhide";
@@ -118,6 +125,11 @@
     internal IReadOnlyList<string> MenuItems(PackView view)
     {
         List<string> items = [DetailsItem];
+        if (view.State == ItemState.UpdateAvailable)
+        {
+            items.Add(ReviewUpdateItem);
+        }
+
         if (view.CanCopyFix)
         {
             items.Add(CopyFixItem);
@@ -159,6 +171,9 @@
         {
             case DetailsItem:
                 await MenuDialogs.AfterClosingAsync(this.menu, this.OpenDetailsAsync);
+                break;
+            case ReviewUpdateItem:
+                await MenuDialogs.AfterClosingAsync(this.menu, () => SkillDialogs.OpenUpdateAsync(this.DialogService, view.Title, view.Pack.Id));
                 break;
             case CopyFixItem:
                 await this.CopyFixPromptAsync();

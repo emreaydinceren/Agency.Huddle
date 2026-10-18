@@ -251,6 +251,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Agency.Huddle.App.SkillSources.IInstallFileLocation>(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.InstallFileWriter>());
         services.AddSingleton<Agency.Huddle.App.SkillSources.SkillPromptBuilder>();
         services.AddSingleton<Agency.Huddle.App.SkillSources.SkillSourcesRemover>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.PackUpdater>();
         services.AddScoped<Agency.Huddle.App.SkillSources.PathFormatChoice>();
 
         // Skill import (SK-2 to SK-7): the downloader gets its own client with a long timeout for the archive; the importer's client only

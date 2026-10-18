@@ -9,6 +9,18 @@ internal static class SkillDialogs
     /// <summary>The prompt dialog's title.</summary>
     public const string AddWithAiTitle = "Add with your AI tool";
 
+    /// <summary>Opens <see cref="UpdateDialog"/> for a Pack, or for a Skill outside a Pack.</summary>
+    /// <param name="dialogs">The dialog service.</param>
+    /// <param name="title">The Pack title or Skill name, for "Update: {title}".</param>
+    /// <param name="packId">The Pack, or null.</param>
+    /// <param name="skillName">The Skill, when there is no Pack.</param>
+    public static Task<IDialogReference> OpenUpdateAsync(IDialogService dialogs, string title, string? packId, string? skillName = null)
+    {
+        ArgumentNullException.ThrowIfNull(dialogs);
+        DialogParameters<UpdateDialog> parameters = new() { { dialog => dialog.PackId, packId }, { dialog => dialog.SkillName, skillName } };
+        return dialogs.ShowAsync<UpdateDialog>($"Update: {title}", parameters, HuddleDialogOptions.SmallForm);
+    }
+
     /// <summary>Opens <see cref="AddWithAiDialog"/> on a task, with what that entry point pre-fills.</summary>
     /// <param name="dialogs">The dialog service.</param>
     /// <param name="task"><c>add</c>, <c>find</c>, <c>update</c> or <c>fix</c>.</param>

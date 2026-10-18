@@ -146,6 +146,7 @@
     internal const int VirtualizeAbove = 500;
 
     private const string CopyPromptItem = "Copy prompt";
+    private const string ReviewUpdateItem = "Review update";
     private const string HideItem = "Hide";
     private const string UnhideItem = "Unhide";
     private const string ShowCatalogItem = "Show catalog in Library";
@@ -268,6 +269,11 @@
             items.Add(CopyPromptItem);
         }
 
+        if (row.State == ItemState.UpdateAvailable && row.Entry is not null)
+        {
+            items.Add(ReviewUpdateItem);
+        }
+
         if (row.Origin == SkillRowOrigin.Registry && row.Entry is not null)
         {
             items.Add(row.Hidden ? UnhideItem : HideItem);
@@ -306,6 +312,9 @@
         {
             case CopyPromptItem:
                 await this.CopyPromptAsync(row);
+                break;
+            case ReviewUpdateItem:
+                _ = await SkillDialogs.OpenUpdateAsync(this.DialogService, row.Name, null, row.Name);
                 break;
             case HideItem:
             case UnhideItem:
