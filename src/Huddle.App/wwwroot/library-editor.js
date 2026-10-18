@@ -5,6 +5,11 @@
 // editors can exist on one page at once.
 import {
   EditorState,
+  EditorSelection,
+  autocompletion,
+  startCompletion,
+  syntaxTree,
+  ensureSyntaxTree,
   EditorView,
   keymap,
   lineNumbers,
@@ -21,6 +26,7 @@ import {
   powerShell,
   yaml,
 } from "./lib/codemirror/codemirror.bundle.js";
+import { planCommand, wikiLinkBeforeCaret } from "./markdown-commands.js";
 
 function languageExtension(languageId) {
   switch (languageId) {
@@ -45,6 +51,203 @@ function languageExtension(languageId) {
   }
 }
 
+// Wait this long after the last keystroke before asking .NET for names, so a fast typist sends one
+// circuit round trip rather than one per key. CodeMirror aborts the superseded request meanwhile.
+const wikiLinkDelayMs = 120;
+
+// Markdown syntax-tree nodes inside which `[[` is code, not a link (Spec §6.5 skips them too).
+const codeNodeNames = new Set(["InlineCode", "FencedCode", "CodeBlock", "CodeText"]);
+
+/** Whether the syntax node at `pos` sits inside a code span, a fenced block or an indented code block. */
+function insideCode(state, pos) {
+  const tree = ensureSyntaxTree(state, pos, 50) ?? syntaxTree(state);
+  for (let node = tree.resolveInner(pos, -1); node; node = node.parent) {
+    if (codeNodeNames.has(node.name)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Applies a toolbar or keyboard command as ONE transaction (one undo step). The text transform is the
+ * pure `planCommand`: it returns only marker insertions and deletions at the selection or the touched
+ * lines, so ADR-0028's "never rewrite what you did not edit" holds.
+ */
+function applyCommand(view, name) {
+  const { state } = view;
+  const plan = planCommand(
+    name,
+    state.doc.toString(),
+    state.selection.ranges.map((r) => ({ anchor: r.anchor, head: r.head })),
+  );
+  if (plan === null) {
+    return;
+  }
+
+  const spec = { changes: plan.changes, userEvent: "input.format", scrollIntoView: true };
+  if (plan.selection !== null) {
+    spec.selection = EditorSelection.create(
+      plan.selection.map((r) => EditorSelection.range(r.anchor, r.head)),
+      state.selection.mainIndex,
+    );
+  }
+
+  view.dispatch(spec);
+  if (plan.openCompletion) {
+    // Nothing typed yet: pop the list straight away for the (empty) query inside the brackets.
+    startCompletion(view);
+  }
+
+  view.focus();
+}
+
+/** A CodeMirror key binding that runs `name` through `applyCommand`. */
+function commandKey(key, name) {
+  return {
+    key,
+    run: (view) => {
+      applyCommand(view, name);
+      return true;
+    },
+  };
+}
+
+/**
+ * Wires the Markdown toolbar element to `view` with ONE delegated listener set, so a click edits the
+ * document without a trip through the Blazor circuit. `mousedown` is prevented so the editor keeps its
+ * focus and selection; the buttons follow the WAI-ARIA toolbar pattern (a roving tabindex: one tab stop,
+ * Left/Right/Home/End move, Escape returns to the editor). Returns the function that detaches it all.
+ */
+function attachToolbar(view, toolbar) {
+  const buttons = () => [...toolbar.querySelectorAll("[data-md-command]")];
+  const commandButton = (target) => (target instanceof Element ? target.closest("[data-md-command]") : null);
+
+  const setActive = (active) => {
+    for (const button of buttons()) {
+      button.tabIndex = button === active ? 0 : -1;
+    }
+  };
+
+  const onMouseDown = (event) => {
+    if (commandButton(event.target) !== null) {
+      event.preventDefault();
+    }
+  };
+
+  const onClick = (event) => {
+    const button = commandButton(event.target);
+    if (button !== null) {
+      applyCommand(view, button.dataset.mdCommand);
+    }
+  };
+
+  const onFocusIn = (event) => {
+    const button = commandButton(event.target);
+    if (button !== null) {
+      setActive(button);
+    }
+  };
+
+  const onKeyDown = (event) => {
+    if (event.key === "Escape") {
+      view.focus();
+      return;
+    }
+
+    const all = buttons();
+    const current = all.indexOf(commandButton(event.target));
+    if (current === -1) {
+      return;
+    }
+
+    let next = -1;
+    switch (event.key) {
+      case "ArrowRight":
+        next = (current + 1) % all.length;
+        break;
+      case "ArrowLeft":
+        next = (current - 1 + all.length) % all.length;
+        break;
+      case "Home":
+        next = 0;
+        break;
+      case "End":
+        next = all.length - 1;
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    setActive(all[next]);
+    all[next].focus();
+  };
+
+  toolbar.addEventListener("mousedown", onMouseDown);
+  toolbar.addEventListener("click", onClick);
+  toolbar.addEventListener("focusin", onFocusIn);
+  toolbar.addEventListener("keydown", onKeyDown);
+
+  return () => {
+    toolbar.removeEventListener("mousedown", onMouseDown);
+    toolbar.removeEventListener("click", onClick);
+    toolbar.removeEventListener("focusin", onFocusIn);
+    toolbar.removeEventListener("keydown", onKeyDown);
+  };
+}
+
+/**
+ * A CodeMirror completion source for `[[`. The names come from .NET (`WikiLinkCompletionsAsync`) because
+ * the per-root link index lives there; the source only decides WHEN to ask and how to apply a pick. It
+ * stays silent inside code (Spec §6.5) and, through the `wikiLinkBeforeCaret` pattern, after `[[x|` and
+ * `[[x#`. `filter: false` because .NET already filtered and ranked, and no `validFor`, so every keystroke
+ * asks again rather than reusing a stale list.
+ */
+function wikiLinkSource(dotNetRef) {
+  return async (context) => {
+    const match = context.matchBefore(wikiLinkBeforeCaret);
+    if (!match || insideCode(context.state, match.from)) {
+      return null;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, wikiLinkDelayMs));
+    if (context.aborted) {
+      return null;
+    }
+
+    let names;
+    try {
+      names = await dotNetRef.invokeMethodAsync("WikiLinkCompletionsAsync", match.text.slice(2));
+    } catch {
+      // The circuit is gone or the component disposed mid-request: offering nothing is correct.
+      return null;
+    }
+
+    if (context.aborted || !names || names.length === 0) {
+      return null;
+    }
+
+    return {
+      from: match.from + 2,
+      filter: false,
+      options: names.map((name) => ({
+        label: name,
+        apply: (view, _completion, from, to) => {
+          // Close the link with `]]` unless the brackets are already there (the toolbar's `[[]]` button).
+          const hasClose = view.state.doc.sliceString(to, to + 2) === "]]";
+          view.dispatch({
+            changes: { from, to, insert: hasClose ? name : name + "]]" },
+            selection: { anchor: from + name.length + 2 },
+            userEvent: "input.complete",
+          });
+        },
+      })),
+    };
+  };
+}
+
 /**
  * Builds a CodeMirror 6 `EditorView` inside `element` and returns a handle object exposing
  * `getText`, `setText` and `dispose`. Text crosses the .NET/JS boundary only on save and on
@@ -52,12 +255,17 @@ function languageExtension(languageId) {
  * `OnSaveRequested` fires only on the `Mod-s` keymap. When `previewMode` is set (Split mode,
  * corrections-B6 item 15), `OnPreviewText` fires 300 ms after the last keystroke - the debounce
  * timer lives here, never as a .NET `Timer`, and is cleared by `dispose`. `showLineNumbers` adds
- * CodeMirror's line-number gutter (Split mode's raw side).
+ * CodeMirror's line-number gutter (Split mode's raw side). An editable Markdown editor also binds
+ * Mod-b / Mod-i / Mod-e and finds the Markdown toolbar of its document pane (the `[data-md-toolbar]`
+ * element inside the nearest `.library-document`, rendered by `MarkdownToolbar` before this editor), whose
+ * buttons then edit client-side; `dispose` detaches it.
  */
 export function create(element, text, readOnly, languageId, dotNetRef, previewMode, showLineNumbers) {
   let savedText = text;
   let dirty = false;
   let previewTimer = null;
+  let detachToolbar = null;
+  const editableMarkdown = languageId === "markdown" && !readOnly;
 
   const updateListener = EditorView.updateListener.of((update) => {
     if (!update.docChanged) {
@@ -93,6 +301,9 @@ export function create(element, text, readOnly, languageId, dotNetRef, previewMo
         return true;
       },
     },
+    ...(editableMarkdown
+      ? [commandKey("Mod-b", "bold"), commandKey("Mod-i", "italic"), commandKey("Mod-e", "code")]
+      : []),
     ...defaultKeymap,
     ...historyKeymap,
   ]);
@@ -110,10 +321,19 @@ export function create(element, text, readOnly, languageId, dotNetRef, previewMo
         history(),
         saveKeymap,
         languageExtension(languageId),
+        // `[[` suggestions are a Markdown-editing aid only: a read-only or non-Markdown editor has none.
+        editableMarkdown ? autocompletion({ override: [wikiLinkSource(dotNetRef)], icons: false }) : [],
         updateListener,
       ],
     }),
   });
+
+  if (editableMarkdown) {
+    const toolbar = element.closest(".library-document")?.querySelector("[data-md-toolbar]") ?? null;
+    if (toolbar !== null) {
+      detachToolbar = attachToolbar(view, toolbar);
+    }
+  }
 
   const handle = {
     getText: () => view.state.doc.toString(),
@@ -143,6 +363,10 @@ export function create(element, text, readOnly, languageId, dotNetRef, previewMo
       if (previewTimer !== null) {
         clearTimeout(previewTimer);
         previewTimer = null;
+      }
+      if (detachToolbar !== null) {
+        detachToolbar();
+        detachToolbar = null;
       }
       view.destroy();
     },

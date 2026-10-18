@@ -36,6 +36,12 @@
     [Parameter]
     public EventCallback<string> PreviewTextChanged { get; set; }
 
+    /// <summary>Answers the editor's <c>[[</c> completion: given what the human typed after the brackets, the link targets to offer (already filtered and ranked). Null offers nothing.</summary>
+    [Parameter]
+    public Func<string, CancellationToken, Task<IReadOnlyList<string>>>? WikiLinkCompletions { get; set; }
+
+    private readonly CancellationTokenSource lifetime = new();
+    private CancellationTokenSource? inFlight;
     private ElementReference editorElement;
     private IJSObjectReference? module;
     private IJSObjectReference? handle;
@@ -113,6 +119,55 @@
         await this.handle.InvokeVoidAsync("revealLine", line);
     }
 
+    /// <summary>
+    /// Called from JS as the human types after <c>[[</c>: the link targets to offer for <paramref name="query"/>,
+    /// at most <see cref="MaxWikiLinkSuggestions"/>. A newer request cancels the one still running (the human has
+    /// typed on), and disposing the editor cancels them all; either way the answer is an empty list, not an error.
+    /// </summary>
+    /// <param name="query">The text typed after the brackets.</param>
+    [JSInvokable]
+    public async Task<IReadOnlyList<string>> WikiLinkCompletionsAsync(string query)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        if (this.WikiLinkCompletions is null || this.disposed)
+        {
+            return [];
+        }
+
+        using CancellationTokenSource request = CancellationTokenSource.CreateLinkedTokenSource(this.lifetime.Token);
+        CancelQuietly(Interlocked.Exchange(ref this.inFlight, request));
+
+        try
+        {
+            return await this.WikiLinkCompletions(query, request.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return [];
+        }
+        finally
+        {
+            _ = Interlocked.CompareExchange(ref this.inFlight, null, request);
+        }
+    }
+
+    /// <summary>Cancels <paramref name="source"/> if it is still live. Its owner disposes it when its request ends, which can happen between the swap and this call.</summary>
+    /// <param name="source">The superseded request's source, if any.</param>
+    private static void CancelQuietly(CancellationTokenSource? source)
+    {
+        try
+        {
+            source?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // The superseded request finished and released its source first: nothing is left to cancel.
+        }
+    }
+
+    /// <summary>The most suggestions a caller should return for one <c>[[</c> query.</summary>
+    public const int MaxWikiLinkSuggestions = 20;
+
     /// <summary>Called from JS each time the dirty state flips. Forwards the value unchanged - see <see cref="DirtyChanged"/>.</summary>
     [JSInvokable]
     public async Task OnDirtyChanged(bool dirty) => await this.DirtyChanged.InvokeAsync(dirty);
@@ -136,7 +191,14 @@
     /// </summary>
     public async ValueTask DisposeAsync()
     {
+        if (this.disposed)
+        {
+            return;
+        }
+
         this.disposed = true;
+        CancelQuietly(Interlocked.Exchange(ref this.inFlight, null));
+        await this.lifetime.CancelAsync();
 
         try
         {
@@ -162,6 +224,7 @@
         finally
         {
             this.selfReference?.Dispose();
+            this.lifetime.Dispose();
         }
     }
 }

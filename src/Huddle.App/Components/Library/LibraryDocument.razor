@@ -87,14 +87,18 @@
         }
         else if (this.mode == LibraryMode.Edit && this.content.Kind == LibraryFileKind.Markdown && this.content.Editable)
         {
+            <MarkdownToolbar />
             <LibraryEditor @ref="this.editorRef" Text="@(this.content.Text ?? string.Empty)" ReadOnly="false" LanguageId="markdown"
-                           DirtyChanged="@this.OnDirtyChangedAsync" SaveRequested="@this.OnSaveRequestedAsync" />
+                           DirtyChanged="@this.OnDirtyChangedAsync" SaveRequested="@this.OnSaveRequestedAsync"
+                           WikiLinkCompletions="@this.WikiLinkCompletionsAsync" />
         }
         else if (this.mode == LibraryMode.Split && this.content.Kind == LibraryFileKind.Markdown && this.content.Editable)
         {
+            <MarkdownToolbar />
             <div class="library-document-split">
                 <LibraryEditor @ref="this.editorRef" Text="@(this.content.Text ?? string.Empty)" ReadOnly="false" LanguageId="markdown"
                                DirtyChanged="@this.OnDirtyChangedAsync" SaveRequested="@this.OnSaveRequestedAsync"
+                               WikiLinkCompletions="@this.WikiLinkCompletionsAsync"
                                PreviewMode="true" PreviewTextChanged="@this.OnPreviewTextChangedAsync" LineNumbers="true" />
                 @this.RenderMarkdown(this.previewText ?? this.content.Text ?? string.Empty)
             </div>
@@ -322,6 +326,12 @@
         this.mode = newMode;
         return Task.CompletedTask;
     }
+
+    /// <summary>The note names to offer after <c>[[</c>: this note's own Library Root only (links are per root), nearest first, each in the shortest form that resolves from this note. Built off the circuit's thread.</summary>
+    /// <param name="query">The text typed after the brackets.</param>
+    /// <param name="ct">Cancelled when the human types on or the editor goes away.</param>
+    private Task<IReadOnlyList<string>> WikiLinkCompletionsAsync(string query, CancellationToken ct) =>
+        this.WikiLinks.SuggestTargetsAsync(this.Path, query, LibraryEditor.MaxWikiLinkSuggestions, ct);
 
     /// <summary>Forwards the editor's dirty flip (Spec §6.7's <c>●</c> and the <see cref="MudExitPrompt"/> guard).</summary>
     private Task OnDirtyChangedAsync(bool value)

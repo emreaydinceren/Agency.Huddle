@@ -586,6 +586,89 @@ public sealed class LibraryDocumentEditTests : IDisposable
         Assert.Empty(cut.FindAll(".mud-dialog-actions button"));
     }
 
+    /// <summary>The Markdown formatting row shows in Edit and Split for a Markdown file and not in Read.</summary>
+    [Fact]
+    public async Task MarkdownToolbar_ShowsOnlyInEditAndSplit()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "a.md"), "# Hello");
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "a.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        SetupEditorModule(ctx, "# Hello");
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-rendered")));
+        bool inRead = cut.FindAll(".markdown-toolbar").Count > 0;
+
+        await SwitchModeAsync(cut, LibraryMode.Edit);
+        bool inEdit = cut.FindAll(".markdown-toolbar").Count > 0;
+
+        await SwitchModeAsync(cut, LibraryMode.Split);
+        bool inSplit = cut.FindAll(".markdown-toolbar").Count > 0;
+
+        Assert.False(inRead);
+        Assert.True(inEdit);
+        Assert.True(inSplit);
+    }
+
+    /// <summary>A view-only (non-Markdown) file has no Markdown formatting row.</summary>
+    [Fact]
+    public async Task MarkdownToolbar_NotShownForNonMarkdown()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "a.json"), "{}");
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "a.json");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<LibraryEditor>()));
+        Assert.Empty(cut.FindAll(".markdown-toolbar"));
+    }
+
+    /// <summary>Clicking Bold in Edit mode makes no call across the circuit: the toolbar edits client-side, so the editor handle sees no <c>runCommand</c> or any other invocation.</summary>
+    [Fact]
+    public async Task MarkdownToolbar_BoldClick_MakesNoCircuitCall()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "a.md"), "hi");
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "a.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        (BunitJSModuleInterop module, BunitJSModuleInterop handle) = SetupEditorModule(ctx, "hi");
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
+        await SwitchModeAsync(cut, LibraryMode.Edit);
+        cut.WaitForAssertion(() => Assert.Contains(module.Invocations, i => i.Identifier == "create"));
+        int before = handle.Invocations.Count;
+
+        await cut.InvokeAsync(() => cut.Find(".markdown-toolbar-bold").ClickAsync());
+
+        Assert.Equal(before, handle.Invocations.Count);
+    }
+
+    /// <summary>The <c>[[</c> completion offers the other notes of the open note's own root, shortest form first, and none from another root.</summary>
+    [Fact]
+    public async Task WikiLinkCompletions_OffersNotesOfTheOwnRootOnly()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        string other = this.fixture.LibraryFixture.CreatePinnedRoot("Other");
+        File.WriteAllText(Path.Combine(root, "a.md"), "hi");
+        File.WriteAllText(Path.Combine(root, "plan.md"), "p");
+        File.WriteAllText(Path.Combine(other, "planet.md"), "p");
+        this.fixture.LibraryFixture.Reload();
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "a.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        SetupEditorModule(ctx, "hi");
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
+        await SwitchModeAsync(cut, LibraryMode.Edit);
+
+        LibraryEditor editor = cut.FindComponent<LibraryEditor>().Instance;
+        IReadOnlyList<string> names = await cut.InvokeAsync(() => editor.WikiLinkCompletionsAsync("pla"));
+
+        Assert.Equal(["plan"], names);
+    }
+
     /// <summary>Switches the document's Read/Edit/Split mode through the toggle group's <c>ValueChanged</c>, as <c>ViewEditorDrawerTests</c> does for its own toggle groups.</summary>
     private static async Task SwitchModeAsync(IRenderedComponent<ContainerFragment> cut, LibraryMode mode)
     {

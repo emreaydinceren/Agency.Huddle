@@ -1,0 +1,59 @@
+@*
+    The Markdown formatting row of the Library editor (Edit and Split modes): one dense button per command.
+    It holds no state and raises no event. Every button carries data-md-command, and library-editor.js
+    (attachToolbar) wires the row to its CodeMirror view with delegated listeners, so a click edits the
+    document in the browser with no trip through the Blazor circuit and the editor keeps its selection
+    (ADR-0028: each command is one small transaction touching only the selection or the chosen lines).
+    The row is a WAI-ARIA toolbar: one tab stop (a roving tabindex that starts on Bold), Left/Right/Home/End
+    move between buttons and Escape returns to the editor. The marker data-md-toolbar is how the editor finds it.
+*@
+<div class="markdown-toolbar" role="toolbar" aria-label="Markdown formatting" aria-orientation="horizontal" data-md-toolbar>
+    <MudTooltip Text="Bold (Ctrl+B)">
+        <MudIconButton Icon="@Icons.Material.Filled.FormatBold" Size="Size.Small" aria-label="Bold" Class="markdown-toolbar-bold" tabindex="0" data-md-command="@Commands.Bold" />
+    </MudTooltip>
+    <MudTooltip Text="Italic (Ctrl+I)">
+        <MudIconButton Icon="@Icons.Material.Filled.FormatItalic" Size="Size.Small" aria-label="Italic" Class="markdown-toolbar-italic" tabindex="-1" data-md-command="@Commands.Italic" />
+    </MudTooltip>
+    <MudTooltip Text="Heading">
+        <MudIconButton Icon="@Icons.Material.Filled.Title" Size="Size.Small" aria-label="Heading" Class="markdown-toolbar-heading" tabindex="-1" data-md-command="@Commands.Heading" />
+    </MudTooltip>
+    <MudTooltip Text="Code (Ctrl+E)">
+        <MudIconButton Icon="@Icons.Material.Filled.Code" Size="Size.Small" aria-label="Code" Class="markdown-toolbar-code" tabindex="-1" data-md-command="@Commands.Code" />
+    </MudTooltip>
+    <MudTooltip Text="Bulleted list">
+        <MudIconButton Icon="@Icons.Material.Filled.FormatListBulleted" Size="Size.Small" aria-label="Bulleted list" Class="markdown-toolbar-bullet-list" tabindex="-1" data-md-command="@Commands.BulletList" />
+    </MudTooltip>
+    <MudTooltip Text="Task list">
+        <MudIconButton Icon="@Icons.Material.Filled.Checklist" Size="Size.Small" aria-label="Task list" Class="markdown-toolbar-task-list" tabindex="-1" data-md-command="@Commands.TaskList" />
+    </MudTooltip>
+    <MudTooltip Text="Link to a note">
+        <MudButton Size="Size.Small" aria-label="Link to a note" Class="markdown-toolbar-wikilink" tabindex="-1" data-md-command="@Commands.Wikilink">[[ ]]</MudButton>
+    </MudTooltip>
+</div>
+
+@code {
+    /// <summary>The command names <c>markdown-commands.js</c>'s <c>planCommand</c> understands, as the buttons' <c>data-md-command</c> values.</summary>
+    public static class Commands
+    {
+        /// <summary>Wraps the selection in <c>**</c>, or removes the <c>**</c> already around it.</summary>
+        public const string Bold = "bold";
+
+        /// <summary>Wraps the selection in <c>*</c>, or removes the <c>*</c> already around it.</summary>
+        public const string Italic = "italic";
+
+        /// <summary>Wraps the selection in backticks, or removes the ones already around it.</summary>
+        public const string Code = "code";
+
+        /// <summary>Sets each selected line to a <c>## </c> heading, or removes it from a line that has one.</summary>
+        public const string Heading = "heading";
+
+        /// <summary>Toggles a <c>- </c> prefix on the selected lines.</summary>
+        public const string BulletList = "bulletList";
+
+        /// <summary>Toggles a <c>- [ ] </c> prefix on the selected lines.</summary>
+        public const string TaskList = "taskList";
+
+        /// <summary>Wraps the selection in <c>[[ ]]</c>, or inserts an empty pair and opens the note suggestions.</summary>
+        public const string Wikilink = "wikilink";
+    }
+}
