@@ -4,7 +4,7 @@ namespace Agency.Huddle.App.Tasks;
 /// The read-only face of the Sprint store (Sprints spec §7.3). <c>TaskService</c>, the task tools and the
 /// pages that only show Sprints depend on this, so an Agent cannot create or remove a Sprint.
 /// </summary>
-public interface ISprintCatalog
+internal interface ISprintCatalog
 {
     /// <summary>Raised after the set of Sprints changed, outside any lock.</summary>
     event Action? SprintsChanged;

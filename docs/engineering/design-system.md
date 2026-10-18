@@ -31,7 +31,7 @@ those. Everything below follows from that.
 | Layer | Owner | Where |
 | --- | --- | --- |
 | Palette, typography, corner radius, elevation | `MudTheme` built in C# | `src/Huddle.App/Themes/` |
-| Components | MudBlazor 9.10.0, used with the house defaults below | `src/Huddle.App/Components/` |
+| Components | MudBlazor 9.11.0, used with the house defaults below | `src/Huddle.App/Components/` |
 | Compositions and Huddle-only widgets | Plain CSS over `--mud-*` variables | `wwwroot/app.css`, `*.razor.css` |
 | The non-MudBlazor tokens | `--font-mono` and the five `--ink-*` rungs, each mixed from MudBlazor variables | `wwwroot/app-vars.css` |
 
@@ -557,7 +557,7 @@ that shows the control, or it can't be reached on a touch screen (UX-075).
   not "Delete") when it repeats per row. A tooltip alone is not enough (UX-V09).
 - **State is never shown by colour alone.** Use text, an icon or `aria-pressed` with it
   (UX-V08).
-- **An inert input uses `Disabled`, not `ReadOnly`.** MudBlazor 9.10.0 styles only the
+- **An inert input uses `Disabled`, not `ReadOnly`.** MudBlazor 9.11.0 styles only the
   disabled state (UX-V04).
 - **An avatar image has an empty `alt`** because the Teammate's name is always rendered
   beside it.
@@ -1253,7 +1253,7 @@ below.
 
 These are open questions, not decisions. Raise them before relying on them.
 
-- **No global MudBlazor defaults.** MudBlazor 9.10.0 can't set `Size.Small` and
+- **No global MudBlazor defaults.** MudBlazor 9.11.0 can't set `Size.Small` and
   `Variant.Outlined` once, so they are set per call site and kept by the convention test
   (CV1, CV2) rather than by a wrapper.
 - **No narrow-width guidance for the shell.** The drawer is persistent at 240px with no
@@ -1282,6 +1282,6 @@ These are open questions, not decisions. Raise them before relying on them.
 - [rules.md](rules.md): the binding behaviour rules, including the stylesheet and Avatar rows.
 - [MudBlazorDesign.md](../../agents/MudBlazorDesign.md): choosing a component for a spec.
 - [MudBlazorImplementation.md](../../agents/MudBlazorImplementation.md): the house
-  patterns, and facts checked against 9.10.0.
+  patterns, and facts checked against the pinned package.
 - [Huddle.Tabs-Specifications.md](../Huddle.Tabs-Specifications.md): the tab and pane model.
 - [language.md](language.md): the words to use in interface copy.
