@@ -88,7 +88,7 @@ public sealed class R3TasksTests
         string css = AppCss();
         string wash = RuleBody(css, ".mud-data-grid.task-list-grid .mud-table-cell.mud-datagrid-group");
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("background-color: var(--mud-palette-surface);", wash, StringComparison.Ordinal);
+        Assert.Contains("background-color: var(--hu-ground-page);", wash, StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("font-weight: 600;", RuleBody(css, ".task-group-label"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.

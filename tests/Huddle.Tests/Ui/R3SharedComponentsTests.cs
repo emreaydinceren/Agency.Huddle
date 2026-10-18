@@ -124,7 +124,7 @@ public sealed class R3SharedComponentsTests
         Assert.Contains("background-color: transparent;", chip, StringComparison.Ordinal); // contains-ok: stylesheet source text
         string set = Rule(css, ".chip-cloud-chip.is-set");
         Assert.Contains("border: 1px solid var(--mud-palette-primary);", set, StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("14%", set, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("background-color: var(--hu-selected-background);", set, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.DoesNotContain("is-quiet", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
