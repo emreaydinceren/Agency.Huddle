@@ -23,4 +23,24 @@ internal sealed record SkinTraits(
     NavStyle Nav = NavStyle.Tint,
     SurfaceStyle Surface = SurfaceStyle.Flat,
     MarkStyle Marks = MarkStyle.Plain,
-    ReadingStyle Reading = ReadingStyle.Plain);
+    ReadingStyle Reading = ReadingStyle.Plain)
+{
+    /// <summary>
+    /// The nine traits as the <c>data-hu-*</c> attributes the layout's Theme marker carries: the attribute name is
+    /// <c>data-hu-</c> plus the trait's lower-case name, the value its kebab-case value name.
+    /// </summary>
+    /// <returns>Attribute name to value, in trait declaration order.</returns>
+    public IReadOnlyDictionary<string, object> ToMarkerAttributes() =>
+        new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["data-hu-message"] = SkinLoader.Kebab(this.Message.ToString()),
+            ["data-hu-send"] = SkinLoader.Kebab(this.Send.ToString()),
+            ["data-hu-status"] = SkinLoader.Kebab(this.Status.ToString()),
+            ["data-hu-labels"] = SkinLoader.Kebab(this.Labels.ToString()),
+            ["data-hu-composer"] = SkinLoader.Kebab(this.Composer.ToString()),
+            ["data-hu-nav"] = SkinLoader.Kebab(this.Nav.ToString()),
+            ["data-hu-surface"] = SkinLoader.Kebab(this.Surface.ToString()),
+            ["data-hu-marks"] = SkinLoader.Kebab(this.Marks.ToString()),
+            ["data-hu-reading"] = SkinLoader.Kebab(this.Reading.ToString()),
+        };
+}

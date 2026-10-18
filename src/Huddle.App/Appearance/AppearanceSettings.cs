@@ -42,8 +42,8 @@ internal sealed record AppearanceSettings(string? ThemeId, string? AccentColorHe
     public static AppearanceSettings Empty { get; } = new((string?)null, (string?)null);
 
     /// <summary>The theme the mode toggle switches to from dark: the stored light choice, or Huddle Light when none is chosen.</summary>
-    public string PreferredLightId => this.LightThemeId ?? Themes.HuddleTheme.LightDescriptor.Id;
+    public string PreferredLightId => this.LightThemeId ?? Themes.HuddleTheme.LightId;
 
     /// <summary>The theme the mode toggle switches to from light: the stored dark choice, or Huddle Dark when none is chosen.</summary>
-    public string PreferredDarkId => this.DarkThemeId ?? Themes.HuddleTheme.DarkDescriptor.Id;
+    public string PreferredDarkId => this.DarkThemeId ?? Themes.HuddleTheme.DarkId;
 }

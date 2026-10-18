@@ -27,7 +27,7 @@ public sealed partial class PackSourceTests
     [Fact]
     public void PacksFolder_HoldsNordicsPack()
     {
-        Assert.True(File.Exists(PackPath(NordicTheme.Pack)), $"Expected {PackPath(NordicTheme.Pack)}.");
+        Assert.True(File.Exists(PackPath("nordic")), $"Expected {PackPath("nordic")}.");
     }
 
     /// <summary>A pack holds no colour literal: every colour is built from a palette variable MudBlazor emits.</summary>

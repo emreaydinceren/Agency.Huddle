@@ -99,7 +99,7 @@ public sealed partial class SkinLoaderTests
     [Fact]
     public void Skins_IncludeCycle_Fails()
     {
-        SkinLoadException exception = Assert.Throws<SkinLoadException>(() => Load(
+        SkinException exception = Assert.Throws<SkinException>(() => Load(
             ("a.json", File("a", "light", 1, "\"include\": \"b.json\"")),
             ("b.json", File("b", "light", 2, "\"include\": \"a.json\""))));
 
@@ -110,7 +110,7 @@ public sealed partial class SkinLoaderTests
     [Fact]
     public void Skins_IncludeMissing_Fails()
     {
-        SkinLoadException exception = Assert.Throws<SkinLoadException>(() => Load(
+        SkinException exception = Assert.Throws<SkinException>(() => Load(
             ("a.json", File("a", "light", 1, "\"include\": \"gone.json\""))));
 
         Assert.Equal("a.json: include 'gone.json' does not exist.", exception.Message);
@@ -136,7 +136,7 @@ public sealed partial class SkinLoaderTests
     [Fact]
     public void Skins_UnknownPaletteKey_Fails()
     {
-        SkinLoadException exception = Assert.Throws<SkinLoadException>(() => Load(
+        SkinException exception = Assert.Throws<SkinException>(() => Load(
             ("a.json", File("a", "light", 1, "\"palette\": { \"hoverOpacity\": \"#112233\" }"))));
 
         Assert.Equal("a.json: palette.hoverOpacity: unknown palette key.", exception.Message);
@@ -146,7 +146,7 @@ public sealed partial class SkinLoaderTests
     [Fact]
     public void Skins_UnknownTokenKey_Fails()
     {
-        SkinLoadException exception = Assert.Throws<SkinLoadException>(() => Load(
+        SkinException exception = Assert.Throws<SkinException>(() => Load(
             ("a.json", File("a", "light", 1, "\"tokens\": { \"no.such.token\": \"palette.surface\" }"))));
 
         Assert.Equal("a.json: tokens.no.such.token: unknown token key.", exception.Message);
@@ -156,9 +156,9 @@ public sealed partial class SkinLoaderTests
     [Fact]
     public void Skins_UnknownTraitValue_Fails()
     {
-        SkinLoadException value = Assert.Throws<SkinLoadException>(() => Load(
+        SkinException value = Assert.Throws<SkinException>(() => Load(
             ("a.json", File("a", "light", 1, "\"traits\": { \"message\": \"row\" }"))));
-        SkinLoadException trait = Assert.Throws<SkinLoadException>(() => Load(
+        SkinException trait = Assert.Throws<SkinException>(() => Load(
             ("a.json", File("a", "light", 1, "\"traits\": { \"typo\": \"bubble\" }"))));
         IReadOnlyList<Skin> fine = Load(("a.json", File("a", "light", 1, "\"traits\": { \"message\": \"Bubble\" }")));
 
@@ -194,7 +194,7 @@ public sealed partial class SkinLoaderTests
     {
         ArgumentNullException.ThrowIfNull(shadows);
 
-        SkinLoadException exception = Assert.Throws<SkinLoadException>(() => Load(("a.json", File("a", "light", 1, shadows))));
+        SkinException exception = Assert.Throws<SkinException>(() => Load(("a.json", File("a", "light", 1, shadows))));
 
         Assert.Equal(message, exception.Message);
     }
@@ -207,7 +207,7 @@ public sealed partial class SkinLoaderTests
     [InlineData("")]
     public void Skins_BadFaceName_Fails(string family)
     {
-        SkinLoadException exception = Assert.Throws<SkinLoadException>(() => Load(
+        SkinException exception = Assert.Throws<SkinException>(() => Load(
             ("a.json", File("a", "light", 1, $"\"faces\": {{ \"read\": [\"{family}\"] }}"))));
 
         Assert.Equal($"a.json: faces.read: '{family}' must match ^[A-Za-z0-9 -]+$.", exception.Message);
@@ -221,17 +221,11 @@ public sealed partial class SkinLoaderTests
     [Theory]
     [InlineData("huddle")]
     [InlineData("huddle-dark")]
-    [InlineData("lumen-light")]
-    [InlineData("lumen-dark")]
-    [InlineData("fluent-light")]
-    [InlineData("fluent-dark")]
-    [InlineData("nordic-light")]
-    [InlineData("nordic-dark")]
-    [InlineData("cobalt-soft-light")]
-    [InlineData("cobalt-soft-dark")]
     public void Skins_MatchLegacyTheme(string id)
     {
-        MudTheme expected = ThemeCatalog.BuiltIn.Single(descriptor => descriptor.Id == id).Theme;
+        bool dark = id == "huddle-dark";
+        MudTheme expected = dark ? ThemeDefaults.CreateDark(HuddleTheme.Dark()) : ThemeDefaults.CreateLight(HuddleTheme.Light());
+        expected.LayoutProperties.DefaultBorderRadius = "8px";
         Skin skin = Assert.Single(SkinLoader.LoadAll(), candidate => candidate.Id == id);
         MudTheme actual = skin.Theme;
 
@@ -245,8 +239,57 @@ public sealed partial class SkinLoaderTests
             Assert.Equal(expected.Shadows.Elevation[i], actual.Shadows.Elevation[i]);
         }
 
-        Assert.Equal(ThemeCatalog.BuiltIn.Single(descriptor => descriptor.Id == id).Pack, skin.Pack);
-        Assert.Equal(ThemeCatalog.BuiltIn.Single(descriptor => descriptor.Id == id).Label, skin.Label);
+        Assert.Null(skin.Pack);
+        Assert.Equal(dark ? "Huddle Dark" : "Huddle Light", skin.Label);
+    }
+
+    /// <summary>Every shipped skin's token overrides are registry keys, and the registry defaults plus those overrides cover every token.</summary>
+    [Fact]
+    public void Skins_MergedSkinIsComplete()
+    {
+        foreach (Skin skin in SkinLoader.LoadAll())
+        {
+            Assert.All(skin.Tokens.Keys, key => Assert.True(SkinTokens.Contains(key), $"{skin.Id}: '{key}' is not a registry token."));
+            Assert.Equal(SkinTokens.All.Count, MergedTokens(skin).Count);
+        }
+    }
+
+    /// <summary>Every merged token value of every shipped skin parses, and every <c>ref()</c> resolves without a cycle.</summary>
+    [Fact]
+    public void Skins_TokenValuesParse()
+    {
+        foreach (Skin skin in SkinLoader.LoadAll())
+        {
+            IReadOnlyDictionary<string, string> merged = MergedTokens(skin);
+            SkinExpression.Validate(merged, skin.Id);
+            foreach (KeyValuePair<string, string> pair in merged)
+            {
+                Assert.NotEmpty(SkinExpression.ToCss(pair.Value, pair.Key, skin.Id));
+            }
+        }
+    }
+
+    /// <summary>A token value outside the grammar fails at load, and the message names the file and the key.</summary>
+    [Fact]
+    public void Skins_BadTokenExpression_FailsNamingFileAndKey()
+    {
+        SkinException exception = Assert.Throws<SkinException>(() => Load(
+            ("a.json", File("a", "light", 1, "\"tokens\": { \"ground.rail\": \"url(x)\" }"))));
+
+        Assert.Matches(@"^a\.json: .*ground\.rail", exception.Message);
+    }
+
+    /// <summary>The registry defaults for <paramref name="skin"/>'s mode with the skin's own overrides applied.</summary>
+    private static Dictionary<string, string> MergedTokens(Skin skin)
+    {
+        Dictionary<string, string> merged = new(StringComparer.Ordinal);
+        foreach (Token token in SkinTokens.All)
+        {
+            string fallback = skin.Mode == ThemeMode.Dark ? token.DarkDefault : token.LightDefault;
+            merged[token.Key] = skin.Tokens.TryGetValue(token.Key, out string? value) ? value : fallback;
+        }
+
+        return merged;
     }
 
     /// <summary>Every family a skin names is on the Google Fonts link in <c>App.razor</c> or is a system face.</summary>

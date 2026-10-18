@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Themes.Skins;
 using MudBlazor;
 
 namespace Agency.Huddle.App.Themes;
@@ -30,6 +31,10 @@ namespace Agency.Huddle.App.Themes;
 /// The picker list this theme appears in. Today it always matches <see cref="Mode"/>; see
 /// <see cref="ThemeGroup"/> for why the two are separate fields.
 /// </param>
+/// <param name="Skin">
+/// The skin whose tokens, faces and traits the layout renders for this theme. The Custom Accent descriptors
+/// carry Huddle's own skin.
+/// </param>
 /// <param name="Pack">
 /// The style pack this theme carries, or <see langword="null"/> for none: the name of one stylesheet under
 /// <c>wwwroot/packs/</c> whose every rule is scoped to <c>:root:has([data-theme-pack="name"])</c>.
@@ -37,4 +42,47 @@ namespace Agency.Huddle.App.Themes;
 /// its theme is selected. See <c>docs/adr/0057-a-theme-may-carry-a-style-pack.md</c>.
 /// </param>
 internal sealed record ThemeDescriptor(
-    string Id, string Label, MudTheme Theme, ThemeMode Mode, ThemeGroup Group, string? Pack = null);
+    string Id, string Label, MudTheme Theme, ThemeMode Mode, ThemeGroup Group, Skin Skin, string? Pack = null)
+{
+    /// <summary>The id of the element <see cref="StyleBlock"/> renders, so a test or a probe can find it.</summary>
+    public const string StyleElementId = "hu-skin";
+
+    /// <summary>
+    /// The skin's <c>&lt;style id="hu-skin"&gt;</c> element as markup, rendered once when the descriptor is built.
+    /// The layout writes it as a <see cref="Microsoft.AspNetCore.Components.MarkupString"/> so the quotes in a font stack
+    /// are not HTML-encoded on prerender.
+    /// </summary>
+    public string StyleBlock { get; } = RenderStyleBlock(Skin);
+
+    /// <summary>The skin's nine traits as the <c>data-hu-*</c> attributes of the layout's Theme marker, built once.</summary>
+    public IReadOnlyDictionary<string, object> TraitAttributes { get; } = Skin.Traits.ToMarkerAttributes();
+
+    /// <summary>Builds the descriptor a skin implies: its theme, mode, the picker group that mode selects, and its pack.</summary>
+    /// <param name="skin">A loaded skin.</param>
+    /// <returns>The descriptor for <paramref name="skin"/>.</returns>
+    public static ThemeDescriptor From(Skin skin)
+    {
+        ArgumentNullException.ThrowIfNull(skin);
+        return new ThemeDescriptor(
+            skin.Id,
+            skin.Label,
+            skin.Theme,
+            skin.Mode,
+            skin.Mode == ThemeMode.Dark ? ThemeGroup.Dark : ThemeGroup.Light,
+            skin,
+            skin.Pack);
+    }
+
+    private static string RenderStyleBlock(Skin skin)
+    {
+        SkinFacesCss faces = new(FontStack(skin.Faces.Read), FontStack(skin.Faces.Mono));
+        string css = SkinCss.Render(skin.Tokens, skin.Mode, skin.Id, faces);
+        return $"<style id=\"{StyleElementId}\">{css}</style>";
+    }
+
+    /// <summary>A CSS font stack for the families, quoting a name that has a space, or <see langword="null"/> for none.</summary>
+    private static string? FontStack(IReadOnlyList<string> families) =>
+        families.Count == 0
+            ? null
+            : string.Join(", ", families.Select(static family => family.Contains(' ', StringComparison.Ordinal) ? $"\"{family}\"" : family));
+}

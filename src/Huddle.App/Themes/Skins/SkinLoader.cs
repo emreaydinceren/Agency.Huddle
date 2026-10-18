@@ -63,7 +63,7 @@ internal static partial class SkinLoader
     /// <summary>Loads skins from in-memory files, for tests.</summary>
     /// <param name="files">File name (such as <c>lumen.light.json</c>) to its JSON text.</param>
     /// <returns>The skins, ordered by <see cref="Skin.Order"/>.</returns>
-    /// <exception cref="SkinLoadException">A file is invalid; the message names the file and key.</exception>
+    /// <exception cref="SkinException">A file is invalid; the message names the file and key.</exception>
     public static IReadOnlyList<Skin> LoadAll(IReadOnlyDictionary<string, string> files)
     {
         ArgumentNullException.ThrowIfNull(files);
@@ -83,7 +83,7 @@ internal static partial class SkinLoader
         IGrouping<string, Skin>? duplicate = skins.GroupBy(static skin => skin.Id, StringComparer.Ordinal).FirstOrDefault(static group => group.Count() > 1);
         if (duplicate is not null)
         {
-            throw new SkinLoadException($"Skin id '{duplicate.Key}' is used by more than one file.");
+            throw new SkinException($"Skin id '{duplicate.Key}' is used by more than one file.");
         }
 
         return [.. skins.OrderBy(static skin => skin.Order)];
@@ -107,7 +107,7 @@ internal static partial class SkinLoader
             }
 
             using Stream stream = assembly.GetManifestResourceStream(resource)
-                ?? throw new SkinLoadException($"{name}: the embedded resource could not be opened.");
+                ?? throw new SkinException($"{name}: the embedded resource could not be opened.");
             using StreamReader reader = new(stream);
             files[name] = reader.ReadToEnd();
         }
@@ -455,6 +455,7 @@ internal static partial class SkinLoader
 
     private static Skin Build(Draft draft)
     {
+        ValidateTokens(draft);
         SkinFaces faces = new(
             draft.Faces.GetValueOrDefault("ui") ?? [],
             draft.Faces.GetValueOrDefault("read") ?? [],
@@ -484,6 +485,31 @@ internal static partial class SkinLoader
             traits,
             draft.Pack,
             BuildTheme(draft));
+    }
+
+    /// <summary>
+    /// Checks the skin's merged token set - the registry defaults for its mode with its overrides applied - against the
+    /// expression grammar, so a bad value fails at load rather than at first render.
+    /// </summary>
+    /// <param name="draft">The merged skin.</param>
+    /// <exception cref="SkinException">A value is invalid; the message names the file, the key and the value.</exception>
+    private static void ValidateTokens(Draft draft)
+    {
+        Dictionary<string, string> merged = new(StringComparer.Ordinal);
+        foreach (Token token in SkinTokens.All)
+        {
+            string fallback = draft.Mode == ThemeMode.Dark ? token.DarkDefault : token.LightDefault;
+            merged[token.Key] = draft.Tokens.GetValueOrDefault(token.Key) ?? fallback;
+        }
+
+        try
+        {
+            SkinExpression.Validate(merged, draft.Id);
+        }
+        catch (SkinException exception)
+        {
+            throw Fail(draft.File, exception.Message);
+        }
     }
 
     private static T Trait<T>(Draft draft, string name, T fallback)
@@ -559,11 +585,11 @@ internal static partial class SkinLoader
         }
     }
 
-    private static string Kebab(string name) =>
+    internal static string Kebab(string name) =>
         string.Concat(name.Select(static (character, index) =>
             char.IsUpper(character) && index > 0 ? "-" + char.ToLowerInvariant(character) : char.ToLowerInvariant(character).ToString()));
 
-    private static SkinLoadException Fail(string file, string message) => new($"{file}: {message}");
+    private static SkinException Fail(string file, string message) => new($"{file}: {message}");
 
     [GeneratedRegex("^[A-Za-z0-9 -]+$", RegexOptions.CultureInvariant)]
     private static partial Regex FaceNamePattern();

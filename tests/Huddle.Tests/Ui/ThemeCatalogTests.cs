@@ -1,7 +1,9 @@
 using System.Reflection;
+using System.Text.RegularExpressions;
 using MudBlazor;
 using MudBlazor.Utilities;
 using Agency.Huddle.App.Themes;
+using Agency.Huddle.App.Themes.Skins;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -411,10 +413,86 @@ public sealed class ThemeCatalogTests
     [Fact]
     public void Nordic_SurfaceIsRaisedPaper_BackgroundIsTheGround()
     {
-        Assert.Equal("#ffffff", NordicTheme.Light().Surface.ToString(MudColorOutputFormats.Hex));
-        Assert.Equal("#f6f6f1", NordicTheme.Light().Background.ToString(MudColorOutputFormats.Hex));
-        Assert.Equal("#1c2125", NordicTheme.Dark().Surface.ToString(MudColorOutputFormats.Hex));
-        Assert.Equal("#161a1d", NordicTheme.Dark().Background.ToString(MudColorOutputFormats.Hex));
+        Palette light = ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == "nordic-light").Theme.PaletteLight;
+        Palette dark = ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == "nordic-dark").Theme.PaletteDark;
+        Assert.Equal("#ffffff", light.Surface.ToString(MudColorOutputFormats.Hex));
+        Assert.Equal("#f6f6f1", light.Background.ToString(MudColorOutputFormats.Hex));
+        Assert.Equal("#1c2125", dark.Surface.ToString(MudColorOutputFormats.Hex));
+        Assert.Equal("#161a1d", dark.Background.ToString(MudColorOutputFormats.Hex));
+    }
+
+    /// <summary>The picker order is the twelve ids the catalog has always had: Huddle, the Custom Accent pair, then Lumen, Fluent, Nordic and Cobalt Soft.</summary>
+    [Fact]
+    public void Catalog_OrderUnchanged()
+    {
+        string[] expected =
+        [
+            "huddle", "huddle-dark", "custom-accent", "custom-accent-dark",
+            "lumen-light", "lumen-dark", "fluent-light", "fluent-dark",
+            "nordic-light", "nordic-dark", "cobalt-soft-light", "cobalt-soft-dark",
+        ];
+
+        Assert.Equal(expected, ThemeCatalog.BuiltIn.Select(static descriptor => descriptor.Id).ToArray());
+    }
+
+    /// <summary>The two Custom Accent descriptors wear Huddle's own skin, so their style block is Huddle's.</summary>
+    [Fact]
+    public void Catalog_AccentCarriesHuddleSkin()
+    {
+        ThemeDescriptor huddle = ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == "huddle");
+        ThemeDescriptor huddleDark = ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == "huddle-dark");
+
+        Assert.Equal("huddle", AccentTheme.LightDescriptor.Skin.Id);
+        Assert.Equal("huddle-dark", AccentTheme.DarkDescriptor.Skin.Id);
+        Assert.Equal(huddle.StyleBlock, AccentTheme.LightDescriptor.StyleBlock);
+        Assert.Equal(huddleDark.StyleBlock, AccentTheme.DarkDescriptor.StyleBlock);
+    }
+
+    /// <summary>A descriptor renders its style once: two reads return the same string instance, which wraps the skin's CSS in the <c>hu-skin</c> element.</summary>
+    [Fact]
+    public void Descriptor_StyleIsRenderedOnce()
+    {
+        ThemeDescriptor descriptor = ThemeCatalog.BuiltIn[0];
+
+        Assert.Same(descriptor.StyleBlock, descriptor.StyleBlock);
+        Assert.Matches(@"^<style id=""hu-skin"">:root\{.*\}</style>$", descriptor.StyleBlock);
+    }
+
+    /// <summary>A skin that overrides a token renders a different block from one that does not, so a Theme change that swaps skins swaps the CSS.</summary>
+    [Fact]
+    public void Descriptor_TokenOverride_ChangesStyleBlock()
+    {
+        const string plain = """{ "id": "t", "label": "T", "mode": "light", "order": 1 }""";
+        const string tinted = """{ "id": "t", "label": "T", "mode": "light", "order": 1, "tokens": { "ground.rail": "#112233" } }""";
+
+        ThemeDescriptor first = ThemeDescriptor.From(Assert.Single(SkinLoader.LoadAll(new Dictionary<string, string>(StringComparer.Ordinal) { ["t.json"] = plain })));
+        ThemeDescriptor second = ThemeDescriptor.From(Assert.Single(SkinLoader.LoadAll(new Dictionary<string, string>(StringComparer.Ordinal) { ["t.json"] = tinted })));
+
+        Assert.NotEqual(first.StyleBlock, second.StyleBlock);
+    }
+
+    /// <summary>A skin that names read and mono faces gets them as quoted CSS stacks in its style block: names with a space are quoted, generic keywords are not.</summary>
+    [Fact]
+    public void Descriptor_FaceStacksAreQuoted()
+    {
+        const string json = """
+            { "id": "t", "label": "T", "mode": "light", "order": 1,
+              "faces": { "read": [ "Source Serif 4", "Georgia", "serif" ], "mono": [ "JetBrains Mono", "monospace" ] } }
+            """;
+        Skin skin = Assert.Single(SkinLoader.LoadAll(new Dictionary<string, string>(StringComparer.Ordinal) { ["t.json"] = json }));
+
+        ThemeDescriptor descriptor = ThemeDescriptor.From(skin);
+
+        Assert.Matches(Regex.Escape("--font-read:\"Source Serif 4\", Georgia, serif;"), descriptor.StyleBlock);
+        Assert.Matches(Regex.Escape("--font-mono:\"JetBrains Mono\", monospace;"), descriptor.StyleBlock);
+    }
+
+    /// <summary>A skin that names no read or mono face declares neither, so <c>app-vars.css</c> stays the fallback.</summary>
+    [Fact]
+    public void Descriptor_NoFaces_DeclaresNoFontVariables()
+    {
+        Assert.DoesNotContain("--font-read", ThemeCatalog.BuiltIn[0].StyleBlock, StringComparison.Ordinal);
+        Assert.DoesNotContain("--font-mono", ThemeCatalog.BuiltIn[0].StyleBlock, StringComparison.Ordinal);
     }
 
     /// <summary>Every authored theme id: the two Huddle themes and the eight mapped from the mockup sets.</summary>

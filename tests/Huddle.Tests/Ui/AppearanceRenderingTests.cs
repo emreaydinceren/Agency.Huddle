@@ -1,6 +1,11 @@
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
+using System.Text.RegularExpressions;
 using AngleSharp.Html.Parser;
+using Agency.Huddle.App.Appearance;
+using Agency.Huddle.App.Themes;
+using Agency.Huddle.App.Themes.Skins;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -196,5 +201,97 @@ public sealed class AppearanceRenderingTests
         IElement marker = Assert.Single(page.QuerySelectorAll("span.theme-marker"));
         Assert.Equal("huddle", marker.GetAttribute("data-huddle-theme"));
         Assert.False(marker.HasAttribute("data-theme-pack"));
+    }
+
+    /// <summary>Extracts the raw content of the skin style block from a prerendered response, or fails when there is not exactly one.</summary>
+    /// <param name="html">The response body.</param>
+    private static string SkinStyleOf(string html)
+    {
+        MatchCollection blocks = Regex.Matches(html, "<style id=\"hu-skin\">(?<css>.*?)</style>", RegexOptions.Singleline | RegexOptions.CultureInvariant);
+        return Assert.Single(blocks).Groups["css"].Value;
+    }
+
+    /// <summary>
+    /// The layout prerenders the skin as one raw <c>&lt;style id="hu-skin"&gt;</c> block (C10): every registry token is
+    /// declared, and nothing in it is HTML-encoded, so the quotes in a font stack survive the prerender.
+    /// </summary>
+    [Fact]
+    public async Task AppShell_RendersSkinStyleBlock()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        using HttpClient client = factory.CreateClient();
+
+        string html = await client.GetStringAsync("/", ct);
+        string css = SkinStyleOf(html);
+
+        Assert.Matches(@"^:root\{.*\}$", css);
+        foreach (Token token in SkinTokens.All)
+        {
+            Assert.Matches(Regex.Escape(token.CssName) + ":", css);
+        }
+
+        Assert.DoesNotContain("&quot;", css, StringComparison.Ordinal);
+        Assert.DoesNotContain("&amp;", css, StringComparison.Ordinal);
+        Assert.DoesNotContain("&#", css, StringComparison.Ordinal);
+    }
+
+    /// <summary>The marker carries the nine structural traits as <c>data-hu-*</c> attributes, at the defaults every shipped skin has today.</summary>
+    [Fact]
+    public async Task AppShell_MarkerCarriesNineTraitAttributes()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        using HttpClient client = factory.CreateClient();
+
+        string html = await client.GetStringAsync("/", ct);
+        IHtmlDocument page = new HtmlParser().ParseDocument(html);
+
+        IElement marker = Assert.Single(page.QuerySelectorAll("span.theme-marker"));
+        Dictionary<string, string> expected = new(StringComparer.Ordinal)
+        {
+            ["data-hu-message"] = "bubble",
+            ["data-hu-send"] = "icon",
+            ["data-hu-status"] = "chip",
+            ["data-hu-labels"] = "sentence",
+            ["data-hu-composer"] = "box",
+            ["data-hu-nav"] = "tint",
+            ["data-hu-surface"] = "flat",
+            ["data-hu-marks"] = "plain",
+            ["data-hu-reading"] = "plain",
+        };
+        Assert.Equal(expected.Count, marker.Attributes.Count(static attribute => attribute.Name.StartsWith("data-hu-", StringComparison.Ordinal)));
+        foreach (KeyValuePair<string, string> pair in expected)
+        {
+            Assert.Equal(pair.Value, marker.GetAttribute(pair.Key));
+        }
+    }
+
+    /// <summary>
+    /// Switching the Theme through the appearance store re-renders the skin block from the newly selected descriptor: still
+    /// exactly one block, and byte-for-byte that descriptor's own. (Every shipped skin overrides no token yet, so two Themes'
+    /// blocks are equal today; <c>Descriptor_TokenOverride_ChangesStyleBlock</c> pins that an override changes the block.)
+    /// </summary>
+    [Fact]
+    public async Task AppShell_ThemeChange_ReplacesStyleBlock()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        using HttpClient client = factory.CreateClient();
+
+        _ = SkinStyleOf(await client.GetStringAsync("/", ct));
+        factory.Services.GetRequiredService<AppearanceStore>().Save("nordic-dark");
+        string html = await client.GetStringAsync("/", ct);
+        string after = SkinStyleOf(html);
+
+        ThemeDescriptor nordicDark = ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == "nordic-dark");
+        Assert.Equal(nordicDark.StyleBlock, $"<style id=\"hu-skin\">{after}</style>");
+        Assert.Equal("nordic-dark", new HtmlParser().ParseDocument(html).QuerySelector("span.theme-marker")?.GetAttribute("data-huddle-theme"));
     }
 }

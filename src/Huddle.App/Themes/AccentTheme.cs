@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Themes.Skins;
 using MudBlazor;
 using MudBlazor.Utilities;
 
@@ -79,7 +80,8 @@ internal static class AccentTheme
         Label: "Custom Accent Light",
         Theme: ThemeDefaults.CreateLight(HuddleTheme.Light()),
         Mode: ThemeMode.Light,
-        Group: ThemeGroup.Light);
+        Group: ThemeGroup.Light,
+        Skin: HuddleSkin(HuddleTheme.LightId));
 
     /// <summary>Custom Accent Dark's descriptor. <see cref="ThemeDescriptor.Theme"/> is a placeholder - see the type's remarks.</summary>
     public static ThemeDescriptor DarkDescriptor { get; } = new(
@@ -87,5 +89,12 @@ internal static class AccentTheme
         Label: "Custom Accent Dark",
         Theme: ThemeDefaults.CreateDark(HuddleTheme.Dark()),
         Mode: ThemeMode.Dark,
-        Group: ThemeGroup.Dark);
+        Group: ThemeGroup.Dark,
+        Skin: HuddleSkin(HuddleTheme.DarkId));
+
+    /// <summary>Huddle's own skin of the given id: the Custom Accent descriptors change a Primary colour, nothing else.</summary>
+    /// <param name="id">A Huddle skin id.</param>
+    /// <returns>The loaded skin.</returns>
+    private static Skin HuddleSkin(string id) =>
+        SkinLoader.LoadAll().Single(skin => string.Equals(skin.Id, id, StringComparison.Ordinal));
 }

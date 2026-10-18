@@ -8,12 +8,10 @@ namespace Agency.Huddle.App.Themes;
 /// CSS <c>light-dark()</c> pairs.
 /// </summary>
 /// <remarks>
-/// Both palettes here are authored, which makes this the one file in <c>Themes/</c> that yields two
-/// catalog entries — <see cref="LightDescriptor"/> and <see cref="DarkDescriptor"/> — rather than
-/// one. A theme in this catalog is a single palette
-/// (<c>docs/adr/0017-a-theme-is-a-palette-not-a-pair.md</c>), so two palettes are two themes; the
-/// alternative would have been to leave the dark palette unreachable, and it is the more carefully
-/// measured of the two.
+/// Both palettes here are authored, which makes Huddle two catalog entries (<see cref="LightId"/> and
+/// <see cref="DarkId"/>) rather than one. A theme in this catalog is a single palette
+/// (<c>docs/adr/0017-a-theme-is-a-palette-not-a-pair.md</c>), so two palettes are two themes. The catalog
+/// entries come from the skin files; this class stays because <see cref="AccentTheme"/> builds from these palettes.
 /// </remarks>
 internal static class HuddleTheme
 {
@@ -128,35 +126,12 @@ internal static class HuddleTheme
     };
 
     /// <summary>
-    /// Huddle Light's descriptor, and the catalog's default theme. Its id stays the bare
-    /// <c>"huddle"</c> the catalog has always used, so an <c>appearance.json</c> written before this
-    /// theme was split in two still resolves to exactly the palette it resolved to then.
+    /// Huddle Light's theme id, and the catalog's default theme. It stays the bare <c>"huddle"</c> the catalog has always
+    /// used, so an <c>appearance.json</c> written before this theme was split in two still resolves to the same palette.
+    /// The descriptor itself is built from <c>Themes/Skins/huddle.light.json</c>.
     /// </summary>
-    public static ThemeDescriptor LightDescriptor { get; } = new(
-        Id: "huddle",
-        Label: "Huddle Light",
-        Theme: WithSoftCorners(ThemeDefaults.CreateLight(Light())),
-        Mode: ThemeMode.Light,
-        Group: ThemeGroup.Light);
+    public const string LightId = "huddle";
 
-    /// <summary>
-    /// Rounds both Huddle themes' corners to 8px, up from MudBlazor's 4px default, to match the
-    /// soft chips and inputs their palettes were sampled from. <c>app.css</c> reads the same value
-    /// through <c>--mud-default-borderradius</c>, so every other theme keeps its 4px corners.
-    /// </summary>
-    /// <param name="theme">A Huddle theme, freshly built.</param>
-    /// <returns><paramref name="theme"/>, with its default border radius set.</returns>
-    private static MudTheme WithSoftCorners(MudTheme theme)
-    {
-        theme.LayoutProperties.DefaultBorderRadius = "8px";
-        return theme;
-    }
-
-    /// <summary>Huddle Dark's descriptor - the same application colours, authored for a dark ground.</summary>
-    public static ThemeDescriptor DarkDescriptor { get; } = new(
-        Id: "huddle-dark",
-        Label: "Huddle Dark",
-        Theme: WithSoftCorners(ThemeDefaults.CreateDark(Dark())),
-        Mode: ThemeMode.Dark,
-        Group: ThemeGroup.Dark);
+    /// <summary>Huddle Dark's theme id - the same application colours, authored for a dark ground.</summary>
+    public const string DarkId = "huddle-dark";
 }

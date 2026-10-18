@@ -1,3 +1,5 @@
+using Agency.Huddle.App.Themes.Skins;
+
 namespace Agency.Huddle.App.Themes;
 
 /// <summary>
@@ -16,7 +18,7 @@ internal static class ThemeCatalog
     /// Every theme built into this application. Each carries exactly one palette and the
     /// <see cref="ThemeMode"/> naming it, so selecting a theme selects light or dark with it
     /// (<c>docs/adr/0017-a-theme-is-a-palette-not-a-pair.md</c>).
-    /// <see cref="HuddleTheme.LightDescriptor"/> is deliberately first: three call sites read
+    /// Huddle Light (<see cref="HuddleTheme.LightId"/>) is deliberately first: three call sites read
     /// <c>BuiltIn[0]</c> to mean "the default theme" — <c>MainLayout</c>'s field initialiser, its
     /// <c>FindDescriptor</c> fallback for an id that names nothing, and the Appearance tab's
     /// <c>SelectedThemeId</c> — so an insertion must never go before it.
@@ -28,25 +30,33 @@ internal static class ThemeCatalog
     /// <c>BuiltIn[0]</c>. The order here is the authoring order: this application's own two themes,
     /// then <see cref="AccentTheme"/>'s two - Primary is a Human-picked colour rather than
     /// hand-tuned, but otherwise Huddle's own neutrals - then the four authored pairs mapped from the
-    /// approved mockup directions (<see cref="LumenTheme"/>, <see cref="FluentTheme"/>,
-    /// <see cref="NordicTheme"/> and <see cref="CobaltSoftTheme"/>).
+    /// approved mockup directions (Lumen, Fluent, Nordic and Cobalt Soft). Every entry but the Custom Accent pair is
+    /// built from a skin file under <c>Themes/Skins/</c>, in that file's <c>order</c>.
     /// </para>
     /// </remarks>
-    public static IReadOnlyList<ThemeDescriptor> BuiltIn { get; } =
-    [
-        HuddleTheme.LightDescriptor,
-        HuddleTheme.DarkDescriptor,
-        AccentTheme.LightDescriptor,
-        AccentTheme.DarkDescriptor,
-        LumenTheme.LightDescriptor,
-        LumenTheme.DarkDescriptor,
-        FluentTheme.LightDescriptor,
-        FluentTheme.DarkDescriptor,
-        NordicTheme.LightDescriptor,
-        NordicTheme.DarkDescriptor,
-        CobaltSoftTheme.LightDescriptor,
-        CobaltSoftTheme.DarkDescriptor,
-    ];
+    public static IReadOnlyList<ThemeDescriptor> BuiltIn { get; } = BuildBuiltIn();
+
+    /// <summary>
+    /// Builds <see cref="BuiltIn"/>: one descriptor per skin file in the skins' own <c>order</c>, with the two Custom
+    /// Accent descriptors - which have no file of their own - slotted in at orders 30 and 40, between Huddle (10, 20) and
+    /// Lumen (50, 60).
+    /// </summary>
+    private static List<ThemeDescriptor> BuildBuiltIn()
+    {
+        List<(int Order, ThemeDescriptor Descriptor)> entries =
+        [
+            .. SkinLoader.LoadAll().Select(static skin => (skin.Order, ThemeDescriptor.From(skin))),
+            (AccentLightOrder, AccentTheme.LightDescriptor),
+            (AccentDarkOrder, AccentTheme.DarkDescriptor),
+        ];
+        return [.. entries.OrderBy(static entry => entry.Order).Select(static entry => entry.Descriptor)];
+    }
+
+    /// <summary>Where Custom Accent Light sorts among the skins' <c>order</c> values.</summary>
+    private const int AccentLightOrder = 30;
+
+    /// <summary>Where Custom Accent Dark sorts among the skins' <c>order</c> values.</summary>
+    private const int AccentDarkOrder = 40;
 
     /// <summary>
     /// <see cref="BuiltIn"/> arranged for the picker: one entry per <see cref="ThemeGroup"/>, in
