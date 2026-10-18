@@ -5,6 +5,10 @@ date: 2026-10-08
 
 # Imported skills are pinned by commit and hash
 
+> **Partly superseded by [ADR-0058](0058-skills-and-packs-are-fetched-by-the-humans-ai-tool.md):** pinning,
+> hashing and the review checks stay; the download goes. The Human's AI tool fetches, and Huddle follows local
+> pointers.
+
 A Skill can be imported from a public GitHub repository, from the built-in catalog or from a
 URL the Human pastes. The import is pinned to one **commit**, the files are recorded by a
 **SHA-256 hash** in a `.source.json` beside them, and the Human sees what the Skill contains
