@@ -1,7 +1,7 @@
-using Agency.Huddle.App.Skills;
+using Agency.Huddle.SkillPacks.Folders;
 using System.Text;
 
-namespace Agency.Huddle.Tests.Skills;
+namespace Agency.Huddle.Tests.SkillPacks.Folders;
 
 /// <summary>
 /// Pins the stable skill-folder hash (SK-7, SK-9, NF-4): order independence, sensitivity to names and bytes,
@@ -106,6 +106,24 @@ public sealed class SkillFolderHashTests
         };
 
         Assert.Equal(SkillFolderHash.Compute(files), SkillFolderHash.ComputeFolder(folder));
+    }
+
+    /// <summary>A <c>.git</c> folder inside the Skill, as when the Skill is the root of its own clone, does not change the hash.</summary>
+    [Fact]
+    public void ComputeFolder_GitFolder_IsIgnored()
+    {
+        using TempDataDir dir = new();
+        string folder = Path.Combine(dir.Path, "skill");
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, "SKILL.md"), "a");
+        string before = SkillFolderHash.ComputeFolder(folder);
+        Directory.CreateDirectory(Path.Combine(folder, ".git", "objects"));
+        File.WriteAllText(Path.Combine(folder, ".git", "HEAD"), "ref: refs/heads/main");
+        File.WriteAllText(Path.Combine(folder, ".git", "objects", "ab"), "blob");
+
+        string after = SkillFolderHash.ComputeFolder(folder);
+
+        Assert.Equal(before, after);
     }
 
     /// <summary>A fixed input hashes to a fixed lowercase hex string, pinning the algorithm.</summary>

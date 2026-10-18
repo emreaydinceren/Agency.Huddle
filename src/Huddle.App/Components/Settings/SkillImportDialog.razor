@@ -9,6 +9,7 @@
 *@
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Skills
+@using Agency.Huddle.SkillPacks.Folders
 
 @implements IDisposable
 
@@ -39,7 +40,7 @@
                         <div class="skill-import-result">
                             <div>
                                 <MudText Typo="Typo.body2" Class="skill-import-result-name">@SkillNames.Display(entry.Name)</MudText>
-                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@entry.Publisher · @entry.Category</MudText>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@entry.Publisher ï¿½ @entry.Category</MudText>
                             </div>
                             <MudButton Variant="Variant.Text" Size="Size.Small" Class="skill-import-pick" Disabled="@this.busy"
                                        OnClick="@(() => this.ReviewCatalogAsync(entry))">Review</MudButton>

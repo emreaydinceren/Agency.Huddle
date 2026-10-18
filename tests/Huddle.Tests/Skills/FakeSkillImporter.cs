@@ -1,3 +1,4 @@
+using Agency.Huddle.SkillPacks.Folders;
 using Agency.Huddle.App.Skills;
 
 namespace Agency.Huddle.Tests.Skills;

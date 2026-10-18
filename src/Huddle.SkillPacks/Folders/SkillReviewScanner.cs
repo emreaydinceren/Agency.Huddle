@@ -1,9 +1,9 @@
 using System.Text;
 
-namespace Agency.Huddle.App.Skills;
+namespace Agency.Huddle.SkillPacks.Folders;
 
 /// <summary>The kind of thing a review flag points at.</summary>
-internal enum ReviewFlagKind
+public enum ReviewFlagKind
 {
     /// <summary>A script or executable file.</summary>
     Script,
@@ -26,14 +26,14 @@ internal enum ReviewFlagKind
 /// <param name="File">Path relative to the skill folder, or <c>.</c> for the skill as a whole.</param>
 /// <param name="Line">One-based line number.</param>
 /// <param name="Excerpt">The offending text, at most 120 characters.</param>
-internal sealed record ReviewFlag(ReviewFlagKind Kind, string File, int Line, string Excerpt);
+public sealed record ReviewFlag(ReviewFlagKind Kind, string File, int Line, string Excerpt);
 
 /// <summary>
 /// Scans a downloaded skill folder for things a user should look at before installing it: scripts,
 /// shell commands, network calls, paths outside the Work Dir and a missing license (SK-6, NF-4, D5).
 /// It only warns; it never blocks.
 /// </summary>
-internal static class SkillReviewScanner
+public static class SkillReviewScanner
 {
     private const int MaxExcerpt = 120;
 

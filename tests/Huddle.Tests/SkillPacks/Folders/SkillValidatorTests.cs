@@ -1,6 +1,6 @@
 using Agency.Huddle.App.Skills;
 
-namespace Agency.Huddle.Tests.Skills;
+namespace Agency.Huddle.Tests.SkillPacks.Folders;
 
 /// <summary>
 /// Pins Spec §8.1 (validating a Skill) against the Spec §7.2 <c>SKILL.md</c> frontmatter schema.

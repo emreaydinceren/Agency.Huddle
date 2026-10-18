@@ -1,13 +1,13 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Agency.Huddle.App.Skills;
+namespace Agency.Huddle.SkillPacks.Folders;
 
 /// <summary>
 /// Computes the stable SHA-256 of a skill folder recorded in <c>.source.json</c> and compared to detect
 /// "modified locally" (SK-7, SK-9, NF-4).
 /// </summary>
-internal static class SkillFolderHash
+public static class SkillFolderHash
 {
     private const string SourceFileName = ".source.json";
 
@@ -25,7 +25,7 @@ internal static class SkillFolderHash
         ArgumentNullException.ThrowIfNull(files);
 
         using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        foreach (string path in files.Keys.Where(static key => !string.Equals(key, SourceFileName, StringComparison.Ordinal)).Order(StringComparer.Ordinal))
+        foreach (string path in files.Keys.Where(static key => !string.Equals(key, SourceFileName, StringComparison.Ordinal) && !IsInGitFolder(key)).Order(StringComparer.Ordinal))
         {
             byte[] content = Normalize(path, files[path]);
             hash.AppendData(Encoding.UTF8.GetBytes(path));
@@ -45,14 +45,36 @@ internal static class SkillFolderHash
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(folder);
 
+        return ComputeFolder(PhysicalFileReader.Instance, folder);
+    }
+
+    /// <summary>Reads every file under <paramref name="folder"/> through <paramref name="reader"/>, skipping any
+    /// <c>.git</c> folder, and hashes it with <see cref="Compute"/>.</summary>
+    /// <param name="reader">The reader the caller uses for the rest of its work.</param>
+    /// <param name="folder">The skill folder.</param>
+    /// <returns>The lowercase hex SHA-256.</returns>
+    public static string ComputeFolder(IFileReader reader, string folder)
+    {
+        ArgumentNullException.ThrowIfNull(reader);
+        ArgumentException.ThrowIfNullOrWhiteSpace(folder);
+
         Dictionary<string, byte[]> files = new(StringComparer.Ordinal);
-        foreach (string file in Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories))
+        foreach (string file in reader.EnumerateFiles(folder, recursive: true))
         {
             string relative = Path.GetRelativePath(folder, file).Replace('\\', '/');
-            files[relative] = File.ReadAllBytes(file);
+            if (!IsInGitFolder(relative))
+            {
+                files[relative] = reader.ReadAllBytes(file);
+            }
         }
 
         return Compute(files);
+    }
+
+    /// <summary>Whether a relative path lies in a <c>.git</c> folder, for a Skill that is the root of its own clone.</summary>
+    private static bool IsInGitFolder(string relative)
+    {
+        return relative.StartsWith(".git/", StringComparison.Ordinal) || relative.Contains("/.git/", StringComparison.Ordinal);
     }
 
     private static byte[] Normalize(string path, byte[] content)

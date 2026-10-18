@@ -1,7 +1,7 @@
-using Agency.Huddle.App.Skills;
+using Agency.Huddle.SkillPacks.Folders;
 using System.Text;
 
-namespace Agency.Huddle.Tests.Skills;
+namespace Agency.Huddle.Tests.SkillPacks.Folders;
 
 /// <summary>
 /// Pins the pre-install review scanner (SK-6, NF-4, D5): one flag per kind, prose links left alone,
