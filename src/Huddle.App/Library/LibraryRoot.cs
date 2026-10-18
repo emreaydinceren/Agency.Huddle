@@ -5,4 +5,5 @@ namespace Agency.Huddle.App.Library;
 /// <param name="DisplayName">The display name shown in the UI.</param>
 /// <param name="FullPath">The absolute file system path.</param>
 /// <param name="Kind">The root kind: Teams, Teammates, or Pinned.</param>
-public sealed record LibraryRoot(string Id, string DisplayName, string FullPath, LibraryRootKind Kind);
+/// <param name="ReadOnly">True for a root the Human can read and search but not change: the Skill Sources folder (Skill Packs spec §6.11).</param>
+public sealed record LibraryRoot(string Id, string DisplayName, string FullPath, LibraryRootKind Kind, bool ReadOnly = false);

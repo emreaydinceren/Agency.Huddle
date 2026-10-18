@@ -92,7 +92,7 @@ public sealed class LibraryRootStoreTests
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
 
-        var pinned = store.Roots[3];
+        var pinned = store.Roots[4];
         Assert.Equal("huddle-docs", pinned.Id);
         Assert.Equal(LibraryRootKind.Pinned, pinned.Kind);
         Assert.Equal(Path.GetFullPath(docsPath), pinned.FullPath);
@@ -113,7 +113,7 @@ public sealed class LibraryRootStoreTests
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
 
-        Assert.Equal(Path.GetFullPath("Docs", dataDir.Path), store.Roots[3].FullPath);
+        Assert.Equal(Path.GetFullPath("Docs", dataDir.Path), store.Roots[4].FullPath);
     }
 
     /// <summary>A trailing directory separator on a pinned path is trimmed from the resolved root (corrections-B3 item 3).</summary>
@@ -132,7 +132,7 @@ public sealed class LibraryRootStoreTests
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
 
-        Assert.Equal(Path.GetFullPath(docsPath), store.Roots[3].FullPath);
+        Assert.Equal(Path.GetFullPath(docsPath), store.Roots[4].FullPath);
     }
 
     /// <summary>A blank pinned path is skipped rather than crashing startup, and a warning is logged (corrections-B3 item 4).</summary>

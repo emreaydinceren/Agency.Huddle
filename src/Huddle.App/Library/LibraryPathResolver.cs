@@ -61,7 +61,7 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
         string normalized = relativePath.Replace('\\', '/');
         if (normalized.Length == 0)
         {
-            path = new LibraryPath(root, string.Empty, root.FullPath, LibraryNodeRole.Root);
+            path = new LibraryPath(root, string.Empty, root.FullPath, LibraryNodeRole.Root, this.IsReadOnly(root, root.FullPath));
             return true;
         }
 
@@ -86,7 +86,7 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
             return false;
         }
 
-        path = new LibraryPath(root, normalized, current, role);
+        path = new LibraryPath(root, normalized, current, role, this.IsReadOnly(root, current));
         return true;
     }
 
@@ -136,7 +136,7 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
         }
 
         string relativePath = parent.RelativePath.Length == 0 ? name : $"{parent.RelativePath}/{name}";
-        path = new LibraryPath(parent.Root, relativePath, current, role);
+        path = new LibraryPath(parent.Root, relativePath, current, role, parent.ReadOnly || this.IsReadOnly(parent.Root, current));
         return true;
     }
 
@@ -238,6 +238,30 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
         folder = resolved;
         error = null;
         return true;
+    }
+
+    /// <summary>
+    /// Whether a resolved location is read only (Skill Packs spec §6.11.1): its root is, or the location equals or lies
+    /// under any read-only root, so a pinned root or a link that reaches into the Skill Sources folder is read only too.
+    /// </summary>
+    internal bool IsReadOnly(LibraryRoot root, string resolvedFullPath)
+    {
+        ArgumentNullException.ThrowIfNull(root);
+        ArgumentNullException.ThrowIfNull(resolvedFullPath);
+        if (root.ReadOnly)
+        {
+            return true;
+        }
+
+        foreach (LibraryRoot candidate in this.roots.Roots)
+        {
+            if (candidate.ReadOnly && (PathEquals(resolvedFullPath, candidate.FullPath) || HasPrefix(resolvedFullPath, candidate.FullPath + Path.DirectorySeparatorChar)))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Finds a root by id (<see cref="LibraryRoot.Id"/>), compared with <see cref="StringComparer.Ordinal"/> (Spec §6.1 step 1).</summary>

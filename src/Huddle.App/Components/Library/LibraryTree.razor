@@ -546,6 +546,11 @@
     /// offered. <see langword="null"/> when the node can be changed.</summary>
     private static string? NoteFor(LibraryPath path, LibraryPath? scope)
     {
+        if (path.ReadOnly)
+        {
+            return LibraryPath.ReadOnlyReason;
+        }
+
         LibraryProtection protection = LibraryProtection.For(path, scope);
         return protection.CanRename && protection.CanMove && protection.CanDelete
             ? null
@@ -558,11 +563,15 @@
     {
         LibraryProtection protection = LibraryProtection.For(path, scope);
 
-        List<MenuAction> actions =
-        [
-            new(LibraryTreeActionKind.NewNote, "New note…", Icons.Material.Outlined.NoteAdd, false),
-            new(LibraryTreeActionKind.NewFolder, "New folder…", Icons.Material.Outlined.CreateNewFolder, false),
-        ];
+        // A read-only node (the Skill Sources folder, Skill Packs spec §6.11.3) offers nothing that writes: no New note
+        // or New folder either, only Copy path and whatever reads.
+        List<MenuAction> actions = path.ReadOnly
+            ? []
+            :
+            [
+                new(LibraryTreeActionKind.NewNote, "New note…", Icons.Material.Outlined.NoteAdd, false),
+                new(LibraryTreeActionKind.NewFolder, "New folder…", Icons.Material.Outlined.CreateNewFolder, false),
+            ];
 
         if (path.Role == LibraryNodeRole.TeamFolder)
         {

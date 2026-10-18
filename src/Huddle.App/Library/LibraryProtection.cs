@@ -20,6 +20,11 @@ internal sealed record LibraryProtection(bool CanRename, bool CanMove, bool CanD
     {
         ArgumentNullException.ThrowIfNull(path);
 
+        if (path.ReadOnly)
+        {
+            return new LibraryProtection(false, false, false, LibraryPath.ReadOnlyReason);
+        }
+
         // Check if this path equals the scope (UI-only protection). Compare using FolderSnapshot.PathComparer.
         if (scope is not null && PathEquals(path, scope))
         {

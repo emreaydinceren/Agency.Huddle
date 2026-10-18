@@ -548,7 +548,7 @@ internal sealed class LibraryFileService(
                 return new LibraryDocumentContent(fresh, kind, null, null, false, UnsupportedTextFormatReason, length, lastWriteUtc);
             }
 
-            bool editable = kind == LibraryFileKind.Markdown;
+            bool editable = kind == LibraryFileKind.Markdown && !fresh.ReadOnly;
             return new LibraryDocumentContent(fresh, kind, text, format, editable, null, length, lastWriteUtc);
         }
     }
@@ -647,6 +647,11 @@ internal sealed class LibraryFileService(
             return new LibraryResult<LibraryEntry>(null, resolveError);
         }
 
+        if (fresh.ReadOnly)
+        {
+            return new LibraryResult<LibraryEntry>(null, LibraryPath.ReadOnlyReason);
+        }
+
         string fileName = Path.GetFileName(fresh.FullPath);
 
         if (!File.Exists(fresh.FullPath))
@@ -731,6 +736,11 @@ internal sealed class LibraryFileService(
             return new LibraryResult<LibraryPath>(null, resolveError);
         }
 
+        if (fresh.ReadOnly)
+        {
+            return new LibraryResult<LibraryPath>(null, LibraryPath.ReadOnlyReason);
+        }
+
         string finalName = LibraryFileKinds.HasKnownExtension(name) ? name : name + DefaultNoteExtension;
 
         string? teammatesError = TeammatesDestinationRefusal(fresh, finalName);
@@ -789,6 +799,11 @@ internal sealed class LibraryFileService(
             return Task.FromResult(new LibraryResult<LibraryPath>(null, resolveError));
         }
 
+        if (fresh.ReadOnly)
+        {
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, LibraryPath.ReadOnlyReason));
+        }
+
         string? teammatesError = TeammatesDestinationRefusal(fresh, null);
         if (teammatesError is not null)
         {
@@ -844,7 +859,7 @@ internal sealed class LibraryFileService(
         ArgumentNullException.ThrowIfNull(file);
         ct.ThrowIfCancellationRequested();
 
-        if (!this.resolver.TryResolve(file.Root.Id, file.RelativePath, out LibraryPath? fresh, out _))
+        if (!this.resolver.TryResolve(file.Root.Id, file.RelativePath, out LibraryPath? fresh, out _) || fresh.ReadOnly)
         {
             return Task.CompletedTask;
         }
@@ -890,6 +905,11 @@ internal sealed class LibraryFileService(
         if (!this.resolver.TryResolve(folder.Root.Id, folder.RelativePath, out LibraryPath? fresh, out string? resolveError))
         {
             return new LibraryResult<LibraryUpload>(null, resolveError);
+        }
+
+        if (fresh.ReadOnly)
+        {
+            return new LibraryResult<LibraryUpload>(null, LibraryPath.ReadOnlyReason);
         }
 
         string couldNotSave = string.Format(CultureInfo.InvariantCulture, UploadCouldNotSaveFormat, name);
@@ -995,6 +1015,11 @@ internal sealed class LibraryFileService(
         if (!this.resolver.TryResolve(item.Root.Id, item.RelativePath, out LibraryPath? fresh, out string? resolveError))
         {
             return new LibraryResult<LibraryMoveResult>(null, resolveError);
+        }
+
+        if (fresh.ReadOnly)
+        {
+            return new LibraryResult<LibraryMoveResult>(null, LibraryPath.ReadOnlyReason);
         }
 
         string parentRelativePath = ParentRelativePath(fresh.RelativePath);
@@ -1126,6 +1151,11 @@ internal sealed class LibraryFileService(
             return new LibraryResult<LibraryMoveResult>(null, targetResolveError);
         }
 
+        if (fresh.ReadOnly || freshTarget.ReadOnly)
+        {
+            return new LibraryResult<LibraryMoveResult>(null, LibraryPath.ReadOnlyReason);
+        }
+
         LibraryProtection protection = LibraryProtection.For(fresh);
         if (!protection.CanMove)
         {
@@ -1227,6 +1257,11 @@ internal sealed class LibraryFileService(
         if (!this.resolver.TryResolve(item.Root.Id, item.RelativePath, out LibraryPath? fresh, out string? resolveError))
         {
             return Task.FromResult(new LibraryResult<LibraryPath>(null, resolveError));
+        }
+
+        if (fresh.ReadOnly)
+        {
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, LibraryPath.ReadOnlyReason));
         }
 
         LibraryProtection protection = LibraryProtection.For(fresh);
@@ -1417,7 +1452,7 @@ internal sealed class LibraryFileService(
         List<string> rewritten,
         List<LibraryNoteFailure> failed)
     {
-        if (!this.resolver.TryResolve(movedTarget.Root.Id, newNote, out LibraryPath? notePath, out _))
+        if (!this.resolver.TryResolve(movedTarget.Root.Id, newNote, out LibraryPath? notePath, out _) || notePath.ReadOnly)
         {
             return;
         }

@@ -401,6 +401,7 @@
             await this.TryOpenInitialFileAsync();
             this.TryOpenFromQuery(this.Navigation.Uri);
             await this.RestoreStateAsync();
+            await this.TryOpenDefaultDocumentAsync();
         }
 
         if (this.OnOpenFileChanged.HasDelegate && (!this.locationPublished || this.currentPath != this.publishedPath))
@@ -681,6 +682,25 @@
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>Opens the root's own first document (<see cref="LibraryRoots.DefaultDocument"/>, SKILLS.md for the Skill
+    /// Sources root) when the explorer shows exactly that one root and nothing else opened it: an initial file, the
+    /// query and a remembered selection all ran first and win.</summary>
+    private Task TryOpenDefaultDocumentAsync()
+    {
+        if (this.currentPath is not null
+            || this.resolvedScopes.Count != 1
+            || this.resolvedScopes[0] is not { RelativePath.Length: 0 } scope
+            || LibraryRoots.DefaultDocument(scope.Root) is not { } defaultDocument
+            || !this.Resolver.TryResolve(scope.Root.Id, defaultDocument, out LibraryPath? resolved, out _)
+            || !File.Exists(resolved.FullPath))
+        {
+            return Task.CompletedTask;
+        }
+
+        this.currentPath = resolved;
+        return this.InvokeAsync(this.StateHasChanged);
     }
 
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>

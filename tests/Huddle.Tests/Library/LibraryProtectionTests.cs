@@ -47,6 +47,24 @@ public sealed class LibraryProtectionTests
         Assert.Null(protection.Reason);
     }
 
+    /// <summary>A read-only path (Skill Packs spec §6.11.3) can't be renamed, moved or deleted, whatever its role, and
+    /// says why with <see cref="LibraryPath.ReadOnlyReason"/>.</summary>
+    [Theory]
+    [InlineData(LibraryNodeRole.File)]
+    [InlineData(LibraryNodeRole.Folder)]
+    public void For_ReadOnlyPath_AllowsNoWriteVerb(LibraryNodeRole role)
+    {
+        LibraryRoot root = new("skill-sources", "Skill Sources", "/tmp/skill-sources", LibraryRootKind.SkillSources, ReadOnly: true);
+        LibraryPath path = new(root, "SKILLS.md", "/tmp/skill-sources/SKILLS.md", role, ReadOnly: true);
+
+        LibraryProtection protection = LibraryProtection.For(path);
+
+        Assert.False(protection.CanRename);
+        Assert.False(protection.CanMove);
+        Assert.False(protection.CanDelete);
+        Assert.Equal(LibraryPath.ReadOnlyReason, protection.Reason);
+    }
+
     public static IEnumerable<object?[]> ProtectionTestData()
     {
         yield return new object?[] { LibraryNodeRole.Root, false, false, false, "A Library root can't be renamed, moved or deleted." };

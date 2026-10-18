@@ -333,6 +333,11 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
             return "upload";
         }
 
+        if (path.Root.Kind == LibraryRootKind.SkillSources)
+        {
+            return "skill sources";
+        }
+
         string[] segments = path.RelativePath.Split('/');
 
         if (path.Root.Kind == LibraryRootKind.Teams)

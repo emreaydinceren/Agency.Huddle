@@ -14,4 +14,7 @@ public enum LibraryRootKind
 
     /// <summary>The Uploads root, where chat uploads are saved; a plain folder tree that behaves like a pinned root for protection.</summary>
     Uploads,
+
+    /// <summary>The Skill Sources folder: SKILLS.md, Pack and catalog files and Source notes, read only (Skill Packs spec §6.11).</summary>
+    SkillSources,
 }
