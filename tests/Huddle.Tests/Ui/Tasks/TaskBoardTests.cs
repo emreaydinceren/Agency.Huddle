@@ -824,7 +824,7 @@ public sealed class TaskBoardTests
         {
             Id = "board-test",
             Name = "Board",
-            Kind = ViewKind.Board,
+            Kind = ViewKind.Kanban,
             Columns = columns ?? DefaultColumns,
             Grouping = grouping ?? [],
             Fields = fields ?? [],

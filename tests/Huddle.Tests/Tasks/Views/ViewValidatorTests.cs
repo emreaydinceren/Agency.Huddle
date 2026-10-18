@@ -19,7 +19,7 @@ public sealed class ViewValidatorTests
     {
         Id = "v1",
         Name = "My Board",
-        Kind = ViewKind.Board,
+        Kind = ViewKind.Kanban,
         Columns =
         [
             new BoardColumn("Backlog", [TaskState.Backlog]),
@@ -93,7 +93,7 @@ public sealed class ViewValidatorTests
     {
         TaskView view = ValidBoard() with { Grouping = [TaskGroupField.State] };
 
-        Assert.Equal(["A Board cannot group by State."], ViewValidator.Validate(view, []));
+        Assert.Equal(["A Kanban cannot group by State."], ViewValidator.Validate(view, []));
     }
 
     /// <summary>A Board with scope Closed is a problem.</summary>
@@ -102,7 +102,7 @@ public sealed class ViewValidatorTests
     {
         TaskView view = ValidBoard() with { Scope = ViewScope.Closed };
 
-        Assert.Equal(["A Board's scope must be Active."], ViewValidator.Validate(view, []));
+        Assert.Equal(["A Kanban's scope must be Active."], ViewValidator.Validate(view, []));
     }
 
     /// <summary>A Board missing Review from every column is a problem.</summary>

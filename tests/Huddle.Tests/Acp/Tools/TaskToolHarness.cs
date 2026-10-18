@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
@@ -210,6 +211,9 @@ internal sealed class TaskToolHarness : IDisposable
     /// <summary>Tracks each Persona's degraded/healthy status.</summary>
     public PersonaHealth Health { get; }
 
+    /// <summary>The shell's Tabs, which hold the breadcrumb trail the Tasks page sets.</summary>
+    public Agency.Huddle.App.Tabs.TabService Tabs { get; } = new();
+
     /// <summary>The chosen avatar per Teammate, over <see cref="TempDataDir"/>'s <c>avatars.json</c>.</summary>
     public AvatarStore Avatars { get; }
 
@@ -293,6 +297,9 @@ internal sealed class TaskToolHarness : IDisposable
     internal void AddTo(IServiceCollection services)
     {
         services.AddSingleton(this.Options);
+
+        // The Tasks page sets the shell breadcrumb (S1a) through it. TryAdd: a test that hosts the page in a TabHost brings its own.
+        services.TryAddSingleton(this.Tabs);
         services.AddSingleton<Agency.Huddle.App.Profile.IHumanIdentity>(new Agency.Huddle.App.Profile.ConfiguredHumanIdentity(this.Options.Value.HumanName));
         services.AddSingleton(this.Clock);
         services.AddSingleton(this.Personas);

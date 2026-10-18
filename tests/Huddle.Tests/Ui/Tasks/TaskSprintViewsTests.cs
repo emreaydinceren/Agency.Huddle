@@ -116,7 +116,7 @@ public sealed class TaskSprintViewsTests
 
         IRenderedComponent<TaskBoard> cut = ctx.Render<TaskBoard>(p =>
         {
-            p.Add(b => b.View, new TaskView { Id = "b", Name = "B", Kind = ViewKind.Board, Columns = BoardLayout.DefaultColumns, Grouping = [TaskGroupField.Sprint] });
+            p.Add(b => b.View, new TaskView { Id = "b", Name = "B", Kind = ViewKind.Kanban, Columns = BoardLayout.DefaultColumns, Grouping = [TaskGroupField.Sprint] });
             p.Add(b => b.Tasks, new List<TaskItem> { none, old, current });
         });
 

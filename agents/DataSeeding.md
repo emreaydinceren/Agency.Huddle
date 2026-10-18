@@ -455,7 +455,7 @@ Saved Task Views go in `views.json` at the data folder root. `all-tasks` and
     {
       "id": "business-board",
       "name": "Business board",
-      "kind": "board",
+      "kind": "kanban",
       "scope": "active",
       "fields": ["priority", "assignee", "due_date"],
       "filter": { "teams": ["Business"] },
@@ -478,7 +478,7 @@ Saved Task Views go in `views.json` at the data folder root. `all-tasks` and
 | --- | --- |
 | `id` | Unique, URL-safe; the View opens at `/tasks/<id>` |
 | `name` | 1–60 characters, unique |
-| `kind` / `scope` | `list` or `board` / `active` or `closed`. A Board must be `active` |
+| `kind` / `scope` | `list` or `kanban` (the old `board` still reads) / `active` or `closed`. A Kanban must be `active` |
 | `fields` | From: `id`, `title`, `status`, `priority`, `assignee`, `creator`, `team`, `project`, `parent`, `blocked_by`, `tags`, `start_date`, `due_date`, `created`, `updated`, `closed`, `origin` |
 | `filter` | `teams`, `projects` (`[{ "team": "Business", "project": "Website" }]`, with `null` for no Project), `assignees` (names, `@me`, `@unassigned`), `states`, `priorities`, `blocked` (`all`, `blocked`, `unblocked`) |
 | `grouping` | Any of `team`, `project`, `assignee`, `state`. A Board cannot group by `state` |

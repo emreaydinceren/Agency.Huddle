@@ -467,12 +467,12 @@ public sealed partial class TaskBoardColumnMenuTests
 
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, harness, viewId: null);
-        await OverrideAsync(cut, view => view with { Kind = ViewKind.Board, Columns = DefaultColumns });
+        await OverrideAsync(cut, view => view with { Kind = ViewKind.Kanban, Columns = DefaultColumns });
         Assert.Equal(DefaultLabels, cut.FindAll("div.task-board-column-header .task-board-column-label").Select(e => e.TextContent.Trim()));
         await ClickHeaderItemAsync(cut, "Done", "Hide");
 
         TaskView saved = Assert.IsType<TaskView>(harness.Views.Get(ViewStore.AllTasksId));
-        Assert.Equal(ViewKind.Board, saved.Kind);
+        Assert.Equal(ViewKind.Kanban, saved.Kind);
         Assert.True(saved.Columns.Single(column => string.Equals(column.Label, "Done", StringComparison.Ordinal)).Hidden);
     }
 
@@ -480,7 +480,7 @@ public sealed partial class TaskBoardColumnMenuTests
     [Fact]
     public void BoardLayout_GroupedWithNoTasks_HasNoLanes()
     {
-        TaskView view = new() { Id = BoardId, Name = "Board", Kind = ViewKind.Board, Columns = DefaultColumns, Grouping = [TaskGroupField.Assignee] };
+        TaskView view = new() { Id = BoardId, Name = "Board", Kind = ViewKind.Kanban, Columns = DefaultColumns, Grouping = [TaskGroupField.Assignee] };
 
         BoardModel model = BoardLayout.Build([], view);
 
@@ -528,7 +528,7 @@ public sealed partial class TaskBoardColumnMenuTests
     /// <returns>The View as saved.</returns>
     private static TaskView SaveBoard(TaskToolHarness harness, IReadOnlyList<BoardColumn>? columns = null)
     {
-        TaskView view = new() { Id = BoardId, Name = "Platform board", Kind = ViewKind.Board, Columns = columns ?? DefaultColumns };
+        TaskView view = new() { Id = BoardId, Name = "Platform board", Kind = ViewKind.Kanban, Columns = columns ?? DefaultColumns };
         ViewSaveResult result = harness.Views.Save(view);
         Assert.True(result.Saved, string.Join(" ", result.Problems));
         return harness.Views.Get(BoardId) ?? throw new InvalidOperationException("The Board View was not saved.");
@@ -539,7 +539,7 @@ public sealed partial class TaskBoardColumnMenuTests
     /// <returns>The effective View.</returns>
     private static TaskView AllTasksAsBoard(TaskToolHarness harness) =>
         (harness.Views.Get(ViewStore.AllTasksId) ?? throw new InvalidOperationException("All Tasks is missing."))
-        with { Kind = ViewKind.Board, Columns = DefaultColumns };
+        with { Kind = ViewKind.Kanban, Columns = DefaultColumns };
 
     /// <summary>The saved Board View's column labels.</summary>
     /// <param name="harness">The harness.</param>

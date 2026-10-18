@@ -99,7 +99,7 @@ public sealed class BoardLayoutTests
     {
         Id = "test-view",
         Name = "Test",
-        Kind = ViewKind.Board,
+        Kind = ViewKind.Kanban,
         Grouping = grouping,
         Columns = columns,
     };

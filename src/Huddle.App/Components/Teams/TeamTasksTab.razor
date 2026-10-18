@@ -121,7 +121,7 @@
         {
             Id = $"team:{this.Team}/{this.Project}",
             Name = this.Project ?? this.Team,
-            Kind = ViewKind.Board,
+            Kind = ViewKind.Kanban,
             Filter = new TaskFilter
             {
                 Teams = [this.Team],
@@ -134,7 +134,7 @@
         {
             Id = $"team:{this.Team}",
             Name = this.Team,
-            Kind = ViewKind.Board,
+            Kind = ViewKind.Kanban,
             Filter = new TaskFilter { Teams = [this.Team] },
             Grouping = ProjectGrouping,
             Columns = BoardLayout.DefaultColumns,

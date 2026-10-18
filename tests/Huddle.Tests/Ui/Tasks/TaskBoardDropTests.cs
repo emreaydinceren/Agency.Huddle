@@ -587,7 +587,7 @@ public sealed class TaskBoardDropTests
         harness.AddTo(ctx.Services);
         IRenderedComponent<MudPopoverProvider> popovers = ctx.Render<MudPopoverProvider>();
         IRenderedComponent<MudDialogProvider> dialogs = ctx.Render<MudDialogProvider>();
-        TaskView view = new() { Id = "board-test", Name = "Board", Kind = ViewKind.Board, Columns = DefaultColumns };
+        TaskView view = new() { Id = "board-test", Name = "Board", Kind = ViewKind.Kanban, Columns = DefaultColumns };
         IRenderedComponent<TaskBoard> board = ctx.Render<TaskBoard>(p =>
         {
             p.Add(b => b.View, view);

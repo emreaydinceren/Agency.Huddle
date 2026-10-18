@@ -309,7 +309,7 @@
     private async Task ChangeColumnAsync(int visibleIndex, Func<BoardColumn, BoardColumn> change)
     {
         int index = this.FullIndexOf(visibleIndex);
-        if (this.ViewStore.Get(this.View.Id) is { Kind: ViewKind.Board } saved && index < saved.Columns.Count)
+        if (this.ViewStore.Get(this.View.Id) is { Kind: ViewKind.Kanban } saved && index < saved.Columns.Count)
         {
             List<BoardColumn> columns = [.. saved.Columns];
             columns[index] = change(columns[index]);

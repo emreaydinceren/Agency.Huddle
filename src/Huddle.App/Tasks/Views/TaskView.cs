@@ -8,8 +8,8 @@ public enum ViewKind
     /// <summary>A data grid, one row per Task.</summary>
     List,
 
-    /// <summary>A Kanban board, one column per <see cref="BoardColumn"/>.</summary>
-    Board,
+    /// <summary>A Kanban board, one column per <see cref="BoardColumn"/>. Saved as "kanban"; the old "board" still reads.</summary>
+    Kanban,
 }
 
 /// <summary>Which Tasks a View considers: the open ones, or the closed ones.</summary>

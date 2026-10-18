@@ -14,24 +14,14 @@
 
 @if (this.SplitHeader)
 {
-    @* The Tasks page's own first row (wireframe): the counts on the left; the page's actions, Group by and
-       List | Board on the right. "New task" is the page header's create action (audit B1), not this row's.
-       Same dense MudToolBar as the row below, so the two rows are the same height. *@
+    @* The Tasks page's own first row (wireframe T2): List | Kanban, then the counts, both on the left; the page's actions on
+       the right, where the page puts "New task" and the View menu in HeaderTrailing (T2 has no visible header). Group by is
+       the filter row's last control. Same dense MudToolBar as the row below, so the two rows are the same height. *@
     <MudToolBar Dense="true" Gutters="false" Class="task-toolbar-header">
+        @this.KindControl
         @this.HeaderLeading
         <MudSpacer />
         @this.HeaderActions
-        @* Group by is a filter-style chip, like Status below: "Group by: Assignee" with a menu of choices, and a clear button once one is chosen. *@
-        <TaskFilterChip Label="Group by" Value="@this.GroupText" IsSet="@(this.PrimaryGrouping is not null)"
-                        OnClear="this.ClearGroupingAsync" Class="task-toolbar-group">
-            <MudMenuItem OnClick="this.ClearGroupingAsync">None</MudMenuItem>
-            @foreach (TaskGroupField field in this.GroupChoices())
-            {
-                TaskGroupField chosen = field;
-                <MudMenuItem OnClick="@(() => this.OnGroupingChangedAsync(chosen))">@GroupFieldLabel(chosen)</MudMenuItem>
-            }
-        </TaskFilterChip>
-        @this.KindControl
         @this.HeaderTrailing
     </MudToolBar>
 }
@@ -196,7 +186,7 @@
 
     @if (!this.SplitHeader)
     {
-        @* With SplitHeader, Group by lives in the header row instead. *@
+        @* With SplitHeader, Group by is the chip at this row's right end instead. *@
         <MudMenu Label="Group, Sort" Class="task-toolbar-group-sort">
             @this.GroupSelect
         </MudMenu>
@@ -216,6 +206,20 @@
                    Class="task-toolbar-dense" />
     }
 
+    @if (this.SplitHeader)
+    {
+        @* Group by is a filter-style chip, like Status: "Group by: Assignee" with a menu of choices, and a clear button once one is
+           chosen. It ends the row, pushed to the right edge (the one-row toolbar keeps its "Group, Sort" menu instead). *@
+        <TaskFilterChip Label="Group by" Value="@this.GroupText" IsSet="@(this.PrimaryGrouping is not null)"
+                        OnClear="this.ClearGroupingAsync" Class="task-toolbar-group">
+            <MudMenuItem OnClick="this.ClearGroupingAsync">None</MudMenuItem>
+            @foreach (TaskGroupField field in this.GroupChoices())
+            {
+                TaskGroupField chosen = field;
+                <MudMenuItem OnClick="@(() => this.OnGroupingChangedAsync(chosen))">@GroupFieldLabel(chosen)</MudMenuItem>
+            }
+        </TaskFilterChip>
+    }
 </MudToolBar>
 
 @code {
@@ -228,13 +232,13 @@
     [Parameter]
     public EventCallback<TaskView> EffectiveViewChanged { get; set; }
 
-    /// <summary>Raised when "+ New task" is clicked, carrying the Team/Project defaults the current filter names. With <see cref="SplitHeader"/> the button is the page header's, so this is raised only by the one-row toolbar.</summary>
+    /// <summary>Raised when "+ New task" is clicked, carrying the Team/Project defaults the current filter names. With <see cref="SplitHeader"/> the page draws its own button, so this is raised only by the one-row toolbar.</summary>
     [Parameter]
     public EventCallback<NewTaskDefaults> OnNewTask { get; set; }
 
     /// <summary>
-    /// Whether List | Board sit in their own first row above the filters, with
-    /// <see cref="HeaderActions"/> and <see cref="HeaderTrailing"/> (the Tasks page, whose "New task" is in its page header). Off, "+ New task" and List | Board lead the one row (the Team page's tab).
+    /// Whether List | Kanban sit in their own first row above the filters, with
+    /// <see cref="HeaderActions"/> and <see cref="HeaderTrailing"/> (the Tasks page, which puts its own "New task" in HeaderTrailing). Off, "+ New task" and List | Kanban lead the one row (the Team page's tab).
     /// </summary>
     [Parameter]
     public bool SplitHeader { get; set; }
@@ -289,8 +293,10 @@
     /// <summary>Ad hoc like every other toolbar control: it flips the effective View's layout only, and "Save to view" offers to persist it - the View editor's own Kind control is the saved counterpart.</summary>
     private RenderFragment KindControl => @<HuddleSegmentedControl T="ViewKind" Value="this.EffectiveView.Kind" ValueChanged="this.OnKindChangedAsync"
                                                                    Class="task-toolbar-kind" ItemCount="2">
-        <MudToggleItem Value="ViewKind.List" Text="List" />
-        <MudToggleItem Value="ViewKind.Board" Text="Board" />
+        @* The same icons as the View's sidebar row (TaskViewNav). In the content, not SelectedIcon/UnselectedIcon: MudToggleGroup
+           draws those only with CheckMark on, and the segmented control turns it off. *@
+        <MudToggleItem Value="ViewKind.List"><MudIcon Icon="@Icons.Material.Filled.TableRows" Size="Size.Small" Class="task-toolbar-kind-icon" />List</MudToggleItem>
+        <MudToggleItem Value="ViewKind.Kanban"><MudIcon Icon="@Icons.Material.Filled.ViewWeek" Size="Size.Small" Class="task-toolbar-kind-icon" />Kanban</MudToggleItem>
     </HuddleSegmentedControl>;
 
     /// <summary>The statuses "Open" stands for: every one that is not terminal.</summary>
@@ -517,14 +523,14 @@
         }
 
         TaskView updated;
-        if (kind == ViewKind.Board)
+        if (kind == ViewKind.Kanban)
         {
-            IReadOnlyList<BoardColumn> columns = this.ViewStore.Get(this.EffectiveView.Id) is { Kind: ViewKind.Board, Columns.Count: > 0 } saved
+            IReadOnlyList<BoardColumn> columns = this.ViewStore.Get(this.EffectiveView.Id) is { Kind: ViewKind.Kanban, Columns.Count: > 0 } saved
                 ? saved.Columns
                 : BoardLayout.DefaultColumns;
             updated = this.EffectiveView with
             {
-                Kind = ViewKind.Board,
+                Kind = ViewKind.Kanban,
                 Scope = ViewScope.Active,
                 Columns = columns,
                 Grouping = [.. this.EffectiveView.Grouping.Where(static field => field != TaskGroupField.State)],

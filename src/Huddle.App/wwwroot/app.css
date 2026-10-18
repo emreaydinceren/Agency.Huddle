@@ -4244,8 +4244,25 @@ a.team-ref,
     min-width: 5rem;
 }
 
+/* Each segment leads with its View kind's sidebar icon, at the row icon size, 4px before the word. */
+.task-toolbar-kind .task-toolbar-kind-icon {
+    font-size: var(--icon-size-row);
+    margin-right: 4px;
+}
+
+/* The header row (T2): List | Kanban, then the counts, on the left; the page's actions on the right. */
 .task-toolbar-header {
     gap: 8px;
+}
+
+.task-toolbar-header .tasks-counts {
+    margin-left: 8px;
+}
+
+/* Group by ends the filter row, pushed to its right edge, with no trailing chip gap so it lines up with the row's end. */
+.task-toolbar .task-filter-chip.task-toolbar-group {
+    margin-left: auto;
+    margin-right: 0;
 }
 
 /* A Task's assignee (TaskAssignee): the avatar, then the name, with room between so the monogram does not run into the name. */
@@ -4328,9 +4345,11 @@ a.team-ref,
     color: var(--hu-selected-foreground);
 }
 
-/* Both toolbar rows are one height (audit A7): the controls are 28px boxes, so the row reads level. */
-.task-toolbar .mud-icon-button,
-.task-toolbar-header .mud-icon-button {
+/* Both toolbar rows are one height (audit A7): the controls are 28px boxes, so the row reads level. Not the switch's thumb
+   (.mud-switch-base is an icon button too): its track is placed for MudBlazor's 38px base, so a 28px base lifted the thumb
+   5px above the track's centre. */
+.task-toolbar .mud-icon-button:not(.mud-switch-base),
+.task-toolbar-header .mud-icon-button:not(.mud-switch-base) {
     width: 28px;
     height: 28px;
     padding: 4px;
@@ -4342,9 +4361,14 @@ a.team-ref,
     min-height: 0;
 }
 
+/* The switch's own body is MudBlazor's 38px; a column flex centres it on the 28px box (it overflows evenly) rather than
+   letting it hang 10px below. */
 .task-toolbar .task-toolbar-dense {
     height: 28px;
     margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 /* A chip without a menu draws its text with the same button but must not answer the pointer or look pressable. */
@@ -7274,14 +7298,16 @@ a.team-ref,
     background: var(--hu-accent-ink);
 }
 
-:root:has([data-hu-surface="paper"]) .mud-button-outlined.mud-button-outlined-default,
-:root:has([data-hu-surface="paper"]) .mud-button-outlined.mud-button-outlined-primary {
+/* Not a toggle item: MudToggleGroup draws an unselected item as an outlined button, and the segmented control paints its
+   own sunk track and raised tile, so a raised ground here turned every unselected segment into a white tile. */
+:root:has([data-hu-surface="paper"]) .mud-button-outlined.mud-button-outlined-default:not(.mud-toggle-item),
+:root:has([data-hu-surface="paper"]) .mud-button-outlined.mud-button-outlined-primary:not(.mud-toggle-item) {
     background: var(--hu-ground-raised);
     border-color: var(--hu-line-control);
     color: var(--mud-palette-text-primary);
 }
 
-:root:has([data-hu-surface="paper"]) .mud-button-outlined:hover {
+:root:has([data-hu-surface="paper"]) .mud-button-outlined:not(.mud-toggle-item):hover {
     background: var(--hu-hover);
 }
 
@@ -7826,14 +7852,15 @@ a.team-ref,
     box-shadow: none;
 }
 
-:root:has([data-hu-surface="hairline"]) .mud-button-outlined.mud-button-outlined-default,
-:root:has([data-hu-surface="hairline"]) .mud-button-outlined.mud-button-outlined-primary {
+/* Not a toggle item, for the reason given at surface=paper's outlined buttons. */
+:root:has([data-hu-surface="hairline"]) .mud-button-outlined.mud-button-outlined-default:not(.mud-toggle-item),
+:root:has([data-hu-surface="hairline"]) .mud-button-outlined.mud-button-outlined-primary:not(.mud-toggle-item) {
     background: var(--hu-ground-raised);
     border-color: var(--hu-line-control);
     color: var(--mud-palette-text-primary);
 }
 
-:root:has([data-hu-surface="hairline"]) .mud-button-outlined:hover {
+:root:has([data-hu-surface="hairline"]) .mud-button-outlined:not(.mud-toggle-item):hover {
     background: var(--hu-hover);
 }
 

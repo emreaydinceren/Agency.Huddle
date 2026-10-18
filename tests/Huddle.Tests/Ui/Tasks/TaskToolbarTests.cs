@@ -100,7 +100,7 @@ public sealed class TaskToolbarTests
     {
         using var dir = new TempDataDir();
         using var store = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
-        var saved = Save(store, "v1", ViewKind.Board, BoardDefaultColumns);
+        var saved = Save(store, "v1", ViewKind.Kanban, BoardDefaultColumns);
 
         await using var ctx = NewContext(store);
         var (_, toolbar) = RenderToolbar(ctx, saved);
@@ -110,8 +110,8 @@ public sealed class TaskToolbarTests
         Assert.Contains("task-toolbar-filter", children[0].ClassList);
         Assert.Contains("btn-action-tight", children[1].ClassList);
         Assert.Contains("task-toolbar-kind", children[2].ClassList);
-        Assert.Equal(["List", "Board"],toolbar.FindAll(".task-toolbar-kind .mud-toggle-item").Select(item => item.TextContent.Trim()));
-        Assert.Equal("Board", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
+        Assert.Equal(["List", "Kanban"],toolbar.FindAll(".task-toolbar-kind .mud-toggle-item").Select(item => item.TextContent.Trim()));
+        Assert.Equal("Kanban", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
     }
 
     /// <summary>Picking Board on a List View raises <c>EffectiveViewChanged</c> with a Board that passes <c>ViewValidator</c> (Active scope, every state in a column), and leaves the saved View a List.</summary>
@@ -127,16 +127,16 @@ public sealed class TaskToolbarTests
         var (_, toolbar) = RenderToolbar(ctx, saved, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v));
 
         Assert.Equal("List", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
-        await toolbar.InvokeAsync(() => toolbar.FindComponent<MudToggleGroup<ViewKind>>().Instance.ValueChanged.InvokeAsync(ViewKind.Board));
+        await toolbar.InvokeAsync(() => toolbar.FindComponent<MudToggleGroup<ViewKind>>().Instance.ValueChanged.InvokeAsync(ViewKind.Kanban));
 
         TaskView updated = raised ?? throw new InvalidOperationException("EffectiveViewChanged was not raised.");
-        Assert.Equal(ViewKind.Board, updated.Kind);
+        Assert.Equal(ViewKind.Kanban, updated.Kind);
         Assert.Equal(ViewScope.Active, updated.Scope);
         Assert.Empty(ViewValidator.Validate(updated, []));
 
         toolbar.Render(builder => builder.Add(t => t.EffectiveView, updated));
 
-        Assert.Equal("Board", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
+        Assert.Equal("Kanban", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
         Assert.Equal(ViewKind.List, store.Get("v1")?.Kind);
     }
 
@@ -146,7 +146,7 @@ public sealed class TaskToolbarTests
     {
         using var dir = new TempDataDir();
         using var store = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
-        var board = Save(store, "v1", ViewKind.Board, BoardDefaultColumns);
+        var board = Save(store, "v1", ViewKind.Kanban, BoardDefaultColumns);
 
         TaskView? raised = null;
         await using var ctx = NewContext(store);
@@ -162,7 +162,7 @@ public sealed class TaskToolbarTests
         raised = null;
         TaskView closedList = list with { Scope = ViewScope.Closed };
         toolbar.Render(builder => builder.Add(t => t.EffectiveView, closedList));
-        await toolbar.InvokeAsync(() => toolbar.FindComponent<MudToggleGroup<ViewKind>>().Instance.ValueChanged.InvokeAsync(ViewKind.Board));
+        await toolbar.InvokeAsync(() => toolbar.FindComponent<MudToggleGroup<ViewKind>>().Instance.ValueChanged.InvokeAsync(ViewKind.Kanban));
 
         TaskView backToBoard = raised ?? throw new InvalidOperationException("EffectiveViewChanged was not raised.");
         Assert.Equal(ViewScope.Active, backToBoard.Scope);
@@ -217,12 +217,13 @@ public sealed class TaskToolbarTests
         await using var splitCtx = NewContext(store);
         var (_, split) = RenderToolbar(splitCtx, saved, splitHeader: true);
         Assert.Contains("task-toolbar-filter", split.Find(".task-toolbar").Children[0].ClassList);
-        Assert.Empty(split.FindAll(".task-toolbar .task-filter-chip"));
+        // Group by is a chip in this row too (its last control), but it is not a filter.
+        Assert.Empty(split.FindAll(".task-toolbar .task-filter-chip:not(.task-toolbar-group)"));
 
         split.Render(builder => builder.Add(t => t.EffectiveView, filtered));
         Assert.Equal(
             ["Team: Platform", "Project: Platform/Backend", "Assignee: Me", "Sprint: Current sprint", "Priority: High", "Status: To Do"],
-            split.FindAll(".task-toolbar .task-filter-chip").Select(chip => string.Join(' ', chip.QuerySelector(".task-filter-chip-button")!.TextContent.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))));
+            split.FindAll(".task-toolbar .task-filter-chip:not(.task-toolbar-group)").Select(chip => string.Join(' ', chip.QuerySelector(".task-filter-chip-button")!.TextContent.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))));
         Assert.Equal(6, split.FindAll(".task-toolbar .task-filter-chip-clear").Count);
 
         await using var plainCtx = NewContext(store);

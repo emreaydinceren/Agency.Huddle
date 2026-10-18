@@ -116,7 +116,7 @@ public sealed class TaskQuerySprintTests
         {
             Id = "b",
             Name = "B",
-            Kind = ViewKind.Board,
+            Kind = ViewKind.Kanban,
             Grouping = [TaskGroupField.Sprint],
             Columns = BoardLayout.DefaultColumns,
         };
