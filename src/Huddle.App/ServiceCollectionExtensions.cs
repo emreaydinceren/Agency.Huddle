@@ -232,6 +232,18 @@ public static class ServiceCollectionExtensions
         // running their own FileSystemWatcher over it.
         services.AddSingleton<SkillStore>();
 
+        // Skill Sources (Skill Packs spec §6.5): the registry of SKILLS.md and the stores beside it. Plain singletons; the
+        // watcher below is the hosted half and the only thing that rebuilds the registry besides Reload.
+        services.AddSingleton<Agency.Huddle.App.SkillSources.SkillSourcesSettings>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.HiddenStore>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.SourceLog>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.SkillsMdWriter>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.RoleLister>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.SkillRegistry>();
+        services.AddSingleton<Agency.Huddle.App.Teams.ISkillAvailability>(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.SkillRegistry>());
+        services.AddSingleton<Agency.Huddle.App.SkillSources.ISkillSourcesMove, Agency.Huddle.App.SkillSources.NoSkillSourcesMove>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.RegistryWatcher>();
+
         // Skill import (SK-2 to SK-7): the downloader gets its own client with a long timeout for the archive; the importer's client only
         // resolves a branch to a commit, so it times out sooner. Both are plain singletons - nothing here is shared with other HTTP users.
         services.AddSingleton(static sp => new SkillDownloader(
@@ -481,6 +493,11 @@ public static class ServiceCollectionExtensions
         // A singleton before it is a hosted service: DataInitializer runs it directly at startup for a
         // rename made while the app was stopped, and the hosted half subscribes to HumanRenamed.
         services.AddSingleton<HumanRenameCascade>();
+
+        // Before every other hosted service that reads Teammates (Skill Packs spec §6.5, "Start-up order"): the move, the
+        // repair of Skills/.trash and the first full read of the registry finish before BuiltinTeammateSeeder,
+        // DataInitializer and PersonaSupervisor start, because the host awaits each StartAsync in registration order.
+        services.AddHostedService(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.RegistryWatcher>());
         services.AddHostedService<DataInitializer>();
         services.AddHostedService(sp => sp.GetRequiredService<HumanRenameCascade>());
         services.AddHostedService<PipeServer>();
