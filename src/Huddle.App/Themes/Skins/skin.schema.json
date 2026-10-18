@@ -593,12 +593,14 @@
       "properties": {
         "message": {
           "enum": [
-            "bubble"
+            "bubble",
+            "row"
           ]
         },
         "send": {
           "enum": [
-            "icon"
+            "icon",
+            "text"
           ]
         },
         "status": {
@@ -613,7 +615,8 @@
         },
         "composer": {
           "enum": [
-            "box"
+            "box",
+            "card"
           ]
         },
         "nav": {
@@ -628,7 +631,8 @@
         },
         "marks": {
           "enum": [
-            "plain"
+            "plain",
+            "chip"
           ]
         },
         "reading": {

@@ -2074,6 +2074,267 @@ a.team-ref,
     font-size: var(--mud-typography-body2-size);
 }
 
+/* ---- Traits: transcript and composer ------------------------------------------------------------------------
+   Variant rules for the message, marks, composer and send traits (ADR-0057, lifted from the Nordic pack). Each is
+   scoped to the marker attribute the skin renders, so a Theme that does not choose the variant never sees it. The
+   default value of each trait is today's Huddle and has no rule here. Colours come from the registry tokens; the
+   Send colours are --hu-send-bg and --hu-send-fg, which a skin sets. */
+
+/* ---- Trait message=row: a flat row per message, the Human's own message included, no bubbles ---------------
+   A row tints on hover; the 8px spread imitates a full-bleed tint without moving the pinned layout. */
+:root:has([data-hu-message="row"]) .message-row {
+    border-radius: var(--mud-default-borderradius);
+    transition: background-color .15s, box-shadow .15s;
+}
+
+:root:has([data-hu-message="row"]) .message-row:hover {
+    background: var(--hu-tone-primary-tint);
+    box-shadow: 0 0 0 8px var(--hu-tone-primary-tint);
+}
+
+:root:has([data-hu-message="row"]) .message-row.human {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 12px;
+    align-items: start;
+}
+
+:root:has([data-hu-message="row"]) .message-row.human > .profile-avatar,
+:root:has([data-hu-message="row"]) .message-row.human > .message-gutter {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+}
+
+:root:has([data-hu-message="row"]) .message-row.human > .profile-avatar {
+    display: flex;
+}
+
+:root:has([data-hu-message="row"]) .message-row.human > .message-gutter {
+    display: block;
+}
+
+:root:has([data-hu-message="row"]) .message-row.human > .message-meta {
+    display: flex;
+    grid-column: 2;
+}
+
+:root:has([data-hu-message="row"]) .message-row.human > .message-bubble,
+:root:has([data-hu-message="row"]) .message-row.human > .message-references {
+    grid-column: 2;
+}
+
+:root:has([data-hu-message="row"]) .message-row.human .message-references {
+    justify-content: flex-start;
+}
+
+:root:has([data-hu-message="row"]) .message-bubble.message-body {
+    max-width: 75ch;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+}
+
+/* ---- Trait marks=chip: names, references, mentions, quotes and tool summaries are drawn as shapes ----------- */
+
+/* The sender reads at body size, the time is tabular and quiet, and paragraphs sit 4px apart. */
+:root:has([data-hu-marks="chip"]) .message-sender {
+    font-size: var(--mud-typography-body1-size);
+}
+
+:root:has([data-hu-marks="chip"]) .message-time {
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+:root:has([data-hu-marks="chip"]) .message-body p + p {
+    margin-top: 4px;
+}
+
+/* A wiki link is a highlighter band; it fills on hover. */
+:root:has([data-hu-marks="chip"]) .library-ref {
+    color: var(--hu-accent-ink);
+    font-weight: 500;
+    text-decoration: none;
+    padding: 0 1px;
+    border-radius: calc(var(--mud-default-borderradius) * .25);
+    background: linear-gradient(var(--hu-tone-primary-soft), var(--hu-tone-primary-soft)) 0 100% / 100% .42em no-repeat;
+    transition: background-size .15s;
+}
+
+:root:has([data-hu-marks="chip"]) .library-ref:hover {
+    background-size: 100% 100%;
+}
+
+:root:has([data-hu-marks="chip"]) .library-ref.library-ref-missing {
+    color: var(--mud-palette-text-secondary);
+    background: none;
+    text-decoration: underline dotted;
+}
+
+/* A Task reference is an info chip with a mono id; Room and Team references are the same chip in the accent. */
+:root:has([data-hu-marks="chip"]) .task-ref,
+:root:has([data-hu-marks="chip"]) a.room-ref,
+:root:has([data-hu-marks="chip"]) a.team-ref {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 8px 0 4px;
+    border-radius: calc(var(--mud-default-borderradius) * .75);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-info) 30%, var(--hu-line-region));
+    background: var(--hu-tone-info-soft);
+    color: var(--hu-tone-info-ink);
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 500;
+    text-decoration: none;
+    line-height: 20px;
+}
+
+:root:has([data-hu-marks="chip"]) a.room-ref,
+:root:has([data-hu-marks="chip"]) a.team-ref {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, var(--hu-line-region));
+    background: var(--hu-tone-primary-tint);
+    color: var(--hu-accent-ink);
+}
+
+/* A Mention is an info pill; a Mention of the Human is the warning "needs you" pill. */
+:root:has([data-hu-marks="chip"]) .mention {
+    color: var(--hu-tone-info-ink);
+    background: var(--hu-tone-info-soft);
+    padding: 0 4px;
+    border-radius: calc(var(--mud-default-borderradius) * .5);
+    font-weight: 500;
+}
+
+:root:has([data-hu-marks="chip"]) .mention.mention--me {
+    color: var(--hu-tone-warning-ink);
+    background: var(--hu-tone-warning-soft);
+}
+
+:root:has([data-hu-marks="chip"]) .message-body code {
+    font-family: var(--font-mono);
+    background: none;
+}
+
+/* A quote is serif italic on an info wash with a 3px bar. */
+:root:has([data-hu-marks="chip"]) .message-body blockquote {
+    margin: 8px 0 0;
+    padding: 4px 12px;
+    border-left: 3px solid var(--mud-palette-info);
+    border-radius: 0 calc(var(--mud-default-borderradius) * .75) calc(var(--mud-default-borderradius) * .75) 0;
+    background: var(--hu-tone-info-soft);
+    color: var(--hu-text-subtle);
+    font-family: var(--font-read);
+    font-style: italic;
+}
+
+/* A tool-call summary is a sunk well; a live one tints with the accent. */
+:root:has([data-hu-marks="chip"]) .turn-detail {
+    padding: 8px 12px;
+    border: 1px solid var(--hu-line-region);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--hu-ground-sunk);
+    color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-marks="chip"]) .message-row.streaming .turn-detail {
+    background: var(--hu-tone-primary-tint);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--hu-line-region));
+}
+
+:root:has([data-hu-marks="chip"]) ::selection {
+    background: var(--hu-tone-primary-soft);
+}
+
+/* ---- Trait composer=card: the box is the paper, the input inside it is borderless, and its bottom 40px is a
+   tool row with attach on the left and Send on the right. The stream fades under it. */
+:root:has([data-hu-composer="card"]) .composer {
+    border-top: 0;
+    padding: 8px 24px 16px;
+    background: linear-gradient(transparent, var(--hu-ground-page) 22%);
+}
+
+:root:has([data-hu-composer="card"]) .composer-box {
+    background: var(--hu-ground-raised);
+    border: 1px solid var(--hu-line-control);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    box-shadow: var(--hu-shadow-card-hover);
+    padding-bottom: 40px;
+    transition: border-color .15s;
+}
+
+:root:has([data-hu-composer="card"]) .composer-box:focus-within {
+    border-color: var(--mud-palette-info);
+}
+
+:root:has([data-hu-composer="card"]) .composer-input,
+:root:has([data-hu-composer="card"]) .composer-box-attach .composer-input {
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+    padding: 12px 16px 4px;
+    line-height: 1.5;
+}
+
+:root:has([data-hu-composer="card"]) .composer-input:focus-visible {
+    border: 0;
+    box-shadow: none;
+}
+
+:root:has([data-hu-composer="card"]) .composer-input::placeholder {
+    color: var(--mud-palette-text-secondary);
+}
+
+:root:has([data-hu-composer="card"]) .composer-attach {
+    left: 8px;
+    right: auto;
+    bottom: 4px;
+}
+
+:root:has([data-hu-composer="card"]) .composer-send {
+    right: 8px;
+    bottom: 8px;
+}
+
+/* The @ picker is paper with a sunk head. */
+:root:has([data-hu-composer="card"]) .composer-picker {
+    background: var(--hu-ground-raised);
+    border: 1px solid var(--hu-line-control);
+    border-radius: var(--mud-default-borderradius);
+    box-shadow: var(--hu-shadow-card-hover);
+}
+
+/* ---- Trait send=text: Send is a small button with its word. The label sits over the button and lets clicks
+   through to it. The colours are the shared Send tokens, which a skin sets. */
+:root:has([data-hu-send="text"]) .composer-send .mud-icon-button {
+    height: 26px;
+    width: auto;
+    padding: 0 48px 0 8px;
+    border-radius: var(--mud-default-borderradius);
+}
+
+:root:has([data-hu-send="text"]) .composer-send .mud-icon-button:hover {
+    background: var(--hu-accent-ink);
+}
+
+:root:has([data-hu-send="text"]) .composer-send .mud-icon-button .mud-icon-root {
+    width: 16px;
+    height: 16px;
+}
+
+:root:has([data-hu-send="text"]) .composer-send-label {
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 12px;
+    line-height: 26px;
+    pointer-events: none;
+    color: var(--hu-send-fg);
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 500;
+}
+
 /* ---- Room member health: an Agent that is Offline or Degraded, surfaced where it matters most --- */
 
 .member-health-alert {

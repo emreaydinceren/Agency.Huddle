@@ -5,4 +5,7 @@ internal enum ComposerStyle
 {
     /// <summary>Today's Huddle: a boxed input.</summary>
     Box,
+
+    /// <summary>A paper card: the box is the surface, the input is borderless and a tool row sits along the bottom.</summary>
+    Card,
 }

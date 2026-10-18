@@ -152,17 +152,17 @@ public sealed partial class SkinLoaderTests
         Assert.Equal("a.json: tokens.no.such.token: unknown token key.", exception.Message);
     }
 
-    /// <summary>A trait value no enum has yet, and an unknown trait, are refused; the default value loads in any case.</summary>
+    /// <summary>A trait value no enum has, and an unknown trait, are refused; the default value loads in any case.</summary>
     [Fact]
     public void Skins_UnknownTraitValue_Fails()
     {
         SkinException value = Assert.Throws<SkinException>(() => Load(
-            ("a.json", File("a", "light", 1, "\"traits\": { \"message\": \"row\" }"))));
+            ("a.json", File("a", "light", 1, "\"traits\": { \"message\": \"sideways\" }"))));
         SkinException trait = Assert.Throws<SkinException>(() => Load(
             ("a.json", File("a", "light", 1, "\"traits\": { \"typo\": \"bubble\" }"))));
         IReadOnlyList<Skin> fine = Load(("a.json", File("a", "light", 1, "\"traits\": { \"message\": \"Bubble\" }")));
 
-        Assert.Equal("a.json: traits.message: 'row' is not a value of this trait; expected one of bubble.", value.Message);
+        Assert.Equal("a.json: traits.message: 'sideways' is not a value of this trait; expected one of bubble, row.", value.Message);
         Assert.Equal("a.json: traits.typo: unknown trait.", trait.Message);
         Assert.Equal(MessageLayout.Bubble, fine[0].Traits.Message);
     }

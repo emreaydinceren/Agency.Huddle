@@ -39,7 +39,7 @@ public sealed class R3FoundationCssTests
         Assert.DoesNotMatch(@"var\(--mud-palette-(divider|divider-light|lines-inputs|background-gray)\)", css);
     }
 
-    /// <summary>1.5x the base radius stays on the message bubble, the Composer and its drop hint; every other surface is 1x.</summary>
+    /// <summary>1.5x the base radius stays on the message bubble, the Composer and its drop hint; every other surface is 1x. A trait variant (a rule scoped to a <c>data-hu-*</c> marker) is a Theme's choice and is not counted.</summary>
     [Fact]
     public void AppCss_OneAndAHalfRadiusSurvivesOnlyOnBubbleAndComposer()
     {
@@ -47,7 +47,8 @@ public sealed class R3FoundationCssTests
         List<string> selectors = [];
         foreach (Match rule in Regex.Matches(css, @"(?<sel>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5)))
         {
-            if (rule.Groups["body"].Value.Contains("var(--mud-default-borderradius) * 1.5", StringComparison.Ordinal))
+            bool traitVariant = StripComments(rule.Groups["sel"].Value).TrimStart().StartsWith(":root:has([data-hu-", StringComparison.Ordinal); // contains-ok: a trait variant rule is scoped to its marker attribute
+            if (!traitVariant && rule.Groups["body"].Value.Contains("var(--mud-default-borderradius) * 1.5", StringComparison.Ordinal))
             {
                 selectors.Add(rule.Groups["sel"].Value.Trim());
             }

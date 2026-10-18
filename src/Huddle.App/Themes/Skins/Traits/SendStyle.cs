@@ -5,4 +5,7 @@ internal enum SendStyle
 {
     /// <summary>Today's Huddle: an icon button.</summary>
     Icon,
+
+    /// <summary>A small button that shows the word "Send" beside its icon.</summary>
+    Text,
 }
