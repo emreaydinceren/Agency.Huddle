@@ -6893,7 +6893,7 @@ a.team-ref,
 :root:has([data-hu-surface="paper"]) .mud-paper.agent-card {
     background: var(--hu-ground-raised);
     border: 1px solid var(--hu-line-region);
-    border-radius: calc(var(--mud-default-borderradius) * 3 / 2);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
     box-shadow: none;
 }
 
@@ -6903,7 +6903,7 @@ a.team-ref,
     background: var(--hu-tone-warning-tint);
     border: 1px solid var(--hu-tone-warning-line);
     border-left: 3px solid var(--hu-needs);
-    border-radius: calc(var(--mud-default-borderradius) * 3 / 2);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
 }
 
 /* -- surface=paper: right sidebar, sections divided by a hairline, rows (9) -------------------------------------- */
@@ -6958,7 +6958,7 @@ a.team-ref,
 
 /* -- surface=paper: Board, lanes and cards: radius, sizes, paddings (12.2) ----------------------------------------- */
 :root:has([data-hu-surface="paper"]) .task-board-column {
-    border-radius: calc(var(--mud-default-borderradius) * 3 / 2);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
 }
 
 :root:has([data-hu-surface="paper"]) .task-board-column-label {
@@ -7048,7 +7048,7 @@ a.team-ref,
 
 /* -- surface=paper: Teammates, cards (13) ------------------------------------------------------------------------- */
 :root:has([data-hu-surface="paper"]) .teammates-item {
-    border-radius: calc(var(--mud-default-borderradius) * 3 / 2);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -7150,14 +7150,14 @@ a.team-ref,
 :root:has([data-hu-surface="paper"]) .process-step,
 :root:has([data-hu-surface="paper"]) .team-type-card,
 :root:has([data-hu-surface="paper"]) .roster-card {
-    border-radius: calc(var(--mud-default-borderradius) * 3 / 2);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
 }
 
 /* -- surface=paper: dialogs, paper with hairline sections; the shadow is MudBlazor's elevation (15.5) -------------- */
 :root:has([data-hu-surface="paper"]) .mud-dialog {
     background: var(--hu-ground-raised);
     border: 1px solid var(--hu-line-control);
-    border-radius: calc(var(--mud-default-borderradius) * 3 / 2);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
 }
 
 :root:has([data-hu-surface="paper"]) .mud-dialog .mud-dialog-title {
@@ -7167,7 +7167,7 @@ a.team-ref,
 :root:has([data-hu-surface="paper"]) .mud-dialog .mud-dialog-actions {
     border-top: 1px solid var(--hu-line-region);
     background: var(--hu-ground-sunk);
-    border-radius: 0 0 calc(var(--mud-default-borderradius) * 3 / 2) calc(var(--mud-default-borderradius) * 3 / 2);
+    border-radius: 0 0 calc(var(--mud-default-borderradius) * 1.5) calc(var(--mud-default-borderradius) * 1.5);
 }
 
 /* -- surface=paper: popovers and floating panels (15.5) ------------------------------------------------------------- */
@@ -7178,7 +7178,7 @@ a.team-ref,
 :root:has([data-hu-surface="paper"]) .profile-popover {
     background: var(--hu-ground-raised);
     border: 1px solid var(--hu-line-control);
-    border-radius: calc(var(--mud-default-borderradius) * 3 / 2);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
 }
 
 :root:has([data-hu-surface="paper"]) .mud-list-item:hover,
