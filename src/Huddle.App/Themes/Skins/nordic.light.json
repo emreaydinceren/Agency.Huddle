@@ -95,8 +95,7 @@
     "tabs.item.hover": "palette.tableHover",
     "message.line-height": "1.5",
     "send.bg": "palette.primary",
-    "send.fg": "palette.primaryText",
-    "ring": "palette.background"
+    "send.fg": "palette.primaryText"
   },
   "traits": {
     "message": "row",
