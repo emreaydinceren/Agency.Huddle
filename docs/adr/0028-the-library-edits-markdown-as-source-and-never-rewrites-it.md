@@ -61,6 +61,11 @@ byte-exact save of the minimal change: only the link text differs.
 - **Huddle ships its first third-party JS library** besides MudBlazor. It is vendored, pinned and
   loaded only when the Library pane is open. CodeMirror's theme reads only `--mud-palette-*` and
   `--mud-typography-*` variables, so the two stylesheet tests keep passing.
+- **The vendored CodeMirror packages** (pinned exactly in `tools/codemirror/package.json`, bundled
+  by `tools/codemirror/build.ps1`): `state`, `view`, `commands`, `language`, `autocomplete` (6.20.3,
+  added for the `[[` note completion), the Markdown, JSON, JavaScript, CSS and XML languages, and
+  the legacy C#, PowerShell and YAML modes. The Markdown toolbar's edits are single transactions on
+  the selection or the chosen lines, so they keep the byte-exact save above.
 - **A link rewrite on rename touches files the Human did not open,** and can collide with an
   Agent writing one of them at the same moment. Under
   [ADR-0029](0029-between-the-human-and-an-agent-the-last-write-wins.md) the later write wins.

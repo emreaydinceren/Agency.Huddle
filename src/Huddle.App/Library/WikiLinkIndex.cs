@@ -240,6 +240,84 @@ internal sealed class WikiLinkIndex : IDisposable
         return WikiLinkResolver.Resolve(index.AllFiles, from.RelativePath, link.Target);
     }
 
+    /// <summary>The notes in <paramref name="from"/>'s root whose name matches <paramref name="query"/>, each written
+    /// as the shortest link target that resolves back to it from <paramref name="from"/> (the same
+    /// <see cref="WikiLinkResolver.ShortestTarget"/> a rename uses), for the editor's <c>[[</c> completion. Nearest first, as
+    /// Spec §6.5 resolution is: notes in the same folder, then by the fewest folder steps from the open note, then names that
+    /// start with the query before names that merely contain it, then ordinal path order. The note itself is left out.
+    /// Empty when the root's index isn't available.</summary>
+    /// <param name="from">The note being edited; it fixes the root and the folder the shortest form is measured from.</param>
+    /// <param name="query">What the human has typed after <c>[[</c>; empty matches every note.</param>
+    /// <param name="max">The most suggestions to return.</param>
+    internal IReadOnlyList<string> SuggestTargets(LibraryPath from, string query, int max)
+    {
+        ArgumentNullException.ThrowIfNull(from);
+        ArgumentNullException.ThrowIfNull(query);
+
+        RootIndex? index = this.GetOrBuild(from.Root.Id);
+        if (index is not { Available: true } || max <= 0)
+        {
+            return [];
+        }
+
+        List<(string Path, string Name, bool StartsWith, int Distance)> matches = [];
+        foreach (string file in index.AllFiles)
+        {
+            if (!LibraryFileKinds.IsMarkdown(file) || FolderSnapshot.PathComparer.Equals(file, from.RelativePath))
+            {
+                continue;
+            }
+
+            // A query with a '/' is a path suffix the human is spelling out, so it is matched against the whole path.
+            string name = query.Contains('/', StringComparison.Ordinal)
+                ? file[..^System.IO.Path.GetExtension(file).Length]
+                : System.IO.Path.GetFileNameWithoutExtension(file);
+            bool startsWith = name.StartsWith(query, StringComparison.OrdinalIgnoreCase);
+            if (startsWith || name.Contains(query, StringComparison.OrdinalIgnoreCase))
+            {
+                matches.Add((file, name, startsWith, WikiLinkResolver.FolderDistance(from.RelativePath, file)));
+            }
+        }
+
+        matches.Sort(static (a, b) =>
+        {
+            int byDistance = a.Distance.CompareTo(b.Distance);
+            if (byDistance != 0)
+            {
+                return byDistance;
+            }
+
+            int byGroup = b.StartsWith.CompareTo(a.StartsWith);
+            return byGroup != 0 ? byGroup : string.CompareOrdinal(a.Path, b.Path);
+        });
+
+        List<string> suggestions = [];
+        foreach ((string path, _, _, _) in matches.Take(max))
+        {
+            suggestions.Add(WikiLinkResolver.ShortestTarget(index.AllFiles, from.RelativePath, path));
+        }
+
+        return suggestions;
+    }
+
+    /// <summary><see cref="SuggestTargets"/> off the caller's thread: the first call for a root walks its disk to build
+    /// the index, which must not stall the Blazor circuit that is waiting on the human's next keystroke.</summary>
+    /// <param name="from">The note being edited.</param>
+    /// <param name="query">What the human has typed after <c>[[</c>.</param>
+    /// <param name="max">The most suggestions to return.</param>
+    /// <param name="ct">Cancels the lookup before it starts; a build already under way finishes and is cached.</param>
+    internal Task<IReadOnlyList<string>> SuggestTargetsAsync(LibraryPath from, string query, int max, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(from);
+        ArgumentNullException.ThrowIfNull(query);
+
+        return Task.Run(() =>
+        {
+            ct.ThrowIfCancellationRequested();
+            return this.SuggestTargets(from, query, max);
+        }, ct);
+    }
+
     /// <summary>Drops the cached index for <paramref name="rootId"/> and bumps its generation, so a build
     /// already in flight for it (fix card 8.4 item 1) is discarded rather than cached once it finishes.</summary>
     /// <param name="rootId">The Library Root id.</param>

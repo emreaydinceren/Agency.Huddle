@@ -3832,6 +3832,37 @@ a.team-ref,
     padding: 24px 16px 0;
 }
 
+/* The Markdown formatting row above the editor (Edit and Split): one 28px row of dense icon buttons,
+   16px in like the document toolbar, closed by the same hairline. */
+.markdown-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    box-sizing: border-box;
+    min-height: 28px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--hu-line-region);
+}
+
+.cm-tooltip.cm-tooltip-autocomplete {
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-text-primary);
+    border: 1px solid var(--mud-palette-lines-default);
+}
+
+/* The picked row wears the app's Selected treatment, like a selected list row. CodeMirror's own theme paints
+   it #17c on white through a longer selector, so the leading html element keeps this one ahead. */
+html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
+    background-color: var(--hu-selected-background);
+    color: var(--hu-selected-foreground);
+}
+
+.markdown-toolbar .mud-button-root {
+    height: 28px;
+    min-width: 28px;
+    color: var(--mud-palette-text-secondary);
+}
+
 .library-document > .library-editor .cm-content,
 .library-document-split > .library-editor .cm-content {
     padding: 24px 16px;

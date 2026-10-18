@@ -357,9 +357,53 @@ file. It is loaded by `library-editor.js` only when a document is opened in Edit
   edits is caught by `MudExitPrompt` (`Disabled` bound to *not dirty*). **Switching documents inside
   the pane** is not navigation, so it asks *Save*, *Discard* or *Cancel* through
   `IDialogService.ShowMessageBoxAsync`.
-- The interop boundary is four calls: `create(element, text, readOnly)`, `getText()`,
-  `setText(text)` and `dispose()`, plus one `DotNetObjectReference` callback, `OnDirtyChanged`.
-  Text crosses the circuit only on save and on mode switch, never per keystroke.
+- The interop boundary is four calls: `create(element, text, readOnly, …)`, `getText()`,
+  `setText(text)` and `dispose()`, plus the `DotNetObjectReference` callbacks `OnDirtyChanged`,
+  `OnSaveRequested`, `OnPreviewText` and `WikiLinkCompletionsAsync` (below). Text crosses the
+  circuit only on save and on mode switch, never per keystroke; the one per-keystroke call is the
+  `[[` completion, which sends the few characters typed after the brackets.
+- **The Markdown toolbar** (`MarkdownToolbar`, wireframe `L3g`) shows above the editor in Edit and
+  Split for an editable `.md` file, and nowhere else. Its buttons are Bold, Italic, Heading, Code,
+  Bulleted list, Task list and `[[ ]]`. A click is handled in the browser, never over the circuit:
+  `library-editor.js` finds the row by `data-md-toolbar` and listens on it (`mousedown` is
+  prevented so the editor keeps its selection). The row is a WAI-ARIA toolbar: one tab stop,
+  Left/Right/Home/End move between buttons, Escape returns to the editor.
+- **Each command is one small CodeMirror transaction**, so it is one undo step and it changes only
+  marker characters at the selection or at the start of the selected lines (ADR-0028: nothing else is
+  read back, re-wrapped or normalised, and a line's `\r` is never touched). The text logic is the
+  pure `wwwroot/markdown-commands.js` (`planCommand`), run under Node by the tests.
+  - **Bold** (`**`), **Italic** (`*`) and **Code** (`` ` ``) wrap the selection, or insert an empty
+    pair with the caret inside. Run on text already wrapped, with the markers just outside or just
+    inside the selection, they remove them instead. Bold and italic tell `*` from `**`: italic on
+    `**x**` adds (`***x***`) and bold on `*x*` adds; on `***x***` each removes only its own.
+  - **Heading** treats any `#`–`######` followed by a space as a heading: a `##` line loses the
+    prefix, a heading of another level is set to `## `, a plain line gets `## `, each selected
+    line on its own.
+  - **Bulleted list** (`- `) and **Task list** (`- [ ] `) prefix the selected lines, or remove the
+    prefix when every selected line already has it. A selection that ends at the start of a line
+    does not take that line.
+  - **`[[ ]]`** wraps the selection in `[[ ]]`, or inserts `[[]]` with the caret inside and opens
+    the suggestion list.
+- **Shortcuts,** bound in the CodeMirror keymap beside `Mod-s`: `Mod-b` Bold, `Mod-i` Italic,
+  `Mod-e` Code. Each tooltip names its shortcut.
+- **`[[` completion.** After `[[`, with only characters that can belong to a target before the caret
+  (not `]`, `[`, `|`, `#` or a line break), the editor asks .NET for note names through
+  `WikiLinkCompletionsAsync(query)` and shows them in a popup; picking one writes the target and
+  closes the link with `]]` unless they are already there. It does not open inside inline code, a
+  fenced block or an indented code block (the Markdown syntax tree decides), nor after `[[x|` or
+  `[[x#`. Requests are made 120 ms after the last keystroke; a newer request, or closing the editor,
+  cancels the one still running. The lookup runs off the circuit's thread, because the first call
+  for a root builds its `WikiLinkIndex`.
+  - **Which notes.** Markdown files of the open note's own Library Root only (§6.5: each root is its
+    own vault), the open note itself left out, whose name contains the query (a query with `/`
+    matches the path), at most 20.
+  - **In what order, nearest first,** as §6.5 resolution decides a tie: notes in the open note's
+    folder, then the fewest folder steps away, then names that start with the query before names
+    that contain it, then ordinal path order.
+  - **How each is written:** the shortest form that still resolves back to it from the open note
+    (`WikiLinkResolver.ShortestTarget`, the same one a rename writes).
+- `@codemirror/autocomplete` is the one CodeMirror package added for this; see
+  [ADR-0028](adr/0028-the-library-edits-markdown-as-source-and-never-rewrites-it.md).
 - The CodeMirror theme is written in `app.css` with `--mud-palette-*` and `--mud-typography-*`
   variables and `--font-mono`, so `AppCss_UsesOnlyMudBlazorVariables` still passes.
 - Non-Markdown text files open in CodeMirror read-only, with the matching language mode for

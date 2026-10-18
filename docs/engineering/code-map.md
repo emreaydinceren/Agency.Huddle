@@ -430,7 +430,10 @@ The Library — the explorer, viewer and editor, Spec §6. Paths are relative to
 | `Library/LibraryFilesEndpoint.cs` | HTTP endpoint serving `/library-files/…` for images inside notes. |
 | `Acp/TeammatePaths.cs` | Definition file, Teammate folder and Work Dir for a Name. |
 | `Acp/TeammateLayoutMigration.cs` | The one-time move from `Teams/` + `work/` to `Teammates/`. |
-| `wwwroot/library-editor.js` | CodeMirror 6 interop module. |
+| `wwwroot/library-editor.js` | CodeMirror 6 interop module: the editor, `Mod-s`/`Mod-b`/`Mod-i`/`Mod-e`, the `[[` completion source and the Markdown toolbar's listeners. |
+| `wwwroot/markdown-commands.js` | The toolbar commands and the `[[` pattern as pure text transforms (no CodeMirror, no DOM), so Node tests can run them. |
+| `Components/Library/MarkdownToolbar.razor` | The Markdown formatting row above the editor (Edit and Split); markup only, wired by `library-editor.js`. |
+| `tools/codemirror/` | Pinned CodeMirror packages and the esbuild script that builds `wwwroot/lib/codemirror/codemirror.bundle.js` (ADR-0028). |
 
 References — the `@` and `#` picker in the Composer, the reference snapshot and the Referenced items header, `docs/Huddle.AtTagging-Specifications.md`. Paths are relative to `src/Huddle.App`:
 

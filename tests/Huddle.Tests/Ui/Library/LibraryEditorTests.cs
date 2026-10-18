@@ -116,6 +116,62 @@ public sealed class LibraryEditorTests
         Assert.Equal("new text", call.Arguments[0]);
     }
 
+    /// <summary>A newer <c>[[</c> request cancels the one still running (the human typed on): the older call answers with an empty list and its token is cancelled, the newer one is answered.</summary>
+    [Fact]
+    public async Task WikiLinkCompletionsAsync_NewerRequest_CancelsTheOlderOne()
+    {
+        using MudBunitContext context = new();
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<CancellationToken> tokens = [];
+        Func<string, CancellationToken, Task<IReadOnlyList<string>>> completions = async (query, ct) =>
+        {
+            tokens.Add(ct);
+            if (string.Equals(query, "a", StringComparison.Ordinal))
+            {
+                await gate.Task.WaitAsync(ct);
+            }
+
+            return [query];
+        };
+        BunitJSModuleInterop module = context.JSInterop.SetupModule(ModulePath);
+        BunitJSModuleInterop handle = module.SetupModule("create", _ => true);
+        handle.SetupVoid("dispose", _ => true).SetVoidResult();
+        IRenderedComponent<LibraryEditor> rendered = context.Render<LibraryEditor>(parameters => parameters
+            .Add(p => p.Text, "x")
+            .Add(p => p.LanguageId, "markdown")
+            .Add(p => p.WikiLinkCompletions, completions));
+
+        Task<IReadOnlyList<string>> older = rendered.Instance.WikiLinkCompletionsAsync("a");
+        IReadOnlyList<string> newer = await rendered.Instance.WikiLinkCompletionsAsync("ab");
+        IReadOnlyList<string> olderResult = await older;
+
+        Assert.Equal(["ab"], newer);
+        Assert.Empty(olderResult);
+        Assert.True(tokens[0].IsCancellationRequested);
+    }
+
+    /// <summary>Disposing the editor ends a <c>[[</c> request still in flight: its token is cancelled and a request made afterwards offers nothing.</summary>
+    [Fact]
+    public async Task WikiLinkCompletionsAsync_AfterDispose_OffersNothing()
+    {
+        using MudBunitContext context = new();
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Func<string, CancellationToken, Task<IReadOnlyList<string>>> completions = async (query, ct) =>
+        {
+            await gate.Task.WaitAsync(ct);
+            return [query];
+        };
+        (IRenderedComponent<LibraryEditor> rendered, _, _) = RenderEditor(context);
+        rendered.Render(parameters => parameters.Add(p => p.WikiLinkCompletions, completions));
+        Task<IReadOnlyList<string>> inFlight = rendered.Instance.WikiLinkCompletionsAsync("q");
+
+        await rendered.Instance.DisposeAsync();
+        IReadOnlyList<string> after = await rendered.Instance.WikiLinkCompletionsAsync("q");
+
+        Assert.Empty(await inFlight);
+        Assert.Empty(after);
+    }
+
     /// <summary>Calling <see cref="LibraryEditor.SetTextAsync"/> before the editor handle exists (no render has happened yet, so <c>create</c> was never called) throws <see cref="InvalidOperationException"/> rather than reaching for a null handle.</summary>
     [Fact]
     public async Task SetTextAsync_BeforeCreate_ThrowsInvalidOperationException()
