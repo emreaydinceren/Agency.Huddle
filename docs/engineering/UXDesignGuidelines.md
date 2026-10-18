@@ -266,7 +266,7 @@ id or a snapshot: an open dialog ignores new parameters.
 | `TeammateGrouping` | `Components/Pages/TeammateGrouping.cs` | Teammates grouped by Team, as `P3` shows them |
 | `PersonaStatusResolver` | `Acp/PersonaStatusResolver.cs` | A Teammate's current `PersonaStatus`, for `StatusDot` |
 | `TeammateProfiles` | `Components/Shared/TeammateProfiles.cs` | `BuildAsync(name, team, ct)`: a saved Teammate as a `ProfileCard`'s data (role description and tier from its team type, Skills, state, and in a Team its Manager badge and Member chip), or, for the Human's Name or Alias (`IHumanIdentity.Matches`), the Human's own card with `IsHuman` set; null when neither matches |
-| `ThemeDefaults`, `ThemeCatalog`, `AccentPalette` | `Themes/` | The px type scale (`WithSharedTypography`), the Theme list, accent contrast clamping |
+| `ThemeDefaults`, `ThemeCatalog`, `SkinLoader`, `AccentPalette` | `Themes/`, `Themes/Skins/` | The px type scale (`WithSharedTypography`), the Theme list built from the skin files, skin loading and customization, accent contrast clamping |
 | `ContrastColour` | `Themes/ContrastColour.cs` | `ReadableForeground`: black or white, whichever reads better, for `PrimaryContrastText` |
 | `StatusChipContrast` | `Themes/StatusChipContrast.cs` | `Fill`, `Text` and `Ratio`: the tinted chip's mixes in C#, so a test holds them to 4.5:1 |
 | `AvatarColours` | `Themes/AvatarColours.cs` | `MonogramStyle` (only `--mud-palette-primary: #hex;`; `app.css` draws both Themes), `Fill` and `Letters`: the recipe in C# for the tests. Light: 20% over Surface, letters 75% toward `TextPrimary`. Dark: 35% over Surface, letters 75% toward white |
@@ -373,7 +373,7 @@ the catalog above.
 | Document | Owns | Binding? | Read it when |
 | --- | --- | --- | --- |
 | [design-system.md](design-system.md) | How the UI looks, reads and behaves: tokens, type roles, chips, avatars, spacing, shape, elevation, icons, motion, focus, layout, overlay anatomy, component defaults, interface copy, stylesheet rules, the checklist | **Yes**, for new and changed UI | Before you design a screen, write markup or touch a stylesheet |
-| Theme vocabulary (Ground, Ink, Quiet ink, Signal, Second cue, the ink ladder) | Defined once, in [design-system.md › Colour](design-system.md#colour). The measured examples are in [theme-authoring.md](theme-authoring.md#the-ink-ladder-measured) | **Yes**, with design-system.md | Before you pick a line, a fill or a signal colour |
+| Theme vocabulary (Ground, Ink, Quiet ink, Signal, Second cue, the ink ladder) | Defined once, in [design-system.md › Colour](design-system.md#colour). The skin model that carries them is in [theme-authoring.md](theme-authoring.md) | **Yes**, with design-system.md | Before you pick a line, a fill or a signal colour |
 | [wireframes.md](wireframes.md) | The code, name and component of every container, an SVG figure per screen, and the words for UI parts | **Yes**, for vocabulary; update it with your change | Before you discuss, specify, report on or change a part of the screen |
 | [UX-Issues.md](UX-Issues.md) | The few rows the UX consistency delivery did not close, with a note on what is left | No: a backlog | Before you change an area |
 | [language.md](language.md) | The defined terms and the words to avoid | **Yes** | Before you write a label, a message or help text |
@@ -485,11 +485,10 @@ with realistic Teams, Teammates, Rooms, Tasks and Library notes:
 An agent starts the `huddle-seed` entry in `.claude/launch.json` with the built-in
 browser's `preview_start` instead of starting the server itself. Then check:
 
-- **Themes:** one of each family, five in all: Huddle Light and Huddle Dark (the top
-  bar's toggle), then **Lumen Light**, **Nordic Dark** and
-  **Cobalt Soft Dark** (Settings, Appearance). Always the same three, so every checker
-  opens the same ones. The rules are relationships, so "the lines are in order and the
-  second cues are present" means the same thing in all five.
+- **Themes:** Lumen Light and Lumen Dark (the default pair; the top bar's toggle), then
+  **Fluent Light**, **Nordic Dark** and **Cobalt Soft Dark** (Settings, Appearance), five in
+  all. Always the same ones, so every checker opens the same ones. The rules are relationships,
+  so "the lines are in order and the second cues are present" means the same thing in all five.
 - **Width:** the full window and a narrow one; the page fills its pane and scrolls inside.
 - **Keyboard:** every control can be reached with Tab, the focus ring shows, and Escape
   closes overlays.
@@ -498,7 +497,7 @@ browser's `preview_start` instead of starting the server itself. Then check:
 - **Sizes:** run the text census, `tools/text-census/text-census.js`, on the changed
   screen (see its [README](../../tools/text-census/README.md)). Nothing renders under 11px,
   and no size appears that the type table doesn't list.
-- **Contrast:** the census's `failures` list is empty in Huddle Light and in Huddle Dark.
+- **Contrast:** the census's `failures` list is empty in Lumen Light and in Lumen Dark.
   Every accent-coloured word and every chip label reaches 4.5:1.
 - **Lines and fills:** lines are in ladder order against Ground (Rule < Edge < Field
   ≤ Chrome), and a washed shape has an Edge. The text census's `lines` report gives each
@@ -506,7 +505,7 @@ browser's `preview_start` instead of starting the server itself. Then check:
 - **Second cues:** switch to greyscale (DevTools › Rendering › Emulate vision
   deficiencies › Achromatopsia). Every state, priority and presence still reads.
 - **Position across Tabs:** switch to a sibling page; the title doesn't move.
-- **Dark-mode edges:** cards and tiles are still visibly bordered in Huddle Dark.
+- **Dark-mode edges:** cards and tiles are still visibly bordered in Lumen Dark.
 - **Hierarchy:** the item's name is the largest text in its container.
 
 **Then update what the next reader relies on, in the same commit:**

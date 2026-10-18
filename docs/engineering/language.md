@@ -831,28 +831,28 @@ See
 ## Appearance
 
 **Theme**
-: One `MudTheme` object in `ThemeCatalog`, carrying **one** palette and the
+: One skin file per Theme and mode, loaded into a `MudTheme` in `ThemeCatalog`, carrying **one** palette and the
   `ThemeDescriptor.Mode` naming which — so a Theme *is* a light one or a dark one rather
   than spanning both, and choosing it chooses the mode
   ([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)). It fills only that slot;
-  the other keeps MudBlazor's defaults and is never rendered. Twelve ship built in:
-  this application's own `huddle` (labelled "Huddle Light") and `huddle-dark`, the two
-  Custom Accent Themes (`custom-accent` and `custom-accent-dark`, whose accent colour the
-  Appearance tab sets), and the Lumen, Fluent, Nordic and Cobalt Soft pairs (lumen-light,
-  lumen-dark and so on, mapped from the approved mockup directions). Seventeen Visual
-  Studio Code ports shipped here until 2026-10-17 — see
+  the other keeps MudBlazor's defaults and is never rendered. Eight ship built in, the
+  Lumen (the default), Fluent, Nordic and Cobalt Soft pairs (lumen-light, lumen-dark and so on,
+  mapped from the approved mockup directions). The Huddle pair, the Custom Accent Themes and
+  seventeen Visual Studio Code ports shipped until 2026-10-17 — see
+  [ADR-0058](../adr/0058-a-theme-is-a-palette-a-skin-and-traits.md) and
   [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)
-  (superseded).
+  (superseded). A Theme is a **skin**: a palette, `--hu-*` tokens, nine traits, faces, radius,
+  typography and shadows. A Human's own accent is a per-Theme **customization**, not a Theme.
   A Theme also carries a **`ThemeGroup`** — Light or Dark — which is the picker list it
   appears in. Today it always equals its Mode, but it is a separate field.
   A Theme is identified by its **id**, which is what
   `appearance.json` stores; never by its display label, for the reason
   [Rules](rules.md) gives for a Model. Roadmap item 7 is what remains: importing an
   *arbitrary* Theme a Human supplies, mapped from JSON into a `MudTheme` at run time
-  rather than generated as CSS. The bundled Themes needed no importer — they were
-  converted once, by hand, and are ordinary C#.
+  rather than generated as CSS. The bundled Themes needed no importer — they are
+  embedded JSON skins.
 : *Avoid*: stylesheet (a Theme stopped being one on 2026-09-14 — see
-  [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md)), skin, palette (that is one
+  [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md)), palette (that is one
   half of a Theme, and a MudBlazor type name), colour scheme (`color-scheme` is a CSS
   property here and no longer carries anything).
 
@@ -867,9 +867,9 @@ See
 
 **Appearance**
 : The Appearance tab of `/settings`, and `{DataDir}/appearance.json` behind it: the
-  selected Theme id (`theme`), and the accent colour (`accentColor`), and nothing else (a retired `libraryPaneSide` key is ignored). Per installation, hand-editable and watched,
-  exactly like `hooks.json`. There are no per-property overrides — that layer was removed
-  with the Tokens — and since 2026-09-21 there is no light/dark preference either: a
+  selected Theme ids (`theme`, `lightTheme`, `darkTheme`), and `customizations` per Theme id (a palette and token override validated like a skin; the Appearance tab writes only `primary`), and nothing else (a retired `libraryPaneSide` key is ignored). Per installation, hand-editable and watched,
+  exactly like `hooks.json`. The old CSS-Token override layer was removed
+  with the Tokens, and since 2026-09-21 there is no light/dark preference either: a
   Theme carries its own palette, so selecting one selects the mode
   ([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)). A file written before then
   still holds a `dark` key; it is an unknown key now, ignored and kept. Appearance is the
@@ -877,6 +877,6 @@ See
 : **The tab is not the file.** Since 2026-09-22 the tab has a second section — the
   Human's own **Avatar** — because the Human has no Persona file and so no Teammate
   card to edit one on. That Avatar is stored in `avatars.json`, a different file with a
-  different owner; `appearance.json` still holds the selected Theme id and the accent colour, and nothing else.
+  different owner; `appearance.json` still holds the selected Theme ids and the Theme customizations, and nothing else.
 : *Avoid*: dark mode and light/dark preference (there is no such setting any more — say
   *a dark Theme*), display settings.

@@ -442,16 +442,18 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     one, and the one you pick is the one you get, on every device, until you pick
     another. Doing this honestly needs a **pair** of authored Themes and a rule for
     resolving between them, the way VS Code's *Preferred Light* / *Preferred Dark* and
-    "Sync with OS" work. Every one of the twelve Themes has a real counterpart in the other mode, so
+    "Sync with OS" work. Every one of the eight Themes has a real counterpart in the other mode, so
     the door is open; it is not built. This replaced a worse limit — until 2026-09-21 the
     preference could contradict the Theme, and selecting a dark Theme with `Light`
     showed Huddle's palette under that Theme's name.
-  - **There is no per-Token customisation at all.** `appearance.json` holds the Theme id
-    (`theme`) and the accent colour (`accentColor`), and nothing else. The Library pane side
+  - **A Human can customize only the accent.** `appearance.json` holds the Theme ids and
+    `customizations` per Theme (a palette and token override), but the Appearance tab writes
+    only `palette.primary` (**Accent for <Theme>**, with Reset); other keys are for hand edits
+    and the Theme lab, which exports JSON and saves nothing. The Library pane side
     setting was retired 2026-10-10 with the docked pane; a leftover `libraryPaneSide` key in an
     existing file is ignored without a warning and left untouched. The override map, its allowlist and the inline `<style>` are gone.
-    Changing one colour means editing `ThemeCatalog` in C# and rebuilding, or waiting for
-    item 7's Theme import.
+    Changing another colour permanently means editing a skin file under `Themes/Skins/`
+    and rebuilding, or waiting for item 7's Theme import.
   - **A bad Theme id is logged, not shown.** `AppearanceStore` warns, names the unknown
     id, leaves the file untouched and falls back to the default Theme — but the
     Appearance tab no longer reports it, because the section that did belonged to the
@@ -464,8 +466,8 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
 - **There is no high-contrast Theme.** The seventeen Visual Studio Code ports, including the
   two High Contrast ones, were removed on 2026-10-17
   ([ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md),
-  superseded). The picker offers the twelve Huddle, Custom Accent, Lumen, Fluent, Nordic and Cobalt
-  Soft Themes, and none of them is designed as a high-contrast mode. A Human who
+  superseded; [ADR-0058](../adr/0058-a-theme-is-a-palette-a-skin-and-traits.md) removed the Huddle and
+  Custom Accent pairs). The picker offers the eight Lumen, Fluent, Nordic and Cobalt Soft Themes, and none of them is designed as a high-contrast mode. A Human who
   stored a removed id in `appearance.json` gets the default Theme and a log warning, not an error.
 - **A Teammate chooses its own Avatar, and here is what that does not cover.**
   Initials, a short label or an uploaded image, over a background colour —
@@ -758,7 +760,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
 - **An Adapter without file tools cannot open an attachment (U19).** The Teammate gets the path line of a file the Human attached, such as `brief.pdf`, and cannot read it: the same limit as any Library path the Adapter cannot open. See [the ChatUploads spec](../Huddle.ChatUploads-Specifications.md) §2.
 - **Later edits to an uploaded file are not announced.** Team Uploads folders are pruned from File Changes scans and the Watched Folder resolver refuses to watch an Uploads folder, so an edit or delete of an uploaded file, by an Agent or the Human, reaches no Teammate. The chat Message is the only notice. See [the ChatUploads spec](../Huddle.ChatUploads-Specifications.md) §6.8.
 - **Unarchiving a Room of a vanished Team lasts until the next restart.** The reconciler archives a vanished Team's Rooms once, and remembers only in memory which ones it archived. A Room the Human unarchives stays in Chats, but a restart archives it again; a Team that returns after a restart does not get its Team Room unarchived.
-- **Nordic follows its mockup, except where a Huddle rule wins.** The Nordic style pack ([ADR-0057](../adr/0057-a-theme-may-carry-a-style-pack.md)) keeps these on purpose:
+- **Nordic follows its mockup, except where a Huddle rule wins.** The Nordic skin ([ADR-0058](../adr/0058-a-theme-is-a-palette-a-skin-and-traits.md), which replaced ADR-0057's style pack) keeps these on purpose:
   - the TextPrimary focus ring, not the mockup's blue ring;
   - the type scale, so 17px titles are 16px and 11.5, 12.5 and 13.5px text snaps to 12 and 13px;
   - the 760px Transcript column;
@@ -771,4 +773,4 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   - a 2px Primary edge on the active Tab;
   - a visible Divider on rules that carry meaning.
 
-  The pack's faint 1.31:1 hairline is used only for region splits. A one-line field is 33px rather than the mockup's 34px, because the next padding step is off the spacing scale. The mockup's archetype glyphs and priority bars are not drawn.
+  Nordic's faint 1.31:1 hairline is used only for region splits. A one-line field is 33px rather than the mockup's 34px, because the next padding step is off the spacing scale. The mockup's archetype glyphs and priority bars are not drawn.

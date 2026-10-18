@@ -2,7 +2,7 @@
 
 Prove that the Appearance tab is an honest control for the Theme: that it is reachable by its own route, lists the whole built-in catalog in the right lists, stores the choice as an id in `appearance.json`, applies it at once with no page load and with no first-paint flash, shares it across browsers, and degrades safely when the file is wrong. The Development profile sets `Team:Acp:Enabled: true`, so the global cost guard in section 0.2 is the only thing holding ACP off. Set it before you launch.
 
-**25 tests** · 25 free, none paid · about 2.9 hours.
+**27 tests** · 27 free, none paid · about 3.1 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -14,14 +14,14 @@ defines the terminals, states, procedures and oracles this page names. Both are 
 > There is **no light/dark control** on this tab: choosing a Theme chooses light or dark, and the
 > application ignores the device's colour setting entirely. The per-token override layer
 > (`wwwroot/theme.css`, `themes/*.css`, `ThemeOverrides`) no longer exists.
-> `appearance.json` holds the keys `theme` (the Theme being shown), `lightTheme` and `darkTheme` (the Human's pair, [ADR-0054](../../adr/0054-a-light-theme-and-a-dark-theme.md)), and `accentColor` (Custom Accent only);
+> `appearance.json` holds the keys `theme` (the Theme being shown), `lightTheme` and `darkTheme` (the Human's pair, [ADR-0054](../../adr/0054-a-light-theme-and-a-dark-theme.md)), and `customizations` (per Theme id; the tab writes only `palette.primary`, the accent);
 > a retired `dark` key, or a retired `libraryPaneSide` key, left in an old file is kept as an unknown key and ignored.
 >
 > **Since ADR-0054 the Appearance tab has two pickers**, `Light theme` and `Dark theme`, and the top
 > bar has a mode button (APPEARANCETHEME-30 to 33 cover them). Tests 03, 04, 06, 28 and 29 were
 > written for the single picker: read "the Theme picker" there as whichever of the two lists holds
 > the Theme named; "stores its id as `theme`" as "stores it as `lightTheme` or `darkTheme`, and as
-> `theme` too when it is of the mode currently shown"; and "the catalog's Themes" as the 6 light
+> `theme` too when it is of the mode currently shown"; and "the catalog's Themes" as the 4 light
 > and 6 dark entries the two lists split them into (neither list has group headings; the
 > `High contrast` group was removed on 2026-10-17 with the VS Code ports). Hand-editing `theme` to put a dark Theme on screen is unaffected.
 >
@@ -108,7 +108,7 @@ If the page will not load at all (connection refused, or an ASP.NET error page),
 
 1. Go to http://localhost:5100/settings/appearance.
 2. Read the paragraph above the Theme picker. Compare it word for word with: `Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's light or dark colours too.`
-3. Read the credit line: the paragraph below the picker (and, only while a Custom Accent theme is selected, below the `Accent colour` picker too). Compare it word for word with: `Custom Accent lets you pick your own accent colour, adjusted if needed so it stays readable. Huddle, Custom Accent, Lumen, Fluent, Nordic and Cobalt Soft are this application's own Themes. None of them is taken from a third-party colour theme.`
+3. Read the credit line: the paragraph below the accent picker. Compare it word for word with: `The accent is adjusted if needed so it stays readable, and belongs to the Theme named above.` Then open the `Licences` disclosure below it and compare its text with: `Lumen, Fluent, Nordic and Cobalt Soft are this application's own Themes. None of them is taken from a third-party colour theme.`
 4. Read the paragraph directly after the credit line. Compare it word for word with: `The selection is stored at <path>. The file does not exist until you save a choice here, so it being absent is expected, not a bug.` (It is not the last paragraph: the closing `Your own avatar is set on the Profile tab.` follows it. There is no `Your avatar` section and no `avatars.json` path on this tab any more.)
 5. Read the path rendered in monospace in the selection paragraph. Write it down. It must be an absolute path, e.g. `<repo>\src\Huddle.App\App_Data\appearance.json` written out in full.
 6. Scan the whole Appearance panel for the sentence `A prompt is one piece of wording this application sends to a model` and for any mention of `prompts.json`, and for any mention of a token name such as `--font-chat` or an "Overrides" heading.
@@ -122,7 +122,7 @@ If the page will not load at all (connection refused, or an ASP.NET error page),
 - The path shown is absolute and ends in `\appearance.json`.
 - Neither the Prompts intro sentence nor any mention of `prompts.json` appears anywhere on the Appearance panel, and there is no token name and no "Overrides" section — that whole layer is gone, not merely hidden.
 - Both of the Prompts paragraphs DO appear on the Prompts panel.
-- The credit line sits directly below the Theme picker (and the Accent colour picker, when shown), names this application's own six families (`Huddle`, `Custom Accent`, `Lumen`, `Fluent`, `Nordic`, `Cobalt Soft`) as its own, and attributes no one. It must not name Visual Studio Code, Solarized or Monokai: those Themes were removed on 2026-10-17.
+- The credit line sits directly below the accent picker, and the `Licences` disclosure names this application's own four families (`Lumen`, `Fluent`, `Nordic`, `Cobalt Soft`) as its own, and attributes no one. It must not name Visual Studio Code, Solarized or Monokai: those Themes were removed on 2026-10-17.
 
 **Fail if — any of these**
 
@@ -141,7 +141,7 @@ If the path shown differs from `<repo>\src\Huddle.App\App_Data\appearance.json`,
 
 **Free** · about 3 min
 
-*Proves the picker is rendered from code (`ThemeCatalog.Grouped`) rather than a hand-maintained second list, in the declared order and in the declared lists — and that the light/dark control that used to sit beside it is gone ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)). The catalog holds twelve entries: the Huddle pair, the Custom Accent pair, and the Lumen, Fluent, Nordic and Cobalt Soft pairs mapped from the approved mockup directions. The seventeen VS Code ports imported on 2026-09-16 ([ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)) were removed on 2026-10-17.*
+*Proves the picker is rendered from code (`ThemeCatalog.Grouped`) rather than a hand-maintained second list, in the declared order and in the declared lists — and that the light/dark control that used to sit beside it is gone ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)). The catalog holds eight entries: the Lumen (the default), Fluent, Nordic and Cobalt Soft pairs mapped from the approved mockup directions ([ADR-0058](../../adr/0058-a-theme-is-a-palette-a-skin-and-traits.md)); the Huddle and Custom Accent pairs were removed with it. The seventeen VS Code ports imported on 2026-09-16 ([ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)) were removed on 2026-10-17.*
 
 **Before you start**
 
@@ -152,32 +152,32 @@ If the path shown differs from `<repo>\src\Huddle.App\App_Data\appearance.json`,
 
 1. Find the Theme picker on the Appearance panel. It is a list, already showing its entries — nothing to open.
 2. Read every row of both lists top to bottom and write them down. Scroll the list if it does not all fit.
-3. Look over the whole panel for any control offering light, dark or system, a select or a toggle. Note that there is no avatar control on this panel: only the closing paragraph `Your own avatar is set on the Profile tab.`, whose `Profile` link goes to `/settings/profile`. Click `Custom Accent Light` and note that an `Accent colour` picker appears below the list, then click `Huddle Light` and note that it goes away. Both clicks write `<data>\appearance.json`; delete it afterwards (`P-RESET-SETTINGS`).
+3. Look over the whole panel for any control offering light, dark or system, a select or a toggle. Note that there is no avatar control on this panel: only the closing paragraph `Your own avatar is set on the Profile tab.`, whose `Profile` link goes to `/settings/profile`. Note the accent picker below the lists, labelled `Accent for <Theme>` for the Theme shown, and that it has no `Reset` link until an accent is picked. Reading the panel writes nothing.
 
 **Pass if — all of these**
 
-- The picker holds exactly twelve Themes in two lists, in this order, and draws no group heading and no `High contrast` group:
-  - **Light theme** — `Huddle Light`, `Custom Accent Light`, `Lumen Light`, `Fluent Light`, `Nordic Light`, `Cobalt Soft Light`
-  - **Dark theme** — `Huddle Dark`, `Custom Accent Dark`, `Lumen Dark`, `Fluent Dark`, `Nordic Dark`, `Cobalt Soft Dark`
-- `Huddle Light` is **first** in `Light theme`. Three call sites read `BuiltIn[0]` to mean "the default Theme", so a Theme appearing above it is a real defect, not a cosmetic one.
+- The picker holds exactly eight Themes in two lists, in this order, and draws no group heading and no `High contrast` group:
+  - **Light theme** — `Lumen Light`, `Fluent Light`, `Nordic Light`, `Cobalt Soft Light`
+  - **Dark theme** — `Lumen Dark`, `Fluent Dark`, `Nordic Dark`, `Cobalt Soft Dark`
+- `Lumen Light` is **first** in `Light theme`. Three call sites read `BuiltIn[0]` to mean "the default Theme", so a Theme appearing above it is a real defect, not a cosmetic one.
 - None of the removed VS Code ports (`Dark Modern`, `Light+`, `Solarized Dark`, `Monokai`, `Abyss`, `Dark High Contrast` and the rest) is listed.
-- **There is no light/dark/system control.** Besides the intro paragraph, the picker and the credit line, the panel holds only: the `Accent colour` picker (shown only while `Custom Accent Light` or `Custom Accent Dark` is selected), the selection-file path, and the closing paragraph `Your own avatar is set on the Profile tab.` with its `Profile` link. There is no `Your avatar` section and no second file path.
+- **There is no light/dark/system control.** Besides the intro paragraph, the picker and the credit line, the panel holds only: the accent picker (`Accent for <Theme>`, always shown, with `Reset` once the Theme has a customization), the credit line, the `Open the Theme lab` link (Development only), the `Licences` disclosure, the selection-file path, and the closing paragraph `Your own avatar is set on the Profile tab.` with its `Profile` link. There is no `Your avatar` section and no second file path.
 
 **Fail if — any of these**
 
-- A light/dark/system control of any kind is present, or the `Accent colour` picker shows for a theme other than the two Custom Accent ones -> ADR-0017 was reverted, or half-reverted; the conflict this whole change removed is back.
-- A row's label is a raw id such as `huddle-dark` rather than `Huddle Dark` -> an id is leaking into the display.
+- A light/dark/system control of any kind is present, or the accent picker is missing for a Theme -> ADR-0017 was reverted, or half-reverted; the conflict this whole change removed is back.
+- A row's label is a raw id such as `lumen-dark` rather than `Lumen Dark` -> an id is leaking into the display.
 - The list shows no Themes, or throws -> the catalog failed to enumerate.
 - A Theme appears in the wrong list — a light Theme under `Dark theme`, or the reverse -> `ThemeGroup` and the palette disagree.
 - A `High contrast` heading, or any VS Code port, appears -> the 2026-10-17 removal was reverted; see ADR-0016.
-- A Theme appears above `Huddle Light` -> `BuiltIn[0]` no longer means the default Theme, which silently changes the fallback for an unknown id.
+- A Theme appears above `Lumen Light` -> `BuiltIn[0]` no longer means the default Theme, which silently changes the fallback for an unknown id.
 
 **Inconclusive if**
 
 If the list renders but the page is visibly still loading (the Blazor circuit has not connected yet), wait five seconds, reload with F5, and read it again. Record INCONCLUSIVE only if it still will not render after a reload.
 
 > [!NOTE]
-> Labels are what you see; ids are what get stored (`huddle`, `huddle-dark`, `custom-accent`, `custom-accent-dark`, `nordic-dark`, `cobalt-soft-light`). Test 04 checks the id half. A Theme's id is its label lowercased and hyphenated, with one worth knowing: `Huddle Light` stores the bare `huddle` — the id it has always had, kept so a file written before the Theme was split in two still resolves.
+> Labels are what you see; ids are what get stored (`lumen-light`, `lumen-dark`, `nordic-dark`, `cobalt-soft-light`). Test 04 checks the id half. A Theme's id is its label lowercased and hyphenated. The retired `huddle`, `lumen-dark`, `custom-accent` and `custom-accent-dark` ids migrate to Lumen (APPEARANCETHEME-34).
 
 ### APPEARANCETHEME-04 — Choosing a Theme stores its id and applies immediately, with no page reload
 
@@ -194,7 +194,7 @@ If the list renders but the page is visibly still loading (the Blazor circuit ha
 
 1. Go to http://localhost:5100/settings/appearance.
 2. Open DevTools with F12 and click the `Network` tab. Click the 'Clear' button (circle-with-slash icon) to empty the request list. Set the filter to `Doc`.
-3. Click `Huddle Dark` in the `Dark theme` list.
+3. Click `Lumen Dark` in the `Dark theme` list.
 4. Watch the page: does it repaint immediately with no spinner, no blank frame and no new entry in the `Doc`-filtered Network list?
 5. Read the address bar and confirm it is unchanged and still shows `Appearance` active in the tab bar.
 6. Look at the page: is the application now dark?
@@ -204,30 +204,30 @@ If the list renders but the page is visibly still loading (the Blazor circuit ha
 **Pass if — all of these**
 
 - No `Doc` request appears in the Network panel — there is no page load at all.
-- The whole application repaints dark within a fraction of a second, still on /settings/appearance with `Appearance` active in the tab bar and `Huddle Dark` marked selected in the picker.
+- The whole application repaints dark within a fraction of a second, still on /settings/appearance with `Appearance` active in the tab bar and `Lumen Dark` marked selected in the picker.
 - The file now exists and reads exactly:
 ```
 {
-  "theme": "huddle-dark"
+  "theme": "lumen-dark"
 }
 ```
   **There is no `dark` key, and that is correct** — the light/dark preference was
   retired on 2026-09-21; the Theme carries its own palette
   ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)).
-- The stored value is the lowercase id `huddle-dark`, NOT the label `Huddle Dark`.
+- The stored value is the lowercase id `lumen-dark`, NOT the label `Lumen Dark`.
 
 **Fail if — any of these**
 
 - The browser performs a full document load (a `Doc` request appears, or the tab's spinner turns) -> the old reload mechanism is back; it is no longer needed and no longer correct, because `<head>` is no longer where the theme lives.
 - No colour change at all -> `MudThemeProvider`'s bound `IsDarkMode` is not being updated from the store.
-- The file contains `"theme": "Huddle Dark"` -> the display label is being persisted instead of the id.
+- The file contains `"theme": "Lumen Dark"` -> the display label is being persisted instead of the id.
 - The file contains a `dark` key that the application just wrote -> the retired preference is being re-added. (A `dark` key you put there yourself by hand is a different matter: it is kept deliberately, as an unknown key. See test 17.)
 - The file is written on one line, or contains `\uXXXX` escapes instead of plain characters -> the writer is not using indented, relaxed-escaping options.
 - The file is not written at all -> the save path is broken.
 
 **Inconclusive if**
 
-If DevTools was opened AFTER the selection, redo it: clear the Network panel, select `Huddle Light`, then select `Huddle Dark` again, and read the result from that second change.
+If DevTools was opened AFTER the selection, redo it: clear the Network panel, select `Lumen Light`, then select `Lumen Dark` again, and read the result from that second change.
 
 > [!NOTE]
 > No page reload on a Theme change is BY DESIGN now — the opposite of what this same test asserted before the MudBlazor migration. Do not report the absence of a reload as a defect; report its PRESENCE as one.
@@ -244,7 +244,7 @@ If DevTools was opened AFTER the selection, redo it: clear the Network panel, se
 
 **Steps**
 
-1. Set the file to exactly `{ "theme": "huddle-dark" }` and save it. Wait one second for the watcher.
+1. Set the file to exactly `{ "theme": "lumen-dark" }` and save it. Wait one second for the watcher.
 2. Go to http://localhost:5100/settings/appearance and press Ctrl+Shift+R.
 3. Watch the picker from the moment the page paints until it has fully settled (about two seconds). Note which row is marked selected.
 4. Confirm the page itself is dark.
@@ -253,9 +253,9 @@ If DevTools was opened AFTER the selection, redo it: clear the Network panel, se
 
 **Pass if — all of these**
 
-- With `"theme": "huddle-dark"` in the file, the picker marks `Huddle Dark` selected and the page is dark.
+- With `"theme": "lumen-dark"` in the file, the picker marks `Lumen Dark` selected and the page is dark.
 - With `"theme": "nordic-light"` in the file, it marks `Nordic Light` and the page is light, on Nordic Light's own birch ground (`#f6f6f1`).
-- With no file, it marks `Huddle Light` — the catalog's default entry — and the page is light.
+- With no file, it marks `Lumen Light` — the catalog's default entry — and the page is light.
 - The file value, the marked row and the page's colours agree in every case, at every moment after the page has settled.
 
 **Fail if — any of these**
@@ -276,7 +276,7 @@ If the marked row is ambiguous — MudBlazor's selected-row styling is a backgro
 **Before you start**
 
 - The operating system is in LIGHT mode (per setup), so a flash would be maximally visible.
-- The file reads `{ "theme": "huddle-dark" }`.
+- The file reads `{ "theme": "lumen-dark" }`.
 - The application is running.
 
 **Steps**
@@ -316,7 +316,7 @@ If you cannot tell whether what you saw was a flash or just the browser's own bl
 **Before you start**
 
 - The application is running.
-- The file reads `{ "theme": "huddle-dark" }` and Chrome shows the application as dark.
+- The file reads `{ "theme": "lumen-dark" }` and Chrome shows the application as dark.
 
 **Steps**
 
@@ -348,7 +348,7 @@ If you cannot tell whether what you saw was a flash or just the browser's own bl
 
 **Inconclusive if**
 
-If the second browser shows light, first check the file still says `"theme": "huddle-dark"` and that Chrome is genuinely reading the same install (same port, same process).
+If the second browser shows light, first check the file still says `"theme": "lumen-dark"` and that Chrome is genuinely reading the same install (same port, same process).
 
 > [!NOTE]
 > This is the positive proof of a documented limit: a second browser, a private window and a phone on the same install all see the same choice.
@@ -371,17 +371,17 @@ If the second browser shows light, first check the file still says `"theme": "hu
 3. Go to http://localhost:5100/settings/appearance. Read which row the picker marks selected. Look for ANY on-page mention of `dracula` being rejected — a problem list, an alert, anything.
 4. Read the most recent warning in the `dotnet run` console.
 5. Run `type <data>\appearance.json` and confirm it still says `dracula`.
-6. Repeat the cycle for `{ "theme": "Huddle-Dark" }` (wrong case — the id comparison is ordinal), checking the page, the picker, the console and the file each time.
+6. Repeat the cycle for `{ "theme": "Lumen-Dark" }` (wrong case — the id comparison is ordinal), checking the page, the picker, the console and the file each time.
 7. Repeat for `{ "theme": "" }` (an empty string).
 8. Repeat for `{ "theme": 42 }` (the wrong JSON type).
 9. Repeat for `{ "dark": "midnight" }` — the retired key, carrying a value that was never valid even when it was read. Nothing may be logged about it at all.
 
 **Pass if — all of these**
 
-- In every case the application renders normally on the default Theme, `Huddle Light`, with no crash and no blank page.
-- The picker marks `Huddle Light` selected in every case.
+- In every case the application renders normally on the default Theme, `Lumen Light`, with no crash and no blank page.
+- The picker marks `Lumen Light` selected in every case.
 - NOTHING is reported anywhere on the Appearance tab for any of these cases — this is the documented behaviour, not a gap in this test.
-- The console carries a warning for each bad `theme` (the app re-resolves the file on every start, every watcher rebuild and every save, and logs each time, so a second copy of the same line is expected, not a failure), reading `Appearance file '<path>' selects theme 'dracula', which is not a known theme; the default theme is used instead and the file is left unchanged.` (the quoted value is the one in the file: `Huddle-Dark`, an empty string, or `42`)
+- The console carries a warning for each bad `theme` (the app re-resolves the file on every start, every watcher rebuild and every save, and logs each time, so a second copy of the same line is expected, not a failure), reading `Appearance file '<path>' selects theme 'dracula', which is not a known theme; the default theme is used instead and the file is left unchanged.` (the quoted value is the one in the file: `Lumen-Dark`, an empty string, or `42`)
 - **Step 9 logs nothing at all.** `dark` is an unknown top-level key now, and an unknown key is kept without comment — it is not validated, so there is nothing to warn about.
 - appearance.json still contains the bad value, unchanged, in every case — the app never rewrites it.
 
@@ -408,38 +408,38 @@ For the numeric/null case, the log line may quote the raw JSON rather than a str
 
 **Before you start**
 
-- The application is running with a working Theme in place: the file reads `{ "theme": "huddle-dark" }` and the page is dark.
+- The application is running with a working Theme in place: the file reads `{ "theme": "lumen-dark" }` and the page is dark.
 - You can see the console of the terminal that launched the app (`T-A`).
 
 **Steps**
 
-1. Open http://localhost:5100/settings/appearance and confirm the application is dark and the picker marks `Huddle Dark`.
-2. Set `<data>\appearance.json` to the deliberately broken text `{"theme":"huddle",` (truncated, no closing brace) and save it.
+1. Open http://localhost:5100/settings/appearance and confirm the application is dark and the picker marks `Lumen Dark`.
+2. Set `<data>\appearance.json` to the deliberately broken text `{"theme":"lumen-light",` (truncated, no closing brace) and save it.
 3. Wait about 2 seconds, then read the console in `T-A`.
-4. Observe the application without reloading: it stays dark and the picker still marks `Huddle Dark`. Then press Ctrl+Shift+R and confirm it is still dark (a reload does not re-read the file; the resolved Theme is held by the running app).
+4. Observe the application without reloading: it stays dark and the picker still marks `Lumen Dark`. Then press Ctrl+Shift+R and confirm it is still dark (a reload does not re-read the file; the resolved Theme is held by the running app).
 5. Run `type <data>\appearance.json` and confirm it is exactly the broken text you wrote.
 6. Repeat steps 2 to 5 with a top-level array: set the file to `[]`, save, wait 2 seconds, and check the same three things (page and picker, console, file).
-7. Put the broken text `{"theme":"huddle",` back, then stop the app (`P-STOP`) and start it again with [`P-LAUNCH-FREE`](common.md#p-launch-free). Do not run a reset: the broken file must stay.
-8. Open http://localhost:5100/settings/appearance. Observe the application: it is on the default Theme, `Huddle Light`, and the picker marks `Huddle Light`. Read the console from the start of the launch.
+7. Put the broken text `{"theme":"lumen-light",` back, then stop the app (`P-STOP`) and start it again with [`P-LAUNCH-FREE`](common.md#p-launch-free). Do not run a reset: the broken file must stay.
+8. Open http://localhost:5100/settings/appearance. Observe the application: it is on the default Theme, `Lumen Light`, and the picker marks `Lumen Light`. Read the console from the start of the launch.
 9. Run `type <data>\appearance.json` again and confirm it is still exactly the broken text.
-10. Now test the mid-write race: put a valid file back (`{ "theme": "huddle-dark" }`), open it in your editor, and press Ctrl+S repeatedly - ten saves in about five seconds - while watching the open /settings/appearance page.
-11. Watch for any flicker of the picker's marked row back to `Huddle Light`.
+10. Now test the mid-write race: put a valid file back (`{ "theme": "lumen-dark" }`), open it in your editor, and press Ctrl+S repeatedly - ten saves in about five seconds - while watching the open /settings/appearance page.
+11. Watch for any flicker of the picker's marked row back to `Lumen Light`.
 
 **Pass if — all of these**
 
-- After the malformed edit in steps 2 and 6, the running application stays on `Huddle Dark` and the picker keeps marking it.
+- After the malformed edit in steps 2 and 6, the running application stays on `Lumen Dark` and the picker keeps marking it.
 - The console carries a warning of the form `Could not parse appearance file '<path>' after a filesystem change, even after retrying; keeping the previously resolved appearance...` for each malformed edit.
-- After the restart in step 8 the application renders normally on `Huddle Light`, the picker marks `Huddle Light`, and the console carries the warning `Could not parse appearance file '<path>'; falling back to the default appearance.`
+- After the restart in step 8 the application renders normally on `Lumen Light`, the picker marks `Lumen Light`, and the console carries the warning `Could not parse appearance file '<path>'; falling back to the default appearance.`
 - appearance.json is exactly the broken text you wrote in steps 5 and 9 - unmodified, unrepaired.
 - Repeated rapid saves of a VALID file do not flicker the picker.
 
 **Fail if — any of these**
 
 - The application crashes, throws, or fails to start on malformed JSON -> a bad file must never prevent the app running.
-- The running application drops to `Huddle Light` when the file is broken -> a mid-write race would flicker the Human's Theme away.
+- The running application drops to `Lumen Light` when the file is broken -> a mid-write race would flicker the Human's Theme away.
 - The application rewrites or repairs the file -> the Human's text is being destroyed.
 - NO warning appears in the console -> there is then no signal anywhere at all.
-- Rapid valid saves flicker the picker back to `Huddle Light` -> the mid-write retry is not working.
+- Rapid valid saves flicker the picker back to `Lumen Light` -> the mid-write retry is not working.
 
 **Inconclusive if**
 
@@ -458,12 +458,12 @@ If the console scrolled past and you cannot find the warning, re-save the broken
 **Steps**
 
 1. Set the file to deliberately broken JSON, exactly:
-{"theme":"huddle-dark",,}
+{"theme":"lumen-dark",,}
 and save it.
 2. Copy that exact text into your test notes as the BEFORE state.
 3. Press Ctrl+Shift+R on http://localhost:5100/settings/appearance.
 4. Read the `dotnet run` console and confirm a `Could not parse appearance file` warning appeared.
-5. In the Theme picker, click `Huddle Dark`.
+5. In the Theme picker, click `Lumen Dark`.
 6. Run `type <data>\appearance.json` and copy the exact contents into your notes as the AFTER state.
 7. Compare BEFORE and AFTER.
 
@@ -472,7 +472,7 @@ and save it.
 - The save does not throw; no error banner appears and no unhandled exception is logged.
 - The file afterwards is VALID, indented JSON reading:
 {
-  "theme": "huddle-dark"
+  "theme": "lumen-dark"
 }
 - The application is dark afterwards.
 
@@ -507,15 +507,15 @@ This test has no 'correct' answer to assert against beyond not-throwing. Mark PA
 and save it. This is precisely the contradictory file the old two-control design could produce: a dark Theme and a light preference.
 2. Press Ctrl+Shift+R on http://localhost:5100/settings/appearance so the app picks it up.
 3. **Confirm the application is on Nordic Dark's own dark palette**, not a light one, and that the picker marks `Nordic Dark`. The `dark` key is ignored entirely.
-4. Click `Huddle Light` in the picker.
+4. Click `Lumen Light` in the picker.
 5. Run `type <data>\appearance.json` and read the exact contents.
-6. Confirm `theme` is now `"huddle"`, and that BOTH `dark` and `note` are still present, untouched.
+6. Confirm `theme` is now `"lumen-light"`, and that BOTH `dark` and `note` are still present, untouched.
 7. Confirm the file stays indented and readable, with plain characters and no `\uXXXX` escapes.
 
 **Pass if — all of these**
 
 - In step 3 the application is dark, on Nordic Dark. The `"dark": "light"` beside it changes nothing.
-- After the Save, the file contains `"theme": "huddle"`, `"dark": "light"` and `"note": "keep me"` — all three.
+- After the Save, the file contains `"theme": "lumen-light"`, `"dark": "light"` and `"note": "keep me"` — all three.
 - Both the `dark` and `note` keys are byte-for-byte what you wrote.
 - The file stays indented and human-readable.
 
@@ -548,9 +548,9 @@ If your editor holds the file open with a lock while the app tries to write, clo
 
 **Steps**
 
-1. Set the file to exactly `{ "theme": "huddle" }` and save. Confirm the page is light and the picker marks `Huddle Light`.
-2. Now WITHOUT touching the browser at all, change the file in your editor to exactly `{ "theme": "huddle-dark" }` and save it.
-3. Keep your eyes on the browser for the next 2 seconds. Note whether the picker's marked row moves to `Huddle Dark` by itself AND whether the page's COLOURS change, with no click and no reload.
+1. Set the file to exactly `{ "theme": "lumen-light" }` and save. Confirm the page is light and the picker marks `Lumen Light`.
+2. Now WITHOUT touching the browser at all, change the file in your editor to exactly `{ "theme": "lumen-dark" }` and save it.
+3. Keep your eyes on the browser for the next 2 seconds. Note whether the picker's marked row moves to `Lumen Dark` by itself AND whether the page's COLOURS change, with no click and no reload.
 4. Click `Teammates` in the sidebar (an in-app navigation). Confirm the colours stay dark.
 5. Check the `dotnet run` console for any unhandled exception during the above.
 
@@ -586,19 +586,19 @@ If nothing updates within 2 seconds, wait another 3 seconds before judging — t
 
 1. Open http://localhost:5100/settings/appearance in two browser windows and arrange them side by side. Call them A and B.
 2. Confirm both pickers mark the same Theme and both pages look the same.
-3. In window A, click `Huddle Dark` in the Theme picker.
+3. In window A, click `Lumen Dark` in the Theme picker.
 4. Watch window A: it should repaint dark immediately, with no page load.
 5. Watch window B for 2 seconds WITHOUT touching it.
-6. Note whether window B's picker moves its marked row to `Huddle Dark` by itself, AND whether window B's colours change too.
-7. In window B, click `Huddle Light` in the picker. Watch window A for 2 seconds without touching it.
+6. Note whether window B's picker moves its marked row to `Lumen Dark` by itself, AND whether window B's colours change too.
+7. In window B, click `Lumen Light` in the picker. Watch window A for 2 seconds without touching it.
 8. Close window B entirely. Watch the `dotnet run` console for 10 seconds for any unhandled exception on circuit disposal.
-9. Interact with window A (click `Huddle Dark` again) and confirm it still works after B was closed.
+9. Interact with window A (click `Lumen Dark` again) and confirm it still works after B was closed.
 
 **Pass if — all of these**
 
 - Window A repaints dark immediately on the selection, no reload.
-- Window B's picker (its marked row) AND its colours flip to `Huddle Dark` by themselves within about half a second.
-- The reverse direction works too (B's selection of `Huddle Light` updates both A's marked row and A's colours).
+- Window B's picker (its marked row) AND its colours flip to `Lumen Dark` by themselves within about half a second.
+- The reverse direction works too (B's selection of `Lumen Light` updates both A's marked row and A's colours).
 - Closing window B logs no unhandled exception, and window A keeps working afterwards.
 
 **Fail if — any of these**
@@ -620,12 +620,12 @@ If both windows are in the same browser process and one is backgrounded, the bro
 **Before you start**
 
 - The application is running.
-- The file reads `{ "theme": "huddle-dark" }` and the app is dark.
+- The file reads `{ "theme": "lumen-dark" }` and the app is dark.
 
 **Steps**
 
-1. Go to http://localhost:5100/settings/appearance and confirm the picker marks `Huddle Dark`.
-2. Click `Huddle Dark` again.
+1. Go to http://localhost:5100/settings/appearance and confirm the picker marks `Lumen Dark`.
+2. Click `Lumen Dark` again.
 3. Watch the page for 5 seconds. Confirm there is no page load (DevTools -> Network, `Doc` filter, stays empty) and no repeated repaint flicker.
 4. Run `type <data>\appearance.json` and read the contents.
 5. Check the `dotnet run` console for errors, and scroll to the bottom of the page for the pale yellow `An unhandled error has occurred.` banner.
@@ -633,7 +633,7 @@ If both windows are in the same browser process and one is backgrounded, the bro
 **Pass if — all of these**
 
 - No page load happens, and the page does not flicker or repaint repeatedly.
-- The file still reads `{ "theme": "huddle-dark" }`, OR it reads `{}` with the picker back on `Huddle Light` and the page light. Both are correct: MudBlazor's single-selection list clears the selection when the selected row is clicked again, and the store reads a cleared selection as "no Theme chosen", which resolves to the catalog default. Record which branch you saw.
+- The file still reads `{ "theme": "lumen-dark" }`, OR it reads `{}` with the picker back on `Lumen Light` and the page light. Both are correct: MudBlazor's single-selection list clears the selection when the selected row is clicked again, and the store reads a cleared selection as "no Theme chosen", which resolves to the catalog default. Record which branch you saw.
 - No error banner, no console error.
 
 **Fail if — any of these**
@@ -643,7 +643,7 @@ If both windows are in the same browser process and one is backgrounded, the bro
 
 **Inconclusive if**
 
-If the click produced neither of the two outcomes above — no file change AND no return to `Huddle Light` — read the file before deciding; the list may simply not have registered the click.
+If the click produced neither of the two outcomes above — no file change AND no return to `Lumen Light` — read the file before deciding; the list may simply not have registered the click.
 
 ### APPEARANCETHEME-22 — Dark mode walked across every page and every state - the acceptance test for the whole item
 
@@ -654,14 +654,14 @@ If the click produced neither of the two outcomes above — no file change AND n
 **Before you start**
 
 - The application is running in the free lane with Teammates: `P-LAUNCH-UAT` has been run and Ada and Bo are Online.
-- The file reads exactly `{ "theme": "huddle-dark" }`.
+- The file reads exactly `{ "theme": "lumen-dark" }`.
 - The operating system is in LIGHT mode, so anything that failed to switch is obvious.
 - For the rejected-persona part, you will hand-edit a Persona file (see steps). If you create or edit a Persona through the UI, set Model = Haiku and Effort = low - the standing convention. Nothing here needs a model and nothing here costs money.
 
 **Steps**
 
 1. Press Ctrl+Shift+R on http://localhost:5100/ and confirm the whole application is dark.
-2. In DevTools -> Elements, select `<body>` and read Computed `background-color`. It must be `rgb(28, 28, 27)` (Huddle Dark's Background, `#1c1c1b`; `HuddleTheme.cs:82`).
+2. In DevTools -> Elements, select `<body>` and read Computed `background-color`. It must be `rgb(11, 11, 15)` (Lumen Dark's Background, `#0b0b0f`; `Themes/Skins/lumen.dark.json`).
 3. (a) With no room selected, inspect: the page body; the sidebar drawer; the `New chat` button; the room list; and the two nav links `Teammates` and `Settings`. Note anything light.
 4. (b) Click `New chat`. Inspect the panel: the agent rows for `Ada` and `Bo`, their coloured status dots, and the `Start chat` button.
 5. (c) Close the panel and click the `Ada` Room in the sidebar. In the Room, inspect: the chat header, the member line, each message row (sender name, timestamp, body), the composer textarea including its placeholder `Message {Room name}… (/invite @Teammate)`, and the budget note line.
@@ -687,7 +687,7 @@ Save it, then press F5 on /teammates.
 **Pass if — all of these**
 
 - Every surface, border, text colour and control listed in (a) through (j) uses the dark palette.
-- Computed `background-color` on `<body>` is `rgb(28, 28, 27)`.
+- Computed `background-color` on `<body>` is `rgb(11, 11, 15)`.
 - Native controls are dark: every select popup, the textarea, and the scrollbars.
 - No white or pale surface appears anywhere except the two documented exemptions in the notes.
 - No element renders blank or with no colour at all.
@@ -716,7 +716,7 @@ If the sidebar has no `Ada` Room or `New chat` lists no agents, parts (c), (d) a
 
 **Before you start**
 
-- The application is running with `{ "theme": "huddle-dark" }` and the operating system in LIGHT mode.
+- The application is running with `{ "theme": "lumen-dark" }` and the operating system in LIGHT mode.
 - At least one Room exists and at least one Teammate tile is visible (`P-LAUNCH-UAT` supplies Ada and Bo and their Rooms for free; if you add a Persona, use Model = Haiku and Effort = low).
 
 **Steps**
@@ -756,7 +756,7 @@ If forcing `:hover` in DevTools has no effect, hover the element with the mouse 
 
 **Before you start**
 
-- The application is running with `{ "theme": "huddle-dark" }`.
+- The application is running with `{ "theme": "lumen-dark" }`.
 - A browser window is open on a Room at http://localhost:5100/.
 - You will stop and restart the server during this test. It is free.
 
@@ -770,9 +770,9 @@ If forcing `:hover` in DevTools has no effect, hover the element with the mouse 
 6. Wait and watch: the text should change to `Rejoin failed... trying again in N seconds.` with a counting number, and eventually to `Failed to rejoin.` / `Please retry or reload the page.` with a `Retry` button.
 7. Look at the panel itself: is it a raised surface with rounded corners and a shadow, and is the page BEHIND it visibly dimmed?
 8. In DevTools -> Elements, find `<dialog id="components-reconnect-modal">`, expand it to reveal the `::backdrop` pseudo-element, select `::backdrop`, and read Computed `background-color`.
-9. Look at the `Retry` button's colour - it must be the application's Primary MudTheme colour (in Huddle Dark the periwinkle `#8f97e6`, `HuddleTheme.cs`; its text is near-black `#141413`, the theme's accent text, not a framework blue), not a light framework blue.
+9. Look at the `Retry` button's colour - it must be the application's Primary MudTheme colour (in Lumen Dark the violet `#8379d8`, `Themes/Skins/lumen.dark.json`; its text is near-black `#0f0f14`, the theme's accent text, not a framework blue), not a light framework blue.
 10. Restart the server with the same [`P-LAUNCH-FREE`](common.md#p-launch-free) command (it carries the cost-guard variable), reload the page.
-11. Go to /settings/appearance and click `Huddle Light` in the Theme picker.
+11. Go to /settings/appearance and click `Lumen Light` in the Theme picker.
 12. Open a Room again, stop the server again with Ctrl+C, and repeat the same observations with the light panel.
 13. Read Computed `background-color` on `::backdrop` again.
 14. Restart the server.
@@ -813,15 +813,15 @@ If the dialog never appears when you stop the server, reload the page, interact 
 
 **Steps**
 
-1. Find the paragraph that begins `Custom Accent lets you pick your own accent colour`. It sits after the Theme picker, the Accent colour picker (shown only for Custom Accent), and above the paragraph that begins `The selection is stored at` (`Appearance.razor:101-111`).
+1. Find the paragraph that begins `The accent is adjusted if needed`. It sits after the Theme lists and the accent picker, and above the paragraph that begins `The selection is stored at`. The `Licences` disclosure follows it.
 2. Read it word for word.
-3. Click `Huddle Dark` in the picker. Read the same paragraph again.
+3. Click `Lumen Dark` in the picker. Read the same paragraph again.
 4. Scan the paragraph for the names `Visual Studio Code`, `Microsoft`, `Solarized` and `Monokai`.
 
 **Pass if — all of these**
 
-- The paragraph sits BETWEEN the Theme picker (and the Accent colour picker, when shown) and the `The selection is stored at` line, not above the picker.
-- It names Huddle, Custom Accent, Lumen, Fluent, Nordic and Cobalt Soft as this application's own Themes and says none is taken from a third-party colour theme.
+- The paragraph sits BETWEEN the Theme lists (and the accent picker) and the `The selection is stored at` line, not above the lists.
+- The `Licences` disclosure names Lumen, Fluent, Nordic and Cobalt Soft as this application's own Themes and says none is taken from a third-party colour theme.
 - None of the four names scanned for in step 4 appears.
 - It attributes **no** theme to any person or organisation.
 - It remains legible in Dark — it is muted text (`--mud-palette-text-secondary`), which must still read comfortably against the dark surface.
@@ -842,7 +842,7 @@ If the Appearance panel will not render, this is INCONCLUSIVE, not a failure —
 
 **Free** · about 12 min
 
-*Proves the catalog actually paints — not just that the labels enumerate. Originally the acceptance walk for [ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md) (superseded), rewritten on 2026-09-21 when borrowing a palette went away ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)) and again on 2026-10-17 for the twelve remaining Themes. A Theme must show its own colours in every reachable state, with no fallback to Huddle's palette available as an excuse.*
+*Proves the catalog actually paints — not just that the labels enumerate. Originally the acceptance walk for [ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md) (superseded), rewritten on 2026-09-21 when borrowing a palette went away ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)) and again on 2026-10-17 for the eight remaining Themes. A Theme must show its own colours in every reachable state, with no fallback to another Theme's palette available as an excuse.*
 
 **Before you start**
 
@@ -851,26 +851,26 @@ If the Appearance panel will not render, this is INCONCLUSIVE, not a failure —
 **Steps**
 
 1. Select Theme `Lumen Dark`. Without reloading, look at the sidebar, the transcript, a Teammate card, and the fenced code block.
-2. Open DevTools → Elements → `<body>` → Computed, and read `background-color`. It must be `rgb(11, 11, 15)` — Lumen Dark's own `#0b0b0f`, not Huddle Dark's `rgb(28, 28, 27)`.
+2. Open DevTools → Elements → `<body>` → Computed, and read `background-color`. It must be `rgb(11, 11, 15)` — Lumen Dark's own `#0b0b0f`, not Lumen Dark's `rgb(11, 11, 15)`.
 3. Hover a Room in the sidebar and confirm the row changes colour. Tab to a link or button and confirm a visible focus outline.
 4. Select Theme `Cobalt Soft Dark`. Confirm the whole surface changes again, and that nothing is left painted in Lumen Dark's colours.
-5. Select Theme `Nordic Dark` and read `background-color` on `<body>` again. It must be `rgb(22, 26, 29)` — Nordic Dark's own `#161a1d`, **not** `rgb(255, 255, 255)` and not Huddle Dark's `rgb(28, 28, 27)`.
+5. Select Theme `Nordic Dark` and read `background-color` on `<body>` again. It must be `rgb(22, 26, 29)` — Nordic Dark's own `#161a1d`, **not** `rgb(255, 255, 255)` and not Lumen Dark's `rgb(11, 11, 15)`.
 6. Select Theme `Nordic Light`. Confirm the surface becomes Nordic Light's own birch palette (`#f6f6f1`), and that `background-color` is not plain white.
 7. Select Theme `Fluent Dark`. Read the transcript and the sidebar.
-8. Return to Theme `Huddle Light`.
+8. Return to Theme `Lumen Light`.
 
 **Pass if — all of these**
 
 - Each Theme selection repaints immediately, with no page reload and no F5.
 - `<body>`'s computed background under `Nordic Dark` is `rgb(22, 26, 29)`, and under `Lumen Dark` is `rgb(11, 11, 15)`.
-- **No Theme ever shows Huddle's palette.** Step 5 is the specific check: before 2026-09-21, a dark Theme with the light preference set rendered Huddle Light under that Theme's name, which is the defect ADR-0017 exists to make unreachable.
+- **No Theme ever shows another Theme's palette.** Step 5 is the specific check: before 2026-09-21, a dark Theme with the light preference set rendered a light Theme under that Theme's name, which is the defect ADR-0017 exists to make unreachable.
 - Under every Theme tried, body text is comfortably readable against its background, the hover state is visible, and the focus outline is visible.
 - `Fluent Dark` renders as a legible dark Theme. There is no high-contrast Theme to compare it with.
 
 **Fail if — any of these**
 
 - Any surface stays painted in the previous Theme's colours after a switch -> something is reading a palette once rather than through `MudThemeProvider`.
-- Any Theme renders Huddle's palette instead of its own -> a borrowed palette is reachable again.
+- Any Theme renders another Theme's palette instead of its own -> a borrowed palette is reachable again.
 - A surface renders blank, transparent, or black-on-black under any Theme -> a palette slot resolved to nothing, which the conversion is specifically designed to make impossible.
 - Selecting a Theme forces a full page load -> the ADR-0010 render-tree behaviour regressed.
 - The fenced code block loses its monospace family -> `--font-mono` in `app-vars.css` is the one app-owned custom property and no Theme should touch it.
@@ -880,45 +880,44 @@ If the Appearance panel will not render, this is INCONCLUSIVE, not a failure —
 If the Blazor circuit drops mid-walk (the reconnect modal appears), reload and start again. Record INCONCLUSIVE rather than FAIL — a dropped circuit invalidates every colour observation after it.
 
 > [!NOTE]
-> No Theme is allowed to sit under the 4.5:1 contrast floor for secondary text: the three that once did (`Light+`, `Quiet Light`, `Solarized Light`) were removed on 2026-10-17, and `ThemeCatalogTests` holds the remaining twelve to the floor with no exceptions. Dim secondary text in any Theme is a defect.
+> No Theme is allowed to sit under the 4.5:1 contrast floor for secondary text: the three that once did (`Light+`, `Quiet Light`, `Solarized Light`) were removed on 2026-10-17, and `ThemeCatalogTests` holds the eight to the floor with no exceptions. Dim secondary text in any Theme is a defect.
 
-### APPEARANCETHEME-28 — Custom Accent stores the picked colour, clamps it for contrast, and shows its picker only for the two accent Themes
+### APPEARANCETHEME-28 — An accent customization is stored per Theme, clamped for contrast, and removed by Reset
 
 **Free** · about 10 min
 
-*Custom Accent Light and Dark paint Huddle's own neutrals with a Human-picked accent. This proves the picker appears only for them, that a pick is stored as `accentColor` beside `theme`, that a colour with no contrast is adjusted at render time rather than painted as picked (`AccentPalette.ClampForContrast`, 4.5:1 floor, `AccentPalette.cs:15`), and that a malformed `accentColor` is logged and ignored.*
+*The accent control on the Appearance tab is named for the Theme shown (`Accent for Lumen Light`) and writes `customizations[<id>].palette.primary` in `appearance.json` ([ADR-0058](../../adr/0058-a-theme-is-a-palette-a-skin-and-traits.md)). This proves the pick is stored per Theme, that a colour with no contrast is adjusted at render time rather than painted as picked (`AccentPalette.ClampForContrast`, 4.5:1 floor), that `Reset` removes it, and that an invalid customization is logged and ignored.*
 
 **Before you start**
 
 - The application is running and you can see the console in `T-A`.
-- `<data>\appearance.json` is absent (`P-RESET-SETTINGS`, then `P-LAUNCH-FREE`), and http://localhost:5100/settings/appearance is open on `Huddle Light`.
+- `<data>\appearance.json` is absent (`P-RESET-SETTINGS`, then `P-LAUNCH-FREE`), and http://localhost:5100/settings/appearance is open on `Lumen Light`.
 
 **Steps**
 
-1. Confirm the tab shows no `Accent colour` field while `Huddle Light` is marked. Click `Huddle Dark` and confirm there is still none.
-2. Click `Custom Accent Light`. An `Accent colour` field appears under the picker (`Appearance.razor:82-93`). Run `type <data>\appearance.json` and confirm it holds `"theme": "custom-accent"` and no `accentColor` yet.
-3. In the `Accent colour` field enter the pale yellow `#ffeb3b` and press Tab. Run `type <data>\appearance.json` and confirm it now holds `"accentColor": "#ffeb3b"` beside the theme.
-4. Look at the primary-coloured controls: the `New chat` button and the active sidebar link. In DevTools -> Elements, select `<html>` and read the custom property `--mud-palette-primary` in Computed. It must NOT be `#ffeb3b`: it is a darker yellow of the same hue. Check that the `New chat` label or the active link text is readable against its background.
-5. Click `Custom Accent Dark`. The field stays and the stored `accentColor` is unchanged. A pale yellow needs no adjustment on a dark ground, so `--mud-palette-primary` now reads `#ffeb3b` (`rgb(255, 235, 59)`).
-6. Enter the dark navy `#1a1a40` in the field and press Tab. Read `--mud-palette-primary` again: it is a LIGHTER blue of the same hue, not `#1a1a40`, and the primary controls are readable on the dark ground (`rgb(28, 28, 27)`).
-7. Click `Huddle Light`. The `Accent colour` field disappears. Run `type <data>\appearance.json` and confirm `accentColor` is still in the file: it is kept, and ignored, while another Theme is chosen.
-8. Click `Custom Accent Light` again and confirm the field returns showing `#1a1a40`.
-9. Hand-edit the file to `{ "theme": "custom-accent", "accentColor": "yellow" }` and save. Wait 2 seconds and read the console in `T-A`.
-10. Run `type <data>\appearance.json` and confirm it is exactly what you wrote.
-11. Delete `<data>\appearance.json` when you are done.
+1. Confirm the accent field is labelled `Accent for Lumen Light` and that no `Reset` link is shown. Click `Lumen Dark` and confirm the label becomes `Accent for Lumen Dark`.
+2. Click `Lumen Light` again. In the accent field enter the pale yellow `#ffeb3b` and press Tab. Run `type <data>\appearance.json` and confirm it holds `customizations` with a `lumen-light` entry whose `palette.primary` is `#ffeb3b`, and that a `Reset` link has appeared.
+3. Look at the primary-coloured controls: the `New chat` button and the active sidebar link. In DevTools -> Elements, select `<html>` and read the custom property `--mud-palette-primary` in Computed. It must NOT be `#ffeb3b`: it is a darker yellow of the same hue. Check that the `New chat` label or the active link text is readable against its background.
+4. Click `Lumen Dark`. The field now shows no accent and no `Reset` (the customization belongs to `Lumen Light`). Enter the dark navy `#1a1a40` and press Tab. Read `--mud-palette-primary` again: it is a LIGHTER blue of the same hue, not `#1a1a40`, and the primary controls are readable on the dark ground (`rgb(11, 11, 15)`).
+5. Run `type <data>\appearance.json` and confirm both `lumen-light` (`#ffeb3b`) and `lumen-dark` (`#1a1a40`) entries are present.
+6. Click `Reset`. The accent returns to Lumen Dark's own `#8379d8`, the `Reset` link goes, and the `lumen-dark` entry is removed from the file while `lumen-light` stays.
+7. Hand-edit the file so the `lumen-light` entry reads `"palette": { "primary": "yellow" }` and save. Wait 2 seconds and read the console in `T-A`.
+8. Run `type <data>\appearance.json` and confirm it is exactly what you wrote.
+9. Delete `<data>\appearance.json` when you are done.
 
 **Pass if — all of these**
 
-- The `Accent colour` field is present only while `Custom Accent Light` or `Custom Accent Dark` is marked.
-- A pick is stored as `accentColor` in `#rrggbb` form, beside `theme`, and survives a switch to another Theme.
-- `--mud-palette-primary` is the picked colour adjusted until it reads at 4.5:1 or better against the page: darker on Custom Accent Light, lighter on Custom Accent Dark. A colour that already reads (the yellow on the dark ground) is left alone.
-- The console carries `Appearance file '<path>' sets accentColor 'yellow', which is not a valid #rrggbb colour; no accent colour is used instead and the file is left unchanged.`, the page still renders, and the file is unchanged.
+- The accent field is labelled for the Theme shown, and `Reset` appears only while that Theme has a customization.
+- A pick is stored as `customizations[<id>].palette.primary` in `#rrggbb` form, one entry per Theme, and survives a switch to another Theme.
+- `--mud-palette-primary` is the picked colour adjusted until it reads at 4.5:1 or better against the page: darker on a light Theme, lighter on a dark one. A colour that already reads is left alone.
+- `Reset` removes only the shown Theme's entry.
+- The console carries `Appearance file '<path>' customization 'lumen-light': <problem>; it is ignored and the file is left unchanged.`, the page still renders on Lumen Light's own accent, and the file is unchanged.
 
 **Fail if — any of these**
 
-- The field shows for a Theme that is not a Custom Accent -> it must ignore the colour entirely.
+- A customization on one Theme changes another Theme's accent -> the entry is not keyed by Theme id.
 - The pale yellow is painted as picked on the light ground, with unreadable primary text -> the contrast clamp is not applied.
-- The malformed colour is repaired or removed from the file, or nothing is logged -> the Human's text is destroyed or silent.
+- The invalid colour is repaired or removed from the file, or nothing is logged -> the Human's text is destroyed or silent.
 
 **Inconclusive if**
 
@@ -938,17 +937,17 @@ If you cannot read `--mud-palette-primary` in DevTools, compare the `New chat` b
 **Steps**
 
 1. Read the whole Appearance tab top to bottom. Look for any control or label mentioning `Library pane`, `Right`, `Left` or a side.
-2. Hand-edit `<data>\appearance.json` to `{ "theme": "huddle-dark", "libraryPaneSide": "left" }` and save. Wait 2 seconds and read the console in `T-A`.
-3. Confirm the page still renders `Huddle Dark` as the marked Theme, and the console carries no warning that mentions `Appearance file`, `libraryPaneSide` or `side`.
-4. Select `Custom Accent Dark`, enter `#3366cc` in the `Accent colour` field and press Tab.
-5. Run `type <data>\appearance.json`. Confirm it now holds `"theme": "custom-accent"` and `"accentColor": "#3366cc"`, and that `"libraryPaneSide": "left"` is still in the file, unchanged.
+2. Hand-edit `<data>\appearance.json` to `{ "theme": "lumen-dark", "libraryPaneSide": "left" }` and save. Wait 2 seconds and read the console in `T-A`.
+3. Confirm the page still renders `Lumen Dark` as the marked Theme, and the console carries no warning that mentions `Appearance file`, `libraryPaneSide` or `side`.
+4. With `Lumen Dark` shown, enter `#3366cc` in the `Accent for Lumen Dark` field and press Tab.
+5. Run `type <data>\appearance.json`. Confirm it now holds a `customizations` entry for `lumen-dark` with `palette.primary` `#3366cc`, and that `"libraryPaneSide": "left"` is still in the file, unchanged.
 6. Delete `<data>\appearance.json` when you are done.
 
 **Pass if — all of these**
 
 - The Appearance tab has no `Library pane` control, no Right/Left choice and no mention of a pane side.
 - Step 2 produces no warning in the console, and the page renders normally.
-- After the accent colour change, the file still contains `"libraryPaneSide": "left"` exactly as written, beside the new `theme` and `accentColor`.
+- After the accent colour change, the file still contains `"libraryPaneSide": "left"` exactly as written, beside the new `customizations`.
 
 **Fail if — any of these**
 
@@ -982,8 +981,8 @@ If the Appearance tab will not render, this is INCONCLUSIVE, not a failure; re-r
 **Pass if — all of these**
 
 - The button is the right-most thing in the top bar. Its icon is a moon and its tooltip reads `Switch to dark theme` while the page is light.
-- After the first click the page is dark (Huddle Dark), the icon is a sun and the tooltip reads `Switch to light theme`.
-- After the first click the file holds `"theme": "huddle-dark"` together with `"lightTheme": "huddle"` and `"darkTheme": "huddle-dark"`. After the second click `theme` is `huddle` again and the other two keys are unchanged.
+- After the first click the page is dark (Lumen Dark), the icon is a sun and the tooltip reads `Switch to light theme`.
+- After the first click the file holds `"theme": "lumen-dark"` together with `"lightTheme": "lumen-light"` and `"darkTheme": "lumen-dark"`. After the second click `theme` is `lumen-light` again and the other two keys are unchanged.
 - No page load happens on a click, and a hard reload paints the right mode from the first frame with no flash of the other one.
 
 **Fail if — any of these**
@@ -1015,9 +1014,9 @@ If the shell will not load, re-run APPEARANCETHEME-01 first.
 
 **Pass if — all of these**
 
-- `Light theme` holds 6 Themes, with no group heading: `Huddle Light`, `Custom Accent Light`, `Lumen Light`, `Fluent Light`, `Nordic Light`, `Cobalt Soft Light`.
-- `Dark theme` holds 6, with no group heading: `Huddle Dark`, `Custom Accent Dark`, `Lumen Dark`, `Fluent Dark`, `Nordic Dark`, `Cobalt Soft Dark`.
-- With no file, `Huddle Light` is marked in the first list and `Huddle Dark` in the second.
+- `Light theme` holds 4 Themes, with no group heading: `Lumen Light`, `Fluent Light`, `Nordic Light`, `Cobalt Soft Light`.
+- `Dark theme` holds 4, with no group heading: `Lumen Dark`, `Fluent Dark`, `Nordic Dark`, `Cobalt Soft Dark`.
+- With no file, `Lumen Light` is marked in the first list and `Lumen Dark` in the second.
 - Clicking the marked row again leaves it marked: a slot is never left empty.
 - The intro paragraph mentions the button in the top bar.
 
@@ -1051,8 +1050,8 @@ If the page is still loading, wait five seconds, press F5 and read again.
 
 **Pass if — all of these**
 
-- Step 1: the page stays light and the tooltip still reads `Switch to dark theme`; the file gains `"darkTheme": "nordic-dark"` and `theme` is absent or `huddle`.
-- Step 2: the page turns Nordic Dark's fjord slate ground (`#161a1d`); `Huddle Light` and `Nordic Dark` are the marked rows.
+- Step 1: the page stays light and the tooltip still reads `Switch to dark theme`; the file gains `"darkTheme": "nordic-dark"` and `theme` is absent or `lumen-light`.
+- Step 2: the page turns Nordic Dark's fjord slate ground (`#161a1d`); `Lumen Light` and `Nordic Dark` are the marked rows.
 - Step 3: the page repaints at once to Cobalt Soft Dark's deep navy ground (`#0e1220`) and `theme` becomes `cobalt-soft-dark`.
 - Step 4: the page stays dark, and the file now holds `"lightTheme": "nordic-light"` with `theme` still `cobalt-soft-dark`.
 - Step 5: the page becomes Nordic Light's birch ground (`#f6f6f1`).
@@ -1079,27 +1078,99 @@ If a click on a row does nothing at all, check APPEARANCETHEME-04 first.
 
 **Steps**
 
-1. Hand-write `<data>\appearance.json` as `{ "theme": "nordic-dark", "dark": "light", "accentColor": "#e2762d" }` and save. Wait 2 seconds. Read the page, both lists and the button tooltip.
+1. Hand-write `<data>\appearance.json` as `{ "theme": "nordic-dark", "dark": "light", "note": "keep me" }` and save. Wait 2 seconds. Read the page, both lists and the button tooltip.
 2. Click the mode button twice. Then run `type <data>\appearance.json`.
-3. Hand-write `{ "theme": "huddle", "lightTheme": "nordic-dark", "darkTheme": "nonsense" }`, save and wait 2 seconds. Read the console in `T-A` and both lists.
+3. Hand-write `{ "theme": "lumen-light", "lightTheme": "nordic-dark", "darkTheme": "nonsense" }`, save and wait 2 seconds. Read the console in `T-A` and both lists.
 4. Run `type <data>\appearance.json`. Then delete the file.
 
 **Pass if — all of these**
 
-- Step 1: the page repaints to Nordic Dark by itself, `Nordic Dark` is marked in `Dark theme`, `Huddle Light` in `Light theme`, and the tooltip reads `Switch to light theme`.
-- Step 2: the first click goes to Huddle Light, the second back to Nordic Dark. The file keeps `"dark": "light"` and `"accentColor"`, and gains `"lightTheme": "huddle"` and `"darkTheme": "nordic-dark"`.
-- Step 3: the console carries two warnings naming `lightTheme` ... `not a known Light theme` and `darkTheme` ... `not a known Dark theme`; the lists mark `Huddle Light` and `Huddle Dark`.
+- Step 1: the page repaints to Nordic Dark by itself, `Nordic Dark` is marked in `Dark theme`, `Lumen Light` in `Light theme`, and the tooltip reads `Switch to light theme`.
+- Step 2: the first click goes to Lumen Light, the second back to Nordic Dark. The file keeps `"dark": "light"` and `"note"`, and gains `"lightTheme": "lumen-light"` and `"darkTheme": "nordic-dark"`.
+- Step 3: the console carries two warnings naming `lightTheme` ... `not a known Light theme` and `darkTheme` ... `not a known Dark theme`; the lists mark `Lumen Light` and `Lumen Dark`.
 - Step 4: the file is exactly as hand-written in step 3 — the warnings never rewrite it.
 
 **Fail if — any of these**
 
-- Step 2 lands on Huddle Dark the second time -> the Theme being left is not recorded, so an old file loses its Theme at the first toggle.
+- Step 2 lands on Lumen Dark the second time -> the Theme being left is not recorded, so an old file loses its Theme at the first toggle.
 - Step 3 shows `Nordic Dark` in the light list -> a wrong-mode choice is being honoured, and a mode can again contradict its Theme.
-- The retired `dark` key or `accentColor` disappears -> the store is dropping keys it should preserve.
+- The retired `dark` key or `note` disappears -> the store is dropping keys it should preserve.
 
 **Inconclusive if**
 
 If the hand edit never reaches the page after 5 seconds, the filesystem watcher is not firing; see APPEARANCETHEME-18.
+
+### APPEARANCETHEME-34 — A stored Huddle or Custom Accent id migrates to Lumen, with its accent kept
+
+**Free** · about 5 min
+
+*A file written before ADR-0058 may still name `huddle`, `huddle-dark`, `custom-accent` or `custom-accent-dark`. This proves each moves onto Lumen in place, and that the `accentColor` a Custom Accent choice carried becomes that Theme's accent customization.*
+
+**Before you start**
+
+- The application is running and you can see the console in `T-A`.
+- http://localhost:5100/settings/appearance is open.
+
+**Steps**
+
+1. Hand-write `<data>\appearance.json` as `{ "theme": "huddle" }` and save. Wait 2 seconds. Read the picker, then run `type <data>\appearance.json`.
+2. Hand-write `{ "theme": "huddle-dark", "lightTheme": "huddle", "darkTheme": "huddle-dark" }`, save and wait 2 seconds. Read both lists and the file.
+3. Hand-write `{ "theme": "custom-accent-dark", "accentColor": "#3366cc" }`, save and wait 2 seconds. Read the picker, the accent field, and the file.
+4. Delete `<data>\appearance.json` when you are done.
+
+**Pass if — all of these**
+
+- Step 1: the page is Lumen Light, `Lumen Light` is marked, and the file now reads `lumen-light` where it read `huddle`.
+- Step 2: the page is dark, `Lumen Dark` is marked in `Dark theme` and `Lumen Light` in `Light theme`, and no stored id is `huddle` or `huddle-dark` any more.
+- Step 3: `Lumen Dark` is marked and shows `Accent for Lumen Dark` with `#3366cc` and a `Reset` link; the file holds a `lumen-dark` customization with that `palette.primary` and no `accentColor`.
+- No unknown-theme warning is logged for any retired id.
+
+**Fail if — any of these**
+
+- A retired id falls back to the default with an unknown-theme warning -> the migration does not run.
+- The `accentColor` is lost in step 3 -> the migration drops the Human's colour.
+
+**Inconclusive if**
+
+If the hand edit never reaches the page after 5 seconds, the filesystem watcher is not firing; see APPEARANCETHEME-18.
+
+### APPEARANCETHEME-35 — The Theme lab edits a Theme live in Development and is absent elsewhere
+
+**Free** · about 8 min
+
+*The Theme lab (`/settings/theme-lab`, [ADR-0058](../../adr/0058-a-theme-is-a-palette-a-skin-and-traits.md)) is a development tool: it previews palette and token edits for the current circuit, shows contrast badges, inspects tokens and exports JSON. Nothing is saved.*
+
+**Before you start**
+
+- The application is running in the Development environment (`P-LAUNCH-FREE`) with `<data>\appearance.json` absent.
+- http://localhost:5100/settings/appearance is open on `Lumen Light`.
+
+**Steps**
+
+1. Find the `Open the Theme lab` link under the credit line and click it. Read the page title and subtitle.
+2. Confirm the lab starts on the Theme you came from (`Lumen Light`).
+3. Edit one palette colour (for example `primary`) and one token. Confirm the page behind repaints at once and the contrast badges update.
+4. Turn on `Inspect` and hover a message or a sidebar row. Confirm it lists the `--hu-*` tokens that element reads.
+5. Click `Export JSON`. Paste the clipboard into a text editor and confirm it holds only the keys you changed, as `palette` and `tokens` objects.
+6. Reload the page. Confirm your edits are gone and `<data>\appearance.json` was not created or changed.
+7. Stop the app and start it in Production (not Development). Open http://localhost:5100/settings/appearance and confirm there is no `Open the Theme lab` link. Open http://localhost:5100/settings/theme-lab and confirm it does not show the lab.
+
+**Pass if — all of these**
+
+- The title is `Theme lab` and the subtitle says it is Development only and that edits are never saved.
+- Edits repaint live; badges update; Inspect lists tokens; Export JSON holds only the changed keys.
+- A reload discards the edits and the file is untouched.
+- Outside Development there is no link and the page does not render the lab.
+
+**Fail if — any of these**
+
+- An edit survives a reload or reaches `appearance.json` -> the lab is saving.
+- The Export JSON lists every key -> it is not diffing against the base skin.
+- The link or lab is reachable in Production -> the Development guard is missing.
+
+**Inconclusive if**
+
+If the clipboard paste is empty, the browser blocked clipboard access; allow it for localhost and repeat step 5.
 
 ---
 

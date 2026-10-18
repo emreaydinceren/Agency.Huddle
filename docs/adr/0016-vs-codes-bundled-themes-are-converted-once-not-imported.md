@@ -5,6 +5,8 @@ date: 2026-09-16
 
 # VS Code's bundled themes are converted once, not imported at run time
 
+> **Status note 2026-10-17.** The "beside Huddle and Custom Accent, twelve in all" below is itself superseded by [ADR-0058](0058-a-theme-is-a-palette-a-skin-and-traits.md): the Huddle and Custom Accent pairs are gone too, and four Themes (eight with modes) remain, Lumen being the default.
+
 > **Superseded 2026-10-17.** The seventeen ports this record describes were removed, together
 > with `ThemeGroup.HighContrast` and `src/Huddle.App/Themes/VsCode/`, because a palette ported
 > from an editor theme cannot carry a skin (shape, type, density and shadows): they could only

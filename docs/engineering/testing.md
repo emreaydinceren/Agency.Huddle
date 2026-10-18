@@ -124,8 +124,8 @@ suite renders a browser** and a CSS custom property resolves entirely inside the
 browser's cascade: *"did this element switch to the dark value?"* is unreachable
 here, while *"is there a colour literal left in this file?"* is exact and total. So
 the suite asserts what it can decide — no literals outside `MainLayout.razor.css`,
-and every `var()` naming a MudBlazor variable or `--font-mono`, in `app.css`
-(`AppCss_UsesOnlyMudBlazorVariables`) **and** in every scoped stylesheet
+and every `var()` naming a MudBlazor variable, a registered `--hu-*` skin token or `--font-mono`, in `app.css`
+(`AppCss_UsesOnlyMudBlazorOrSkinTokens`, `AppCss_ReadsOnlyKnownTokens`) **and** in every scoped stylesheet
 (`ScopedCss_UsesOnlyMudBlazorVariables`).
 
 That second test exists because its absence nearly shipped a defect:
@@ -287,13 +287,13 @@ Tools. With `Team:Acp:Enabled=true` — which spends money — check:
     `MudThemeProvider`.
 33. **Every Theme shows its own colours.** Pick `Nordic Dark` and check
     the page ground is `#161a1d` (`rgb(22, 26, 29)`) — Nordic Dark's own
-    Background, not Huddle's. Before 2026-09-21 the same selection with the
-    light preference set rendered Huddle Light instead; that combination is what
+    Background, not another Theme's. Before 2026-09-21 the same selection with the
+    light preference set rendered a light Theme instead; that combination is what
     [ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md) exists to make
     unreachable.
 34. **The picker has two lists, and listing does not reorder the catalog.** **Light
     theme** and **Dark theme** each list their Themes with no group headings,
-    `Huddle Light` is first under Light, and there is no High contrast group.
+    `Lumen Light` is first under Light, and there is no High contrast group.
 35. **A bad Theme id is logged, not shown.** Set `"theme": "dracula"` in
     `App_Data/appearance.json`. The built-in Theme applies, one warning naming the
     unknown id reaches the log, and **the file is unchanged** so fixing the typo
