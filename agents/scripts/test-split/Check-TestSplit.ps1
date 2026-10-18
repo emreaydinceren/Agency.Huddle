@@ -64,6 +64,7 @@ $testsRoot = Join-Path $repoRoot 'tests'
 $projectDirs = @()
 if (Test-Path -LiteralPath $testsRoot) {
     $projectDirs = @(Get-ChildItem -LiteralPath $testsRoot -Directory -Filter 'Huddle.Tests*' |
+        Where-Object { $_.Name -ne 'Huddle.Tests.Common' } |
         Where-Object { @(Get-ChildItem -LiteralPath $_.FullName -Filter '*.csproj' -File).Count -gt 0 })
 }
 

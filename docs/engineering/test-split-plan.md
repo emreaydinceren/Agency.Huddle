@@ -485,8 +485,11 @@ committed as `test-split: wire Huddle.Tests.<Target>`.
 | A Hosted test fails with "content root" or missing `.deps.json` | `Microsoft.AspNetCore.Mvc.Testing` not referenced directly by the test project | §S5 template |
 | A test can't find a file under `tests/Huddle.Tests/…` | A §S10 literal or §S9 content row | Fix the literal / move the content with its test |
 | `CS1574` cref could not be resolved | A `///` in a moved Common file names a test type that stayed behind | Replace `<see cref="X"/>` with `<c>X</c>` using Edit; never `sed -i` (R1, 2026-10-18: 2.3 and 3.3 each spent about 6 calls rediscovering this) |
+| `CS0117`/`CS0103` for a member of a test class that stayed behind | Shared static helpers rather than types | Extract the members unchanged into an internal static class in Common and point the call sites at it (R2: 6.3 took 27 calls rediscovering this) |
 
 Leftover empty folders after a move are harmless; do not `rm -rf` them (a recursive delete timed out in 3.3).
+
+R2 (2026-10-18): for a future split, one task per project ("skeleton, move, wire") by one fresh agent is enough: the skeleton red then green, then `Move-TestFiles -Target <P>`, then stop for the manager's pure-rename commit, then wire. Never poll or resume an agent for an investigation; run repeated test runs as one background script that writes a summary file.
 
 ---
 
@@ -1077,7 +1080,7 @@ Ids are `<deliverable>.<task>`:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "2.3" -State Done -TrackerPath docs/engineering/test-split-plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 30 of 77 tasks Done · 1 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
+**Status:** 33 of 77 tasks Done · 2 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1121,9 +1124,9 @@ Ids are `<deliverable>.<task>`:
 | 7.2 Move the SkillPacks tests (H) | Haiku | 7.1 | | | ✔ |
 | 7.3 Wire SkillPacks (S) | Sonnet | 7.2 | | | ✔ |
 | **D8 The remainder becomes Domain** | Sonnet | D7 | | | |
-| 8.1 Rename the project (H) | Haiku | D7 | | | |
-| 8.2 Domain project file, runner file and literals (H) | Haiku | 8.1 | | | |
-| 8.3 Drop the old grants and prove the end state (S) | Sonnet | 8.2, 1.5 | | | |
+| 8.1 Rename the project (H) | Haiku | D7 | | | ✔ |
+| 8.2 Domain project file, runner file and literals (H) | Haiku | 8.1 | | | ✔ |
+| 8.3 Drop the old grants and prove the end state (S) | Sonnet | 8.2, 1.5 | | | ✔ |
 | **D9 CI comments and docs** | Haiku | D8 | | | |
 | 9.1 CI comments (H) | Haiku | D8 | | | |
 | 9.2 `Testing.md` and `testing.md` (H) | Haiku | D8 | | | |
@@ -1134,7 +1137,7 @@ Ids are `<deliverable>.<task>`:
 | 10.2 Load measurement and tuning (S) — skipped by the user, 2026-10-18 | Sonnet | 10.1, 0.6 | | | |
 | 10.3 Remove the migration tooling (H) | Haiku | 10.2, D9 | | | |
 | R1 Retrospective at 15 Done | Opus | 15 Done | | | ✔ |
-| R2 Retrospective at 30 Done | Opus | 30 Done | | | |
+| R2 Retrospective at 30 Done | Opus | 30 Done | | | ✔ |
 | **D11 One way to wait** | Sonnet | D10 | | | |
 | 11.1 Red: `EventuallyTests` (S) | Sonnet | D10 | | | |
 | 11.2 `Eventually` and `TestBudgets` (S) | Sonnet | 11.1 | | | |

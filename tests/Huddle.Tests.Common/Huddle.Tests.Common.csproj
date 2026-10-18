@@ -26,7 +26,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="Huddle.Tests" />
     <InternalsVisibleTo Include="Huddle.Tests.Domain" />
     <InternalsVisibleTo Include="Huddle.Tests.SkillPacks" />
     <InternalsVisibleTo Include="Huddle.Tests.Components" />

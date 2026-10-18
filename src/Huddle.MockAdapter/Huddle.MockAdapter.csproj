@@ -6,7 +6,6 @@
     <AssemblyName>mock-acp</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="Huddle.Tests" />
     <InternalsVisibleTo Include="Huddle.Tests.Common" />
     <InternalsVisibleTo Include="Huddle.Tests.Domain" />
     <InternalsVisibleTo Include="Huddle.Tests.SkillPacks" />
