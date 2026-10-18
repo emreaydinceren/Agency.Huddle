@@ -139,7 +139,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 
 **Paid** 💰 · about 25 min
 
-*Proves the layout and colour rules in [Appendix D.6 and D.7](../../Huddle.TurnDetail-Specifications.md): no horizontal scroll at phone width, a long block scrolling inside its capped height, and every mark and border readable under a dark Theme, a light Theme and a High contrast Theme.*
+*Proves the layout and colour rules in [Appendix D.6 and D.7](../../Huddle.TurnDetail-Specifications.md): no horizontal scroll at phone width, a long block scrolling inside its capped height, and every mark and border readable under Huddle Dark, Huddle Light and Nordic Dark.*
 
 **Before you start**
 
@@ -151,7 +151,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 1. Send `Create long.md with 120 lines, each reading "Line N: the quick brown fox jumps over the lazy dog" with N counting up, then read it back twice and summarise it.` The Turn must still be running while you do the steps below; if it finishes first, send the request again with a different file name.
 2. When the `Write` row appears, press its expander. Scroll inside the opened block with the mouse wheel.
 3. In DevTools, emulate a 320 px wide viewport. Read the row and the open preview.
-4. Switch the Theme at `/settings/appearance` to one from each of three groups: a dark one, a light one and one from the High contrast group. Open the Room again each time you come back. After each switch, check whether the row is still open; if it closed, open it again. Look at the status marks, the two borders and the text in the preview under each.
+4. Switch the Theme at `/settings/appearance` to each of three Themes: Huddle Dark, Huddle Light and Nordic Dark. Open the Room again each time you come back. After each switch, check whether the row is still open; if it closed, open it again. Look at the status marks, the two borders and the text in the preview under each.
 5. In the 320 px view press Tab until the expander has focus and press Enter, then Space.
 
 **Pass if — all of these**

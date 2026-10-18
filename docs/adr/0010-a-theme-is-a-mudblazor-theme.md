@@ -5,6 +5,8 @@ date: 2026-09-14
 
 # A Theme is a MudBlazor MudTheme, not a stylesheet
 
+> **Status note 2026-10-17.** [ADR-0058](0058-a-theme-is-a-palette-a-skin-and-traits.md) supersedes the "no per-Theme file" rule: each Theme is now an embedded JSON skin loaded by `SkinLoader`, and the C# Theme classes and `AccentTheme` named below are gone. A Theme is still a `MudTheme` with no per-Theme stylesheet.
+
 > **Supersedes [ADR-0009](0009-a-theme-is-a-stylesheet-layered-over-the-tokens.md).** That
 > document's central claim — a Theme is a CSS file layered over 39 Tokens, and the feature
 > adds no JavaScript at all — is no longer true of this codebase.

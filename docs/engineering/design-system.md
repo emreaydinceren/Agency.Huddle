@@ -46,7 +46,7 @@ write the same markup or declaration block a second time, extract it instead.
 ## Foundations
 
 **Visual reference.** One figure shows the presence badges, the four chip looks, the type
-scale and a Board card in Huddle Light's values. The User Guide and theme-authoring.md link
+scale and a Board card in the former Huddle Light's values. The User Guide and theme-authoring.md link
 the same drawing, so all three readers see one picture. Redraw it when one of those rules
 changes.
 
@@ -104,10 +104,10 @@ ratio of each rung in each Theme is evidence, not a rule; it lives in
 
 | Other term | Means |
 | --- | --- |
-| Base radius | `var(--mud-default-borderradius)`: 8px in the Huddle Themes, 4px in the others. Every radius is a multiple of it |
+| Base radius | `var(--mud-default-borderradius)`: each skin's `radius` (Lumen and Fluent 6px, Nordic and Cobalt Soft 8px). Every radius is a multiple of it |
 | Hue distance | The difference in hue angle between two colours. Two signals, or a signal and the Accent, are told apart only if they are far enough apart |
 | Second cue | A glyph, shape, position or word that carries a meaning as well as its hue, so the meaning survives a Theme whose hues collide, and greyscale |
-| Theme families | **Authored** (Huddle Light and Dark), **Custom Accent** (Huddle neutrals, the Human's accent), **Ported** (VS Code, values kept faithful), **High Contrast** |
+| Theme families | Four, each a light and dark pair: Lumen (the default), Fluent, Nordic and Cobalt Soft, each a JSON skin ([ADR-0058](../adr/0058-a-theme-is-a-palette-a-skin-and-traits.md)). The Human's own accent is a per-Theme customization, not a Theme. The Huddle pair, Custom Accent, the VS Code ports and the High Contrast group are gone |
 
 | Role | MudBlazor variable | Use it for |
 | --- | --- | --- |
@@ -134,7 +134,7 @@ ratio of each rung in each Theme is evidence, not a rule; it lives in
 
 > **A wash never defines a shape on its own.** A washed shape (tag chip, reference chip, preview
 > block) also carries an Edge line, so it keeps its outline where the wash can't (dark grounds,
-> ported Themes). Washes sit on the Wash rung (Ink 6%); inner rules on the Rule rung (Ink 10%),
+> any Theme). Washes sit on the Wash rung (Ink 6%); inner rules on the Rule rung (Ink 10%),
 > or are replaced by spacing.
 
 Edge is the only border of a card, tile or row. Chrome is for chrome only, never a card, an
@@ -199,7 +199,7 @@ mean something else in this table.
 > **A meaning never rests on hue alone.** Every signal has a second cue (the state dot's shape,
 > the priority glyph, a word), so it survives colliding hues and greyscale. **Hue distance:** in
 > an authored Theme, signals are at least 30 degrees apart from each other and from the Accent.
-> A ported Theme may fall short; its second cues carry the meaning.
+> A customized accent cannot guarantee this against a picked colour; the second cues carry the meaning.
 
 **Status colours carry the same meaning everywhere.** A status colour is chosen by a pure
 mapping function, never at a call site (UX-V14).
@@ -231,28 +231,28 @@ relationships under [How the rules are enforced](#how-the-rules-are-enforced). I
 every Theme to a `DrawerText` and `DrawerIcon` taken from its own text colours. The Human's
 accent colour goes through `AccentPalette.ClampForContrast`, which darkens or lightens it until
 it clears the floor, and its `PrimaryContrastText` is black or white, whichever reads better
-(`ContrastColour.ReadableForeground`). Both Huddle Themes set `ActionDefault` equal to
+(`ContrastColour.ReadableForeground`). The Lumen Themes set `ActionDefault` equal to
 `TextSecondary`, so an icon button reads as supporting text and not as MudBlazor's 54% black
-(`ThemeCatalogTests` pins it); the 17 VS Code Themes keep MudBlazor's default. A palette
-that fails these tests does not ship; a ported Theme that misses a relationship is listed in
-`DocumentedShortfalls` and nothing else. The tests cover palettes and the chips, not
+(`ThemeCatalogTests` pins it). A palette that fails these tests does not ship, and there is
+no exception list. The tests cover palettes and the chips, not
 other tinted states; see [Known gaps](#known-gaps).
 
-**The shipped palettes.** Huddle Light and Huddle Dark are authored in
-[`HuddleTheme.cs`](../../src/Huddle.App/Themes/HuddleTheme.cs). Their neutrals are warm
-neutral greys and near-neutral charcoals sampled from the Claude desktop app. Each Theme
-has its own accent, because each is its own palette
-([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)). Their values and ratios are
-in [theme-authoring.md › The Huddle accent](theme-authoring.md#the-huddle-accent) and
-[Borders and status colours](theme-authoring.md#borders-and-status-colours). A text colour
-on a Primary fill is never hard-coded; see the [lookup](UXDesignGuidelines.md#i-need-use-this).
+**The shipped palettes.** The catalog holds four authored pairs mapped from the approved mockup
+directions: Lumen (the default, Lumen Light and Lumen Dark), Fluent, Nordic and Cobalt Soft, eight
+Themes in all. Each is a JSON skin under `src/Huddle.App/Themes/Skins/`, loaded by `SkinLoader`; its
+palette, tokens and traits are explained in [theme-authoring.md](theme-authoring.md). Each Theme has
+its own accent, because each is its own palette
+([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)). A text colour on a Primary fill is
+never hard-coded; see the [lookup](UXDesignGuidelines.md#i-need-use-this). The Huddle pair, the
+Custom Accent pair and the 17 palettes once converted from VS Code were removed
+([ADR-0058](../adr/0058-a-theme-is-a-palette-a-skin-and-traits.md); ADR-0016 is superseded).
+The picker has a Light theme list and a Dark theme list; the catalog holds the counts.
 
-The catalog also holds the Custom Accent pair
-([`AccentTheme.cs`](../../src/Huddle.App/Themes/AccentTheme.cs)), the four authored pairs mapped from the approved
-mockup directions (Lumen, Fluent, Nordic and Cobalt Soft; see
-[theme-authoring.md › The mockup pairs](theme-authoring.md#the-mockup-pairs)) and 17 palettes converted
-from VS Code ([ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)).
-The picker groups them as Light, Dark and High Contrast; the catalog holds the counts.
+**Tokens and traits.** Colour decisions the palette cannot name (the ground of the rail, the
+current item, a region line, a card shadow) are `--hu-*` tokens registered once in `SkinTokens`,
+with defaults written over the palette. Structure that differs between Themes (message layout,
+send button, status look, labels, composer, nav, surface, marks, reading) is a trait, a
+`data-hu-*` attribute on `.theme-marker` whose variants are written once in `app.css`.
 
 **One palette per Theme.** A Theme carries one palette and its own `ThemeMode`; the mode
 is derived from the Theme and from nothing else
@@ -264,13 +264,13 @@ and one dark Theme, and the top bar's `ThemeModeToggle` switches between them
 
 | Aspect | Value |
 | --- | --- |
-| UI face | By default Inter, then Helvetica Neue, then `sans-serif`; loaded from Google Fonts in `App.razor`. Nordic uses IBM Plex Sans, with Literata as its reading face (`--font-read`) and IBM Plex Mono for code ([ADR-0057](../adr/0057-a-theme-may-carry-a-style-pack.md)) |
+| UI face | By default Inter, then Helvetica Neue, then `sans-serif`; loaded from Google Fonts in `App.razor`. A skin sets its own faces: Nordic uses IBM Plex Sans, with Literata as its reading face (`--font-read`) and IBM Plex Mono for code |
 | Monospace | `--font-mono`: `ui-monospace`, Cascadia Mono, Consolas, Courier New |
 | Case | Sentence case everywhere. `Typo.button` is `text-transform: none`; tab rails must be too (UX-009). A Tab title is never italic: a preview Tab is weight 400 and the others 500 |
 | Scale | Set in rendered px, once, in `ThemeDefaults.WithSharedTypography`. The page is not zoomed ([ADR-0056](../adr/0056-the-ui-renders-at-100-percent-with-a-px-type-scale.md)) |
 
-Set up once in [`ThemeDefaults.cs`](../../src/Huddle.App/Themes/ThemeDefaults.cs). VS Code
-themes carry no fonts, so every Theme inherits this stack.
+Set up once in [`ThemeDefaults.cs`](../../src/Huddle.App/Themes/ThemeDefaults.cs). A
+palette carries no fonts, so every Theme inherits this stack.
 
 **The type scale, by role.** Pick the role, then use its `Typo` and tag. The scale stops
 at `h5`; don't use `h1` to `h4` as a `Typo`. The Rendered column is what the Human sees,
@@ -392,7 +392,7 @@ area is plain `100vh`. See
 
 | Token | Value | Use it for |
 | --- | --- | --- |
-| `var(--mud-default-borderradius)` | 8px in both Huddle Themes, 4px elsewhere | Every bordered card, tile and input, whatever its size; chips, preview blocks, drawers' inner panels |
+| `var(--mud-default-borderradius)` | The skin's `radius`: 6px (Lumen, Fluent) or 8px (Nordic, Cobalt Soft) | Every bordered card, tile and input, whatever its size; chips, preview blocks, drawers' inner panels |
 | `calc(var(--mud-default-borderradius) * 1.5)` | 12px or 6px | The message bubble and the Composer, and nothing else |
 | `calc(var(--mud-default-borderradius) * 0.75)` | 6px or 3px | An element nested inside a rounded one, such as the segmented indicator, the Status and Tag chips, and the selected-row shape |
 | `50%` | Circle | Avatars and status dots, always |
@@ -514,7 +514,7 @@ children. Standalone, `StatusDot` draws the same 10px badge inline.
 | Hollow grey ring | Offline | Asleep; Offline |
 
 A filled tone is the palette colour mixed 20% toward black, so the white glyph keeps at least
-3:1 against it in both Huddle Themes (a test holds it). Both rings are the neutral grey. The
+3:1 against it in every Theme (a test holds it). Both rings are the neutral grey. The
 pulse glyph breathes: the badge fades between full and about half opacity over 1.8s, and is
 static under `prefers-reduced-motion`. The glyph carries the state, so the badge also reads in
 greyscale.
@@ -549,7 +549,7 @@ that shows the control, or it can't be reached on a touch screen (UX-075).
   ([app.css](../../src/Huddle.App/wwwroot/app.css) "Keyboard focus ring").
 - **The Composer's focused border is the accent.** `.composer-input:focus-visible` draws a
   `Primary` border plus a 0.5px inset accent ring, which reads as 1.5px and moves no text.
-  `Primary` clears 3:1 against Surface in both Huddle Themes, where the Chrome line would
+  `Primary` clears 3:1 against Surface in every Theme (`SkinContrastTests`), where the Chrome line would
   not.
 - **Every `MudAlert` has a role**: `role="alert"` for an interruption, `role="status"` for
   a consequence (UX-V05).
@@ -1120,14 +1120,16 @@ prefers `DateFormat="MMM d, yyyy"`.
    `::deep` rule under a component root never matches and fails silently. This holds for a
    Huddle component's own scoped file too (UX-V16).
 2. **Put a rule in a `.razor.css`** only when it targets markup in that component.
-3. **Colour and font:** `var(--mud-palette-*)`, `var(--mud-typography-*)` and the ink rungs
-   only. A
+3. **Colour and font:** `var(--mud-palette-*)`, `var(--mud-typography-*)`, the skin tokens
+   (`--hu-*`) and the ink rungs only. A
    literal fails `AppCss_DeclaresNoColourLiteral` or `AppCss_DeclaresNoFontFamilyLiteral`.
    The one allowed exception is `#blazor-error-ui` in `MainLayout.razor.css`.
-4. **Every `var()` names a MudBlazor variable, one of the five ink rungs (`--ink-strip`,
-   `--ink-wash`, `--ink-rule`, `--ink-edge`, `--ink-field`) or `--font-mono`.** An unresolved
+4. **Every `var()` names a MudBlazor variable, a registered skin token (`--hu-*`), one of the
+   five ink rungs (`--ink-strip`, `--ink-wash`, `--ink-rule`, `--ink-edge`, `--ink-field`, aliases
+   of `--hu-ink-*`) or `--font-mono`.** An unresolved
    property resolves to nothing, not to a fallback, and a surface goes invisible
-   (`AppCss_UsesOnlyMudBlazorVariables` allows exactly those, and
+   (`AppCss_UsesOnlyMudBlazorOrSkinTokens` allows exactly those, `AppCss_ReadsOnlyKnownTokens`
+   refuses an unregistered `--hu-*`, and
    `ScopedCss_UsesOnlyMudBlazorVariables` holds scoped files to the same list). That includes a
    feature-local custom property such as `--task-ref-dot` (UX-V15).
 5. **Sizes, radii and layers use the tokens above**: spacing in px on the 4/8/12/16/24
@@ -1154,19 +1156,16 @@ prefers `DateFormat="MMM d, yyyy"`.
 ## Adding a Theme or changing a palette
 
 [theme-authoring.md](theme-authoring.md) walks through these steps in full, with the
-palette table and the VS Code mapping.
+palette table.
 
-1. Build the palette in C# and register a `ThemeDescriptor` in
-   [`ThemeCatalog.BuiltIn`](../../src/Huddle.App/Themes/ThemeCatalog.cs). Never insert
-   before `BuiltIn[0]`; three call sites treat it as the default.
-2. Give the descriptor a `ThemeMode` and a `ThemeGroup`; the picker groups by `Group`.
-3. For a converted VS Code palette, comment each value with the key it came from. No
-   importer ships, so the comment is the only record
-   ([ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)).
-4. Run `ThemeCatalogTests`. Fix the colour (a darker or lighter `Primary`); a shipped Theme
-   carries no exception. Set `DrawerText` and `DrawerIcon` from the palette's own text
-   colours.
-5. Update [manual-tests/appearance-theme.md](manual-tests/appearance-theme.md) if the
+1. Copy the closest skin file under `src/Huddle.App/Themes/Skins/`, give it an id, a label, a
+   `mode` and an `order`, and change its palette, tokens and traits. `ThemeCatalog.BuiltIn` is
+   built from the files; its first entry (Lumen Light) is the default.
+2. Run `SkinLoaderTests`, `SkinContrastTests` and `ThemeCatalogTests`. Fix the colour (a darker
+   or lighter `primary`); a shipped Theme carries no exception. Set `drawerText` and
+   `drawerIcon` from the palette's own text colours.
+3. Tune it in the Theme lab (`/settings/theme-lab`, Development) and export the JSON.
+4. Update [manual-tests/appearance-theme.md](manual-tests/appearance-theme.md) if the
    picker changes.
 
 ## How the rules are enforced
@@ -1174,13 +1173,13 @@ palette table and the VS Code mapping.
 | Rule | Enforced by |
 | --- | --- |
 | No colour or font-family literal in a stylesheet | `AppCss_DeclaresNoColourLiteral`, `AppCss_DeclaresNoFontFamilyLiteral` |
-| Only MudBlazor variables, the five `--ink-*` rungs and `--font-mono` in `var()` | `AppCss_UsesOnlyMudBlazorVariables`, `ScopedCss_UsesOnlyMudBlazorVariables` |
-| Palette contrast and `DrawerText` | `ThemeCatalogTests` |
-| For every Theme: Rule < Edge < Field <= Chrome against Ground; Quiet ink between Ink 50% and Ink 80% and at least 4.5:1; for authored Themes, signal hue distance at least 30 degrees. A ported Theme that misses goes into `DocumentedShortfalls` | `ThemeCatalogTests` |
+| Only MudBlazor variables, registered `--hu-*` skin tokens, the five `--ink-*` rungs and `--font-mono` in `var()`; every token read, every trait value styled | `AppCss_UsesOnlyMudBlazorOrSkinTokens`, `AppCss_ReadsOnlyKnownTokens`, `SkinTokens_EveryTokenIsRead`, `Traits_EveryValueHasCss`, `ScopedCss_UsesOnlyMudBlazorVariables` |
+| Palette contrast and `DrawerText` | `ThemeCatalogTests`; text 4.5:1 on every ground and focus 3:1 in `SkinContrastTests` |
+| For every Theme: Rule < Edge < Field <= Chrome against Ground; Quiet ink between Ink 50% and Ink 80% and at least 4.5:1; for authored Themes, signal hue distance at least 30 degrees. There are no exceptions | `ThemeCatalogTests` |
 | Type roles, 11px minimum, weights up to 600, input text at 400, 75ch and 760px | `TypeScaleTests` |
 | How a date reads on screen | `HumanDateTests` |
 | One hue per meaning: the state, priority and presence mappings | `TaskColorsTests` |
-| Status chip contrast | `ChipStyleTests`, which holds the chip pairs to 4.5:1 in Huddle Light and Huddle Dark |
+| Status chip contrast | `ChipStyleTests`, which holds the chip pairs to 4.5:1 |
 | No colour literal in an inline `style` attribute | `RazorComponents_NoInlineColourLiteralInStyleAttribute` |
 | `Size.Small` on buttons, icon buttons, chips, toggles and FABs (CV1) | `UiConventionTests` |
 | `Variant.Outlined` and `Margin.Dense` on inputs (CV2) | `UiConventionTests` |
@@ -1241,7 +1240,7 @@ below.
 **Copy and verification**
 
 - [ ] Labels are sentence case, verbs come from the verb table, counts are pluralised.
-- [ ] It looks right in Huddle Light, Huddle Dark and one High Contrast Theme, run with
+- [ ] It looks right in Lumen Light, Lumen Dark and one other dark Theme (Nordic Dark), run with
       `.\run.ps1 -Seed`.
 - [ ] It fills its pane and scrolls inside it at a narrow width.
 - [ ] The text census (`tools/text-census/`) shows no size under 11px and no contrast
@@ -1261,8 +1260,8 @@ These are open questions, not decisions. Raise them before relying on them.
   collapse, and only the Task list has a narrow-width rule.
 - **Contrast tests cover palettes and chips, not other component states.** A tinted
   background such as the Human's bubble or the selected row is not measured. The measured
-  baseline for the two Huddle Themes is in
-  [theme-authoring.md › The tinted-state gap](theme-authoring.md#the-tinted-state-gap).
+  baseline was taken on the former Huddle Themes and is no longer kept; the text
+  and focus floors that are held are in [theme-authoring.md › The guards](theme-authoring.md#the-guards).
 
 ## Keeping this document current
 

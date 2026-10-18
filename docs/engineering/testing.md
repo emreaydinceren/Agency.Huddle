@@ -124,8 +124,8 @@ suite renders a browser** and a CSS custom property resolves entirely inside the
 browser's cascade: *"did this element switch to the dark value?"* is unreachable
 here, while *"is there a colour literal left in this file?"* is exact and total. So
 the suite asserts what it can decide — no literals outside `MainLayout.razor.css`,
-and every `var()` naming a MudBlazor variable or `--font-mono`, in `app.css`
-(`AppCss_UsesOnlyMudBlazorVariables`) **and** in every scoped stylesheet
+and every `var()` naming a MudBlazor variable, a registered `--hu-*` skin token or `--font-mono`, in `app.css`
+(`AppCss_UsesOnlyMudBlazorOrSkinTokens`, `AppCss_ReadsOnlyKnownTokens`) **and** in every scoped stylesheet
 (`ScopedCss_UsesOnlyMudBlazorVariables`).
 
 That second test exists because its absence nearly shipped a defect:
@@ -279,22 +279,21 @@ Tools. With `Team:Acp:Enabled=true` — which spends money — check:
     private window: **the same Theme**. Restart the app: still the same. This is
     the deliberate consequence of the choice living in a file rather than in the
     browser.
-32. **The catalog paints, not just enumerates.** Pick `Dark Modern`, then `Monokai`,
-    then `Solarized Light`, from the nineteen the Theme picker offers. Each must
-    repaint immediately with no page load, and `<body>`'s computed background under
-    `Dark Modern` must be `rgb(31, 31, 31)`. A label that selects but does not
+32. **The catalog paints, not just enumerates.** Pick `Lumen Dark`, then `Cobalt Soft Dark`,
+    then `Nordic Light`, from the twelve the Theme picker offers. Each must
+    repaint immediately with no page load, and the page ground under
+    `Nordic Light` must be birch, `#f6f6f1`. A label that selects but does not
     repaint means a palette is being read once rather than through
     `MudThemeProvider`.
-33. **Every Theme shows its own colours.** Pick `Solarized Dark` and check
-    `<body>`'s computed background is `rgb(0, 43, 54)` — Solarized Dark's own
-    `editor.background`, not Huddle's. Before 2026-09-21 the same selection with the
-    light preference set rendered Huddle Light instead; that combination is what
+33. **Every Theme shows its own colours.** Pick `Nordic Dark` and check
+    the page ground is `#161a1d` (`rgb(22, 26, 29)`) — Nordic Dark's own
+    Background, not another Theme's. Before 2026-09-21 the same selection with the
+    light preference set rendered a light Theme instead; that combination is what
     [ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md) exists to make
     unreachable.
-34. **The picker is grouped, and grouping does not reorder the catalog.** The list
-    shows **Light**, **Dark** and **High contrast** headings, `Huddle Light` is first
-    under Light, and the two High Contrast Themes are under their own heading rather
-    than under Dark and Light.
+34. **The picker has two lists, and listing does not reorder the catalog.** **Light
+    theme** and **Dark theme** each list their Themes with no group headings,
+    `Lumen Light` is first under Light, and there is no High contrast group.
 35. **A bad Theme id is logged, not shown.** Set `"theme": "dracula"` in
     `App_Data/appearance.json`. The built-in Theme applies, one warning naming the
     unknown id reaches the log, and **the file is unchanged** so fixing the typo

@@ -591,6 +591,15 @@ window.huddleStorage = {
 };
 
 window.huddleResize = {
+  // The drawer shows different content (another Task, or New task): MudBlazor's .mud-drawer-content is the
+  // scroll container and outlives the keyed body, so its scroll position is reset here.
+  scrollDrawerToTop(body) {
+    const scroller = body?.closest(".mud-drawer-content");
+    if (scroller) {
+      scroller.scrollTop = 0;
+    }
+  },
+
   // Drag-to-resize for the Task detail panel's End-anchored MudDrawer. Writes straight to the
   // drawer's own "--mud-drawer-width" instance variable on every pointermove - the same one
   // MudBlazor's compiled CSS already falls back to var(--mud-drawer-width-right) for - so dragging

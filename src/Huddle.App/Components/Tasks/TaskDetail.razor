@@ -610,11 +610,11 @@ else if (this.loaded is { } task)
     [Parameter]
     public EventCallback<bool> TitleEditingChanged { get; set; }
 
-    /// <summary>Raised when the Panel or dialog should close: Cancel (always), and Expand once its own dialog has opened (Spec §13.6, corrections-B7 "14.4" item 1). The caller (the Tasks page, its own drawer's own <c>OnClose</c>) is a later dispatch's wiring (14.5).</summary>
+    /// <summary>Raised when the Panel or dialog should close: Cancel (always), and Expand just before its own dialog opens (Spec §13.6, corrections-B7 "14.4" item 1, theming plan 7.6). The caller (the Tasks page, its own drawer's own <c>OnClose</c>) is a later dispatch's wiring (14.5).</summary>
     [Parameter]
     public EventCallback OnClose { get; set; }
 
-    /// <summary>Unused: Expand is self-contained (<see cref="ExpandAsync"/> opens <see cref="TaskDetailDialog"/> directly through the injected <see cref="IDialogService"/>). Kept for a caller that wants to know Expand happened, independent of the close it triggers.</summary>
+    /// <summary>Unused: Expand is self-contained (<see cref="ExpandAsync"/> opens <see cref="TaskDetailDialog"/> directly through the injected <see cref="IDialogService"/>). Kept for a caller that wants to know Expand happened, independent of the close it triggers (which now comes first, before the dialog opens).</summary>
     [Parameter]
     public EventCallback OnExpand { get; set; }
 
@@ -1236,7 +1236,13 @@ else if (this.loaded is { } task)
         return true;
     }
 
-    /// <summary>Expand (Spec §13.6): guarded by <see cref="ConfirmDiscardAsync"/>, then opens <see cref="TaskDetailDialog"/> with only <see cref="Id"/> - never a <see cref="TaskDraft"/>, since the dialog loads the Task itself (corrections-B5 D14 item 7) - and closes the Panel.</summary>
+    /// <summary>
+    /// Expand (Spec §13.6): guarded by <see cref="ConfirmDiscardAsync"/>, then closes the Panel through <see cref="OnClose"/>
+    /// and opens <see cref="TaskDetailDialog"/> with only <see cref="Id"/> - never a <see cref="TaskDraft"/>, since the
+    /// dialog loads the Task itself (corrections-B5 D14 item 7). On <c>/tasks/item/{id}</c> the host answers the close by
+    /// navigating to the view's path, and that location change reaches the server after the dialog has opened; MudBlazor
+    /// closes a dialog on a path change by default, so this one opens with <see cref="ExpandOptions"/>.
+    /// </summary>
     private async Task ExpandAsync()
     {
         if (!await this.ConfirmDiscardAsync())
@@ -1244,10 +1250,17 @@ else if (this.loaded is { } task)
             return;
         }
 
+        string? title = this.loaded is { } expanded ? $"{expanded.Id} · {expanded.Title}" : null;
         DialogParameters<TaskDetailDialog> parameters = new() { { dialog => dialog.Id, this.Id } };
-        _ = await this.Dialogs.ShowAsync<TaskDetailDialog>(this.loaded is { } expanded ? $"{expanded.Id} · {expanded.Title}" : null, parameters, TaskDetailDialog.Options);
         await this.OnClose.InvokeAsync();
+        _ = await this.Dialogs.ShowAsync<TaskDetailDialog>(title, parameters, ExpandOptions);
     }
+
+    /// <summary>
+    /// <see cref="TaskDetailDialog.Options"/>, kept open across the path change Expand's own close causes. The dialog is
+    /// modal, so the only other path change while it is open is the browser's Back, which leaves it over the view.
+    /// </summary>
+    private static readonly DialogOptions ExpandOptions = TaskDetailDialog.Options with { CloseOnNavigation = false };
 
     /// <summary>
     /// Make a copy (Spec §13.6): opens a new <see cref="TaskDetailDialog"/> in create mode with a

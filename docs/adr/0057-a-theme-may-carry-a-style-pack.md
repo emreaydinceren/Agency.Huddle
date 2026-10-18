@@ -1,9 +1,12 @@
 ---
-status: accepted
+status: superseded
 date: 2026-10-17
 ---
 
 # A Theme may carry a style pack
+
+> **Superseded** the same day by [ADR-0058](0058-a-theme-is-a-palette-a-skin-and-traits.md): Nordic's pack became
+> token values and trait variants, and `wwwroot/packs/` was deleted. The record below is kept as it was decided.
 
 > **Supersedes**, for style packs only, [ADR-0010](0010-a-theme-is-a-mudblazor-theme.md)'s "there is no `theme.css`,
 > no `wwwroot/themes/`". A Theme is still a `MudTheme` ([ADR-0017](0017-a-theme-is-a-palette-not-a-pair.md)), and

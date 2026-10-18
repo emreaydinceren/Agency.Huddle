@@ -1,7 +1,9 @@
 using System.Reflection;
+using System.Text.RegularExpressions;
 using MudBlazor;
 using MudBlazor.Utilities;
 using Agency.Huddle.App.Themes;
+using Agency.Huddle.App.Themes.Skins;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -55,45 +57,59 @@ public sealed class ThemeCatalogTests
     }
 
     /// <summary>
-    /// A spot-check that the two shipped "Huddle" themes carry the expected <c>Primary</c> and
-    /// <c>Background</c> - the colours most likely to visibly regress if a future edit swaps the two
-    /// themes' palettes, or fat-fingers a hex value. Huddle is the one file in <c>Themes/</c> with
-    /// two authored palettes, which is why it is the one that became two catalog entries.
+    /// A spot-check that the two Lumen themes carry the expected <c>Primary</c> and <c>Background</c> - the colours
+    /// most likely to visibly regress if a future edit swaps the two themes' palettes, or fat-fingers a hex value.
     /// </summary>
     [Fact]
-    public void Huddle_PrimaryAndBackgroundCarryTheExpectedValues()
+    public void Lumen_PrimaryAndBackgroundCarryTheExpectedValues()
     {
-        var light = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "huddle", StringComparison.Ordinal));
-        var dark = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "huddle-dark", StringComparison.Ordinal));
+        var light = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "lumen-light", StringComparison.Ordinal));
+        var dark = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "lumen-dark", StringComparison.Ordinal));
 
         Assert.Equal(ThemeMode.Light, light.Mode);
-        Assert.Equal("#5B64C8", Hex(light.Theme.PaletteLight.Primary), ignoreCase: true);
+        Assert.Equal("#7368D3", Hex(light.Theme.PaletteLight.Primary), ignoreCase: true);
         Assert.Equal("#FFFFFF", Hex(light.Theme.PaletteLight.PrimaryContrastText), ignoreCase: true);
-        Assert.Equal("#F2F0ED", Hex(light.Theme.PaletteLight.Background), ignoreCase: true);
-        Assert.Equal("#FFFFFF", Hex(light.Theme.PaletteLight.Surface), ignoreCase: true);
-        Assert.Equal("#e6e2dc", Hex(light.Theme.PaletteLight.DrawerBackground), ignoreCase: true);
+        Assert.Equal("#FFFFFF", Hex(light.Theme.PaletteLight.Background), ignoreCase: true);
 
         Assert.Equal(ThemeMode.Dark, dark.Mode);
-        Assert.Equal("#8F97E6", Hex(dark.Theme.PaletteDark.Primary), ignoreCase: true);
-        Assert.Equal("#141413", Hex(dark.Theme.PaletteDark.PrimaryContrastText), ignoreCase: true);
-        Assert.Equal("#1C1C1B", Hex(dark.Theme.PaletteDark.Background), ignoreCase: true);
-
-        // F4: default icon buttons draw in the Theme's secondary text colour, not MudBlazor's translucent grey.
-        Assert.Equal(Hex(light.Theme.PaletteLight.TextSecondary), Hex(light.Theme.PaletteLight.ActionDefault), ignoreCase: true);
-        Assert.Equal(Hex(dark.Theme.PaletteDark.TextSecondary), Hex(dark.Theme.PaletteDark.ActionDefault), ignoreCase: true);
+        Assert.Equal("#8379D8", Hex(dark.Theme.PaletteDark.Primary), ignoreCase: true);
+        Assert.Equal("#0B0B0F", Hex(dark.Theme.PaletteDark.Background), ignoreCase: true);
     }
 
     /// <summary>
-    /// <see cref="ThemeCatalog.BuiltIn"/>'s first entry is the "Huddle Light" theme, whose id is the
-    /// bare <c>"huddle"</c>. Three call sites read <c>BuiltIn[0]</c> as "the default theme", and that
-    /// id is what an <c>appearance.json</c> written before the split already stores, so both are
-    /// pinned here rather than left to a comment.
+    /// <see cref="ThemeCatalog.BuiltIn"/>'s first entry is Lumen Light (P5-D4). Three call sites read <c>BuiltIn[0]</c> as
+    /// "the default theme", and <see cref="ThemeCatalog.DefaultLightId"/> and <see cref="ThemeCatalog.DefaultDarkId"/>
+    /// name the pair the mode toggle falls back to, so all of it is pinned here rather than left to a comment.
     /// </summary>
     [Fact]
-    public void BuiltIn_FirstEntryIsTheHuddleLightDefault()
+    public void BuiltIn_FirstEntryIsTheLumenLightDefault()
     {
-        Assert.Equal("huddle", ThemeCatalog.BuiltIn[0].Id);
+        Assert.Equal("lumen-light", ThemeCatalog.BuiltIn[0].Id);
         Assert.Equal(ThemeMode.Light, ThemeCatalog.BuiltIn[0].Mode);
+        Assert.Equal("lumen-light", ThemeCatalog.DefaultLightId);
+        Assert.Equal("lumen-dark", ThemeCatalog.DefaultDarkId);
+        Assert.Equal(ThemeMode.Dark, ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == ThemeCatalog.DefaultDarkId).Mode);
+    }
+
+    /// <summary>The retired Huddle and Custom Accent Themes are gone from the catalogue and from the loaded skins (P5-D4).</summary>
+    /// <param name="retiredId">A retired Theme id.</param>
+    [Theory]
+    [InlineData("huddle")]
+    [InlineData("huddle-dark")]
+    [InlineData("custom-accent")]
+    [InlineData("custom-accent-dark")]
+    public void RetiredThemes_AreNotInTheCatalogue(string retiredId)
+    {
+        Assert.DoesNotContain(ThemeCatalog.BuiltIn, descriptor => string.Equals(descriptor.Id, retiredId, StringComparison.Ordinal));
+        Assert.DoesNotContain(SkinLoader.LoadAll(), skin => string.Equals(skin.Id, retiredId, StringComparison.Ordinal));
+    }
+
+    /// <summary>The picker offers four Theme families, each a light and a dark one: four of each mode.</summary>
+    [Fact]
+    public void Grouped_OffersFourLightAndFourDarkThemes()
+    {
+        Assert.Equal(4, ThemeCatalog.BuiltIn.Count(static descriptor => descriptor.Mode == ThemeMode.Light));
+        Assert.Equal(4, ThemeCatalog.BuiltIn.Count(static descriptor => descriptor.Mode == ThemeMode.Dark));
     }
 
     /// <summary>
@@ -123,29 +139,7 @@ public sealed class ThemeCatalogTests
         }
     }
 
-    /// <summary>
-    /// A high-contrast theme is grouped under <see cref="ThemeGroup.HighContrast"/> even though its
-    /// <see cref="ThemeDescriptor.Mode"/> is an ordinary light or dark - the exact case that keeps
-    /// <see cref="ThemeGroup"/> and <see cref="ThemeMode"/> two fields rather than one.
-    /// </summary>
-    [Fact]
-    public void BuiltIn_HighContrastThemesAreGroupedApartFromTheirMode()
-    {
-        var darkHighContrast = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "dark-high-contrast", StringComparison.Ordinal));
-        var lightHighContrast = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "light-high-contrast", StringComparison.Ordinal));
-
-        Assert.Equal(ThemeMode.Dark, darkHighContrast.Mode);
-        Assert.Equal(ThemeGroup.HighContrast, darkHighContrast.Group);
-
-        Assert.Equal(ThemeMode.Light, lightHighContrast.Mode);
-        Assert.Equal(ThemeGroup.HighContrast, lightHighContrast.Group);
-    }
-
-    /// <summary>
-    /// Every <c>(themeId, pair)</c> combination this suite holds to a WCAG contrast floor, minus the
-    /// combinations <see cref="DocumentedShortfalls"/> pins as known, measured exceptions - a theme
-    /// that cannot clear its floor is recorded there rather than skipped silently.
-    /// </summary>
+    /// <summary>Every <c>(themeId, pair)</c> combination this suite holds to a WCAG contrast floor: every built-in theme against every pair in <see cref="ContrastPairs"/>.</summary>
     public static TheoryData<string, string> ContrastCombinations()
     {
         TheoryData<string, string> data = new();
@@ -153,10 +147,7 @@ public sealed class ThemeCatalogTests
         {
             foreach (var pair in ContrastPairs)
             {
-                if (!IsDocumentedShortfall(descriptor.Id, pair.Name))
-                {
-                    data.Add(descriptor.Id, pair.Name);
-                }
+                data.Add(descriptor.Id, pair.Name);
             }
         }
 
@@ -185,42 +176,6 @@ public sealed class ThemeCatalogTests
             $"{themeId}: {pairName} contrast ratio {ratio:F2}:1 falls short of the {pair.Floor:F1}:1 WCAG AA {pair.FloorKind} minimum.");
     }
 
-    /// <summary>Every <c>(themeId, pair)</c> combination <see cref="DocumentedShortfalls"/> pins.</summary>
-    public static TheoryData<string, string> DocumentedShortfallCombinations()
-    {
-        TheoryData<string, string> data = new();
-        foreach (var shortfall in DocumentedShortfalls.Where(candidate => !candidate.Pair.StartsWith(ChipPairPrefix, StringComparison.Ordinal)))
-        {
-            data.Add(shortfall.ThemeId, shortfall.Pair);
-        }
-
-        return data;
-    }
-
-    /// <summary>
-    /// The other half of <see cref="DocumentedShortfalls"/>: a listed combination must still measure
-    /// below its floor, at the exact ratio recorded. If a palette value changes - fixed or otherwise -
-    /// this fails the build, so a stale entry cannot quietly rot; it must be deleted instead.
-    /// </summary>
-    /// <param name="themeId"><see cref="ThemeDescriptor.Id"/> of the documented shortfall under test.</param>
-    /// <param name="pairName">The <see cref="ContrastPairSpec.Name"/> of the documented shortfall under test.</param>
-    [Theory]
-    [MemberData(nameof(DocumentedShortfallCombinations))]
-    public void DocumentedShortfalls_StillFallShort(string themeId, string pairName)
-    {
-        var shortfall = DocumentedShortfalls.Single(candidate =>
-            string.Equals(candidate.ThemeId, themeId, StringComparison.Ordinal) &&
-            string.Equals(candidate.Pair, pairName, StringComparison.Ordinal));
-        var descriptor = ThemeCatalog.BuiltIn.Single(candidate => string.Equals(candidate.Id, themeId, StringComparison.Ordinal));
-        var pair = ContrastPairs.Single(candidate => string.Equals(candidate.Name, pairName, StringComparison.Ordinal));
-        var palette = NativePalette(descriptor);
-
-        var ratio = ContrastColour.Ratio(pair.Foreground(palette), pair.Background(palette));
-
-        Assert.True(ratio < shortfall.Floor, $"{themeId}: {pairName} no longer falls short of {shortfall.Floor:F1}:1 - delete this documented shortfall.");
-        Assert.Equal(shortfall.Ratio, ratio, precision: 2);
-    }
-
     /// <summary>
     /// Every <c>--mud-palette-*</c> custom property <c>app.css</c> or a <c>.razor.css</c> file actually
     /// references, mapped to its <see cref="Palette"/> property, has a value in every built-in theme's
@@ -235,13 +190,6 @@ public sealed class ThemeCatalogTests
         List<string> referencedTokens = [.. CssSource.ReadReferencedTokens(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"))];
         var componentsDirectory = CssSource.RepoPath("src", "Huddle.App", "Components");
         foreach (var cssFile in Directory.EnumerateFiles(componentsDirectory, "*.razor.css", SearchOption.AllDirectories))
-        {
-            referencedTokens.AddRange(CssSource.ReadReferencedTokens(cssFile));
-        }
-
-        // A style pack (ADR-0057) reads palette slots app.css does not, such as divider-light and table-hover.
-        var packsDirectory = CssSource.RepoPath("src", "Huddle.App", "wwwroot", "packs");
-        foreach (var cssFile in Directory.EnumerateFiles(packsDirectory, "*.css"))
         {
             referencedTokens.AddRange(CssSource.ReadReferencedTokens(cssFile));
         }
@@ -297,9 +245,8 @@ public sealed class ThemeCatalogTests
 
     /// <summary>
     /// Every authored theme's <c>Divider</c> - the border of message cards, tiles and roster cards - reads at
-    /// least 1.5:1 against <c>Surface</c>: the two Huddle themes and the eight mapped from the mockup sets. The
-    /// VS Code themes are imported faithfully and held to no floor here;
-    /// <see cref="BuiltIn_DividerVersusSurface_IsRecorded"/> measures them.
+    /// least 1.5:1 against <c>Surface</c>: the two Huddle themes and the eight mapped from the mockup sets.
+    /// <see cref="BuiltIn_DividerVersusSurface_IsRecorded"/> measures every built-in theme, Custom Accent included.
     /// </summary>
     /// <param name="themeId"><see cref="ThemeDescriptor.Id"/> of the authored theme under test.</param>
     [Theory]
@@ -353,7 +300,7 @@ public sealed class ThemeCatalogTests
     /// In an authored Theme every pair of signals, and each signal against the Accent, sit at least 30 degrees apart in
     /// hue (audit A2), so a meaning never rests on a hue that collides with another. The signals are Working
     /// (<c>Info</c>), Review (<c>Tertiary</c>), <c>Success</c>, <c>Warning</c> and <c>Error</c>; the Accent is <c>Primary</c>.
-    /// Ported Themes take their signals from VS Code and may fall short; their second cues carry the meaning.
+    /// A customized Primary is not authored, so it is checked separately below.
     /// </summary>
     /// <param name="themeId"><see cref="ThemeDescriptor.Id"/> of the authored theme under test.</param>
     [Theory]
@@ -366,20 +313,24 @@ public sealed class ThemeCatalogTests
     }
 
     /// <summary>
-    /// Custom Accent derives its Review colour from whatever accent the Human picks, so for accents all round the
+    /// A customized Primary derives its Review colour from whatever accent the Human picks, so for accents all round the
     /// wheel <c>Tertiary</c> stays at least 30 degrees from the accent and from every other signal. What the code cannot
     /// guarantee is the fixed signals against a picked accent: an accent chosen within 30 degrees of <c>Info</c>,
     /// <c>Success</c>, <c>Warning</c> or <c>Error</c> collides with that signal, and its second cue (the state dot's
-    /// shape, the priority glyph) carries the meaning. That is the one hue-distance shortfall of Custom Accent.
+    /// shape, the priority glyph) carries the meaning. That is the one hue-distance shortfall of a customized accent.
     /// </summary>
     /// <param name="hue">The hue, in degrees, of the accent the Human picks.</param>
     /// <param name="dark">Whether the dark palette is built.</param>
     [Theory]
     [MemberData(nameof(AccentHues))]
-    public void CustomAccent_TertiaryIsAtLeastThirtyDegreesFromTheAccentAndEverySignal(int hue, bool dark)
+    public void CustomizedAccent_TertiaryIsAtLeastThirtyDegreesFromTheAccentAndEverySignal(int hue, bool dark)
     {
         MudColor picked = new((double)hue, 0.7, 0.5, 1.0);
-        var theme = AccentTheme.BuildTheme(picked.ToString(MudColorOutputFormats.Hex), dark);
+        Skin baseSkin = SkinLoader.LoadAll().Single(skin => string.Equals(skin.Id, dark ? "lumen-dark" : "lumen-light", StringComparison.Ordinal));
+        SkinCustomization customization = new(
+            new Dictionary<string, string>(StringComparer.Ordinal) { ["primary"] = picked.ToString(MudColorOutputFormats.Hex) },
+            new Dictionary<string, string>(StringComparer.Ordinal));
+        MudTheme theme = SkinLoader.Customize(baseSkin, customization).Theme;
         Palette palette = dark ? theme.PaletteDark : theme.PaletteLight;
 
         foreach (var (name, other) in new[] { ("Primary", palette.Primary), ("Info", palette.Info), ("Success", palette.Success), ("Warning", palette.Warning), ("Error", palette.Error) })
@@ -403,8 +354,8 @@ public sealed class ThemeCatalogTests
     }
 
     /// <summary>
-    /// The text ladder (audit A9): <c>TextPrimary</c> (Ink) reads at least 7:1 on <c>Surface</c> in every theme not
-    /// recorded in <see cref="InkShortfalls"/>, and <c>TextSecondary</c> (Quiet ink) sits between Ink at 50% and Ink at
+    /// The text ladder (audit A9): <c>TextPrimary</c> (Ink) reads at least 7:1 on <c>Surface</c> in every theme, and
+    /// <c>TextSecondary</c> (Quiet ink) sits between Ink at 50% and Ink at
     /// 80% mixed into the Surface, so it is visibly quieter than Ink and never fainter than half of it. The 4.5:1
     /// floor for Quiet ink is held by <see cref="BuiltIn_NativePaletteContrast_ClearsWcagFloor"/>.
     /// </summary>
@@ -420,21 +371,14 @@ public sealed class ThemeCatalogTests
         var fifty = ContrastColour.Ratio(InkMix(palette, 0.5), palette.Surface);
         var eighty = ContrastColour.Ratio(InkMix(palette, 0.8), palette.Surface);
 
-        if (!InkShortfalls.Contains(themeId))
-        {
-            Assert.True(inkRatio >= 7.0, $"{themeId}: Ink on Surface is {inkRatio:F2}:1, under 7:1.");
-            Assert.True(quietRatio >= fifty && quietRatio <= eighty, $"{themeId}: Quiet ink is {quietRatio:F2}:1 on Surface, outside Ink 50% ({fifty:F2}:1) to Ink 80% ({eighty:F2}:1).");
-        }
-        else
-        {
-            Assert.True(inkRatio < 7.0 || quietRatio < fifty || quietRatio > eighty, $"{themeId}: no longer misses the text ladder - delete it from {nameof(InkShortfalls)}.");
-        }
+        Assert.True(inkRatio >= 7.0, $"{themeId}: Ink on Surface is {inkRatio:F2}:1, under 7:1.");
+        Assert.True(quietRatio >= fifty && quietRatio <= eighty, $"{themeId}: Quiet ink is {quietRatio:F2}:1 on Surface, outside Ink 50% ({fifty:F2}:1) to Ink 80% ({eighty:F2}:1).");
     }
 
     /// <summary>
     /// The four mockup sets each ship as a light and a dark theme with the id, mode, picker group and corner radius
-    /// the theme mapping gives them, and each sits after Huddle Light so <c>BuiltIn[0]</c> stays the default. An id
-    /// is what <c>appearance.json</c> stores, so it is pinned here rather than left to the descriptor's file.
+    /// the theme mapping gives them. An id is what <c>appearance.json</c> stores, so it is pinned here rather than left
+    /// to the descriptor's file.
     /// </summary>
     /// <param name="themeId">The theme's id.</param>
     /// <param name="dark">Whether it fills the dark palette slot rather than the light one.</param>
@@ -451,7 +395,7 @@ public sealed class ThemeCatalogTests
     public void MockupSets_ShipAsLightAndDarkThemes(string themeId, bool dark, string radius)
     {
         var index = ThemeCatalog.BuiltIn.ToList().FindIndex(candidate => string.Equals(candidate.Id, themeId, StringComparison.Ordinal));
-        Assert.True(index > 0, $"{themeId} is missing from the catalog or sits at BuiltIn[0].");
+        Assert.True(index >= 0, $"{themeId} is missing from the catalog.");
 
         var descriptor = ThemeCatalog.BuiltIn[index];
         Assert.Equal(dark ? ThemeMode.Dark : ThemeMode.Light, descriptor.Mode);
@@ -460,37 +404,86 @@ public sealed class ThemeCatalogTests
     }
 
     /// <summary>
-    /// Only the two Nordic Themes carry a style pack (ADR-0057), and it is <c>nordic</c>; every other Theme carries none,
-    /// so <c>packs/nordic.css</c> is inert for it.
-    /// </summary>
-    [Fact]
-    public void BuiltIn_OnlyNordicCarriesAStylePack()
-    {
-        foreach (var descriptor in ThemeCatalog.BuiltIn)
-        {
-            bool nordic = descriptor.Id is "nordic-light" or "nordic-dark";
-            Assert.Equal(nordic ? "nordic" : null, descriptor.Pack);
-        }
-    }
-
-    /// <summary>
     /// Nordic's Surface is the white raised paper and its Background the birch ground (ADR-0057), the reverse of the
-    /// mapping a Theme without a pack uses, so the pack can paint four grounds from the palette.
+    /// mapping the other Themes use, so its skin tokens can paint four grounds from the palette.
     /// </summary>
     [Fact]
     public void Nordic_SurfaceIsRaisedPaper_BackgroundIsTheGround()
     {
-        Assert.Equal("#ffffff", NordicTheme.Light().Surface.ToString(MudColorOutputFormats.Hex));
-        Assert.Equal("#f6f6f1", NordicTheme.Light().Background.ToString(MudColorOutputFormats.Hex));
-        Assert.Equal("#1c2125", NordicTheme.Dark().Surface.ToString(MudColorOutputFormats.Hex));
-        Assert.Equal("#161a1d", NordicTheme.Dark().Background.ToString(MudColorOutputFormats.Hex));
+        Palette light = ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == "nordic-light").Theme.PaletteLight;
+        Palette dark = ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == "nordic-dark").Theme.PaletteDark;
+        Assert.Equal("#ffffff", light.Surface.ToString(MudColorOutputFormats.Hex));
+        Assert.Equal("#f6f6f1", light.Background.ToString(MudColorOutputFormats.Hex));
+        Assert.Equal("#1c2125", dark.Surface.ToString(MudColorOutputFormats.Hex));
+        Assert.Equal("#161a1d", dark.Background.ToString(MudColorOutputFormats.Hex));
     }
 
-    /// <summary>Every authored theme id: the two Huddle themes and the eight mapped from the mockup sets.</summary>
+    /// <summary>The picker order is the eight ids left after P5-D4: Lumen, Fluent, Nordic and Cobalt Soft, each light then dark.</summary>
+    [Fact]
+    public void Catalog_OrderIsLumenFluentNordicCobaltSoft()
+    {
+        string[] expected =
+        [
+            "lumen-light", "lumen-dark", "fluent-light", "fluent-dark",
+            "nordic-light", "nordic-dark", "cobalt-soft-light", "cobalt-soft-dark",
+        ];
+
+        Assert.Equal(expected, ThemeCatalog.BuiltIn.Select(static descriptor => descriptor.Id).ToArray());
+    }
+
+    /// <summary>A descriptor renders its style once: two reads return the same string instance, which wraps the skin's CSS in the <c>hu-skin</c> element.</summary>
+    [Fact]
+    public void Descriptor_StyleIsRenderedOnce()
+    {
+        ThemeDescriptor descriptor = ThemeCatalog.BuiltIn[0];
+
+        Assert.Same(descriptor.StyleBlock, descriptor.StyleBlock);
+        Assert.Matches(@"^<style id=""hu-skin"">:root\{.*\}</style>$", descriptor.StyleBlock);
+    }
+
+    /// <summary>A skin that overrides a token renders a different block from one that does not, so a Theme change that swaps skins swaps the CSS.</summary>
+    [Fact]
+    public void Descriptor_TokenOverride_ChangesStyleBlock()
+    {
+        const string plain = """{ "id": "t", "label": "T", "mode": "light", "order": 1 }""";
+        const string tinted = """{ "id": "t", "label": "T", "mode": "light", "order": 1, "tokens": { "ground.rail": "#112233" } }""";
+
+        ThemeDescriptor first = ThemeDescriptor.From(Assert.Single(SkinLoader.LoadAll(new Dictionary<string, string>(StringComparer.Ordinal) { ["t.json"] = plain })));
+        ThemeDescriptor second = ThemeDescriptor.From(Assert.Single(SkinLoader.LoadAll(new Dictionary<string, string>(StringComparer.Ordinal) { ["t.json"] = tinted })));
+
+        Assert.NotEqual(first.StyleBlock, second.StyleBlock);
+    }
+
+    /// <summary>A skin that names read and mono faces gets them as quoted CSS stacks in its style block: names with a space are quoted, generic keywords are not.</summary>
+    [Fact]
+    public void Descriptor_FaceStacksAreQuoted()
+    {
+        const string json = """
+            { "id": "t", "label": "T", "mode": "light", "order": 1,
+              "faces": { "read": [ "Source Serif 4", "Georgia", "serif" ], "mono": [ "JetBrains Mono", "monospace" ] } }
+            """;
+        Skin skin = Assert.Single(SkinLoader.LoadAll(new Dictionary<string, string>(StringComparer.Ordinal) { ["t.json"] = json }));
+
+        ThemeDescriptor descriptor = ThemeDescriptor.From(skin);
+
+        Assert.Matches(Regex.Escape("--font-read:\"Source Serif 4\", Georgia, serif;"), descriptor.StyleBlock);
+        Assert.Matches(Regex.Escape("--font-mono:\"JetBrains Mono\", monospace;"), descriptor.StyleBlock);
+    }
+
+    /// <summary>A skin that names no read or mono face declares neither, so <c>app-vars.css</c> stays the fallback.</summary>
+    [Fact]
+    public void Descriptor_NoFaces_DeclaresNoFontVariables()
+    {
+        const string json = """{ "id": "t", "label": "T", "mode": "light", "order": 1 }""";
+        ThemeDescriptor descriptor = ThemeDescriptor.From(Assert.Single(SkinLoader.LoadAll(new Dictionary<string, string>(StringComparer.Ordinal) { ["t.json"] = json })));
+
+        Assert.DoesNotContain("--font-read", descriptor.StyleBlock, StringComparison.Ordinal);
+        Assert.DoesNotContain("--font-mono", descriptor.StyleBlock, StringComparison.Ordinal);
+    }
+
+    /// <summary>Every authored theme id: the eight mapped from the mockup sets.</summary>
     public static TheoryData<string> AuthoredThemeIds() =>
     [
-        "huddle",
-        "huddle-dark",
         "lumen-light",
         "lumen-dark",
         "fluent-light",
@@ -572,14 +565,6 @@ public sealed class ThemeCatalogTests
         return string.Concat(segments.Select(segment => char.ToUpperInvariant(segment[0]) + segment[1..]));
     }
 
-    /// <summary>Whether <paramref name="themeId"/>/<paramref name="pairName"/> is one of <see cref="DocumentedShortfalls"/>.</summary>
-    /// <param name="themeId">The theme id to look up.</param>
-    /// <param name="pairName">The pair name to look up.</param>
-    private static bool IsDocumentedShortfall(string themeId, string pairName) =>
-        DocumentedShortfalls.Any(shortfall =>
-            string.Equals(shortfall.ThemeId, themeId, StringComparison.Ordinal) &&
-            string.Equals(shortfall.Pair, pairName, StringComparison.Ordinal));
-
     /// <summary>
     /// The palette a theme actually carries: its <see cref="MudTheme.PaletteLight"/> when
     /// <see cref="ThemeDescriptor.Mode"/> is <see cref="ThemeMode.Light"/>, otherwise its
@@ -618,75 +603,6 @@ public sealed class ThemeCatalogTests
         new("PrimaryContrastText vs Primary", palette => palette.PrimaryContrastText, palette => palette.Primary, 4.5, "text"),
     ];
 
-    /// <summary>The <see cref="DocumentedShortfall.Pair"/> prefix of a status-chip entry: <c>chip:Warning</c> is the Warning chip text on its tint, measured by <c>R3FixTests</c>, not a <see cref="ContrastPairs"/> pair.</summary>
-    internal const string ChipPairPrefix = "chip:";
-
-    /// <summary>Why every status-chip entry in <see cref="DocumentedShortfalls"/> is recorded and not fixed.</summary>
-    private const string ChipJustification = "Ported VS Code Theme, faithful palette value; status chip text at the 50% Signal-ink mix still misses; second cue (glyph/dot/word) carries the meaning.";
-
-    /// <summary>
-    /// The themes that genuinely cannot clear their floor, pinned in both directions:
-    /// <see cref="ContrastCombinations"/> skips each one, and <see cref="DocumentedShortfalls_StillFallShort"/>
-    /// asserts it still measures at the recorded ratio, so a later fix - or any other change to the
-    /// underlying palette value - fails the build and forces the stale entry to be deleted rather than
-    /// left to rot. Every value here is imported unmodified from its VS Code source; "themes are
-    /// imported faithfully" is the governing decision this list exists to keep.
-    /// </summary>
-    internal static readonly IReadOnlyList<DocumentedShortfall> DocumentedShortfalls =
-    [
-        new(
-            "light-plus",
-            "TextSecondary vs Surface",
-            4.40,
-            4.5,
-            "VS Code's registry default for descriptionForeground in light themes is #717171, which measures 4.48:1 against pure white; against this theme's own near-white Surface (#f3f3f3) it measures 4.40:1. Imported unmodified."),
-        new(
-            "quiet-light",
-            "TextSecondary vs Surface",
-            4.40,
-            4.5,
-            "VS Code's registry default for descriptionForeground in light themes is #717171, which measures 4.48:1 against pure white; against this theme's own near-white Surface (#f3f3f3) it measures 4.40:1. Imported unmodified."),
-        new(
-            "solarized-light",
-            "TextSecondary vs Surface",
-            3.98,
-            4.5,
-            "TextSecondary is the same #717171 registry default as the themes above, but Solarized Light's own Surface (#eee8d5) is not near-white, lowering the ratio to 3.98:1. Imported unmodified."),
-        new("dark-plus", ChipPairPrefix + "Secondary", 4.49, 4.5, ChipJustification),
-        new("light-plus", ChipPairPrefix + "Warning", 3.47, 4.5, ChipJustification),
-        new("light-plus", ChipPairPrefix + "Success", 4.00, 4.5, ChipJustification),
-        new("light-plus", ChipPairPrefix + "Secondary", 4.16, 4.5, ChipJustification),
-        new("light-plus", ChipPairPrefix + "Neutral", 4.20, 4.5, ChipJustification),
-        new("abyss", ChipPairPrefix + "Secondary", 3.75, 4.5, ChipJustification),
-        new("monokai-dimmed", ChipPairPrefix + "Secondary", 4.43, 4.5, ChipJustification),
-        new("quiet-light", ChipPairPrefix + "Warning", 3.47, 4.5, ChipJustification),
-        new("quiet-light", ChipPairPrefix + "Error", 3.11, 4.5, ChipJustification),
-        new("quiet-light", ChipPairPrefix + "Success", 4.00, 4.5, ChipJustification),
-        new("quiet-light", ChipPairPrefix + "Neutral", 4.20, 4.5, ChipJustification),
-        new("solarized-light", ChipPairPrefix + "Info", 4.21, 4.5, ChipJustification),
-        new("solarized-light", ChipPairPrefix + "Warning", 3.19, 4.5, ChipJustification),
-        new("solarized-light", ChipPairPrefix + "Success", 3.67, 4.5, ChipJustification),
-        new("solarized-light", ChipPairPrefix + "Secondary", 2.98, 4.5, ChipJustification),
-        new("solarized-light", ChipPairPrefix + "Primary", 4.16, 4.5, ChipJustification),
-        new("solarized-light", ChipPairPrefix + "Neutral", 3.82, 4.5, ChipJustification),
-    ];
-
-    /// <summary>
-    /// The ported themes that miss the text ladder (Ink under 7:1 on Surface, or Quiet ink outside Ink 50% to 80%),
-    /// pinned both ways like <see cref="DocumentedShortfalls"/>: a listed theme must still miss, so a stale entry fails
-    /// the build. Every value is imported unmodified from its VS Code source, which is why these are recorded and not fixed.
-    /// </summary>
-    private static readonly HashSet<string> InkShortfalls = new(StringComparer.Ordinal)
-    {
-        // Ink 5.58:1 on Surface: VS Code's registry-default foreground #616161 on the #f3f3f3 Surface.
-        "light-plus",
-        // Ink 5.58:1 on Surface, the same pair.
-        "quiet-light",
-        // Ink 5.05:1 on Surface: the same #616161 foreground on Solarized Light's #eee8d5 Surface.
-        "solarized-light",
-        // Quiet ink 10.55:1 on Surface, above Ink 80% (5.83:1): this theme's descriptionForeground is the same #3b3b3b as its foreground, so Quiet ink equals Ink.
-        "light-modern",
-    };
     /// <summary>One foreground/background pair this suite holds to a WCAG contrast floor.</summary>
     /// <param name="Name">The pair's display name, used as the theory's data label and in failure messages.</param>
     /// <param name="Foreground">Selects the foreground colour from a theme's native palette.</param>
@@ -694,12 +610,4 @@ public sealed class ThemeCatalogTests
     /// <param name="Floor">The minimum WCAG 2.1 contrast ratio this pair must clear.</param>
     /// <param name="FloorKind">Names the floor in a failure message. Every pair here is a text pair against the WCAG 1.4.3 4.5:1 minimum, so this is always "text".</param>
     private sealed record ContrastPairSpec(string Name, Func<Palette, MudColor> Foreground, Func<Palette, MudColor> Background, double Floor, string FloorKind);
-
-    /// <summary>One theme's documented, measured contrast shortfall.</summary>
-    /// <param name="ThemeId"><see cref="ThemeDescriptor.Id"/> of the theme this shortfall belongs to.</param>
-    /// <param name="Pair">The <see cref="ContrastPairSpec.Name"/> of the pair that falls short.</param>
-    /// <param name="Ratio">The measured WCAG 2.1 contrast ratio, to two decimals.</param>
-    /// <param name="Floor">The floor this ratio falls short of.</param>
-    /// <param name="Justification">The factual, measured cause of the shortfall.</param>
-    internal sealed record DocumentedShortfall(string ThemeId, string Pair, double Ratio, double Floor, string Justification);
 }

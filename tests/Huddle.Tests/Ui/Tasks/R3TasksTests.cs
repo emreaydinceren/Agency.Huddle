@@ -88,7 +88,7 @@ public sealed class R3TasksTests
         string css = AppCss();
         string wash = RuleBody(css, ".mud-data-grid.task-list-grid .mud-table-cell.mud-datagrid-group");
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("background-color: var(--mud-palette-surface);", wash, StringComparison.Ordinal);
+        Assert.Contains("background-color: var(--hu-ground-page);", wash, StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("font-weight: 600;", RuleBody(css, ".task-group-label"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
@@ -212,7 +212,7 @@ public sealed class R3TasksTests
         Assert.Equal("2", heading.QuerySelector(".task-board-lane-count")?.TextContent.Trim());
         string rule = RuleBody(AppCss(), ".task-board-lane-heading.group-heading");
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("border-bottom: 1px solid var(--mud-palette-lines-default);", rule, StringComparison.Ordinal);
+        Assert.Contains("border-bottom: 1px solid var(--hu-line-region);", rule, StringComparison.Ordinal);
     }
 
     // ---- B4d, B10f, B10i: the row and card menus ----
@@ -815,11 +815,11 @@ public sealed class R3TasksTests
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("height: 28px;", chip, StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface))", RuleBody(css, ".task-filter-chip-set"), StringComparison.Ordinal);
+        Assert.Contains("background-color: var(--hu-selected-background);", RuleBody(css, ".task-filter-chip-set"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("height: 28px;", RuleBody(css, ".task-toolbar .mud-icon-button,\n.task-toolbar-header .mud-icon-button"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary))", RuleBody(css, ".task-filter-chip-set .task-filter-chip-button"), StringComparison.Ordinal);
+        Assert.Contains("color: var(--hu-selected-foreground);", RuleBody(css, ".task-filter-chip-set .task-filter-chip-button"), StringComparison.Ordinal);
     }
 
     /// <summary>The Dense switch is an Accent switch, like the Fields switches.</summary>

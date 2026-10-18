@@ -6,7 +6,7 @@ namespace Agency.Huddle.App.Themes;
 /// <summary>
 /// Clamps an arbitrary accent colour so it is safe to use as <see cref="MudBlazor.Palette.Primary"/>.
 /// A Human-picked accent colour carries no contrast guarantee the way every hand-tuned palette in
-/// <see cref="ThemeCatalog"/> does - <see cref="HuddleTheme.Dark"/>'s own remarks walk through exactly
+/// <see cref="ThemeCatalog"/> does - the former Huddle Dark theme's own remarks walked through exactly
 /// this check for its own <c>Primary</c>, measured against WCAG 2.1's contrast maths in
 /// <see cref="ContrastColour"/>. This does the same measurement at runtime instead of by hand.
 /// </summary>

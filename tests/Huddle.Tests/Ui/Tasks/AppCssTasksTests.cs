@@ -272,7 +272,7 @@ public sealed class AppCssTasksTests
     {
         string lane = RuleFor(".task-board-column");
 
-        Assert.Contains("background-color: var(--mud-palette-surface);", lane, StringComparison.Ordinal);
+        Assert.Contains("background-color: var(--hu-ground-sunk);", lane, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("border: 1px solid var(--ink-edge);", lane, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("border-radius: var(--mud-default-borderradius);", lane, StringComparison.Ordinal);
         Assert.DoesNotContain("background-gray", lane, StringComparison.Ordinal);

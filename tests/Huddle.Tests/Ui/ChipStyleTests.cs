@@ -53,8 +53,16 @@ public sealed class ChipStyleTests
     {
         string rule = RuleBody($".mud-chip.status-chip-{colour}");
 
-        Assert.Contains($"background-color: color-mix(in srgb, var(--mud-palette-{colour}) 14%, var(--mud-palette-surface));", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains($"color: color-mix(in srgb, var(--mud-palette-{colour}) 50%, var(--mud-palette-text-primary));", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        // Secondary is the one tone no Theme differs on, so it keeps the literal recipe; every other colour reads its tone tokens,
+        // whose registered defaults are that same recipe (pinned once in SkinTokensTests).
+        string background = string.Equals(colour, "secondary", StringComparison.Ordinal)
+            ? $"color-mix(in srgb, var(--mud-palette-{colour}) 14%, var(--mud-palette-surface))"
+            : $"var(--hu-tone-{colour}-soft)";
+        string text = string.Equals(colour, "secondary", StringComparison.Ordinal)
+            ? $"color-mix(in srgb, var(--mud-palette-{colour}) 50%, var(--mud-palette-text-primary))"
+            : $"var(--hu-tone-{colour}-ink)";
+        Assert.Contains($"background-color: {background};", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains($"color: {text};", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.DoesNotContain($"background-color: var(--mud-palette-{colour});", rule, StringComparison.Ordinal);
     }
 
@@ -70,22 +78,22 @@ public sealed class ChipStyleTests
         Assert.Contains("1px dashed", RuleBody(".mud-chip.filter-chip"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         string set = RuleBody(".mud-chip.filter-chip.mud-chip-selected");
         Assert.Contains("1px solid var(--mud-palette-primary)", set, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("color-mix(in srgb, var(--mud-palette-primary) 14%", set, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("background-color: var(--hu-selected-background);", set, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
 
         Assert.Contains("var(--mud-typography-caption-size)", RuleBody(".chip-meta"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
     }
 
-    /// <summary>The tinted text (status colour 50% toward TextPrimary) on its fill (14% over Surface) reaches 4.5:1 for every status colour, and for the neutral chip, in Huddle Light and Huddle Dark.</summary>
+    /// <summary>The tinted text (status colour 50% toward TextPrimary) on its fill (14% over Surface) reaches 4.5:1 for every status colour, and for the neutral chip, in Lumen Light and Lumen Dark.</summary>
     [Fact]
-    public void StatusChipText_ReachesFloor_InHuddleLightAndDark()
+    public void StatusChipText_ReachesFloor_InLumenLightAndDark()
     {
-        PaletteLight light = HuddleTheme.Light();
-        PaletteDark dark = HuddleTheme.Dark();
+        Palette light = ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == "lumen-light").Theme.PaletteLight;
+        Palette dark = ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == "lumen-dark").Theme.PaletteDark;
 
         (string Theme, MudColor Surface, MudColor TextPrimary, MudColor[] Statuses)[] themes =
         [
-            ("Huddle Light", light.Surface, light.TextPrimary, [light.Info, light.Warning, light.Error, light.Success, light.Secondary, light.TextSecondary]),
-            ("Huddle Dark", dark.Surface, dark.TextPrimary, [dark.Info, dark.Warning, dark.Error, dark.Success, dark.Secondary, dark.TextSecondary]),
+            ("Lumen Light", light.Surface, light.TextPrimary, [light.Info, light.Warning, light.Error, light.Success, light.Secondary, light.TextSecondary]),
+            ("Lumen Dark", dark.Surface, dark.TextPrimary, [dark.Info, dark.Warning, dark.Error, dark.Success, dark.Secondary, dark.TextSecondary]),
         ];
 
         foreach ((string theme, MudColor surface, MudColor textPrimary, MudColor[] statuses) in themes)

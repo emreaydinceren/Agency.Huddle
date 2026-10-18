@@ -71,7 +71,7 @@
             </div>
         }
         <MudTooltip Text="@(this.Uploading ? "Waiting for uploads…" : "Send")" Placement="Placement.Start" RootClass="composer-send">
-            <MudIconButton Icon="@Icons.Material.Filled.Send" Color="Color.Primary" Size="Size.Small"
+            <MudIconButton Icon="@Icons.Material.Filled.Send" Size="Size.Small" Class="composer-send-button"
                            Disabled="this.Uploading"
                            aria-label="Send message" OnClick="this.SendClickedAsync" />
             @* A visible "Send" word beside the icon, hidden in app.css; a style pack may show it (Nordic, ADR-0057).

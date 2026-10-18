@@ -9,7 +9,10 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 public sealed class R3FoundationCssTests
 {
-    /// <summary>The five ladder rungs are declared in <c>app-vars.css</c>, each as Ink mixed into Surface at its percentage.</summary>
+    /// <summary>
+    /// The five ladder rungs are declared in <c>app-vars.css</c> as the <c>--hu-ink-*</c> skin tokens, each as Ink mixed
+    /// into Surface at its percentage; the <c>--ink-*</c> names stay as aliases of them (see <c>SkinCssTests</c>).
+    /// </summary>
     /// <param name="name">The custom property.</param>
     /// <param name="percent">The share of Ink.</param>
     [Theory]
@@ -22,7 +25,9 @@ public sealed class R3FoundationCssTests
     {
         string vars = Normalise(File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app-vars.css")));
 
-        Assert.Contains($"{name}: color-mix(in srgb, var(--mud-palette-text-primary) {percent}%, var(--mud-palette-surface));", vars, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        string token = "--hu-" + name["--".Length..];
+
+        Assert.Contains($"{token}: color-mix(in srgb, var(--mud-palette-text-primary) {percent}%, var(--mud-palette-surface));", vars, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
     /// <summary>Lines and washes come from the ladder: no rule reads the palette's own Divider, DividerLight, LinesInputs or BackgroundGray, which sit on different rungs in different Themes.</summary>
@@ -34,7 +39,7 @@ public sealed class R3FoundationCssTests
         Assert.DoesNotMatch(@"var\(--mud-palette-(divider|divider-light|lines-inputs|background-gray)\)", css);
     }
 
-    /// <summary>1.5x the base radius stays on the message bubble, the Composer and its drop hint; every other surface is 1x.</summary>
+    /// <summary>1.5x the base radius stays on the message bubble, the Composer and its drop hint; every other surface is 1x. A trait variant (a rule scoped to a <c>data-hu-*</c> marker) is a Theme's choice and is not counted.</summary>
     [Fact]
     public void AppCss_OneAndAHalfRadiusSurvivesOnlyOnBubbleAndComposer()
     {
@@ -42,7 +47,8 @@ public sealed class R3FoundationCssTests
         List<string> selectors = [];
         foreach (Match rule in Regex.Matches(css, @"(?<sel>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5)))
         {
-            if (rule.Groups["body"].Value.Contains("var(--mud-default-borderradius) * 1.5", StringComparison.Ordinal))
+            bool traitVariant = StripComments(rule.Groups["sel"].Value).TrimStart().StartsWith(":root:has([data-hu-", StringComparison.Ordinal); // contains-ok: a trait variant rule is scoped to its marker attribute
+            if (!traitVariant && rule.Groups["body"].Value.Contains("var(--mud-default-borderradius) * 1.5", StringComparison.Ordinal))
             {
                 selectors.Add(rule.Groups["sel"].Value.Trim());
             }
@@ -72,9 +78,9 @@ public sealed class R3FoundationCssTests
 
         Assert.Contains("margin-inline: 4px;", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("border-radius: calc(var(--mud-default-borderradius) * 0.75);", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("var(--mud-palette-primary) 14%, var(--mud-palette-surface)", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("var(--hu-selected-background)", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("font-weight: 500;", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("var(--mud-palette-primary) 20%, var(--mud-palette-surface)", RuleBody(".selected-shape:hover,\r\n.selected-shape:focus-visible"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("var(--hu-selected-background-hover)", RuleBody(".selected-shape:hover,\r\n.selected-shape:focus-visible"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
     }
 
     /// <summary>A filter chip is a 28px pill with 0 12px padding and 13px text; unset it is a dashed Field line, set it takes the accent border and tint.</summary>
@@ -132,9 +138,9 @@ public sealed class R3FoundationCssTests
     {
         string css = AppCss();
 
-        Assert.Matches(@"\.mud-button-outlined \{\s*border-color: var\(--mud-palette-lines-default\);", css);
+        Assert.Matches(@"\.mud-button-outlined \{\s*border-color: var\(--hu-line-control\);", css);
         Assert.Matches(@"\.mud-table \.mud-table-cell \{\s*border-bottom-color: var\(--ink-edge\);", css);
-        Assert.Matches(@"\.mud-tabs-tabbar \{\s*border-bottom: 1px solid var\(--mud-palette-lines-default\);", css);
+        Assert.Matches(@"\.mud-tabs-tabbar \{\s*border-bottom: 1px solid var\(--hu-line-region\);", css);
         Assert.Matches(@"\.mud-tabs-panels \{\s*padding-top: 24px;", css);
         Assert.Matches(@"\.mud-input\.mud-input-outlined \.mud-input-outlined-border \{\s*border-color: var\(--ink-field\);", css);
     }
@@ -145,8 +151,8 @@ public sealed class R3FoundationCssTests
     {
         string css = AppCss();
 
-        Assert.Matches(@"\.mud-link\.mud-primary-text \{\s*color: color-mix\(in srgb, var\(--mud-palette-primary\) 70%, var\(--mud-palette-text-primary\)\) !important;", css);
-        Assert.Matches(@"\.mud-list-item\.mud-selected-item \{[^}]*background-color: color-mix\(in srgb, var\(--mud-palette-primary\) 14%, var\(--mud-palette-surface\)\);", css);
+        Assert.Matches(@"\.mud-link\.mud-primary-text \{\s*color: var\(--hu-accent-ink\) !important;", css);
+        Assert.Matches(@"\.mud-list-item\.mud-selected-item \{[^}]*background-color: var\(--hu-selected-background\);", css);
     }
 
     /// <summary>The stylesheet source with line endings normalised to LF.</summary>

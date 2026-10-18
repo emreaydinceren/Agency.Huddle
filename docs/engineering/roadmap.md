@@ -32,7 +32,7 @@ reminder that the remaining three on that line are cheap for the same reason.
 | ~~4~~ | ~~Stopping a turn~~ — **delivered 2026-09-13** | `PersonaRunner`, `Chat.razor` | shipped; Stop means this Agent now, and a stopped Turn is not a failure |
 | ~~5~~ | ~~Tool-call visibility~~ — **delivered 2026-09-13** | `PersonaRunner`'s event loop | shipped as one `ToolActivity` Envelope, not two; the bump it forced was spent on 3 as well |
 | ~~6~~ | ~~CSS tokenisation and dark mode~~ — **delivered 2026-09-13** | `wwwroot/app.css`, then `theme.css` and `themes/` beside it | shipped; the file was twice the size this list claimed, and a stylesheet that had never loaded had to be fixed first |
-| 7 | Theme import — **half delivered 2026-09-16** | a JSON-to-`MudTheme` mapper, for an *arbitrary* supplied Theme | seventeen of VS Code's bundled Themes are already **in** `ThemeCatalog`, converted by hand, and the mapping they used is written down — see [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md) |
+| 7 | Theme import — **half delivered 2026-09-16** | a JSON-to-`MudTheme` mapper, for an *arbitrary* supplied Theme | seventeen of VS Code's bundled Themes were in `ThemeCatalog` from 2026-09-16 until they were removed on 2026-10-17; the mapping they used is still written down in the superseded [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md) |
 | ~~8~~ | ~~Following a Room without being Mentioned~~ — **delivered 2026-09-16** | `ReplyGate.cs`, a new App Tool pair | shipped; the follow set became a Singleton rather than a per-runner field, which retro-amended [ADR-0012](../adr/0012-a-room-says-why-it-stayed-quiet.md) |
 | 9 | Per-Persona tool grants | `DotAcpAgentHostFactory`, `PersonaFrontmatter` | tools already built per `agentId`; `_` fields reserved |
 | ~~10~~ | ~~Persona frontmatter becomes the Member's identity~~ — **delivered 2026-09-12** | `PersonaIndex`, `PersonaStore`, `MentionParser` | shipped; `Persona.cs` was not touched |
@@ -336,8 +336,14 @@ something else is supplying the values.
 
 ## 7. Theme import
 
+> **Amended 2026-10-17.** The seventeen VS Code Themes described below were removed (a palette
+> cannot carry a skin); the catalog now holds twelve authored Themes
+> ([ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md), superseded).
+> The note after this one records what was true between 2026-09-16 and then. An importer for an
+> arbitrary supplied Theme is still open.
+
 > **Amended 2026-09-16 by [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md),
-> and half of it is now shipped.** The catalog holds nineteen Themes: `huddle`
+> and half of it is now shipped.** (The ports were removed on 2026-10-17; see the amendment above.) The catalog then held nineteen Themes: `huddle`
 > ("Huddle Light") and `huddle-dark`, plus seventeen of the colour Themes bundled with
 > Visual Studio Code. They needed **no importer** — they were converted once, by hand,
 > into ordinary C# under `Themes/VsCode/`, one file per Theme. Nothing reads theme JSON

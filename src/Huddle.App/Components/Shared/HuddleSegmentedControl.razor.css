@@ -17,7 +17,7 @@
     bottom: 0.1875rem;
     left: 0.1875rem;
     background-color: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-lines-default);
+    border: 1px solid var(--hu-line-control);
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
     box-shadow: var(--mud-elevation-1);
     transition: transform 120ms ease;

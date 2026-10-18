@@ -281,7 +281,7 @@ Do not confuse `prompts.json` (the override file, under App_Data, absent until s
 > [!NOTE]
 > This test deliberately leaves a `prompts.json` behind. Delete it (`Remove-Item src\Huddle.App\App_Data\prompts.json`) if a later test needs a first-run state.
 
-### STARTUPCONFIG-10 — Appearance tab on a first run reads Huddle Light; picking a dark Theme writes appearance.json and applies immediately, with no reload
+### STARTUPCONFIG-10 — Appearance tab on a first run reads Lumen Light; picking a dark Theme writes appearance.json and applies immediately, with no reload
 
 **Free** · about 8 min
 
@@ -300,30 +300,30 @@ Do not confuse `prompts.json` (the override file, under App_Data, absent until s
 4. Read the Theme list (labelled `Theme`): its group headings, which entry is first and which entry is selected. Count the entries.
 5. Look for any other control that chooses light or dark (a select, a radio group, a switch) and note whether one exists.
 6. Read the paragraph naming where the selection is stored.
-7. Click `Huddle Dark` in the Theme list.
+7. Click `Lumen Dark` in the Theme list.
 8. Watch the browser closely: note whether the whole page reloads (tab spinner, a full repaint from the server) or whether just the colours change in place with no navigation.
 9. Read the page's colours after the change settles.
 10. In `T-B` run `Test-Path src\Huddle.App\App_Data\appearance.json` and then `Get-Content src\Huddle.App\App_Data\appearance.json`.
-11. Click `Huddle Light` in the Theme list to put the app back.
+11. Click `Lumen Light` in the Theme list to put the app back.
 
 **Pass if — all of these**
 
 - Step 1 returns False.
 - The intro reads exactly `Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's light or dark colours too.`
-- The Theme list holds 21 Themes (Custom Accent Light and Dark included) under `Light`, `Dark` and `High contrast` headings, with `Huddle Light` first and already selected. `APPEARANCETHEME-03` pins the full list; here only the count of 21 and `Huddle Light` being first and selected matter.
+- The Theme lists hold 8 Themes: four in `Light theme` and four in `Dark theme`, with `Lumen Light` first and already selected. `APPEARANCETHEME-03` pins the full list; here only the count of 8 and `Lumen Light` being first and selected matter.
 - **There is no light/dark control** — no `Appearance` select, no light/dark/system choice of any kind.- The file-path paragraph reads `The selection is stored at <path>`, where `<path>` is the absolute path ending `\src\Huddle.App\App_Data\appearance.json`, and states the file does not exist until a choice is saved here, so its absence is expected, not a bug. The path is rendered, not the literal text `this.AppearanceStore.FilePath` (that would be the missing-`@` defect).
-- Choosing `Huddle Dark` applies IMMEDIATELY — the page repaints dark with no navigation, no tab spinner, no address-bar or history change. The page body is `#1c1c1b`.
-- Step 10 returns True, and the file is indented JSON whose `theme` key is `huddle-dark` — the lowercase id, never the display label `Huddle Dark`, and with no `dark` key. Whitespace is not judged (the app writes it indented; `AppearanceStore.cs:73-75`).
+- Choosing `Lumen Dark` applies IMMEDIATELY — the page repaints dark with no navigation, no tab spinner, no address-bar or history change. The page body is `#0b0b0f`.
+- Step 10 returns True, and the file is indented JSON whose `theme` key is `lumen-dark` — the lowercase id, never the display label `Lumen Dark`, and with no `dark` key. Whitespace is not judged (the app writes it indented; `AppearanceStore.cs:73-75`).
 
 **Fail if — any of these**
 
 - Step 1 returns True on a clean App_Data -> the app created `appearance.json` on its own; it must never do that.
 - The whole page reloads (spinner, full repaint, or the address bar flickers) -> the deleted full-page-reload path was reintroduced; ADR-0010 explicitly removed it because `MudThemeProvider` renders in the tree now.
-- The file stores the display label (`Huddle Dark`) rather than the id `huddle-dark` -> a display name was persisted where the stored value belongs.
+- The file stores the display label (`Lumen Dark`) rather than the id `lumen-dark` -> a display name was persisted where the stored value belongs.
 - The app writes a `dark` key of its own -> the retired preference is back; see ADR-0017.
 - A light/dark/system control is present -> the retired preference is back on the UI side.
-- The picker offers a different count than 29 or a different first entry -> the catalog changed; re-check `ThemeCatalog.BuiltIn` before filing, since a new built-in Theme is a real feature addition, not necessarily a defect.
-- Choosing `Huddle Dark` on a light-mode OS leaves the page light -> `MainLayout` is not deriving `MudThemeProvider`'s `IsDarkMode` from `ThemeDescriptor.Mode`.
+- The picker offers a different count than 8 or a different first entry -> the catalog changed; re-check `ThemeCatalog.BuiltIn` before filing, since a new built-in Theme is a real feature addition, not necessarily a defect.
+- Choosing `Lumen Dark` on a light-mode OS leaves the page light -> `MainLayout` is not deriving `MudThemeProvider`'s `IsDarkMode` from `ThemeDescriptor.Mode`.
 
 **Inconclusive if**
 
