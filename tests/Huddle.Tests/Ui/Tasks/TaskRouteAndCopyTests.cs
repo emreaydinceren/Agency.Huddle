@@ -303,7 +303,7 @@ public sealed class TaskRouteAndCopyTests
     private static TaskItem CreateTask(TaskToolHarness harness, string title = "T") =>
         Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft(title, "Platform", null), TaskActors.Human(harness.Options.Value))).Task;
 
-    /// <summary>Registers the harness's services into a fresh <see cref="MudBunitContext"/> (the <see cref="TasksPageTests"/> pattern).</summary>
+    /// <summary>Registers the harness's services into a fresh <see cref="MudBunitContext"/> (the <c>TasksPageTests</c> pattern).</summary>
     private static MudBunitContext NewContext(TaskToolHarness harness)
     {
         MudBunitContext ctx = new();

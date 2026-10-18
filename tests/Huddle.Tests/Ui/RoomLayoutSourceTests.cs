@@ -5,7 +5,7 @@ namespace Agency.Huddle.Tests.Ui;
 /// to the Human (the elicitation bridge): a Room whose Transcript was taller than the window could not
 /// be scrolled at all, and a form taller than the window pushed Send and the composer out of reach.
 /// Nothing in this suite renders a browser, so each property is pinned in the stylesheet or the markup
-/// that carries it, the same kind of assertion <see cref="AppStylesheetTests"/> and
+/// that carries it, the same kind of assertion <c>AppStylesheetTests</c> and
 /// <c>ThemeSourceTests</c> make; the real check was looking at it in the browser pane.
 /// </summary>
 public sealed class RoomLayoutSourceTests

@@ -974,7 +974,7 @@ public sealed class ChatPageTests
     /// top of <c>SendAsync</c> - never on a Room change - so a confirmation from one Room stayed on
     /// screen in the next. Renders <see cref="Composer"/> directly through <see cref="MudBunitContext"/>
     /// (the same split <see cref="TeammatesPageTests"/> uses) and drives the Room switch the same way
-    /// <see cref="InviteTeammateTests"/> drives its own state reset: a bUnit
+    /// <c>InviteTeammateTests</c> drives its own state reset: a bUnit
     /// <c>SetParametersAndRender</c> with a new <c>RoomId</c>, exactly what Chat.razor does when the
     /// user navigates from one Room's page to another's.
     /// </summary>

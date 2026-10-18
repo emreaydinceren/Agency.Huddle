@@ -290,7 +290,7 @@ public sealed class TasksPageDetailTests
         Assert.Equal(expected, watched);
     }
 
-    /// <summary>Registers the harness's services into a fresh <see cref="MudBunitContext"/> - mirrors <see cref="TasksPageTests"/>'s own helper.</summary>
+    /// <summary>Registers the harness's services into a fresh <see cref="MudBunitContext"/> - mirrors <c>TasksPageTests</c>'s own helper.</summary>
     private static MudBunitContext NewContext(TaskToolHarness harness)
     {
         MudBunitContext ctx = new();

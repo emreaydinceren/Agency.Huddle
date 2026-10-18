@@ -3,7 +3,7 @@ namespace Agency.Huddle.Tests.Ui.Tasks;
 /// <summary>
 /// Pins Spec §13.9's <c>window.huddleStorage</c> helper and §13.13.1's <c>window.huddleClipboard</c>
 /// helper as source facts, because the repo has no JavaScript test runner - the same source-text
-/// approach <see cref="AppStylesheetTests"/> and <c>ThemeSourceTests</c> use for <c>app.css</c>.
+/// approach <c>AppStylesheetTests</c> and <c>ThemeSourceTests</c> use for <c>app.css</c>.
 /// </summary>
 public sealed class AppJsSourceTests
 {

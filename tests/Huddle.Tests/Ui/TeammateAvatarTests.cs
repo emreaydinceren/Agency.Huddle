@@ -9,7 +9,7 @@ namespace Agency.Huddle.Tests.Ui;
 /// <summary>
 /// Renders <see cref="TeammateAvatar"/> on its own, covering the Image-then-Label-then-monogram
 /// precedence, the <see cref="Avatar.Background"/> inline style, and the single-root-element
-/// constraint <see cref="TeammateCardTests"/> and <see cref="TeammatesPageTests"/> both depend on.
+/// constraint <c>TeammateCardTests</c> and <c>TeammatesPageTests</c> both depend on.
 /// Uses the plain generic <see cref="BunitContext.Render{TComponent}(Action{ComponentParameterCollectionBuilder{TComponent}})"/>
 /// rather than <see cref="MudBunitContext.RenderWithPopovers"/>: this component shows no popover and
 /// no dialog, so it needs neither provider.

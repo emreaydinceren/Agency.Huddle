@@ -8,7 +8,7 @@ namespace Agency.Huddle.Tests.Acp;
 /// <summary>
 /// Covers <see cref="AcpOptions.TeammatesDir"/> (Spec §6.15, §7) and the start-up guard that
 /// rejects the retired <c>Team:Acp:TeamsDir</c> configuration key, mirroring the existing
-/// <c>Acp:PersonaDir</c> guard in <see cref="ServiceCollectionExtensionsTests"/>.
+/// <c>Acp:PersonaDir</c> guard in <c>ServiceCollectionExtensionsTests</c>.
 /// </summary>
 public sealed class TeammatesDirOptionTests
 {

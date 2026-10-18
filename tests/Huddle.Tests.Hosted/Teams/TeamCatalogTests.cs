@@ -13,7 +13,7 @@ namespace Agency.Huddle.Tests.Teams;
 /// <see cref="PersonaStore"/> and <see cref="TaskStore"/> over one temporary data directory, the
 /// change event both sources drive, and the DI registration. Every definition file and folder a row
 /// needs at start is seeded BEFORE the stores are constructed. The pure projection is pinned by
-/// <see cref="TeamCatalogBuildTests"/>.
+/// <c>TeamCatalogBuildTests</c>.
 /// </summary>
 public sealed class TeamCatalogTests
 {
