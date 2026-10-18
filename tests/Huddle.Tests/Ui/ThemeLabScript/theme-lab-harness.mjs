@@ -1,10 +1,13 @@
 // Drives src/Huddle.App/wwwroot/theme-lab.js against a hand-made DOM, one scenario per argv[2], and prints a JSON
 // object of what happened. ThemeLabJsTests runs this with `node` and asserts on the output.
+import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 
+// theme-lab.js is an ES module in a .js file with no package.json beside it. Node 22 detects that from the syntax,
+// but Node 18 (the CI image) loads a .js file as CommonJS and fails on `export`, so import its text as a module.
 const root = process.argv[3];
-const lab = await import(pathToFileURL(path.join(root, "src", "Huddle.App", "wwwroot", "theme-lab.js")).href);
+const source = await readFile(path.join(root, "src", "Huddle.App", "wwwroot", "theme-lab.js"), "utf8");
+const lab = await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`);
 
 const out = {};
 const scenario = process.argv[2];
