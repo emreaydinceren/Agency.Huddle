@@ -114,6 +114,12 @@ public sealed class AddWithAiDialogTests : IDisposable
     [Fact]
     public async Task WslPath_RewritesThePrompt_AndSurvivesReopening()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("The WSL path needs a data folder with a drive letter; a Linux path has none, so Copy path offers no WSL form (the form itself is pinned by SkillPromptBuilderTests).");
+            return;
+        }
+
         await this.fixture.SeedAsync();
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = await OpenAsync(ctx, "update");

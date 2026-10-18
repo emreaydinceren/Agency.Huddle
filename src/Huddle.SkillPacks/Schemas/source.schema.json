@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://huddle.local/schemas/source.schema.json",
+  "$id": "urn:agency-huddle:schema:source",
   "title": "Huddle Source record (sources/<source>/source.json)",
   "description": "Where a Source's files came from and whether it is still in use. Never holds a credential. Property names are matched ignoring case; unknown properties are ignored.",
   "type": "object",

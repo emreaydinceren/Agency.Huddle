@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://huddle.local/schemas/skillcatalog.schema.json",
+  "$id": "urn:agency-huddle:schema:skillcatalog",
   "title": "Huddle skill catalog file (<id>.skillcatalog.json)",
   "description": "A list of Skills a Source offers, each fetched when its path is filled in. Property names are matched ignoring case; unknown properties are ignored.",
   "type": "object",

@@ -90,6 +90,12 @@ public sealed class RemovePackTests : IDisposable
     [Fact]
     public async Task TeammateWriteFails_StopsBeforeSkillsMd()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("A read-only file still accepts the write when the process may override it (root on a Linux runner); Windows enforces the attribute.");
+            return;
+        }
+
         await this.fixture.SeedAsync();
         await this.fixture.HolderAsync("Jane", "documents");
         string file = Path.Combine(this.fixture.Host.DataDir, "Teammates", "Jane", "Jane.md");
@@ -114,6 +120,12 @@ public sealed class RemovePackTests : IDisposable
     [Fact]
     public async Task FileDeleteFails_SaysSo_RowStaysRemoved()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Linux does not mandatory-lock files opened with FileShare.None.");
+            return;
+        }
+
         await this.fixture.SeedAsync();
         string file = this.fixture.Pack("documents").FilePath ?? string.Empty;
         RemovalOutcome outcome;
@@ -314,6 +326,12 @@ public sealed class RemoveSourceTests : IDisposable
     [Fact]
     public async Task StepOneFails_KeepsTheNotes()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("A read-only file still accepts the write when the process may override it (root on a Linux runner); Windows enforces the attribute.");
+            return;
+        }
+
         await this.fixture.SeedAsync();
         File.SetAttributes(this.fixture.SkillsMd, FileAttributes.ReadOnly);
         try
@@ -333,6 +351,12 @@ public sealed class RemoveSourceTests : IDisposable
     [Fact]
     public async Task NotesLocked_SaysTheRowsAreGone()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Linux does not mandatory-lock files opened with FileShare.None.");
+            return;
+        }
+
         await this.fixture.SeedAsync();
         string notes = Path.Combine(this.fixture.Host.Dir, "sources", "local", "test", "NOTES.md");
         RemovalOutcome outcome;
