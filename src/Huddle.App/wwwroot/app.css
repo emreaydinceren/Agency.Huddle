@@ -1980,6 +1980,9 @@ a.team-ref,
 }
 
 .composer-input {
+    /* Block, not the textarea's default inline-block: inline, it sits on the baseline and the box grows a ~6px
+       descender strip below it, so Send and Attach (placed from the box's bottom) touched the input's border. */
+    display: block;
     box-sizing: border-box;
     width: 100%;
 
