@@ -29,8 +29,10 @@
 @using Agency.Huddle.App.Appearance
 @using Agency.Huddle.App.Themes
 @using MudBlazor.Utilities
+@using Microsoft.Extensions.Hosting
 @implements IDisposable
 @inject AppearanceStore AppearanceStore
+@inject IWebHostEnvironment Environment
 
 <SettingsIntro>
     Pick one light theme and one dark theme. The button at the right of the top bar switches between
@@ -98,6 +100,12 @@
 <p class="theme-credit mb-2">
     The accent is adjusted if needed so it stays readable, and belongs to the Theme named above.
 </p>
+
+@* The Theme lab is a development tool (ADR-0058); outside Development the link is not rendered and the page redirects. *@
+@if (this.Environment.IsDevelopment())
+{
+    <MudLink Href="/settings/theme-lab" Class="theme-lab-link" Typo="Typo.body2">Open the Theme lab</MudLink>
+}
 
 <details class="theme-licences mt-4">
     <summary>Licences</summary>

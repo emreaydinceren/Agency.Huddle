@@ -1,6 +1,8 @@
 using Bunit;
 using Bunit.Rendering;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using MudBlazor;
 using Agency.Huddle.App.Appearance;
 
@@ -156,12 +158,42 @@ public sealed class AppearanceTabTests
         cut.WaitForAssertion(() => Assert.NotEqual(plain, cut.FindAll("[aria-label='Light theme'] .mud-list-item")[0].InnerHtml));
     }
 
-    /// <summary>A context with the one store the Appearance tab injects.</summary>
+    /// <summary>In Development the tab links to the Theme lab.</summary>
+    [Fact]
+    public async Task ThemeLabLink_ShownInDevelopment()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory, Environments.Development);
+
+        IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
+
+        AngleSharp.Dom.IElement link = cut.Find("a.theme-lab-link");
+        Assert.Equal("/settings/theme-lab", link.GetAttribute("href"));
+        Assert.Equal("Open the Theme lab", link.TextContent.Trim());
+    }
+
+    /// <summary>Outside Development the tab does not offer the Theme lab, a development tool.</summary>
+    [Fact]
+    public async Task ThemeLabLink_HiddenOutsideDevelopment()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory, Environments.Production);
+
+        IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
+
+        Assert.Empty(cut.FindAll("a.theme-lab-link"));
+    }
+
+    /// <summary>A context with the store and the hosting environment the Appearance tab injects.</summary>
     /// <param name="factory">The factory whose store backs it.</param>
-    private static MudBunitContext NewContext(TeamWebApplicationFactory factory)
+    /// <param name="environmentName">The hosting environment the tab sees; Development unless a test says otherwise.</param>
+    private static MudBunitContext NewContext(TeamWebApplicationFactory factory, string environmentName = "Development")
     {
         MudBunitContext ctx = new();
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AppearanceStore>());
+        IWebHostEnvironment environment = factory.Services.GetRequiredService<IWebHostEnvironment>();
+        environment.EnvironmentName = environmentName;
+        ctx.Services.AddSingleton(environment);
         return ctx;
     }
 
