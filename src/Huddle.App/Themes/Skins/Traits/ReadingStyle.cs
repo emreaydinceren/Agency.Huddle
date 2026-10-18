@@ -5,4 +5,7 @@ internal enum ReadingStyle
 {
     /// <summary>Today's Huddle: the plain reading view.</summary>
     Plain,
+
+    /// <summary>Book-like prose in the reading face, a rail outline and a serif empty state.</summary>
+    Book,
 }

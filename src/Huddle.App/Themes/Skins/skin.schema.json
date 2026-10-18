@@ -605,12 +605,14 @@
         },
         "status": {
           "enum": [
-            "chip"
+            "chip",
+            "pill"
           ]
         },
         "labels": {
           "enum": [
-            "sentence"
+            "sentence",
+            "upper"
           ]
         },
         "composer": {
@@ -621,12 +623,14 @@
         },
         "nav": {
           "enum": [
-            "tint"
+            "tint",
+            "tile"
           ]
         },
         "surface": {
           "enum": [
-            "flat"
+            "flat",
+            "paper"
           ]
         },
         "marks": {
@@ -637,7 +641,8 @@
         },
         "reading": {
           "enum": [
-            "plain"
+            "plain",
+            "book"
           ]
         }
       }

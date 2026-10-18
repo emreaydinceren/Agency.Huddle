@@ -5,4 +5,7 @@ internal enum NavStyle
 {
     /// <summary>Today's Huddle: a tinted row.</summary>
     Tint,
+
+    /// <summary>A lifted tile, with a bar on the activity bar's current item.</summary>
+    Tile,
 }

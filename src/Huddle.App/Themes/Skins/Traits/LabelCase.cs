@@ -5,4 +5,7 @@ internal enum LabelCase
 {
     /// <summary>Today's Huddle: sentence case.</summary>
     Sentence,
+
+    /// <summary>Uppercase micro-labels with wide tracking.</summary>
+    Upper,
 }

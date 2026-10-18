@@ -5,4 +5,7 @@ internal enum StatusStyle
 {
     /// <summary>Today's Huddle: a rounded chip.</summary>
     Chip,
+
+    /// <summary>A full pill with a shape-coded dot for a Task's state and a clay priority.</summary>
+    Pill,
 }
