@@ -16,6 +16,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Huddle.Acp.Tests/Huddle.Acp.Tests.csproj" />
+    <Project Path="tests/Huddle.Tests.Agents/Huddle.Tests.Agents.csproj" />
     <Project Path="tests/Huddle.Tests.Common/Huddle.Tests.Common.csproj" />
     <Project Path="tests/Huddle.Tests.Hosted/Huddle.Tests.Hosted.csproj" />
     <Project Path="tests/Huddle.Tests/Huddle.Tests.csproj" />
