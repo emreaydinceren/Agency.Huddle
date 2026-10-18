@@ -83,17 +83,17 @@ public sealed class ChipStyleTests
         Assert.Contains("var(--mud-typography-caption-size)", RuleBody(".chip-meta"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
     }
 
-    /// <summary>The tinted text (status colour 50% toward TextPrimary) on its fill (14% over Surface) reaches 4.5:1 for every status colour, and for the neutral chip, in Huddle Light and Huddle Dark.</summary>
+    /// <summary>The tinted text (status colour 50% toward TextPrimary) on its fill (14% over Surface) reaches 4.5:1 for every status colour, and for the neutral chip, in Lumen Light and Lumen Dark.</summary>
     [Fact]
-    public void StatusChipText_ReachesFloor_InHuddleLightAndDark()
+    public void StatusChipText_ReachesFloor_InLumenLightAndDark()
     {
-        PaletteLight light = HuddleTheme.Light();
-        PaletteDark dark = HuddleTheme.Dark();
+        Palette light = ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == "lumen-light").Theme.PaletteLight;
+        Palette dark = ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == "lumen-dark").Theme.PaletteDark;
 
         (string Theme, MudColor Surface, MudColor TextPrimary, MudColor[] Statuses)[] themes =
         [
-            ("Huddle Light", light.Surface, light.TextPrimary, [light.Info, light.Warning, light.Error, light.Success, light.Secondary, light.TextSecondary]),
-            ("Huddle Dark", dark.Surface, dark.TextPrimary, [dark.Info, dark.Warning, dark.Error, dark.Success, dark.Secondary, dark.TextSecondary]),
+            ("Lumen Light", light.Surface, light.TextPrimary, [light.Info, light.Warning, light.Error, light.Success, light.Secondary, light.TextSecondary]),
+            ("Lumen Dark", dark.Surface, dark.TextPrimary, [dark.Info, dark.Warning, dark.Error, dark.Success, dark.Secondary, dark.TextSecondary]),
         ];
 
         foreach ((string theme, MudColor surface, MudColor textPrimary, MudColor[] statuses) in themes)

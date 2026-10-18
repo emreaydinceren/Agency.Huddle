@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using MudBlazor;
+using MudBlazor.Utilities;
 
 namespace Agency.Huddle.App.Themes.Skins;
 
@@ -87,6 +88,223 @@ internal static partial class SkinLoader
         }
 
         return [.. skins.OrderBy(static skin => skin.Order)];
+    }
+
+    /// <summary>
+    /// Keeps the entries of <paramref name="requested"/> that a skin file may hold and drops the rest, reporting each dropped
+    /// entry. The rules are the skin file's own: a palette key must be a settable colour of <see cref="Palette"/> and its value a
+    /// hex or <c>rgb()</c>/<c>rgba()</c> colour; a token key must be in the registry and its expression must parse, reference
+    /// only registry tokens, and not loop back on itself once merged over the skin's own tokens.
+    /// </summary>
+    /// <param name="skin">The skin the customization applies to.</param>
+    /// <param name="requested">The Human's overrides, as read.</param>
+    /// <param name="rejected">Called once for each dropped entry with a message naming it, or <see langword="null"/> to drop silently.</param>
+    /// <returns>The valid subset; never <see langword="null"/>.</returns>
+    public static SkinCustomization Sanitize(Skin skin, SkinCustomization requested, Action<string>? rejected = null)
+    {
+        ArgumentNullException.ThrowIfNull(skin);
+        ArgumentNullException.ThrowIfNull(requested);
+
+        Dictionary<string, string> palette = new(StringComparer.Ordinal);
+        foreach (KeyValuePair<string, string> entry in requested.Palette)
+        {
+            string? problem = PaletteProblem(entry.Key, entry.Value);
+            if (problem is null)
+            {
+                palette[entry.Key] = entry.Value;
+            }
+            else
+            {
+                rejected?.Invoke($"palette.{entry.Key}: {problem}");
+            }
+        }
+
+        Dictionary<string, string> merged = [];
+        foreach (Token token in SkinTokens.All)
+        {
+            merged[token.Key] = skin.Tokens.GetValueOrDefault(token.Key) ?? (skin.Mode == ThemeMode.Dark ? token.DarkDefault : token.LightDefault);
+        }
+
+        Dictionary<string, string> tokens = new(StringComparer.Ordinal);
+        foreach (KeyValuePair<string, string> entry in requested.Tokens)
+        {
+            string? problem = TokenProblem(skin, merged, entry.Key, entry.Value);
+            if (problem is null)
+            {
+                tokens[entry.Key] = entry.Value;
+                merged[entry.Key] = entry.Value;
+            }
+            else
+            {
+                rejected?.Invoke($"tokens.{entry.Key}: {problem}");
+            }
+        }
+
+        return new SkinCustomization(palette, tokens);
+    }
+
+    /// <summary>
+    /// The skin with a Human's overrides merged over it: a new <see cref="Skin"/> whose palette, tokens and
+    /// <see cref="MudTheme"/> carry them. Invalid entries are dropped (see <see cref="Sanitize"/>), never thrown on, because the
+    /// caller is a render. A customized <c>primary</c> is clamped for contrast through <see cref="AccentPalette.ClampForContrast"/>,
+    /// and its <c>primaryDarken</c>, <c>primaryContrastText</c> and <c>tertiary</c> follow it unless the customization sets them.
+    /// The shared <paramref name="skin"/> is never mutated.
+    /// </summary>
+    /// <param name="skin">The skin to customize.</param>
+    /// <param name="customization">The Human's overrides.</param>
+    /// <returns><paramref name="skin"/> itself when nothing valid is overridden; otherwise a new skin.</returns>
+    public static Skin Customize(Skin skin, SkinCustomization customization)
+    {
+        ArgumentNullException.ThrowIfNull(skin);
+        ArgumentNullException.ThrowIfNull(customization);
+
+        SkinCustomization clean = Sanitize(skin, customization);
+        if (clean.IsEmpty)
+        {
+            return skin;
+        }
+
+        Dictionary<string, string> palette = new(skin.Palette, StringComparer.Ordinal);
+        foreach (KeyValuePair<string, string> entry in clean.Palette)
+        {
+            palette[entry.Key] = entry.Value;
+        }
+
+        Dictionary<string, string> tokens = new(skin.Tokens, StringComparer.Ordinal);
+        foreach (KeyValuePair<string, string> entry in clean.Tokens)
+        {
+            tokens[entry.Key] = entry.Value;
+        }
+
+        Draft draft = new()
+        {
+            File = skin.Id,
+            Id = skin.Id,
+            Label = skin.Label,
+            Mode = skin.Mode,
+            Order = skin.Order,
+            Radius = skin.Radius,
+            LetterSpacing = skin.Typography.LetterSpacing,
+            LineHeight = skin.Typography.LineHeight,
+        };
+        AddFace(draft, "ui", skin.Faces.Ui);
+        AddFace(draft, "read", skin.Faces.Read);
+        AddFace(draft, "mono", skin.Faces.Mono);
+        foreach (KeyValuePair<int, string> shadow in skin.Shadows)
+        {
+            draft.Shadows[shadow.Key] = shadow.Value;
+        }
+
+        foreach (KeyValuePair<string, string> entry in palette)
+        {
+            draft.Palette[entry.Key] = entry.Value;
+        }
+
+        MudTheme theme = BuildTheme(draft);
+        string? clamped = ApplyAccent(theme, skin.Mode, clean.Palette);
+        if (clamped is not null)
+        {
+            palette["primary"] = clamped;
+        }
+
+        return skin with { Palette = palette, Tokens = tokens, Theme = theme };
+    }
+
+    private static void AddFace(Draft draft, string name, IReadOnlyList<string> families)
+    {
+        if (families.Count > 0)
+        {
+            draft.Faces[name] = [.. families];
+        }
+    }
+
+    /// <summary>Why a palette entry is refused, or <see langword="null"/> when it is valid.</summary>
+    private static string? PaletteProblem(string key, string value)
+    {
+        if (!PaletteProperties.TryGetValue(key, out PropertyInfo? property))
+        {
+            return "unknown palette key.";
+        }
+
+        if (!ColourPattern().IsMatch(value))
+        {
+            return $"'{value}' is not a hex or rgb()/rgba() colour.";
+        }
+
+        if (property.PropertyType == typeof(MudColor))
+        {
+            try
+            {
+                _ = new MudColor(value);
+            }
+            catch (Exception)
+            {
+                // MudColor's parser throws a different exception type for each malformed shape; every one means the same thing here.
+                return $"'{value}' is not a colour MudBlazor can read.";
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Why a token entry is refused against the tokens merged so far, or <see langword="null"/> when it is valid.</summary>
+    private static string? TokenProblem(Skin skin, Dictionary<string, string> merged, string key, string value)
+    {
+        if (!SkinTokens.Contains(key))
+        {
+            return "unknown token key.";
+        }
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "the expression is empty.";
+        }
+
+        Dictionary<string, string> candidate = new(merged, StringComparer.Ordinal) { [key] = value };
+        try
+        {
+            SkinExpression.Validate(candidate, skin.Id);
+        }
+        catch (SkinException exception)
+        {
+            return exception.Message;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Replaces the Primary family of the theme's palette with the customized <c>primary</c>, clamped against that palette's
+    /// Background and Surface, and returns the clamped colour as hex; <see langword="null"/> when <c>primary</c> is not customized.
+    /// </summary>
+    private static string? ApplyAccent(MudTheme theme, ThemeMode mode, IReadOnlyDictionary<string, string> customized)
+    {
+        if (!customized.TryGetValue("primary", out string? primary))
+        {
+            return null;
+        }
+
+        bool dark = mode == ThemeMode.Dark;
+        Palette palette = dark ? theme.PaletteDark : theme.PaletteLight;
+        MudColor clamped = AccentPalette.ClampForContrast(new MudColor(primary), palette.Background, palette.Surface, towardBlack: !dark);
+        palette.Primary = clamped;
+        if (!customized.ContainsKey("primaryDarken"))
+        {
+            palette.PrimaryDarken = clamped.ColorRgbDarken().Value;
+        }
+
+        if (!customized.ContainsKey("primaryContrastText"))
+        {
+            palette.PrimaryContrastText = ContrastColour.ReadableForeground(clamped);
+        }
+
+        if (!customized.ContainsKey("tertiary"))
+        {
+            // Review's signal moves with the accent so it stays at least 30 degrees from it, from Info and from the other signals.
+            palette.Tertiary = AccentPalette.ChooseTertiary(clamped, palette, palette.Tertiary, towardBlack: !dark);
+        }
+
+        return clamped.ToString(MudColorOutputFormats.Hex);
     }
 
     private static Dictionary<string, string> ReadEmbedded()

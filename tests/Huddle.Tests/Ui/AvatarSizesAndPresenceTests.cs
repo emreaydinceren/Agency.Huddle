@@ -123,7 +123,8 @@ public sealed class AvatarSizesAndPresenceTests
     [InlineData(true)]
     public void BadgeTones_KeepTheWhiteGlyphAboveThreeToOne(bool dark)
     {
-        MudBlazor.Palette palette = dark ? HuddleTheme.Dark() : HuddleTheme.Light();
+        ThemeDescriptor descriptor = ThemeCatalog.BuiltIn.Single(candidate => candidate.Id == (dark ? "lumen-dark" : "lumen-light"));
+        MudBlazor.Palette palette = dark ? descriptor.Theme.PaletteDark : descriptor.Theme.PaletteLight;
         MudColor white = new("#ffffff");
         MudColor black = new("#000000");
         MudColor[] tones = [palette.Success, palette.Warning, palette.Error, palette.Info];

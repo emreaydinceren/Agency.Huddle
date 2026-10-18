@@ -16,11 +16,17 @@ public sealed class AvatarColoursTests
     /// <summary>The WCAG 1.4.3 text minimum.</summary>
     private const double WcagTextMinimum = 4.5;
 
-    /// <summary>The Huddle Light and Huddle Dark Surface and TextPrimary pairs, with whether the Theme is a Dark one, by Theme name.</summary>
+    /// <summary>The Lumen Light palette, the default Light Theme.</summary>
+    private static MudBlazor.Palette LumenLight() => ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == "lumen-light").Theme.PaletteLight;
+
+    /// <summary>The Lumen Dark palette, the default Dark Theme.</summary>
+    private static MudBlazor.Palette LumenDark() => ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == "lumen-dark").Theme.PaletteDark;
+
+    /// <summary>The Lumen Light and Lumen Dark Surface and TextPrimary pairs, with whether the Theme is a Dark one, by Theme name.</summary>
     public static TheoryData<string, string, string, bool> Palettes() => new()
     {
-        { "Huddle Light", HuddleTheme.Light().Surface.ToString(MudColorOutputFormats.Hex), HuddleTheme.Light().TextPrimary.ToString(MudColorOutputFormats.Hex), false },
-        { "Huddle Dark", HuddleTheme.Dark().Surface.ToString(MudColorOutputFormats.Hex), HuddleTheme.Dark().TextPrimary.ToString(MudColorOutputFormats.Hex), true },
+        { "Lumen Light", LumenLight().Surface.ToString(MudColorOutputFormats.Hex), LumenLight().TextPrimary.ToString(MudColorOutputFormats.Hex), false },
+        { "Lumen Dark", LumenDark().Surface.ToString(MudColorOutputFormats.Hex), LumenDark().TextPrimary.ToString(MudColorOutputFormats.Hex), true },
     };
 
     /// <summary>The mix is plain sRGB interpolation, so its end points and midpoint are exact.</summary>
@@ -113,10 +119,10 @@ public sealed class AvatarColoursTests
     {
         MudColor accent = new("#5b64c8");
 
-        MudColor lightFill = AvatarColours.Fill(accent, HuddleTheme.Light().Surface, dark: false);
-        MudColor lightLetters = AvatarColours.Letters(accent, HuddleTheme.Light().TextPrimary, dark: false);
-        MudColor darkFill = AvatarColours.Fill(accent, HuddleTheme.Dark().Surface, dark: true);
-        MudColor darkLetters = AvatarColours.Letters(accent, HuddleTheme.Dark().TextPrimary, dark: true);
+        MudColor lightFill = AvatarColours.Fill(accent, LumenLight().Surface, dark: false);
+        MudColor lightLetters = AvatarColours.Letters(accent, LumenLight().TextPrimary, dark: false);
+        MudColor darkFill = AvatarColours.Fill(accent, LumenDark().Surface, dark: true);
+        MudColor darkLetters = AvatarColours.Letters(accent, LumenDark().TextPrimary, dark: true);
 
         Assert.True(ContrastColour.RelativeLuminance(lightFill) > ContrastColour.RelativeLuminance(lightLetters));
         Assert.True(ContrastColour.RelativeLuminance(darkFill) < ContrastColour.RelativeLuminance(darkLetters));

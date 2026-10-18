@@ -71,7 +71,7 @@ public sealed class AppearanceStoreTests
         using var store = new AppearanceStore(dataDir.Options(), logger);
 
         Assert.Null(store.Current.ThemeId);
-        Assert.Equal("huddle", store.Current.PreferredLightId);
+        Assert.Equal("lumen-light", store.Current.PreferredLightId);
         Assert.Equal("{\"theme\":\"dark-modern\"}", File.ReadAllText(path));
         Assert.Equal(
             $"Appearance file '{path}' selects theme 'dark-modern', which is not a known theme; the default theme is used instead and the file is left unchanged.",
@@ -126,11 +126,11 @@ public sealed class AppearanceStoreTests
     {
         using var dataDir = new TempDataDir();
         var path = Path.Combine(dataDir.Path, "appearance.json");
-        File.WriteAllText(path, "{\"theme\":\"huddle-dark\"}");
+        File.WriteAllText(path, "{\"theme\":\"lumen-dark\"}");
 
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
-        Assert.Equal("huddle-dark", store.Current.ThemeId);
+        Assert.Equal("lumen-dark", store.Current.ThemeId);
     }
 
     /// <summary>An edit made outside the process (a human hand-editing the file) is picked up by the filesystem watcher once its debounce settles.</summary>
@@ -141,10 +141,10 @@ public sealed class AppearanceStoreTests
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
         var path = Path.Combine(dataDir.Path, "appearance.json");
 
-        File.WriteAllText(path, "{\"theme\":\"huddle\"}");
+        File.WriteAllText(path, "{\"theme\":\"lumen-light\"}");
 
         await WaitForAsync(
-            () => string.Equals(store.Current.ThemeId, "huddle", StringComparison.Ordinal),
+            () => string.Equals(store.Current.ThemeId, "lumen-light", StringComparison.Ordinal),
             TestContext.Current.CancellationToken);
     }
 
@@ -161,27 +161,27 @@ public sealed class AppearanceStoreTests
 
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
-        store.Save("huddle-dark");
+        store.Save("lumen-dark");
 
-        Assert.Equal("huddle-dark", store.Current.ThemeId);
+        Assert.Equal("lumen-dark", store.Current.ThemeId);
         var json = File.ReadAllText(path);
-        Assert.Contains("huddle-dark", json, StringComparison.Ordinal);
+        Assert.Contains("lumen-dark", json, StringComparison.Ordinal);
         Assert.Contains("left alone", json, StringComparison.Ordinal);
         Assert.Contains("\"dark\"", json, StringComparison.Ordinal);
     }
 
-    /// <summary>With nothing chosen the toggle moves between the two Huddle themes, and back.</summary>
+    /// <summary>With nothing chosen the toggle moves between the two Lumen themes, and back.</summary>
     [Fact]
-    public void ToggleMode_WithNothingChosen_SwitchesBetweenTheHuddleThemes()
+    public void ToggleMode_WithNothingChosen_SwitchesBetweenTheLumenThemes()
     {
         using var dataDir = new TempDataDir();
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
         store.ToggleMode();
-        Assert.Equal("huddle-dark", store.Current.ThemeId);
+        Assert.Equal("lumen-dark", store.Current.ThemeId);
 
         store.ToggleMode();
-        Assert.Equal("huddle", store.Current.ThemeId);
+        Assert.Equal("lumen-light", store.Current.ThemeId);
     }
 
     /// <summary>Choosing a dark theme while a light one is shown records it for the toggle without changing what is shown.</summary>
@@ -236,7 +236,8 @@ public sealed class AppearanceStoreTests
         File.WriteAllText(Path.Combine(dataDir.Path, "appearance.json"), "{\"lightTheme\":\"nordic-dark\"}");
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
-        Assert.Equal("huddle", store.Current.PreferredLightId);
+        Assert.Equal("lumen-light", store.Current.PreferredLightId);
+        Assert.Equal("lumen-dark", store.Current.PreferredDarkId);
     }
 
     /// <summary>Saving raises <see cref="AppearanceStore.AppearanceChanged"/> after the write and the rebuild.</summary>
@@ -248,77 +249,7 @@ public sealed class AppearanceStoreTests
         var raised = false;
         store.AppearanceChanged += () => raised = true;
 
-        store.Save("huddle");
-
-        Assert.True(raised);
-    }
-
-    /// <summary>A well-formed <c>#rrggbb</c> accent colour resolves - the one extra value this store carries alongside the theme id.</summary>
-    [Fact]
-    public void Current_WithAValidAccentColor_ResolvesIt()
-    {
-        using var dataDir = new TempDataDir();
-        var path = Path.Combine(dataDir.Path, "appearance.json");
-        File.WriteAllText(path, "{\"theme\":\"custom-accent\",\"accentColor\":\"#00b294\"}");
-
-        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
-
-        Assert.Equal("custom-accent", store.Current.ThemeId);
-        Assert.Equal("#00b294", store.Current.AccentColorHex);
-    }
-
-    /// <summary>A malformed accent colour is a warning, never a failure: no colour is used (so the placeholder theme applies) and the file is left exactly as it was, the same tolerance an unknown theme id gets.</summary>
-    [Fact]
-    public void Current_WithAMalformedAccentColor_ResolvesNullAndLeavesTheFileUnchanged()
-    {
-        using var dataDir = new TempDataDir();
-        var path = Path.Combine(dataDir.Path, "appearance.json");
-        File.WriteAllText(path, "{\"accentColor\":\"not-a-colour\"}");
-
-        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
-
-        Assert.Null(store.Current.AccentColorHex);
-        Assert.Contains("not-a-colour", File.ReadAllText(path), StringComparison.Ordinal);
-    }
-
-    /// <summary><see cref="AppearanceStore.SaveAccentColor"/> writes its own key and leaves the theme id - saved separately by <see cref="AppearanceStore.Save"/> - untouched, proving the two writers cannot clobber each other.</summary>
-    [Fact]
-    public void SaveAccentColor_WritesTheAccentColorAndLeavesTheThemeUntouched()
-    {
-        using var dataDir = new TempDataDir();
-        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
-        store.Save("custom-accent");
-
-        store.SaveAccentColor("#00b294");
-
-        Assert.Equal("custom-accent", store.Current.ThemeId);
-        Assert.Equal("#00b294", store.Current.AccentColorHex);
-    }
-
-    /// <summary><see cref="AppearanceStore.SaveAccentColor"/> with <see langword="null"/> clears a previously chosen colour, removing the key entirely rather than leaving an empty string behind.</summary>
-    [Fact]
-    public void SaveAccentColor_WithNull_ClearsAPreviouslyChosenColour()
-    {
-        using var dataDir = new TempDataDir();
-        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
-        store.SaveAccentColor("#00b294");
-
-        store.SaveAccentColor(null);
-
-        Assert.Null(store.Current.AccentColorHex);
-        Assert.DoesNotContain("accentColor", File.ReadAllText(Path.Combine(dataDir.Path, "appearance.json")), StringComparison.Ordinal);
-    }
-
-    /// <summary>Saving an accent colour raises <see cref="AppearanceStore.AppearanceChanged"/> after the write and the rebuild, mirroring <see cref="Save_RaisesAppearanceChanged"/>.</summary>
-    [Fact]
-    public void SaveAccentColor_RaisesAppearanceChanged()
-    {
-        using var dataDir = new TempDataDir();
-        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
-        var raised = false;
-        store.AppearanceChanged += () => raised = true;
-
-        store.SaveAccentColor("#00b294");
+        store.Save("lumen-light");
 
         Assert.True(raised);
     }
@@ -333,13 +264,13 @@ public sealed class AppearanceStoreTests
     {
         using var dataDir = new TempDataDir();
         var path = Path.Combine(dataDir.Path, "appearance.json");
-        File.WriteAllText(path, "{\"theme\":\"huddle-dark\",\"libraryPaneSide\":\"left\"}");
+        File.WriteAllText(path, "{\"theme\":\"lumen-dark\",\"libraryPaneSide\":\"left\"}");
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
-        store.SaveAccentColor("#00b294");
+        store.SaveAccentColor("lumen-dark", "#00b294");
 
-        Assert.Equal("huddle-dark", store.Current.ThemeId);
-        Assert.Equal("#00b294", store.Current.AccentColorHex);
+        Assert.Equal("lumen-dark", store.Current.ThemeId);
+        Assert.Equal("#00b294", store.Current.CustomizationFor("lumen-dark")?.Palette["primary"]);
         Assert.Contains("libraryPaneSide", File.ReadAllText(path), StringComparison.Ordinal);
     }
 
@@ -375,15 +306,15 @@ public sealed class AppearanceStoreTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dataDir = new();
         string path = Path.Combine(dataDir.Path, "appearance.json");
-        File.WriteAllText(path, """{ "theme": "huddle" }""");
+        File.WriteAllText(path, """{ "theme": "lumen-light" }""");
         RecordingLogger<AppearanceStore> logger = new();
         using AppearanceStore store = new(dataDir.Options(), logger);
 
-        using (FileStream held = LockedWatcherFileSupport.WriteAndHold(path, """{ "theme": "huddle-dark" }"""))
+        using (FileStream held = LockedWatcherFileSupport.WriteAndHold(path, """{ "theme": "lumen-dark" }"""))
         {
             await LockedWatcherFileSupport.WaitForWarningAsync(logger, ct);
 
-            Assert.Equal("huddle", store.Current.ThemeId);
+            Assert.Equal("lumen-light", store.Current.ThemeId);
         }
     }
 }

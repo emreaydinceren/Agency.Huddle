@@ -52,7 +52,7 @@
         {
             <MudListItem T="string" Value="@theme.Id">
                 <div class="theme-row">
-                    <ThemeSwatch Colours="@SwatchFor(theme)" />
+                    <ThemeSwatch Colours="@SwatchFor(ThemeCatalog.Resolve(theme, this.AppearanceStore.Current.CustomizationFor(theme.Id)))" />
                     <span>@theme.Label</span>
                 </div>
             </MudListItem>
@@ -73,7 +73,7 @@
         {
             <MudListItem T="string" Value="@theme.Id">
                 <div class="theme-row">
-                    <ThemeSwatch Colours="@SwatchFor(theme)" />
+                    <ThemeSwatch Colours="@SwatchFor(ThemeCatalog.Resolve(theme, this.AppearanceStore.Current.CustomizationFor(theme.Id)))" />
                     <span>@theme.Label</span>
                 </div>
             </MudListItem>
@@ -81,27 +81,28 @@
     }
 </MudList>
 
-@if (this.IsCustomAccentSelected)
+@* THE TRAP applies here exactly as it does to the avatar's MudColorPicker: bind Text, never Value - Value
+   is a non-null MudColor, so binding it would materialise a hard-coded hex colour the instant this tab first
+   renders a Theme with no accent chosen yet. Shows the colour exactly as picked; the Theme's customization is
+   what clamps it for contrast when it renders, so what MainLayout paints can differ slightly from what is
+   shown here - by design, see AccentPalette's own remarks. The control belongs to the Theme being shown and
+   writes customizations[its id].palette.primary. *@
+<MudColorPicker Label="@this.AccentLabel" ColorPickerMode="ColorPickerMode.HEX" ShowAlpha="false"
+                Text="@this.AccentColorText" TextChanged="this.OnAccentColorTextChanged"
+                Class="mt-4 theme-picker-accent-colour" />
+@if (this.AppearanceStore.Current.CustomizationFor(this.ShownTheme.Id) is not null)
 {
-    @* THE TRAP applies here exactly as it does to the avatar's MudColorPicker below: bind Text, never
-       Value - Value is a non-null MudColor, so binding it would materialise a hard-coded hex colour
-       the instant this tab first renders a Custom Accent selection with no colour chosen yet. Shows
-       the colour exactly as picked; AccentTheme.BuildTheme is what clamps it for contrast when it
-       renders, so what MainLayout paints can differ slightly from what is shown here - by design, see
-       AccentPalette's own remarks. *@
-    <MudColorPicker Label="Accent colour" ColorPickerMode="ColorPickerMode.HEX" ShowAlpha="false"
-                     Text="@this.AccentColorText" TextChanged="this.OnAccentColorTextChanged"
-                     Class="mt-2 theme-picker-accent-colour" />
+    <MudLink OnClick="this.OnAccentReset" Class="theme-accent-reset" Typo="Typo.body2">Reset</MudLink>
 }
 
 <p class="theme-credit mb-2">
-    Custom Accent lets you pick your own accent colour, adjusted if needed so it stays readable.
+    The accent is adjusted if needed so it stays readable, and belongs to the Theme named above.
 </p>
 
 <details class="theme-licences mt-4">
     <summary>Licences</summary>
     <p class="theme-credit mt-2">
-        Huddle, Custom Accent, Lumen, Fluent, Nordic and Cobalt Soft are this application's own Themes. None of them
+        Lumen, Fluent, Nordic and Cobalt Soft are this application's own Themes. None of them
         is taken from a third-party colour theme.
     </p>
 </details>
@@ -138,13 +139,15 @@
         ];
     }
 
-    /// <summary>Whether the colour picker should show at all: only when one of the two <see cref="AccentTheme"/> entries is selected, since every other theme ignores <see cref="AppearanceSettings.AccentColorHex"/> entirely.</summary>
-    private bool IsCustomAccentSelected =>
-        string.Equals(this.AppearanceStore.Current.PreferredLightId, AccentTheme.LightDescriptor.Id, StringComparison.Ordinal) ||
-        string.Equals(this.AppearanceStore.Current.PreferredDarkId, AccentTheme.DarkDescriptor.Id, StringComparison.Ordinal);
+    /// <summary>The Theme being shown, which the accent control belongs to: the stored selection, or the catalog's default.</summary>
+    private ThemeDescriptor ShownTheme => ThemeCatalog.Find(this.AppearanceStore.Current.ThemeId) ?? ThemeCatalog.BuiltIn[0];
 
-    /// <summary>The accent colour shown in the picker: the store's own value, read straight through with no local buffer - since there is only one value here and nothing to seed across a mode switch the way the avatar editor's fields need.</summary>
-    private string? AccentColorText => this.AppearanceStore.Current.AccentColorHex;
+    /// <summary>The accent control's label, naming the Theme it will change.</summary>
+    private string AccentLabel => $"Accent for {this.ShownTheme.Label}";
+
+    /// <summary>The accent colour shown in the picker: the shown Theme's stored <c>palette.primary</c>, read straight through with no local buffer, or <see langword="null"/> when none is chosen.</summary>
+    private string? AccentColorText =>
+        this.AppearanceStore.Current.CustomizationFor(this.ShownTheme.Id)?.Palette.GetValueOrDefault("primary");
 
     /// <summary>Subscribes to <see cref="AppearanceStore.AppearanceChanged"/> - see the file-level comment for why this matters.</summary>
     protected override void OnInitialized()
@@ -175,7 +178,7 @@
     }
 
     /// <summary>
-    /// Saves the newly picked accent colour, mirroring <see cref="OnThemeChangedAsync"/> one key over.
+    /// Saves the newly picked accent colour as the shown Theme's <c>palette.primary</c>.
     /// Blank input (the picker's Clear action, or a Human who deletes the hex text) maps to
     /// <see langword="null"/>, meaning "no accent colour chosen" - the same convention
     /// <see cref="AvatarEditor"/> uses for the avatar's own colour picker.
@@ -183,7 +186,13 @@
     /// <param name="value">The colour picker's newly typed or picked text, or <see langword="null"/>/blank.</param>
     private void OnAccentColorTextChanged(string? value)
     {
-        this.AppearanceStore.SaveAccentColor(string.IsNullOrWhiteSpace(value) ? null : value);
+        this.AppearanceStore.SaveAccentColor(this.ShownTheme.Id, string.IsNullOrWhiteSpace(value) ? null : value);
+    }
+
+    /// <summary>Removes everything the Human customised for the shown Theme, so it renders as authored.</summary>
+    private void OnAccentReset()
+    {
+        this.AppearanceStore.ResetCustomization(this.ShownTheme.Id);
     }
 
     private void OnAppearanceChanged()

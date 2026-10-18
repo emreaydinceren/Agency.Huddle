@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Reflection;
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Themes;
 using Agency.Huddle.App.Themes.Skins;
@@ -10,8 +8,7 @@ namespace Agency.Huddle.Tests.Themes.Skins;
 
 /// <summary>
 /// Pins <see cref="SkinLoader"/>: the ten embedded skin files load, merge their <c>include</c> chains as architecture
-/// section 5 says, reject every invalid file with a message naming the file and key, and reproduce the C# Theme classes
-/// property for property (<see cref="Skins_MatchLegacyTheme"/>) until P1-C deletes those classes.
+/// section 5 says, and reject every invalid file with a message naming the file and key.
 /// </summary>
 public sealed partial class SkinLoaderTests
 {
@@ -45,7 +42,7 @@ public sealed partial class SkinLoaderTests
 
         string folder = CssSource.RepoPath("src", "Huddle.App", "Themes", "Skins");
         int files = Directory.GetFiles(folder, "*.json").Count(static path => !path.EndsWith("skin.schema.json", StringComparison.Ordinal));
-        Assert.Equal(10, files);
+        Assert.Equal(8, files);
         Assert.Equal(files, skins.Count);
         Assert.All(skins, static skin => Assert.NotNull(skin.Theme));
     }
@@ -59,7 +56,7 @@ public sealed partial class SkinLoaderTests
         Assert.Equal(skins.Count, skins.Select(static skin => skin.Id).Distinct(StringComparer.Ordinal).Count());
         Assert.Equal(skins.OrderBy(static skin => skin.Order).Select(static skin => skin.Id), skins.Select(static skin => skin.Id));
         Assert.Equal(skins.Count, skins.Select(static skin => skin.Order).Distinct().Count());
-        Assert.Equal("huddle", skins[0].Id);
+        Assert.Equal("lumen-light", skins[0].Id);
     }
 
     /// <summary>Every light skin has a dark partner with the same stem and the next order, and the reverse.</summary>
@@ -223,35 +220,6 @@ public sealed partial class SkinLoaderTests
         Assert.Equal($"a.json: faces.read: '{family}' must match ^[A-Za-z0-9 -]+$.", exception.Message);
     }
 
-    /// <summary>
-    /// The JSON is a faithful transcription: every <see cref="Palette"/> property, the border radius, the UI font family and
-    /// every shadow elevation equal the C# descriptor's theme, compared by reflection so no property is hand-picked.
-    /// </summary>
-    /// <param name="id">A built-in Theme id.</param>
-    [Theory]
-    [InlineData("huddle")]
-    [InlineData("huddle-dark")]
-    public void Skins_MatchLegacyTheme(string id)
-    {
-        bool dark = id == "huddle-dark";
-        MudTheme expected = dark ? ThemeDefaults.CreateDark(HuddleTheme.Dark()) : ThemeDefaults.CreateLight(HuddleTheme.Light());
-        expected.LayoutProperties.DefaultBorderRadius = "8px";
-        Skin skin = Assert.Single(SkinLoader.LoadAll(), candidate => candidate.Id == id);
-        MudTheme actual = skin.Theme;
-
-        AssertPaletteEqual(expected.PaletteLight, actual.PaletteLight);
-        AssertPaletteEqual(expected.PaletteDark, actual.PaletteDark);
-        Assert.Equal(expected.LayoutProperties.DefaultBorderRadius, actual.LayoutProperties.DefaultBorderRadius);
-        Assert.Equal(expected.Typography.Default.FontFamily, actual.Typography.Default.FontFamily);
-        Assert.Equal(expected.Shadows.Elevation.Length, actual.Shadows.Elevation.Length);
-        for (int i = 0; i < expected.Shadows.Elevation.Length; i++)
-        {
-            Assert.Equal(expected.Shadows.Elevation[i], actual.Shadows.Elevation[i]);
-        }
-
-        Assert.Equal(dark ? "Huddle Dark" : "Huddle Light", skin.Label);
-    }
-
     /// <summary>Every shipped skin's token overrides are registry keys, and the registry defaults plus those overrides cover every token.</summary>
     [Fact]
     public void Skins_MergedSkinIsComplete()
@@ -325,21 +293,6 @@ public sealed partial class SkinLoaderTests
         foreach (string family in named)
         {
             Assert.True(loaded.Contains(family) || SystemFonts.Contains(family, StringComparer.Ordinal), $"'{family}' is neither on the Google Fonts link nor a system face.");
-        }
-    }
-
-    /// <summary>Compares every readable <see cref="Palette"/> property of two palettes by its invariant text.</summary>
-    private static void AssertPaletteEqual(Palette expected, Palette actual)
-    {
-        PropertyInfo[] properties = typeof(Palette).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(static property => property.GetMethod is { IsPublic: true } && property.GetIndexParameters().Length == 0)
-            .ToArray();
-        Assert.True(properties.Length >= 60, "reflection found too few palette properties to prove anything");
-        foreach (PropertyInfo property in properties)
-        {
-            string want = Convert.ToString(property.GetValue(expected), CultureInfo.InvariantCulture) ?? string.Empty;
-            string got = Convert.ToString(property.GetValue(actual), CultureInfo.InvariantCulture) ?? string.Empty;
-            Assert.True(string.Equals(want, got, StringComparison.Ordinal), $"Palette.{property.Name}: expected '{want}', got '{got}'.");
         }
     }
 

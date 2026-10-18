@@ -22,18 +22,16 @@ namespace Agency.Huddle.Tests.Ui;
 public sealed class AppearanceRenderingTests
 {
     // The exact CSS custom property MudThemeProvider.GenerateTheme emits for Palette.Background, in
-    // MudColor's default (rgba) string form. Present in the response only when the "Huddle Light"
-    // theme's palette actually rendered. (Primary can no longer tell the two Huddle themes apart:
-    // the accents differ per theme but the neutral ground is the stable marker.) The constant keeps
-    // its historical name.
-    private const string LightPrimaryVariable = "--mud-palette-background: rgba(242,240,237,1);";
+    // MudColor's default (rgba) string form. Present in the response only when the "Lumen Light"
+    // theme's palette actually rendered. The constant keeps its historical name.
+    private const string LightPrimaryVariable = "--mud-palette-background: rgba(255,255,255,1);";
 
-    // The counterpart for "Huddle Dark", present only when IsDarkMode resolved to true before the
+    // The counterpart for "Lumen Dark", present only when IsDarkMode resolved to true before the
     // response was written. Kept as the literal rendered rgba because that is what reaches the browser.
-    private const string DarkPrimaryVariable = "--mud-palette-background: rgba(28,28,27,1);";
+    private const string DarkPrimaryVariable = "--mud-palette-background: rgba(11,11,15,1);";
 
-    // Huddle Light's Primary (#5b64c8), which the Custom Accent Light placeholder carries.
-    private const string BrandPrimaryVariable = "--mud-palette-primary: rgba(91,100,200,1);";
+    // Lumen Light's own Primary (#7368d3).
+    private const string BrandPrimaryVariable = "--mud-palette-primary: rgba(115,104,211,1);";
 
     // Nordic Dark's own page ground, #161a1d (fjord slate). Asserted rather than its Primary because a
     // background is this theme's and no other's.
@@ -72,7 +70,7 @@ public sealed class AppearanceRenderingTests
         CancellationToken ct = cts.Token;
 
         await using TeamWebApplicationFactory factory = new();
-        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"huddle-dark\"}");
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"lumen-dark\"}");
         using HttpClient client = factory.CreateClient();
 
         var html = await client.GetStringAsync("/", ct);
@@ -122,19 +120,18 @@ public sealed class AppearanceRenderingTests
     }
 
     /// <summary>
-    /// Selecting "Custom Accent Light" with a chosen accent colour renders that colour, not the
-    /// placeholder Huddle Light Primary - and it does so from a plain HTTP GET, with no browser
-    /// JavaScript involved. Unlike the browser-detection approach this replaced, the accent colour is
-    /// a Human-picked, server-persisted value known synchronously on the very first render.
+    /// A customized <c>palette.primary</c> for the shown Theme renders that colour, not the Theme's own Primary - from a
+    /// plain HTTP GET, with no browser JavaScript involved: the customization is a server-persisted value known
+    /// synchronously on the very first render.
     /// </summary>
     [Fact]
-    public async Task AppShell_WithCustomAccentAndAColourChosen_RendersThatColourNotThePlaceholder()
+    public async Task AppShell_WithACustomizedPrimary_RendersThatColourNotTheThemesOwn()
     {
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
 
         await using TeamWebApplicationFactory factory = new();
-        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"custom-accent\",\"accentColor\":\"#00b294\"}");
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"lumen-light\",\"customizations\":{\"lumen-light\":{\"palette\":{\"primary\":\"#00b294\"}}}}");
         using HttpClient client = factory.CreateClient();
 
         var html = await client.GetStringAsync("/", ct);
@@ -143,20 +140,90 @@ public sealed class AppearanceRenderingTests
         Assert.DoesNotContain(BrandPrimaryVariable, html, StringComparison.Ordinal);
     }
 
-    /// <summary>Selecting "Custom Accent Light" with no colour chosen yet renders the placeholder - plain Huddle Light's own Primary - rather than an error or a blank palette.</summary>
+    /// <summary>With no customization the shell renders the Theme's own Primary rather than an error or a blank palette.</summary>
     [Fact]
-    public async Task AppShell_WithCustomAccentAndNoColourChosen_RendersThePlaceholder()
+    public async Task AppShell_WithNoCustomization_RendersTheThemesOwnPrimary()
     {
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
 
         await using TeamWebApplicationFactory factory = new();
-        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"custom-accent\"}");
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"lumen-light\"}");
         using HttpClient client = factory.CreateClient();
 
         var html = await client.GetStringAsync("/", ct);
 
         Assert.Contains(BrandPrimaryVariable, html, StringComparison.Ordinal);
+    }
+
+    /// <summary>A customization of another Theme does not touch the shown one.</summary>
+    [Fact]
+    public async Task AppShell_WithAnotherThemesCustomization_RendersTheShownThemesOwnPrimary()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"lumen-light\",\"customizations\":{\"nordic-light\":{\"palette\":{\"primary\":\"#00b294\"}}}}");
+        using HttpClient client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/", ct);
+
+        Assert.Contains(BrandPrimaryVariable, html, StringComparison.Ordinal);
+    }
+
+    /// <summary>A customized token reaches the <c>hu-skin</c> block of the prerendered page.</summary>
+    [Fact]
+    public async Task AppShell_WithACustomizedToken_RendersItInTheSkinBlock()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"lumen-light\",\"customizations\":{\"lumen-light\":{\"tokens\":{\"ground.rail\":\"#112233\"}}}}");
+        using HttpClient client = factory.CreateClient();
+
+        string html = await client.GetStringAsync("/", ct);
+
+        Assert.Contains("--hu-ground-rail:#112233;", SkinStyleOf(html), StringComparison.Ordinal);
+    }
+
+    /// <summary>An invalid customization never breaks the render: the page is the Theme without it.</summary>
+    [Fact]
+    public async Task AppShell_WithAnInvalidCustomization_StillRendersTheTheme()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"lumen-light\",\"customizations\":{\"lumen-light\":{\"palette\":{\"primary\":\"nope\"},\"tokens\":{\"ground.rail\":\"url(x)\"}}}}");
+        using HttpClient client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/", ct);
+
+        Assert.Contains(BrandPrimaryVariable, html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// An <c>appearance.json</c> written by the previous release (<c>custom-accent</c> with an <c>accentColor</c>) opens as Lumen
+    /// Light with that colour as its Primary: the migration reaches the first render.
+    /// </summary>
+    [Fact]
+    public async Task AppShell_WithALegacyCustomAccentFile_RendersLumenLightWithTheColour()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"custom-accent\",\"accentColor\":\"#00b294\"}");
+        using HttpClient client = factory.CreateClient();
+
+        string html = await client.GetStringAsync("/", ct);
+        IHtmlDocument page = new HtmlParser().ParseDocument(html);
+
+        Assert.Equal("lumen-light", Assert.Single(page.QuerySelectorAll("span.theme-marker")).GetAttribute("data-huddle-theme"));
+        Assert.Contains(LightPrimaryVariable, html, StringComparison.Ordinal);
+        Assert.DoesNotContain(BrandPrimaryVariable, html, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -215,7 +282,7 @@ public sealed class AppearanceRenderingTests
         IHtmlDocument page = new HtmlParser().ParseDocument(html);
 
         IElement marker = Assert.Single(page.QuerySelectorAll("span.theme-marker"));
-        Assert.Equal("huddle", marker.GetAttribute("data-huddle-theme"));
+        Assert.Equal("lumen-light", marker.GetAttribute("data-huddle-theme"));
         Assert.False(marker.HasAttribute("data-theme-pack"));
     }
 
@@ -254,7 +321,7 @@ public sealed class AppearanceRenderingTests
         Assert.DoesNotContain("&#", css, StringComparison.Ordinal);
     }
 
-    /// <summary>The marker carries the nine structural traits as <c>data-hu-*</c> attributes, at the defaults every shipped skin has today.</summary>
+    /// <summary>The marker carries the nine structural traits as <c>data-hu-*</c> attributes, at Lumen Light's, the default Theme's.</summary>
     [Fact]
     public async Task AppShell_MarkerCarriesNineTraitAttributes()
     {
@@ -270,14 +337,14 @@ public sealed class AppearanceRenderingTests
         IElement marker = Assert.Single(page.QuerySelectorAll("span.theme-marker"));
         Dictionary<string, string> expected = new(StringComparer.Ordinal)
         {
-            ["data-hu-message"] = "bubble",
-            ["data-hu-send"] = "icon",
-            ["data-hu-status"] = "chip",
+            ["data-hu-message"] = "row",
+            ["data-hu-send"] = "square",
+            ["data-hu-status"] = "glyph",
             ["data-hu-labels"] = "sentence",
-            ["data-hu-composer"] = "box",
-            ["data-hu-nav"] = "tint",
-            ["data-hu-surface"] = "flat",
-            ["data-hu-marks"] = "plain",
+            ["data-hu-composer"] = "card",
+            ["data-hu-nav"] = "tile",
+            ["data-hu-surface"] = "hairline",
+            ["data-hu-marks"] = "chip",
             ["data-hu-reading"] = "plain",
         };
         Assert.Equal(expected.Count, marker.Attributes.Count(static attribute => attribute.Name.StartsWith("data-hu-", StringComparison.Ordinal)));

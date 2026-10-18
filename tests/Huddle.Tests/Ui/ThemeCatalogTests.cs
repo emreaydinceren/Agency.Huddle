@@ -57,45 +57,59 @@ public sealed class ThemeCatalogTests
     }
 
     /// <summary>
-    /// A spot-check that the two shipped "Huddle" themes carry the expected <c>Primary</c> and
-    /// <c>Background</c> - the colours most likely to visibly regress if a future edit swaps the two
-    /// themes' palettes, or fat-fingers a hex value. Huddle is the one file in <c>Themes/</c> with
-    /// two authored palettes, which is why it is the one that became two catalog entries.
+    /// A spot-check that the two Lumen themes carry the expected <c>Primary</c> and <c>Background</c> - the colours
+    /// most likely to visibly regress if a future edit swaps the two themes' palettes, or fat-fingers a hex value.
     /// </summary>
     [Fact]
-    public void Huddle_PrimaryAndBackgroundCarryTheExpectedValues()
+    public void Lumen_PrimaryAndBackgroundCarryTheExpectedValues()
     {
-        var light = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "huddle", StringComparison.Ordinal));
-        var dark = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "huddle-dark", StringComparison.Ordinal));
+        var light = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "lumen-light", StringComparison.Ordinal));
+        var dark = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "lumen-dark", StringComparison.Ordinal));
 
         Assert.Equal(ThemeMode.Light, light.Mode);
-        Assert.Equal("#5B64C8", Hex(light.Theme.PaletteLight.Primary), ignoreCase: true);
+        Assert.Equal("#7368D3", Hex(light.Theme.PaletteLight.Primary), ignoreCase: true);
         Assert.Equal("#FFFFFF", Hex(light.Theme.PaletteLight.PrimaryContrastText), ignoreCase: true);
-        Assert.Equal("#F2F0ED", Hex(light.Theme.PaletteLight.Background), ignoreCase: true);
-        Assert.Equal("#FFFFFF", Hex(light.Theme.PaletteLight.Surface), ignoreCase: true);
-        Assert.Equal("#e6e2dc", Hex(light.Theme.PaletteLight.DrawerBackground), ignoreCase: true);
+        Assert.Equal("#FFFFFF", Hex(light.Theme.PaletteLight.Background), ignoreCase: true);
 
         Assert.Equal(ThemeMode.Dark, dark.Mode);
-        Assert.Equal("#8F97E6", Hex(dark.Theme.PaletteDark.Primary), ignoreCase: true);
-        Assert.Equal("#141413", Hex(dark.Theme.PaletteDark.PrimaryContrastText), ignoreCase: true);
-        Assert.Equal("#1C1C1B", Hex(dark.Theme.PaletteDark.Background), ignoreCase: true);
-
-        // F4: default icon buttons draw in the Theme's secondary text colour, not MudBlazor's translucent grey.
-        Assert.Equal(Hex(light.Theme.PaletteLight.TextSecondary), Hex(light.Theme.PaletteLight.ActionDefault), ignoreCase: true);
-        Assert.Equal(Hex(dark.Theme.PaletteDark.TextSecondary), Hex(dark.Theme.PaletteDark.ActionDefault), ignoreCase: true);
+        Assert.Equal("#8379D8", Hex(dark.Theme.PaletteDark.Primary), ignoreCase: true);
+        Assert.Equal("#0B0B0F", Hex(dark.Theme.PaletteDark.Background), ignoreCase: true);
     }
 
     /// <summary>
-    /// <see cref="ThemeCatalog.BuiltIn"/>'s first entry is the "Huddle Light" theme, whose id is the
-    /// bare <c>"huddle"</c>. Three call sites read <c>BuiltIn[0]</c> as "the default theme", and that
-    /// id is what an <c>appearance.json</c> written before the split already stores, so both are
-    /// pinned here rather than left to a comment.
+    /// <see cref="ThemeCatalog.BuiltIn"/>'s first entry is Lumen Light (P5-D4). Three call sites read <c>BuiltIn[0]</c> as
+    /// "the default theme", and <see cref="ThemeCatalog.DefaultLightId"/> and <see cref="ThemeCatalog.DefaultDarkId"/>
+    /// name the pair the mode toggle falls back to, so all of it is pinned here rather than left to a comment.
     /// </summary>
     [Fact]
-    public void BuiltIn_FirstEntryIsTheHuddleLightDefault()
+    public void BuiltIn_FirstEntryIsTheLumenLightDefault()
     {
-        Assert.Equal("huddle", ThemeCatalog.BuiltIn[0].Id);
+        Assert.Equal("lumen-light", ThemeCatalog.BuiltIn[0].Id);
         Assert.Equal(ThemeMode.Light, ThemeCatalog.BuiltIn[0].Mode);
+        Assert.Equal("lumen-light", ThemeCatalog.DefaultLightId);
+        Assert.Equal("lumen-dark", ThemeCatalog.DefaultDarkId);
+        Assert.Equal(ThemeMode.Dark, ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == ThemeCatalog.DefaultDarkId).Mode);
+    }
+
+    /// <summary>The retired Huddle and Custom Accent Themes are gone from the catalogue and from the loaded skins (P5-D4).</summary>
+    /// <param name="retiredId">A retired Theme id.</param>
+    [Theory]
+    [InlineData("huddle")]
+    [InlineData("huddle-dark")]
+    [InlineData("custom-accent")]
+    [InlineData("custom-accent-dark")]
+    public void RetiredThemes_AreNotInTheCatalogue(string retiredId)
+    {
+        Assert.DoesNotContain(ThemeCatalog.BuiltIn, descriptor => string.Equals(descriptor.Id, retiredId, StringComparison.Ordinal));
+        Assert.DoesNotContain(SkinLoader.LoadAll(), skin => string.Equals(skin.Id, retiredId, StringComparison.Ordinal));
+    }
+
+    /// <summary>The picker offers four Theme families, each a light and a dark one: four of each mode.</summary>
+    [Fact]
+    public void Grouped_OffersFourLightAndFourDarkThemes()
+    {
+        Assert.Equal(4, ThemeCatalog.BuiltIn.Count(static descriptor => descriptor.Mode == ThemeMode.Light));
+        Assert.Equal(4, ThemeCatalog.BuiltIn.Count(static descriptor => descriptor.Mode == ThemeMode.Dark));
     }
 
     /// <summary>
@@ -286,7 +300,7 @@ public sealed class ThemeCatalogTests
     /// In an authored Theme every pair of signals, and each signal against the Accent, sit at least 30 degrees apart in
     /// hue (audit A2), so a meaning never rests on a hue that collides with another. The signals are Working
     /// (<c>Info</c>), Review (<c>Tertiary</c>), <c>Success</c>, <c>Warning</c> and <c>Error</c>; the Accent is <c>Primary</c>.
-    /// Custom Accent is not authored, so it is checked separately below.
+    /// A customized Primary is not authored, so it is checked separately below.
     /// </summary>
     /// <param name="themeId"><see cref="ThemeDescriptor.Id"/> of the authored theme under test.</param>
     [Theory]
@@ -299,20 +313,24 @@ public sealed class ThemeCatalogTests
     }
 
     /// <summary>
-    /// Custom Accent derives its Review colour from whatever accent the Human picks, so for accents all round the
+    /// A customized Primary derives its Review colour from whatever accent the Human picks, so for accents all round the
     /// wheel <c>Tertiary</c> stays at least 30 degrees from the accent and from every other signal. What the code cannot
     /// guarantee is the fixed signals against a picked accent: an accent chosen within 30 degrees of <c>Info</c>,
     /// <c>Success</c>, <c>Warning</c> or <c>Error</c> collides with that signal, and its second cue (the state dot's
-    /// shape, the priority glyph) carries the meaning. That is the one hue-distance shortfall of Custom Accent.
+    /// shape, the priority glyph) carries the meaning. That is the one hue-distance shortfall of a customized accent.
     /// </summary>
     /// <param name="hue">The hue, in degrees, of the accent the Human picks.</param>
     /// <param name="dark">Whether the dark palette is built.</param>
     [Theory]
     [MemberData(nameof(AccentHues))]
-    public void CustomAccent_TertiaryIsAtLeastThirtyDegreesFromTheAccentAndEverySignal(int hue, bool dark)
+    public void CustomizedAccent_TertiaryIsAtLeastThirtyDegreesFromTheAccentAndEverySignal(int hue, bool dark)
     {
         MudColor picked = new((double)hue, 0.7, 0.5, 1.0);
-        var theme = AccentTheme.BuildTheme(picked.ToString(MudColorOutputFormats.Hex), dark);
+        Skin baseSkin = SkinLoader.LoadAll().Single(skin => string.Equals(skin.Id, dark ? "lumen-dark" : "lumen-light", StringComparison.Ordinal));
+        SkinCustomization customization = new(
+            new Dictionary<string, string>(StringComparer.Ordinal) { ["primary"] = picked.ToString(MudColorOutputFormats.Hex) },
+            new Dictionary<string, string>(StringComparer.Ordinal));
+        MudTheme theme = SkinLoader.Customize(baseSkin, customization).Theme;
         Palette palette = dark ? theme.PaletteDark : theme.PaletteLight;
 
         foreach (var (name, other) in new[] { ("Primary", palette.Primary), ("Info", palette.Info), ("Success", palette.Success), ("Warning", palette.Warning), ("Error", palette.Error) })
@@ -359,8 +377,8 @@ public sealed class ThemeCatalogTests
 
     /// <summary>
     /// The four mockup sets each ship as a light and a dark theme with the id, mode, picker group and corner radius
-    /// the theme mapping gives them, and each sits after Huddle Light so <c>BuiltIn[0]</c> stays the default. An id
-    /// is what <c>appearance.json</c> stores, so it is pinned here rather than left to the descriptor's file.
+    /// the theme mapping gives them. An id is what <c>appearance.json</c> stores, so it is pinned here rather than left
+    /// to the descriptor's file.
     /// </summary>
     /// <param name="themeId">The theme's id.</param>
     /// <param name="dark">Whether it fills the dark palette slot rather than the light one.</param>
@@ -377,7 +395,7 @@ public sealed class ThemeCatalogTests
     public void MockupSets_ShipAsLightAndDarkThemes(string themeId, bool dark, string radius)
     {
         var index = ThemeCatalog.BuiltIn.ToList().FindIndex(candidate => string.Equals(candidate.Id, themeId, StringComparison.Ordinal));
-        Assert.True(index > 0, $"{themeId} is missing from the catalog or sits at BuiltIn[0].");
+        Assert.True(index >= 0, $"{themeId} is missing from the catalog.");
 
         var descriptor = ThemeCatalog.BuiltIn[index];
         Assert.Equal(dark ? ThemeMode.Dark : ThemeMode.Light, descriptor.Mode);
@@ -400,31 +418,17 @@ public sealed class ThemeCatalogTests
         Assert.Equal("#161a1d", dark.Background.ToString(MudColorOutputFormats.Hex));
     }
 
-    /// <summary>The picker order is the twelve ids the catalog has always had: Huddle, the Custom Accent pair, then Lumen, Fluent, Nordic and Cobalt Soft.</summary>
+    /// <summary>The picker order is the eight ids left after P5-D4: Lumen, Fluent, Nordic and Cobalt Soft, each light then dark.</summary>
     [Fact]
-    public void Catalog_OrderUnchanged()
+    public void Catalog_OrderIsLumenFluentNordicCobaltSoft()
     {
         string[] expected =
         [
-            "huddle", "huddle-dark", "custom-accent", "custom-accent-dark",
             "lumen-light", "lumen-dark", "fluent-light", "fluent-dark",
             "nordic-light", "nordic-dark", "cobalt-soft-light", "cobalt-soft-dark",
         ];
 
         Assert.Equal(expected, ThemeCatalog.BuiltIn.Select(static descriptor => descriptor.Id).ToArray());
-    }
-
-    /// <summary>The two Custom Accent descriptors wear Huddle's own skin, so their style block is Huddle's.</summary>
-    [Fact]
-    public void Catalog_AccentCarriesHuddleSkin()
-    {
-        ThemeDescriptor huddle = ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == "huddle");
-        ThemeDescriptor huddleDark = ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == "huddle-dark");
-
-        Assert.Equal("huddle", AccentTheme.LightDescriptor.Skin.Id);
-        Assert.Equal("huddle-dark", AccentTheme.DarkDescriptor.Skin.Id);
-        Assert.Equal(huddle.StyleBlock, AccentTheme.LightDescriptor.StyleBlock);
-        Assert.Equal(huddleDark.StyleBlock, AccentTheme.DarkDescriptor.StyleBlock);
     }
 
     /// <summary>A descriptor renders its style once: two reads return the same string instance, which wraps the skin's CSS in the <c>hu-skin</c> element.</summary>
@@ -470,15 +474,16 @@ public sealed class ThemeCatalogTests
     [Fact]
     public void Descriptor_NoFaces_DeclaresNoFontVariables()
     {
-        Assert.DoesNotContain("--font-read", ThemeCatalog.BuiltIn[0].StyleBlock, StringComparison.Ordinal);
-        Assert.DoesNotContain("--font-mono", ThemeCatalog.BuiltIn[0].StyleBlock, StringComparison.Ordinal);
+        const string json = """{ "id": "t", "label": "T", "mode": "light", "order": 1 }""";
+        ThemeDescriptor descriptor = ThemeDescriptor.From(Assert.Single(SkinLoader.LoadAll(new Dictionary<string, string>(StringComparer.Ordinal) { ["t.json"] = json })));
+
+        Assert.DoesNotContain("--font-read", descriptor.StyleBlock, StringComparison.Ordinal);
+        Assert.DoesNotContain("--font-mono", descriptor.StyleBlock, StringComparison.Ordinal);
     }
 
-    /// <summary>Every authored theme id: the two Huddle themes and the eight mapped from the mockup sets.</summary>
+    /// <summary>Every authored theme id: the eight mapped from the mockup sets.</summary>
     public static TheoryData<string> AuthoredThemeIds() =>
     [
-        "huddle",
-        "huddle-dark",
         "lumen-light",
         "lumen-dark",
         "fluent-light",
