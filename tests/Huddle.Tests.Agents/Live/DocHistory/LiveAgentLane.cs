@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Tests.Elicitation;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.Acp.DotAcp;
@@ -101,8 +102,12 @@ internal sealed class LiveAgentLane : IAsyncDisposable
     public async Task<LiveTurn> RunAsync(string workDirectory, string prompt, CancellationToken cancellationToken)
     {
         string names = string.Join(", ", this.toolServer.ToolNames.Select(static name => $"mcp__team__{name}"));
+        // The same paragraph the app adds to a real Persona's prompt when it offers the tool (DocHistory spec section 10).
+        string guidance = this.toolServer.ToolNames.Contains("log_change", StringComparer.Ordinal)
+            ? " " + PromptRenderer.Render(PromptCatalog.Get("systemPrompt.docHistory").Default, new Dictionary<string, string> { ["{{logChangeTool}}"] = "mcp__team__log_change" })
+            : string.Empty;
         SystemPromptOptions system = new(
-            $"The Team application exposes these tools, which run inside the application process: {names}.",
+            $"The Team application exposes these tools, which run inside the application process: {names}.{guidance}",
             SystemPromptMode.Append);
         Stopwatch clock = Stopwatch.StartNew();
         await using IAgentSession session = await this.host.StartSessionAsync(

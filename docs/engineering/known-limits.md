@@ -12,8 +12,12 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   that the document changed or that every change was logged: only the tool's description asks an Agent to call it.
   Edits made outside Huddle are not recorded, and a Teammate renamed later keeps its old Name on earlier entries
   ([ADR-0060](../adr/0060-a-documents-history-is-what-its-editors-report.md)). How often real Agents call the tool is
-  unmeasured until the paid probe (`TEAM_E2E_DOCHISTORY=1`, `tests/Huddle.Tests.Agents/Live/DocHistory/`) has been run;
-  record its rates here when it has. The links Huddle rewrites in other notes when a note is renamed or moved are
+  measured by the paid probe (`TEAM_E2E_DOCHISTORY=1`, `tests/Huddle.Tests.Agents/Live/DocHistory/`), on Haiku at low Effort:
+  with the description alone, 0 of 35 runs logged a change. With the system prompt paragraph that names the tool and its
+  arguments, and relative paths accepted, the 2026-10-19 rates were: asked to call it 5 of 5; edit two files 5 of 5; no
+  invented actor 5 of 5; read-only and non-Markdown 5 of 5 each (correctly no call); create a document 1 of 5; check a
+  document 0 of 5; disagree with a document 0 of 5. So an Agent reliably logs an edit it is asked to make, and does not
+  reliably log a new file or a review or objection that it gives as an answer. Treat the History as incomplete for those. The links Huddle rewrites in other notes when a note is renamed or moved are
   not recorded in those notes' Histories, on purpose: the Human did not edit them.
 - **A bare address-bar URL is not a reference.** Pasting `http://localhost:5100/rooms/<id>` opens the Room, but it is not recognised as a reference: no reference chip, no snapshot, no Referenced items line. Recognising it needs the app's own origin, and is planned for a later version ([ADR-0055](../adr/0055-a-reference-is-text-with-a-stable-key.md), [the references design](../Huddle.AtTagging-Specifications.md) §6.1).
 - **A renamed or moved Library file shows as unavailable.** A reference is stored by path, so a Library file renamed or moved in the Library shows the unavailable chip in chat. It is not followed to its new place ([ADR-0055](../adr/0055-a-reference-is-text-with-a-stable-key.md), [the references design](../Huddle.AtTagging-Specifications.md) D-8). A Task's status change is not flagged, and a Team is linked by its Name: a Team folder renamed by hand makes its Team links unavailable.

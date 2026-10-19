@@ -13,8 +13,8 @@ internal sealed record LoggedCall(JsonObject Arguments, string Result);
 /// <summary>
 /// A <c>log_change</c> that records every call (DocHistory spec §10, DH-T0). It has the shipped name, input schema and
 /// description, so a live model meets exactly what it will meet once the real tool is offered. Without an inner tool it
-/// answers <c>Logged.</c> to a call the real tool would accept and the real tool's own refusal text to a path it would
-/// refuse (not rooted, or outside <see cref="Folder"/>); given the real tool, it passes each call through and records what that returned (DH-T9).
+/// answers <c>Logged.</c> to a call the real tool would accept and the real tool's own refusal text to a call it would
+/// refuse (outside <see cref="Folder"/>; a relative path is taken to be under it, as the real tool takes it under the Work Dir); given the real tool, it passes each call through and records what that returned (DH-T9).
 /// </summary>
 internal sealed class RecordingLogChangeTool(IAppTool? inner = null) : IAppTool
 {
@@ -51,9 +51,27 @@ internal sealed class RecordingLogChangeTool(IAppTool? inner = null) : IAppTool
     private string Standin(JsonObject arguments)
     {
         string path = (string?)arguments["path"] ?? string.Empty;
-        bool inLibrary = Path.IsPathFullyQualified(path)
-            && (this.Folder is null || Path.GetFullPath(path).StartsWith(Path.GetFullPath(this.Folder), StringComparison.OrdinalIgnoreCase));
-        return inLibrary ? "Logged." : $"'{path}' is not in the Library. Only Library documents have a history.";
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return "'path' is a required argument.";
+        }
+
+        string rooted = Path.IsPathRooted(path) || this.Folder is null ? path : Path.Combine(this.Folder, path);
+        bool inLibrary = Path.IsPathFullyQualified(rooted)
+            && (this.Folder is null || Path.GetFullPath(rooted).StartsWith(Path.GetFullPath(this.Folder), StringComparison.OrdinalIgnoreCase));
+        if (!inLibrary)
+        {
+            return $"'{path}' is not in the Library. Only Library documents have a history.";
+        }
+
+        string kind = ((string?)arguments["kind"] ?? string.Empty).Trim().ToUpperInvariant();
+        if (kind is not ("CREATED" or "EDITED" or "REVIEWED" or "OBJECTED"))
+        {
+            return "'kind' must be created, edited, reviewed or objected.";
+        }
+
+        string summary = ((string?)arguments["summary"] ?? string.Empty).Trim();
+        return summary.Length is 0 or > 200 ? "'summary' is required, one line of at most 200 characters." : "Logged.";
     }
 
     /// <inheritdoc />

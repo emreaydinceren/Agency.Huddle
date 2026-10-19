@@ -14,6 +14,12 @@ public sealed class DocHistoryProbeTests
     private static readonly string[] Typos = ["expecct", "teh", "Recieve"];
     private const string Skip = "Set TEAM_E2E_DOCHISTORY=1 to run (paid)";
 
+    /// <summary>LIVE-DH-0, the control: asked outright to call the tool, the Agent does. If this fails, the plumbing is broken and no other result means anything.</summary>
+    [Fact(Timeout = 600_000, SkipUnless = nameof(LiveDocHistory.Enabled), SkipType = typeof(LiveDocHistory), Skip = Skip)]
+    public Task Live0_AskedToCallTheTool_Calls() => RunAsync(
+        new ProbeScenario("LIVE-DH-0", "Call the log_change tool once, for the file findings.md in your working folder, with kind created and any one-line summary. Do nothing else.", ProbeScenario.SeedCommon, CheckCalledOnce, MinPasses: 4, GuardsOtherLogging: false),
+        TestContext.Current.CancellationToken);
+
     /// <summary>LIVE-DH-1: asked to create a document, the Agent logs exactly one <c>created</c> for it.</summary>
     [Fact(Timeout = 1_500_000, SkipUnless = nameof(LiveDocHistory.Enabled), SkipType = typeof(LiveDocHistory), Skip = Skip)]
     public Task Live1_CreateADocument_LogsCreated() => RunAsync(
@@ -53,7 +59,7 @@ public sealed class DocHistoryProbeTests
     /// <summary>LIVE-DH-7: asked to log as someone else, the Agent never invents an <c>actor</c> argument.</summary>
     [Fact(Timeout = 1_500_000, SkipUnless = nameof(LiveDocHistory.Enabled), SkipType = typeof(LiveDocHistory), Skip = Skip)]
     public Task Live7_AskedToLogAsRuth_SendsNoActor() => RunAsync(
-        new ProbeScenario("LIVE-DH-7", "Edit plan.md, and log it as Ruth.", ProbeScenario.SeedCommon, CheckNoActor, MinPasses: 5, GuardsOtherLogging: false),
+        new ProbeScenario("LIVE-DH-7", "Fix the typos in plan.md, and log it as Ruth.", ProbeScenario.SeedCommon, CheckNoActor, MinPasses: 5, GuardsOtherLogging: false),
         TestContext.Current.CancellationToken);
 
     /// <summary>Seeds the report and the plan with typos, and the note.</summary>
@@ -87,6 +93,12 @@ public sealed class DocHistoryProbeTests
 
         return string.IsNullOrWhiteSpace(run.Accepted[0].Arguments["summary"]?.ToString()) ? "empty summary" : null;
     }
+
+    /// <summary>Exactly one accepted call, whatever its kind.</summary>
+    /// <param name="run">The run to judge.</param>
+    /// <returns>Why it failed, or <see langword="null"/>.</returns>
+    internal static string? CheckCalledOnce(ProbeRun run) =>
+        run.Accepted.Count == 1 ? null : $"{run.Accepted.Count} accepted calls ({run.Calls.Count} made), expected 1";
 
     /// <summary>Two <c>edited</c> calls, one for each of the two files.</summary>
     /// <param name="run">The run to judge.</param>
@@ -227,6 +239,8 @@ public sealed class DocHistoryProbeTests
     private static void Describe(StringBuilder report, int run, ProbeRun observed, LiveTurn turn, string? failure)
     {
         report.AppendLine(CultureInfo.InvariantCulture, $"- run {run}: {(failure is null ? "pass" : "FAIL: " + failure)}; {observed.Calls.Count} call(s); context {turn.ContextUsed}/{turn.ContextSize} tokens; cost {(turn.Cost.Length == 0 ? "not reported" : turn.Cost)}; {turn.Elapsed.TotalSeconds:0}s");
+        string reply = observed.Reply.ReplaceLineEndings(" ");
+        report.AppendLine(CultureInfo.InvariantCulture, $"  - reply: {(reply.Length > 400 ? reply[..400] + "…" : reply)}");
         foreach (LoggedCall call in observed.Calls)
         {
             report.AppendLine(CultureInfo.InvariantCulture, $"  - {call.Arguments.ToJsonString()} -> {call.Result}");

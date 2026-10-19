@@ -10,9 +10,9 @@ public sealed class ProbeJudgeTests
 {
     private static readonly string Folder = Path.Combine(Path.GetTempPath(), "probe-judge");
 
-    /// <summary>A call whose path the real tool would refuse does not count as the one expected call.</summary>
+    /// <summary>A call the tool refused does not count as the one expected call.</summary>
     [Fact]
-    public void CheckCreated_RefusedRelativePath_Fails()
+    public void CheckCreated_RefusedCall_Fails()
     {
         ProbeRun run = RunOf([Call("findings.md", "created", "Wrote three findings", "'findings.md' is not in the Library. Only Library documents have a history.")]);
 
@@ -63,7 +63,7 @@ public sealed class ProbeJudgeTests
         Assert.Null(DocHistoryProbeTests.CheckNoActor(RunOf([Call(Path.Combine(Folder, "plan.md"), "edited", "Fixed", "Logged.")], after: Edited())));
     }
 
-    /// <summary>The stand-in refuses a relative path and a path outside the run's folder, as the real tool does, and accepts one inside.</summary>
+    /// <summary>The stand-in refuses a path outside the run's folder, as the real tool does, and accepts one inside, relative or not.</summary>
     [Fact]
     public async Task StandIn_RefusesWhatTheRealToolWouldRefuse()
     {
@@ -74,7 +74,19 @@ public sealed class ProbeJudgeTests
         string outside = await tool.InvokeAsync(Args(Path.Combine(Path.GetTempPath(), "elsewhere", "x.md")), ct);
         string inside = await tool.InvokeAsync(Args(Path.Combine(Folder, "findings.md")), ct);
 
-        Assert.Equal(["not in the Library", "not in the Library", "Logged."], [Trim(relative), Trim(outside), inside]);
+        Assert.Equal(["Logged.", "not in the Library", "Logged."], [relative, Trim(outside), inside]);
+    }
+
+    /// <summary>The stand-in refuses a call that names the wrong arguments, as the real tool does, so a model guessing <c>action</c> for <c>kind</c> is not counted.</summary>
+    [Fact]
+    public async Task StandIn_RefusesWrongArgumentNames()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        RecordingLogChangeTool tool = new() { Folder = Folder };
+
+        string result = await tool.InvokeAsync(new JsonObject { ["path"] = "findings.md", ["action"] = "created", ["summary"] = "x" }, ct);
+
+        Assert.Equal("'kind' must be created, edited, reviewed or objected.", result);
     }
 
     private static string Trim(string refusal) => refusal.Contains("is not in the Library", StringComparison.Ordinal) ? "not in the Library" : refusal;

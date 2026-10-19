@@ -173,7 +173,7 @@ result texts written in code, never throwing for an expected failure.
 
 | Argument | Type | Rule |
 | --- | --- | --- |
-| `path` | string | The document's full path or `file://` URL, resolved with `LibraryPathResolver.TryResolveAbsolute`. |
+| `path` | string | The document's full path or `file://` URL, resolved with `LibraryPathResolver.TryResolveAbsolute`. A relative path is taken to be under the Agent's own Work Dir (`TeammatePaths.WorkDir`), which is where the name it was given in a Message points. |
 | `kind` | string | `created`, `edited`, `reviewed` or `objected`, case-insensitive. |
 | `summary` | string | Required, trimmed, line breaks replaced by spaces, at most `MaxSummaryLength` characters. |
 
@@ -196,14 +196,22 @@ true **and** the Adapter Profile `ReadsFiles`. It is appended before `GetHelpToo
 **Description** (prompt key `tool.logChange.description`, configuration per
 [ADR-0007](adr/0007-model-facing-text-is-configuration.md)):
 
-> Records one line in a Library document's history, which the Human sees under the document's title. Call it once
-> for each Markdown document you create or change, after the file is written, with `created` or `edited` and a
-> summary of what you did in your own words. Call it with `reviewed` when you checked a document, and `objected`
-> when you disagree with it, even if you changed nothing. Write the summary for the Human: what changed and why,
-> not how.
+> Records one line in a Library document's history, which the Human sees under the document's title.
+> Always call it as your last step after you create or change a Markdown (.md) document, once for each document, before you tell the Human you are done.
+> Give the document's full path, created or edited, and a summary of what you did and why in your own words.
+> Also call it with reviewed when you checked a document without changing it, and with objected when you disagree with it, even if you changed nothing.
+> Do not call it for a file that is not Markdown, or for a document you only read.
+> Write the summary for the Human: what changed and why, not how.
 
-There is no other prompt change. Whether Agents call the tool reliably is the main risk of this design (ADR-0060,
-*Consequences*); the manual tests measure it (§10).
+**The system prompt paragraph** (prompt key `systemPrompt.docHistory`, sent only when the session offers the tool, like
+`systemPrompt.askHuman`). The first paid probe (2026-10-19) showed the description alone is not enough: an Adapter can
+defer a tool's own description and schema, so a model sees only the tool's name, finishes the task and never logs it, and
+when it does call it guesses the argument names. The paragraph therefore names the tool, its three arguments and the three
+cases (changed, reviewed, objected), and says logging a document is not editing it. Its text is the catalog default.
+
+The paid probe's results and what changed between rounds are in [known-limits.md](engineering/known-limits.md).
+Whether Agents call the tool reliably is the main risk of this design (ADR-0060, *Consequences*); the manual tests
+measure it (§10).
 
 ### 6.4 The Human's save
 

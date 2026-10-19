@@ -236,16 +236,7 @@ internal static class SystemPromptComposer
 
         List<string> parts = [orientation, persona.Text, identity, chatRules, tools];
 
-        // An Adapter can defer a tool's own description, so the model may see only the name of
-        // ask_human; this paragraph is the one place its "when to ask" is always read. The name
-        // arrives prefixed and is substituted, never typed (rules.md: App Tool names). Omitted when
-        // the session offers no such tool, so a caller that does not pass it gets the old output.
-        if (!string.IsNullOrWhiteSpace(askHumanToolName))
-        {
-            parts.Add(prompts.Render(
-                "systemPrompt.askHuman",
-                new Dictionary<string, string> { ["{{askHumanTool}}"] = askHumanToolName }));
-        }
+        AddToolParagraphs(parts, prompts, toolNames, askHumanToolName);
 
         if (roleBlock is not null)
         {
@@ -267,6 +258,39 @@ internal static class SystemPromptComposer
         AddClosingParts(parts, prompts, scope, memory);
 
         return string.Join("\n\n", parts);
+    }
+
+    /// <summary>
+    /// Adds the paragraphs for the tools whose own description an Adapter may never show the model. Each is sent only
+    /// when its tool is offered, so a session without the tool reads what it read before.
+    /// </summary>
+    /// <param name="parts">The prompt parts so far.</param>
+    /// <param name="prompts">Resolves each prompt's current text.</param>
+    /// <param name="toolNames">The offered tools' names, already prefixed.</param>
+    /// <param name="askHumanToolName"><c>ask_human</c>'s own prefixed name, or <see langword="null"/> when it is not offered.</param>
+    private static void AddToolParagraphs(List<string> parts, IPromptSource prompts, IReadOnlyList<string> toolNames, string? askHumanToolName)
+    {
+        // An Adapter can defer a tool's own description, so the model may see only the name of
+        // ask_human; this paragraph is the one place its "when to ask" is always read. The name
+        // arrives prefixed and is substituted, never typed (rules.md: App Tool names). Omitted when
+        // the session offers no such tool, so a caller that does not pass it gets the old output.
+        if (!string.IsNullOrWhiteSpace(askHumanToolName))
+        {
+            parts.Add(prompts.Render(
+                "systemPrompt.askHuman",
+                new Dictionary<string, string> { ["{{askHumanTool}}"] = askHumanToolName }));
+        }
+
+        // Same reason as ask_human above: the tool's description may never reach the model, and without this
+        // paragraph real models finished the task without logging it (DocHistory spec section 10). The name
+        // comes from the offered list, already prefixed, so the paragraph exists only when the tool does.
+        string? logChangeToolName = toolNames.FirstOrDefault(static name => name.EndsWith("log_change", StringComparison.Ordinal));
+        if (logChangeToolName is not null)
+        {
+            parts.Add(prompts.Render(
+                "systemPrompt.docHistory",
+                new Dictionary<string, string> { ["{{logChangeTool}}"] = logChangeToolName }));
+        }
     }
 
     /// <summary>Adds the role block, followed by the Process block (manager or member wording) when the role carries one.</summary>

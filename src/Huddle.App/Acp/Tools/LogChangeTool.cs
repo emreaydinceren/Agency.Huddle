@@ -17,6 +17,7 @@ internal sealed class LogChangeTool(
     DocHistoryRecorder recorder,
     LibraryPathResolver resolver,
     IOptions<TeamOptions> options,
+    TeammatePaths paths,
     string agentName,
     IPromptSource prompts) : IAppTool
 {
@@ -81,7 +82,7 @@ internal sealed class LogChangeTool(
             return "'path' is a required argument.";
         }
 
-        if (!resolver.TryResolveAbsolute(path, out LibraryPath? file))
+        if (!resolver.TryResolveAbsolute(this.Absolute(path), out LibraryPath? file))
         {
             return $"'{path}' is not in the Library. Only Library documents have a history.";
         }
@@ -108,6 +109,17 @@ internal sealed class LogChangeTool(
             ? "Logged."
             : "The change could not be recorded. The document itself is unchanged.";
     }
+
+    /// <summary>
+    /// A path the Agent gave relative, resolved against its own Work Dir, which is the folder it was told it works in. An
+    /// Agent's own file tools take full paths, but it often logs the name it was given in the Message (DocHistory spec §6.3).
+    /// </summary>
+    /// <param name="path">The path as the Agent gave it.</param>
+    /// <returns>The path unchanged when it is rooted or a <c>file:</c> URL, else the path under the Agent's Work Dir.</returns>
+    private string Absolute(string path) =>
+        Path.IsPathRooted(path) || path.StartsWith("file:", StringComparison.OrdinalIgnoreCase)
+            ? path
+            : Path.Combine(paths.WorkDir(agentName), path);
 
     /// <summary>Reads one of the four kind names, in any letter case. A number is not a name.</summary>
     /// <param name="text">The Agent's text.</param>

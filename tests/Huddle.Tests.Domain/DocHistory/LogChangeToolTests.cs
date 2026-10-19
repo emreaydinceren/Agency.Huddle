@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.Profile;
@@ -183,6 +184,37 @@ public sealed class LogChangeToolTests
         Assert.False(Directory.Exists(Path.Combine(fixture.DataDir, "doc-history")));
     }
 
+    /// <summary>A relative path is the file under the Agent's own Work Dir, so the name the Agent was given in a Message works.</summary>
+    [Fact]
+    public async Task Invoke_RelativePath_ResolvesUnderTheAgentsWorkDir()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        string workDir = new TeammatePaths(fixture.BoundOptions).WorkDir("Nova");
+        Directory.CreateDirectory(workDir);
+        File.WriteAllText(Path.Combine(workDir, "brief.md"), "x");
+        LogChangeTool tool = Build(fixture, "Nova", out DocHistoryStore store);
+
+        string result = await tool.InvokeAsync(Args("brief.md", "created", "Wrote the brief"), ct);
+
+        Assert.Equal("Logged.", result);
+        Assert.Equal("Nova", Assert.Single(store.Read(fixture.Resolve(workDir, "brief.md"))).Actor);
+    }
+
+    /// <summary>A relative path that does not exist under the Work Dir is refused as missing, not as outside the Library.</summary>
+    [Fact]
+    public async Task Invoke_RelativePathNotThere_SaysItDoesNotExist()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        Directory.CreateDirectory(new TeammatePaths(fixture.BoundOptions).WorkDir("Nova"));
+        LogChangeTool tool = Build(fixture, "Nova", out _);
+
+        string result = await tool.InvokeAsync(Args("later.md", "created", "x"), ct);
+
+        Assert.Equal("'later.md' does not exist. Log a change after the file is written.", result);
+    }
+
     /// <summary>Builds the tool over the fixture's Library with a recorder and store of its own.</summary>
     /// <param name="fixture">The Library fixture.</param>
     /// <param name="agentName">The Name the tool is bound to.</param>
@@ -192,7 +224,7 @@ public sealed class LogChangeToolTests
     {
         store = new DocHistoryStore(fixture.BoundOptions, NullLogger<DocHistoryStore>.Instance);
         DocHistoryRecorder recorder = new(store, fixture.BoundOptions, NullLogger<DocHistoryRecorder>.Instance, new ConfiguredHumanIdentity("Emre"));
-        return new LogChangeTool(recorder, fixture.Resolver, fixture.BoundOptions, agentName, new FakePromptSource());
+        return new LogChangeTool(recorder, fixture.Resolver, fixture.BoundOptions, new TeammatePaths(fixture.BoundOptions), agentName, new FakePromptSource());
     }
 
     /// <summary>The arguments of one call.</summary>

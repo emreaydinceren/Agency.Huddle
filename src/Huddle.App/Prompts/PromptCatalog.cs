@@ -188,6 +188,23 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
+            Key: "systemPrompt.docHistory",
+            Label: "Logging document changes",
+            HelperText:
+                "One paragraph, after the asking-the-Human paragraph, telling an Agent to log each Markdown " +
+                "document it changes. It exists because an Adapter can defer a tool's own description, so the " +
+                "model may see only the tool's name and a description alone did not make real models call " +
+                "log_change (DocHistory spec section 10). Only sent when the session offers the tool. Must keep " +
+                "{{logChangeTool}}: the tool's exact, prefixed name is substituted in.",
+            Default:
+                """
+                When you create or change a Markdown (.md) document, call {{logChangeTool}} once for it as your last step, before you tell the Human you are done. Its arguments are path (the document's path), kind (created, edited, reviewed or objected) and summary (one line saying what you did and why). Also call it when you review a document without changing it, such as checking its citations or facts (kind reviewed), and when you disagree with part of a document (kind objected), even if you changed nothing and were asked not to edit it: logging a document is not editing it. Do not call it for a file that is not Markdown, or for a document you only read to answer a question or summarise it. It is how the Human sees who changed a document and when.
+                """,
+            Placeholders: ["{{logChangeTool}}"],
+            RequiredPlaceholders: ["{{logChangeTool}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
             Key: "systemPrompt.roleBlock",
             Label: "Role block",
             HelperText:
@@ -1284,7 +1301,7 @@ internal static class PromptCatalog
                 "history. It is the only prompt that asks an Agent to call the tool. Takes no placeholders.",
             Default:
                 """
-                Records one line in a Library document's history, which the Human sees under the document's title. Call it once for each Markdown document you create or change, after the file is written, with created or edited and a summary of what you did in your own words. Call it with reviewed when you checked a document, and objected when you disagree with it, even if you changed nothing. Write the summary for the Human: what changed and why, not how.
+                Records one line in a Library document's history, which the Human sees under the document's title. Always call it as your last step after you create or change a Markdown (.md) document, once for each document, before you tell the Human you are done. Give the document's full path, created or edited, and a summary of what you did and why in your own words. Also call it with reviewed when you checked a document without changing it, and with objected when you disagree with it, even if you changed nothing. Do not call it for a file that is not Markdown, or for a document you only read. Write the summary for the Human: what changed and why, not how.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
