@@ -145,6 +145,7 @@ the per-area tables below.
 | [Needs You: the sidebar card of Rooms waiting on the Human](needs-you.md) | [below](#needs-you) |
 | [Right sidebar: the panels by Subject, Outline, collapse and focus](right-sidebar.md) | [below](#right-sidebar) |
 | [References in a Message: the @ picker, Copy link and the Referenced items header](at-tagging.md) | [below](#at-tagging) |
+| [Document history: the byline, the History and the Recent edits panel](doc-history.md) | [below](#doc-history) |
 ---
 
 ## at-tagging
@@ -1084,6 +1085,19 @@ Needs You: the sidebar card of Rooms waiting on the Human — [area file](needs-
 | [NEEDSYOU-02](needs-you.md#needsyou-02--opening-a-room-does-not-clear-it-posting-in-it-does) |  | Active |  | | not yet run by a person; checked once in the app 2026-10-12 |
 | [NEEDSYOU-03](needs-you.md#needsyou-03--dismiss-hides-a-room-without-answering-what-is-behind-it) |  | Active |  | | not yet run by a person; checked once in the app 2026-10-12 |
 | [NEEDSYOU-04](needs-you.md#needsyou-04--archiving-hides-a-room-from-the-card-and-unarchiving-brings-it-back) |  | Active |  | | not yet run by a person; checked once in the app 2026-10-12 |
+
+## doc-history
+
+Document history: the byline, the History and the Recent edits panel — [area file](doc-history.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [DOCHISTORY-01](doc-history.md#dochistory-01--two-teammates-create-and-edit-a-document-the-byline-and-the-panel-show-both) | 💰 | Active |  |  |
+| [DOCHISTORY-02](doc-history.md#dochistory-02--a-review-that-changes-nothing-is-a-reviewed-by) | 💰 | Active |  |  |
+| [DOCHISTORY-03](doc-history.md#dochistory-03--saving-in-the-library-adds-an-entry-under-the-humans-name-without-a-reload) |  | Active |  |  |
+| [DOCHISTORY-04](doc-history.md#dochistory-04--renaming-and-moving-a-document-carries-its-history) |  | Active |  |  |
+| [DOCHISTORY-05](doc-history.md#dochistory-05--how-often-do-real-agents-log-their-edits) | 💰 | Active |  |  |
+| [DOCHISTORY-06](doc-history.md#dochistory-06--the-history-is-grouped-by-day-whole-and-the-byline-leads-to-it) |  | Active |  |  |
 
 ---
 

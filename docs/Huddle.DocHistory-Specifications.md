@@ -1,6 +1,6 @@
 # Huddle.DocHistory — Design Specification
 
-**Date:** 2026-10-18 · **Status:** Designed, not built · **Decision record:**
+**Date:** 2026-10-18 · **Status:** Built; the paid live probe has not been run · **Decision record:**
 [ADR-0060](adr/0060-a-documents-history-is-what-its-editors-report.md) · **Builds on:**
 [Huddle.Library-Specifications.md](Huddle.Library-Specifications.md),
 [Huddle.RightSidebar-Specifications.md](Huddle.RightSidebar-Specifications.md),
@@ -216,7 +216,11 @@ There is no other prompt change. Whether Agents call the tool reliably is the ma
 | `HumanCreated(LibraryPath file)` | `LibraryFileService.CreateFileAsync`, after a successful create | `Created`, empty summary |
 | `Moved(LibraryPath from, LibraryPath to)` | `LibraryFileService.RenameAsync` and `MoveAsync`, after success | Moves the history (§6.5) |
 
-Each does nothing for a file that is not Markdown or when `Enabled` is false. `LibraryFileService` takes it as an
+Each does nothing for a file that is not Markdown or when `Enabled` is false, except `Moved`, which carries a history
+that exists whether or not `Enabled` is true: moving a file is not recording, and a document moved while History is
+off must find its history where it is when History is turned back on. `HumanSaved` is called by `WriteTextAsync`
+only: the links the Library rewrites in other notes after a rename or move are written without it, because the
+Human did not edit those notes. `LibraryFileService` takes it as an
 optional trailing constructor parameter, so the many tests that build the service by hand need no change. It is the
 service, not `LibraryDocument.razor`, so every Human write path is covered and the component stays thin. Every caller
 of these four methods is a Human action in the Library UI; Agents never reach `LibraryFileService`.
@@ -241,7 +245,7 @@ A `static` class of pure functions over `IReadOnlyList<DocHistoryEntry>`.
 | Written by | The actor of the first `Created` entry; with none, the actor of the first entry. |
 | Edited by | Distinct actors of `Edited` entries other than the writer, most recent first. |
 | Reviewed by | Distinct actors of `Reviewed` entries, most recent first. |
-| Objections by | Distinct actors of `Objected` entries, most recent first. |
+| Objected by | Distinct actors of `Objected` entries, most recent first. |
 | When | The `At` of the newest entry. |
 
 Each list shows at most three Names, then "+N". An empty part is left out, separator included.
@@ -370,8 +374,9 @@ which decides whether the design survives, and an **end-to-end check after** (DH
   keeps the cost [manual-tests.md](engineering/manual-tests.md) documents for it, and the reverse holds too.
 - **Model:** Haiku at low Effort, per manual-tests.md §0.3. Never Opus. `ANTHROPIC_API_KEY` is unset, so the
   `claude` login pays.
-- **Cost report:** each test writes, for every run, the tool calls it saw, their arguments and the Turn's token usage
-  from the session's usage events. They go to the test output and to `{temp}/dochistory-live-{timestamp}.md`. The
+- **Cost report:** each test writes, for every run, the tool calls it saw, their arguments and the context
+  in use and the cost the Adapter reported at the end of the Turn, from the session's usage events. Tokens spent per Turn
+  are not available without a change to the ACP subtree. They go to the test output and to `{temp}/dochistory-live-{timestamp}.md`. The
   Human reads that report, not just pass or fail.
 - **Repetition:** a model is not deterministic, so each probe scenario runs **5 times** in fresh sessions and asserts
   a **pass rate**, not a single result.

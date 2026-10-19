@@ -27,6 +27,17 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   about one.
 : *Avoid*: bot, assistant, AI, agent host.
 
+**History** (of a document)
+: The entries a Markdown document's editors logged, oldest first on disk and newest first on screen. An Agent adds to
+  it by calling `log_change`; Huddle adds the Human's saves. It is what the editors reported, not a record Huddle
+  verified ([ADR-0060](../adr/0060-a-documents-history-is-what-its-editors-report.md)).
+: *Avoid*: revision history, version history, audit log, changelog: none of those is a copy of the document.
+
+**Byline**
+: The one line under a document's toolbar that summarises its History: who wrote it, who edited, reviewed and
+  objected to it, and when it last changed.
+: *Avoid*: author line, credits.
+
 **Name**
 : What a Teammate is called — a display name, not a slug. Letters, digits, `_`,
   `-` and single interior spaces, at most 64 characters, opening on a letter or a

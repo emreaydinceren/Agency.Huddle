@@ -8,6 +8,13 @@ oversights or quietly add them.
 Two entries have since been planned and one has since been built; each one says
 so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 
+- **A document's History is what its editors reported.** An Agent adds to it by calling `log_change`, and nothing checks
+  that the document changed or that every change was logged: only the tool's description asks an Agent to call it.
+  Edits made outside Huddle are not recorded, and a Teammate renamed later keeps its old Name on earlier entries
+  ([ADR-0060](../adr/0060-a-documents-history-is-what-its-editors-report.md)). How often real Agents call the tool is
+  unmeasured until the paid probe (`TEAM_E2E_DOCHISTORY=1`, `tests/Huddle.Tests.Agents/Live/DocHistory/`) has been run;
+  record its rates here when it has. The links Huddle rewrites in other notes when a note is renamed or moved are
+  not recorded in those notes' Histories, on purpose: the Human did not edit them.
 - **A bare address-bar URL is not a reference.** Pasting `http://localhost:5100/rooms/<id>` opens the Room, but it is not recognised as a reference: no reference chip, no snapshot, no Referenced items line. Recognising it needs the app's own origin, and is planned for a later version ([ADR-0055](../adr/0055-a-reference-is-text-with-a-stable-key.md), [the references design](../Huddle.AtTagging-Specifications.md) §6.1).
 - **A renamed or moved Library file shows as unavailable.** A reference is stored by path, so a Library file renamed or moved in the Library shows the unavailable chip in chat. It is not followed to its new place ([ADR-0055](../adr/0055-a-reference-is-text-with-a-stable-key.md), [the references design](../Huddle.AtTagging-Specifications.md) D-8). A Task's status change is not flagged, and a Team is linked by its Name: a Team folder renamed by hand makes its Team links unavailable.
 - **A label typed by hand still mentions.** A reference's label is text. A hand-edited `[@Nova](/rooms/…)` puts a real `@Nova` in the Message, and Nova is Mentioned exactly as if `@Nova` were typed. Picker labels never contain a live `@`, so only a typed one does ([the references design](../Huddle.AtTagging-Specifications.md) §6.1).
