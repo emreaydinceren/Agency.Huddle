@@ -1,21 +1,16 @@
-using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
-using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Seeder.Model;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 namespace Agency.Huddle.Seeder.Writing;
-
-/// <summary>The ids the database assigned, which Task files and the manifest need.</summary>
-/// <param name="UserIds">Teammate Name to user id.</param>
-/// <param name="RoomIds">Room key to Room id.</param>
-internal sealed record DatabaseResult(IReadOnlyDictionary<string, string> UserIds, IReadOnlyDictionary<string, string> RoomIds);
 
 /// <summary>
 /// Creates <c>team.db</c> and the Room transcripts through Huddle's own <see cref="ITeamDirectory"/> and
@@ -36,16 +31,16 @@ internal static class DatabaseSeeder
 
         try
         {
-            await directory.InitializeAsync(plan.HumanName, ct);
+            await directory.InitializeAsync(plan.HumanName, ct).ConfigureAwait(false);
 
             // A saved profile, so the seeded app opens on its Rooms rather than the first-run redirect to Settings > Profile.
             string profile = JsonSerializer.Serialize(new Dictionary<string, string>(StringComparer.Ordinal) { ["name"] = plan.HumanName });
-            await File.WriteAllTextAsync(Path.Combine(dataDir, "profile.json"), profile, ct);
+            await File.WriteAllTextAsync(Path.Combine(dataDir, "profile.json"), profile, ct).ConfigureAwait(false);
 
             Dictionary<string, string> userIds = new(StringComparer.OrdinalIgnoreCase);
             foreach (SeedTeammate teammate in plan.Teammates)
             {
-                User user = await directory.UpsertAgentUserAsync(teammate.Name, teammate.Title, ct)
+                User user = await directory.UpsertAgentUserAsync(teammate.Name, teammate.Title, ct).ConfigureAwait(false)
                     ?? throw new InvalidOperationException($"Could not create the user '{teammate.Name}'.");
                 userIds[teammate.Name] = user.Id;
             }
@@ -54,12 +49,12 @@ internal static class DatabaseSeeder
             Dictionary<string, string> roomIds = new(StringComparer.Ordinal);
             foreach (SeedRoom room in plan.Rooms)
             {
-                roomIds[room.Key] = await CreateRoomAsync(room, userIds, directory, ct);
+                roomIds[room.Key] = await CreateRoomAsync(room, userIds, directory, ct).ConfigureAwait(false);
             }
 
             foreach (SeedRoom room in plan.Rooms)
             {
-                await AppendMessagesAsync(plan, room, dataDir, userIds, roomIds, chat, ct);
+                await AppendMessagesAsync(plan, room, dataDir, userIds, roomIds, chat, ct).ConfigureAwait(false);
             }
 
             return new DatabaseResult(userIds, roomIds);
@@ -80,16 +75,16 @@ internal static class DatabaseSeeder
 
         // A Team Room is named for its Team, as the app's own reconciler creates it; every other Room starts with the derived name.
         string initialName = room.IsTeamRoom ? room.Name : string.Join(", ", room.Members);
-        Room created = await directory.CreateRoomAsync(initialName, memberIds, room.Team, room.IsTeamRoom, ct);
+        Room created = await directory.CreateRoomAsync(initialName, memberIds, room.Team, room.IsTeamRoom, ct).ConfigureAwait(false);
 
         if (!string.Equals(room.Name, initialName, StringComparison.Ordinal))
         {
-            await directory.RenameRoomAsync(created.Id, room.Name, ct);
+            await directory.RenameRoomAsync(created.Id, room.Name, ct).ConfigureAwait(false);
         }
 
         if (room.Archived)
         {
-            await directory.SetRoomArchivedAsync(created.Id, archived: true, ct);
+            await directory.SetRoomArchivedAsync(created.Id, archived: true, ct).ConfigureAwait(false);
         }
 
         return created.Id;
@@ -119,7 +114,7 @@ internal static class DatabaseSeeder
             {
                 References = expanded.References,
             };
-            await chat.AppendAsync(roomIds[room.Key], chatMessage, ct);
+            await chat.AppendAsync(roomIds[room.Key], chatMessage, ct).ConfigureAwait(false);
         }
     }
 

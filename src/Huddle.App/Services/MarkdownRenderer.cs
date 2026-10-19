@@ -348,7 +348,9 @@ public static partial class MarkdownRenderer
         link.GetAttributes().AddClass("task-ref");
         if (reference.Status is { } status)
         {
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
             link.GetAttributes().AddClass(string.Create(CultureInfo.InvariantCulture, $"task-ref-status-{TaskColors.For(status).ToString().ToLowerInvariant()}"));
+#pragma warning restore HAA0102
         }
 
         if (reference.Closed)

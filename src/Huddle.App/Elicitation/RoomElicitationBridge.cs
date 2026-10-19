@@ -32,7 +32,7 @@ internal sealed partial class RoomElicitationBridge(
         string askerName;
         try
         {
-            User? asker = await directory.GetUserAsync(context.AgentId, cancellationToken);
+            User? asker = await directory.GetUserAsync(context.AgentId, cancellationToken).ConfigureAwait(false);
             askerName = asker?.Name ?? context.AgentId;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -41,13 +41,14 @@ internal sealed partial class RoomElicitationBridge(
         }
 
         PendingElicitation card = store.Add(context.RoomId, context.AgentId, askerName, form);
-        using CancellationTokenRegistration registration = cancellationToken.Register(() =>
+        CancellationTokenRegistration registration = cancellationToken.Register(() =>
         {
             _ = store.DropOne(card.RoomId, card.Id);
             _ = card.Completion.TrySetResult(new ElicitationCancelled());
         });
+        await using var registrationScope = registration.ConfigureAwait(false);
 
-        return await card.Completion.Task;
+        return await card.Completion.Task.ConfigureAwait(false);
     }
 
     /// <summary>Logs that a form was declined because its schema is not one the bridge can show.</summary>

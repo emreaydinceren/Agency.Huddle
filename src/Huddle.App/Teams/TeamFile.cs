@@ -55,21 +55,57 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
             return false;
         }
 
-        int closing = -1;
-        for (int index = 1; index < lines.Length; index++)
-        {
-            if (string.Equals(lines[index].TrimEnd(), Delimiter, StringComparison.Ordinal))
-            {
-                closing = index;
-                break;
-            }
-        }
-
+        int closing = FindClosingDelimiter(lines);
         if (closing < 0)
         {
             return false;
         }
 
+        (Dictionary<string, string> values, List<string> unknown) = ReadFrontmatter(lines, closing);
+
+        if (!values.TryGetValue(TeamTypeKey, out string? teamTypeText) || !VersionedRef.TryParse(teamTypeText, out VersionedRef? teamType))
+        {
+            return false;
+        }
+
+        string process = values.GetValueOrDefault(ProcessKey, string.Empty);
+        string notes = string.Join('\n', lines[(closing + 1)..]);
+        file = new TeamFile(
+            teamType,
+            NullIfBlank(values.GetValueOrDefault(ManagerKey)),
+            NullIfBlank(values.GetValueOrDefault(WorkspaceKey)),
+            NullIfBlank(values.GetValueOrDefault(OwnsKey)),
+            string.IsNullOrWhiteSpace(process) ? TeamPaths.ProcessFileName : process,
+            notes)
+        {
+            UnknownLines = unknown,
+            Onboarded = string.Equals(values.GetValueOrDefault(OnboardedKey), "true", StringComparison.OrdinalIgnoreCase),
+        };
+        return true;
+    }
+
+    /// <summary>Finds the closing frontmatter delimiter.</summary>
+    /// <param name="lines">The document lines; the first is the opening delimiter.</param>
+    /// <returns>The index of the closing delimiter line, or -1 when there is none.</returns>
+    private static int FindClosingDelimiter(string[] lines)
+    {
+        for (int index = 1; index < lines.Length; index++)
+        {
+            if (string.Equals(lines[index].TrimEnd(), Delimiter, StringComparison.Ordinal))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>Reads the frontmatter lines into the known keys and the lines kept verbatim.</summary>
+    /// <param name="lines">The document lines.</param>
+    /// <param name="closing">The index of the closing delimiter line.</param>
+    /// <returns>The known values by key, and the lines that are not a known <c>key: value</c> pair.</returns>
+    private static (Dictionary<string, string> Values, List<string> Unknown) ReadFrontmatter(string[] lines, int closing)
+    {
         Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase);
         List<string> unknown = [];
         for (int index = 1; index < closing; index++)
@@ -97,25 +133,7 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
             }
         }
 
-        if (!values.TryGetValue(TeamTypeKey, out string? teamTypeText) || !VersionedRef.TryParse(teamTypeText, out VersionedRef? teamType))
-        {
-            return false;
-        }
-
-        string process = values.GetValueOrDefault(ProcessKey, string.Empty);
-        string notes = string.Join('\n', lines[(closing + 1)..]);
-        file = new TeamFile(
-            teamType,
-            NullIfBlank(values.GetValueOrDefault(ManagerKey)),
-            NullIfBlank(values.GetValueOrDefault(WorkspaceKey)),
-            NullIfBlank(values.GetValueOrDefault(OwnsKey)),
-            string.IsNullOrWhiteSpace(process) ? TeamPaths.ProcessFileName : process,
-            notes)
-        {
-            UnknownLines = unknown,
-            Onboarded = string.Equals(values.GetValueOrDefault(OnboardedKey), "true", StringComparison.OrdinalIgnoreCase),
-        };
-        return true;
+        return (values, unknown);
     }
 
     /// <summary>Composes the file text: the frontmatter, then <see cref="Notes"/>. LF line endings only.</summary>

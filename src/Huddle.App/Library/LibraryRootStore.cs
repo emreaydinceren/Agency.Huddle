@@ -1,20 +1,14 @@
+using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.SkillSources;
+using Agency.Huddle.Contracts;
+using Microsoft.Extensions.Options;
 using System.Globalization;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App.Acp;
-using Agency.Huddle.Contracts;
-using Agency.Huddle.App.SkillSources;
 
 namespace Agency.Huddle.App.Library;
-
-/// <summary>A parse failure in <c>library-roots.json</c>, with a 1-based line and column when known.</summary>
-/// <param name="Message">A human-readable description of the failure.</param>
-/// <param name="Line">The 1-based line the failure was found on, or <see langword="null"/> when unknown.</param>
-/// <param name="Column">The 1-based column the failure was found on, or <see langword="null"/> when unknown.</param>
-public sealed record LibraryRootLoadError(string Message, long? Line, long? Column);
 
 /// <summary>
 /// Joins the two built-in Library Roots (Teams, Teammates) with the Human-editable
@@ -337,6 +331,14 @@ internal sealed class LibraryRootStore
             return (null, [], null);
         }
 
+        return (ReadPinned(obj), ReadHidden(obj), null);
+    }
+
+    /// <summary>Reads the <c>pinned</c> array of the roots file, skipping entries without a string name and path.</summary>
+    /// <param name="obj">The parsed roots file.</param>
+    /// <returns>The pinned entries, or <see langword="null"/> when the file has no <c>pinned</c> array.</returns>
+    private static List<PinnedRootEntry>? ReadPinned(JsonObject obj)
+    {
         List<PinnedRootEntry>? pinnedFromFile = null;
         if (obj.TryGetPropertyValue("pinned", out var pinnedNode) && pinnedNode is JsonArray pinnedArray)
         {
@@ -352,6 +354,14 @@ internal sealed class LibraryRootStore
             }
         }
 
+        return pinnedFromFile;
+    }
+
+    /// <summary>Reads the <c>hidden</c> array of the roots file, skipping entries that are not strings.</summary>
+    /// <param name="obj">The parsed roots file.</param>
+    /// <returns>The hidden root ids; empty when the file has no <c>hidden</c> array.</returns>
+    private static HashSet<string> ReadHidden(JsonObject obj)
+    {
         HashSet<string> hidden = new(StringComparer.Ordinal);
         if (obj.TryGetPropertyValue("hidden", out var hiddenNode) && hiddenNode is JsonArray hiddenArray)
         {
@@ -364,7 +374,7 @@ internal sealed class LibraryRootStore
             }
         }
 
-        return (pinnedFromFile, hidden, null);
+        return hidden;
     }
 
     /// <summary>The pinned-root source for <see cref="BuildRoots"/>: the file's list when one was saved, else the configured list.</summary>

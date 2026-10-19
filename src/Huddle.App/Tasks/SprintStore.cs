@@ -1,24 +1,8 @@
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Watching;
+using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.App.Tasks;
-
-/// <summary>The outcome of <see cref="SprintStore.Create(string)"/> (Sprints spec §8).</summary>
-internal abstract record SprintCreateResult
-{
-    /// <summary>A new Sprint was appended to <c>sprints.md</c>.</summary>
-    /// <param name="Sprint">The Sprint that was created.</param>
-    public sealed record Created(Sprint Sprint) : SprintCreateResult;
-
-    /// <summary>A Sprint with the same name, ignoring case, already existed; nothing was written.</summary>
-    /// <param name="Sprint">The Sprint that already had the name.</param>
-    public sealed record Existing(Sprint Sprint) : SprintCreateResult;
-
-    /// <summary>The name was invalid, or the file could not be written; nothing was written.</summary>
-    /// <param name="Problem">What is wrong, in prose a Human can read as-is.</param>
-    public sealed record Refused(string Problem) : SprintCreateResult;
-}
 
 /// <summary>
 /// Owns <c>{DataDir}/sprints.md</c> (Sprints spec §8): loads and watches it, appends a Sprint line on
@@ -159,32 +143,15 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
 
         string trimmed = name.Trim();
         Sprint created = new(new SprintId(1), trimmed);
-        Sprint? existing = null;
-        bool raise = false;
+        Sprint? existing;
+        bool raise;
         lock (this.writeGate)
         {
             try
             {
                 string? text = this.ReadTextFromDisk();
                 SprintFile file = SprintFileFormat.ParseFile(text ?? "");
-                foreach (Sprint sprint in file.Sprints)
-                {
-                    if (string.Equals(sprint.Name, trimmed, StringComparison.OrdinalIgnoreCase))
-                    {
-                        // The Sprint came from a write the watcher has not reported yet: adopt it now, so the Task
-                        // save that follows can find it.
-                        bool stale = this.snapshot.Sprints.All(known => known.Id != sprint.Id);
-                        if (stale)
-                        {
-                            this.snapshot = file;
-                        }
-
-                        existing = sprint;
-                        raise = stale;
-                        break;
-                    }
-                }
-
+                (existing, raise) = this.FindExisting(file, trimmed);
                 if (existing is null)
                 {
                     int highestInFile = file.Sprints.Count == 0 ? 0 : file.Sprints[^1].Id.Number;
@@ -216,6 +183,31 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
         return existing is not null
             ? new SprintCreateResult.Existing(existing)
             : new SprintCreateResult.Created(created);
+    }
+
+    /// <summary>
+    /// The Sprint named <paramref name="trimmed"/> in <paramref name="file"/>, ignoring case, and whether it was new to the
+    /// snapshot. Must be called under the write lock.
+    /// </summary>
+    private (Sprint? Existing, bool Stale) FindExisting(SprintFile file, string trimmed)
+    {
+        foreach (Sprint sprint in file.Sprints)
+        {
+            if (string.Equals(sprint.Name, trimmed, StringComparison.OrdinalIgnoreCase))
+            {
+                // The Sprint came from a write the watcher has not reported yet: adopt it now, so the Task
+                // save that follows can find it.
+                bool stale = this.snapshot.Sprints.All(known => known.Id != sprint.Id);
+                if (stale)
+                {
+                    this.snapshot = file;
+                }
+
+                return (sprint, stale);
+            }
+        }
+
+        return (null, false);
     }
 
     /// <summary>
@@ -265,7 +257,9 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                 this.logger.LogWarning(ex, "Could not remove the unused sprint {SprintId} from '{Path}'.", id, this.path);
+#pragma warning restore HAA0601
                 return false;
             }
         }
@@ -290,7 +284,6 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
         this.events.TaskChanged -= this.OnTaskChanged;
         this.watcher.Dispose();
     }
-
 
     /// <summary>Whether two parses of the file are the same Sprints and the same problems.</summary>
     private static bool SameContent(SprintFile left, SprintFile right) =>

@@ -1,15 +1,10 @@
-using System.Globalization;
 using Agency.Huddle.SkillPacks.Checking;
 using Agency.Huddle.SkillPacks.Files;
 using Agency.Huddle.SkillPacks.Folders;
 using Agency.Huddle.SkillPacks.Reading;
+using System.Globalization;
 
 namespace Agency.Huddle.SkillPacks.Resolving;
-
-/// <summary>Switches for one resolve.</summary>
-/// <param name="IgnoreGrace">True for <b>Reload</b>: a file that fails to parse is reported even when it was written in
-/// the last two seconds (§6.9.5).</param>
-public sealed record ResolveOptions(bool IgnoreGrace = false);
 
 /// <summary>Turns a <see cref="Registry"/> into a <see cref="ResolvedRegistry"/> (§8.3). Structural only: it loads files,
 /// resolves paths, catalog references and names, and hashes folders; it assigns no state.</summary>
@@ -323,29 +318,7 @@ public static class RegistryResolver
             {
                 if (row.Kind == RowKind.Pack)
                 {
-                    PackEntry pack = packs[row.Index];
-                    if (pack.File is null || pack.FilePath is null || pack.SkillNames.Count == 0)
-                    {
-                        continue;
-                    }
-
-                    string baseDir = Path.GetDirectoryName(pack.FilePath) ?? registry.Directory;
-                    foreach (PackSkill skill in pack.File.Skills)
-                    {
-                        string provider = $"pack:{pack.Id}";
-                        if (skill.Path is not null)
-                        {
-                            Add(skill.Name, new SkillClaim(provider, RowKind.Pack, row.Index, pack.FilePath, skill.Origin ?? string.Empty, null, skill.Path, baseDir, null), null);
-                        }
-                        else if (skill.Catalog is not null
-                            && this.catalogsById.TryGetValue(skill.Catalog, out ResolvedCatalog? catalog)
-                            && catalog.File?.Find(skill.Name) is { } entry
-                            && catalog.FilePath is not null)
-                        {
-                            string catalogDir = Path.GetDirectoryName(catalog.FilePath) ?? registry.Directory;
-                            Add(skill.Name, new SkillClaim(provider, RowKind.Pack, row.Index, pack.FilePath, entry.Origin, entry.License, entry.Path, catalogDir, catalog.Id), entry);
-                        }
-                    }
+                    this.AddPackClaims(row, packs[row.Index], Add);
                 }
                 else
                 {
@@ -364,6 +337,33 @@ public static class RegistryResolver
             }
 
             return [.. order.Select(name => this.BuildSkill(name, claims[name]))];
+        }
+
+        /// <summary>Hands <paramref name="add"/> a claim for each Skill a Pack lists, from its own path or from a Catalog entry.</summary>
+        private void AddPackClaims(RegistryRow row, PackEntry pack, Action<string, SkillClaim, CatalogEntry?> add)
+        {
+            if (pack.File is null || pack.FilePath is null || pack.SkillNames.Count == 0)
+            {
+                return;
+            }
+
+            string baseDir = Path.GetDirectoryName(pack.FilePath) ?? registry.Directory;
+            foreach (PackSkill skill in pack.File.Skills)
+            {
+                string provider = $"pack:{pack.Id}";
+                if (skill.Path is not null)
+                {
+                    add(skill.Name, new SkillClaim(provider, RowKind.Pack, row.Index, pack.FilePath, skill.Origin ?? string.Empty, null, skill.Path, baseDir, null), null);
+                }
+                else if (skill.Catalog is not null
+                    && this.catalogsById.TryGetValue(skill.Catalog, out ResolvedCatalog? catalog)
+                    && catalog.File?.Find(skill.Name) is { } entry
+                    && catalog.FilePath is not null)
+                {
+                    string catalogDir = Path.GetDirectoryName(catalog.FilePath) ?? registry.Directory;
+                    add(skill.Name, new SkillClaim(provider, RowKind.Pack, row.Index, pack.FilePath, entry.Origin, entry.License, entry.Path, catalogDir, catalog.Id), entry);
+                }
+            }
         }
 
         /// <summary>One Skill from its claims; the first claim's origin decides which claims are the same Skill.</summary>

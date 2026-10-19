@@ -131,7 +131,7 @@ internal sealed class SkinColourResolver
 
         if (text.StartsWith('#'))
         {
-            string hex = text.Length == 4 ? string.Concat(text[1], text[1], text[2], text[2], text[3], text[3]) : text[1..];
+            string hex = text.Length == 4 ? new string([text[1], text[1], text[2], text[2], text[3], text[3]]) : text[1..];
             return new MudColor("#" + hex);
         }
 

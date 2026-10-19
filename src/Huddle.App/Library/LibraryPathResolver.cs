@@ -119,7 +119,7 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
         string current = Path.Combine(parent.FullPath, name);
         string? rootResolvedTarget = LinkPaths.ResolveIfLink(parent.Root.FullPath);
 
-        if (child.Attributes.HasFlag(FileAttributes.ReparsePoint) && LinkPaths.ResolveLinkTarget(child) is string target)
+        if ((child.Attributes & FileAttributes.ReparsePoint) != 0 && LinkPaths.ResolveLinkTarget(child) is string target)
         {
             if (!IsWithinRoot(target, parent.Root.FullPath, rootResolvedTarget))
             {

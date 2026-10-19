@@ -43,6 +43,49 @@ internal static class PromptCatalog
     /// <returns>The full list of prompt definitions.</returns>
     private static IReadOnlyList<PromptDefinition> BuildAll() =>
     [
+        ..BuildPart01(),
+        ..BuildPart02(),
+        ..BuildPart03(),
+        ..BuildPart04(),
+        ..BuildPart05(),
+        ..BuildPart06(),
+        ..BuildPart07(),
+        ..BuildPart08(),
+        ..BuildPart09(),
+        ..BuildPart10(),
+        ..BuildPart11(),
+        ..BuildPart12(),
+        ..BuildPart13(),
+        ..BuildPart14(),
+        ..BuildPart15(),
+        ..BuildPart16(),
+        ..BuildPart17(),
+        ..BuildPart18(),
+        ..BuildPart19(),
+        ..BuildPart20(),
+        ..BuildPart21(),
+        ..BuildPart22(),
+        ..BuildPart23(),
+        ..BuildPart24(),
+        ..BuildPart25(),
+        ..BuildPart26(),
+        ..BuildPart27(),
+        ..BuildPart28(),
+        ..BuildPart29(),
+        ..BuildPart30(),
+        ..BuildPart31(),
+        ..BuildPart32(),
+        ..BuildPart33(),
+        ..BuildPart34(),
+        ..BuildPart35(),
+        ..BuildPart36(),
+        ..BuildPart37(),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.orientation</c> to <c>systemPrompt.identity</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart01() =>
+    [
         new PromptDefinition(
             Key: "systemPrompt.orientation",
             Label: "Orientation",
@@ -76,7 +119,12 @@ internal static class PromptCatalog
             Placeholders: ["{{personaName}}"],
             RequiredPlaceholders: ["{{personaName}}"],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.chatRules</c> to <c>systemPrompt.tools</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart02() =>
+    [
         new PromptDefinition(
             Key: "systemPrompt.chatRules",
             Label: "Chat rules",
@@ -117,7 +165,12 @@ internal static class PromptCatalog
             Placeholders: ["{{toolNames}}"],
             RequiredPlaceholders: ["{{toolNames}}"],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.askHuman</c> to <c>systemPrompt.roleBlock</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart03() =>
+    [
         new PromptDefinition(
             Key: "systemPrompt.askHuman",
             Label: "Asking the Human",
@@ -157,7 +210,12 @@ internal static class PromptCatalog
             Placeholders: ["{{name}}", "{{role}}", "{{team}}", "{{consult}}", "{{skills}}"],
             RequiredPlaceholders: ["{{name}}", "{{role}}", "{{team}}", "{{consult}}", "{{skills}}"],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.processBlockManager</c> to <c>turn.onboarding</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart04() =>
+    [
         new PromptDefinition(
             Key: "systemPrompt.processBlockManager",
             Label: "Process block (manager)",
@@ -200,7 +258,12 @@ internal static class PromptCatalog
             Placeholders: ["{{steps}}"],
             RequiredPlaceholders: ["{{steps}}"],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.skills</c> to <c>turn.message</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart05() =>
+    [
         new PromptDefinition(
             Key: "systemPrompt.skills",
             Label: "Skills block",
@@ -248,7 +311,12 @@ internal static class PromptCatalog
             Placeholders: ["{{roomLabel}}", "{{sender}}", "{{text}}"],
             RequiredPlaceholders: ["{{roomLabel}}", "{{sender}}", "{{text}}"],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>turn.referencesHeader</c> to <c>turn.referenceRoom</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart06() =>
+    [
         new PromptDefinition(
             Key: "turn.referencesHeader",
             Label: "Referenced items header",
@@ -287,7 +355,12 @@ internal static class PromptCatalog
             Placeholders: ["{{name}}", "{{id}}", "{{scope}}", "{{members}}"],
             RequiredPlaceholders: ["{{name}}", "{{id}}", "{{scope}}", "{{members}}"],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>turn.referenceTeam</c> to <c>turn.referencesMore</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart07() =>
+    [
         new PromptDefinition(
             Key: "turn.referenceTeam",
             Label: "Referenced Team line",
@@ -326,7 +399,12 @@ internal static class PromptCatalog
             Placeholders: ["{{count}}"],
             RequiredPlaceholders: ["{{count}}"],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>turn.referencesHint</c> to <c>turn.catchUpHeader</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart08() =>
+    [
         new PromptDefinition(
             Key: "turn.referencesHint",
             Label: "Referenced items hint",
@@ -367,7 +445,12 @@ internal static class PromptCatalog
             Placeholders: ["{{roomLabel}}"],
             RequiredPlaceholders: [],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>turn.catchUpLine</c> to <c>turn.transcriptResumedHeader</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart09() =>
+    [
         new PromptDefinition(
             Key: "turn.catchUpLine",
             Label: "Catch-up line",
@@ -409,7 +492,12 @@ internal static class PromptCatalog
             Placeholders: ["{{roomLabel}}"],
             RequiredPlaceholders: ["{{roomLabel}}"],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>turn.transcriptOmitted</c> to <c>turn.fileChangesHeader</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart10() =>
+    [
         new PromptDefinition(
             Key: "turn.transcriptOmitted",
             Label: "Transcript omitted",
@@ -453,7 +541,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>turn.fileAdded</c> to <c>turn.fileDeleted</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart11() =>
+    [
         new PromptDefinition(
             Key: "turn.fileAdded",
             Label: "File added",
@@ -495,7 +588,12 @@ internal static class PromptCatalog
             Placeholders: ["{{path}}"],
             RequiredPlaceholders: ["{{path}}"],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>turn.fileChangesMore</c> to <c>turn.libraryDocsHeader</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart12() =>
+    [
         new PromptDefinition(
             Key: "turn.fileChangesMore",
             Label: "File Changes more",
@@ -537,7 +635,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>turn.libraryDoc</c> to <c>turn.libraryDocTruncated</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart13() =>
+    [
         new PromptDefinition(
             Key: "turn.libraryDoc",
             Label: "Library document line",
@@ -578,7 +681,12 @@ internal static class PromptCatalog
             Placeholders: ["{{max}}", "{{size}}"],
             RequiredPlaceholders: ["{{max}}", "{{size}}"],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>turn.libraryDocsMore</c> to <c>turn.libraryDocIncluded</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart14() =>
+    [
         new PromptDefinition(
             Key: "turn.libraryDocsMore",
             Label: "Library documents more",
@@ -617,7 +725,12 @@ internal static class PromptCatalog
             Placeholders: ["{{path}}", "{{location}}", "{{size}}"],
             RequiredPlaceholders: ["{{path}}", "{{location}}", "{{size}}"],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>turn.libraryImageUnavailable</c> to <c>getHelp.intro</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart15() =>
+    [
         new PromptDefinition(
             Key: "turn.libraryImageUnavailable",
             Label: "Library image unavailable",
@@ -663,7 +776,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>getHelp.rooms</c> to <c>getHelp.messages</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart16() =>
+    [
         new PromptDefinition(
             Key: "getHelp.rooms",
             Label: "Help: Rooms",
@@ -701,7 +819,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>getHelp.mentions</c> to <c>getHelp.replying</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart17() =>
+    [
         new PromptDefinition(
             Key: "getHelp.mentions",
             Label: "Help: mentions",
@@ -734,7 +857,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>getHelp.budget</c> to <c>getHelp.toolEntry</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart18() =>
+    [
         new PromptDefinition(
             Key: "getHelp.budget",
             Label: "Help: budget",
@@ -783,7 +911,12 @@ internal static class PromptCatalog
             Placeholders: ["{{toolName}}", "{{toolDescription}}"],
             RequiredPlaceholders: ["{{toolName}}", "{{toolDescription}}"],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>getHelp.footer</c> to <c>tool.listAgents.description</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart19() =>
+    [
         new PromptDefinition(
             Key: "getHelp.footer",
             Label: "Help: footer",
@@ -826,7 +959,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>tool.createRoom.description</c> to <c>tool.readRecords.description</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart20() =>
+    [
         new PromptDefinition(
             Key: "tool.createRoom.description",
             Label: "create_room description",
@@ -868,7 +1006,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>tool.listTeams.description</c> to <c>tool.confirmRequest.description</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart21() =>
+    [
         new PromptDefinition(
             Key: "tool.listTeams.description",
             Label: "list_teams description",
@@ -910,7 +1053,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>tool.triageRequest.description</c> to <c>tool.markRetroRow.description</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart22() =>
+    [
         new PromptDefinition(
             Key: "tool.triageRequest.description",
             Label: "triage_request description",
@@ -952,7 +1100,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>tool.proposeRetroChanges.description</c> to <c>tool.postMessage.description</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart23() =>
+    [
         new PromptDefinition(
             Key: "tool.proposeRetroChanges.description",
             Label: "propose_retro_changes description",
@@ -994,7 +1147,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>tool.followRoom.description</c> to <c>tool.readSkill.description</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart24() =>
+    [
         new PromptDefinition(
             Key: "tool.followRoom.description",
             Label: "follow_room description",
@@ -1036,7 +1194,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>tool.validateTeammate.description</c> to <c>tool.askHuman.description</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart25() =>
+    [
         new PromptDefinition(
             Key: "tool.validateTeammate.description",
             Label: "validate_teammate description",
@@ -1079,7 +1242,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>tool.watchFolder.description</c> to <c>turn.fileByYouSuffix</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart26() =>
+    [
         new PromptDefinition(
             Key: "tool.watchFolder.description",
             Label: "watch_folder description",
@@ -1119,7 +1287,12 @@ internal static class PromptCatalog
             Placeholders: ["{{roomName}}"],
             RequiredPlaceholders: ["{{roomName}}"],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.memory</c> to <c>systemPrompt.memoryEmpty</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart27() =>
+    [
         new PromptDefinition(
             Key: "systemPrompt.memory",
             Label: "Memory block",
@@ -1165,7 +1338,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.memoryMore</c> to <c>systemPrompt.teamMemoryPaths</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart28() =>
+    [
         new PromptDefinition(
             Key: "systemPrompt.memoryMore",
             Label: "Memory index, more",
@@ -1210,7 +1388,12 @@ internal static class PromptCatalog
             Placeholders: ["{{team}}", "{{teamMemoryPath}}", "{{projectMemoryPattern}}"],
             RequiredPlaceholders: ["{{teamMemoryPath}}", "{{projectMemoryPattern}}"],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.teamMemoryHeading</c> to <c>systemPrompt.roomSessions</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart29() =>
+    [
         new PromptDefinition(
             Key: "systemPrompt.teamMemoryHeading",
             Label: "Team Memory heading",
@@ -1254,7 +1437,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.roomSessionsCarry</c> to <c>systemPrompt.sharedSession</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart30() =>
+    [
         new PromptDefinition(
             Key: "systemPrompt.roomSessionsCarry",
             Label: "Room Sessions, what still carries",
@@ -1293,7 +1481,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>task.wake.message</c> to <c>tool.getTask.description</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart31() =>
+    [
         new PromptDefinition(
             Key: "task.wake.message",
             Label: "Task wake-up message",
@@ -1339,7 +1532,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>tool.listTasks.description</c> to <c>tool.closeTask.description</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart32() =>
+    [
         new PromptDefinition(
             Key: "tool.listTasks.description",
             Label: "list_tasks description",
@@ -1381,7 +1579,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>tool.reopenTask.description</c> to <c>prompt.digest</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart33() =>
+    [
         new PromptDefinition(
             Key: "tool.reopenTask.description",
             Label: "reopen_task description",
@@ -1429,7 +1632,12 @@ internal static class PromptCatalog
             Placeholders: ["{{team}}", "{{since}}"],
             RequiredPlaceholders: ["{{team}}", "{{since}}"],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>prompt.rollup</c> to <c>installSkillPack.body</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart34() =>
+    [
         new PromptDefinition(
             Key: "prompt.rollup",
             Label: "Roll-up prompt",
@@ -1468,7 +1676,171 @@ internal static class PromptCatalog
             Label: "InstallSkillPack.md body",
             HelperText:
                 "The fixed sections of InstallSkillPack.md, which any AI tool reads to add Skills and Packs for this Huddle. Huddle writes the front matter and the appendices around it. Must keep all five placeholders: {{computer}}, {{skillSourcesDir}}, {{registryPath}}, {{validateCommand}} and {{checkHints}}.",
+            Default: InstallSkillPackBody,
+            Placeholders: ["{{computer}}", "{{skillSourcesDir}}", "{{registryPath}}", "{{validateCommand}}", "{{checkHints}}"],
+            RequiredPlaceholders: ["{{computer}}", "{{skillSourcesDir}}", "{{registryPath}}", "{{validateCommand}}", "{{checkHints}}"],
+            Timing: PromptTiming.Live),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog, from <c>skillPrompt.add</c> to <c>skillPrompt.findForRole</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart35() =>
+    [
+        new PromptDefinition(
+            Key: "skillPrompt.add",
+            Label: "Add Skills or Packs (prompt you paste)",
+            HelperText:
+                "The prompt Settings › Skills copies for your AI tool when you ask it to add Packs or Skills from a link or folder. Must keep {{installFile}} and {{where}}: without the first the tool does not know what to read, and without the second it does not know where to look.",
             Default:
+                """
+                Read the file at {{installFile}} first, and follow it. It is Huddle's instructions for adding
+                Skills and Packs, with this Huddle's roles and Skills in its appendix.
+
+                Task: add Packs or Skills from {{where}} (section 9, "Add").
+                {{purposeLine}}
+
+                Fetch them to this computer with my sign-ins, write the Pack or catalog file, source.json and
+                NOTES.md, and add the SKILLS.md row. Run the validate command from the file with --strict
+                until it prints Errors=0. Ask me before fetching more than 20 Skills or 50 MB.
+
+                When you are done, tell me what is ready in Huddle and what its details card will flag.
+                """,
+            Placeholders: ["{{installFile}}", "{{where}}", "{{purposeLine}}"],
+            RequiredPlaceholders: ["{{installFile}}", "{{where}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "skillPrompt.findForRole",
+            Label: "Find Packs for a role (prompt you paste)",
+            HelperText:
+                "The prompt copied when you ask your AI tool to suggest Packs for a role. Must keep {{installFile}} and {{roleId}}.",
+            Default:
+                """
+                Read the file at {{installFile}} first, and follow it. It is Huddle's instructions for adding
+                Skills and Packs, with this Huddle's roles and Skills in its appendix.
+
+                Task: find Packs for the {{roleTitle}} role (id: {{roleId}}) (section 9, "Find Packs for a role").
+                {{purposeLine}}
+
+                Look first at what this Huddle already has (appendix B) and at catalog Skills not yet
+                downloaded (appendix D). Suggest at most three Packs. For each, say where it is from, which
+                Skills it holds, the licence, and what you could not check. Ask me before you fetch anything.
+                After I choose, add them as the file says, with {{roleId}} in appliesTo, and tell me when they
+                are ready.
+                """,
+            Placeholders: ["{{installFile}}", "{{roleTitle}}", "{{roleId}}", "{{purposeLine}}"],
+            RequiredPlaceholders: ["{{installFile}}", "{{roleId}}"],
+            Timing: PromptTiming.Live),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog, from <c>skillPrompt.update</c> to <c>skillPrompt.fix</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart36() =>
+    [
+        new PromptDefinition(
+            Key: "skillPrompt.update",
+            Label: "Check for updates (prompt you paste)",
+            HelperText:
+                "The prompt copied when you ask your AI tool to check Sources for new commits. Must keep {{installFile}} and {{sources}}.",
+            Default:
+                """
+                Read the file at {{installFile}} first, and follow it. It is Huddle's instructions for adding
+                Skills and Packs, with this Huddle's roles and Skills in its appendix.
+
+                Task: check these Sources for updates (section 9, "Check for updates"):
+                {{sources}}
+
+                Read each Source's NOTES.md before you touch it. If it has not moved, change nothing. If it
+                has, pull the new commit, rewrite only the files that changed, update source.json, NOTES.md and
+                the rows' Last updated, and run the validate command until it prints Errors=0. Record a
+                deprecation or a move in source.json with its reason. Delete nothing.
+
+                Then tell me, Source by Source, what changed and what did not.
+                """,
+            Placeholders: ["{{installFile}}", "{{sources}}"],
+            RequiredPlaceholders: ["{{installFile}}", "{{sources}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "skillPrompt.fix",
+            Label: "Fix a problem (prompt you paste)",
+            HelperText:
+                "The prompt Copy fix prompt copies for a Broken or Not downloaded row. Must keep {{installFile}} and {{localPath}}; {{problems}} carries what Huddle found.",
+            Default:
+                """
+                Read the file at {{installFile}} first, and follow it. It is Huddle's instructions for adding
+                Skills and Packs, with this Huddle's roles and Skills in its appendix.
+
+                Task: fix the {{table}} row for {{localPath}} in SKILLS.md (section 9, "Fix a problem").
+                Huddle shows it as {{state}}. Huddle reported:
+
+                {{problems}}
+
+                Find the cause and fix that row and the files it points at, and nothing else. If this computer
+                has no entry for a path, fetch the files here and add this computer's entry only. Run the
+                validate command on the row's path with --strict until it prints Errors=0, then tell me what
+                you changed.
+                """,
+            Placeholders: ["{{installFile}}", "{{table}}", "{{localPath}}", "{{state}}", "{{problems}}"],
+            RequiredPlaceholders: ["{{installFile}}", "{{localPath}}"],
+            Timing: PromptTiming.Live),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog, from <c>skillPrompt.fetchSkill</c> to <c>skillPrompt.needsSetup</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart37() =>
+    [
+        new PromptDefinition(
+            Key: "skillPrompt.fetchSkill",
+            Label: "Fetch one Skill (prompt you paste)",
+            HelperText:
+                "The prompt Copy prompt copies beside a Not downloaded Skill. Must keep {{installFile}} and {{skillName}}.",
+            Default:
+                """
+                Read the file at {{installFile}} first, and follow it. It is Huddle's instructions for adding
+                Skills and Packs, with this Huddle's roles and Skills in its appendix.
+
+                Task: fetch one Skill to this computer (section 9, "Fetch Skills").
+                Skill: {{skillName}}
+                Catalog: {{catalogId}}, at {{catalogPath}}
+                Origin: {{origin}}
+
+                Fetch exactly the commit in the origin, put it in a folder you choose, and set the Skill's
+                "path" in the catalog file (this computer's entry if the catalog is shared). Do not change the
+                SKILLS.md row or any other Skill. Run the validate command on the catalog file with --strict
+                until it prints Errors=0, then tell me when it is ready.
+                """,
+            Placeholders: ["{{installFile}}", "{{skillName}}", "{{catalogId}}", "{{catalogPath}}", "{{origin}}"],
+            RequiredPlaceholders: ["{{installFile}}", "{{skillName}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "skillPrompt.needsSetup",
+            Label: "Needs setup (prompt you paste)",
+            HelperText:
+                "The prompt Copy prompt copies on a Needs setup draft in Build a team. Must keep {{installFile}}, {{roleId}} and {{missing}}.",
+            Default:
+                """
+                Read the file at {{installFile}} first, and follow it. It is Huddle's instructions for adding
+                Skills and Packs, with this Huddle's roles and Skills in its appendix.
+
+                Task: set up what the {{roleTitle}} role (id: {{roleId}}) needs before I can hire it
+                (section 9, "Fetch Skills"). Missing on this computer:
+
+                {{missing}}
+
+                Fetch each one here and fill in its path (this computer's entry if the file is shared). Reuse
+                a catalog entry when one exists (appendix D) and fetch exactly the commit in its origin. Run
+                the validate command with --strict on each file you change until it prints Errors=0. Then tell
+                me what is ready; I will return to Huddle and approve the hire.
+                """,
+            Placeholders: ["{{installFile}}", "{{roleTitle}}", "{{roleId}}", "{{missing}}"],
+            RequiredPlaceholders: ["{{installFile}}", "{{roleId}}", "{{missing}}"],
+            Timing: PromptTiming.Live),
+    ];
+
+    /// <summary>The fixed sections of <c>InstallSkillPack.md</c>, kept out of the definition so the slice that lists it stays short.</summary>
+    private const string InstallSkillPackBody =
                 """
                 ## 1. What you are doing
 
@@ -1644,151 +2016,5 @@ internal static class PromptCatalog
                 Write one short message in plain words: what is ready in Huddle, by name; what its details card
                 will flag (scripts, licences, unread files); anything you could not do and why. Put check codes
                 in brackets at the end, not at the front.
-                """,
-            Placeholders: ["{{computer}}", "{{skillSourcesDir}}", "{{registryPath}}", "{{validateCommand}}", "{{checkHints}}"],
-            RequiredPlaceholders: ["{{computer}}", "{{skillSourcesDir}}", "{{registryPath}}", "{{validateCommand}}", "{{checkHints}}"],
-            Timing: PromptTiming.Live),
-
-        new PromptDefinition(
-            Key: "skillPrompt.add",
-            Label: "Add Skills or Packs (prompt you paste)",
-            HelperText:
-                "The prompt Settings › Skills copies for your AI tool when you ask it to add Packs or Skills from a link or folder. Must keep {{installFile}} and {{where}}: without the first the tool does not know what to read, and without the second it does not know where to look.",
-            Default:
-                """
-                Read the file at {{installFile}} first, and follow it. It is Huddle's instructions for adding
-                Skills and Packs, with this Huddle's roles and Skills in its appendix.
-
-                Task: add Packs or Skills from {{where}} (section 9, "Add").
-                {{purposeLine}}
-
-                Fetch them to this computer with my sign-ins, write the Pack or catalog file, source.json and
-                NOTES.md, and add the SKILLS.md row. Run the validate command from the file with --strict
-                until it prints Errors=0. Ask me before fetching more than 20 Skills or 50 MB.
-
-                When you are done, tell me what is ready in Huddle and what its details card will flag.
-                """,
-            Placeholders: ["{{installFile}}", "{{where}}", "{{purposeLine}}"],
-            RequiredPlaceholders: ["{{installFile}}", "{{where}}"],
-            Timing: PromptTiming.Live),
-
-        new PromptDefinition(
-            Key: "skillPrompt.findForRole",
-            Label: "Find Packs for a role (prompt you paste)",
-            HelperText:
-                "The prompt copied when you ask your AI tool to suggest Packs for a role. Must keep {{installFile}} and {{roleId}}.",
-            Default:
-                """
-                Read the file at {{installFile}} first, and follow it. It is Huddle's instructions for adding
-                Skills and Packs, with this Huddle's roles and Skills in its appendix.
-
-                Task: find Packs for the {{roleTitle}} role (id: {{roleId}}) (section 9, "Find Packs for a role").
-                {{purposeLine}}
-
-                Look first at what this Huddle already has (appendix B) and at catalog Skills not yet
-                downloaded (appendix D). Suggest at most three Packs. For each, say where it is from, which
-                Skills it holds, the licence, and what you could not check. Ask me before you fetch anything.
-                After I choose, add them as the file says, with {{roleId}} in appliesTo, and tell me when they
-                are ready.
-                """,
-            Placeholders: ["{{installFile}}", "{{roleTitle}}", "{{roleId}}", "{{purposeLine}}"],
-            RequiredPlaceholders: ["{{installFile}}", "{{roleId}}"],
-            Timing: PromptTiming.Live),
-
-        new PromptDefinition(
-            Key: "skillPrompt.update",
-            Label: "Check for updates (prompt you paste)",
-            HelperText:
-                "The prompt copied when you ask your AI tool to check Sources for new commits. Must keep {{installFile}} and {{sources}}.",
-            Default:
-                """
-                Read the file at {{installFile}} first, and follow it. It is Huddle's instructions for adding
-                Skills and Packs, with this Huddle's roles and Skills in its appendix.
-
-                Task: check these Sources for updates (section 9, "Check for updates"):
-                {{sources}}
-
-                Read each Source's NOTES.md before you touch it. If it has not moved, change nothing. If it
-                has, pull the new commit, rewrite only the files that changed, update source.json, NOTES.md and
-                the rows' Last updated, and run the validate command until it prints Errors=0. Record a
-                deprecation or a move in source.json with its reason. Delete nothing.
-
-                Then tell me, Source by Source, what changed and what did not.
-                """,
-            Placeholders: ["{{installFile}}", "{{sources}}"],
-            RequiredPlaceholders: ["{{installFile}}", "{{sources}}"],
-            Timing: PromptTiming.Live),
-
-        new PromptDefinition(
-            Key: "skillPrompt.fix",
-            Label: "Fix a problem (prompt you paste)",
-            HelperText:
-                "The prompt Copy fix prompt copies for a Broken or Not downloaded row. Must keep {{installFile}} and {{localPath}}; {{problems}} carries what Huddle found.",
-            Default:
-                """
-                Read the file at {{installFile}} first, and follow it. It is Huddle's instructions for adding
-                Skills and Packs, with this Huddle's roles and Skills in its appendix.
-
-                Task: fix the {{table}} row for {{localPath}} in SKILLS.md (section 9, "Fix a problem").
-                Huddle shows it as {{state}}. Huddle reported:
-
-                {{problems}}
-
-                Find the cause and fix that row and the files it points at, and nothing else. If this computer
-                has no entry for a path, fetch the files here and add this computer's entry only. Run the
-                validate command on the row's path with --strict until it prints Errors=0, then tell me what
-                you changed.
-                """,
-            Placeholders: ["{{installFile}}", "{{table}}", "{{localPath}}", "{{state}}", "{{problems}}"],
-            RequiredPlaceholders: ["{{installFile}}", "{{localPath}}"],
-            Timing: PromptTiming.Live),
-
-        new PromptDefinition(
-            Key: "skillPrompt.fetchSkill",
-            Label: "Fetch one Skill (prompt you paste)",
-            HelperText:
-                "The prompt Copy prompt copies beside a Not downloaded Skill. Must keep {{installFile}} and {{skillName}}.",
-            Default:
-                """
-                Read the file at {{installFile}} first, and follow it. It is Huddle's instructions for adding
-                Skills and Packs, with this Huddle's roles and Skills in its appendix.
-
-                Task: fetch one Skill to this computer (section 9, "Fetch Skills").
-                Skill: {{skillName}}
-                Catalog: {{catalogId}}, at {{catalogPath}}
-                Origin: {{origin}}
-
-                Fetch exactly the commit in the origin, put it in a folder you choose, and set the Skill's
-                "path" in the catalog file (this computer's entry if the catalog is shared). Do not change the
-                SKILLS.md row or any other Skill. Run the validate command on the catalog file with --strict
-                until it prints Errors=0, then tell me when it is ready.
-                """,
-            Placeholders: ["{{installFile}}", "{{skillName}}", "{{catalogId}}", "{{catalogPath}}", "{{origin}}"],
-            RequiredPlaceholders: ["{{installFile}}", "{{skillName}}"],
-            Timing: PromptTiming.Live),
-
-        new PromptDefinition(
-            Key: "skillPrompt.needsSetup",
-            Label: "Needs setup (prompt you paste)",
-            HelperText:
-                "The prompt Copy prompt copies on a Needs setup draft in Build a team. Must keep {{installFile}}, {{roleId}} and {{missing}}.",
-            Default:
-                """
-                Read the file at {{installFile}} first, and follow it. It is Huddle's instructions for adding
-                Skills and Packs, with this Huddle's roles and Skills in its appendix.
-
-                Task: set up what the {{roleTitle}} role (id: {{roleId}}) needs before I can hire it
-                (section 9, "Fetch Skills"). Missing on this computer:
-
-                {{missing}}
-
-                Fetch each one here and fill in its path (this computer's entry if the file is shared). Reuse
-                a catalog entry when one exists (appendix D) and fetch exactly the commit in its origin. Run
-                the validate command with --strict on each file you change until it prints Errors=0. Then tell
-                me what is ready; I will return to Huddle and approve the hire.
-                """,
-            Placeholders: ["{{installFile}}", "{{roleTitle}}", "{{roleId}}", "{{missing}}"],
-            RequiredPlaceholders: ["{{installFile}}", "{{roleId}}", "{{missing}}"],
-            Timing: PromptTiming.Live),
-    ];
+                """;
 }

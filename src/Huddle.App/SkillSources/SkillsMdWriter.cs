@@ -1,21 +1,8 @@
-using System.Text;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.SkillPacks.Reading;
+using System.Text;
 
 namespace Agency.Huddle.App.SkillSources;
-
-/// <summary>The outcome of removing a row from SKILLS.md.</summary>
-internal enum RemoveRowResult
-{
-    /// <summary>The row's lines were deleted.</summary>
-    Removed,
-
-    /// <summary>No row points at that file.</summary>
-    NotFound,
-
-    /// <summary>The file kept changing between the read and the write, three times.</summary>
-    KeptChanging,
-}
 
 /// <summary>Deletes a row's lines from SKILLS.md (§8.8): every other byte is written back as it was, through a temporary
 /// file and a move. If the file changed between the read and the write (by length or write time), it starts again, at
@@ -111,54 +98,5 @@ internal sealed class SkillsMdWriter(SkillSourcesSettings settings)
         }
 
         return lines;
-    }
-}
-
-/// <summary>One row the move writes.</summary>
-/// <param name="LocalPath">The Local path cell: a plain path or <c>NAME: path</c>.</param>
-/// <param name="OriginUrl">The Origin URL cell, or empty.</param>
-/// <param name="LastUpdated">The Last updated cell (<c>yyyy-MM-dd</c>).</param>
-/// <param name="Notes">The Notes cell.</param>
-internal sealed record TemplateRow(string LocalPath, string OriginUrl, string LastUpdated, string Notes);
-
-/// <summary>The fixed template the move writes SKILLS.md from (§8.8 "Create", §6.13): the title, the "do not edit by hand"
-/// note, a line of description, and the two tables. LF line endings, one newline at the end.</summary>
-internal static class SkillsMdTemplate
-{
-    /// <summary>The whole file.</summary>
-    public static string Build(IReadOnlyList<TemplateRow> packs, IReadOnlyList<TemplateRow> catalogs)
-    {
-        ArgumentNullException.ThrowIfNull(packs);
-        ArgumentNullException.ThrowIfNull(catalogs);
-        StringBuilder text = new();
-        text.Append("# Skills registry\n\n");
-        text.Append("> We do not recommend editing this file by hand. Your AI tool adds and updates its rows by\n");
-        text.Append("> following InstallSkillPack.md, and a mistake here makes a Pack or Skill show as Broken in\n");
-        text.Append("> Huddle.\n\n");
-        text.Append("Every Pack and Skill this Huddle knows about. Each row points at a file on this computer.\n\n");
-        Table(text, "Packs", packs);
-        text.Append('\n');
-        Table(text, "Catalogs", catalogs);
-        return text.ToString();
-    }
-
-    /// <summary>One heading and its table.</summary>
-    private static void Table(StringBuilder text, string heading, IReadOnlyList<TemplateRow> rows)
-    {
-        text.Append("## ").Append(heading).Append("\n\n");
-        text.Append("| Local path | Origin URL | Last updated | Notes |\n");
-        text.Append("| --- | --- | --- | --- |\n");
-        foreach (TemplateRow row in rows)
-        {
-            string[] cells = [Cell(row.LocalPath), Cell(row.OriginUrl), Cell(row.LastUpdated), Cell(row.Notes)];
-            text.Append('|').Append(string.Join('|', cells.Select(static cell => cell.Length == 0 ? " " : $" {cell} "))).Append("|\n");
-        }
-    }
-
-    /// <summary>A cell: <c>|</c> escaped, line breaks as spaces, trimmed.</summary>
-    private static string Cell(string value)
-    {
-        string flat = value.Replace("|", "\\|", StringComparison.Ordinal).ReplaceLineEndings(" ").Trim();
-        return flat.Length == 0 ? string.Empty : flat;
     }
 }

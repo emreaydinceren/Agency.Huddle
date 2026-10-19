@@ -1,15 +1,5 @@
 namespace Agency.Huddle.SkillPacks.Checking;
 
-/// <summary>How serious a finding is. An error makes its item Broken; a warning is shown on the details card.</summary>
-public enum Severity
-{
-    /// <summary>Shown, but the item stays usable.</summary>
-    Warning = 1,
-
-    /// <summary>The item the finding belongs to takes the state of its check.</summary>
-    Error = 2,
-}
-
 /// <summary>One thing a check found. The four fields are the whole public contract.</summary>
 /// <param name="Severity">Warning or error, after <see cref="CheckOptions.Strict"/> has been applied.</param>
 /// <param name="Code">A code from <see cref="CheckCatalog"/>, such as <c>S004</c>.</param>

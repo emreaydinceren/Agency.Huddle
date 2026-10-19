@@ -30,7 +30,7 @@ internal sealed class NeedsYouStartupScan(
         IReadOnlyList<Room> rooms;
         try
         {
-            rooms = await teamDirectory.GetRoomsAsync(stoppingToken);
+            rooms = await teamDirectory.GetRoomsAsync(stoppingToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -51,7 +51,7 @@ internal sealed class NeedsYouStartupScan(
 
             try
             {
-                await this.ScanAsync(room.Id, stoppingToken);
+                await this.ScanAsync(room.Id, stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -70,8 +70,8 @@ internal sealed class NeedsYouStartupScan(
     /// <returns>A task that completes when the Room has been seeded or found clear.</returns>
     private async Task ScanAsync(string roomId, CancellationToken ct)
     {
-        IReadOnlyList<User> members = await teamDirectory.GetRoomMembersAsync(roomId, ct);
-        IReadOnlyList<ChatMessage> tail = await chatStore.ReadTailAsync(roomId, NeedsYouStartupScan.TailLength, ct);
+        IReadOnlyList<User> members = await teamDirectory.GetRoomMembersAsync(roomId, ct).ConfigureAwait(false);
+        IReadOnlyList<ChatMessage> tail = await chatStore.ReadTailAsync(roomId, NeedsYouStartupScan.TailLength, ct).ConfigureAwait(false);
         IReadOnlyList<MentionAlias> aliases = aliasSource.Aliases;
 
         ChatMessage? mention = NeedsYouRule.OldestUnansweredMention(

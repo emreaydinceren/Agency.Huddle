@@ -306,19 +306,63 @@ a rule known not to fire only gives false cover.
 Nine `S9999-*` entries are Sonar's own bookkeeping diagnostics, not code rules.
 
 To clear any rule here, follow [Changing a rule](#changing-a-rule).
+## Meziantou.Analyzer
+
+Added 2026-10-18 as a `GlobalPackageReference` (3.0.312) in `Directory.Packages.props`. Scope is
+**product code under `src/`**; a `[tests/**.cs]` section in `.editorconfig` switches off every
+Meziantou rule that fired in tests. Measured with `-p:TreatWarningsAsErrors=false`: 1,396 hits in `src`
+(1,208 of them `Huddle.App`) and 2,359 in `tests` with the defaults.
+
+These rules are `warning`, and their hits in the chat side's `src` were fixed in the same change:
+
+| Rule | Hits fixed | What the fix was |
+| --- | --- | --- |
+| `MA0004` (`ConfigureAwait`), with `CA2007` | 619 | `.ConfigureAwait(false)` on every await outside `Components/`. An `await using` declaration became a plain declaration plus `await using var xScope = x.ConfigureAwait(false);`, because appending `ConfigureAwait` to the declaration would change the variable's type to `ConfiguredAsyncDisposable`. A block-scoped one became `await using (x.ConfigureAwait(false)) { ... }`. |
+| `MA0048` (file name must match type name) | 407 | 393 types moved into their own files, 14 files renamed. Anything that names a source file by path had to follow: `tests/Huddle.Tests/Teams/neutrality-allow.txt` lists `RetroProposalSet.cs` now. |
+| `MA0051` (method too long: 60 lines or 40 statements) | 92 | Extracted private helpers. Behaviour unchanged. |
+| `MA0089` (use the `char` overload) | 19 | `Replace('\r', '\n')`, `string.Join(' ', ...)`; two one-character string constants became `char`. |
+| `MA0042` (use the async variant in an async method) | 7 | `using` became `await using`. One `Cancel()` in `RoomSession.cs` stays behind a narrow `#pragma` with its reason. |
+| `MA0005`, `MA0012`, `MA0022`, `MA0029`, `MA0050`, `MA0052`, `MA0054`, `MA0073`, `MA0100`, `MA0155`, `MA0169` | 0 | Turned on with no hits, so they only guard new code. |
+
+Exemptions, all path-scoped sections in `.editorconfig`:
+
+- **`src/Huddle.App/Components/**.cs`** has `CA2007` and `MA0004` set to `none`. This is the UI layer: its code
+  awaits and then touches component state, dialogs or the renderer, so it must resume on the renderer's
+  context. **Measured, not assumed:** `ConfigureAwait(false)` in the dialog helpers
+  (`ConfirmDialogExtensions`, `MenuDialogs` and others) made
+  `LibraryExplorerTests.DeleteFolderContainingOpenDocument_AsksToLeaveFirst` time out every run, and the same
+  tests pass on a pristine tree. The services under `Components/` keep `ConfigureAwait(false)`; never add
+  it to an await whose continuation touches a component. The analyzer does not see the generated code of
+  `.razor` files, so the components themselves are not flagged.
+- **The ACP subtree** (`src/Huddle.Acp`, `src/Huddle.Console`, `tests/Huddle.Acp.Tests`) has `CA2007`, `MA0004`,
+  `MA0048`, `MA0051`, `MA0042` and `MA0089` set to `none`, like `S108`: about 45 hits there belong to the
+  ACP owner. Delete that section when they are fixed.
+
+The other twelve rules that fire stay at `suggestion`: `MA0002`, `MA0006`, `MA0009`, `MA0023`, `MA0046`,
+`MA0099`, `MA0015`, `MA0084`, `MA0132`, `MA0008`, `MA0011` and `MA0016` (1 to 86 hits each in `src`). Their
+hits are not read yet and do not fail the build. `suggestion` shows in the IDE but does not print in
+`dotnet build`; to count hits, raise the severity to `warning` temporarily and build with
+`-p:TreatWarningsAsErrors=false`. Promote a rule to `warning` once its hits are fixed.
+
+`MA0002` and `MA0006` overlap the written string-comparison rules in `CSharpPrinciples.md` and are the
+first candidates to promote. `MA0009` (regex timeout) is a real denial-of-service check.
+
+**A test that fails in a worktree under `.claude\`:** `SkillsMdGoldenTests.SkillsMd_ForFixture_MatchesGolden`
+fails when the repository path contains a backslash followed by punctuation, because
+`SkillSourcesMove.CodeSpanIfNeeded` then wraps the path in a code span. It fails on an unmodified tree at such a
+path, so it says nothing about a change made there.
 ## Non-Sonar settings
 
 | Setting | Where | Decision and reason |
 | --- | --- | --- |
 | `CS1591` suppressed | `Directory.Build.props` | Turning on the documentation file (needed so `IDE0005` runs) also turns on `CS1591`. XML docs are a house rule enforced by review, the `PreToolUse` hook and `Check-TestDocs.ps1`, not by the compiler. |
-| `CA2007` off | `.editorconfig` | No `SynchronizationContext` to deadlock on in ASP.NET Core or the generic host, so blanket `ConfigureAwait(false)` was judged noise. |
+| `CA2007` warning | `.editorconfig` | **Re-enabled 2026-10-18** (it was `none`, on the grounds that ASP.NET Core and the generic host have no `SynchronizationContext`). Every await in `src` now ends in `.ConfigureAwait(false)`; see [Meziantou.Analyzer](#meziantouanalyzer) for the exemptions. Still off in `tests/**`. |
 | `IDE0008` off | `.editorconfig` | It conflicts with the `var` preferences. |
 | `IDE0058` silent | `.editorconfig` | An unused expression value is common and harmless here. |
 | `IDE0005`, `IDE0011` as errors | `.editorconfig` | Cheap, unambiguous, and they cannot silently regress. |
 | `CA1062` as warning | `.editorconfig` | Public-API guard; kept at warning because existing call sites were not audited when it was added. |
 | `CA1707` off in test projects | `.csproj` | Tests use `Method_Scenario_Expectation` names. |
 | `CA1861` off in `Huddle.Acp.Tests` | `.csproj` | Constant arrays in test data. |
-| `CA2007` also in `Huddle.App` and `Huddle.Contracts` | `.csproj` | **Redundant** with the `.editorconfig` setting. Safe to remove; not yet removed. |
 | `CA1848` off in `Huddle.App` and `Huddle.Contracts` | `.csproj` | Documented allowance in `CSharpPrinciples.md`: direct `logger.LogX` calls are fine there. Leave it. |
 | `CA1031` off in `Huddle.App` and `Huddle.Contracts` | `.csproj` | **Open.** With the suppression lifted about 40 broad `catch` sites show up, far more than the four the Haiku audit counted. See [Deferred](#deferred). |
 

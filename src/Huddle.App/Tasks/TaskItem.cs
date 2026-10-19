@@ -1,27 +1,5 @@
 namespace Agency.Huddle.App.Tasks;
 
-/// <summary>Who made a change. Names are Persona Names, or the Human's Name.</summary>
-public sealed record TaskActor(TaskActorKind Kind, string Name, string? UserId);
-
-/// <summary>The kind of actor who made a change to a Task.</summary>
-public enum TaskActorKind
-{
-    /// <summary>The human user.</summary>
-    Human,
-
-    /// <summary>An AI agent.</summary>
-    Agent,
-
-    /// <summary>Someone outside Huddle who edited the file.</summary>
-    OutsideHuddle,
-}
-
-/// <summary>Where a Task lives. Project is null for a Task directly under its Team.</summary>
-public sealed record TaskLocation(string Team, string? Project, bool Closed);
-
-/// <summary>One entry in a Task's change log.</summary>
-public sealed record ChangeLogEntry(DateTimeOffset At, string Actor, string Summary);
-
 /// <summary>A work item that the Human and AI Teammates share.</summary>
 public sealed record TaskItem
 {

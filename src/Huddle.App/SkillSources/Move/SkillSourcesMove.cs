@@ -57,7 +57,7 @@ internal sealed partial class SkillSourcesMove : ISkillSourcesMove
     /// <inheritdoc/>
     async Task ISkillSourcesMove.RunAsync(CancellationToken ct)
     {
-        _ = await this.RunAsync(ct);
+        _ = await this.RunAsync(ct).ConfigureAwait(false);
     }
 
     /// <summary>Runs the move unless SKILLS.md exists.</summary>
@@ -81,7 +81,7 @@ internal sealed partial class SkillSourcesMove : ISkillSourcesMove
         try
         {
             Directory.CreateDirectory(Path.Combine(dir, "sources", "local", "my-packs"));
-            Plan plan = await Task.Run(() => this.Stage(staging, ct), ct);
+            Plan plan = await Task.Run(() => this.Stage(staging, ct), ct).ConfigureAwait(false);
             if (!this.Place(staging, dir, skillsMd))
             {
                 return null;
@@ -98,12 +98,14 @@ internal sealed partial class SkillSourcesMove : ISkillSourcesMove
             {
                 this.logger.LogInformation(
                     "Moved {Catalogs} catalogs ({Skills} Skills, {Omitted} omitted), {Packs} Pack rows, {Pointed} Skills pointed at, {Left} left in place",
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                     report.Catalogs,
                     report.CatalogSkills,
                     report.OmittedDuplicates,
                     report.ShippedPackRows + report.UserPacksMoved,
                     report.SkillsPointedAt,
                     report.SkillsLeftInPlace);
+#pragma warning restore HAA0601
             }
             return report;
         }
@@ -409,29 +411,7 @@ internal sealed partial class SkillSourcesMove : ISkillSourcesMove
     {
         HashSet<string> ids = new(StringComparer.Ordinal);
         string folder = Path.Combine(this.settings.DataDir, TeamPaths.SkillPacksDir);
-        List<LegacyPack> packs = [];
-        if (Directory.Exists(folder))
-        {
-            foreach (string file in Directory.GetFiles(folder, "*.json").Order(StringComparer.Ordinal))
-            {
-                string name = Path.GetFileName(file);
-                (LegacyPack? pack, string? problem) = LegacyPackReader.Parse(File.ReadAllText(file), name);
-                string? reason = SkipReason(pack, problem, ids);
-                if (reason is not null || pack is null)
-                {
-                    if (pack is not null && reason is not null && !reason.StartsWith("another", StringComparison.Ordinal))
-                    {
-                        ids.Remove(pack.Id);
-                    }
-
-                    plan.Problems.Add(new MoveProblem(name, $"{name}: {reason}."));
-                    plan.Line(MyPacksSource, "pack-skipped", $"file:{name}", $"{name} not moved: {reason}.");
-                    continue;
-                }
-
-                packs.Add(pack);
-            }
-        }
+        List<LegacyPack> packs = ReadLegacyPacks(plan, folder, ids);
 
         foreach (LegacyPack pack in packs.OrderBy(static pack => pack.Id, StringComparer.Ordinal))
         {
@@ -457,6 +437,49 @@ internal sealed partial class SkillSourcesMove : ISkillSourcesMove
             }
         }
 
+        WriteMyPacksSource(plan, folder);
+        return [.. packs.Select(static pack => pack.Id)];
+    }
+
+    /// <summary>Reads the old Pack files, recording a problem and a log line for each one that cannot move.</summary>
+    /// <param name="plan">The plan receiving problems and log lines.</param>
+    /// <param name="folder">The folder holding the old Pack files.</param>
+    /// <param name="ids">The ids accepted so far; each accepted Pack's id is added.</param>
+    /// <returns>The Packs that can move.</returns>
+    private static List<LegacyPack> ReadLegacyPacks(Plan plan, string folder, HashSet<string> ids)
+    {
+        List<LegacyPack> packs = [];
+        if (Directory.Exists(folder))
+        {
+            foreach (string file in Directory.GetFiles(folder, "*.json").Order(StringComparer.Ordinal))
+            {
+                string name = Path.GetFileName(file);
+                (LegacyPack? pack, string? problem) = LegacyPackReader.Parse(File.ReadAllText(file), name);
+                string? reason = SkipReason(pack, problem, ids);
+                if (reason is not null || pack is null)
+                {
+                    if (pack is not null && reason is not null && !reason.StartsWith("another", StringComparison.Ordinal))
+                    {
+                        ids.Remove(pack.Id);
+                    }
+
+                    plan.Problems.Add(new MoveProblem(name, $"{name}: {reason}."));
+                    plan.Line(MyPacksSource, "pack-skipped", $"file:{name}", $"{name} not moved: {reason}.");
+                    continue;
+                }
+
+                packs.Add(pack);
+            }
+        }
+
+        return packs;
+    }
+
+    /// <summary>Writes <c>source.json</c> and <c>NOTES.md</c> for the <c>local/my-packs</c> Source.</summary>
+    /// <param name="plan">The plan receiving the Source files.</param>
+    /// <param name="folder">The folder the old Pack files were kept in.</param>
+    private static void WriteMyPacksSource(Plan plan, string folder)
+    {
         JsonObject source = new()
         {
             ["schemaVersion"] = 1,
@@ -469,7 +492,6 @@ internal sealed partial class SkillSourcesMove : ISkillSourcesMove
         };
         string notes = $"---\nlayout: huddle-my-packs\nmanifest: packs/*.skillpack.json\n---\n# Your own Packs\n\nThe Packs you kept in {folder}, moved here on {plan.Date}. Edit them here; Huddle no longer reads SkillPacks/.\n";
         plan.WriteSource(MyPacksSource, source.ToJsonString(JsonOptions) + "\n", notes);
-        return [.. packs.Select(static pack => pack.Id)];
     }
 
     /// <summary>Why an old Pack file is not moved, or null when it is (§6.13, "A Pack that does not move"). Adds a new id to <paramref name="ids"/>.</summary>

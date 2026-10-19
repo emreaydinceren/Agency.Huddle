@@ -47,7 +47,7 @@ internal sealed class PostMessageTool(ChatService chat, string callerAgentId, IP
 
         try
         {
-            await chat.PostAsync(roomId, callerAgentId, text, ct: cancellationToken);
+            await chat.PostAsync(roomId, callerAgentId, text, ct: cancellationToken).ConfigureAwait(false);
             ownPosts.Record(callerAgentId, roomId, text);
             return $"Posted to room '{roomId}'.";
         }

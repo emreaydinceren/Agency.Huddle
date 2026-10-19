@@ -82,21 +82,10 @@ internal sealed class ProposeTeammatesTool(
             return "The 'roomId' argument is required.";
         }
 
-        var room = await directory.GetRoomAsync(roomId, cancellationToken);
+        var (room, roomRefusal) = await this.ResolveProposableRoomAsync(roomId, cancellationToken).ConfigureAwait(false);
         if (room is null)
         {
-            return $"Unknown room '{roomId}'.";
-        }
-
-        var members = await directory.GetRoomMembersAsync(roomId, cancellationToken);
-        if (!members.Any(member => string.Equals(member.Id, callerAgentId, StringComparison.Ordinal)))
-        {
-            return "You are not a Member of that Room.";
-        }
-
-        if (room.Archived)
-        {
-            return "That Room is Archived.";
+            return roomRefusal;
         }
 
         if (arguments["candidates"] is not JsonArray candidatesArray || candidatesArray.Count is 0 or > 4)
@@ -105,21 +94,13 @@ internal sealed class ProposeTeammatesTool(
         }
 
         var problems = new List<string>();
-        var candidates = new List<Candidate>();
-        for (var index = 0; index < candidatesArray.Count; index++)
-        {
-            if (CandidateJson.TryParse(candidatesArray[index], index + 1, out var candidate, problems) && candidate is not null)
-            {
-                candidates.Add(candidate);
-            }
-        }
-
+        var candidates = ParseCandidates(candidatesArray, problems);
         if (problems.Count > 0)
         {
             return string.Join('\n', problems);
         }
 
-        var check = await checker.CheckAsync(candidates, cancellationToken);
+        var check = await checker.CheckAsync(candidates, cancellationToken).ConfigureAwait(false);
         if (!check.IsValid)
         {
             return string.Join('\n', check.Problems);
@@ -128,12 +109,20 @@ internal sealed class ProposeTeammatesTool(
         var refusal = hireLimits.Check(candidates);
         if (refusal is not null)
         {
-            return refusal.Kind == HireLimitKind.PerTeam
-                ? $"Team {refusal.Team} has {refusal.Used} Teammates and the limit is {refusal.Limit} per Team; propose at most {refusal.Fits}."
-                : $"{refusal.Used} live processes are running and the limit is {refusal.Limit} live processes; propose at most {refusal.Fits}.";
+            return DescribeHireLimit(refusal);
         }
 
-        var caller = await directory.GetUserAsync(callerAgentId, cancellationToken);
+        return await this.StoreProposalAsync(room, roomId, candidates, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Stores the Proposal for the Human to approve, unless this Room already has one waiting.</summary>
+    /// <param name="room">The Room the Proposal is made in.</param>
+    /// <param name="roomId">The Room id as the model sent it.</param>
+    /// <param name="candidates">The checked Candidates.</param>
+    /// <param name="cancellationToken">Cancels the directory lookup.</param>
+    private async Task<string> StoreProposalAsync(Room room, string roomId, List<Candidate> candidates, CancellationToken cancellationToken)
+    {
+        var caller = await directory.GetUserAsync(callerAgentId, cancellationToken).ConfigureAwait(false);
         var proposerName = caller?.Name ?? callerAgentId;
 
         var proposal = new Proposal(
@@ -154,5 +143,57 @@ internal sealed class ProposeTeammatesTool(
         var names = string.Join(", ", candidates.Select(candidate => candidate.Name));
         return $"Proposed {candidates.Count} Teammates ({names}) in Room '{room.Name}' (id {room.Id}). " +
             "The Human has been asked to approve. Do not create Rooms for them or mention them yet; you will be told the outcome in this Room.";
+    }
+
+    /// <summary>Looks the Room up and checks the caller may propose in it: it exists, the caller is a Member and it is not Archived.</summary>
+    /// <param name="roomId">The Room the model named.</param>
+    /// <param name="cancellationToken">Cancels the directory lookups.</param>
+    /// <returns>The Room, or a null Room with the refusal text.</returns>
+    private async Task<(Room? Room, string Refusal)> ResolveProposableRoomAsync(string roomId, CancellationToken cancellationToken)
+    {
+        var room = await directory.GetRoomAsync(roomId, cancellationToken).ConfigureAwait(false);
+        if (room is null)
+        {
+            return (null, $"Unknown room '{roomId}'.");
+        }
+
+        var members = await directory.GetRoomMembersAsync(roomId, cancellationToken).ConfigureAwait(false);
+        if (!members.Any(member => string.Equals(member.Id, callerAgentId, StringComparison.Ordinal)))
+        {
+            return (null, "You are not a Member of that Room.");
+        }
+
+        if (room.Archived)
+        {
+            return (null, "That Room is Archived.");
+        }
+
+        return (room, string.Empty);
+    }
+
+    /// <summary>Parses every Candidate in the array, appending each problem to <paramref name="problems"/>.</summary>
+    /// <param name="candidatesArray">The <c>candidates</c> array the model sent.</param>
+    /// <param name="problems">Collects every problem found, across all Candidates.</param>
+    private static List<Candidate> ParseCandidates(JsonArray candidatesArray, List<string> problems)
+    {
+        var candidates = new List<Candidate>();
+        for (var index = 0; index < candidatesArray.Count; index++)
+        {
+            if (CandidateJson.TryParse(candidatesArray[index], index + 1, out var candidate, problems) && candidate is not null)
+            {
+                candidates.Add(candidate);
+            }
+        }
+
+        return candidates;
+    }
+
+    /// <summary>Words the refusal for a Proposal that would push the Teammate count over a hire limit.</summary>
+    /// <param name="refusal">The refusal <see cref="HireLimitGuard"/> returned.</param>
+    private static string DescribeHireLimit(HireRefusal refusal)
+    {
+        return refusal.Kind == HireLimitKind.PerTeam
+            ? $"Team {refusal.Team} has {refusal.Used} Teammates and the limit is {refusal.Limit} per Team; propose at most {refusal.Fits}."
+            : $"{refusal.Used} live processes are running and the limit is {refusal.Limit} live processes; propose at most {refusal.Fits}.";
     }
 }

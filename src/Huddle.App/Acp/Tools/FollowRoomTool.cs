@@ -48,7 +48,7 @@ internal sealed class FollowRoomTool(RoomFollows roomFollows, ITeamDirectory tea
             return "'roomId' is a required argument.";
         }
 
-        var room = await teamDirectory.GetRoomAsync(roomId, cancellationToken);
+        var room = await teamDirectory.GetRoomAsync(roomId, cancellationToken).ConfigureAwait(false);
         if (room is null)
         {
             return $"Unknown room '{roomId}'.";
@@ -58,7 +58,7 @@ internal sealed class FollowRoomTool(RoomFollows roomFollows, ITeamDirectory tea
         // following a Room the caller is not in would report success here and then silently deliver
         // nothing. Refusing up front, and saying why, is cheaper than a caller discovering that on
         // the first Message that never arrives.
-        var members = await teamDirectory.GetRoomMembersAsync(roomId, cancellationToken);
+        var members = await teamDirectory.GetRoomMembersAsync(roomId, cancellationToken).ConfigureAwait(false);
         if (!members.Any(member => string.Equals(member.Id, callerAgentId, StringComparison.Ordinal)))
         {
             return $"You are not a member of room '{room.Name}' (id {room.Id}), so following it would be a silent no-op: delivery only ever reaches Members. Ask a member to invite you with invite_agent, or start your own Room with create_room instead.";

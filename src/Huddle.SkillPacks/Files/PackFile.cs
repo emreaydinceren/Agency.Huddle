@@ -1,25 +1,8 @@
-using System.Text.Json;
 using Agency.Huddle.SkillPacks.Checking;
 using Agency.Huddle.SkillPacks.Reading;
+using System.Text.Json;
 
 namespace Agency.Huddle.SkillPacks.Files;
-
-/// <summary>The outcome of reading one file: the record when its shape is usable, and the findings either way.</summary>
-/// <typeparam name="T">The record type.</typeparam>
-/// <param name="Value">The record, or null when the file's shape is unusable.</param>
-/// <param name="Findings">The shape findings.</param>
-public sealed record ParseResult<T>(T? Value, IReadOnlyList<Finding> Findings) where T : class
-{
-    /// <summary>True when <see cref="Value"/> is set.</summary>
-    public bool Ok => this.Value is not null;
-}
-
-/// <summary>A Skill inside a Pack: its own folder, or a named entry of a catalog. Exactly one of Path and Catalog is set (P009).</summary>
-/// <param name="Name">The Skill name.</param>
-/// <param name="Path">Where the folder is. Null when <paramref name="Catalog"/> is set. An empty entry means Not downloaded.</param>
-/// <param name="Catalog">The id of a catalog that lists this Skill. Null when <paramref name="Path"/> is set.</param>
-/// <param name="Origin">The pinned tree URL when the Pack gives its own path; ignored when <paramref name="Catalog"/> is set.</param>
-public sealed record PackSkill(string Name, PathEntries? Path, string? Catalog, string? Origin);
 
 /// <summary>A <c>*.skillpack.json</c> file (§7.2).</summary>
 /// <param name="SchemaVersion">Always <see cref="KnownSchemaVersion"/> once parsed.</param>
@@ -71,16 +54,7 @@ public sealed record PackFile(
         string? title = JsonFields.String(root, "title");
         string? source = JsonFields.String(root, "source");
         JsonElement? skills = JsonFields.Get(root, "skills");
-        List<string> missing = [];
-        AddIfBlank(missing, "id", id);
-        AddIfBlank(missing, "version", version);
-        AddIfBlank(missing, "title", title);
-        AddIfBlank(missing, "source", source);
-        if (skills is not { ValueKind: JsonValueKind.Array })
-        {
-            missing.Add("skills");
-        }
-
+        List<string> missing = MissingFields(id, version, title, source, skills);
         if (missing.Count > 0 || id is null || version is null || title is null || source is null || skills is not { ValueKind: JsonValueKind.Array } skillArray)
         {
             return Fail("P002", filePath, $"Required field missing or not text: {string.Join(", ", missing)}.");
@@ -164,6 +138,22 @@ public sealed record PackFile(
         }
 
         return result;
+    }
+
+    /// <summary>The required fields that are blank, or the <c>skills</c> list when it is not an array.</summary>
+    private static List<string> MissingFields(string? id, string? version, string? title, string? source, JsonElement? skills)
+    {
+        List<string> missing = [];
+        AddIfBlank(missing, "id", id);
+        AddIfBlank(missing, "version", version);
+        AddIfBlank(missing, "title", title);
+        AddIfBlank(missing, "source", source);
+        if (skills is not { ValueKind: JsonValueKind.Array })
+        {
+            missing.Add("skills");
+        }
+
+        return missing;
     }
 
     /// <summary>Adds <paramref name="field"/> when <paramref name="value"/> is blank.</summary>

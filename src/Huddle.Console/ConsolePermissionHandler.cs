@@ -67,7 +67,9 @@ internal sealed class ConsolePermissionHandler(IConsoleInput input, IConsoleOutp
 
     private static void Render(PermissionRequestContext context, IConsoleOutput output)
     {
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
         string kind = context.ToolCall.Kind.ToString().ToLowerInvariant();
+#pragma warning restore HAA0102
         string title = context.ToolCall.Title ?? context.ToolCall.ToolCallId;
         output.WriteLine($"Permission requested: [{kind}] {title}", ConsoleStyle.Tool);
 

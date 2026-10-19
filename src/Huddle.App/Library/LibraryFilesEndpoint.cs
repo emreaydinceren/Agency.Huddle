@@ -97,7 +97,8 @@ internal static class LibraryFilesEndpoint
     /// <param name="ct">Cancels the read.</param>
     private static async Task<byte[]> ReadHeadAsync(string fullPath, CancellationToken ct)
     {
-        using FileStream stream = new(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        FileStream stream = new(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        await using var streamScope = stream.ConfigureAwait(false);
         int length = (int)Math.Min(stream.Length, DetectionHeadBytes);
         byte[] buffer = new byte[length];
         int totalRead = 0;

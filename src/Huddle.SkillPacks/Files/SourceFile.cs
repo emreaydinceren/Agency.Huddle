@@ -1,48 +1,9 @@
-using System.Globalization;
-using System.Text.Json;
 using Agency.Huddle.SkillPacks.Checking;
 using Agency.Huddle.SkillPacks.Reading;
+using System.Globalization;
+using System.Text.Json;
 
 namespace Agency.Huddle.SkillPacks.Files;
-
-/// <summary>Where a Source's files came from.</summary>
-public enum SourceKind
-{
-    /// <summary>A GitHub repository.</summary>
-    Github,
-
-    /// <summary>Any other git repository.</summary>
-    Git,
-
-    /// <summary>A folder on disk.</summary>
-    Local,
-}
-
-/// <summary>What the Source says about itself.</summary>
-public enum SourceStatus
-{
-    /// <summary>In use.</summary>
-    Active,
-
-    /// <summary>Still choosable, but on its way out.</summary>
-    Deprecated,
-
-    /// <summary>Pulled: new hires cannot take it.</summary>
-    Withdrawn,
-
-    /// <summary>Moved elsewhere (<see cref="SourceFile.MovedTo"/>).</summary>
-    Moved,
-}
-
-/// <summary>Whether reaching the Source needs a sign-in. Never a credential.</summary>
-public enum SignInMode
-{
-    /// <summary>Public.</summary>
-    None,
-
-    /// <summary>The AI tool needs the Human's sign-in.</summary>
-    Required,
-}
 
 /// <summary>A <c>sources/&lt;source&gt;/source.json</c> file (§7.2). Written by the AI tool; Huddle reads it.</summary>
 /// <param name="SchemaVersion">Always 1 once parsed.</param>
@@ -113,17 +74,7 @@ public sealed record SourceFile(
         PathEntries? localPath = JsonFields.Get(root, "localPath") is { } localValue ? PathEntries.FromJson(localValue) : null;
         string? reason = JsonFields.String(root, "statusReason");
         string? movedTo = JsonFields.String(root, "movedTo");
-        List<Finding> findings = [];
-        if (statusValue != SourceStatus.Active && string.IsNullOrWhiteSpace(reason))
-        {
-            findings.Add(Finding.Error("O003", filePath, $"status is {Lower(statusValue)} but statusReason is empty."));
-        }
-
-        if (statusValue == SourceStatus.Moved && string.IsNullOrWhiteSpace(movedTo))
-        {
-            findings.Add(Finding.Error("O003", filePath, "status is moved but movedTo is empty."));
-        }
-
+        List<Finding> findings = StatusFindings(statusValue, reason, movedTo, filePath);
         SourceFile file = new(
             PackFile.KnownSchemaVersion,
             kindValue,
@@ -140,10 +91,29 @@ public sealed record SourceFile(
         return new ParseResult<SourceFile>(file, findings);
     }
 
+    /// <summary>The O003 findings for a status that needs a reason or a destination it does not have.</summary>
+    private static List<Finding> StatusFindings(SourceStatus status, string? reason, string? movedTo, string filePath)
+    {
+        List<Finding> findings = [];
+        if (status != SourceStatus.Active && string.IsNullOrWhiteSpace(reason))
+        {
+            findings.Add(Finding.Error("O003", filePath, $"status is {Lower(status)} but statusReason is empty."));
+        }
+
+        if (status == SourceStatus.Moved && string.IsNullOrWhiteSpace(movedTo))
+        {
+            findings.Add(Finding.Error("O003", filePath, "status is moved but movedTo is empty."));
+        }
+
+        return findings;
+    }
+
     /// <summary>The lowercase name an enum value is written with.</summary>
     public static string Lower<TEnum>(TEnum value) where TEnum : struct, Enum
     {
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
         return new string([.. value.ToString().Select(char.ToLowerInvariant)]);
+#pragma warning restore HAA0102
     }
 
     /// <summary>An enum value from its lowercase name, or null.</summary>

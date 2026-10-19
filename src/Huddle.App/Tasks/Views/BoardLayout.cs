@@ -2,20 +2,11 @@ using System.Text;
 
 namespace Agency.Huddle.App.Tasks.Views;
 
-/// <summary>The Board's arrangement: its swimlanes, its visible columns, and how many Tasks a hidden column hides.</summary>
-public sealed record BoardModel(IReadOnlyList<BoardLane> Lanes, IReadOnlyList<BoardColumn> VisibleColumns, int HiddenTaskCount);
-
-/// <summary>One swimlane of a Board: its raw grouping key, its display label, and its cells. Key is <c>""</c> when ungrouped.</summary>
-public sealed record BoardLane(string Key, string? Label, IReadOnlyList<BoardCell> Cells);
-
-/// <summary>The Tasks in one lane that fall under one Board column.</summary>
-public sealed record BoardCell(BoardColumn Column, IReadOnlyList<TaskItem> Items);
-
 /// <summary>Builds a <see cref="BoardModel"/> from sorted Tasks and a <see cref="TaskView"/>, for Spec §12.6.</summary>
 internal static class BoardLayout
 {
     /// <summary>Separates the raw grouping-field values that make up a lane's Key. A control character, so it never collides with user text.</summary>
-    private const string KeySeparator = "\u001f";
+    private const char KeySeparator = '\u001f';
 
     /// <summary>Replaces a null grouping value in a lane's Key, so a Teammate literally named "Unassigned" cannot collide with the null group.</summary>
     private const string NullSentinel = "\u0000";
@@ -150,7 +141,9 @@ internal static class BoardLayout
         TaskGroupField.Assignee => task.Assignee ?? NullSentinel,
         TaskGroupField.State => task.Status.ToWire(),
         TaskGroupField.Sprint => task.Sprint?.ToString() ?? NullSentinel,
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(field), field, "Unknown grouping field."),
+#pragma warning restore HAA0601
     };
 
     /// <summary>Encodes a string as Base64Url (no padding), so any character survives inside a zone id.</summary>

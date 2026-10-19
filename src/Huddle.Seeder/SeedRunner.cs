@@ -1,21 +1,7 @@
 using Agency.Huddle.Seeder.Model;
-using Agency.Huddle.Seeder.Scenarios;
 using Agency.Huddle.Seeder.Writing;
 
 namespace Agency.Huddle.Seeder;
-
-/// <summary>What the caller asked the seeder to build.</summary>
-/// <param name="Scenario">The scenario to build.</param>
-/// <param name="Root">The seed root; wiped first.</param>
-/// <param name="Today">The run date every offset is measured from.</param>
-internal sealed record SeedRequest(IScenario Scenario, string Root, DateOnly Today);
-
-/// <summary>What was built.</summary>
-/// <param name="Root">The seed root.</param>
-/// <param name="DataDir">The data folder Huddle should be pointed at.</param>
-/// <param name="Plan">The plan that was written.</param>
-/// <param name="Ids">The ids the database assigned.</param>
-internal sealed record SeedSummary(string Root, string DataDir, SeedPlan Plan, DatabaseResult Ids);
 
 /// <summary>Wipes the seed root and builds a scenario into it. Huddle is never started; everything goes through files and Huddle's own public data API.</summary>
 internal static class SeedRunner
@@ -42,7 +28,7 @@ internal static class SeedRunner
         // Without this marker Huddle's one-time layout migration moves every non-Task note under Teams/ into Teammates/_unsorted/.
         SeedIo.WriteText(SeedIo.Resolve(dataDir, "Teammates/" + LayoutMarker), string.Empty);
 
-        DatabaseResult ids = await DatabaseSeeder.SeedAsync(plan, dataDir, ct);
+        DatabaseResult ids = await DatabaseSeeder.SeedAsync(plan, dataDir, ct).ConfigureAwait(false);
 
         WriteFolders(plan, dataDir);
         WriteTeammates(plan, dataDir);

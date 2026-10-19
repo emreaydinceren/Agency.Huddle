@@ -121,7 +121,49 @@ internal sealed partial class PersonaRenameCascade(
     /// <param name="renamed">The old and the new Name of the Persona that changed.</param>
     private void OnPersonaRenamed(PersonaRenamed renamed)
     {
-        // FIRST, and deliberately ABOVE the early return below: an Avatar exists whether or not an
+        this.RenamePersonaScopedState(renamed);
+        this.RenameTaskAndViewReferences(renamed);
+
+        // corrections-B2 item 18: ABOVE the "no Agent row" early return below, same reasoning as the
+        // Avatar/file-state/Room-Session/Task/View moves above it - the Teammate folder exists (once
+        // any Work Dir has ever been created inside it, or a definition file placed there) whether or
+        // not an Agent has ever registered, so gating the move on the Team Directory row would leave
+        // a stock installation (Acp:Enabled false by default) never moving it at all.
+        //
+        // Begun synchronously, here, rather than inside the detached task below: corrections-B2 item
+        // 20 needs the pending state visible to a concurrent DotAcpAgentHostFactory.StartAsync the
+        // instant this method returns, not after the detached task has had a chance to run.
+        var folderMoveHandle = folderMoves.Begin(renamed.NewName);
+        _ = this.MoveTeammateFolderDetachedAsync(folderMoveHandle, renamed.OldName, renamed.NewName);
+
+        var user = teamDirectory.FindUserByName(renamed.OldName);
+        if (user is null || user.Kind != UserKind.Agent)
+        {
+            // No Agent has ever registered under the old Name - the normal case when Acp:Enabled is
+            // false, or when this Persona has simply never connected. There is nothing left to cascade.
+            return;
+        }
+
+        if (!teamDirectory.RenameUser(user.Id, renamed.NewName))
+        {
+            // The likeliest cause is that the new Name is already held by a different Agent. A
+            // partial cascade (a Room renamed under a Name the users row never took) is worse than
+            // none, so stop here - the Teammate folder still moves above, independently.
+            LogRenameRejected(logger, renamed.OldName, renamed.NewName);
+            return;
+        }
+
+        _ = this.CascadeDetachedAsync(user.Id, renamed.OldName, renamed.NewName);
+    }
+
+    /// <summary>
+    /// Moves the Avatar, Spend, offered commands, File Changes state and Room Session state of the
+    /// renamed Persona. Runs ABOVE the "no Agent row" early return of <see cref="OnPersonaRenamed"/>.
+    /// </summary>
+    /// <param name="renamed">The old and the new Name of the Persona that changed.</param>
+    private void RenamePersonaScopedState(PersonaRenamed renamed)
+    {
+        // FIRST, and deliberately ABOVE the early return in OnPersonaRenamed: an Avatar exists whether or not an
         // Agent has ever connected, so gating it on the Team Directory row would silently lose the
         // avatar of a Teammate that has never run - which, with Acp:Enabled false by default, is
         // every Teammate in a stock installation.
@@ -171,7 +213,15 @@ internal sealed partial class PersonaRenameCascade(
         {
             LogRoomSessionsMoveFailed(logger, renamed.OldName, renamed.NewName, ex);
         }
+    }
 
+    /// <summary>
+    /// Rewrites the renamed Persona's Task and saved-View references. Runs ABOVE the "no Agent row"
+    /// early return of <see cref="OnPersonaRenamed"/>.
+    /// </summary>
+    /// <param name="renamed">The old and the new Name of the Persona that changed.</param>
+    private void RenameTaskAndViewReferences(PersonaRenamed renamed)
+    {
         // Same placement and the same reason again (Spec §9.6): a Task's creator/assignee, and a
         // saved View's assignee filter, both exist whether or not an Agent has ever connected, so
         // this must sit ABOVE the "no Agent row" early return too. Two separate try/catch blocks, so
@@ -196,37 +246,6 @@ internal sealed partial class PersonaRenameCascade(
         {
             LogViewRenameFailed(logger, renamed.OldName, renamed.NewName, ex);
         }
-
-        // corrections-B2 item 18: ABOVE the "no Agent row" early return below, same reasoning as the
-        // Avatar/file-state/Room-Session/Task/View moves above it - the Teammate folder exists (once
-        // any Work Dir has ever been created inside it, or a definition file placed there) whether or
-        // not an Agent has ever registered, so gating the move on the Team Directory row would leave
-        // a stock installation (Acp:Enabled false by default) never moving it at all.
-        //
-        // Begun synchronously, here, rather than inside the detached task below: corrections-B2 item
-        // 20 needs the pending state visible to a concurrent DotAcpAgentHostFactory.StartAsync the
-        // instant this method returns, not after the detached task has had a chance to run.
-        var folderMoveHandle = folderMoves.Begin(renamed.NewName);
-        _ = this.MoveTeammateFolderDetachedAsync(folderMoveHandle, renamed.OldName, renamed.NewName);
-
-        var user = teamDirectory.FindUserByName(renamed.OldName);
-        if (user is null || user.Kind != UserKind.Agent)
-        {
-            // No Agent has ever registered under the old Name - the normal case when Acp:Enabled is
-            // false, or when this Persona has simply never connected. There is nothing left to cascade.
-            return;
-        }
-
-        if (!teamDirectory.RenameUser(user.Id, renamed.NewName))
-        {
-            // The likeliest cause is that the new Name is already held by a different Agent. A
-            // partial cascade (a Room renamed under a Name the users row never took) is worse than
-            // none, so stop here - the Teammate folder still moves above, independently.
-            LogRenameRejected(logger, renamed.OldName, renamed.NewName);
-            return;
-        }
-
-        _ = this.CascadeDetachedAsync(user.Id, renamed.OldName, renamed.NewName);
     }
 
     /// <summary>
@@ -393,6 +412,23 @@ internal sealed partial class PersonaRenameCascade(
             return;
         }
 
+        if (!await this.TryMoveDirectoryWithRetryAsync(source, target, caseOnlyChange, oldName, newName).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        this.FinishFolderMove(target, oldName, newName);
+    }
+
+    /// <summary>Moves the folder, retrying a locked directory a few times before giving up.</summary>
+    /// <param name="source">The old Teammate folder.</param>
+    /// <param name="target">The new Teammate folder.</param>
+    /// <param name="caseOnlyChange">Whether the rename only changes letter case, so the move goes through a temporary sibling.</param>
+    /// <param name="oldName">The Persona's old Name, for the failure log.</param>
+    /// <param name="newName">The Persona's new Name, for the failure log.</param>
+    /// <returns><see langword="true"/> when the folder moved; <see langword="false"/> when every attempt failed and the failure was logged.</returns>
+    private async Task<bool> TryMoveDirectoryWithRetryAsync(string source, string target, bool caseOnlyChange, string oldName, string newName)
+    {
         for (var attempt = 1; attempt <= MaxWorkDirMoveAttempts; attempt++)
         {
             try
@@ -420,10 +456,19 @@ internal sealed partial class PersonaRenameCascade(
             catch (IOException ex)
             {
                 LogWorkDirMoveFailed(logger, oldName, newName, ex);
-                return;
+                return false;
             }
         }
 
+        return true;
+    }
+
+    /// <summary>Renames the moved definition file, ensures the new Work Dir exists and rescans the Persona index.</summary>
+    /// <param name="target">The new Teammate folder.</param>
+    /// <param name="oldName">The Persona's old Name.</param>
+    /// <param name="newName">The Persona's new Name.</param>
+    private void FinishFolderMove(string target, string oldName, string newName)
+    {
         // The definition file travelled inside the folder still named for the OLD Name - rename it
         // now, exactly once, only if PersonaStore.Update actually left it there under that name.
         var movedDefinition = Path.Combine(target, $"{oldName}.md");

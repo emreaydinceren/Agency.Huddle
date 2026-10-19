@@ -21,13 +21,13 @@ internal static class LinkPaths
         if (Directory.Exists(path))
         {
             DirectoryInfo info = new(path);
-            return info.Attributes.HasFlag(FileAttributes.ReparsePoint) ? ResolveLinkTarget(info) : null;
+            return (info.Attributes & FileAttributes.ReparsePoint) != 0 ? ResolveLinkTarget(info) : null;
         }
 
         if (File.Exists(path))
         {
             FileInfo info = new(path);
-            return info.Attributes.HasFlag(FileAttributes.ReparsePoint) ? ResolveLinkTarget(info) : null;
+            return (info.Attributes & FileAttributes.ReparsePoint) != 0 ? ResolveLinkTarget(info) : null;
         }
 
         return null;

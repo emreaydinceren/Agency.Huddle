@@ -169,7 +169,19 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
         // Dictionary grouped by OrdinalIgnoreCase to handle case-insensitive duplicates
         Dictionary<string, TeamData> byName = new(StringComparer.OrdinalIgnoreCase);
 
-        // Add folders first - their spelling wins for display name
+        AddFolders(byName, folders);
+        AddLabels(byName, labels);
+        AddMembers(byName, members);
+        FinalizeDisplayNames(byName);
+
+        return BuildSummaries(byName, cards);
+    }
+
+    /// <summary>Adds the Team folders first; their spelling wins for the display name.</summary>
+    /// <param name="byName">The teams gathered so far, compared without case.</param>
+    /// <param name="folders">Team folders on disk.</param>
+    private static void AddFolders(Dictionary<string, TeamData> byName, IReadOnlyList<TeamFolder> folders)
+    {
         foreach (TeamFolder folder in folders)
         {
             if (byName.TryGetValue(folder.Name, out TeamData? existing))
@@ -194,8 +206,13 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
                 };
             }
         }
+    }
 
-        // Add labels that don't already exist and track spellings
+    /// <summary>Adds the labels that do not already exist and tracks their spellings.</summary>
+    /// <param name="byName">The teams gathered so far, compared without case.</param>
+    /// <param name="labels">Known team labels.</param>
+    private static void AddLabels(Dictionary<string, TeamData> byName, IReadOnlyList<string> labels)
+    {
         foreach (string label in labels)
         {
             if (byName.TryGetValue(label, out TeamData? existing))
@@ -217,8 +234,13 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
                 };
             }
         }
+    }
 
-        // Add members to their teams and track spellings
+    /// <summary>Adds each Persona to its Teams and tracks the spellings.</summary>
+    /// <param name="byName">The teams gathered so far, compared without case.</param>
+    /// <param name="members">Persona team memberships.</param>
+    private static void AddMembers(Dictionary<string, TeamData> byName, IReadOnlyList<(string Persona, IReadOnlyList<string> Teams)> members)
+    {
         foreach ((string personaName, IReadOnlyList<string> personaTeams) in members)
         {
             foreach (string team in personaTeams)
@@ -247,8 +269,12 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
                 teamData.Members.Add(personaName);
             }
         }
+    }
 
-        // Finalize display names - use first spelling in ordinal order for entries without folders
+    /// <summary>Finalises display names: the first spelling in ordinal order for entries without a folder.</summary>
+    /// <param name="byName">The teams gathered so far, compared without case.</param>
+    private static void FinalizeDisplayNames(Dictionary<string, TeamData> byName)
+    {
         foreach (TeamData data in byName.Values)
         {
             if (!data.HasFolder && data.Spellings.Count > 0)
@@ -256,8 +282,14 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
                 data.DisplayName = data.Spellings.OrderBy(s => s, StringComparer.Ordinal).First();
             }
         }
+    }
 
-        // Build the result list with filtering, deduplication and sorting
+    /// <summary>Builds the result list with filtering, deduplication and sorting.</summary>
+    /// <param name="byName">The teams gathered, compared without case.</param>
+    /// <param name="cards">Parsed <c>_team.md</c> files by Team name.</param>
+    /// <returns>The team summaries, sorted by name.</returns>
+    private static List<TeamSummary> BuildSummaries(Dictionary<string, TeamData> byName, Dictionary<string, TeamFile> cards)
+    {
         List<TeamSummary> result = byName.Values
             .Select(data => new TeamSummary(
                 data.DisplayName,

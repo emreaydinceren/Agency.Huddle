@@ -52,7 +52,7 @@ internal sealed class ConfirmRequestTool(
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
+        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
         if (actor is null)
         {
             return actorRefusal;
@@ -80,12 +80,7 @@ internal sealed class ConfirmRequestTool(
             return transition.Error ?? string.Empty;
         }
 
-        string note = (noteText ?? string.Empty).Trim();
-        TaskPatch patch = new()
-        {
-            Description = note.Length > 0 ? string.Concat(request.Description, "\n\n## Confirmation\n", note) : null,
-            ExtraFields = [.. (fields with { ConfirmedBy = actor.Name }).ToFrontmatter()],
-        };
+        TaskPatch patch = BuildConfirmationPatch(request, fields, actor, noteText);
 
         if (!TaskToolText.TryRun(() => tasks.Update(request.Id, patch, request.Version, actor), out TaskResult? updateResult, out string updateRunRefusal))
         {
@@ -109,9 +104,24 @@ internal sealed class ConfirmRequestTool(
             return closeRefusal;
         }
 
-        await notifier.NotifyAsync(closed, RequestEvent.Confirm, transition.Wake, actor.Name, cancellationToken);
+        await notifier.NotifyAsync(closed, RequestEvent.Confirm, transition.Wake, actor.Name, cancellationToken).ConfigureAwait(false);
 
         return string.Create(CultureInfo.InvariantCulture, $"Confirmed {closed.Id}; it is closed.");
+    }
+
+    /// <summary>Builds the patch that records <c>confirmed_by</c> and appends the optional note under a Confirmation heading.</summary>
+    /// <param name="request">The Request being confirmed.</param>
+    /// <param name="fields">The Request fields as they are.</param>
+    /// <param name="actor">The confirming caller.</param>
+    /// <param name="noteText">The raw <c>note</c> argument, if any.</param>
+    private static TaskPatch BuildConfirmationPatch(TaskItem request, RequestFields fields, TaskActor actor, string? noteText)
+    {
+        string note = (noteText ?? string.Empty).Trim();
+        return new TaskPatch
+        {
+            Description = note.Length > 0 ? string.Concat(request.Description, "\n\n## Confirmation\n", note) : null,
+            ExtraFields = [.. (fields with { ConfirmedBy = actor.Name }).ToFrontmatter()],
+        };
     }
 
     /// <summary>Puts back the Request fields and body that confirming changed, after closing was refused.</summary>

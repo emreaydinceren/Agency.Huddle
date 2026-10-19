@@ -20,6 +20,35 @@ public sealed class TaskIdTests
         Assert.Equal(expectedNumber, id.Number);
     }
 
+    /// <summary>TryFormat writes exactly the text <see cref="TaskId.ToString"/> returns, padded to four digits.</summary>
+    [Theory]
+    [InlineData("PLAT", 42)]
+    [InlineData("A", 1)]
+    [InlineData("ABCDEFGH", 123456789)]
+    public void TryFormat_FitsBuffer_MatchesToString(string prefix, int number)
+    {
+        TaskId id = new(prefix, number);
+        Span<char> buffer = stackalloc char[32];
+
+        bool fitted = id.TryFormat(buffer, out int written);
+
+        Assert.True(fitted);
+        Assert.Equal(id.ToString(), buffer[..written].ToString());
+    }
+
+    /// <summary>TryFormat reports failure and writes nothing when the buffer is too small.</summary>
+    [Fact]
+    public void TryFormat_BufferTooSmall_ReturnsFalse()
+    {
+        TaskId id = new("PLAT", 42);
+        Span<char> buffer = stackalloc char[4];
+
+        bool fitted = id.TryFormat(buffer, out int written);
+
+        Assert.False(fitted);
+        Assert.Equal(0, written);
+    }
+
     /// <summary>Invalid TaskIds return false.</summary>
     [Theory]
     [InlineData("PLAT")]

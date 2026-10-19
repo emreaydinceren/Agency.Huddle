@@ -1,22 +1,12 @@
+using Agency.Huddle.SkillPacks;
+using Agency.Huddle.SkillPacks.Resolving;
 using System.Globalization;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Agency.Huddle.SkillPacks;
-using Agency.Huddle.SkillPacks.Resolving;
 
 namespace Agency.Huddle.App.SkillSources;
-
-/// <summary>One <c>log.jsonl</c> line as its writer names it; <see cref="SourceLog"/> fills <c>at</c>, <c>computer</c> and
-/// <c>huddle</c> (§7.2, "sources/&lt;source&gt;/log.jsonl").</summary>
-/// <param name="Event">One of the events of §7.2.</param>
-/// <param name="Subject"><c>pack:&lt;id&gt;</c>, <c>catalog:&lt;id&gt;</c>, <c>skill:&lt;name&gt;</c> or <c>file:&lt;path&gt;</c>.</param>
-/// <param name="Action">A finer label; only <c>moved</c> uses it.</param>
-/// <param name="Detail">One sentence for people.</param>
-/// <param name="Code">A check code, for <c>row-broken</c>.</param>
-/// <param name="Data">Event-specific values.</param>
-internal sealed record LogLine(string Event, string Subject, string? Action = null, string? Detail = null, string? Code = null, IReadOnlyDictionary<string, object?>? Data = null);
 
 /// <summary>Appends lines to a Source's <c>log.jsonl</c>: one write per line with <see cref="FileShare.ReadWrite"/>, so two
 /// Huddles interleave whole lines; never rewritten, never rotated.</summary>
