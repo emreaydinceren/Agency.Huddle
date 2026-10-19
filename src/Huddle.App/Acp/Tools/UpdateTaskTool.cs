@@ -55,6 +55,8 @@ internal sealed class UpdateTaskTool(
             ["due_date"] = new JsonObject { ["type"] = "string" },
             ["reason"] = new JsonObject { ["type"] = "string" },
             ["sprint"] = new JsonObject { ["type"] = "string" },
+            ["human_gate"] = new JsonObject { ["type"] = "boolean" },
+            ["action"] = new JsonObject { ["type"] = "string" },
         },
         ["required"] = new JsonArray { "taskId" },
     };
@@ -148,7 +150,9 @@ internal sealed class UpdateTaskTool(
             || !TryReadOptionalDate(arguments, "start_date", out Optional<DateOnly?> startDate, out refusal)
             || !TryReadOptionalDate(arguments, "due_date", out Optional<DateOnly?> dueDate, out refusal)
             || !TaskToolText.TryGetString(arguments, "reason", out string? reason, out refusal)
-            || !TryReadSprint(arguments, sprints, out Optional<SprintId?> sprint, out refusal))
+            || !TryReadSprint(arguments, sprints, out Optional<SprintId?> sprint, out refusal)
+            || !TryReadHumanGate(arguments, out Optional<bool> humanGate, out refusal)
+            || !TryReadAction(arguments, out Optional<string?> action, out refusal))
         {
             return false;
         }
@@ -170,8 +174,50 @@ internal sealed class UpdateTaskTool(
             Project = project,
             Reason = reason,
             Sprint = sprint,
+            HumanGate = humanGate,
+            Action = action,
         };
         refusal = string.Empty;
+        return true;
+    }
+
+    /// <summary>Reads the optional <c>human_gate</c> argument; absent leaves it unset, and <see langword="false"/> is passed on so the service can refuse it for an Agent.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="humanGate">The gate change, unset when the argument is absent.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryReadHumanGate(JsonObject arguments, out Optional<bool> humanGate, out string refusal)
+    {
+        humanGate = default;
+        if (!TaskToolText.TryGetBool(arguments, "human_gate", false, out bool value, out refusal))
+        {
+            return false;
+        }
+
+        if (arguments.ContainsKey("human_gate"))
+        {
+            humanGate = Optional<bool>.Set(value);
+        }
+
+        return true;
+    }
+
+    /// <summary>Reads the optional <c>action</c> argument; an empty string clears the Action.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="action">The Action change, unset when the argument is absent.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryReadAction(JsonObject arguments, out Optional<string?> action, out string refusal)
+    {
+        action = default;
+        if (!TaskToolText.TryGetString(arguments, "action", out string? text, out refusal))
+        {
+            return false;
+        }
+
+        if (text is not null)
+        {
+            action = Optional<string?>.Set(text.Trim().Length == 0 ? null : text);
+        }
+
         return true;
     }
 

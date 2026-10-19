@@ -1645,6 +1645,15 @@ internal static class PromptCatalog
                 to it in a Message; the Human sees it as a link. A sprint groups Tasks in time and
                 spans Teams. Give create_task, update_task or list_tasks a sprint as its name or id, or
                 as current; it must already exist, because you cannot create one.
+
+                Some work is outward: it reaches people or systems beyond this team, such as sending
+                a message, publishing, paying or deleting for good. Create such a Task with
+                human_gate true, or set it with update_task. Set the Action, the one outward step,
+                with the action argument; set the Action before you do it. When the Proof is
+                complete, move the Task to Needs You. Only the Human can Accept it, and only the
+                Human can turn human_gate off or clear the Action. After the Accept, the assignee
+                carries out the Action and then moves the Task to Done. Use list_tasks with the
+                status Needs You to see what is waiting for the Human.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
