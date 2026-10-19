@@ -28,7 +28,7 @@ public sealed class TaskBoardHumanGateTests
     private const string NoLane = "";
 
     /// <summary>An <see cref="IProofSource"/> whose answer the test sets, shared by the Board and the Task service.</summary>
-    private sealed class SettableProofSource : IProofSource
+    internal sealed class SettableProofSource : IProofSource
     {
         /// <summary>The Proof every Task gets.</summary>
         public Proof Current { get; set; } = new([new ProofItem("Item", true, null, null, ProofItemSource.Process)]);
@@ -40,7 +40,7 @@ public sealed class TaskBoardHumanGateTests
     }
 
     /// <summary>The Proof with three of four items met; the open one is the citation check owned by Ruth.</summary>
-    private static Proof ThreeOfFour() => new(
+    internal static Proof ThreeOfFour() => new(
     [
         new ProofItem("Draft", true, null, null, ProofItemSource.Process),
         new ProofItem("Sources", true, null, null, ProofItemSource.Process),
@@ -49,10 +49,10 @@ public sealed class TaskBoardHumanGateTests
     ]);
 
     /// <summary>The Human's actor.</summary>
-    private static TaskActor HumanOf(TaskToolHarness harness) => TaskActors.Human(harness.Options.Value);
+    internal static TaskActor HumanOf(TaskToolHarness harness) => TaskActors.Human(harness.Options.Value);
 
     /// <summary>Creates a gated Task assigned to Nova in <paramref name="status"/>; a Needs You Task is moved there by Nova.</summary>
-    private static TaskItem Gated(TaskToolHarness harness, TaskState status, string? action = null)
+    internal static TaskItem Gated(TaskToolHarness harness, TaskState status, string? action = null)
     {
         TaskState start = status == TaskState.NeedsYou ? TaskState.Review : status;
         TaskDraft draft = new("Write the reply", "Platform", null, start, Assignee: Nova) { HumanGate = true, Action = action };
@@ -67,14 +67,14 @@ public sealed class TaskBoardHumanGateTests
     }
 
     /// <summary>Creates an ordinary Task in <paramref name="status"/>.</summary>
-    private static TaskItem Ordinary(TaskToolHarness harness, TaskState status)
+    internal static TaskItem Ordinary(TaskToolHarness harness, TaskState status)
     {
         TaskDraft draft = new("Plain job", "Platform", null, status);
         return Assert.IsType<TaskResult.Saved>(harness.Service.Create(draft, HumanOf(harness))).Task;
     }
 
     /// <summary>Renders the providers and the Board over <paramref name="tasks"/> with the default Board View.</summary>
-    private static Rig Render(MudBunitContext ctx, TaskToolHarness harness, SettableProofSource proof, IReadOnlyList<TaskItem> tasks)
+    internal static Rig Render(MudBunitContext ctx, TaskToolHarness harness, SettableProofSource proof, IReadOnlyList<TaskItem> tasks)
     {
         ctx.Services.AddSingleton<IProofSource>(proof);
         harness.AddTo(ctx.Services);
@@ -91,7 +91,7 @@ public sealed class TaskBoardHumanGateTests
     }
 
     /// <summary>Records every Task change the service raises.</summary>
-    private static List<TaskChange> Record(TaskToolHarness harness)
+    internal static List<TaskChange> Record(TaskToolHarness harness)
     {
         List<TaskChange> changes = [];
         harness.Events.TaskChanged += changes.Add;
@@ -99,7 +99,7 @@ public sealed class TaskBoardHumanGateTests
     }
 
     /// <summary>The Board and its provider hosts, with the two ways to move a card.</summary>
-    private sealed class Rig(
+    internal sealed class Rig(
         IRenderedComponent<TaskBoard> board,
         IRenderedComponent<MudPopoverProvider> popovers,
         IRenderedComponent<MudSnackbarProvider> toasts,
@@ -264,7 +264,8 @@ public sealed class TaskBoardHumanGateTests
             "Proof 3/4 — citation check still open (Ruth, 19 of 23 in #RSH-209). Accept unlocks when it's in.",
             rig.Toasts.Markup,
             StringComparison.Ordinal));
-        Assert.Single(rig.Toasts.FindAll("button"), b => string.Equals(b.TextContent.Trim(), "Ask Ruth", StringComparison.Ordinal));
+        IElement ask = Assert.Single(rig.Toasts.FindAll("button"), b => string.Equals(b.TextContent.Trim(), "Ask Ruth", StringComparison.Ordinal));
+        Assert.Equal("Ask Ruth for citation check", ask.GetAttribute("aria-label"));
         Assert.Equal(TaskState.NeedsYou, harness.Store.Get(task.Id)?.Status);
         Assert.Empty(changes);
         Assert.Empty(rig.Dialogs.FindComponents<TaskDecisionDialogComponent>());
@@ -305,7 +306,8 @@ public sealed class TaskBoardHumanGateTests
     {
         SettableProofSource proof = new();
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken, proof: proof);
-        TaskItem task = Gated(harness, TaskState.NeedsYou);
+        TaskItem gated = Gated(harness, TaskState.NeedsYou);
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Update(gated.Id, new TaskPatch { Description = "The reply to the press." }, null, HumanOf(harness))).Task;
         List<TaskChange> changes = Record(harness);
         await using MudBunitContext ctx = new();
         Rig rig = Render(ctx, harness, proof, [task]);
@@ -315,7 +317,9 @@ public sealed class TaskBoardHumanGateTests
         IRenderedComponent<TaskDecisionDialogComponent> dialog = rig.WaitForDecisionDialog();
         Assert.Equal($"Your decision on {task.Id}", HumanGateCopy.DecisionDialogTitle(task.Id.ToString()));
         rig.Dialogs.WaitForAssertion(() => Assert.Equal($"Your decision on {task.Id}", rig.Dialogs.Find(".mud-dialog-title").TextContent.Trim()));
-        Assert.NotEmpty(dialog.FindComponents<TaskDecisionCard>());
+        _ = Assert.Single(dialog.FindComponents<TaskDecisionCard>());
+        Assert.Equal("Write the reply", dialog.Find(".task-decision-dialog-title").TextContent.Trim());
+        Assert.Equal("The reply to the press.", dialog.Find(".task-decision-dialog-description").TextContent.Trim());
         Assert.Equal(TaskState.NeedsYou, harness.Store.Get(task.Id)?.Status);
         Assert.Empty(changes);
         await rig.Dialogs.InvokeAsync(() => rig.DialogButton("Cancel").ClickAsync());

@@ -566,16 +566,22 @@
     /// <returns><see langword="true"/> when the move was handled here; <see langword="false"/> when the Task is gone or no longer gated, so the ordinary path reports or moves it.</returns>
     private async Task<bool> HandleGatedDoneAsync(TaskItem item)
     {
-        if (this.Store.Get(item.Id) is not { IsGated: true } current)
+        if (this.Store.Get(item.Id) is not { IsGated: true, Status: not TaskState.Done } current)
         {
             return false;
         }
 
         Proof proof = this.ProofSource.For(current);
         string assignee = string.IsNullOrWhiteSpace(current.Assignee) ? HumanGateCopy.UnassignedAssignee : current.Assignee;
-        if (current.Status != TaskState.NeedsYou)
+        if (current.Status is TaskState.Backlog or TaskState.ToDo or TaskState.InProgress or TaskState.Review)
         {
             this.Snackbar.Add(HumanGateCopy.GoesToNeedsYouFirst(current.Id.ToString(), proof.MetCount, proof.Total), Severity.Error, configure: null, key: "board-gate-first");
+        }
+        else if (current.Status != TaskState.NeedsYou)
+        {
+            // A closed Task (Cancelled, Duplicate, Rejected) cannot go to Needs You first: H-4 explains the way in.
+            GateRefusal? refusal = HumanGateRules.Check(current, current with { Status = TaskState.Done }, TaskActors.Human(this.Human), proof, this.Human.Name);
+            this.Snackbar.Add(refusal?.Message ?? HumanGateCopy.GoesToNeedsYouFirst(current.Id.ToString(), proof.MetCount, proof.Total), Severity.Error, configure: null, key: "board-gate-closed");
         }
         else if (Acceptance.Of(current).State == AcceptanceState.Valid)
         {
@@ -649,7 +655,7 @@
             return;
         }
 
-        if (target == TaskState.Done && item.IsGated && await this.HandleGatedDoneAsync(item))
+        if (target == TaskState.Done && await this.HandleGatedDoneAsync(item))
         {
             return;
         }
