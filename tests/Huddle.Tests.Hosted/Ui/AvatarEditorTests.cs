@@ -127,10 +127,10 @@ public sealed class AvatarEditorTests
     /// <summary>Picks the fourth thumbnail in the library dialog, after opening it from the editor's library button.</summary>
     private static async Task PickFromLibraryAsync(IRenderedComponent<ContainerFragment> cut)
     {
-        // Click(), not ClickAsync(): the handler awaits the dialog's result, so awaiting it here would wait for the pick that comes next.
-        await cut.InvokeAsync(() => cut.FindAll("button").First(button => string.Equals(button.TextContent.Trim(), ButtonText, StringComparison.Ordinal)).Click());
+        // ClickAsync() is not awaited here: the handler awaits the dialog's result, so awaiting it would wait for the pick that comes next.
+        await cut.InvokeAsync(() => { _ = cut.FindAll("button").First(button => string.Equals(button.TextContent.Trim(), ButtonText, StringComparison.Ordinal)).ClickAsync(); });
         cut.WaitForAssertion(() => Assert.True(cut.FindAll(Thumb).Count > 3), TimeSpan.FromSeconds(5));
-        await cut.InvokeAsync(() => cut.FindAll(Thumb)[3].Click());
+        await cut.InvokeAsync(() => cut.FindAll(Thumb)[3].ClickAsync());
     }
 
     /// <summary>With nothing stored the editor offers the three choices, starts on "An image" with its controls and no Label field, and shows no fields for the initials.</summary>

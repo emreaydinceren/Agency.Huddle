@@ -233,7 +233,7 @@ public sealed class LibraryPanelTests
         Assert.True(File.Exists(filePath));
 
         var cut = ctx.RenderWithPopovers(RenderPanel);
-        _ = cut.InvokeAsync(() => cut.Find(".library-panel-reset-button").Click());
+        _ = cut.InvokeAsync(() => cut.Find(".library-panel-reset-button").ClickAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
 
         Assert.Equal("Reset pinned folders?", cut.Find(".mud-dialog-title").TextContent.Trim());
@@ -256,7 +256,7 @@ public sealed class LibraryPanelTests
         byte[] before = File.ReadAllBytes(filePath);
 
         var cut = ctx.RenderWithPopovers(RenderPanel);
-        _ = cut.InvokeAsync(() => cut.Find(".library-panel-reset-button").Click());
+        _ = cut.InvokeAsync(() => cut.Find(".library-panel-reset-button").ClickAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
 
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).ClickAsync());

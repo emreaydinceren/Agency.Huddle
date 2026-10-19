@@ -450,16 +450,16 @@ public sealed class TeammatesPageTests
     /// page once on its own: <see cref="BuiltinTeammateSeeder"/> writes the Chief of Staff at startup,
     /// <see cref="PersonaStore"/>'s file watcher sees that write and, 500 ms later, its debounce raises
     /// <see cref="PersonaStore.PersonasChanged"/>, which reloads and repaints the page and retires the
-    /// button's event handler id. A bare <c>Find(...).Click()</c> reads the id on the test thread and
+    /// button's event handler id. A bare synchronous click reads the id on the test thread and
     /// queues the dispatch behind that repaint, then throws <c>UnknownEventHandlerIdException</c> -
-    /// about one full-suite run in three. The synchronous <c>Click()</c> rather than awaiting
-    /// <c>ClickAsync()</c>: the handler awaits <c>IDialogService.ShowAsync</c>, and the callers wait for
+    /// about one full-suite run in three. The click is raised, not awaited, because
+    /// the handler awaits <c>IDialogService.ShowAsync</c>, and the callers wait for
     /// the card itself with <c>WaitForAssertion</c> (see <c>agents/BlazorTesting.md</c>).
     /// </summary>
     /// <param name="cut">The rendered page from <see cref="RenderPage"/>.</param>
     /// <returns>A task that completes once the click has been dispatched.</returns>
     private static Task ClickNewTeammateAsync(IRenderedComponent<Bunit.Rendering.ContainerFragment> cut) =>
-        cut.InvokeAsync(() => cut.Find(NewTeammateSelector).Click());
+        cut.InvokeAsync(() => { _ = cut.Find(NewTeammateSelector).ClickAsync(); });
 
     [Fact]
     public async Task Sidebar_LinksToTeammatesPage()

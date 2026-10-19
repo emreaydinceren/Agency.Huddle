@@ -77,7 +77,7 @@ public sealed class TeammateCardOpenerTests
 
         _ = cut.InvokeAsync(() => cut.FindAll("button.teammate-tile")
             .Single(candidate => candidate.TextContent.Contains("Nova", StringComparison.Ordinal))
-            .Click());
+            .ClickAsync());
 
         cut.WaitForState(() => cut.FindComponents<TeammateCard>().Count == 1);
         TeammateCard card = cut.FindComponent<TeammateCard>().Instance;

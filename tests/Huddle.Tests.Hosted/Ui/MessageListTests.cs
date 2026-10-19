@@ -291,7 +291,7 @@ public sealed class MessageListTests
 
         Assert.NotEmpty(cut.FindAll(".turn-detail-panel .mud-collapse-container.invisible"));
 
-        cut.Find("button.turn-detail-toggle").Click();
+        await cut.InvokeAsync(() => cut.Find("button.turn-detail-toggle").ClickAsync());
 
         Assert.Empty(cut.FindAll(".turn-detail-panel .mud-collapse-container.invisible"));
     }
@@ -322,13 +322,13 @@ public sealed class MessageListTests
         Assert.Equal("false", closed.GetAttribute("aria-expanded"));
         Assert.Equal("Show change to notes.md", closed.GetAttribute("aria-label"));
 
-        closed.Click();
+        await cut.InvokeAsync(() => closed.ClickAsync());
 
         var open = cut.Find("button.turn-detail-toggle");
         Assert.Equal("true", open.GetAttribute("aria-expanded"));
         Assert.Equal("Hide change to notes.md", open.GetAttribute("aria-label"));
 
-        open.Click();
+        await cut.InvokeAsync(() => open.ClickAsync());
 
         Assert.Equal("false", cut.Find("button.turn-detail-toggle").GetAttribute("aria-expanded"));
     }
@@ -354,7 +354,7 @@ public sealed class MessageListTests
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = MessageListTests.NewContext(factory);
         var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit(new EditChange("one", "two"))]));
-        cut.Find("button.turn-detail-toggle").Click();
+        await cut.InvokeAsync(() => cut.Find("button.turn-detail-toggle").ClickAsync());
 
         Assert.Equal("Change to notes.md", cut.Find(".edit-preview").GetAttribute("aria-label"));
         Assert.Equal("E:\\work\\notes.md", cut.Find(".edit-preview-path").TextContent.Trim());
@@ -371,7 +371,7 @@ public sealed class MessageListTests
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = MessageListTests.NewContext(factory);
         var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit(new EditChange(null, "hello"))]));
-        cut.Find("button.turn-detail-toggle").Click();
+        await cut.InvokeAsync(() => cut.Find("button.turn-detail-toggle").ClickAsync());
 
         Assert.Empty(cut.FindAll(".edit-preview-side.removed"));
         Assert.Equal("hello", cut.Find(".edit-preview-side.added pre").TextContent);
@@ -384,7 +384,7 @@ public sealed class MessageListTests
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = MessageListTests.NewContext(factory);
         var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit(new EditChange("<b>x</b>", "<script>alert(1)</script>"))]));
-        cut.Find("button.turn-detail-toggle").Click();
+        await cut.InvokeAsync(() => cut.Find("button.turn-detail-toggle").ClickAsync());
 
         Assert.Empty(cut.FindAll(".edit-preview b"));
         Assert.Empty(cut.FindAll(".edit-preview script"));
@@ -398,7 +398,7 @@ public sealed class MessageListTests
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = MessageListTests.NewContext(factory);
         var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit(new EditChange("a", "b", Truncated: true))]));
-        cut.Find("button.turn-detail-toggle").Click();
+        await cut.InvokeAsync(() => cut.Find("button.turn-detail-toggle").ClickAsync());
 
         Assert.Equal("Shortened: showing the first 4,096 characters.", cut.Find(".edit-preview-note.truncated").TextContent.Trim());
     }
@@ -412,7 +412,7 @@ public sealed class MessageListTests
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = MessageListTests.NewContext(factory);
         var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit(new EditChange("a", "b", false, omitted))]));
-        cut.Find("button.turn-detail-toggle").Click();
+        await cut.InvokeAsync(() => cut.Find("button.turn-detail-toggle").ClickAsync());
 
         Assert.Equal(expected, cut.Find(".edit-preview-note.omitted").TextContent.Trim());
     }
@@ -424,7 +424,7 @@ public sealed class MessageListTests
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = MessageListTests.NewContext(factory);
         var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit(new EditChange("a", "b"))]));
-        cut.Find("button.turn-detail-toggle").Click();
+        await cut.InvokeAsync(() => cut.Find("button.turn-detail-toggle").ClickAsync());
 
         Assert.Empty(cut.FindAll(".edit-preview-note"));
     }
@@ -520,7 +520,7 @@ public sealed class MessageListTests
         var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit()]));
         int scrollsBefore = ctx.JSInterop.Invocations.Count(invocation => string.Equals(invocation.Identifier, "teamScroll.toBottom", StringComparison.Ordinal));
 
-        cut.Find("button.turn-detail-toggle").Click();
+        await cut.InvokeAsync(() => cut.Find("button.turn-detail-toggle").ClickAsync());
 
         int scrollsAfter = ctx.JSInterop.Invocations.Count(invocation => string.Equals(invocation.Identifier, "teamScroll.toBottom", StringComparison.Ordinal));
         Assert.Equal(scrollsBefore, scrollsAfter);
@@ -535,7 +535,7 @@ public sealed class MessageListTests
         Draft running = MessageListTests.DraftWithCalls(new ToolCallDetail("c1", "Edit notes.md", ToolActivityStatus.InProgress, "E:\\work\\notes.md", null, new EditChange("one", "two")));
         Draft done = MessageListTests.DraftWithCalls(new ToolCallDetail("c1", "Edit notes.md", ToolActivityStatus.Completed, "E:\\work\\notes.md", 1, new EditChange("one", "two")));
         var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [running]));
-        cut.Find("button.turn-detail-toggle").Click();
+        await cut.InvokeAsync(() => cut.Find("button.turn-detail-toggle").ClickAsync());
 
         cut.Render(parameters => parameters.Add(p => p.Drafts, [done]));
 
@@ -550,7 +550,7 @@ public sealed class MessageListTests
         await using var ctx = MessageListTests.NewContext(factory);
         Draft draft = MessageListTests.DraftWithEdit();
         var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [draft]));
-        cut.Find("button.turn-detail-toggle").Click();
+        await cut.InvokeAsync(() => cut.Find("button.turn-detail-toggle").ClickAsync());
 
         cut.Render(parameters => parameters.Add(p => p.Drafts, []));
         cut.Render(parameters => parameters.Add(p => p.Drafts, [draft]));

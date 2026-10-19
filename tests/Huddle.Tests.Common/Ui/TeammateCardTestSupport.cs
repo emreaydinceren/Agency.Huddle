@@ -264,7 +264,7 @@ internal static class TeammateCardTestSupport
     /// <param name="cut">The rendered page holding the card.</param>
     /// <param name="find">Resolves the element against the current DOM, throwing when it is absent.</param>
     internal static Task ClickAsync(IRenderedComponent<ContainerFragment> cut, Func<IElement> find) =>
-        DispatchWhenPresentAsync(cut, find, static element => element.Click());
+        DispatchWhenPresentAsync(cut, find, static element => { _ = element.ClickAsync(); });
 
     /// <summary>
     /// Waits until <paramref name="find"/> resolves an element, then resolves it AGAIN and raises
@@ -274,7 +274,7 @@ internal static class TeammateCardTestSupport
     /// Neither the page nor the card is synchronous end to end: <c>Teammates.OnInitializedAsync</c>
     /// and a View/Edit card's own <c>OnInitializedAsync</c> each finish on a real SQLite lookup, and
     /// their completion renders land on the dispatcher whenever that lookup answers - under full-suite
-    /// load, often mid-test. A plain <c>Find(...).Click()</c> from the test thread races them twice
+    /// load, often mid-test. A bare synchronous click from the test thread races them twice
     /// over: the element may not be painted yet (<c>Sequence contains no matching element</c>), or a
     /// render can land between the find and the event and retire the element's handler id
     /// (<see cref="UnknownEventHandlerIdException"/>). Waiting fixes the first; finding and raising
