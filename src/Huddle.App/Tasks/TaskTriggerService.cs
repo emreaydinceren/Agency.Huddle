@@ -380,6 +380,12 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
 
             batch.Actor = change.Actor;
             batch.Entries.Add(change.Entry);
+            if (change.Decision is { } decision)
+            {
+                batch.Decision = decision;
+                batch.Note = change.Note;
+            }
+
             if (change.Changes.Any(static field => field.Field == TaskField.Status))
             {
                 batch.StatusChanged = true;
@@ -922,6 +928,11 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         try
         {
             string text = this.Render(latest, actor, assigneeName, batch.Entries);
+            if (DecisionSentence(latest, batch.Decision, batch.Note) is { } sentence)
+            {
+                text = text + "\n" + sentence;
+            }
+
             await this.chat.PostAsync(room.Id, senderId, text, ct: ct).ConfigureAwait(false);
             if (isAgent)
             {
@@ -1067,6 +1078,49 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         return senderIsMember && assigneeIsMember ? origin : null;
     }
 
+    /// <summary>The sentence that quotes the Human's decision (Human gate Spec §6.6), appended as the Message's last line.</summary>
+    /// <param name="task">The latest Task, whose Action an Accept names.</param>
+    /// <param name="decision">The batch's decision, if any.</param>
+    /// <param name="note">The note given with it.</param>
+    /// <returns>The sentence, or <see langword="null"/> when there is nothing to quote.</returns>
+    private static string? DecisionSentence(TaskItem task, Agency.Huddle.App.Tasks.HumanGate.TaskDecision? decision, string? note) => decision switch
+    {
+        Agency.Huddle.App.Tasks.HumanGate.TaskDecision.Accept when task.Action is { } action =>
+            $"Accepted: go ahead and {NeutraliseMentions(action)}, then move {task.Id} to Done.",
+        Agency.Huddle.App.Tasks.HumanGate.TaskDecision.RequestChanges when note is not null =>
+            $"Changes requested: \"{NeutraliseMentions(note)}\"",
+        Agency.Huddle.App.Tasks.HumanGate.TaskDecision.Decline when note is not null =>
+            $"Declined: \"{NeutraliseMentions(note)}\"",
+        _ => null,
+    };
+
+    /// <summary>Posts the Human's <paramref name="text"/> to <paramref name="owner"/> of a Proof item, in the Room <see cref="ChooseRoomAsync"/> picks with the owner as a Member.</summary>
+    /// <param name="task">The Task the item belongs to.</param>
+    /// <param name="owner">The item's owner, by Name.</param>
+    /// <param name="text">The text to post, exactly as given.</param>
+    /// <param name="ct">Cancels the post.</param>
+    /// <returns>The Room's display name, or a failure when the owner is unknown or the post is refused.</returns>
+    internal async Task<AskOutcome> AskAsync(TaskItem task, string owner, string text, CancellationToken ct)
+    {
+        User? ownerUser = await this.directory.FindUserByNameAsync(owner, ct).ConfigureAwait(false);
+        if (ownerUser is null)
+        {
+            return AskOutcome.Failure;
+        }
+
+        try
+        {
+            Room room = await this.ChooseRoomAsync(task, KnownIds.Human, ownerUser, ct).ConfigureAwait(false);
+            await this.chat.PostAsync(room.Id, KnownIds.Human, text, ct: ct).ConfigureAwait(false);
+            return new AskOutcome(true, room.Name);
+        }
+        catch (ChatException ex)
+        {
+            LogRoomRefused(this.logger, task.Id, ex.Code, ex);
+            return AskOutcome.Failure;
+        }
+    }
+
     /// <summary>Renders <c>task.wake.message</c> (Spec §10.5) for the latest Task and the batch's summaries, neutralising Mentions in the title and the changes.</summary>
     /// <param name="task">The latest Task.</param>
     /// <param name="actor">Who made the changes.</param>
@@ -1189,6 +1243,12 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
 
         /// <summary>Every batched change's Change log entry, in arrival order.</summary>
         public List<ChangeLogEntry> Entries { get; } = [];
+
+        /// <summary>The Human's latest decision in this batch, or <see langword="null"/> when none was made.</summary>
+        public Agency.Huddle.App.Tasks.HumanGate.TaskDecision? Decision { get; set; }
+
+        /// <summary>The note given with <see cref="Decision"/>.</summary>
+        public string? Note { get; set; }
 
         /// <summary>The coalescing timer, or <see langword="null"/> when the batch fires directly.</summary>
         public ITimer? Timer { get; set; }
