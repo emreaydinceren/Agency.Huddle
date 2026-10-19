@@ -7,6 +7,7 @@ public enum TaskState
     ToDo,
     InProgress,
     Review,
+    NeedsYou,
     Done,
     Cancelled,
     Duplicate,

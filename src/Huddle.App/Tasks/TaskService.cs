@@ -507,6 +507,8 @@ internal sealed class TaskService : IDisposable
             StartDate = draft.StartDate,
             DueDate = draft.DueDate,
             Sprint = draft.Sprint,
+            HumanGate = draft.HumanGate,
+            Action = draft.Action,
             Description = draft.Description,
             UnknownFields = draft.ExtraFields ?? [],
             Location = new TaskLocation(team, project, false),

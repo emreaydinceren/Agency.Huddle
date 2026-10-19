@@ -25,8 +25,11 @@ internal static partial class TaskFileFormat
     {
         "id", "title", "status", "priority", "creator", "assignee", "origin",
         "parent", "blocked_by", "duplicate_of", "tags", "start_date", "due_date",
-        "sprint",
+        "sprint", "human_gate", "action",
     };
+
+    /// <summary>The longest <c>action</c> value a Task file may carry (Human gate Spec §6.1).</summary>
+    private const int MaxActionLength = 200;
 
     private static readonly char[] LineBreakCharacters = ['\n', '\r'];
 
@@ -90,6 +93,8 @@ internal static partial class TaskFileFormat
             StartDate = relations.StartDate,
             DueDate = relations.DueDate,
             Sprint = relations.Sprint,
+            HumanGate = relations.HumanGate,
+            Action = relations.Action,
             Description = description,
             Location = location,
             ChangeLog = changeLog,
@@ -106,7 +111,7 @@ internal static partial class TaskFileFormat
     private sealed record RequiredFields(TaskId Id, string Title, TaskState Status, TaskPriority Priority, string Creator);
 
     /// <summary>The optional keys that point at other records or carry dates, validated per Spec §7.2.</summary>
-    private sealed record Relations(TaskId? Parent, IReadOnlyList<TaskId> BlockedBy, TaskId? DuplicateOf, IReadOnlyList<string> Tags, DateOnly? StartDate, DateOnly? DueDate, SprintId? Sprint);
+    private sealed record Relations(TaskId? Parent, IReadOnlyList<TaskId> BlockedBy, TaskId? DuplicateOf, IReadOnlyList<string> Tags, DateOnly? StartDate, DateOnly? DueDate, SprintId? Sprint, bool HumanGate, string? Action);
 
     /// <summary>Validates <c>id</c>, <c>title</c>, <c>status</c>, <c>priority</c> and <c>creator</c>; the first violation is <paramref name="error"/>.</summary>
     private static bool TryParseRequired(IReadOnlyList<PersonaFrontmatterField> fields, [NotNullWhen(true)] out RequiredFields? required, out string error)
@@ -182,12 +187,15 @@ internal static partial class TaskFileFormat
             || !TryParseTags(fields, out IReadOnlyList<string> tags, out error)
             || !TryParseDate(fields, "start_date", out DateOnly? startDate, out error)
             || !TryParseDate(fields, "due_date", out DateOnly? dueDate, out error)
-            || !TryParseSprint(fields, out SprintId? sprint, out error))
+            || !TryParseSprint(fields, out SprintId? sprint, out error)
+            || !TryParseAction(fields, out string? action, out error))
         {
             return false;
         }
 
-        relations = new Relations(parent, blockedBy, duplicateOf, tags, startDate, dueDate, sprint);
+        bool humanGate = TryGetField(fields, "human_gate", out string? humanGateRaw)
+            && string.Equals(humanGateRaw?.Trim(), "true", StringComparison.OrdinalIgnoreCase);
+        relations = new Relations(parent, blockedBy, duplicateOf, tags, startDate, dueDate, sprint, humanGate, action);
         return true;
     }
 
@@ -324,6 +332,16 @@ internal static partial class TaskFileFormat
         if (task.Sprint is { } sprint)
         {
             lines.Add(string.Create(CultureInfo.InvariantCulture, $"sprint: {sprint}"));
+        }
+
+        if (task.HumanGate)
+        {
+            lines.Add("human_gate: true");
+        }
+
+        if (task.Action is { } action)
+        {
+            lines.Add(ComposeScalarLine("action", action));
         }
     }
 
@@ -705,6 +723,25 @@ internal static partial class TaskFileFormat
             }
 
             sprint = parsed;
+        }
+
+        error = "";
+        return true;
+    }
+
+    /// <summary>Parses the optional "action" key: trimmed, empty is none, more than <see cref="MaxActionLength"/> characters rejects the file (Human gate Spec §6.1).</summary>
+    private static bool TryParseAction(IReadOnlyList<PersonaFrontmatterField> fields, out string? action, out string error)
+    {
+        action = null;
+        if (TryGetField(fields, "action", out string? raw) && NullIfEmpty(raw) is { } trimmed)
+        {
+            if (trimmed.Length > MaxActionLength)
+            {
+                error = string.Create(CultureInfo.InvariantCulture, $"invalid action: longer than {MaxActionLength} characters");
+                return false;
+            }
+
+            action = trimmed;
         }
 
         error = "";

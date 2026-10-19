@@ -430,6 +430,7 @@
                 TaskState.ToDo => "Nothing to do yet.",
                 TaskState.InProgress => "Nothing in progress.",
                 TaskState.Review => "Nothing in review.",
+                TaskState.NeedsYou => "Nothing needs you.",
                 TaskState.Done => "Nothing done yet.",
                 _ => string.Create(CultureInfo.InvariantCulture, $"Nothing {column.States[0].ToWire().ToLowerInvariant()} yet."),
             }

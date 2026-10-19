@@ -45,6 +45,15 @@ public sealed record TaskItem
     /// <summary>The Sprint the Task belongs to, or null for none. The id need not be in <c>sprints.md</c>.</summary>
     public SprintId? Sprint { get; init; }
 
+    /// <summary>Whether the Task waits for the Human before it can be Done (<c>human_gate: true</c>). <see langword="false"/> is the absent key.</summary>
+    public bool HumanGate { get; init; }
+
+    /// <summary>The one-line outward action the Task will take once the Human accepts (at most 200 characters), or null for none.</summary>
+    public string? Action { get; init; }
+
+    /// <summary>True when the Task is gated: it carries <see cref="HumanGate"/> or an <see cref="Action"/>.</summary>
+    public bool IsGated => this.HumanGate || this.Action is not null;
+
     /// <summary>The Task's description in markdown format.</summary>
     public string Description { get; init; } = "";
 

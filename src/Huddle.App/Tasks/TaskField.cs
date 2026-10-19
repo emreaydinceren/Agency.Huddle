@@ -39,6 +39,12 @@ public enum TaskField
     /// <summary>The Sprint the Task belongs to.</summary>
     Sprint,
 
+    /// <summary>Whether the Task waits for the Human (<c>human_gate</c>).</summary>
+    HumanGate,
+
+    /// <summary>The one-line outward action the Task will take (<c>action</c>).</summary>
+    Action,
+
     /// <summary>The Task's description.</summary>
     Description,
 
