@@ -739,7 +739,7 @@ internal sealed class TaskService : IDisposable
 
     /// <summary>Whether the Task is a bug: a <c>request: bug</c> field or a <c>bug</c> label.</summary>
     /// <param name="task">The Task.</param>
-    private static bool HasBugMarker(TaskItem task) =>
+    internal static bool HasBugMarker(TaskItem task) =>
         task.Tags.Contains("bug", StringComparer.OrdinalIgnoreCase)
         || string.Equals(UnknownValue(task, "request"), "bug", StringComparison.OrdinalIgnoreCase);
 

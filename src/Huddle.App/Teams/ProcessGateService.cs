@@ -106,12 +106,20 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
             && context.AuthorRoleCovers.TryGetValue(line.Author, out string? covers)
             && covers.Split(',', StringSplitOptions.TrimEntries).Contains(VerifyCoverage, StringComparer.OrdinalIgnoreCase));
 
-    private static bool HasFailureBeforePass(IReadOnlyList<EvidenceLine> evidence)
+    /// <summary>Whether a run with a non-zero exit code is followed by a later run with exit code 0.</summary>
+    /// <param name="evidence">The Task's Evidence lines.</param>
+    /// <returns><see langword="true"/> when a failing run came before a passing one.</returns>
+    internal static bool HasFailureBeforePass(IReadOnlyList<EvidenceLine> evidence)
     {
         List<EvidenceLine> runs = [.. evidence.Where(static line => line.ExitCode is not null).OrderBy(static line => line.Time)];
         EvidenceLine? failure = runs.FirstOrDefault(static line => line.ExitCode != 0);
         return failure is not null && runs.Any(line => line.ExitCode == 0 && line.Time > failure.Time);
     }
+
+    /// <summary>The Team's parsed Process, for the Proof builder.</summary>
+    /// <param name="team">The Team name.</param>
+    /// <returns>The Process document, or <see langword="null"/> when the Team or its Process is unknown.</returns>
+    internal ProcessDocument? ProcessOf(string team) => this.Load(team);
 
     private ProcessDocument? Load(string team)
     {
