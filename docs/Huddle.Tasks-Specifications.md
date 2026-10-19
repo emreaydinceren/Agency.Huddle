@@ -108,7 +108,7 @@ Agent takes a single action.
 | Reordering cards by hand | A rank field would make every reorder a file write, and therefore a wake-up |
 | Closed Tasks on a Board | A Board is for work in progress |
 | A formatting toolbar in the description editor | V2 will use `BitMarkdownEditor` (Appendix B) |
-| Attachments | Links in the description work |
+| Attachments | Links in the description work. Designed for V2 in [TaskAttachments](Huddle.TaskAttachments-Specifications.md) |
 | Agents using Views | `list_tasks` takes plain filters. Views are the Human's |
 | A Task history beyond the Change log | The Change log is the history |
 | Deleting a Task | Close it instead. A Task file deleted by hand simply disappears from the index (§15, E-9) |
@@ -2253,6 +2253,6 @@ WS5 lands `task.wake.message` first.
 | Waking at startup for offline edits | Would need a queue with a Human prompt, to avoid a flood |
 | Queued delivery to an offline assignee | Needs a change to the ACP side (ADR-0004) |
 | Agents using Views | A `view` argument on `list_tasks` |
-| Attachments | A sibling `<ID>/` folder that moves with the Task |
+| Attachments | Designed in [TaskAttachments](Huddle.TaskAttachments-Specifications.md): link a Library file, or upload to `Uploads/Tasks/<ID>/`. The sibling `<ID>/` folder first proposed here was rejected there (D-1): `_` folders are hidden from the Library |
 | The `#` picker in the description editor | The same `teamComposer` logic attached to `MudTextField`'s inner textarea |
 | A preview card on hovering a Task link | Needs a Blazor-rendered Message body, or a small JavaScript-delegated click and hover handler |

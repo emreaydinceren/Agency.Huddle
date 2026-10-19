@@ -326,6 +326,15 @@ internal sealed class TaskToolHarness : IDisposable
         services.AddSingleton(this.RoomEvents);
         services.AddSingleton(this.OwnPosts);
         services.AddSingleton(this.Triggers);
+
+        // TaskDetail injects the attach services (TaskAttachments spec 6.5). TryAdd: a test of attaching registers its own.
+        services.TryAddSingleton<Agency.Huddle.App.Library.ILibraryReferenceResolver>(new Agency.Huddle.Tests.Library.FakeLibraryNoteResolver());
+        services.TryAddSingleton(_ =>
+        {
+            Agency.Huddle.Tests.Library.LibraryFileServiceFixture library = Agency.Huddle.Tests.Library.LibraryFileServiceFixture.Attach(this.Options.Value.DataDir);
+            return new Agency.Huddle.App.Uploads.TaskUploadService(
+                this.Store, new Agency.Huddle.App.Uploads.TaskUploadFolders(library.Resolver), library.CreateService(), this.Options);
+        });
     }
 
     /// <summary>Disposes every disposable service above, then the temp directory itself.</summary>

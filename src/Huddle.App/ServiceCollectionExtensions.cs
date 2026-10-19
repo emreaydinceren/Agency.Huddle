@@ -472,6 +472,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Uploads.ChatUploadService>();
         services.AddScoped<Uploads.PendingUploads>();
 
+        // Task attachments (TaskAttachments spec 6.2): the upload folder is uploads:/Tasks/<ID>.
+        services.AddSingleton<Uploads.TaskUploadFolders>();
+        services.AddSingleton<Uploads.TaskUploadService>();
+
         // Registered right after LibraryFileService (Task 10.2.i): collects the Library documents
         // mentioned in a Turn's messages. No Library.Enabled gate here (corrections-B6 item 8) -
         // PersonaSupervisor passes a null collector when the Library is disabled.

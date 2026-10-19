@@ -153,6 +153,24 @@ public sealed class LibraryDocumentCollectorTests
         Assert.Equal("Team Marketing", report.Items[1].Location, StringComparer.Ordinal);
     }
 
+    /// <summary>A file in a Task's upload folder is labelled <c>Task {ID}</c>, not <c>upload</c> (TaskAttachments spec 6.6).</summary>
+    [Fact]
+    public async Task Collect_TaskUploadFile_LabelledWithTaskId()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        (LibraryFileServiceFixture fixture, IOptions<TeamOptions> options) = BuildFixture();
+        using LibraryFileServiceFixture _ = fixture;
+        string taskDir = Path.Combine(fixture.DataDir, "Uploads", "Tasks", "GROW-0002");
+        Directory.CreateDirectory(taskDir);
+        string taskFile = Path.Combine(taskDir, "brief.md");
+        File.WriteAllText(taskFile, "brief");
+        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), options);
+
+        LibraryDocumentsReport report = await collector.CollectAsync([new Uri(taskFile).AbsoluteUri], readsFiles: true, ct);
+
+        Assert.Equal("Task GROW-0002", Assert.Single(report.Items).Location, StringComparer.Ordinal);
+    }
+
     /// <summary>A sent upload path, an absolute path with spaces in a code span, resolves into the Uploads root and the document reads <c>upload</c> (ChatUploads spec 6.7).</summary>
     [Fact]
     public async Task Collect_SentUploadPathWithSpacesInCodeSpan_ResolvesToUploadsRoot()

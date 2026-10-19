@@ -3,6 +3,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.App.Uploads;
 using Markdig;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
@@ -330,7 +331,7 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
 
         if (path.Root.Kind == LibraryRootKind.Uploads)
         {
-            return "upload";
+            return LibraryDocumentCollector.UploadLocation(path);
         }
 
         if (path.Root.Kind == LibraryRootKind.SkillSources)
@@ -356,6 +357,18 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
         }
 
         return string.Create(CultureInfo.InvariantCulture, $"teammate {name}");
+    }
+
+    /// <summary>
+    /// The label of a file in the Uploads root: <c>Task {ID}</c> under <c>Tasks/{ID}/</c> (TaskAttachments spec 6.6),
+    /// otherwise <c>upload</c>.
+    /// </summary>
+    private static string UploadLocation(LibraryPath path)
+    {
+        string[] segments = path.RelativePath.Split('/');
+        return segments.Length >= 3 && string.Equals(segments[0], TaskUploadFolders.FolderName, StringComparison.Ordinal)
+            ? string.Create(CultureInfo.InvariantCulture, $"Task {segments[1]}")
+            : "upload";
     }
 
     /// <summary>Reads a Teammate's definition file and returns its frontmatter <c>Name</c>, or

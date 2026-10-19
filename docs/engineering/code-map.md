@@ -412,6 +412,9 @@ The Library — the explorer, viewer and editor, Spec §6. Paths are relative to
 | `Library/UploadNames.cs` | Cleans a browser's file name for an upload and numbers a taken name (`notes (2).txt`); a pasted screenshot gets the `pasted-image-…` name, from `TimeProvider` (spec §6.3). It only builds names: choosing the unique name on disk and removing a partial file are `LibraryFileService`'s job. |
 | `Library/LibraryUpload.cs` | The record `LibraryFileService.CreateFromStreamAsync` returns: the saved path, its kind and its size (spec §6.2). |
 | `Uploads/ChatUploadService.cs` | Saves one attached file for a Room: picks the Room's folder from its Scope, streams the bytes under the size cap and removes a refused partial file (spec §6.4). |
+| `Uploads/TaskUploadFolders.cs`, `Uploads/TaskUploadService.cs` | A Task's upload folder, `uploads:/Tasks/<ID>`, and the service that saves one attached file there through the chat upload's byte writer (TaskAttachments spec §6.1, §6.2). |
+| `Tasks/TaskAttachmentText.cs` | Appends a file's path as a code-span line to a Task description, once, with a blank line only after prose (TaskAttachments spec §6.4). |
+| `Components/Library/LibraryFilePickerDialog.razor` | Picks one Library file by name search or by browsing; a folder only opens (TaskAttachments spec §6.3). |
 | `Uploads/PendingUploads.cs` | The composer's chips: one `PendingUpload` per attachment, with its state (uploading, done, refused) (spec §6.4). |
 | `Uploads/RoomUploadFolders.cs` (`IRoomUploadFolders`) | A Room's upload folders, resolved through the Library's path resolver. Used by Room delete to recycle them (spec §6.9). |
 | `Library/TeamFolderCatalog.cs`, `Library/TeamFolderProvisioner.cs` | List and create Team and Project folders. |
