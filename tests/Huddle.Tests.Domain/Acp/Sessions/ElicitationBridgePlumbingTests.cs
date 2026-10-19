@@ -8,6 +8,7 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Acp.Sessions;
 
@@ -55,7 +56,7 @@ public sealed class ElicitationBridgePlumbingTests
                     AgentMessagesSinceHuman: 0,
                     Budget: 0),
                 ct);
-            await WaitUntilAsync(() => factory.Session.Prompts.Count == 1, ct);
+            await Eventually.UntilAsync(() => factory.Session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
             IElicitationScope scope = Assert.Single(factory.Session.BoundScopes);
             Task<ElicitationResult> pending = scope.ElicitAsync(Request, ct);
@@ -71,20 +72,6 @@ public sealed class ElicitationBridgePlumbingTests
         }
     }
 
-    /// <summary>Polls <paramref name="condition"/> until it is true, or fails the test after five seconds.</summary>
-    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct)
-    {
-        DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Condition was not met before the test's timeout.");
-            }
-
-            await Task.Delay(10, ct);
-        }
-    }
 
     /// <summary>A hand-scripted pipe server that answers the handshake and every <see cref="ReadTranscript"/>, and lets a test send envelopes to the runner.</summary>
     private sealed class FakeServer : IAsyncDisposable

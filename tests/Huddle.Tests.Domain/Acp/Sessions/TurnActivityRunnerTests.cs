@@ -10,6 +10,7 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Waiting;
 
 /// <summary>
 /// Pins <see cref="TurnActivity"/> at the runner level (D8 correction 6): a
@@ -46,24 +47,16 @@ public sealed class TurnActivityRunnerTests
 
         await server.SendAsync(Posted(room, "hello"), ct);
 
-        await WaitUntilAsync(() => turnActivity.IsBusyIn("agent-1", room.Id), ct);
+        await Eventually.UntilAsync(() => turnActivity.IsBusyIn("agent-1", room.Id), ct, interval: TimeSpan.FromMilliseconds(20));
         Assert.True(turnActivity.IsBusyIn("agent-1", room.Id));
 
         release.SetResult();
 
         await server.ReceiveUntilAsync<PostMessage>(ct);
-        await WaitUntilAsync(() => !turnActivity.IsBusyIn("agent-1", room.Id), ct);
+        await Eventually.UntilAsync(() => !turnActivity.IsBusyIn("agent-1", room.Id), ct, interval: TimeSpan.FromMilliseconds(20));
         Assert.False(turnActivity.IsBusyIn("agent-1", room.Id));
     }
 
-    /// <summary>Polls <paramref name="condition"/> until it is true, or <paramref name="ct"/> fires.</summary>
-    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct)
-    {
-        while (!condition())
-        {
-            await Task.Delay(20, ct);
-        }
-    }
 
     private static RoomInfo GroupRoom(string id, string name) =>
         new(

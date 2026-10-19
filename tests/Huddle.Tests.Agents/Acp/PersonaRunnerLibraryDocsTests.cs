@@ -11,6 +11,7 @@ using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Agency.Huddle.Tests.Library;
+using Agency.Huddle.Tests.Waiting;
 
 /// <summary>
 /// Pins Task 10.4: the plumbing that carries a <see cref="LibraryDocumentCollector"/> and a
@@ -44,7 +45,7 @@ public sealed class PersonaRunnerLibraryDocsTests
         try
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", $"see {uri}", [], TriggerMessageId: "trig-1")));
-            await WaitUntilAsync(() => session.Prompts.Count == 1, ct);
+            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
             var prompt = Assert.Single(session.Prompts);
             var header = new FakePromptSource().Render("turn.libraryDocsHeader", new Dictionary<string, string>());
@@ -76,7 +77,7 @@ public sealed class PersonaRunnerLibraryDocsTests
         try
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", $"see {uri}", [], TriggerMessageId: "trig-1")));
-            await WaitUntilAsync(() => session.Prompts.Count == 1, ct);
+            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
             var prompt = Assert.Single(session.Prompts);
             Assert.Contains("the document's own inlined content", prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
@@ -106,7 +107,7 @@ public sealed class PersonaRunnerLibraryDocsTests
         try
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", $"see {uri}", [], TriggerMessageId: "trig-1")));
-            await WaitUntilAsync(() => session.Prompts.Count == 1, ct);
+            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
             var prompt = Assert.Single(session.Prompts);
             Assert.Contains(filePath, prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
@@ -141,7 +142,7 @@ public sealed class PersonaRunnerLibraryDocsTests
                 1,
                 new WorkItem(
                     "room-1", "Room 1", "Human", "hi", [new CaughtUpMessage("Friend", $"see {uri}")], TriggerMessageId: "trig-1")));
-            await WaitUntilAsync(() => session.Prompts.Count == 1, ct);
+            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
             var prompt = Assert.Single(session.Prompts);
             var header = new FakePromptSource().Render("turn.libraryDocsHeader", new Dictionary<string, string>());
@@ -180,7 +181,7 @@ public sealed class PersonaRunnerLibraryDocsTests
                 1,
                 new WorkItem(
                     "room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1", OwnPostLines: [$"see {uri}"])));
-            await WaitUntilAsync(() => session.Prompts.Count == 1, ct);
+            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
             var prompt = Assert.Single(session.Prompts);
             var header = new FakePromptSource().Render("turn.libraryDocsHeader", new Dictionary<string, string>());
@@ -213,7 +214,7 @@ public sealed class PersonaRunnerLibraryDocsTests
         try
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go on", [], TriggerMessageId: "trig-1")));
-            await WaitUntilAsync(() => session.Prompts.Count == 1, ct);
+            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
             var prompt = Assert.Single(session.Prompts);
             var header = new FakePromptSource().Render("turn.libraryDocsHeader", new Dictionary<string, string>());
@@ -260,19 +261,5 @@ public sealed class PersonaRunnerLibraryDocsTests
         await runCts.CancelAsync();
         await session.DisposeAsync();
         runCts.Dispose();
-    }
-
-    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct, TimeSpan? timeout = null)
-    {
-        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(5));
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Condition was not met before the test's timeout.");
-            }
-
-            await Task.Delay(10, ct);
-        }
     }
 }

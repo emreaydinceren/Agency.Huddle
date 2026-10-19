@@ -9,12 +9,12 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
-using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Pipes;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -52,7 +52,7 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (userId, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (userId, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         Assert.Single(factory.Calls);
         Assert.Equal(userId, factory.Calls[0].AgentId);
@@ -77,7 +77,7 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        await WaitForDirectRoomAsync(fixture, "nova", ct);
+        await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
         var user = await directory.FindUserByNameAsync("nova", ct);
 
@@ -103,7 +103,7 @@ public sealed class PersonaRunnerTests
         await using var runner = CreateHost(fixture, persona, factory);
         await runner.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "Chief of Staff", ct);
         var prompts = await WaitForPromptCountAsync(factory.Session, 1, ct);
 
         var prompt = Assert.Single(prompts);
@@ -121,7 +121,7 @@ public sealed class PersonaRunnerTests
     /// proves the negative the same way <see cref="ABudgetExhaustedRefusal_ReportsNothing"/> does
     /// elsewhere in this file: bound the wait to <see cref="PersonaRunner.StartAsync"/> completing
     /// (which itself deterministically waits through the Welcome handshake and session creation, via
-    /// <see cref="WaitForDirectRoomAsync"/> confirming registration) plus a short, fixed grace period
+    /// <c>Eventually.WaitForDirectRoomAsync</c> confirming registration) plus a short, fixed grace period
     /// for a wrongly-queued item to reach the fake session - a bounded, explained sleep rather than an
     /// unbounded assertion that could only ever time out instead of failing cleanly.
     /// </remarks>
@@ -137,7 +137,7 @@ public sealed class PersonaRunnerTests
 
         await using var runner = CreateHost(fixture, persona, factory);
         await runner.StartAsync(ct);
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         // A Greeting would be queued by StartAsync itself, ahead of anything that arrives later, so
         // the probe Message being the first Turn is the whole proof: no sleep needed.
@@ -157,7 +157,7 @@ public sealed class PersonaRunnerTests
     /// </summary>
     /// <remarks>
     /// The "later real Message" this test waits on is the Human's own post:
-    /// <see cref="WaitForHistoryCountAsync"/> proves it reached the Transcript - and therefore that
+    /// <c>Eventually.WaitForHistoryCountAsync</c> proves it reached the Transcript - and therefore that
     /// the Room's file is non-empty for <see cref="IChatStore.HasMessagesAsync"/> to see - before the
     /// second runner ever says <c>hello</c>. Only the absence that follows (no Greeting on that
     /// second start) needs the same bounded grace period <see cref="Start_NotBuiltin_NoGreeting"/>
@@ -175,18 +175,18 @@ public sealed class PersonaRunnerTests
         var firstFactory = new FakeAgentHostFactory();
         await using var firstRunner = CreateHost(fixture, persona, firstFactory);
         await firstRunner.StartAsync(ct);
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "Chief of Staff", ct);
 
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 1, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 1, ct);
         await firstRunner.StopAsync();
 
         var secondFactory = new FakeAgentHostFactory();
         await using var secondRunner = CreateHost(fixture, persona, secondFactory);
         await secondRunner.StartAsync(ct);
-        await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+        await Eventually.DirectRoomAsync(fixture.Services, "Chief of Staff", ct);
 
         // A Greeting would be queued by StartAsync itself, ahead of anything that arrives later, so
         // the probe Message being the first Turn is the whole proof: no sleep needed.
@@ -221,12 +221,12 @@ public sealed class PersonaRunnerTests
         var firstFactory = new FakeAgentHostFactory();
         await using var firstRunner = CreateHost(fixture, persona, firstFactory);
         await firstRunner.StartAsync(ct);
-        var (agentId, roomId) = await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+        var (agentId, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "Chief of Staff", ct);
 
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 1, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 1, ct);
 
         await using var friend = await fixture.ConnectClientAsync(ct);
         await friend.WriteAsync(new Hello("friend", null), ct);
@@ -238,7 +238,7 @@ public sealed class PersonaRunnerTests
         var secondFactory = new FakeAgentHostFactory();
         await using var secondRunner = CreateHost(fixture, persona, secondFactory);
         await secondRunner.StartAsync(ct);
-        await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+        await Eventually.DirectRoomAsync(fixture.Services, "Chief of Staff", ct);
 
         // A Greeting would be queued by StartAsync itself, ahead of anything that arrives later, so
         // the probe Message being the first Turn is the whole proof: no sleep needed.
@@ -294,9 +294,9 @@ public sealed class PersonaRunnerTests
         await using var runner = CreateHost(fixture, persona, factory);
         await runner.StartAsync(ct);
 
-        var (agentId, roomId) = await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+        var (agentId, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "Chief of Staff", ct);
         var store = fixture.Services.GetRequiredService<IChatStore>();
-        var history = await WaitForHistoryCountAsync(store, roomId, 1, ct);
+        var history = await Eventually.HistoryCountAsync(store, roomId, 1, ct);
 
         var greeting = Assert.Single(history);
         Assert.Equal(agentId, greeting.SenderId);
@@ -325,7 +325,7 @@ public sealed class PersonaRunnerTests
         await using var runner = CreateHost(fixture, persona, factory);
         await runner.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "Chief of Staff", ct);
         await WaitForPromptCountAsync(factory.Session, 1, ct);
 
         // Bounded grace period for the failed prompt's post-processing to finish - the same shape
@@ -362,7 +362,7 @@ public sealed class PersonaRunnerTests
         await using var runner = CreateHost(fixture, persona, factory);
         await runner.StartAsync(ct);
 
-        var (agentId, roomId) = await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+        var (agentId, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "Chief of Staff", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
 
@@ -370,7 +370,7 @@ public sealed class PersonaRunnerTests
         // in flight - the runner's single consumer loop can only pick this up once that Turn ends.
         await chat.PostAsync(roomId, KnownIds.Human, "hello, anyone there?", ct: ct);
 
-        var history = await WaitForHistoryCountAsync(store, roomId, 3, ct);
+        var history = await Eventually.HistoryCountAsync(store, roomId, 3, ct);
 
         Assert.False(factory.Session.OverlapDetected);
         Assert.Equal(2, factory.Session.Prompts.Count);
@@ -403,13 +403,13 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (agentId, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (agentId, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
 
         await chat.PostAsync(roomId, KnownIds.Human, "hello there", ct: ct);
 
-        var history = await WaitForHistoryCountAsync(store, roomId, 2, ct);
+        var history = await Eventually.HistoryCountAsync(store, roomId, 2, ct);
 
         Assert.Equal("pong", history[^1].Text);
         Assert.Equal(agentId, history[^1].SenderId);
@@ -429,7 +429,7 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         await using var friend = await fixture.ConnectClientAsync(ct);
         await friend.WriteAsync(new Hello("friend", null), ct);
@@ -467,7 +467,7 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         await using var friend = await fixture.ConnectClientAsync(ct);
         await friend.WriteAsync(new Hello("friend", null), ct);
@@ -479,7 +479,7 @@ public sealed class PersonaRunnerTests
 
         await chat.PostAsync(room.Id, KnownIds.Human, "@nova hello", ct: ct);
 
-        var history = await WaitForHistoryCountAsync(store, room.Id, 2, ct);
+        var history = await Eventually.HistoryCountAsync(store, room.Id, 2, ct);
 
         Assert.Equal("mentioned reply", history[^1].Text);
         Assert.Equal(novaId, history[^1].SenderId);
@@ -505,7 +505,7 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         await using var friend = await fixture.ConnectClientAsync(ct);
         await friend.WriteAsync(new Hello("friend", null), ct);
@@ -542,7 +542,7 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (novaId, rootRoomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, rootRoomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
         var scoped = await directory.CreateRoomAsync("Plans", [KnownIds.Human, novaId], "Marketing", ct: ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
@@ -576,7 +576,7 @@ public sealed class PersonaRunnerTests
         await using var runner = CreateHost(fixture, new Persona("nova", "You are Nova."), factory);
         await runner.StartAsync(ct);
 
-        var (_, rootRoomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, rootRoomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         Assert.Equal(rootRoomId, StartupRoomId(runner));
     }
 
@@ -597,7 +597,7 @@ public sealed class PersonaRunnerTests
         await using var runner = CreateHost(fixture, new Persona("Chief of Staff", BuiltinTeammate.DefaultText), factory);
         await runner.StartAsync(ct);
 
-        var (_, rootRoomId) = await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+        var (_, rootRoomId) = await Eventually.DirectRoomAsync(fixture.Services, "Chief of Staff", ct);
         var prompts = await WaitForPromptCountAsync(factory.Session, 1, ct);
         Assert.StartsWith($"[Room: Chief of Staff (id: {rootRoomId})]", prompts[0], StringComparison.Ordinal); // contains-ok: prompt text, not markup; only the label prefix is pinned, the rest is the Greeting
     }
@@ -652,7 +652,7 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
 
         await chat.PostAsync(roomId, KnownIds.Human, "hello", ct: ct);
@@ -679,13 +679,13 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
 
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
 
-        var history = await WaitForHistoryCountAsync(store, roomId, 2, ct);
+        var history = await Eventually.HistoryCountAsync(store, roomId, 2, ct);
 
         Assert.Equal("Hello, world!", history[^1].Text);
     }
@@ -706,7 +706,7 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory, clock: clock);
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
 
@@ -721,7 +721,7 @@ public sealed class PersonaRunnerTests
         await WaitForPromptCountAsync(factory.Session, 2, ct);
         await clock.AdvanceWhenArmedAsync(2, TimeSpan.FromMilliseconds(300), ct);
 
-        var history = await WaitForHistoryCountAsync(store, roomId, 4, ct);
+        var history = await Eventually.HistoryCountAsync(store, roomId, 4, ct);
 
         Assert.False(factory.Session.OverlapDetected);
         Assert.Equal(2, factory.Session.Prompts.Count);
@@ -744,14 +744,14 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (agentId, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (agentId, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
 
         await chat.PostAsync(roomId, KnownIds.Human, "first message", ct: ct);
         await chat.PostAsync(roomId, KnownIds.Human, "second message", ct: ct);
 
-        var history = await WaitForHistoryCountAsync(store, roomId, 3, ct);
+        var history = await Eventually.HistoryCountAsync(store, roomId, 3, ct);
 
         Assert.Equal("recovered", history[^1].Text);
         Assert.Equal(agentId, history[^1].SenderId);
@@ -779,7 +779,7 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
 
         await chat.PostAsync(roomId, KnownIds.Human, "first message", ct: ct);
@@ -824,7 +824,7 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory, logger);
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
 
         await chat.PostAsync(roomId, KnownIds.Human, "first message", ct: ct);
@@ -1837,7 +1837,7 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (agentId, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (agentId, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
 
@@ -1877,7 +1877,7 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (agentId, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (agentId, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
 
@@ -1916,7 +1916,7 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         await using var friend = await fixture.ConnectClientAsync(ct);
         await friend.WriteAsync(new Hello("friend", null), ct);
@@ -1954,7 +1954,7 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         await using var friend = await fixture.ConnectClientAsync(ct);
         await friend.WriteAsync(new Hello("friend", null), ct);
@@ -1969,7 +1969,7 @@ public sealed class PersonaRunnerTests
         await chat.PostAsync(room.Id, KnownIds.Human, "missed three", ct: ct);
         await chat.PostAsync(room.Id, KnownIds.Human, "@nova wake up", ct: ct);
 
-        await WaitForHistoryCountAsync(store, room.Id, 5, ct);
+        await Eventually.HistoryCountAsync(store, room.Id, 5, ct);
 
         var prompt = Assert.Single(factory.Session.Prompts);
         Assert.Contains("missed one", prompt, StringComparison.Ordinal);
@@ -1993,7 +1993,7 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         await using var friend = await fixture.ConnectClientAsync(ct);
         await friend.WriteAsync(new Hello("friend", null), ct);
@@ -2005,10 +2005,10 @@ public sealed class PersonaRunnerTests
 
         await chat.PostAsync(room.Id, KnownIds.Human, "batch one missed", ct: ct);
         await chat.PostAsync(room.Id, KnownIds.Human, "@nova first tag", ct: ct);
-        await WaitForHistoryCountAsync(store, room.Id, 3, ct);
+        await Eventually.HistoryCountAsync(store, room.Id, 3, ct);
 
         await chat.PostAsync(room.Id, KnownIds.Human, "@nova second tag", ct: ct);
-        await WaitForHistoryCountAsync(store, room.Id, 5, ct);
+        await Eventually.HistoryCountAsync(store, room.Id, 5, ct);
 
         Assert.Equal(2, factory.Session.Prompts.Count);
         var secondPrompt = factory.Session.Prompts[1];
@@ -2030,7 +2030,7 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         await using var friend = await fixture.ConnectClientAsync(ct);
         await friend.WriteAsync(new Hello("friend", null), ct);
@@ -2044,7 +2044,7 @@ public sealed class PersonaRunnerTests
         await chat.PostAsync(roomA.Id, KnownIds.Human, "room a secret missed message", ct: ct);
         await chat.PostAsync(roomB.Id, KnownIds.Human, "@nova hello in room b", ct: ct);
 
-        await WaitForHistoryCountAsync(store, roomB.Id, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomB.Id, 2, ct);
 
         var prompt = Assert.Single(factory.Session.Prompts);
         Assert.DoesNotContain("room a secret missed message", prompt, StringComparison.Ordinal);
@@ -2069,7 +2069,7 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         await using var friend = await fixture.ConnectClientAsync(ct);
         await friend.WriteAsync(new Hello("friend", null), ct);
@@ -2109,13 +2109,13 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
 
         await chat.PostAsync(roomId, KnownIds.Human, "hello there", ct: ct);
 
-        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 2, ct);
 
         var prompt = Assert.Single(factory.Session.Prompts);
 
@@ -2195,7 +2195,7 @@ public sealed class PersonaRunnerTests
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
 
@@ -2230,7 +2230,7 @@ public sealed class PersonaRunnerTests
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
         await chat.PostAsync(room.Id, friendId, "@nova declined for budget", ct: ct);
@@ -2238,7 +2238,7 @@ public sealed class PersonaRunnerTests
         // No sleep between the two posts: the pipe is ordered, so the runner sees the declined Message
         // before the Human's, which is the order this test is about.
         await chat.PostAsync(room.Id, KnownIds.Human, "@nova carry on", ct: ct);
-        await WaitForHistoryCountAsync(store, room.Id, 3, ct);
+        await Eventually.HistoryCountAsync(store, room.Id, 3, ct);
 
         var prompt = Assert.Single(factory.Session.Prompts);
         Assert.DoesNotContain("declined for budget", prompt, StringComparison.Ordinal);
@@ -2260,7 +2260,7 @@ public sealed class PersonaRunnerTests
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
         await chat.PostAsync(room.Id, friendId, "@nova hello", ct: ct);
@@ -2268,7 +2268,7 @@ public sealed class PersonaRunnerTests
         var extended = await chat.ExtendBudgetAsync(room.Id, ct);
 
         Assert.Equal(ExtendResult.Granted, extended.Result);
-        var history = await WaitForHistoryCountAsync(store, room.Id, 2, ct);
+        var history = await Eventually.HistoryCountAsync(store, room.Id, 2, ct);
         Assert.Equal("resumed", history[^1].Text);
         Assert.Equal(novaId, history[^1].SenderId);
 
@@ -2277,7 +2277,7 @@ public sealed class PersonaRunnerTests
         // would have used "resumed", and the redelivery would have produced a second reply before
         // the probe's, so the Transcript would differ from the one asserted here.
         await chat.PostAsync(room.Id, KnownIds.Human, "@nova probe", ct: ct);
-        var settled = await WaitForHistoryCountAsync(store, room.Id, 4, ct);
+        var settled = await Eventually.HistoryCountAsync(store, room.Id, 4, ct);
 
         Assert.Equal(["@nova hello", "resumed", "@nova probe", "probe reply"], settled.Select(m => m.Text).ToArray());
         Assert.Equal(2, factory.Session.Prompts.Count);
@@ -2307,11 +2307,11 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
         await chat.PostAsync(room.Id, friendId, "@nova one", ct: ct);
-        await WaitForHistoryCountAsync(store, room.Id, 2, ct);
+        await Eventually.HistoryCountAsync(store, room.Id, 2, ct);
 
         await chat.PostAsync(room.Id, friendId, "@nova two", ct: ct);
 
@@ -2327,7 +2327,7 @@ public sealed class PersonaRunnerTests
         // takes the queued "second reply". Had "two" been taken, "second reply" would sit before the
         // probe in the Transcript, not after it.
         await chat.PostAsync(room.Id, KnownIds.Human, "@nova probe", ct: ct);
-        var history = await WaitForHistoryCountAsync(store, room.Id, 5, ct);
+        var history = await Eventually.HistoryCountAsync(store, room.Id, 5, ct);
 
         Assert.Equal(["@nova one", "first reply", "@nova two", "@nova probe", "second reply"], history.Select(m => m.Text).ToArray());
         Assert.Equal(2, factory.Session.Prompts.Count);
@@ -2357,14 +2357,14 @@ public sealed class PersonaRunnerTests
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
         await chat.PostAsync(room.Id, friendId, "@nova one", ct: ct);
-        await WaitForHistoryCountAsync(store, room.Id, 2, ct);
+        await Eventually.HistoryCountAsync(store, room.Id, 2, ct);
 
         await chat.PostAsync(room.Id, friendId, "@nova two", ct: ct);
-        var history = await WaitForHistoryCountAsync(store, room.Id, 4, ct);
+        var history = await Eventually.HistoryCountAsync(store, room.Id, 4, ct);
 
         Assert.Contains(history, m => m.Text == "second reply");
     }
@@ -2389,14 +2389,14 @@ public sealed class PersonaRunnerTests
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
         await chat.PostAsync(room.Id, friendId, "@nova one", ct: ct);
-        await WaitForHistoryCountAsync(store, room.Id, 2, ct);
+        await Eventually.HistoryCountAsync(store, room.Id, 2, ct);
 
         await chat.PostAsync(room.Id, KnownIds.Human, "@nova carry on", ct: ct);
-        var history = await WaitForHistoryCountAsync(store, room.Id, 4, ct);
+        var history = await Eventually.HistoryCountAsync(store, room.Id, 4, ct);
 
         Assert.Equal("after the human spoke", history[^1].Text);
     }
@@ -2421,14 +2421,14 @@ public sealed class PersonaRunnerTests
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
         await chat.PostAsync(room.Id, friendId, "@nova one", ct: ct);
-        await WaitForHistoryCountAsync(store, room.Id, 2, ct);
+        await Eventually.HistoryCountAsync(store, room.Id, 2, ct);
 
         await chat.PostAsync(room.Id, friendId, "@nova two", ct: ct);
-        var history = await WaitForHistoryCountAsync(store, room.Id, 4, ct);
+        var history = await Eventually.HistoryCountAsync(store, room.Id, 4, ct);
 
         Assert.Contains(history, m => m.Text == "second reply");
     }
@@ -2454,7 +2454,7 @@ public sealed class PersonaRunnerTests
         agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
-        await WaitForDirectRoomAsync(fixture, "nova", ct);
+        await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         await statuses.AssertContainsEventuallyAsync(
             s => s.State == PersonaState.Degraded && s.Reason!.Contains("claude-99", StringComparison.Ordinal),
@@ -2481,7 +2481,7 @@ public sealed class PersonaRunnerTests
         agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
-        await WaitForDirectRoomAsync(fixture, "nova", ct);
+        await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         // Bounded grace period: give a misbehaving check every chance to report anyway.
         await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
@@ -2506,7 +2506,7 @@ public sealed class PersonaRunnerTests
         agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
 
@@ -2539,7 +2539,7 @@ public sealed class PersonaRunnerTests
         agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
 
         await chat.PostAsync(roomId, KnownIds.Human, "one", ct: ct);
@@ -2576,7 +2576,7 @@ public sealed class PersonaRunnerTests
         agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
 
         await chat.PostAsync(roomId, KnownIds.Human, "first message", ct: ct);
@@ -2611,7 +2611,7 @@ public sealed class PersonaRunnerTests
         agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
 
@@ -2637,7 +2637,7 @@ public sealed class PersonaRunnerTests
         agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
 
@@ -2764,11 +2764,11 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
         await chat.PostAsync(room.Id, friendId, "@nova one", ct: ct);
-        await WaitForHistoryCountAsync(store, room.Id, 2, ct);
+        await Eventually.HistoryCountAsync(store, room.Id, 2, ct);
 
         await chat.PostAsync(room.Id, friendId, "@nova two", ct: ct);
 
@@ -2800,11 +2800,11 @@ public sealed class PersonaRunnerTests
         await using var agentHost = CreateHost(fixture, persona, factory);
         agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
         await chat.PostAsync(room.Id, friendId, "@nova one", ct: ct);
-        await WaitForHistoryCountAsync(store, room.Id, 2, ct);
+        await Eventually.HistoryCountAsync(store, room.Id, 2, ct);
 
         await chat.PostAsync(room.Id, friendId, "@nova two", ct: ct);
         await statuses.AssertContainsEventuallyAsync(s => s.State == PersonaState.Degraded, ct);
@@ -2813,7 +2813,7 @@ public sealed class PersonaRunnerTests
 
         // Five, not four: unlike TokenBudget_ResetsOnAHumanMessage, "two" is also in this Room's
         // history (declined for a spent Budget, but still posted and still counted).
-        var history = await WaitForHistoryCountAsync(store, room.Id, 5, ct);
+        var history = await Eventually.HistoryCountAsync(store, room.Id, 5, ct);
 
         Assert.Equal("after the human spoke", history[^1].Text);
         var settled = await statuses.WaitForAsync(static history => history.Count > 0 && history[^1].State == PersonaState.Online, ct);
@@ -3238,7 +3238,7 @@ public sealed class PersonaRunnerTests
         agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         await chat.PostAsync(roomId, KnownIds.Human, "first message", ct: ct);
 
@@ -3263,7 +3263,7 @@ public sealed class PersonaRunnerTests
         var agentHost = CreateHost(fixture, persona, factory);
         agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
-        await WaitForDirectRoomAsync(fixture, "nova", ct);
+        await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
 
         await agentHost.DisposeAsync();
 
@@ -3428,42 +3428,7 @@ public sealed class PersonaRunnerTests
         TurnScenario.Stop,
     };
 
-    private static async Task<(string AgentId, string RoomId)> WaitForDirectRoomAsync(
-        PipeHostFixture fixture, string agentName, CancellationToken ct)
-    {
-        var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
-        var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
 
-        while (true)
-        {
-            var user = await directory.FindUserByNameAsync(agentName, ct);
-            if (user is not null && gateway.IsOnline(user.Id))
-            {
-                var room = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, user.Id, ct);
-                if (room is not null)
-                {
-                    return (user.Id, room.Id);
-                }
-            }
-
-            await Task.Delay(5, ct);
-        }
-    }
-
-    private static async Task<IReadOnlyList<ChatMessage>> WaitForHistoryCountAsync(
-        IChatStore store, string roomId, int count, CancellationToken ct)
-    {
-        while (true)
-        {
-            var history = await store.ReadAllAsync(roomId, ct);
-            if (history.Count >= count)
-            {
-                return history;
-            }
-
-            await Task.Delay(5, ct);
-        }
-    }
 
     /// <summary>
     /// Polls <paramref name="store"/> until <paramref name="senderId"/> has posted at least one Message
@@ -3495,7 +3460,7 @@ public sealed class PersonaRunnerTests
     /// <summary>
     /// Polls <paramref name="session"/>'s recorded <see cref="FakeAgentSession.Prompts"/> until at
     /// least <paramref name="count"/> have arrived, the same bounded-poll shape as
-    /// <see cref="WaitForDirectRoomAsync"/> and <see cref="WaitForHistoryCountAsync"/> above: a
+    /// <c>Eventually.WaitForDirectRoomAsync</c> and <c>Eventually.WaitForHistoryCountAsync</c> above: a
     /// Greeting Turn runs on <see cref="PersonaRunner"/>'s own consumer loop, concurrently with the
     /// test, so there is no single call this test can await for "the prompt has arrived" - only a
     /// condition to poll for, bounded by <paramref name="ct"/> so a runner that never queues the

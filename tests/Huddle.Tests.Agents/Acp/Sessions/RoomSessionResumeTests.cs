@@ -15,6 +15,7 @@ using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Agency.Huddle.Tests.Pipes;
+using Agency.Huddle.Tests.Waiting;
 
 /// <summary>
 /// Pins <see cref="RoomSession"/>'s resume decision and <see cref="RoomSessionStore"/> read/write
@@ -41,11 +42,11 @@ public sealed class RoomSessionResumeTests
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1")));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             // The PostMessage is written mid-Turn; the store entry only at Turn end, after the File
             // Changes commit - so it has to be waited for, not read straight after the post.
-            await WaitUntilAsync(() => store.Get("nova", "room-1") is not null, ct);
+            await Eventually.UntilAsync(() => store.Get("nova", "room-1") is not null, ct, timeout: TestBudgets.Standard);
 
             var posted = Assert.Single(owner.Written.OfType<PostMessage>());
             var entry = store.Get("nova", "room-1");
@@ -79,7 +80,7 @@ public sealed class RoomSessionResumeTests
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1")));
 
-            await WaitUntilAsync(() => store.Get("nova", "room-1") is not null, ct);
+            await Eventually.UntilAsync(() => store.Get("nova", "room-1") is not null, ct, timeout: TestBudgets.Standard);
 
             RoomSessionEntry? stored = store.Get("nova", "room-1");
             Assert.NotNull(stored);
@@ -118,7 +119,7 @@ public sealed class RoomSessionResumeTests
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-5")));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             Assert.Empty(host.ResumeCalls);
         }
@@ -149,7 +150,7 @@ public sealed class RoomSessionResumeTests
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-2")));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             Assert.Contains("stored-session-id", host.ResumeCalls);
         }
@@ -181,7 +182,7 @@ public sealed class RoomSessionResumeTests
         try
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1")));
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any() && store.Get("nova", "room-1") is not null, ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any() && store.Get("nova", "room-1") is not null, ct, timeout: TestBudgets.Standard);
             string? firstPostId = Assert.Single(owner.Written.OfType<PostMessage>()).MessageId;
             Assert.NotNull(firstPostId);
 
@@ -190,7 +191,7 @@ public sealed class RoomSessionResumeTests
 
             // The third Turn is held in flight, so the command Turn has fully ended (its store write
             // included) and the third has not yet written its own.
-            await WaitUntilAsync(() => session.Prompts.Count == 3, ct);
+            await Eventually.UntilAsync(() => session.Prompts.Count == 3, ct, timeout: TestBudgets.Standard);
             var entry = store.Get("nova", "room-1");
             releaseThird.SetResult();
 
@@ -229,15 +230,15 @@ public sealed class RoomSessionResumeTests
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-6")));
 
-            await WaitUntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => !delta.IsFinal), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => !delta.IsFinal), ct, timeout: TestBudgets.Standard);
 
             await room.StopAsync("room-1", mark: 0, ct);
 
-            await WaitUntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
 
             // Same Turn-end ordering as TurnEnd_StoresEntry_LastMessageIdIsReplyIdOrTrigger: the
             // final delta precedes the store write.
-            await WaitUntilAsync(() => store.Get("nova", "room-1") is not null, ct);
+            await Eventually.UntilAsync(() => store.Get("nova", "room-1") is not null, ct, timeout: TestBudgets.Standard);
 
             Assert.Empty(owner.Written.OfType<PostMessage>());
             var entry = store.Get("nova", "room-1");
@@ -278,7 +279,7 @@ public sealed class RoomSessionResumeTests
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-7")));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             Assert.Equal(500, owner.TokensAdded);
         }
@@ -312,7 +313,7 @@ public sealed class RoomSessionResumeTests
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-2")));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             Assert.Contains("stored-session-id", host.ResumeCalls);
             Assert.Single(owner.TranscriptReadCalls);
@@ -351,7 +352,7 @@ public sealed class RoomSessionResumeTests
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-3")));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             Assert.Contains("stored-session-id", host.ResumeCalls);
             Assert.Null(owner.TranscriptReadCalls[0].AfterMessageId);
@@ -384,7 +385,7 @@ public sealed class RoomSessionResumeTests
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-4")));
 
-            await WaitUntilAsync(() => owner.ReportCalls.Contains("ReportTurnFailure"), ct);
+            await Eventually.UntilAsync(() => owner.ReportCalls.Contains("ReportTurnFailure"), ct, timeout: TestBudgets.Standard);
 
             Assert.Empty(owner.Written.OfType<PostMessage>());
             var kept = store.Get("nova", "room-1");
@@ -420,7 +421,7 @@ public sealed class RoomSessionResumeTests
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-5")));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             Assert.Empty(host.ResumeCalls);
         }
@@ -543,19 +544,5 @@ public sealed class RoomSessionResumeTests
         await runCts.CancelAsync();
         await session.DisposeAsync();
         runCts.Dispose();
-    }
-
-    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct, TimeSpan? timeout = null)
-    {
-        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(5));
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Condition was not met before the test's timeout.");
-            }
-
-            await Task.Delay(10, ct);
-        }
     }
 }

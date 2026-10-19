@@ -8,6 +8,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
+using Agency.Huddle.Tests.Waiting;
 
 /// <summary>
 /// Pins <see cref="RoomSession"/> (RS §6.1) in isolation, before <see cref="Agency.Huddle.App.Acp.PersonaRunner"/> is
@@ -170,7 +171,7 @@ public sealed class RoomSessionTests
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             Assert.Equal([(session.SessionId, 0.0548m, "USD")], owner.SpendAdded);
         }
@@ -195,7 +196,7 @@ public sealed class RoomSessionTests
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             var call = Assert.Single(owner.CommandsSet);
             Assert.Equal(session.SessionId, call.SessionId);
@@ -220,7 +221,7 @@ public sealed class RoomSessionTests
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             Assert.Empty(owner.SpendAdded);
         }
@@ -243,7 +244,7 @@ public sealed class RoomSessionTests
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             Assert.Equal(300, owner.TokensAdded);
             Assert.False(owner.TokenBudgetSpent);
@@ -268,7 +269,7 @@ public sealed class RoomSessionTests
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             Assert.Equal(1, openCalls);
             PostMessage posted = Assert.Single(owner.Written.OfType<PostMessage>());
@@ -296,7 +297,7 @@ public sealed class RoomSessionTests
             room.Enqueue(new QueuedWork(1, RoomAItem));
             room.Enqueue(new QueuedWork(2, RoomAItem));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 2, ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 2, ct, timeout: TestBudgets.Standard);
 
             Assert.False(session.OverlapDetected);
         }
@@ -318,12 +319,12 @@ public sealed class RoomSessionTests
         try
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
-            await WaitUntilAsync(() => session.Prompts.Count == 1, ct);
+            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
             await room.StopAsync("room-b", mark: 1, ct);
 
             Assert.Equal(0, session.CancelCallCount);
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
         }
         finally
         {
@@ -348,13 +349,13 @@ public sealed class RoomSessionTests
             var b1 = RoomBItem with { Text = "b1" };
 
             room.Enqueue(new QueuedWork(1, a1));
-            await WaitUntilAsync(() => session.Prompts.Count == 1, ct);
+            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
             room.Enqueue(new QueuedWork(2, a2));
             room.Enqueue(new QueuedWork(3, b1));
 
             await room.StopAsync("room-a", mark: 2, ct);
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(message => message.Text == "b1 reply"), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(message => message.Text == "b1 reply"), ct, timeout: TestBudgets.Standard);
 
             Assert.DoesNotContain(session.Prompts, prompt => prompt.Contains("a2", StringComparison.Ordinal));
         }
@@ -376,11 +377,11 @@ public sealed class RoomSessionTests
         try
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
-            await WaitUntilAsync(() => session.Prompts.Count == 1, ct);
+            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
             await room.StopAsync("room-a", mark: 1, ct);
 
-            await WaitUntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
 
             Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportTurnFailure));
             Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportIncompleteStop));
@@ -417,11 +418,11 @@ public sealed class RoomSessionTests
         try
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
-            await WaitUntilAsync(() => session.Prompts.Count == 1, ct);
+            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
             await room.StopAsync("room-a", mark: 1, ct);
 
-            await WaitUntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
 
             Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportTurnFailure));
             Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportOffline));
@@ -446,12 +447,12 @@ public sealed class RoomSessionTests
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await WaitUntilAsync(() => session.CancelObservedPromptInFlight, ct, TimeSpan.FromSeconds(5));
+            await Eventually.UntilAsync(() => session.CancelObservedPromptInFlight, ct, TimeSpan.FromSeconds(5));
 
             // The far-side cancel above is the FIRST thing the watchdog does; the Turn only fails -
             // and reports it - once that cancel has returned and its own token has fired, so the
             // report is waited for rather than read straight after the cancel was observed.
-            await WaitUntilAsync(() => owner.ReportCalls.Contains(nameof(IRoomSessionOwner.ReportTurnFailure)), ct);
+            await Eventually.UntilAsync(() => owner.ReportCalls.Contains(nameof(IRoomSessionOwner.ReportTurnFailure)), ct, timeout: TestBudgets.Standard);
 
             Assert.Contains(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportTurnFailure));
         }
@@ -474,7 +475,7 @@ public sealed class RoomSessionTests
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await WaitUntilAsync(() => owner.ReportCalls.Contains(nameof(IRoomSessionOwner.ReportTokenBudgetSpent)), ct);
+            await Eventually.UntilAsync(() => owner.ReportCalls.Contains(nameof(IRoomSessionOwner.ReportTokenBudgetSpent)), ct, timeout: TestBudgets.Standard);
 
             Assert.Empty(session.Prompts);
             Assert.Equal(0, openCalls);
@@ -509,7 +510,7 @@ public sealed class RoomSessionTests
             Assert.Equal(RoomSessionState.Closed, room.State);
 
             room.Enqueue(new QueuedWork(1, RoomAItem));
-            await WaitUntilAsync(() => openCalls == 2, ct);
+            await Eventually.UntilAsync(() => openCalls == 2, ct, timeout: TestBudgets.Standard);
         }
         finally
         {
@@ -555,7 +556,7 @@ public sealed class RoomSessionTests
         try
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             Assert.Equal(1, scheduler.OfferCount);
         }
@@ -581,7 +582,7 @@ public sealed class RoomSessionTests
             await room.StopAsync("room-a", mark: 100, ct);
             room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await WaitUntilAsync(() => scheduler.CompleteCount == 1, ct);
+            await Eventually.UntilAsync(() => scheduler.CompleteCount == 1, ct, timeout: TestBudgets.Standard);
 
             Assert.Equal(1, scheduler.OfferCount);
             Assert.Empty(session.Prompts);
@@ -606,10 +607,10 @@ public sealed class RoomSessionTests
         try
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
-            await WaitUntilAsync(() => session.Prompts.Count == 1, ct);
+            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
             room.Enqueue(new QueuedWork(2, RoomAItem));
 
-            await WaitUntilAsync(() => scheduler.CompleteCount == 2, ct);
+            await Eventually.UntilAsync(() => scheduler.CompleteCount == 2, ct, timeout: TestBudgets.Standard);
 
             List<string> calls = [.. scheduler.Calls];
             var offerSecondIndex = calls.IndexOf("Offer(2)");
@@ -636,7 +637,7 @@ public sealed class RoomSessionTests
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await WaitUntilAsync(() => scheduler.CompleteCount == 1, ct);
+            await Eventually.UntilAsync(() => scheduler.CompleteCount == 1, ct, timeout: TestBudgets.Standard);
 
             Assert.Contains(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportTurnFailure));
         }
@@ -651,6 +652,7 @@ public sealed class RoomSessionTests
     /// <see cref="TurnActivity.End"/> once it finishes: busy while the reply is held open, not busy
     /// once it is posted (Spec §10.8).
     /// </summary>
+#pragma warning disable S2699 // The test's checks are the Eventually.UntilAsync waits, which fail the test when a condition never holds; Sonar cannot see an assertion inside the shared helper.
     [Fact]
     public async Task Turn_Completes_BeginThenEnd()
     {
@@ -665,18 +667,19 @@ public sealed class RoomSessionTests
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await WaitUntilAsync(() => turnActivity.IsBusyIn("agent-1", "room-a"), ct);
+            await Eventually.UntilAsync(() => turnActivity.IsBusyIn("agent-1", "room-a"), ct, timeout: TestBudgets.Standard);
 
             release.SetResult();
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
-            await WaitUntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-a"), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+            await Eventually.UntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-a"), ct, timeout: TestBudgets.Standard);
         }
         finally
         {
             await DisposeSessionAsync(room, runCts);
         }
     }
+#pragma warning restore S2699
 
     /// <summary>
     /// A Turn whose prompt throws still calls <see cref="TurnActivity.End"/>, so a failure never
@@ -698,11 +701,11 @@ public sealed class RoomSessionTests
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await WaitUntilAsync(() => owner.ReportCalls.Contains(nameof(IRoomSessionOwner.ReportTurnFailure)), ct);
+            await Eventually.UntilAsync(() => owner.ReportCalls.Contains(nameof(IRoomSessionOwner.ReportTurnFailure)), ct, timeout: TestBudgets.Standard);
 
             // ReportTurnFailure runs in the catch, End in the finally after the watchdog awaits, so
             // the failure report is visible before End has run; wait for it rather than assert it.
-            await WaitUntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-a"), ct);
+            await Eventually.UntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-a"), ct, timeout: TestBudgets.Standard);
 
             Assert.True(busyObserved);
             Assert.False(turnActivity.IsBusyIn("agent-1", "room-a"));
@@ -726,13 +729,13 @@ public sealed class RoomSessionTests
         try
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
-            await WaitUntilAsync(() => session.Prompts.Count == 1, ct);
+            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
             Assert.True(turnActivity.IsBusyIn("agent-1", "room-a"));
 
             await room.StopAsync("room-a", mark: 1, ct);
 
-            await WaitUntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
 
             Assert.False(turnActivity.IsBusyIn("agent-1", "room-a"));
         }
@@ -762,18 +765,18 @@ public sealed class RoomSessionTests
         try
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(message => message.Text == "a done"), ct);
-            await WaitUntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-a"), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(message => message.Text == "a done"), ct, timeout: TestBudgets.Standard);
+            await Eventually.UntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-a"), ct, timeout: TestBudgets.Standard);
 
             room.Enqueue(new QueuedWork(2, RoomBItem));
-            await WaitUntilAsync(() => turnActivity.IsBusyIn("agent-1", "room-b"), ct);
+            await Eventually.UntilAsync(() => turnActivity.IsBusyIn("agent-1", "room-b"), ct, timeout: TestBudgets.Standard);
 
             Assert.False(turnActivity.IsBusyIn("agent-1", "room-a"));
 
             release.SetResult();
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(message => message.Text == "b held"), ct);
-            await WaitUntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-b"), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(message => message.Text == "b held"), ct, timeout: TestBudgets.Standard);
+            await Eventually.UntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-b"), ct, timeout: TestBudgets.Standard);
         }
         finally
         {
@@ -795,8 +798,8 @@ public sealed class RoomSessionTests
             var before = room.LastActivity;
             room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
-            await WaitUntilAsync(() => room.LastActivity > before, ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+            await Eventually.UntilAsync(() => room.LastActivity > before, ct, timeout: TestBudgets.Standard);
 
             Assert.True(room.LastActivity > before);
         }
@@ -819,7 +822,7 @@ public sealed class RoomSessionTests
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             var reported = Assert.Single(owner.ReportedModels);
             Assert.Same(session.Models, reported);
@@ -890,7 +893,7 @@ public sealed class RoomSessionTests
         {
             room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             return [.. owner.Written.OfType<ToolActivity>()];
         }
@@ -911,19 +914,4 @@ public sealed class RoomSessionTests
             onOpen();
             return Task.FromResult<IAgentSession>(session());
         };
-
-    /// <summary>Polls <paramref name="condition"/> until it is true, or fails the test after <paramref name="timeout"/>.</summary>
-    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct, TimeSpan? timeout = null)
-    {
-        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(5));
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Condition was not met before the test's timeout.");
-            }
-
-            await Task.Delay(10, ct);
-        }
-    }
 }

@@ -6,6 +6,7 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Acp.Sessions;
 
@@ -69,7 +70,7 @@ public sealed class RoomSessionUserInputTests
         Assert.Equal(0, rig.Session.CancelCallCount);
 
         clock.Advance(TimeSpan.FromSeconds(0.3));
-        await WaitUntilAsync(() => rig.Session.CancelCallCount == 1, ct);
+        await Eventually.UntilAsync(() => rig.Session.CancelCallCount == 1, ct, timeout: TestBudgets.Standard);
 
         Assert.Equal(1, rig.Session.CancelCallCount);
     }
@@ -103,7 +104,7 @@ public sealed class RoomSessionUserInputTests
         Assert.Equal(0, rig.Session.CancelCallCount);
 
         clock.Advance(TimeSpan.FromSeconds(0.3));
-        await WaitUntilAsync(() => rig.Session.CancelCallCount == 1, ct);
+        await Eventually.UntilAsync(() => rig.Session.CancelCallCount == 1, ct, timeout: TestBudgets.Standard);
     }
 
     /// <summary>Releasing the same lease twice counts once, so a double dispose cannot un-pause the watchdog under a second open question.</summary>
@@ -154,8 +155,8 @@ public sealed class RoomSessionUserInputTests
         // The second Turn goes silent for a full bound: its own watchdog and the fake session's delay are the two armed timers.
         await rig.StartTurnAsync(2, expectedTimers: 2, ct);
         clock.Advance(Bound);
-        await WaitUntilAsync(() => rig.Session.CancelCallCount == 1, ct);
-        await WaitUntilAsync(() => rig.Owner.ReportCalls.Contains(nameof(IRoomSessionOwner.ReportTurnFailure)), ct);
+        await Eventually.UntilAsync(() => rig.Session.CancelCallCount == 1, ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => rig.Owner.ReportCalls.Contains(nameof(IRoomSessionOwner.ReportTurnFailure)), ct, timeout: TestBudgets.Standard);
 
         Assert.Equal(1, rig.Session.CancelCallCount);
     }
@@ -175,7 +176,7 @@ public sealed class RoomSessionUserInputTests
         Assert.False(lease.Token.IsCancellationRequested);
 
         rig.Release.SetResult();
-        await WaitUntilAsync(() => rig.Owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct);
+        await Eventually.UntilAsync(() => rig.Owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
 
         Assert.True(lease.Token.IsCancellationRequested);
     }
@@ -205,7 +206,7 @@ public sealed class RoomSessionUserInputTests
         Assert.True(rig.Session.LastPromptCancellationToken.IsCancellationRequested);
 
         rig.Release.SetResult();
-        await WaitUntilAsync(() => rig.Owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct);
+        await Eventually.UntilAsync(() => rig.Owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
 
         Assert.Equal(1, rig.Session.CancelCallCount);
         Assert.DoesNotContain(rig.Owner.ReportCalls, reported => reported == nameof(IRoomSessionOwner.ReportTurnFailure));
@@ -267,7 +268,7 @@ public sealed class RoomSessionUserInputTests
         Assert.False(rig.Session.LastPromptCancellationToken.IsCancellationRequested);
 
         rig.Release.SetResult();
-        await WaitUntilAsync(() => rig.Owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct);
+        await Eventually.UntilAsync(() => rig.Owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
 
         Assert.Equal("reply", Assert.Single(rig.Owner.Written.OfType<PostMessage>()).Text);
         Assert.Contains(rig.Owner.ReportCalls, reported => reported == nameof(IRoomSessionOwner.ReportTurnCompleted));
@@ -355,7 +356,7 @@ public sealed class RoomSessionUserInputTests
         rig.Session.EnqueueGatedReply(rig.Release.Task);
         await rig.StartTurnAsync(1, expectedTimers: 0, ct);
         rig.Release.SetResult();
-        await WaitUntilAsync(() => rig.Owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct);
+        await Eventually.UntilAsync(() => rig.Owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
 
         ElicitationResult result = await rig.Room.ElicitAsync(Request, ct);
 
@@ -451,7 +452,7 @@ public sealed class RoomSessionUserInputTests
 
         // Released at t = 0, so a full bound of silence later the watchdog fires.
         clock.Advance(Bound);
-        await WaitUntilAsync(() => rig.Session.CancelCallCount == 1, ct);
+        await Eventually.UntilAsync(() => rig.Session.CancelCallCount == 1, ct, timeout: TestBudgets.Standard);
     }
 
     /// <summary>A bridge that throws surfaces its exception unchanged, and the lease is still released so the watchdog runs again.</summary>
@@ -469,7 +470,7 @@ public sealed class RoomSessionUserInputTests
 
         Assert.Equal("form could not be shown", thrown.Message);
         clock.Advance(Bound);
-        await WaitUntilAsync(() => rig.Session.CancelCallCount == 1, ct);
+        await Eventually.UntilAsync(() => rig.Session.CancelCallCount == 1, ct, timeout: TestBudgets.Standard);
     }
 
     /// <summary>Opening the lease counts as activity: a Turn that only ever showed a question and was then stopped still stores its session for a resume.</summary>
@@ -488,7 +489,7 @@ public sealed class RoomSessionUserInputTests
         Assert.NotNull(lease);
         await rig.Room.StopAsync("room-a", mark: 1, ct);
 
-        await WaitUntilAsync(() => store.Get("nova", "room-a") is not null, ct);
+        await Eventually.UntilAsync(() => store.Get("nova", "room-a") is not null, ct, timeout: TestBudgets.Standard);
 
         Assert.Equal(rig.Session.SessionId, store.Get("nova", "room-a")?.SessionId);
     }
@@ -510,8 +511,8 @@ public sealed class RoomSessionUserInputTests
         Assert.NotNull(lease);
 
         clock.Advance(Bound);
-        await WaitUntilAsync(() => other.Session.CancelCallCount == 1, ct);
-        await WaitUntilAsync(() => clock.PendingTimers >= 1, ct);
+        await Eventually.UntilAsync(() => other.Session.CancelCallCount == 1, ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => clock.PendingTimers >= 1, ct, timeout: TestBudgets.Standard);
 
         Assert.Equal(0, leased.Session.CancelCallCount);
     }
@@ -626,7 +627,7 @@ public sealed class RoomSessionUserInputTests
         rig.Session.OnPrompt = _ => boundAtPrompt = rig.Session.BoundScopes.Count;
 
         await rig.StartTurnAsync(1, expectedTimers: 0, ct);
-        await WaitUntilAsync(() => boundAtPrompt >= 0, ct);
+        await Eventually.UntilAsync(() => boundAtPrompt >= 0, ct, timeout: TestBudgets.Standard);
 
         Assert.Same(rig.Room, Assert.Single(rig.Session.BoundScopes));
         Assert.Equal(1, boundAtPrompt);
@@ -665,7 +666,7 @@ public sealed class RoomSessionUserInputTests
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-1")));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             Assert.Equal("stored-session-id", Assert.Single(host.ResumeCalls));
             Assert.Same(room, Assert.Single(resumed.BoundScopes));
@@ -685,7 +686,7 @@ public sealed class RoomSessionUserInputTests
     private static async Task AdvanceAndSettleAsync(Rig rig, TimeSpan by, int timersAfter, CancellationToken ct)
     {
         rig.Clock.Advance(by);
-        await WaitUntilAsync(() => rig.Clock.PendingTimers >= timersAfter || rig.Session.CancelCallCount > 0, ct);
+        await Eventually.UntilAsync(() => rig.Clock.PendingTimers >= timersAfter || rig.Session.CancelCallCount > 0, ct, timeout: TestBudgets.Standard);
     }
 
     /// <summary>
@@ -704,20 +705,6 @@ public sealed class RoomSessionUserInputTests
         }
     }
 
-    /// <summary>Polls <paramref name="condition"/> until it is true, or fails the test after five seconds.</summary>
-    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct)
-    {
-        DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Condition was not met before the test's timeout.");
-            }
-
-            await Task.Delay(10, ct);
-        }
-    }
 
     /// <summary>The Adapter Profile a per-Room test's host reports: one that can resume.</summary>
     private static AdapterProfile ClaudeProfile() => new(
@@ -828,7 +815,7 @@ public sealed class RoomSessionUserInputTests
         {
             this.sequence++;
             this.Room.Enqueue(new QueuedWork(this.sequence, RoomAItem));
-            await WaitUntilAsync(() => this.Session.Prompts.Count == promptCount, ct);
+            await Eventually.UntilAsync(() => this.Session.Prompts.Count == promptCount, ct, timeout: TestBudgets.Standard);
             await WaitForTimersAsync(this.Clock, expectedTimers, ct);
         }
 

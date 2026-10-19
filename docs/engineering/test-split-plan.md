@@ -1080,7 +1080,7 @@ Ids are `<deliverable>.<task>`:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "2.3" -State Done -TrackerPath docs/engineering/test-split-plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 41 of 77 tasks Done · 2 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
+**Status:** 43 of 77 tasks Done · 2 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1141,10 +1141,10 @@ Ids are `<deliverable>.<task>`:
 | **D11 One way to wait** | Sonnet | D10 | | | |
 | 11.1 Red: `EventuallyTests` (S) | Sonnet | D10 | | | ✔ |
 | 11.2 `Eventually` and `TestBudgets` (S) | Sonnet | 11.1 | | | ✔ |
-| 11.3 Migrate the `Acp` wait copies (S) | Sonnet | 11.2 | | | |
+| 11.3 Migrate the `Acp` wait copies (S) | Sonnet | 11.2 | | | ✔ |
 | 11.4 Migrate the other wait copies (H) | Haiku | 11.2 | | | |
 | 11.5 Silent-deadline loops fail with a reason (S) | Sonnet | 11.3 | | | |
-| 11.6 `ValueAsync` wrappers (S) | Sonnet | 11.3 | | | |
+| 11.6 `ValueAsync` wrappers (S) | Sonnet | 11.3 | | | ✔ |
 | **D12 One recording logger** | Sonnet | D10 | | | |
 | 12.1 Red: `RecordingLoggerTests` (H) | Haiku | D10 | | | |
 | 12.2 `RecordingLogger` and provider (S) | Sonnet | 12.1 | | | |

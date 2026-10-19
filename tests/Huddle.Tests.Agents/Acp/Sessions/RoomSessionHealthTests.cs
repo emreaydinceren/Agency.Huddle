@@ -14,6 +14,7 @@ using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Agency.Huddle.Tests.Pipes;
+using Agency.Huddle.Tests.Waiting;
 
 /// <summary>
 /// Pins RS §6.8's health and token-Budget rules across Room Sessions: one Persona-wide failure
@@ -128,21 +129,21 @@ public sealed class RoomSessionHealthTests
         try
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "one", [], TriggerMessageId: "trig-1")));
-            await WaitUntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportTurnFailure)) == 1, ct);
+            await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportTurnFailure)) == 1, ct, timeout: TestBudgets.Standard);
 
             Assert.NotNull(store.Get("nova", "room-1"));
 
             room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "two", [], TriggerMessageId: "trig-2")));
-            await WaitUntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportTurnFailure)) == 2, ct);
+            await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportTurnFailure)) == 2, ct, timeout: TestBudgets.Standard);
 
-            await WaitUntilAsync(() => room.State == RoomSessionState.Closed, ct);
+            await Eventually.UntilAsync(() => room.State == RoomSessionState.Closed, ct, timeout: TestBudgets.Standard);
             Assert.Null(store.Get("nova", "room-1"));
 
             // A third item reopens - since the entry was forgotten, the resume lookup finds nothing,
             // so ResumeAsync is never called even though this host is otherwise resume-capable.
             session.EnqueueReply("fresh reply");
             room.Enqueue(new QueuedWork(3, new WorkItem("room-1", "Room 1", "Human", "three", [], TriggerMessageId: "trig-3")));
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             // ResumeCalls already holds "old-session" from item 1's own legitimate resume, before
             // either failure - what this proves is that item 3, AFTER the forget, adds no new one.
@@ -179,9 +180,9 @@ public sealed class RoomSessionHealthTests
         try
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-a", "Room A", "Human", "one", [])));
-            await WaitUntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportTurnFailure)) == 1, ct);
+            await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportTurnFailure)) == 1, ct, timeout: TestBudgets.Standard);
             room.Enqueue(new QueuedWork(2, new WorkItem("room-a", "Room A", "Human", "two", [])));
-            await WaitUntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportTurnFailure)) == 2, ct);
+            await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportTurnFailure)) == 2, ct, timeout: TestBudgets.Standard);
 
             // Give a wrongly-closing implementation every chance to have closed by now.
             await Task.Delay(200, ct);
@@ -212,9 +213,9 @@ public sealed class RoomSessionHealthTests
         try
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "one", [], TriggerMessageId: "trig-1")));
-            await WaitUntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportOffline)) == 1, ct);
+            await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportOffline)) == 1, ct, timeout: TestBudgets.Standard);
             room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "two", [], TriggerMessageId: "trig-2")));
-            await WaitUntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportOffline)) == 2, ct);
+            await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportOffline)) == 2, ct, timeout: TestBudgets.Standard);
 
             // Give a wrongly-counting implementation every chance to have closed and forgotten by now.
             await Task.Delay(200, ct);
@@ -254,7 +255,7 @@ public sealed class RoomSessionHealthTests
         await using PersonaRunner runner = CreateRunner(fixture, Nova, novaFactory, acp);
         await runner.StartAsync(ct);
 
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var friendId = await RegisterLightweightAgentAsync(fixture, "friend", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
@@ -263,11 +264,11 @@ public sealed class RoomSessionHealthTests
 
         novaFactory.Host!.OnOpen = session => session.EnqueueReplyWithUsage([1000], "p1");
         await chat.PostAsync(roomP.Id, friendId, "@nova p1", ct: ct);
-        await WaitForHistoryCountAsync(store, roomP.Id, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomP.Id, 2, ct);
 
         novaFactory.Host.OnOpen = session => session.EnqueueReplyWithUsage([500], "q1");
         await chat.PostAsync(roomQ.Id, friendId, "@nova q1", ct: ct);
-        await WaitForHistoryCountAsync(store, roomQ.Id, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomQ.Id, 2, ct);
 
         // 1000 + 500 = 1500, over the 1200 budget: a further Turn in Room P must be dropped without
         // ever prompting again - proof the two sessions' rises share one counter.
@@ -295,7 +296,7 @@ public sealed class RoomSessionHealthTests
         await using PersonaRunner runner = CreateRunner(fixture, Nova, novaFactory, acp);
         await runner.StartAsync(ct);
 
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var friendId = await RegisterLightweightAgentAsync(fixture, "friend", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
@@ -304,22 +305,22 @@ public sealed class RoomSessionHealthTests
 
         novaFactory.Host!.OnOpen = session => session.EnqueueReplyWithUsage([1000], "p1");
         await chat.PostAsync(roomP.Id, friendId, "@nova p1", ct: ct);
-        await WaitForHistoryCountAsync(store, roomP.Id, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomP.Id, 2, ct);
 
         novaFactory.Host.OnOpen = session => session.EnqueueReplyWithUsage([5000], "q1");
         await chat.PostAsync(roomQ.Id, friendId, "@nova q1", ct: ct);
-        await WaitForHistoryCountAsync(store, roomQ.Id, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomQ.Id, 2, ct);
 
         // Room P's own session (Sessions[1]) reports a LOWER Used than its own last rise: a
         // compaction, not a spend.
         novaFactory.Host.Sessions[1].EnqueueReplyWithUsage([800], "p2");
         await chat.PostAsync(roomP.Id, friendId, "@nova p2", ct: ct);
-        await WaitForHistoryCountAsync(store, roomP.Id, 4, ct);
+        await Eventually.HistoryCountAsync(store, roomP.Id, 4, ct);
 
         novaFactory.Host.Sessions[1].EnqueueReply("p3");
         await chat.PostAsync(roomP.Id, friendId, "@nova p3", ct: ct);
 
-        await WaitUntilAsync(() => novaFactory.Host.Sessions[1].Prompts.Count == 3, ct);
+        await Eventually.UntilAsync(() => novaFactory.Host.Sessions[1].Prompts.Count == 3, ct, timeout: TestBudgets.Standard);
     }
 
     /// <summary>A spent Persona-wide Budget blocks a Turn in a Room whose own session has not even opened yet.</summary>
@@ -337,7 +338,7 @@ public sealed class RoomSessionHealthTests
         await using PersonaRunner runner = CreateRunner(fixture, Nova, novaFactory, acp);
         await runner.StartAsync(ct);
 
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var friendId = await RegisterLightweightAgentAsync(fixture, "friend", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
@@ -346,7 +347,7 @@ public sealed class RoomSessionHealthTests
 
         novaFactory.Host!.OnOpen = session => session.EnqueueReplyWithUsage([1200], "spends it all");
         await chat.PostAsync(roomP.Id, friendId, "@nova p1", ct: ct);
-        await WaitForHistoryCountAsync(store, roomP.Id, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomP.Id, 2, ct);
 
         // Room Q's session has never opened. The Budget check (D22 correction 11) runs before the
         // open, so this Mention must never open one at all - only Nova's own direct Room's session
@@ -375,7 +376,7 @@ public sealed class RoomSessionHealthTests
         await using PersonaRunner runner = CreateRunner(fixture, Nova, novaFactory, acp);
         await runner.StartAsync(ct);
 
-        var (novaId, roomXId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, roomXId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var friendId = await RegisterLightweightAgentAsync(fixture, "friend", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
@@ -384,7 +385,7 @@ public sealed class RoomSessionHealthTests
 
         novaFactory.Host!.OnOpen = session => session.EnqueueReplyWithUsage([1200], "spends it all");
         await chat.PostAsync(roomP.Id, friendId, "@nova p1", ct: ct);
-        await WaitForHistoryCountAsync(store, roomP.Id, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomP.Id, 2, ct);
 
         // Confirms the Budget really is spent first: Room Q's first Mention never opens a session.
         await chat.PostAsync(roomQ.Id, friendId, "@nova please open", ct: ct);
@@ -395,12 +396,12 @@ public sealed class RoomSessionHealthTests
         // This is the one Turn in this file deliberately triggered by the Human: the Human's own
         // Message, then Nova's reply, is roomX's first-ever history, so the count is 2, not 3.
         await chat.PostAsync(roomXId, KnownIds.Human, "reset it", ct: ct);
-        await WaitForHistoryCountAsync(store, roomXId, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomXId, 2, ct);
 
         novaFactory.Host.OnOpen = session => session.EnqueueReply("finally open");
         await chat.PostAsync(roomQ.Id, friendId, "@nova try again", ct: ct);
 
-        await WaitUntilAsync(() => novaFactory.Host.Sessions.Count == 3 && novaFactory.Host.Sessions[2].Prompts.Count == 1, ct);
+        await Eventually.UntilAsync(() => novaFactory.Host.Sessions.Count == 3 && novaFactory.Host.Sessions[2].Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
     }
 
     /// <summary>Builds a bare <see cref="PersonaRunner"/> with no pipe connection at all, for a test that only calls its <see cref="IRoomSessionOwner"/> members directly.</summary>
@@ -480,27 +481,6 @@ public sealed class RoomSessionHealthTests
         return new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger);
     }
 
-    /// <summary>Waits until <paramref name="agentName"/> is registered and Online, then returns its id and its direct Room with the Human.</summary>
-    private static async Task<(string AgentId, string RoomId)> WaitForDirectRoomAsync(PipeHostFixture fixture, string agentName, CancellationToken ct)
-    {
-        var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
-        var gateway = fixture.Services.GetRequiredService<Agency.Huddle.App.Pipes.IAgentGateway>();
-
-        while (true)
-        {
-            var user = await directory.FindUserByNameAsync(agentName, ct);
-            if (user is not null && gateway.IsOnline(user.Id))
-            {
-                var room = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, user.Id, ct);
-                if (room is not null)
-                {
-                    return (user.Id, room.Id);
-                }
-            }
-
-            await Task.Delay(50, ct);
-        }
-    }
 
     /// <summary>Registers <paramref name="agentName"/> as an Agent over a bare Hello/Welcome handshake, with no <see cref="PersonaRunner"/> behind it - only to exist and be a Member of a group Room.</summary>
     private static async Task<string> RegisterLightweightAgentAsync(PipeHostFixture fixture, string agentName, CancellationToken ct)
@@ -511,28 +491,7 @@ public sealed class RoomSessionHealthTests
         return welcome.AgentId;
     }
 
-    /// <summary>Waits until <paramref name="roomId"/>'s Transcript holds at least <paramref name="count"/> Messages.</summary>
-    private static async Task WaitForHistoryCountAsync(IChatStore store, string roomId, int count, CancellationToken ct)
-    {
-        while ((await store.ReadAllAsync(roomId, ct)).Count < count)
-        {
-            await Task.Delay(50, ct);
-        }
-    }
 
-    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct, TimeSpan? timeout = null)
-    {
-        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(5));
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Condition was not met before the test's timeout.");
-            }
-
-            await Task.Delay(10, ct);
-        }
-    }
 
     private static async Task DisposeSessionAsync(RoomSession session, CancellationTokenSource runCts)
     {

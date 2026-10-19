@@ -11,6 +11,7 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
+using Agency.Huddle.Tests.Waiting;
 
 /// <summary>
 /// Pins RS §6.8 "Stop" routed to a Room's own <see cref="RoomSession"/> (finding P-6, RS §9 E-4),
@@ -45,7 +46,7 @@ public sealed class RoomSessionStopTests
         factory.Host!.Sessions[0].EnqueueDelayedReply(TimeSpan.FromSeconds(10), "a reply");
 
         await server.SendAsync(Posted(roomA, "hold room a"), ct);
-        await WaitUntilAsync(() => factory.Host.Sessions[0].Prompts.Count == 1, ct);
+        await Eventually.UntilAsync(() => factory.Host.Sessions[0].Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
         // Queued behind A's live Turn: a group Room's first Mention lazily opens its own session,
         // but that open only ever happens inside an admitted ticket (P-5), so it cannot start until
@@ -82,7 +83,7 @@ public sealed class RoomSessionStopTests
         factory.Host!.Sessions[0].EnqueueDelayedReply(TimeSpan.FromSeconds(10), "a reply");
 
         await server.SendAsync(Posted(roomA, "hold room a"), ct);
-        await WaitUntilAsync(() => factory.Host.Sessions[0].Prompts.Count == 1, ct);
+        await Eventually.UntilAsync(() => factory.Host.Sessions[0].Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
         // TrySetResult in a finally: an ungated await observes no cancellation token (unlike
         // EnqueueDelayedReply), so an assertion failing above must still release it, or Room B's
@@ -93,10 +94,10 @@ public sealed class RoomSessionStopTests
         {
             factory.Host.OnOpen = session => session.EnqueueGatedReply(releaseB.Task, "b reply");
             await server.SendAsync(Posted(roomB, "hold room b"), ct);
-            await WaitUntilAsync(() => factory.Host.Sessions.Count == 2 && factory.Host.Sessions[1].Prompts.Count == 1, ct);
+            await Eventually.UntilAsync(() => factory.Host.Sessions.Count == 2 && factory.Host.Sessions[1].Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
             await server.SendAsync(new StopTurn(roomA.Id), ct);
-            await WaitUntilAsync(() => factory.Host.Sessions[0].CancelCallCount == 1, ct);
+            await Eventually.UntilAsync(() => factory.Host.Sessions[0].CancelCallCount == 1, ct, timeout: TestBudgets.Standard);
 
             Assert.Equal(0, factory.Host.Sessions[1].CancelCallCount);
         }
@@ -126,7 +127,7 @@ public sealed class RoomSessionStopTests
 
         factory.Host!.Sessions[0].EnqueueDelayedReply(TimeSpan.FromSeconds(10), "a reply");
         await server.SendAsync(Posted(roomA, "hold room a"), ct);
-        await WaitUntilAsync(() => factory.Host.Sessions[0].Prompts.Count == 1, ct);
+        await Eventually.UntilAsync(() => factory.Host.Sessions[0].Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
         factory.Host.OnOpen = session => session.EnqueueReply("b reply");
         await server.SendAsync(Posted(roomB, "hi b"), ct);
@@ -191,7 +192,7 @@ public sealed class RoomSessionStopTests
 
         factory.Host!.Sessions[0].EnqueueDelayedReply(TimeSpan.FromSeconds(10), "a reply");
         await server.SendAsync(Posted(roomA, "hold room a"), ct);
-        await WaitUntilAsync(() => factory.Host.Sessions[0].Prompts.Count == 1, ct);
+        await Eventually.UntilAsync(() => factory.Host.Sessions[0].Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
         await server.SendAsync(new StopTurn(roomA.Id), ct);
         await server.ReceiveUntilAsync<MessageDelta>(delta => delta.RoomId == roomA.Id && delta.IsFinal, ct);
@@ -272,7 +273,7 @@ public sealed class RoomSessionStopTests
             // The dropped item never reaches a Turn at all - the locked check-and-publish returns
             // before the try/finally that would write a terminating MessageDelta - so the ticket's
             // own completion, not a written Envelope, is what proves the consumer finished with it.
-            await WaitUntilAsync(() => scheduler.CompleteCount == 1, ct);
+            await Eventually.UntilAsync(() => scheduler.CompleteCount == 1, ct, timeout: TestBudgets.Standard);
 
             Assert.Empty(session.Prompts);
             Assert.Empty(owner.Written.OfType<PostMessage>());
@@ -316,19 +317,6 @@ public sealed class RoomSessionStopTests
         return new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
     }
 
-    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct, TimeSpan? timeout = null)
-    {
-        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(5));
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Condition was not met before the test's timeout.");
-            }
-
-            await Task.Delay(10, ct);
-        }
-    }
 
     /// <summary>A hand-scripted pipe server giving a test full control over the Welcome a <see cref="PersonaRunner"/> receives, and over what a Stop reaches (RS §9 E-4's own harness, duplicated from <c>RoomSessionPoolTests</c> per this plan's per-file fake convention).</summary>
     private sealed class FakeServer : IAsyncDisposable

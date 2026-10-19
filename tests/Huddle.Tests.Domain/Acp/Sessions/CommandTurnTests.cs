@@ -5,6 +5,7 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Acp.Sessions;
 
@@ -362,22 +363,8 @@ public sealed class CommandTurnTests
 
     /// <summary>Waits until the Turn has written its final Draft terminator, which every Turn path ends with.</summary>
     private static Task WaitUntilFinalDeltaAsync(FakeRoomSessionOwner owner, CancellationToken ct) =>
-        WaitUntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct);
+        Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
 
     private static Task WaitUntilPostedAsync(FakeRoomSessionOwner owner, string text, CancellationToken ct) =>
-        WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(post => post.Text == text), ct);
-
-    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct)
-    {
-        DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Condition was not met before the test's timeout.");
-            }
-
-            await Task.Delay(10, ct);
-        }
-    }
+        Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(post => post.Text == text), ct, timeout: TestBudgets.Standard);
 }

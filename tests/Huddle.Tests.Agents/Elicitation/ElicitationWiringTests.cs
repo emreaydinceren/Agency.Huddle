@@ -12,6 +12,7 @@ using Agency.Huddle.App.Skills;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Pipes;
 using static Agency.Huddle.Tests.Elicitation.ElicitationTestSupport;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Elicitation;
 
@@ -97,7 +98,7 @@ public sealed class ElicitationWiringTests
         {
             personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []), "You are Nova.");
             await supervisor.StartAsync(ct);
-            (string agentId, string roomId) = await WaitForDirectRoomAsync(fixture, directory, "nova", ct);
+            (string agentId, string roomId) = await Eventually.DirectRoomAsync(fixture.Services, directory, "nova", ct);
             await fixture.Services.GetRequiredService<ChatService>().PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
             await WaitUntilAsync(() => factory.Session.Prompts.Count == 1 && factory.Session.BoundScopes.Count == 1, ct);
             IElicitationScope scope = Assert.Single(factory.Session.BoundScopes);
@@ -147,29 +148,6 @@ public sealed class ElicitationWiringTests
         return store.Get(roomId)[^1];
     }
 
-    /// <summary>Waits until <paramref name="agentName"/> is registered and online, then returns its id and its direct Room with the Human.</summary>
-    /// <param name="fixture">The running app.</param>
-    /// <param name="directory">The Team Directory to look in.</param>
-    /// <param name="agentName">The Agent's Name.</param>
-    /// <param name="ct">Bounds the wait.</param>
-    private static async Task<(string AgentId, string RoomId)> WaitForDirectRoomAsync(PipeHostFixture fixture, ITeamDirectory directory, string agentName, CancellationToken ct)
-    {
-        Agency.Huddle.App.Pipes.IAgentGateway gateway = fixture.Services.GetRequiredService<Agency.Huddle.App.Pipes.IAgentGateway>();
-        while (true)
-        {
-            User? user = await directory.FindUserByNameAsync(agentName, ct);
-            if (user is not null && gateway.IsOnline(user.Id))
-            {
-                Room? room = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, user.Id, ct);
-                if (room is not null)
-                {
-                    return (user.Id, room.Id);
-                }
-            }
-
-            await Task.Delay(50, ct);
-        }
-    }
 
     /// <summary>Polls <paramref name="condition"/> until it is true, or the test's <paramref name="ct"/> fires.</summary>
     /// <param name="condition">The condition to poll.</param>

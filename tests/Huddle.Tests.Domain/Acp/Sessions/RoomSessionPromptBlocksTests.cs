@@ -8,6 +8,7 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Agency.Huddle.Tests.Library;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Acp.Sessions;
 
@@ -64,7 +65,7 @@ public sealed class RoomSessionPromptBlocksTests
             readsFiles: readsFiles);
 
         room.Enqueue(new QueuedWork(1, item));
-        await WaitUntilAsync(() => session.AgentPrompts.Count == 1, ct);
+        await Eventually.UntilAsync(() => session.AgentPrompts.Count == 1, ct, timeout: TestBudgets.Slow);
         await runCts.CancelAsync();
         return Assert.Single(session.AgentPrompts);
     }
@@ -253,19 +254,6 @@ public sealed class RoomSessionPromptBlocksTests
         Assert.DoesNotContain(fake, entry.Message, StringComparison.Ordinal);
     }
 
-    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct)
-    {
-        DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Condition was not met before the test's timeout.");
-            }
-
-            await Task.Delay(10, ct);
-        }
-    }
 
     private sealed class RecordingLogger : ILogger
     {

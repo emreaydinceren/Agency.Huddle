@@ -14,6 +14,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Pipes;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -41,13 +42,13 @@ public sealed class PersonaRunnerFileChangesTests
         await using var agentHost = CreateHost(fixture, persona, factory, tracker);
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
 
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 2, ct);
 
         var room = await directory.GetRoomAsync(roomId, ct);
         Assert.NotNull(room);
@@ -80,18 +81,18 @@ public sealed class PersonaRunnerFileChangesTests
         await using var agentHost = CreateHost(fixture, persona, factory, tracker);
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
 
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 2, ct);
 
         File.SetLastWriteTimeUtc(filePath, DateTime.UtcNow.AddMinutes(5));
         File.WriteAllText(filePath, "v1 changed");
 
         await chat.PostAsync(roomId, KnownIds.Human, "hi again", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 4, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 4, ct);
 
         var header = new FakePromptSource().Render("turn.fileChangesHeader", new Dictionary<string, string>());
 
@@ -129,12 +130,12 @@ public sealed class PersonaRunnerFileChangesTests
         await using var agentHost = CreateHost(fixture, persona, factory, tracker, new PersonaCommands(Microsoft.Extensions.Logging.Abstractions.NullLogger<PersonaCommands>.Instance));
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
 
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 2, ct);
 
         File.SetLastWriteTimeUtc(filePath, DateTime.UtcNow.AddMinutes(5));
         File.WriteAllText(filePath, "v1 changed");
@@ -180,7 +181,7 @@ public sealed class PersonaRunnerFileChangesTests
         await using var agentHost = CreateHost(fixture, persona, factory, tracker);
         await agentHost.StartAsync(ct);
 
-        var (novaId, roomAId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, roomAId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
@@ -191,11 +192,11 @@ public sealed class PersonaRunnerFileChangesTests
         // Seed both Rooms' baselines with the file's original content.
         factory.Session.EnqueueReply("seed a");
         await chat.PostAsync(roomAId, KnownIds.Human, "hi a", ct: ct);
-        await WaitForHistoryCountAsync(store, roomAId, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomAId, 2, ct);
 
         factory.Session.EnqueueReply("seed b");
         await chat.PostAsync(roomB.Id, KnownIds.Human, "hi b", ct: ct);
-        await WaitForHistoryCountAsync(store, roomB.Id, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomB.Id, 2, ct);
 
         // Room A's second Turn: an Edit tool call touches a.txt while the Turn is running - the file
         // is written mid-turn, in the gap EnqueueDripFedReply leaves before its one chunk.
@@ -210,17 +211,17 @@ public sealed class PersonaRunnerFileChangesTests
         await WaitForToolStatusAsync(drafts, roomAId, ToolActivityStatus.Completed, ct);
         File.WriteAllText(filePath, "v2 edited");
 
-        await WaitForHistoryCountAsync(store, roomAId, 4, ct, clock);
+        await Eventually.HistoryCountAsync(store, roomAId, 4, ct, onTick: () => clock.Advance(TimeSpan.FromSeconds(1)));
 
         // Room A's next Turn: the edit was attributed to this Agent's own tool call and must not be listed.
         factory.Session.EnqueueReply("a again");
         await chat.PostAsync(roomAId, KnownIds.Human, "hi a again", ct: ct);
-        await WaitForHistoryCountAsync(store, roomAId, 6, ct);
+        await Eventually.HistoryCountAsync(store, roomAId, 6, ct);
 
         // Room B's next Turn: the same edit, never attributed there, must be listed.
         factory.Session.EnqueueReply("b again");
         await chat.PostAsync(roomB.Id, KnownIds.Human, "hi b again", ct: ct);
-        await WaitForHistoryCountAsync(store, roomB.Id, 4, ct);
+        await Eventually.HistoryCountAsync(store, roomB.Id, 4, ct);
 
         Assert.Equal(5, factory.Session.Prompts.Count);
         Assert.DoesNotContain(filePath, factory.Session.Prompts[3], StringComparison.Ordinal);
@@ -249,14 +250,14 @@ public sealed class PersonaRunnerFileChangesTests
         await using var agentHost = CreateHost(fixture, persona, factory, tracker);
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
         var drafts = fixture.Services.GetRequiredService<Drafts>();
 
         factory.Session.EnqueueReply("seed");
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 2, ct);
 
         var rawInput = RawInputFor(filePath);
         factory.Session.EnqueueToolActivity(
@@ -269,11 +270,11 @@ public sealed class PersonaRunnerFileChangesTests
         await WaitForToolStatusAsync(drafts, roomId, ToolActivityStatus.Completed, ct);
         File.WriteAllText(filePath, "v2 edited");
 
-        await WaitForHistoryCountAsync(store, roomId, 4, ct, clock);
+        await Eventually.HistoryCountAsync(store, roomId, 4, ct, onTick: () => clock.Advance(TimeSpan.FromSeconds(1)));
 
         factory.Session.EnqueueReply("seed again");
         await chat.PostAsync(roomId, KnownIds.Human, "hi again", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 6, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 6, ct);
 
         Assert.Equal(3, factory.Session.Prompts.Count);
         Assert.Contains(filePath, factory.Session.Prompts[2], StringComparison.Ordinal);
@@ -300,24 +301,24 @@ public sealed class PersonaRunnerFileChangesTests
         await using var agentHost = CreateHost(fixture, persona, factory, tracker);
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
 
         factory.Session.EnqueueReply("seed");
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 2, ct);
 
         File.SetLastWriteTimeUtc(filePath, DateTime.UtcNow.AddMinutes(5));
         File.WriteAllText(filePath, "v1 changed");
 
         factory.Session.EnqueueFailure(new AgentException("session/prompt failed: refused"));
         await chat.PostAsync(roomId, KnownIds.Human, "fail please", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 3, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 3, ct);
 
         factory.Session.EnqueueReply("ok again");
         await chat.PostAsync(roomId, KnownIds.Human, "hi again", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 5, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 5, ct);
 
         Assert.Equal(3, factory.Session.Prompts.Count);
         Assert.Contains(filePath, factory.Session.Prompts[1], StringComparison.Ordinal);
@@ -346,7 +347,7 @@ public sealed class PersonaRunnerFileChangesTests
         await using var agentHost = CreateHost(fixture, persona, factory, tracker);
         await agentHost.StartAsync(ct);
 
-        var (novaId, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var chatStore = fixture.Services.GetRequiredService<IChatStore>();
         var drafts = fixture.Services.GetRequiredService<Drafts>();
@@ -354,7 +355,7 @@ public sealed class PersonaRunnerFileChangesTests
 
         factory.Session.EnqueueReply("seed");
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
-        await WaitForHistoryCountAsync(chatStore, roomId, 2, ct);
+        await Eventually.HistoryCountAsync(chatStore, roomId, 2, ct);
 
         // A Turn the Human stops mid-reply, after an Edit tool call has already touched a.txt.
         var rawInput = RawInputFor(filePath);
@@ -421,7 +422,7 @@ public sealed class PersonaRunnerFileChangesTests
         await using var agentHost = CreateHost(fixture, persona, factory, tracker);
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
 
@@ -429,7 +430,7 @@ public sealed class PersonaRunnerFileChangesTests
         await chat.PostAsync(roomId, KnownIds.Human, "two", ct: ct);
         await chat.PostAsync(roomId, KnownIds.Human, "three", ct: ct);
 
-        var history = await WaitForHistoryCountAsync(store, roomId, 6, ct);
+        var history = await Eventually.HistoryCountAsync(store, roomId, 6, ct);
         Assert.Equal(6, history.Count);
 
         var deadline = DateTimeOffset.UtcNow.AddSeconds(10);
@@ -468,18 +469,18 @@ public sealed class PersonaRunnerFileChangesTests
         await using var agentHost = CreateHost(fixture, persona, factory, fileChanges: null);
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
 
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 2, ct);
 
         File.WriteAllText(filePath, "v1 changed");
 
         await chat.PostAsync(roomId, KnownIds.Human, "hi again", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 4, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 4, ct);
 
         var room = await directory.GetRoomAsync(roomId, ct);
         Assert.NotNull(room);
@@ -525,45 +526,4 @@ public sealed class PersonaRunnerFileChangesTests
         Assert.Contains(drafts.ForRoom(roomId), draft => draft.ToolStatus == status);
     }
 
-    /// <summary>Waits until <paramref name="agentName"/> is registered and Online, then returns its id and its direct Room with the Human.</summary>
-    private static async Task<(string AgentId, string RoomId)> WaitForDirectRoomAsync(
-        PipeHostFixture fixture, string agentName, CancellationToken ct)
-    {
-        var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
-        var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
-
-        while (true)
-        {
-            var user = await directory.FindUserByNameAsync(agentName, ct);
-            if (user is not null && gateway.IsOnline(user.Id))
-            {
-                var room = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, user.Id, ct);
-                if (room is not null)
-                {
-                    return (user.Id, room.Id);
-                }
-            }
-
-            await Task.Delay(50, ct);
-        }
-    }
-
-    /// <summary>Waits until <paramref name="roomId"/>'s Transcript holds at least <paramref name="count"/> Messages, advancing <paramref name="clock"/> (when given) so a drip-fed reply can finish.</summary>
-    private static async Task<IReadOnlyList<ChatMessage>> WaitForHistoryCountAsync(
-        IChatStore store, string roomId, int count, CancellationToken ct, FakeTimeProvider? clock = null)
-    {
-        while (true)
-        {
-            var history = await store.ReadAllAsync(roomId, ct);
-            if (history.Count >= count)
-            {
-                return history;
-            }
-
-            // A drip-fed reply waits on the fake clock; the delay may not be registered yet, so keep advancing.
-            clock?.Advance(TimeSpan.FromSeconds(1));
-
-            await Task.Delay(50, ct);
-        }
-    }
 }

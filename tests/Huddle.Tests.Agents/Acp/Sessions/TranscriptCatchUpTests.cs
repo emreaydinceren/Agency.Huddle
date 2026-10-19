@@ -14,6 +14,7 @@ using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Agency.Huddle.Tests.Pipes;
+using Agency.Huddle.Tests.Waiting;
 
 /// <summary>
 /// Pins <see cref="RoomSession"/>'s Transcript Catch-up (RS §6.5): the first Turn after any open
@@ -48,7 +49,7 @@ public sealed class TranscriptCatchUpTests
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go with 2", [], TriggerMessageId: "trig-1")));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             var call = Assert.Single(owner.TranscriptReadCalls);
             Assert.Equal("room-1", call.RoomId);
@@ -82,10 +83,10 @@ public sealed class TranscriptCatchUpTests
         try
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "hello", [], TriggerMessageId: "trig-1")));
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 1, ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 1, ct, timeout: TestBudgets.Standard);
 
             room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "again", [], TriggerMessageId: "trig-2")));
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 2, ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 2, ct, timeout: TestBudgets.Standard);
 
             Assert.Single(owner.TranscriptReadCalls);
         }
@@ -113,10 +114,10 @@ public sealed class TranscriptCatchUpTests
         try
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "@nova /compact", [], WorkItemKind.Command, TriggerMessageId: "trig-1", Command: new AdapterCommandCall("compact", string.Empty))));
-            await WaitUntilAsync(() => session.Prompts.Count == 1, ct);
+            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
             room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "go on", [], TriggerMessageId: "trig-2")));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(post => post.Text == "ok"), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(post => post.Text == "ok"), ct, timeout: TestBudgets.Standard);
 
             var call = Assert.Single(owner.TranscriptReadCalls);
             Assert.Equal("trig-2", call.BeforeMessageId);
@@ -153,7 +154,7 @@ public sealed class TranscriptCatchUpTests
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Nova & You", "You", "hello there", [], TriggerMessageId: "trig-1")));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             var prompt = Assert.Single(session.Prompts);
             var expected = RoomSession.BuildPrompt(new WorkItem("room-1", "Nova & You", "You", "hello there", []), new FakePromptSource());
@@ -179,7 +180,7 @@ public sealed class TranscriptCatchUpTests
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Nova & You", "You", "hello there", [], TriggerMessageId: "trig-1")));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             var posted = Assert.Single(owner.Written.OfType<PostMessage>());
             Assert.Equal("hi there", posted.Text);
@@ -205,10 +206,10 @@ public sealed class TranscriptCatchUpTests
         try
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", string.Empty, string.Empty, [], WorkItemKind.Greeting)));
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 1, ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 1, ct, timeout: TestBudgets.Standard);
 
             room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1")));
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 2, ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 2, ct, timeout: TestBudgets.Standard);
 
             Assert.Empty(owner.TranscriptReadCalls);
         }
@@ -242,7 +243,7 @@ public sealed class TranscriptCatchUpTests
         {
             room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1")));
 
-            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
             Assert.Empty(owner.TranscriptReadCalls);
         }
@@ -281,7 +282,7 @@ public sealed class TranscriptCatchUpTests
             new Persona("nova", "You are Nova."), options, novaFactory, new FakePromptSource(), new RoomFollows(), logger, roomSessions: roomSessions);
         await novaRunner.StartAsync(ct);
 
-        var (novaId, roomXId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (novaId, roomXId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var friendId = await RegisterLightweightAgentAsync(fixture, "friend", ct);
 
         var chat = fixture.Services.GetRequiredService<ChatService>();
@@ -291,23 +292,23 @@ public sealed class TranscriptCatchUpTests
         // Nova's own direct Room, RoomX: this Turn takes the global gate's only slot and hangs there
         // until gate is released below.
         await chat.PostAsync(roomXId, KnownIds.Human, "hold this room", ct: ct);
-        await WaitUntilAsync(() => novaFactory.Session.Prompts.Count == 1, ct);
+        await Eventually.UntilAsync(() => novaFactory.Session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
         // The trigger: enqueued (and its own Message id fixed as the Transcript's beforeMessageId)
         // while RoomX's Turn still holds the gate - RoomY's own Turn cannot even open its session
         // yet, let alone read the Transcript.
         await chat.PostAsync(roomY.Id, KnownIds.Human, "@nova please review, option 2", ct: ct);
-        await WaitForHistoryCountAsync(store, roomY.Id, 1, ct);
+        await Eventually.HistoryCountAsync(store, roomY.Id, 1, ct);
 
         // Two more Messages land in RoomY, after the trigger, while Nova's Turn there still waits on
         // the gate - not yet admitted, so it has not read the Transcript yet.
         await chat.PostAsync(roomY.Id, KnownIds.Human, "no wait, actually option 3", ct: ct);
         await chat.PostAsync(roomY.Id, friendId, "I would go with option 3 too", ct: ct);
-        await WaitForHistoryCountAsync(store, roomY.Id, 3, ct);
+        await Eventually.HistoryCountAsync(store, roomY.Id, 3, ct);
 
         gate.SetResult();
 
-        await WaitUntilAsync(() => novaFactory.Host!.Sessions.Count == 2 && novaFactory.Host.Sessions[1].Prompts.Count == 1, ct);
+        await Eventually.UntilAsync(() => novaFactory.Host!.Sessions.Count == 2 && novaFactory.Host.Sessions[1].Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
         var prompt = novaFactory.Host!.Sessions[1].Prompts[0];
         Assert.Contains("please review, option 2", prompt, StringComparison.Ordinal);
@@ -347,8 +348,8 @@ public sealed class TranscriptCatchUpTests
         // start (RS §6.2's exception); the group Room below gets a distinct, later-opened session -
         // this is what novaFactory.Session (the FIRST-opened one) is NOT, so every assertion below
         // reads whichever session opens second.
-        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
-        var (friendId, _) = await WaitForDirectRoomAsync(fixture, "friend", ct);
+        var (novaId, _) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
+        var (friendId, _) = await Eventually.DirectRoomAsync(fixture.Services, "friend", ct);
         Assert.Single(novaFactory.Host!.Sessions);
 
         var chat = fixture.Services.GetRequiredService<ChatService>();
@@ -360,11 +361,11 @@ public sealed class TranscriptCatchUpTests
             await chat.PostAsync(room.Id, KnownIds.Human, $"note {i}", ct: ct);
         }
 
-        await WaitForHistoryCountAsync(store, room.Id, 30, ct);
+        await Eventually.HistoryCountAsync(store, room.Id, 30, ct);
 
         await chat.PostAsync(room.Id, KnownIds.Human, "@nova go with option 2", ct: ct);
 
-        await WaitUntilAsync(() => novaFactory.Host.Sessions.Count == 2 && novaFactory.Host.Sessions[1].Prompts.Count == 1, ct);
+        await Eventually.UntilAsync(() => novaFactory.Host.Sessions.Count == 2 && novaFactory.Host.Sessions[1].Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
         var prompt = novaFactory.Host.Sessions[1].Prompts[0];
         Assert.Contains("…10 earlier Messages are not shown.", prompt, StringComparison.Ordinal);
@@ -398,13 +399,13 @@ public sealed class TranscriptCatchUpTests
         await friendRunner.StartAsync(ct);
         await novaRunner.StartAsync(ct);
 
-        var (friendId, _) = await WaitForDirectRoomAsync(fixture, "friend", ct);
+        var (friendId, _) = await Eventually.DirectRoomAsync(fixture.Services, "friend", ct);
 
         // Waits only for Nova's own registration - its id is never needed directly here, since the
         // Invitation below addresses it by Name. Per-Room mode already opened nova's own Human Room
         // session at start (RS §6.2's exception), consuming novaFactory.Session - the Room it joins
         // below gets a distinct, second session.
-        await WaitForDirectRoomAsync(fixture, "nova", ct);
+        await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         Assert.Single(novaFactory.Host!.Sessions);
 
         var chat = fixture.Services.GetRequiredService<ChatService>();
@@ -414,12 +415,12 @@ public sealed class TranscriptCatchUpTests
         // before Nova ever joins.
         var room = await chat.CreateRoomForAsync([friendId], ct);
         await chat.PostAsync(room.Id, KnownIds.Human, "let's plan the trip", ct: ct);
-        await WaitForHistoryCountAsync(store, room.Id, 2, ct);
+        await Eventually.HistoryCountAsync(store, room.Id, 2, ct);
 
         await chat.InviteAsync(room.Id, "nova", ct);
         await chat.PostAsync(room.Id, KnownIds.Human, "@nova welcome, what do you think?", ct: ct);
 
-        await WaitUntilAsync(() => novaFactory.Host.Sessions.Count == 2 && novaFactory.Host.Sessions[1].Prompts.Count == 1, ct);
+        await Eventually.UntilAsync(() => novaFactory.Host.Sessions.Count == 2 && novaFactory.Host.Sessions[1].Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
         var prompt = novaFactory.Host.Sessions[1].Prompts[0];
         Assert.Contains("let's plan the trip", prompt, StringComparison.Ordinal);
@@ -440,36 +441,7 @@ public sealed class TranscriptCatchUpTests
         return count;
     }
 
-    /// <summary>Waits until <paramref name="agentName"/> is registered and Online, then returns its id and its direct Room with the Human.</summary>
-    private static async Task<(string AgentId, string RoomId)> WaitForDirectRoomAsync(PipeHostFixture fixture, string agentName, CancellationToken ct)
-    {
-        var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
-        var gateway = fixture.Services.GetRequiredService<Agency.Huddle.App.Pipes.IAgentGateway>();
 
-        while (true)
-        {
-            var user = await directory.FindUserByNameAsync(agentName, ct);
-            if (user is not null && gateway.IsOnline(user.Id))
-            {
-                var room = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, user.Id, ct);
-                if (room is not null)
-                {
-                    return (user.Id, room.Id);
-                }
-            }
-
-            await Task.Delay(50, ct);
-        }
-    }
-
-    /// <summary>Waits until <paramref name="roomId"/>'s Transcript holds at least <paramref name="count"/> Messages.</summary>
-    private static async Task WaitForHistoryCountAsync(IChatStore store, string roomId, int count, CancellationToken ct)
-    {
-        while ((await store.ReadAllAsync(roomId, ct)).Count < count)
-        {
-            await Task.Delay(50, ct);
-        }
-    }
 
     /// <summary>
     /// Registers <paramref name="agentName"/> as an Agent over a bare Hello/Welcome handshake on its
@@ -518,19 +490,5 @@ public sealed class TranscriptCatchUpTests
         await runCts.CancelAsync();
         await session.DisposeAsync();
         runCts.Dispose();
-    }
-
-    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct, TimeSpan? timeout = null)
-    {
-        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(5));
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Condition was not met before the test's timeout.");
-            }
-
-            await Task.Delay(10, ct);
-        }
     }
 }

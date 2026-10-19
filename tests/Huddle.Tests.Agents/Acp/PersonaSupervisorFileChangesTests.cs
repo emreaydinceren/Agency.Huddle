@@ -9,10 +9,10 @@ using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
-using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Conformance;
 using Agency.Huddle.Tests.Pipes;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -48,11 +48,11 @@ public sealed class PersonaSupervisorFileChangesTests
         personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []), "You are Nova.");
         await supervisor.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 2, ct);
 
         await supervisor.StopAsync(ct);
 
@@ -82,11 +82,11 @@ public sealed class PersonaSupervisorFileChangesTests
         personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []), "You are Nova.");
         await supervisor.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 2, ct);
 
         await supervisor.StopAsync(ct);
 
@@ -128,11 +128,11 @@ public sealed class PersonaSupervisorFileChangesTests
         personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []) { Adapter = "agency" }, "You are Nova.");
         await supervisor.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 2, ct);
 
         await supervisor.StopAsync(ct);
 
@@ -157,7 +157,7 @@ public sealed class PersonaSupervisorFileChangesTests
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
         await chat.PostAsync(room.Id, KnownIds.Human, "hi", ct: ct);
-        await WaitForHistoryCountAsync(store, room.Id, 2, ct);
+        await Eventually.HistoryCountAsync(store, room.Id, 2, ct);
 
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var stateFile = Path.Combine(options.Value.DataDir, "file-state", "nova.json");
@@ -195,11 +195,11 @@ public sealed class PersonaSupervisorFileChangesTests
         personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []), "You are Nova.");
         await supervisor.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 2, ct);
 
         await supervisor.StopAsync(ct);
 
@@ -235,7 +235,7 @@ public sealed class PersonaSupervisorFileChangesTests
         personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []), "You are Nova.");
         await supervisor.StartAsync(ct);
 
-        var (agentId, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (agentId, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
 
@@ -285,16 +285,16 @@ public sealed class PersonaSupervisorFileChangesTests
         personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []), "You are Nova.");
         await supervisor.StartAsync(ct);
 
-        var (agentId, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (agentId, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
 
-        await WaitUntilAsync(() => turnActivity.IsBusyIn(agentId, roomId), ct);
+        await Eventually.UntilAsync(() => turnActivity.IsBusyIn(agentId, roomId), ct, interval: TimeSpan.FromMilliseconds(20));
 
         Assert.True(turnActivity.IsBusyIn(agentId, roomId));
 
         release.SetResult();
-        await WaitUntilAsync(() => !turnActivity.IsBusyIn(agentId, roomId), ct);
+        await Eventually.UntilAsync(() => !turnActivity.IsBusyIn(agentId, roomId), ct, interval: TimeSpan.FromMilliseconds(20));
 
         await supervisor.StopAsync(ct);
     }
@@ -325,7 +325,7 @@ public sealed class PersonaSupervisorFileChangesTests
         personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []), "You are Nova.");
         await supervisor.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var workDir = OwnWorkDir(options.Value, "nova");
         Directory.CreateDirectory(workDir);
         var filePath = Path.Combine(workDir, "a.md");
@@ -336,7 +336,7 @@ public sealed class PersonaSupervisorFileChangesTests
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
         await chat.PostAsync(roomId, KnownIds.Human, $"see {uri}", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 2, ct);
 
         await supervisor.StopAsync(ct);
 
@@ -377,7 +377,7 @@ public sealed class PersonaSupervisorFileChangesTests
         personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []) { Adapter = "agency" }, "You are Nova.");
         await supervisor.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var workDir = OwnWorkDir(options.Value, "nova");
         Directory.CreateDirectory(workDir);
         var filePath = Path.Combine(workDir, "a.md");
@@ -388,7 +388,7 @@ public sealed class PersonaSupervisorFileChangesTests
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
         await chat.PostAsync(roomId, KnownIds.Human, $"see {uri}", ct: ct);
-        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+        await Eventually.HistoryCountAsync(store, roomId, 2, ct);
 
         await supervisor.StopAsync(ct);
 
@@ -403,39 +403,7 @@ public sealed class PersonaSupervisorFileChangesTests
     /// <summary>Builds a fresh <see cref="PersonaHealth"/> against the real clock.</summary>
     private static PersonaHealth NewHealth() => new(TimeProvider.System, NullLogger<PersonaHealth>.Instance);
 
-    /// <summary>Waits until <paramref name="agentName"/> is registered and Online, then returns its id and its direct Room with the Human.</summary>
-    private static async Task<(string AgentId, string RoomId)> WaitForDirectRoomAsync(
-        PipeHostFixture fixture, string agentName, CancellationToken ct)
-    {
-        var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
-        var gateway = fixture.Services.GetRequiredService<Agency.Huddle.App.Pipes.IAgentGateway>();
 
-        while (true)
-        {
-            var user = await directory.FindUserByNameAsync(agentName, ct);
-            if (user is not null && gateway.IsOnline(user.Id))
-            {
-                var room = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, user.Id, ct);
-                if (room is not null)
-                {
-                    return (user.Id, room.Id);
-                }
-            }
-
-            await Task.Delay(50, ct);
-        }
-    }
-
-    /// <summary>Polls <paramref name="condition"/> until it is true, or the test's <paramref name="ct"/> fires.</summary>
-    /// <param name="condition">The condition to poll.</param>
-    /// <param name="ct">Bounds the poll.</param>
-    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct)
-    {
-        while (!condition())
-        {
-            await Task.Delay(20, ct);
-        }
-    }
 
     /// <summary>Waits until <paramref name="path"/> exists, or <paramref name="timeout"/> elapses.</summary>
     /// <param name="path">The file to wait for.</param>
@@ -456,21 +424,5 @@ public sealed class PersonaSupervisorFileChangesTests
         }
 
         return true;
-    }
-
-    /// <summary>Waits until <paramref name="roomId"/>'s Transcript holds at least <paramref name="count"/> Messages.</summary>
-    private static async Task<IReadOnlyList<ChatMessage>> WaitForHistoryCountAsync(
-        IChatStore store, string roomId, int count, CancellationToken ct)
-    {
-        while (true)
-        {
-            var history = await store.ReadAllAsync(roomId, ct);
-            if (history.Count >= count)
-            {
-                return history;
-            }
-
-            await Task.Delay(50, ct);
-        }
     }
 }

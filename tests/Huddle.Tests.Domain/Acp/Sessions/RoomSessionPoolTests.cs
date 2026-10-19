@@ -9,6 +9,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Waiting;
 
 /// <summary>
 /// Pins <see cref="Agency.Huddle.App.Acp.Sessions.RoomSessionPool"/> (RS §6.2), findings P-4, P-5 and
@@ -311,7 +312,7 @@ public sealed class RoomSessionPoolTests
         var releaseG = new TaskCompletionSource();
         factory.Host!.OnOpen = session => session.EnqueueGatedReply(releaseG.Task, "g reply");
         await server.SendAsync(Posted(roomG, "hi"), ct);
-        await WaitUntilAsync(() => factory.Host.Sessions.Count == 3, ct);
+        await Eventually.UntilAsync(() => factory.Host.Sessions.Count == 3, ct, timeout: TestBudgets.Standard);
         factory.Host.OnOpen = null;
 
         // Room D's ticket is offered next (lower sequence than Room A's second message below), so
@@ -332,7 +333,7 @@ public sealed class RoomSessionPoolTests
         // Room D opens (the 4th live Room Session while the cap is 3): eviction must prefer Room C
         // (Idle, empty queue) over Room A (Idle, but its queue still holds the second message), even
         // though Room A is the older of the two.
-        await WaitUntilAsync(() => factory.Host.Sessions.Count == 4 && factory.Host.Sessions[1].Disposed, ct, TimeSpan.FromSeconds(10));
+        await Eventually.UntilAsync(() => factory.Host.Sessions.Count == 4 && factory.Host.Sessions[1].Disposed, ct, TimeSpan.FromSeconds(10));
 
         Assert.True(factory.Host.Sessions[1].Disposed); // Room C: evicted.
         Assert.False(factory.Host.Sessions[0].Disposed); // Room A: protected, still has queued work.
@@ -373,7 +374,7 @@ public sealed class RoomSessionPoolTests
             await server.SendAsync(Posted(room, "hi"), ct);
         }
 
-        await WaitUntilAsync(() => factory.Host.Sessions.Count == 3, ct);
+        await Eventually.UntilAsync(() => factory.Host.Sessions.Count == 3, ct, timeout: TestBudgets.Standard);
         factory.Host.OnOpen = null;
 
         await server.SendAsync(Posted(roomF, "hi"), ct);
@@ -572,7 +573,7 @@ public sealed class RoomSessionPoolTests
         try
         {
             await server.SendAsync(Posted(roomC, "hi"), ct);
-            await WaitUntilAsync(() => factory.Session.Prompts.Count == 1, ct);
+            await Eventually.UntilAsync(() => factory.Session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
             // Room B opens and finishes a whole Turn while C's is still in flight, so B's LastActivity
             // is newer than C's: were C Idle, it - not B - would be the least recently used candidate.
@@ -630,19 +631,6 @@ public sealed class RoomSessionPoolTests
             persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, timeProvider: timeProvider);
     }
 
-    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct, TimeSpan? timeout = null)
-    {
-        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(5));
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Condition was not met before the test's timeout.");
-            }
-
-            await Task.Delay(10, ct);
-        }
-    }
 
     /// <summary>
     /// Advances <paramref name="time"/> by <paramref name="step"/> and sweeps, repeating until

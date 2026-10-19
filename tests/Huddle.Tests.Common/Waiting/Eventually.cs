@@ -1,6 +1,10 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.DependencyInjection;
+using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Pipes;
+using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.Tests.Waiting;
 
@@ -103,6 +107,84 @@ internal static class Eventually
 
             await DelayOrFailAsync(delay, label, () => last, ct);
         }
+    }
+
+    /// <summary>
+    /// Waits until <paramref name="roomId"/>'s Transcript holds at least <paramref name="count"/> Messages and
+    /// returns the whole Transcript.
+    /// </summary>
+    /// <param name="store">The chat store to read.</param>
+    /// <param name="roomId">The Room to read.</param>
+    /// <param name="count">The Message count to wait for.</param>
+    /// <param name="ct">The test's own deadline.</param>
+    /// <param name="timeout">How long to wait; <see langword="null"/> means only <paramref name="ct"/> bounds the wait.</param>
+    /// <param name="onTick">Runs after each poll that came up short, for example to advance a fake clock so a drip-fed reply can finish.</param>
+    /// <returns>The Transcript once it holds at least <paramref name="count"/> Messages.</returns>
+    internal static Task<IReadOnlyList<ChatMessage>> HistoryCountAsync(
+        IChatStore store,
+        string roomId,
+        int count,
+        CancellationToken ct,
+        TimeSpan? timeout = null,
+        Action? onTick = null)
+    {
+        return ValueAsync(
+            probeCt => store.ReadAllAsync(roomId, probeCt),
+            history => history.Count >= count,
+            ct,
+            timeout,
+            onTick: onTick,
+            what: $"history count >= {count} in room {roomId}");
+    }
+
+    /// <summary>
+    /// Waits until <paramref name="agentName"/> is registered and online, then returns its id and its direct
+    /// Room with the Human. The Team Directory and the Agent gateway come from <paramref name="services"/>.
+    /// </summary>
+    /// <param name="services">The running app's services, such as <c>PipeHostFixture.Services</c>.</param>
+    /// <param name="agentName">The Agent's Name.</param>
+    /// <param name="ct">The test's own deadline.</param>
+    /// <param name="timeout">How long to wait; <see langword="null"/> means only <paramref name="ct"/> bounds the wait.</param>
+    /// <returns>The Agent's id and the id of its direct Room with the Human.</returns>
+    internal static Task<(string AgentId, string RoomId)> DirectRoomAsync(
+        IServiceProvider services, string agentName, CancellationToken ct, TimeSpan? timeout = null)
+    {
+        return DirectRoomAsync(services, services.GetRequiredService<ITeamDirectory>(), agentName, ct, timeout);
+    }
+
+    /// <summary>
+    /// As <see cref="DirectRoomAsync(IServiceProvider, string, CancellationToken, TimeSpan?)"/>, but looks the
+    /// Agent and its Room up in <paramref name="directory"/>.
+    /// </summary>
+    /// <param name="services">The running app's services; supplies the Agent gateway.</param>
+    /// <param name="directory">The Team Directory to look in.</param>
+    /// <param name="agentName">The Agent's Name.</param>
+    /// <param name="ct">The test's own deadline.</param>
+    /// <param name="timeout">How long to wait; <see langword="null"/> means only <paramref name="ct"/> bounds the wait.</param>
+    /// <returns>The Agent's id and the id of its direct Room with the Human.</returns>
+    internal static async Task<(string AgentId, string RoomId)> DirectRoomAsync(
+        IServiceProvider services, ITeamDirectory directory, string agentName, CancellationToken ct, TimeSpan? timeout = null)
+    {
+        IAgentGateway gateway = services.GetRequiredService<IAgentGateway>();
+
+        (string AgentId, string RoomId)? found = await ValueAsync<(string AgentId, string RoomId)?>(
+            async probeCt =>
+            {
+                User? user = await directory.FindUserByNameAsync(agentName, probeCt);
+                if (user is null || !gateway.IsOnline(user.Id))
+                {
+                    return null;
+                }
+
+                Room? room = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, user.Id, probeCt);
+                return room is null ? null : (user.Id, room.Id);
+            },
+            static candidate => candidate is not null,
+            ct,
+            timeout,
+            what: $"direct room with {agentName}");
+
+        return found.GetValueOrDefault();
     }
 
     /// <summary>Runs the probe, converting test-token cancellation into a named failure.</summary>
