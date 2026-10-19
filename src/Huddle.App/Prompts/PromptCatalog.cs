@@ -188,6 +188,23 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
+            Key: "systemPrompt.docHistory",
+            Label: "Logging document changes",
+            HelperText:
+                "One paragraph, after the asking-the-Human paragraph, telling an Agent to log each Markdown " +
+                "document it changes. It exists because an Adapter can defer a tool's own description, so the " +
+                "model may see only the tool's name and a description alone did not make real models call " +
+                "log_change (DocHistory spec section 10). Only sent when the session offers the tool. Must keep " +
+                "{{logChangeTool}}: the tool's exact, prefixed name is substituted in.",
+            Default:
+                """
+                Before every final reply, ask yourself: did I Write or Edit a Markdown (.md) file, or check or judge one? If you wrote a new .md file (kind created) or edited an existing one (kind edited), call {{logChangeTool}} once for it. If you checked a .md document's citations or facts without changing it (kind reviewed), or you disagree with part of one (kind objected), call it too, even when you were asked not to edit the file. Its arguments are path (the document's full path), kind and summary (one line saying what you did and why), for example {{logChangeTool}}(path="/work/notes.md", kind="created", summary="Wrote three findings about the report"). Skip it only for a file that is not Markdown, or a document you only read to answer a question or summarise it. It is how the Human sees who changed a document and when.
+                """,
+            Placeholders: ["{{logChangeTool}}"],
+            RequiredPlaceholders: ["{{logChangeTool}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
             Key: "systemPrompt.roleBlock",
             Label: "Role block",
             HelperText:
@@ -1271,6 +1288,20 @@ internal static class PromptCatalog
             Default:
                 """
                 Stops listing file changes for a folder you started watching with watch_folder. Your own folder, and folders your Persona lists, stay watched.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.logChange.description",
+            Label: "log_change description",
+            HelperText:
+                "The job description a model reads for the log_change tool, which writes a line in a document's " +
+                "history. It is the only prompt that asks an Agent to call the tool. Takes no placeholders.",
+            Default:
+                """
+                Records one line in a Library document's history, which the Human sees under the document's title. Always call it as your last step after you create or change a Markdown (.md) document, once for each document, before you tell the Human you are done. Give the document's full path, created or edited, and a summary of what you did and why in your own words. Also call it with reviewed when you checked a document without changing it, and with objected when you disagree with it, even if you changed nothing. Do not call it for a file that is not Markdown, or for a document you only read. Write the summary for the Human: what changed and why, not how.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

@@ -297,6 +297,10 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `FileChanges:Ignore` | `[".git", "node_modules", "bin", "obj"]` | Directory names `FolderScanner` prunes, compared case-insensitively. |
 | `FileChanges:MaxFilesPerFolder` | `5000` | Above this a folder scan reports `TooLarge` rather than walking it. |
 | `FileChanges:MaxListed` | `50` | The most File Changes lines listed per Turn, across every Watched Folder. |
+| `DocHistory:Enabled` | `true` | Whether document History runs at all ([DocHistory spec](Huddle.DocHistory-Specifications.md) §6.9). `false` offers no `log_change`, records no Human saves and shows no byline, History or Recent edits panel. The history files stay where they are. |
+| `DocHistory:MaxEntries` | `500` | Entries kept per document; the oldest are dropped on the next append. |
+| `DocHistory:MaxSummaryLength` | `200` | The longest summary `log_change` accepts. |
+| `DocHistory:HumanSaveGroupWindow` | `00:05:00` | How close consecutive Human saves must be to share one row in the panel and the History. |
 | `FileChanges:MaxMemoryEntries` | `100` | The most Memory lines shown in a new session's system prompt; the rest are counted rather than listed. |
 | `Tasks:Enabled` | `true` | `false` hides the UI, offers no tools and wakes no one. The Task files stay where they are. |
 | `Team:Teams:Dir` | `Teams` | Team folders, relative to `DataDir`. Shared with Tasks, and replaces `Tasks:Dir`. Must not overlap `Team:Acp:TeammatesDir`; start-up refuses it otherwise (`LayoutGuard`). |

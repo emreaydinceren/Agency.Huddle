@@ -462,6 +462,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ILibraryReferenceResolver>(sp => sp.GetRequiredService<LibraryReferenceResolver>());
         services.AddSingleton<ILibraryNoteResolver>(sp => sp.GetRequiredService<LibraryReferenceResolver>());
 
+        // A document's History (DocHistory spec §6.2, §6.4): the store and its one writer. Registered
+        // before LibraryFileService, which takes the recorder to log the Human's saves and moves.
+        services.AddSingleton<DocHistory.DocHistoryStore>();
+        services.AddSingleton<DocHistory.DocHistoryRecorder>();
+
         // Registered right after LibraryPathResolver (corrections-B4 item 7): it depends on the
         // resolver above and on IRecycleBin, registered just above.
         services.AddSingleton<LibraryFileService>();
@@ -556,6 +561,8 @@ public static class ServiceCollectionExtensions
             static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.OutlinePanel), static options => options.Library.Enabled));
         services.AddSidebarPanel(new Sidebar.SidebarPanel("linked-documents", "Linked documents", MudBlazor.Icons.Material.Filled.Link, 20,
             static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.LinkedDocumentsPanel), static options => options.Library.Enabled));
+        services.AddSidebarPanel(new Sidebar.SidebarPanel("recent-edits", "Recent edits", MudBlazor.Icons.Material.Filled.History, 30,
+            static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.RecentEditsPanel), static options => options.Library.Enabled && options.DocHistory.Enabled));
         services.AddScoped<Sidebar.PageCommandBus>();
         services.AddScoped<Components.Shared.TeammateCardOpener>();
 

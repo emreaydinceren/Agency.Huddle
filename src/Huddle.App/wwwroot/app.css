@@ -4473,6 +4473,109 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     padding-inline: 16px;
 }
 
+/* Document history (DocHistory spec §6.7, §6.8, §6.10): the byline under the toolbar, the History under the backlinks. */
+.doc-byline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 16px;
+    margin: 0;
+    padding: 4px 16px;
+    border: 0;
+    background: none;
+    color: var(--mud-palette-text-secondary);
+    font: inherit;
+    font-size: var(--mud-typography-body2-size);
+    text-align: start;
+    cursor: pointer;
+}
+
+.doc-byline-part,
+.doc-history-actor {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.doc-byline-time {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.doc-byline-label {
+    color: var(--mud-palette-text-disabled);
+}
+
+.doc-history {
+    box-sizing: border-box;
+    max-width: calc(calc(var(--mud-typography-body1-size) * 8 / 7 * 35) + 32px);
+    margin: 24px 0 0;
+    padding-inline: 16px;
+}
+
+.doc-history-title {
+    margin: 0 0 8px;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 500;
+}
+
+.doc-history-day-label {
+    margin: 16px 0 4px;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    color: var(--mud-palette-text-secondary);
+}
+
+.doc-history-entry {
+    display: flex;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.doc-history-time {
+    flex: 0 0 3rem;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.doc-history-body {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.doc-history-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.doc-history-chip,
+.doc-history-kind {
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.doc-history-summary {
+    margin-top: 2px;
+    font-size: var(--mud-typography-body2-size);
+    overflow-wrap: anywhere;
+}
+
+.doc-history-summary p {
+    margin: 0;
+}
+
+.recent-edit-row .recent-edit-time {
+    flex: 0 0 auto;
+    font-size: var(--mud-typography-caption-size);
+}
+
 .library-backlinks .mud-expand-panel-header .mud-expand-panel-text {
     font-size: var(--mud-typography-body2-size);
     font-weight: 500;

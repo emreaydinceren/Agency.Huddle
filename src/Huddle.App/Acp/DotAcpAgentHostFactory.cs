@@ -5,6 +5,7 @@ using Agency.Huddle.Acp.DotAcp;
 using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.Acp.Tools;
 using Agency.Huddle.App.Acp.Tools;
+using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Skills;
@@ -137,6 +138,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 
         IReadOnlyList<string> toolNames = [.. toolSet.Tools.Select(tool => $"{toolSet.ToolNamePrefix}{tool.Name}")];
 
+        this.InstallDocHistoryHook(workDir, toolNames);
+
         DotAcpAgentHost innerHost = await this.StartInnerHostAsync(processOptions, toolServer, cancellationToken).ConfigureAwait(false);
 
         IReadOnlyDictionary<string, object>? meta = BuildIsolationMeta(profile);
@@ -239,6 +242,20 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         }
 
         return profile;
+    }
+
+    /// <summary>
+    /// DocHistory spec section 10: when the session offers <c>log_change</c>, puts the Stop hook in the Work Dir before the
+    /// Adapter process reads that folder's settings.
+    /// </summary>
+    /// <param name="workDir">The Persona's Work Dir.</param>
+    /// <param name="toolNames">The session's tool names, already prefixed.</param>
+    private void InstallDocHistoryHook(string workDir, IReadOnlyList<string> toolNames)
+    {
+        if (SystemPromptComposer.FindLogChangeTool(toolNames) is { } logChangeToolName)
+        {
+            DocHistoryStopHook.Install(workDir, this.options.DataDir, logChangeToolName, this.logger);
+        }
     }
 
     /// <summary>Creates the Persona's Work Dir and the memory folder next to it.</summary>
@@ -410,6 +427,14 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             IAppTool watchFolderTool = ActivatorUtilities.CreateInstance<WatchFolderTool>(this.serviceProvider, persona.Name);
             IAppTool unwatchFolderTool = ActivatorUtilities.CreateInstance<UnwatchFolderTool>(this.serviceProvider, persona.Name);
             chatTools = [.. chatTools, watchFolderTool, unwatchFolderTool];
+        }
+
+        // DocHistory spec §6.3: log_change is offered on the same terms, so an Agent that cannot write files is
+        // not asked to report writing one. Appended before GetHelpTool is built, so get_help lists it.
+        if (this.options.DocHistory.Enabled && profile.ReadsFiles)
+        {
+            IAppTool logChangeTool = ActivatorUtilities.CreateInstance<LogChangeTool>(this.serviceProvider, persona.Name);
+            chatTools = [.. chatTools, logChangeTool];
         }
 
         return chatTools;

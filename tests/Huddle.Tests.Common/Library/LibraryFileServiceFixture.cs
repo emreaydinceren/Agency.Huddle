@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
 
@@ -158,6 +159,26 @@ internal sealed class LibraryFileServiceFixture : IDisposable
             options: Options.Create(this.teamOptions),
             logger: NullLogger<LibraryFileService>.Instance,
             beforeRewriteWriteForTests: beforeRewriteWriteForTests);
+        this.createdServices.Add(service);
+        return service;
+    }
+
+    /// <summary>This fixture's bound <see cref="TeamOptions"/>, for a collaborator built beside the service.</summary>
+    public IOptions<TeamOptions> BoundOptions => Options.Create(this.teamOptions);
+
+    /// <summary>Constructs the service under test as <see cref="CreateService()"/> does, with a History recorder (DocHistory spec §6.4).</summary>
+    /// <param name="history">The recorder the service reports the Human's saves, creates and moves to.</param>
+    /// <returns>The service.</returns>
+    public LibraryFileService CreateServiceWithHistory(DocHistoryRecorder history)
+    {
+        this.RecycleBin = new RecordingRecycleBin();
+        LibraryFileService service = new(
+            this.Resolver,
+            this.RecycleBin,
+            index: this.Index,
+            options: Options.Create(this.teamOptions),
+            logger: NullLogger<LibraryFileService>.Instance,
+            history: history);
         this.createdServices.Add(service);
         return service;
     }

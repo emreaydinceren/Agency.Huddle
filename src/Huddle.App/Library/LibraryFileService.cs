@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Search;
 
@@ -21,13 +22,16 @@ namespace Agency.Huddle.App.Library;
 /// <param name="beforeRewriteWriteForTests">The D8 rewrite-loop test seam (8.5.i-b): stored here, invoked
 /// by the rewrite loop after a linking note's rewritten text is computed and before it is written.
 /// <see langword="null"/> for the ordinary path.</param>
+/// <param name="history">Records the Human's saves, creates, renames and moves in a document's History
+/// (DocHistory spec §6.4, §6.5). <see langword="null"/> when built by hand without one: nothing is recorded.</param>
 internal sealed class LibraryFileService(
     LibraryPathResolver resolver,
     IRecycleBin recycleBin,
     WikiLinkIndex index,
     IOptions<TeamOptions> options,
     ILogger<LibraryFileService> logger,
-    Func<LibraryPath, Task>? beforeRewriteWriteForTests = null) : IDisposable
+    Func<LibraryPath, Task>? beforeRewriteWriteForTests = null,
+    DocHistoryRecorder? history = null) : IDisposable
 {
     /// <summary>The most of a file read up front to detect its kind (Spec §6.4).</summary>
     private const int DetectionHeadBytes = 8192;
@@ -127,6 +131,7 @@ internal sealed class LibraryFileService(
     /// <see cref="ApplyNoteRewriteAsync"/> after a linking note's rewritten text is computed and before it is
     /// written, so a test can mutate the note on disk to prove the stamp check without a race.</summary>
     private readonly Func<LibraryPath, Task>? beforeRewriteWriteForTests = beforeRewriteWriteForTests;
+    private readonly DocHistoryRecorder? history = history;
 
     /// <summary>Serialises rename and move (with their D8 rewrite loop) so two never interleave
     /// (corrections-B5 D8 item 10). An instance field: <see cref="LibraryFileService"/> owns it and disposes
@@ -650,6 +655,25 @@ internal sealed class LibraryFileService(
     /// <exception cref="FileNotFoundException">A missing parent folder is not a Team or Project folder.</exception>
     internal async Task<LibraryResult<LibraryEntry>> WriteTextAsync(LibraryPath file, string editorText, TextFileFormat format, CancellationToken ct)
     {
+        LibraryResult<LibraryEntry> result = await this.WriteTextCoreAsync(file, editorText, format, ct).ConfigureAwait(false);
+        if (result.Value is { } saved)
+        {
+            // Only a save the Human made is a Human entry (DocHistory spec §6.4). A link rewrite after a rename or
+            // move goes through WriteTextCoreAsync, so it records nothing.
+            this.history?.HumanSaved(saved.Path);
+        }
+
+        return result;
+    }
+
+    /// <summary>Everything <see cref="WriteTextAsync"/> does except report the save to the History.</summary>
+    /// <param name="file">The file to write; re-resolved against the current tree before use.</param>
+    /// <param name="editorText">The editor's text, with <c>\n</c>-only newlines.</param>
+    /// <param name="format">The recorded encoding, BOM and line ending from <see cref="ReadAsync"/>.</param>
+    /// <param name="ct">Cancels the write.</param>
+    /// <returns>The fresh <see cref="LibraryEntry"/> on success, or a refusal reason.</returns>
+    private async Task<LibraryResult<LibraryEntry>> WriteTextCoreAsync(LibraryPath file, string editorText, TextFileFormat format, CancellationToken ct)
+    {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(editorText);
         ArgumentNullException.ThrowIfNull(format);
@@ -801,7 +825,13 @@ internal sealed class LibraryFileService(
         }
 
         InvalidateOverlapping(this.resolver, this.index, target.FullPath);
-        return this.ReResolveCreated(fresh, finalName);
+        LibraryResult<LibraryPath> created = this.ReResolveCreated(fresh, finalName);
+        if (created.Value is { } createdPath)
+        {
+            this.history?.HumanCreated(createdPath);
+        }
+
+        return created;
     }
 
     /// <summary>
@@ -1080,6 +1110,18 @@ internal sealed class LibraryFileService(
     /// <param name="ct">Cancels the rename.</param>
     /// <returns>The move result (D8 fills its lists) on success, or a refusal reason.</returns>
     internal async Task<LibraryResult<LibraryMoveResult>> RenameAsync(LibraryPath item, string newName, CancellationToken ct)
+    {
+        LibraryResult<LibraryMoveResult> result = await this.RenameCoreAsync(item, newName, ct).ConfigureAwait(false);
+        this.CarryHistory(item, result);
+        return result;
+    }
+
+    /// <summary>The body of <see cref="RenameAsync"/>, before the History follows the item.</summary>
+    /// <param name="item">The already-resolved item to rename; re-resolved before use.</param>
+    /// <param name="newName">The item's new name, in the same folder.</param>
+    /// <param name="ct">Cancels the rename.</param>
+    /// <returns>The move result on success, or a refusal reason.</returns>
+    private async Task<LibraryResult<LibraryMoveResult>> RenameCoreAsync(LibraryPath item, string newName, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(newName);
@@ -1379,6 +1421,18 @@ internal sealed class LibraryFileService(
     /// <returns>The move result (D8 fills its lists) on success, or a refusal reason.</returns>
     internal async Task<LibraryResult<LibraryMoveResult>> MoveAsync(LibraryPath item, LibraryPath targetFolder, CancellationToken ct)
     {
+        LibraryResult<LibraryMoveResult> result = await this.MoveCoreAsync(item, targetFolder, ct).ConfigureAwait(false);
+        this.CarryHistory(item, result);
+        return result;
+    }
+
+    /// <summary>The body of <see cref="MoveAsync"/>, before the History follows the item.</summary>
+    /// <param name="item">The already-resolved item to move; re-resolved before use.</param>
+    /// <param name="targetFolder">The folder to move it into.</param>
+    /// <param name="ct">Cancels the move.</param>
+    /// <returns>The move result on success, or a refusal reason.</returns>
+    private async Task<LibraryResult<LibraryMoveResult>> MoveCoreAsync(LibraryPath item, LibraryPath targetFolder, CancellationToken ct)
+    {
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(targetFolder);
         ct.ThrowIfCancellationRequested();
@@ -1517,6 +1571,17 @@ internal sealed class LibraryFileService(
         }
 
         return Directory.EnumerateDirectories(folderFullPath, TasksFolderName, SearchOption.AllDirectories).Any();
+    }
+
+    /// <summary>After a successful rename or move, moves the item's History with it (DocHistory spec §6.5).</summary>
+    /// <param name="item">The item before the move.</param>
+    /// <param name="result">The rename or move outcome.</param>
+    private void CarryHistory(LibraryPath item, LibraryResult<LibraryMoveResult> result)
+    {
+        if (result.Value is { } moved)
+        {
+            this.history?.Moved(item, moved.NewPath);
+        }
     }
 
     /// <summary>Moves a file or folder without overwrite, dispatching to <see cref="File.Move(string, string)"/>
@@ -1785,7 +1850,7 @@ internal sealed class LibraryFileService(
             return;
         }
 
-        LibraryResult<LibraryEntry> writeResult = await this.WriteTextAsync(notePath, rewrittenText, format, CancellationToken.None).ConfigureAwait(false);
+        LibraryResult<LibraryEntry> writeResult = await this.WriteTextCoreAsync(notePath, rewrittenText, format, CancellationToken.None).ConfigureAwait(false);
         if (writeResult.Error is not null)
         {
             failed.Add(new LibraryNoteFailure(newNote, writeResult.Error));
