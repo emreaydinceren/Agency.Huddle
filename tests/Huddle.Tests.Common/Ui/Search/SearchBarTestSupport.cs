@@ -16,6 +16,7 @@ using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Search;
 using Agency.Huddle.Tests.Ui.Layout;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Ui.Search;
 
@@ -169,20 +170,16 @@ internal sealed class SearchBarHarness : IAsyncDisposable
     /// <returns>The call, ready to be completed.</returns>
     public async Task<GatedCall> NextOpenCallAsync(SearchFilter filter, SearchScope scope, CancellationToken ct)
     {
-        DateTimeOffset giveUp = DateTimeOffset.UtcNow + Patience;
-        while (DateTimeOffset.UtcNow < giveUp)
-        {
-            GatedCall? call = this.Providers[filter].Calls.LastOrDefault(candidate =>
-                candidate.Query.Scope == scope && !candidate.Token.IsCancellationRequested && !candidate.Completion.Task.IsCompleted);
-            if (call is not null)
-            {
-                return call;
-            }
-
-            await Task.Delay(TimeSpan.FromMilliseconds(10), ct);
-        }
-
-        throw new TimeoutException($"The {filter} provider was never asked on the {scope} side.");
+        GatedCall? call = await Eventually.ValueAsync<GatedCall?>(
+            _ => Task.FromResult(this.Providers[filter].Calls.LastOrDefault(candidate =>
+                candidate.Query.Scope == scope && !candidate.Token.IsCancellationRequested && !candidate.Completion.Task.IsCompleted)),
+            candidate => candidate is not null,
+            ct,
+            timeout: Patience,
+            interval: TimeSpan.FromMilliseconds(10),
+            what: $"a {filter} provider asked on the {scope} side");
+        Assert.NotNull(call);
+        return call;
     }
 
     /// <summary>Raises a group update on the orchestrator's event as a pool thread would, without a search behind it.</summary>

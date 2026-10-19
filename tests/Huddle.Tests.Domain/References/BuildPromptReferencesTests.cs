@@ -10,6 +10,7 @@ using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.References;
 
@@ -63,27 +64,13 @@ public sealed class BuildPromptReferencesTests
             references: expander);
 
         room.Enqueue(new QueuedWork(1, item));
-        await BuildPromptReferencesTests.WaitUntilAsync(() => session.AgentPrompts.Count == 1, ct);
+        await Eventually.UntilAsync(() => session.AgentPrompts.Count == 1, ct, timeout: TestBudgets.Slow);
         await runCts.CancelAsync();
         return Assert.Single(session.AgentPrompts);
     }
 
     private static string HintLine(string prompt) =>
         prompt.Split('\n').Single(line => line.StartsWith("To learn more", StringComparison.Ordinal));
-
-    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct)
-    {
-        DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Condition was not met before the test's timeout.");
-            }
-
-            await Task.Delay(10, ct);
-        }
-    }
 
     /// <summary>The header sits after the Library documents block and before the Message line.</summary>
     [Fact]

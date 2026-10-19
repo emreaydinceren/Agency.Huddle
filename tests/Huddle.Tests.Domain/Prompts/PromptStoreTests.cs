@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Components.Settings;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.Tests.Waiting;
 
 /// <summary>
 /// Tests for <see cref="PromptStore"/>: that it joins <see cref="PromptCatalog"/>'s defaults with an
@@ -407,9 +408,7 @@ public sealed class PromptStoreTests
 
         WritePromptsJson(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = "Externally edited text." });
 
-        await WaitForAsync(
-            () => string.Equals(store.Raw("getHelp.intro"), "Externally edited text.", StringComparison.Ordinal),
-            TestContext.Current.CancellationToken);
+        await Eventually.UntilAsync(() => string.Equals(store.Raw("getHelp.intro"), "Externally edited text.", StringComparison.Ordinal), TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.Equal("Externally edited text.", store.Raw("getHelp.intro"));
     }
@@ -425,7 +424,7 @@ public sealed class PromptStoreTests
 
         WritePromptsJson(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = "Externally edited text." });
 
-        await WaitForAsync(() => raised, TestContext.Current.CancellationToken);
+        await Eventually.UntilAsync(() => raised, TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.True(raised);
     }
@@ -441,9 +440,7 @@ public sealed class PromptStoreTests
 
         File.Delete(Path.Combine(dataDir.Path, "prompts.json"));
 
-        await WaitForAsync(
-            () => string.Equals(store.Raw("getHelp.intro"), PromptCatalog.Get("getHelp.intro").Default, StringComparison.Ordinal),
-            TestContext.Current.CancellationToken);
+        await Eventually.UntilAsync(() => string.Equals(store.Raw("getHelp.intro"), PromptCatalog.Get("getHelp.intro").Default, StringComparison.Ordinal), TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
 
         foreach (var prompt in PromptCatalog.All)
         {
@@ -470,9 +467,7 @@ public sealed class PromptStoreTests
             ProtocolJson.Options));
         File.Move(tempPath, targetPath, overwrite: true);
 
-        await WaitForAsync(
-            () => string.Equals(store.Raw("getHelp.intro"), "Renamed into place.", StringComparison.Ordinal),
-            TestContext.Current.CancellationToken);
+        await Eventually.UntilAsync(() => string.Equals(store.Raw("getHelp.intro"), "Renamed into place.", StringComparison.Ordinal), TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.Equal("Renamed into place.", store.Raw("getHelp.intro"));
     }
@@ -516,36 +511,13 @@ public sealed class PromptStoreTests
 
         // The last write must have settled and been observed before asserting the raise count, or
         // this could read a count captured mid-burst.
-        await WaitForAsync(
-            () => string.Equals(store.Raw("getHelp.intro"), $"Burst write {writeCount - 1}.", StringComparison.Ordinal),
-            TestContext.Current.CancellationToken);
+        await Eventually.UntilAsync(() => string.Equals(store.Raw("getHelp.intro"), $"Burst write {writeCount - 1}.", StringComparison.Ordinal), TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
 
         // A generous upper bound rather than an exact count: exactly how many debounce windows a
         // tight burst on this machine's filesystem collapses into is itself timing-dependent, and
         // asserting an exact number would be its own flake. What matters is that it collapsed at
         // all - far fewer raises than the ten writes above.
         Assert.True(invocationCount < writeCount);
-    }
-
-    /// <summary>
-    /// Polls <paramref name="condition"/> until it is true or a generous timeout elapses, for
-    /// asserting on a <see cref="FileSystemWatcher"/>-driven, timing-dependent side effect without a
-    /// bare <see cref="Task.Delay(TimeSpan, CancellationToken)"/> whose length is only a guess.
-    /// </summary>
-    /// <param name="condition">Checked repeatedly until it returns <see langword="true"/>.</param>
-    /// <param name="cancellationToken">Cancels the wait.</param>
-    private static async Task WaitForAsync(Func<bool> condition, CancellationToken cancellationToken)
-    {
-        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Timed out waiting for the filesystem watcher to pick up the change.");
-            }
-
-            await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
-        }
     }
 
     /// <summary>The first catalog prompt whose default spans several lines, so a CRLF copy of it differs from the default byte for byte.</summary>

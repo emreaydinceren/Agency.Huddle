@@ -100,7 +100,7 @@ public sealed class ElicitationWiringTests
             await supervisor.StartAsync(ct);
             (string agentId, string roomId) = await Eventually.DirectRoomAsync(fixture.Services, directory, "nova", ct);
             await fixture.Services.GetRequiredService<ChatService>().PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
-            await WaitUntilAsync(() => factory.Session.Prompts.Count == 1 && factory.Session.BoundScopes.Count == 1, ct);
+            await Eventually.UntilAsync(() => factory.Session.Prompts.Count == 1 && factory.Session.BoundScopes.Count == 1, ct, interval: TimeSpan.FromMilliseconds(20));
             IElicitationScope scope = Assert.Single(factory.Session.BoundScopes);
 
             Task<ElicitationResult> pending = scope.ElicitAsync(Request(SingleQuestionSchema, SingleQuestionMessage), ct);
@@ -149,14 +149,4 @@ public sealed class ElicitationWiringTests
     }
 
 
-    /// <summary>Polls <paramref name="condition"/> until it is true, or the test's <paramref name="ct"/> fires.</summary>
-    /// <param name="condition">The condition to poll.</param>
-    /// <param name="ct">Bounds the poll.</param>
-    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct)
-    {
-        while (!condition())
-        {
-            await Task.Delay(20, ct);
-        }
-    }
 }

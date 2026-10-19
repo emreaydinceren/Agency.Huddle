@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Appearance;
 using Agency.Huddle.Tests.Elicitation;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Appearance;
 
@@ -133,6 +134,7 @@ public sealed class AppearanceStoreTests
         Assert.Equal("lumen-dark", store.Current.ThemeId);
     }
 
+#pragma warning disable S2699 // The test's only check is the Eventually.UntilAsync wait, which fails the test when the condition never holds; Sonar cannot see an assertion inside the shared helper.
     /// <summary>An edit made outside the process (a human hand-editing the file) is picked up by the filesystem watcher once its debounce settles.</summary>
     [Fact]
     public async Task Current_ExternalEdit_IsPickedUpByTheWatcher()
@@ -143,10 +145,9 @@ public sealed class AppearanceStoreTests
 
         File.WriteAllText(path, "{\"theme\":\"lumen-light\"}");
 
-        await WaitForAsync(
-            () => string.Equals(store.Current.ThemeId, "lumen-light", StringComparison.Ordinal),
-            TestContext.Current.CancellationToken);
+        await Eventually.UntilAsync(() => string.Equals(store.Current.ThemeId, "lumen-light", StringComparison.Ordinal), TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
     }
+#pragma warning restore S2699
 
     /// <summary>
     /// Saving re-reads the file first, so an unknown top-level key already on disk survives the
@@ -272,28 +273,6 @@ public sealed class AppearanceStoreTests
         Assert.Equal("lumen-dark", store.Current.ThemeId);
         Assert.Equal("#00b294", store.Current.CustomizationFor("lumen-dark")?.Palette["primary"]);
         Assert.Contains("libraryPaneSide", File.ReadAllText(path), StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// Polls <paramref name="condition"/> until it is true or a generous timeout elapses, for
-    /// asserting on a <see cref="FileSystemWatcher"/>-driven, timing-dependent side effect without a
-    /// bare <see cref="Task.Delay(TimeSpan, CancellationToken)"/> whose length is only a guess.
-    /// Copied from <c>PromptStoreTests.WaitForAsync</c>.
-    /// </summary>
-    /// <param name="condition">Checked repeatedly until it returns <see langword="true"/>.</param>
-    /// <param name="cancellationToken">Cancels the wait.</param>
-    private static async Task WaitForAsync(Func<bool> condition, CancellationToken cancellationToken)
-    {
-        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Timed out waiting for the filesystem watcher to pick up the change.");
-            }
-
-            await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
-        }
     }
 
     /// <summary>

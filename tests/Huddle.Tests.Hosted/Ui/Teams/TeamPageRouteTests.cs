@@ -4,6 +4,7 @@ using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
 using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
 
@@ -119,10 +120,8 @@ public sealed class TeamPageRouteTests
 
         HttpClient client = factory.CreateClient();
         ITeamCatalog catalog = factory.Services.GetRequiredService<ITeamCatalog>();
-        await WaitForAsync(
-            () => catalog.Find("Business")?.Projects.Contains("Marketing Project") == true
-                && catalog.Find("Sales & Ops")?.Projects.Contains("Launch") == true,
-            cancellationToken);
+        await Eventually.UntilAsync(() => catalog.Find("Business")?.Projects.Contains("Marketing Project") == true
+                && catalog.Find("Sales & Ops")?.Projects.Contains("Launch") == true, cancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
         return client;
     }
 
@@ -147,18 +146,4 @@ public sealed class TeamPageRouteTests
         return element.TextContent.Trim();
     }
 
-    /// <summary>Polls <paramref name="condition"/> until it is true or ten seconds pass, for a watcher-driven catalog without a bare delay.</summary>
-    private static async Task WaitForAsync(Func<bool> condition, CancellationToken cancellationToken)
-    {
-        DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Timed out waiting for the catalog to list the seeded Teams and Projects.");
-            }
-
-            await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
-        }
-    }
 }

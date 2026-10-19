@@ -12,6 +12,7 @@ using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Ui.SkillPacks;
 
@@ -39,7 +40,7 @@ internal sealed class UpdateFixture : IDisposable
         await this.Host.ReadAsync();
         SkillCopier copier = new(this.Host.Registry, this.Host.Settings, this.Host.Log, NullLogger<SkillCopier>.Instance, this.Host.Clock);
         Assert.True((await copier.CopyAsync([.. this.Host.Registry.Current.Resolved.Skills], Xunit.TestContext.Current.CancellationToken)).Ok);
-        await WaitForAsync(() => this.Host.Skills.Get("docx") is not null);
+        await Eventually.UntilAsync(() => this.Host.Skills.Get("docx") is not null, Xunit.TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
         if (holder)
         {
             this.Host.Teammate("Jane", ["docx"], [new VersionedRef("documents", "1.0.0")]);
@@ -64,18 +65,6 @@ internal sealed class UpdateFixture : IDisposable
     {
         IReadOnlyList<Persona> teammates = [.. this.Host.Personas.Entries.Select(entry => this.Host.Personas.Get(entry.Name)).OfType<Persona>()];
         return PackUpdatePlanner.Plan("documents", this.Host.Registry, this.Host.Skills, teammates, PhysicalFileReader.Instance);
-    }
-
-    /// <summary>Waits until a condition holds, for the Skill store's file watcher.</summary>
-    public static async Task WaitForAsync(Func<bool> condition)
-    {
-        DateTime limit = DateTime.UtcNow.AddSeconds(10);
-        while (!condition() && DateTime.UtcNow < limit)
-        {
-            await Task.Delay(50, Xunit.TestContext.Current.CancellationToken);
-        }
-
-        Assert.True(condition());
     }
 
     /// <summary>Disposes it.</summary>
@@ -191,7 +180,7 @@ public sealed class UpdateDialogTests : IDisposable
     {
         await this.fixture.SeedAsync();
         File.AppendAllText(Path.Combine(this.fixture.Host.Settings.SkillsDir, "docx", "SKILL.md"), "My edit.\n");
-        await UpdateFixture.WaitForAsync(() => this.fixture.Host.Skills.Get("docx")?.ModifiedLocally == true);
+        await Eventually.UntilAsync(() => this.fixture.Host.Skills.Get("docx")?.ModifiedLocally == true, Xunit.TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
         await using MudBunitContext ctx = this.fixture.Ui.NewContext();
 
         IRenderedComponent<ContainerFragment> cut = await OpenAsync(ctx);

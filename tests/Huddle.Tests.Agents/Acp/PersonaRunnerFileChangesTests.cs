@@ -208,7 +208,7 @@ public sealed class PersonaRunnerFileChangesTests
 
         await chat.PostAsync(roomAId, KnownIds.Human, "edit please", ct: ct);
 
-        await WaitForToolStatusAsync(drafts, roomAId, ToolActivityStatus.Completed, ct);
+        await Eventually.UntilAsync(() => drafts.ForRoom(roomAId).Any(draft => draft.ToolStatus == ToolActivityStatus.Completed), ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(20));
         File.WriteAllText(filePath, "v2 edited");
 
         await Eventually.HistoryCountAsync(store, roomAId, 4, ct, onTick: () => clock.Advance(TimeSpan.FromSeconds(1)));
@@ -267,7 +267,7 @@ public sealed class PersonaRunnerFileChangesTests
 
         await chat.PostAsync(roomId, KnownIds.Human, "run it", ct: ct);
 
-        await WaitForToolStatusAsync(drafts, roomId, ToolActivityStatus.Completed, ct);
+        await Eventually.UntilAsync(() => drafts.ForRoom(roomId).Any(draft => draft.ToolStatus == ToolActivityStatus.Completed), ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(20));
         File.WriteAllText(filePath, "v2 edited");
 
         await Eventually.HistoryCountAsync(store, roomId, 4, ct, onTick: () => clock.Advance(TimeSpan.FromSeconds(1)));
@@ -368,7 +368,7 @@ public sealed class PersonaRunnerFileChangesTests
 
         await chat.PostAsync(roomId, KnownIds.Human, "edit it", ct: ct);
 
-        await WaitForToolStatusAsync(drafts, roomId, ToolActivityStatus.Completed, ct);
+        await Eventually.UntilAsync(() => drafts.ForRoom(roomId).Any(draft => draft.ToolStatus == ToolActivityStatus.Completed), ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(20));
         await gateway.StopTurnAsync(novaId, roomId, ct);
 
         var deadline = DateTimeOffset.UtcNow.AddSeconds(10);
@@ -513,17 +513,5 @@ public sealed class PersonaRunnerFileChangesTests
     /// <summary>A minimal <c>file_path</c> raw-input JSON body naming <paramref name="fullPath"/>.</summary>
     private static string RawInputFor(string fullPath) =>
         JsonSerializer.Serialize(new Dictionary<string, string> { ["file_path"] = fullPath });
-
-    /// <summary>Waits until <paramref name="drafts"/> reports <paramref name="status"/> for some Draft in <paramref name="roomId"/> - proof the event reader has already processed the tool-call event (and so already recorded its touched path) before the caller acts further, closing the race finding P-1's live check exists to guard against.</summary>
-    private static async Task WaitForToolStatusAsync(Drafts drafts, string roomId, ToolActivityStatus status, CancellationToken ct)
-    {
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(10);
-        while (!drafts.ForRoom(roomId).Any(draft => draft.ToolStatus == status) && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
-
-        Assert.Contains(drafts.ForRoom(roomId), draft => draft.ToolStatus == status);
-    }
 
 }

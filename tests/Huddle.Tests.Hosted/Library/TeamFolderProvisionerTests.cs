@@ -9,6 +9,7 @@ using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Ui;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Library;
 
@@ -409,7 +410,7 @@ public sealed class TeamFolderProvisionerTests
         Assert.Equal("Ops", result.Value.RelativePath);
         Assert.True(Directory.Exists(result.Value.FullPath));
         Assert.Equal(["Ops"], EntryNames(fixture.TeamsRoot));
-        await WaitForAsync(() => fixture.Catalog.Find("Ops")?.HasFolder == true, ct);
+        await Eventually.UntilAsync(() => fixture.Catalog.Find("Ops")?.HasFolder == true, ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
         Assert.True(fixture.Catalog.Find("Ops")?.HasFolder);
     }
 
@@ -696,26 +697,6 @@ public sealed class TeamFolderProvisionerTests
     /// <param name="directory">The directory to list.</param>
     private static string[] EntryNames(string directory) =>
         [.. Directory.GetFileSystemEntries(directory).Select(static entry => Path.GetFileName(entry)).Order(StringComparer.Ordinal)];
-
-    /// <summary>
-    /// Polls <paramref name="condition"/> until it is true or a generous timeout elapses, for
-    /// asserting on the catalog's watcher-driven rebuild without a bare delay.
-    /// </summary>
-    /// <param name="condition">Checked repeatedly until it returns <see langword="true"/>.</param>
-    /// <param name="cancellationToken">Cancels the wait.</param>
-    private static async Task WaitForAsync(Func<bool> condition, CancellationToken cancellationToken)
-    {
-        DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Timed out waiting for the catalog to pick up the change.");
-            }
-
-            await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
-        }
-    }
 
     /// <summary>An isolated <see cref="PersonaStore"/>, <see cref="LibraryRootStore"/> and
     /// <see cref="LibraryPathResolver"/> over a fresh temp <c>DataDir</c>, with <c>Teams/</c> and

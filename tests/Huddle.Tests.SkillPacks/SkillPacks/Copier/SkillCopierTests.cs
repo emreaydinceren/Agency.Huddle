@@ -5,6 +5,7 @@ using Agency.Huddle.SkillPacks;
 using Agency.Huddle.SkillPacks.Resolving;
 using Agency.Huddle.Tests.SkillPacks.RegistryService;
 using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.SkillPacks.Copier;
 
@@ -212,7 +213,7 @@ public sealed class SkillCopierTests
         (RegistryHost host, SkillCopier copier, string pointer) = await Ready();
         using RegistryHost owned = host;
         await copier.CopyAsync([Entry(host, "docx")], ct);
-        await WaitForStoreAsync(host, "docx", ct);
+        await Eventually.UntilAsync(() => host.Skills.Get("docx") is not null, ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
         File.WriteAllText(Path.Combine(pointer, "extra.md"), "More.");
         await host.Registry.RebuildAsync(RebuildScope.All, ct);
 
@@ -240,18 +241,6 @@ public sealed class SkillCopierTests
         Assert.Equal("current", File.ReadAllText(Path.Combine(skills, "pdf", "SKILL.md")));
         Assert.Empty(Directory.GetDirectories(Path.Combine(skills, SkillCopyFolders.Trash)));
         Assert.Empty(Directory.GetDirectories(Path.Combine(skills, SkillCopyFolders.Staging)));
-    }
-
-    /// <summary>Waits, at most ten seconds, until the Skill store's own watcher has picked the copy up.</summary>
-    private static async Task WaitForStoreAsync(RegistryHost host, string name, CancellationToken ct)
-    {
-        DateTime limit = DateTime.UtcNow.AddSeconds(10);
-        while (host.Skills.Get(name) is null && DateTime.UtcNow < limit)
-        {
-            await Task.Delay(50, ct);
-        }
-
-        Assert.NotNull(host.Skills.Get(name));
     }
 
     /// <summary>A disk reader whose answer for SKILL.md changes every time it is read, as if an AI tool kept writing.</summary>

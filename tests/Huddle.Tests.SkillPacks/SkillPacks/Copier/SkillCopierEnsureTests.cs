@@ -2,6 +2,7 @@ using Agency.Huddle.App.SkillSources;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.SkillPacks.RegistryService;
 using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.SkillPacks.Copier;
 
@@ -46,7 +47,7 @@ public sealed class SkillCopierEnsureTests
         using RegistryHost host = new();
         SkillCopier copier = await ReadyAsync(host, ct);
         _ = await copier.EnsureAvailableAsync(["docx"], ct);
-        await WaitForStoreAsync(host, "docx", ct);
+        await Eventually.UntilAsync(() => host.Skills.Get("docx") is not null, ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
         string sentinel = Path.Combine(host.Settings.SkillsDir, "docx", "sentinel.txt");
         File.WriteAllText(sentinel, "kept");
 
@@ -123,15 +124,4 @@ public sealed class SkillCopierEnsureTests
         return File.Exists(log) ? [.. File.ReadAllLines(log).Where(static line => line.Contains("\"copied\"", StringComparison.Ordinal))] : [];
     }
 
-    /// <summary>Waits until the Skill store has seen a new copy.</summary>
-    private static async Task WaitForStoreAsync(RegistryHost host, string name, CancellationToken ct)
-    {
-        DateTime limit = DateTime.UtcNow.AddSeconds(10);
-        while (host.Skills.Get(name) is null && DateTime.UtcNow < limit)
-        {
-            await Task.Delay(50, ct);
-        }
-
-        Assert.NotNull(host.Skills.Get(name));
-    }
 }

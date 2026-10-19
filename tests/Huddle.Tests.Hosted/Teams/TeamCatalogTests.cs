@@ -5,6 +5,7 @@ using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp;
 using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Ui;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Teams;
 
@@ -96,7 +97,7 @@ public sealed class TeamCatalogTests
 
         // The watcher plus a 500 ms debounce drive this, so poll: never a fixed delay. The catalog
         // swaps its snapshot BEFORE it raises Changed, so once Changed has fired Teams is current.
-        await WaitForAsync(() => Volatile.Read(ref raised) > 0, ct);
+        await Eventually.UntilAsync(() => Volatile.Read(ref raised) > 0, ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
         catalog.Changed -= Count;
 
         Assert.Equal(["Research|projects=|members=Nova|folder=True"], Describe(catalog.Teams));
@@ -125,7 +126,7 @@ public sealed class TeamCatalogTests
 
         // Prove the TaskStore signal DID fire after the dispose, so silence from the catalog is
         // the unsubscribe and not a watcher that never got going.
-        await WaitForAsync(() => Volatile.Read(ref taskSignals) > 0, ct);
+        await Eventually.UntilAsync(() => Volatile.Read(ref taskSignals) > 0, ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
         tasks.IndexChanged -= CountTaskSignal;
 
         Assert.Equal(0, Volatile.Read(ref raised));
@@ -173,7 +174,7 @@ public sealed class TeamCatalogTests
 
         WriteTeamFile(dir, "Ops", new TeamFile(new VersionedRef("development", "1"), "Nova", null, "Releases", "Process.md", string.Empty));
 
-        await WaitForAsync(() => Volatile.Read(ref raised) > 0, ct);
+        await Eventually.UntilAsync(() => Volatile.Read(ref raised) > 0, ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
         catalog.Changed -= Count;
 
         TeamSummary? ops = catalog.Find("Ops");
@@ -319,24 +320,4 @@ public sealed class TeamCatalogTests
     private static void CreateFolder(TempDataDir dir, params string[] segments) =>
         Directory.CreateDirectory(Path.Combine([TestTaskStore.Root(dir), .. segments]));
 
-    /// <summary>
-    /// Polls <paramref name="condition"/> until it is true or a generous timeout elapses, for
-    /// asserting on a <see cref="FileSystemWatcher"/>-driven side effect without a bare delay.
-    /// Copied from <c>AppearanceStoreTests.WaitForAsync</c>.
-    /// </summary>
-    /// <param name="condition">Checked repeatedly until it returns <see langword="true"/>.</param>
-    /// <param name="cancellationToken">Cancels the wait.</param>
-    private static async Task WaitForAsync(Func<bool> condition, CancellationToken cancellationToken)
-    {
-        DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Timed out waiting for the filesystem watcher to pick up the change.");
-            }
-
-            await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
-        }
-    }
 }

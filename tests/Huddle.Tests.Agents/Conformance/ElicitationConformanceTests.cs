@@ -10,6 +10,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using static Agency.Huddle.Tests.Elicitation.ElicitationTestSupport;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Conformance;
 
@@ -515,7 +516,7 @@ public sealed class ElicitationConformanceTests
         /// <param name="ct">Cancels the wait.</param>
         internal async Task<PendingElicitation> NextCardAsync(CancellationToken ct)
         {
-            await WaitUntilAsync(() => this.Store.Get(this.RoomId).Count > 0, "a card to appear in the Room", ct);
+            await Eventually.UntilAsync(() => this.Store.Get(this.RoomId).Count > 0, ct, timeout: TestBudgets.Standard, describe: () => "a card to appear in the Room");
             return this.Store.Get(this.RoomId)[^1];
         }
 
@@ -539,7 +540,7 @@ public sealed class ElicitationConformanceTests
         /// <param name="ct">Cancels the wait.</param>
         internal async Task WaitForAgentRepliesAsync(int count, CancellationToken ct)
         {
-            await WaitUntilAsync(() => this.AgentPosts() >= count, $"{count} Agent Message(s) in the Room", ct);
+            await Eventually.UntilAsync(() => this.AgentPosts() >= count, ct, timeout: TestBudgets.Standard, describe: () => $"{count} Agent Message(s) in the Room");
         }
 
         /// <summary>The Room's Transcript as one line per Message, <c>Human: text</c> or <c>Agent: text</c>.</summary>
@@ -592,21 +593,4 @@ public sealed class ElicitationConformanceTests
         }
     }
 
-    /// <summary>Polls <paramref name="condition"/> until it holds, or fails the test after five seconds.</summary>
-    /// <param name="condition">What the test is waiting for.</param>
-    /// <param name="what">Names what was awaited, for the failure message.</param>
-    /// <param name="ct">Cancels the wait.</param>
-    private static async Task WaitUntilAsync(Func<bool> condition, string what, CancellationToken ct)
-    {
-        DateTime deadline = DateTime.UtcNow + Bound;
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail($"Timed out after five seconds waiting for {what}.");
-            }
-
-            await Task.Delay(10, ct);
-        }
-    }
 }

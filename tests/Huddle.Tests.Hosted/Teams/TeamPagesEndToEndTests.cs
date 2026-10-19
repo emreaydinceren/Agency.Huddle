@@ -11,6 +11,7 @@ using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Ui;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Teams;
 
@@ -20,7 +21,7 @@ namespace Agency.Huddle.Tests.Teams;
 /// ACP). Each test seeds its own host through <see cref="StartAsync"/> and follows one numbered step of the
 /// deliverable: folders and catalog, membership, Team Memory in the prompt, the reserved <c>memory</c> name,
 /// the two pages, and the two catalog flags. The host's catalog lags disk changes by about 500 ms, so every
-/// read of it waits with <see cref="WaitForAsync"/> instead of a bare delay.
+/// read of it waits with <c>Eventually.UntilAsync</c> instead of a bare delay.
 /// </summary>
 public sealed class TeamPagesEndToEndTests
 {
@@ -46,9 +47,9 @@ public sealed class TeamPagesEndToEndTests
         ITeamCatalog catalog = factory.Services.GetRequiredService<ITeamCatalog>();
 
         LibraryResult<LibraryPath> team = folders.EnsureTeam("Business");
-        await WaitForAsync(() => catalog.Find("Business") is not null, ct);
+        await Eventually.UntilAsync(() => catalog.Find("Business") is not null, ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
         LibraryResult<LibraryPath> project = folders.EnsureProjectIn("Business", "Marketing Project");
-        await WaitForAsync(() => catalog.Find("Business")?.Projects.Contains("Marketing Project") == true, ct);
+        await Eventually.UntilAsync(() => catalog.Find("Business")?.Projects.Contains("Marketing Project") == true, ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.Null(team.Error);
         Assert.Null(project.Error);
@@ -72,7 +73,7 @@ public sealed class TeamPagesEndToEndTests
         ITeamMembership membership = factory.Services.GetRequiredService<ITeamMembership>();
 
         MembershipResult result = membership.Add("Business", "Kim");
-        await WaitForAsync(() => catalog.Find("Business")?.Members.Contains("Kim") == true, ct);
+        await Eventually.UntilAsync(() => catalog.Find("Business")?.Members.Contains("Kim") == true, ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.Equal(MembershipOutcome.Added, result.Outcome);
         Assert.Null(result.Problem);
@@ -94,7 +95,7 @@ public sealed class TeamPagesEndToEndTests
         PersonaStore personas = factory.Services.GetRequiredService<PersonaStore>();
         IPromptSource prompts = factory.Services.GetRequiredService<IPromptSource>();
         Assert.Equal(MembershipOutcome.Added, membership.Add("Business", "Kim").Outcome);
-        await WaitForAsync(() => catalog.Find("Business")?.Members.Contains("Kim") == true, ct);
+        await Eventually.UntilAsync(() => catalog.Find("Business")?.Members.Contains("Kim") == true, ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
         string memoryDir = Path.Combine(factory.TasksDirPath, "Business", "Marketing Project", "memory");
         Directory.CreateDirectory(memoryDir);
         string launchFile = Path.Combine(memoryDir, "launch-date.md");
@@ -154,7 +155,7 @@ public sealed class TeamPagesEndToEndTests
             factory.TasksDirPath,
             Path.Combine("Business", "_tasks", "BUS-0001.md"),
             TestTasks.Make(id: "BUS-0001", location: new("Business", null, false)));
-        await WaitForAsync(() => tasks.All.Any(static task => task.Id.ToString() == "BUS-0001"), ct);
+        await Eventually.UntilAsync(() => tasks.All.Any(static task => task.Id.ToString() == "BUS-0001"), ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.Equal(["BUS-0001"], tasks.All.Select(static task => task.Id.ToString()).ToList());
         Assert.Equal(["Marketing Project"], catalog.Find("Business")?.Projects);
@@ -190,7 +191,7 @@ public sealed class TeamPagesEndToEndTests
         using HttpClient client = await StartAsync(factory, opsNova, KimText, ct);
         ITeamCatalog catalog = factory.Services.GetRequiredService<ITeamCatalog>();
 
-        await WaitForAsync(() => catalog.Find("Legal") is not null && catalog.Find(OpsLabel) is not null, ct);
+        await Eventually.UntilAsync(() => catalog.Find("Legal") is not null && catalog.Find(OpsLabel) is not null, ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
 
         TeamSummary? legal = catalog.Find("Legal");
         TeamSummary? ops = catalog.Find(OpsLabel);
@@ -213,7 +214,7 @@ public sealed class TeamPagesEndToEndTests
 
         HttpClient client = factory.CreateClient();
         PersonaStore personas = factory.Services.GetRequiredService<PersonaStore>();
-        await WaitForAsync(() => personas.Get("Nova") is not null && personas.Get("Kim") is not null, cancellationToken);
+        await Eventually.UntilAsync(() => personas.Get("Nova") is not null && personas.Get("Kim") is not null, cancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
         return client;
     }
 
@@ -223,9 +224,9 @@ public sealed class TeamPagesEndToEndTests
         ITeamFolders folders = factory.Services.GetRequiredService<ITeamFolders>();
         ITeamCatalog catalog = factory.Services.GetRequiredService<ITeamCatalog>();
         Assert.Null(folders.EnsureTeam("Business").Error);
-        await WaitForAsync(() => catalog.Find("Business") is not null, cancellationToken);
+        await Eventually.UntilAsync(() => catalog.Find("Business") is not null, cancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
         Assert.Null(folders.EnsureProjectIn("Business", "Marketing Project").Error);
-        await WaitForAsync(() => catalog.Find("Business")?.Projects.Contains("Marketing Project") == true, cancellationToken);
+        await Eventually.UntilAsync(() => catalog.Find("Business")?.Projects.Contains("Marketing Project") == true, cancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
         return catalog;
     }
 
@@ -268,18 +269,4 @@ public sealed class TeamPagesEndToEndTests
         return string.Join(' ', TextOf(page, selector).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
     }
 
-    /// <summary>Polls <paramref name="condition"/> until it is true or ten seconds pass, for a watcher-driven catalog without a bare delay.</summary>
-    private static async Task WaitForAsync(Func<bool> condition, CancellationToken cancellationToken)
-    {
-        DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Timed out waiting for the host to reflect the change on disk.");
-            }
-
-            await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
-        }
-    }
 }

@@ -18,6 +18,7 @@ using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Ui;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Teams;
 
@@ -56,8 +57,6 @@ public sealed class TeamsPhase4EndToEndTests
     private const string UnblockedMarker = "Unblocked: ";
 
     private const string OwnedRefusal = "Only managers file Requests; ask your own manager.";
-
-    private static readonly TimeSpan WaitLimit = TimeSpan.FromSeconds(30);
 
     /// <summary>Flow 1 (RQ-1 to RQ-6): Web's manager files a Bug Request to API, API's manager accepts, API's developer works it to Review, API's QA attaches Evidence and moves it to Done, Web's QA confirms and it closes with <c>confirmed_by</c>, and Web's blocked Task wakes at Done.</summary>
     [Fact]
@@ -100,11 +99,11 @@ public sealed class TeamsPhase4EndToEndTests
 
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.InProgress }, null, apiDeveloper));
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Review }, null, apiDeveloper));
-        await WaitForAsync(() => run.WakesOf(webManager.Name, apiDeveloper.Name) >= 1, ct, run.Describe);
+        await Eventually.UntilAsync(() => run.WakesOf(webManager.Name, apiDeveloper.Name) >= 1, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50), describe: run.Describe);
 
         _ = Saved(service.AddEvidence(request.Id, new EvidenceLine(DateTimeOffset.UtcNow, apiQa.Name, CheckCommand, 0, null, null, string.Empty), apiQa));
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Done }, null, apiQa));
-        await WaitForAsync(() => run.WakesOf(webManager.Name, apiQa.Name) >= 1 && run.Wakes(webDeveloper.Name, UnblockedMarker) >= 1, ct, run.Describe);
+        await Eventually.UntilAsync(() => run.WakesOf(webManager.Name, apiQa.Name) >= 1 && run.Wakes(webDeveloper.Name, UnblockedMarker) >= 1, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50), describe: run.Describe);
 
         Assert.Equal(TaskState.Done, Current(store, request.Id).Status);
         Assert.Equal(1, run.Wakes(webDeveloper.Name, UnblockedMarker));
@@ -254,7 +253,7 @@ public sealed class TeamsPhase4EndToEndTests
 
         await using Run second = Run.Open(root);
         ITeamCatalog catalog = second.Services.GetRequiredService<ITeamCatalog>();
-        await WaitForAsync(() => catalog.Find(WebTeam)?.Members.Count == 5 && catalog.Find(ApiTeam)?.Members.Count == 4, ct);
+        await Eventually.UntilAsync(() => catalog.Find(WebTeam)?.Members.Count == 5 && catalog.Find(ApiTeam)?.Members.Count == 4, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50));
 
         TaskItem request = Current(second.Services.GetRequiredService<TaskStore>(), requestId);
         Assert.Equal(TaskState.Backlog, request.Status);
@@ -276,24 +275,6 @@ public sealed class TeamsPhase4EndToEndTests
         TempDataDir workspace = new();
         _ = Directory.CreateDirectory(Path.Combine(workspace.Path, ".git"));
         return workspace;
-    }
-
-    /// <summary>Polls <paramref name="condition"/> until it holds, failing the test after <see cref="WaitLimit"/>.</summary>
-    /// <param name="condition">The condition to wait for.</param>
-    /// <param name="ct">Cancels the wait.</param>
-    /// <param name="describe">Describes the host's state for the failure message, or <see langword="null"/>.</param>
-    private static async Task WaitForAsync(Func<bool> condition, CancellationToken ct, Func<string>? describe = null)
-    {
-        DateTime deadline = DateTime.UtcNow + WaitLimit;
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail(string.Concat("Timed out waiting for the host to reach the expected state.\n", describe?.Invoke()));
-            }
-
-            await Task.Delay(50, ct);
-        }
     }
 
     /// <summary>Unwraps a saved Task result.</summary>
@@ -470,7 +451,7 @@ public sealed class TeamsPhase4EndToEndTests
         Assert.True(started.Ok, started.Error);
 
         ITeamCatalog catalog = services.GetRequiredService<ITeamCatalog>();
-        await WaitForAsync(() => catalog.Find(teamName) is { Manager: not null } team && team.Members.Count == cards.Count, ct);
+        await Eventually.UntilAsync(() => catalog.Find(teamName) is { Manager: not null } team && team.Members.Count == cards.Count, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50));
         return new TeamCast(cards);
     }
 

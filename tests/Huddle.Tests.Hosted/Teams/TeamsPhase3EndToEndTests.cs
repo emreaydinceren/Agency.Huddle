@@ -17,6 +17,7 @@ using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Ui;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Teams;
 
@@ -48,8 +49,6 @@ public sealed class TeamsPhase3EndToEndTests
 
     private const string CheckCommand = "dotnet test";
 
-    private static readonly TimeSpan WaitLimit = TimeSpan.FromSeconds(30);
-
     /// <summary>Flow 1: Create and Start a Small Development Team: the manager's host runs first, the Team files and role files exist, and the onboarding turn is posted once.</summary>
     [Fact]
     public async Task CreateAndStart_ManagerRunsFirst_FilesExist_OnboardingPostedOnce()
@@ -75,7 +74,7 @@ public sealed class TeamsPhase3EndToEndTests
         MessagePostedEvent posted = Assert.Single(onboarding);
         string[] memberNames = [.. posted.Members.Select(static member => member.Name).Order(StringComparer.Ordinal)];
         Assert.Equal([cast.Manager.Name, "You"], memberNames);
-        await WaitForAsync(() => run.Launcher.Launches >= cast.Cards.Count, ct);
+        await Eventually.UntilAsync(() => run.Launcher.Launches >= cast.Cards.Count, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50));
         Assert.True(run.Launcher.Launches >= cast.Cards.Count);
     }
 
@@ -204,10 +203,10 @@ public sealed class TeamsPhase3EndToEndTests
         TaskItem blocked = Assert.IsType<TaskResult.Saved>(service.Create(new TaskDraft("Blocked", TeamName, null, TaskState.ToDo, Assignee: developer.Name, OriginRoomId: room.Id, BlockedBy: [blocker.Id]), human)).Task;
 
         _ = service.Update(blocker.Id, new TaskPatch { Status = TaskState.InProgress }, null, developer);
-        await WaitForAsync(() => run.WakesOf(manager.Name, developer.Name) >= 1, ct);
+        await Eventually.UntilAsync(() => run.WakesOf(manager.Name, developer.Name) >= 1, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50));
         int developerWakesBefore = run.WakesOf(developer.Name, null);
         _ = service.Update(blocker.Id, new TaskPatch { Status = TaskState.Done }, null, human, humanOverridesGates: true);
-        await WaitForAsync(() => run.WakesOf(developer.Name, null) > developerWakesBefore, ct);
+        await Eventually.UntilAsync(() => run.WakesOf(developer.Name, null) > developerWakesBefore, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.Equal(1, run.WakesOf(manager.Name, developer.Name));
         Assert.Equal(TaskState.Done, run.Services.GetRequiredService<TaskStore>().Get(blocker.Id)?.Status);
@@ -235,7 +234,7 @@ public sealed class TeamsPhase3EndToEndTests
 
         await using Run second = Run.Open(root);
         ITeamCatalog catalog = second.Services.GetRequiredService<ITeamCatalog>();
-        await WaitForAsync(() => catalog.Find(TeamName)?.Members.Count == cast.Cards.Count, ct);
+        await Eventually.UntilAsync(() => catalog.Find(TeamName)?.Members.Count == cast.Cards.Count, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50));
 
         TeamSummary? team = catalog.Find(TeamName);
         Assert.Equal(cast.Manager.Name, team?.Manager);
@@ -275,23 +274,6 @@ public sealed class TeamsPhase3EndToEndTests
         return workspace;
     }
 
-    /// <summary>Polls <paramref name="condition"/> until it holds, failing the test after <see cref="WaitLimit"/>.</summary>
-    /// <param name="condition">The condition to wait for.</param>
-    /// <param name="ct">Cancels the wait.</param>
-    private static async Task WaitForAsync(Func<bool> condition, CancellationToken ct)
-    {
-        DateTime deadline = DateTime.UtcNow + WaitLimit;
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Timed out waiting for the host to reach the expected state.");
-            }
-
-            await Task.Delay(50, ct);
-        }
-    }
-
     /// <summary>Creates the Development Team with its four starting roles, hires the manager the way Team setup does, and starts everyone.</summary>
     /// <param name="run">The running host.</param>
     /// <param name="workspace">The repository folder.</param>
@@ -328,7 +310,7 @@ public sealed class TeamsPhase3EndToEndTests
         Assert.True(started.Ok, started.Error);
 
         ITeamCatalog catalog = services.GetRequiredService<ITeamCatalog>();
-        await WaitForAsync(() => catalog.Find(TeamName) is { Manager: not null } team && team.Members.Count == cards.Count, ct);
+        await Eventually.UntilAsync(() => catalog.Find(TeamName) is { Manager: not null } team && team.Members.Count == cards.Count, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50));
         return new TeamCast(cards, manager);
     }
 
