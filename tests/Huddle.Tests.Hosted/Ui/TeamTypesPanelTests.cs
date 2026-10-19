@@ -22,19 +22,11 @@ public sealed class TeamTypesPanelTests
 
     private static string Manifest(string id, string name, int order, string version = "1.0.0")
     {
-        string json = """
-            { "schemaVersion": 1, "id": "@ID", "version": "@VERSION", "displayName": "@NAME", "order": @ORDER,
-              "workspace": { "kind": "none", "label": "None", "required": false },
-              "processes": [{ "id": "flow", "file": "processes/flow.md", "default": true }],
-              "roles": [
-                { "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true },
-                { "id": "dev", "title": "Developer", "candidate": "candidates/lead.md", "maxPerTeam": 3 }] }
-            """;
-        return json
-            .Replace("@ID", id, StringComparison.Ordinal)
-            .Replace("@VERSION", version, StringComparison.Ordinal)
-            .Replace("@NAME", name, StringComparison.Ordinal)
-            .Replace("@ORDER", order.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        return Factories.TeamTypeJson.Manifest(id, name, order, version, rolesJson: """
+            [
+              { "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true },
+              { "id": "dev", "title": "Developer", "candidate": "candidates/lead.md", "maxPerTeam": 3 }]
+            """);
     }
 
     private static Dictionary<string, string> Builtins()

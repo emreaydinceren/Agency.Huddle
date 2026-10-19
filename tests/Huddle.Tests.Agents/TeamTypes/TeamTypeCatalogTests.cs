@@ -17,19 +17,8 @@ public sealed class TeamTypeCatalogTests
     private static string Manifest(string id, string name, int order, string candidate = "candidates/lead.md", string process = "processes/flow.md", bool manager = true)
     {
         string managerText = manager ? "true" : "false";
-        string json = """
-            { "schemaVersion": 1, "id": "@ID", "version": "1.0.0", "displayName": "@NAME", "order": @ORDER,
-              "workspace": { "kind": "none", "label": "None", "required": false },
-              "processes": [{ "id": "flow", "file": "@PROCESS", "default": true }],
-              "roles": [{ "id": "lead", "title": "Lead", "candidate": "@CANDIDATE", "manager": @MANAGER, "required": true }] }
-            """;
-        return json
-            .Replace("@ID", id, StringComparison.Ordinal)
-            .Replace("@NAME", name, StringComparison.Ordinal)
-            .Replace("@ORDER", order.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal)
-            .Replace("@PROCESS", process.Replace("\\", "\\\\", StringComparison.Ordinal), StringComparison.Ordinal)
-            .Replace("@CANDIDATE", candidate.Replace("\\", "\\\\", StringComparison.Ordinal), StringComparison.Ordinal)
-            .Replace("@MANAGER", managerText, StringComparison.Ordinal);
+        string rolesJson = $$"""[{ "id": "lead", "title": "Lead", "candidate": {{System.Text.Json.JsonSerializer.Serialize(candidate)}}, "manager": {{managerText}}, "required": true }]""";
+        return Factories.TeamTypeJson.Manifest(id, name, order, processFile: process, rolesJson: rolesJson);
     }
 
     private static Dictionary<string, string> Builtins()

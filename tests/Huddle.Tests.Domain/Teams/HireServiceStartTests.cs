@@ -16,25 +16,19 @@ public sealed class HireServiceStartTests
 {
     private const string TeamName = "Web Team";
 
-    private const string Manifest = """
-        { "schemaVersion": 1, "id": "web", "version": "1.2.0", "displayName": "Web", "order": 1,
-          "workspace": { "kind": "none", "label": "None", "required": false },
-          "processes": [{ "id": "flow", "file": "processes/flow.md", "default": true }],
-          "roles": [
+    private static readonly string Manifest = Factories.TeamTypeJson.Manifest("web", "Web", order: 1, version: "1.2.0", rolesJson: """
+        [
             { "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true },
             { "id": "dev", "title": "Developer", "candidate": "candidates/dev.md", "maxPerTeam": 3 }
-          ] }
-        """;
+        ]
+        """);
 
-    private const string FlatManifest = """
-        { "schemaVersion": 1, "id": "flat", "version": "1.0.0", "displayName": "Flat", "order": 2,
-          "workspace": { "kind": "none", "label": "None", "required": false },
-          "processes": [{ "id": "flow", "file": "processes/flow.md", "default": true }],
-          "roles": [
+    private static readonly string FlatManifest = Factories.TeamTypeJson.Manifest("flat", "Flat", order: 2, version: "1.0.0", rolesJson: """
+        [
             { "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true },
             { "id": "dev", "title": "Developer", "candidate": "candidates/dev.md", "required": true }
-          ] }
-        """;
+        ]
+        """);
 
     private static HireService Create(TempDataDir dir, out PersonaStore personas, out FakeSkillCopier installer, out FakeStartGate gate, TeamOptions? options = null, Func<TeamTypeCatalog, ProcessProvisioner>? makeProvisioner = null, Func<TeamTypeCatalog, TeamOnboarding>? makeOnboarding = null)
     {

@@ -23,16 +23,12 @@ internal sealed class RetroProposalFixture : IDisposable
     /// <summary>The text of <c>_team.md</c> the fixture starts with.</summary>
     public const string TeamText = "---\nteamType: 'web@1.2.0'\nprocess: 'Process.md'\n---\nTeam notes: keep it small.\n";
 
-    private const string TypeManifest = """
-        { "schemaVersion": 1, "id": "web", "version": "1.2.0", "displayName": "Web", "order": 1,
-          "workspace": { "kind": "none", "label": "None", "required": false },
-          "processes": [{ "id": "flow", "file": "processes/flow.md", "default": true }],
-          "retroRole": "retro",
-          "roles": [
+    private static readonly string TypeManifest = Factories.TeamTypeJson.Manifest("web", "Web", order: 1, version: "1.2.0", extraJson: "\"retroRole\": \"retro\"", rolesJson: """
+        [
             { "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true },
             { "id": "retro", "title": "Retro", "candidate": "candidates/retro.md", "maxPerTeam": 1 }
-          ] }
-        """;
+        ]
+        """);
 
     private RetroProposalFixture(TaskToolHarness harness, string roomId, string otherRoomId)
     {

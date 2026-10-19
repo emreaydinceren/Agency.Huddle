@@ -31,12 +31,7 @@ internal sealed class ProfileFixture : IDisposable
         this.Personas = this.dir.CreatePersonaStore();
         Dictionary<string, string> builtins = new(StringComparer.Ordinal)
         {
-            ["t01/team-type.json"] = """
-                { "schemaVersion": 1, "id": "t01", "version": "1.0.0", "displayName": "Type 01", "order": 1,
-                  "workspace": { "kind": "none", "label": "None", "required": false },
-                  "processes": [{ "id": "flow", "file": "processes/flow.md", "default": true }],
-                  "roles": [ { "id": "tutor", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true } ] }
-                """,
+            ["t01/team-type.json"] = Factories.TeamTypeJson.Manifest("t01", "Type 01", rolesJson: """[{ "id": "tutor", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true }]"""),
             ["t01/candidates/lead.md"] = "---\ntitle: Lead\nconsult_when: planning\n---\nYou lead.",
             ["t01/processes/flow.md"] = "# Flow",
         };

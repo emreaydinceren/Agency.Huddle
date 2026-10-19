@@ -14,12 +14,7 @@ public sealed class UserCandidateWriterTests
     private const string NoStance = "The stance is required.";
     private const string NotSaved = "The role could not be saved.";
 
-    private const string Manifest = """
-        { "schemaVersion": 1, "id": "alpha", "version": "1.0.0", "displayName": "Alpha", "order": 1,
-          "workspace": { "kind": "none", "label": "None", "required": false },
-          "processes": [{ "id": "flow", "file": "processes/flow.md", "default": true }],
-          "roles": [{ "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true }] }
-        """;
+    private static readonly string Manifest = Factories.TeamTypeJson.Manifest("alpha", "Alpha", order: 1, version: "1.0.0", rolesJson: """[{ "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true }]""");
 
     private const string Candidate = """
         ---

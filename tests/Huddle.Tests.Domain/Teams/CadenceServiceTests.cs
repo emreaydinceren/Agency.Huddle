@@ -21,16 +21,12 @@ public sealed class CadenceServiceTests
     private const string RetroAgent = "Rae";
     private const string NoRetroNote = "No Retro agent is hired on this Team, so please run this retro yourself.\n\n";
 
-    private const string Manifest = """
-        { "schemaVersion": 1, "id": "web", "version": "1.2.0", "displayName": "Web", "order": 1,
-          "workspace": { "kind": "none", "label": "None", "required": false },
-          "processes": [{ "id": "flow", "file": "processes/flow.md", "default": true }],
-          "retroRole": "retro",
-          "roles": [
+    private static readonly string Manifest = Factories.TeamTypeJson.Manifest("web", "Web", order: 1, version: "1.2.0", extraJson: "\"retroRole\": \"retro\"", rolesJson: """
+        [
             { "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true },
             { "id": "retro", "title": "Retro", "candidate": "candidates/retro.md", "maxPerTeam": 1 }
-          ] }
-        """;
+        ]
+        """);
 
     private static readonly DateTimeOffset Start = new(2026, 10, 8, 12, 0, 0, TimeSpan.Zero);
 

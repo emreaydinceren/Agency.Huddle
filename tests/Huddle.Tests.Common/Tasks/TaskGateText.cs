@@ -15,15 +15,12 @@ internal static class TaskGateText
     internal const string QaDone ="Gate qa-evidence-before-done: an Evidence line from a member who verifies (for example QA Engineer) is needed before this Task can be Done.";
     internal const string QaGate ="'qa-evidence-before-done'";
 
-    private const string Manifest = """
-        { "schemaVersion": 1, "id": "web", "version": "1.2.0", "displayName": "Web", "order": 1,
-          "workspace": { "kind": "none", "label": "None", "required": false },
-          "processes": [{ "id": "flow", "file": "processes/flow.md", "default": true }],
-          "roles": [
+    private static readonly string Manifest = Factories.TeamTypeJson.Manifest("web", "Web", order: 1, version: "1.2.0", rolesJson: """
+        [
             { "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true },
             { "id": "qa", "title": "QA Engineer", "candidate": "candidates/qa.md", "covers": ["verify"] }
-          ] }
-        """;
+        ]
+        """);
 
     /// <summary>A Process.md frontmatter enabling the given comma-joined, quoted gate ids.</summary>
     internal static string Process(string gates) =>

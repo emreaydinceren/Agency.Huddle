@@ -182,15 +182,11 @@ public sealed class TeamTypeCatalogPoolTests
         string typeDir = Path.Combine(dir.Path, "TeamTypes", "alpha");
         Directory.CreateDirectory(Path.Combine(typeDir, "candidates"));
         File.WriteAllText(Path.Combine(typeDir, "candidates", "extra.md"), "---\ntitle: 'Extra'\n---\nYou do extra.");
-        File.WriteAllText(Path.Combine(typeDir, "team-type.json"), """
-            { "schemaVersion": 1, "id": "alpha", "version": "1.2.0", "displayName": "Alpha", "order": 5,
-              "workspace": { "kind": "none", "label": "None", "required": false },
-              "coverage": [ "check" ],
-              "processes": [ { "id": "flow", "file": "processes/flow.md", "default": true } ],
-              "roles": [
-                { "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true, "covers": [ "check" ] },
-                { "id": "extra", "title": "Extra", "candidate": "candidates/extra.md" } ] }
-            """);
+        File.WriteAllText(Path.Combine(typeDir, "team-type.json"), Factories.TeamTypeJson.Manifest("alpha", "Alpha", order: 5, version: "1.2.0", extraJson: "\"coverage\": [ \"check\" ]", rolesJson: """
+            [
+              { "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true, "covers": [ "check" ] },
+              { "id": "extra", "title": "Extra", "candidate": "candidates/extra.md" } ]
+            """));
 
         TeamTypeCatalog catalog = Create(dir);
 
@@ -241,12 +237,7 @@ public sealed class TeamTypeCatalogPoolTests
         HiringPoolCatalog pool = new(dir.Options(), NullLogger<HiringPoolCatalog>.Instance, poolFiles);
         Dictionary<string, string> builtins = new(StringComparer.Ordinal)
         {
-            ["old/team-type.json"] = """
-                { "schemaVersion": 1, "id": "old", "version": "1.0.0", "displayName": "Old", "order": 1,
-                  "workspace": { "kind": "none", "label": "None" },
-                  "processes": [ { "id": "flow", "file": "processes/flow.md", "default": true } ],
-                  "roles": [ { "id": "boss", "title": "Boss", "candidate": "candidates/boss.md", "manager": true, "required": true } ] }
-                """,
+            ["old/team-type.json"] = Factories.TeamTypeJson.Manifest("old", "Old", rolesJson: """[{ "id": "boss", "title": "Boss", "candidate": "candidates/boss.md", "manager": true, "required": true }]"""),
             ["old/candidates/boss.md"] = "---\ntitle: 'Boss'\n---\nYou boss.",
             ["old/processes/flow.md"] = "# Flow",
         };
