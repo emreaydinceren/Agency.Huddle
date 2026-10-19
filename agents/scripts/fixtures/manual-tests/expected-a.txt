@@ -4,5 +4,7 @@ HUB-MISSING gamma.md not linked from docs/engineering/manual-tests.md
 PLANNING-MISSING gamma.md not linked from docs/engineering/manual-tests/planning.md
 TRACKER-MISSING alpha.md ALPHA-02 has no tracker row
 TRACKER-ORPHAN tracker.md ALPHA-09 has no heading
+LOG-MISSING alpha.md ALPHA-02 has no run-log entry
+LOG-ORPHAN run-log.md ALPHA-09 has no heading
 DUPLICATE-ID gamma.md BETA-01 is also a heading in beta.md
-CHECK-MANUALTESTS Errors=7
+CHECK-MANUALTESTS Errors=9

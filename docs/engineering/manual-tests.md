@@ -186,7 +186,9 @@ These are documented decisions in [Known limits](known-limits.md). Observing one
 ### 0.7 Recording results
 
 Results go in the [Tracker](manual-tests/tracker.md) — one row per test,
-carrying a status and the issue number of anything that failed.
+carrying a status and the issue number of anything that failed. Each run also gets a row in the
+[Run log](manual-tests/run-log.md), under that test's section, so the history of every test stays
+in one file after the tracker row moves on.
 
 Set a row to **Testing** when you pick a test up, so a second tester does not start the same
 one, then to **Pass** or **Fail** when you conclude. A Blocked or Inconclusive run leaves the

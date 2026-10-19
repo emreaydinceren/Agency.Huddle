@@ -1,6 +1,7 @@
 # Manual test tracker
 
-Where every test stands. One row per test, updated as you run it.
+Where every test stands. One row per test, updated as you run it. What happened on every run,
+including the ones before the current status, is in the [Run log](run-log.md).
 
 > [!NOTE]
 > **The demo-agent cases were removed on 2026-10-06**, when `Team:DemoAgent:Enabled` became `false`
@@ -519,6 +520,9 @@ Library explorer and editor — [area file](library.md)
 | [L16](library.md#l16--old-teamsmd--work-install-is-migrated-to-the-teammates-folder-layout-on-startup) |  | Active |  |  |
 | [L17](library.md#l17--a-real-obsidian-vault-is-pinned-as-a-library-root-and-can-be-edited-without-reformatting) |  | Active |  |  |
 | [L18](library.md#l18--runps1--cleanonly-deletes-the-database-and-teammate-definitions-and-keeps-everything-else) |  | Active |  |  |
+| [L19](library.md#l19--the-markdown-toolbar-and-its-shortcuts-toggle-markers-undo-in-one-step-and-are-keyboard-reachable) |  | Active |  |  |
+| [L20](library.md#l20--a-toolbar-edit-saves-byte-exact-on-a-crlf-note-with-a-bom) |  | Active |  |  |
+| [L21](library.md#l21---suggests-notes-from-the-notes-own-root-nearest-first-and-does-not-double-) |  | Active |  |  |
 
 ## model-effort
 

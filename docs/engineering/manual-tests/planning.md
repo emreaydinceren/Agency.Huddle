@@ -43,7 +43,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 19 | [Adapter commands](adapter-commands.md) | 7 | 6 | 1.8h |
 | 20 | [Avatar library: choosing a face from the library](avatar-library.md) | 28 | — | 3.3h |
 | 21 | [File Changes, Watched Folders and Memory](file-changes.md) | 12 | 10 | 3.2h |
-| 22 | [Library explorer and editor](library.md) | 19 | 1 | 2.9h |
+| 22 | [Library explorer and editor](library.md) | 22 | 1 | 3.6h |
 | 23 | [Prompt blocks](prompt-blocks.md) | 6 | 5 | 1.4h |
 | 24 | [Room Sessions: per-Room context, resume and Stop](room-sessions.md) | 12 | — | 5.8h |
 | 25 | [Tasks: creating, moving, viewing and referencing a unit of work](tasks.md) | 19 | 5 | 3.6h |
