@@ -94,7 +94,8 @@ public sealed class LibraryDocumentScrollTests : IDisposable
         await using MudBunitContext ctx = this.NewContext();
         ctx.JSInterop.Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
         IRenderedComponent<ContainerFragment> cut = LibraryDocumentScrollTests.RenderDoc(ctx, path);
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-toolbar")));
+        // The toolbar renders before the file loads, and ScrollToHistory is ignored until it has: wait for the rendered body.
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-rendered")));
 
         await cut.InvokeAsync(() => ctx.Services.GetRequiredService<PageCommandBus>().SendAsync(LibraryDocumentScrollTests.TabId, new ScrollToHistory()));
 
