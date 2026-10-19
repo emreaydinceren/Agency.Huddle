@@ -36,7 +36,7 @@ public sealed class WorkModeConformanceTests
 
         MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(
             persona, cancellationToken: ct, scriptAgent: WorkModeConformanceTests.AdvertiseModes);
-        await fixture.Agent.WaitForAsync("session/new", TimeSpan.FromSeconds(5));
+        await fixture.SessionNewAsync(ct);
         await fixture.DisposeAsync();
 
         Assert.DoesNotContain(
@@ -59,7 +59,7 @@ public sealed class WorkModeConformanceTests
 
         MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(
             persona, cancellationToken: ct, scriptAgent: WorkModeConformanceTests.AdvertiseModes);
-        await fixture.Agent.WaitForAsync("session/new", TimeSpan.FromSeconds(5));
+        await fixture.SessionNewAsync(ct);
         await fixture.DisposeAsync();
 
         Assert.DoesNotContain(

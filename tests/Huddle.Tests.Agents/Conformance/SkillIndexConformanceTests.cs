@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using Agency.Huddle.App.Acp;
 
 namespace Agency.Huddle.Tests.Conformance;
@@ -32,7 +31,7 @@ public sealed class SkillIndexConformanceTests
 
         await using MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(persona, cancellationToken: ct);
 
-        string appendedPrompt = await SkillIndexConformanceTests.GetAppendedSystemPromptAsync(fixture, ct);
+        string appendedPrompt = await fixture.AppendedSystemPromptAsync(ct);
 
         Assert.Contains("mcp__team__read_skill", appendedPrompt, StringComparison.Ordinal);
         Assert.Contains("mcp__team__validate_teammate", appendedPrompt, StringComparison.Ordinal);
@@ -55,26 +54,11 @@ public sealed class SkillIndexConformanceTests
 
         await using MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(persona, cancellationToken: ct);
 
-        string appendedPrompt = await SkillIndexConformanceTests.GetAppendedSystemPromptAsync(fixture, ct);
+        string appendedPrompt = await fixture.AppendedSystemPromptAsync(ct);
 
         Assert.DoesNotContain("read_skill", appendedPrompt, StringComparison.Ordinal);
         Assert.DoesNotContain("validate_teammate", appendedPrompt, StringComparison.Ordinal);
         Assert.DoesNotContain("propose_teammates", appendedPrompt, StringComparison.Ordinal);
         Assert.DoesNotContain("You hold these Skills", appendedPrompt, StringComparison.Ordinal);
-    }
-
-    /// <summary>Waits for <c>session/new</c> and pulls the appended system prompt text out of its <c>_meta</c> payload.</summary>
-    private static async Task<string> GetAppendedSystemPromptAsync(MockAdapterFixture fixture, CancellationToken cancellationToken)
-    {
-        JsonObject sessionNewRequest = await fixture.Agent.WaitForAsync("session/new", TimeSpan.FromSeconds(5));
-        cancellationToken.ThrowIfCancellationRequested();
-
-        JsonObject? parameters = sessionNewRequest["params"] as JsonObject;
-        JsonObject? meta = parameters?["_meta"] as JsonObject;
-        JsonObject? systemPrompt = meta?["systemPrompt"] as JsonObject;
-        string? appendedPrompt = (string?)systemPrompt?["append"];
-
-        Assert.NotNull(appendedPrompt);
-        return appendedPrompt;
     }
 }

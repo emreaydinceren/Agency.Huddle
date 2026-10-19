@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
@@ -45,22 +44,16 @@ public sealed class CommandTurnTests
         session.EnqueueToolActivity(ObservedCompactEvents());
         session.EnqueueReply();
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, CompactItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, CompactItem));
 
-            await WaitUntilFinalDeltaAsync(owner, ct);
+        await WaitUntilFinalDeltaAsync(owner, ct);
 
-            PostMessage posted = Assert.Single(owner.Written.OfType<PostMessage>());
-            Assert.Equal("Compacted my conversation: 50,624 → 2,964 tokens in 9 s.", posted.Text);
-            Assert.Equal("room-1", posted.RoomId);
-            Assert.Equal("/compact", Assert.Single(session.Prompts));
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        PostMessage posted = Assert.Single(owner.Written.OfType<PostMessage>());
+        Assert.Equal("Compacted my conversation: 50,624 → 2,964 tokens in 9 s.", posted.Text);
+        Assert.Equal("room-1", posted.RoomId);
+        Assert.Equal("/compact", Assert.Single(session.Prompts));
     }
 
     /// <summary>A command Turn with no tool output still says it ran, so a Room can tell silence from a finished command.</summary>
@@ -71,19 +64,13 @@ public sealed class CommandTurnTests
         FakeAgentSession session = new();
         session.EnqueueReply();
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, CompactItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, CompactItem));
 
-            await WaitUntilFinalDeltaAsync(owner, ct);
+        await WaitUntilFinalDeltaAsync(owner, ct);
 
-            Assert.Equal("Ran /compact.", Assert.Single(owner.Written.OfType<PostMessage>()).Text);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Equal("Ran /compact.", Assert.Single(owner.Written.OfType<PostMessage>()).Text);
     }
 
     /// <summary>Malformed tool output degrades to the plain line, never to an error or a silent Room.</summary>
@@ -97,19 +84,13 @@ public sealed class CommandTurnTests
             new ToolCallUpdated("s", "call-1", null, ToolKind.Think, ToolCallStatus.Completed, """{"preTokens":"lots"}"""));
         session.EnqueueReply();
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, CompactItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, CompactItem));
 
-            await WaitUntilFinalDeltaAsync(owner, ct);
+        await WaitUntilFinalDeltaAsync(owner, ct);
 
-            Assert.Equal("Ran /compact.", Assert.Single(owner.Written.OfType<PostMessage>()).Text);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Equal("Ran /compact.", Assert.Single(owner.Written.OfType<PostMessage>()).Text);
     }
 
     /// <summary>A failed tool call says the command did not finish, even if figures also arrived.</summary>
@@ -123,19 +104,13 @@ public sealed class CommandTurnTests
             new ToolCallUpdated("s", "call-1", null, ToolKind.Think, ToolCallStatus.Failed, null));
         session.EnqueueReply();
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, CompactItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, CompactItem));
 
-            await WaitUntilFinalDeltaAsync(owner, ct);
+        await WaitUntilFinalDeltaAsync(owner, ct);
 
-            Assert.Equal("/compact did not finish.", Assert.Single(owner.Written.OfType<PostMessage>()).Text);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Equal("/compact did not finish.", Assert.Single(owner.Written.OfType<PostMessage>()).Text);
     }
 
     /// <summary>
@@ -154,19 +129,13 @@ public sealed class CommandTurnTests
         ]);
         session.EnqueueReply();
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, CompactItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, CompactItem));
 
-            await WaitUntilFinalDeltaAsync(owner, ct);
+        await WaitUntilFinalDeltaAsync(owner, ct);
 
-            Assert.Equal("Compacted my conversation: 50,624 → 2,964 tokens in 9 s.", Assert.Single(owner.Written.OfType<PostMessage>()).Text);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Equal("Compacted my conversation: 50,624 → 2,964 tokens in 9 s.", Assert.Single(owner.Written.OfType<PostMessage>()).Text);
     }
 
     /// <summary>A Stop or a refusal posts nothing, exactly as for any other Turn.</summary>
@@ -180,19 +149,13 @@ public sealed class CommandTurnTests
         session.EnqueueToolActivity(ObservedCompactEvents());
         session.EnqueueReplyEndingIn(reason);
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, CompactItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, CompactItem));
 
-            await WaitUntilFinalDeltaAsync(owner, ct);
+        await WaitUntilFinalDeltaAsync(owner, ct);
 
-            Assert.Empty(owner.Written.OfType<PostMessage>());
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Empty(owner.Written.OfType<PostMessage>());
     }
 
     /// <summary>When the Adapter's command does reply with text, that text is the Message: the fixed line is only for a command that says nothing.</summary>
@@ -204,19 +167,13 @@ public sealed class CommandTurnTests
         session.EnqueueToolActivity(ObservedCompactEvents());
         session.EnqueueReply("Context is now 2,964 tokens.");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, CompactItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, CompactItem));
 
-            await WaitUntilFinalDeltaAsync(owner, ct);
+        await WaitUntilFinalDeltaAsync(owner, ct);
 
-            Assert.Equal("Context is now 2,964 tokens.", Assert.Single(owner.Written.OfType<PostMessage>()).Text);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Equal("Context is now 2,964 tokens.", Assert.Single(owner.Written.OfType<PostMessage>()).Text);
     }
 
     /// <summary>An ordinary Turn is never given an outcome line, whatever shape its tool output has.</summary>
@@ -228,19 +185,13 @@ public sealed class CommandTurnTests
         session.EnqueueToolActivity(ObservedCompactEvents());
         session.EnqueueReply("here you go");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "You", "hello", [], TriggerMessageId: "trig-1")));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "You", "hello", [], TriggerMessageId: "trig-1")));
 
-            await WaitUntilFinalDeltaAsync(owner, ct);
+        await WaitUntilFinalDeltaAsync(owner, ct);
 
-            Assert.Equal("here you go", Assert.Single(owner.Written.OfType<PostMessage>()).Text);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Equal("here you go", Assert.Single(owner.Written.OfType<PostMessage>()).Text);
     }
 
     /// <summary>
@@ -259,22 +210,16 @@ public sealed class CommandTurnTests
         session.EnqueueReplyWithUsage([2_964]);
         session.EnqueueReplyWithUsage([43_908, 44_100], "third");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "You", "hello", [], TriggerMessageId: "trig-1")));
-            await WaitUntilPostedAsync(owner, "first", ct);
-            room.Enqueue(new QueuedWork(2, CompactItem));
-            await WaitUntilPostedAsync(owner, "Compacted my conversation: 50,624 → 2,964 tokens in 9 s.", ct);
-            room.Enqueue(new QueuedWork(3, new WorkItem("room-1", "Room 1", "You", "go on", [], TriggerMessageId: "trig-3")));
-            await WaitUntilPostedAsync(owner, "third", ct);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "You", "hello", [], TriggerMessageId: "trig-1")));
+        await WaitUntilPostedAsync(owner, "first", ct);
+        room.Enqueue(new QueuedWork(2, CompactItem));
+        await WaitUntilPostedAsync(owner, "Compacted my conversation: 50,624 → 2,964 tokens in 9 s.", ct);
+        room.Enqueue(new QueuedWork(3, new WorkItem("room-1", "Room 1", "You", "go on", [], TriggerMessageId: "trig-3")));
+        await WaitUntilPostedAsync(owner, "third", ct);
 
-            Assert.Equal(50_624 + 192, owner.TokensAdded);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Equal(50_624 + 192, owner.TokensAdded);
     }
 
     /// <summary>The control for the test above: the same usage levels without a command Turn count the whole re-fill.</summary>
@@ -287,22 +232,16 @@ public sealed class CommandTurnTests
         session.EnqueueReplyWithUsage([2_964], "second");
         session.EnqueueReplyWithUsage([43_908, 44_100], "third");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "You", "hello", [], TriggerMessageId: "trig-1")));
-            await WaitUntilPostedAsync(owner, "first", ct);
-            room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "You", "again", [], TriggerMessageId: "trig-2")));
-            await WaitUntilPostedAsync(owner, "second", ct);
-            room.Enqueue(new QueuedWork(3, new WorkItem("room-1", "Room 1", "You", "go on", [], TriggerMessageId: "trig-3")));
-            await WaitUntilPostedAsync(owner, "third", ct);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "You", "hello", [], TriggerMessageId: "trig-1")));
+        await WaitUntilPostedAsync(owner, "first", ct);
+        room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "You", "again", [], TriggerMessageId: "trig-2")));
+        await WaitUntilPostedAsync(owner, "second", ct);
+        room.Enqueue(new QueuedWork(3, new WorkItem("room-1", "Room 1", "You", "go on", [], TriggerMessageId: "trig-3")));
+        await WaitUntilPostedAsync(owner, "third", ct);
 
-            Assert.Equal(50_624 + 40_944 + 192, owner.TokensAdded);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Equal(50_624 + 40_944 + 192, owner.TokensAdded);
     }
 
     /// <summary>A Stop during a command Turn leaves the baseline alone: only a completed command resets it.</summary>
@@ -315,50 +254,15 @@ public sealed class CommandTurnTests
         session.EnqueueReplyEndingIn(StopReason.Cancelled);
         session.EnqueueReplyWithUsage([60_000], "third");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "You", "hello", [], TriggerMessageId: "trig-1")));
-            await WaitUntilPostedAsync(owner, "first", ct);
-            room.Enqueue(new QueuedWork(2, CompactItem));
-            room.Enqueue(new QueuedWork(3, new WorkItem("room-1", "Room 1", "You", "go on", [], TriggerMessageId: "trig-3")));
-            await WaitUntilPostedAsync(owner, "third", ct);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "You", "hello", [], TriggerMessageId: "trig-1")));
+        await WaitUntilPostedAsync(owner, "first", ct);
+        room.Enqueue(new QueuedWork(2, CompactItem));
+        room.Enqueue(new QueuedWork(3, new WorkItem("room-1", "Room 1", "You", "go on", [], TriggerMessageId: "trig-3")));
+        await WaitUntilPostedAsync(owner, "third", ct);
 
-            Assert.Equal(60_000, owner.TokensAdded);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
-    }
-
-    private static (RoomSession Session, CancellationTokenSource RunCts) CreateSession(
-        FakeRoomSessionOwner owner, Func<CancellationToken, Task<IAgentSession>> open)
-    {
-        CancellationTokenSource runCts = new();
-        RoomSession session = new(
-            roomId: "room-1",
-            open: open,
-            owner: owner,
-            scheduler: new ImmediateTurnScheduler(),
-            prompts: new FakePromptSource(),
-            options: new AcpOptions(),
-            fileChanges: null,
-            declaredWatches: [],
-            logger: NullLogger.Instance,
-            runToken: runCts.Token,
-            persona: Nova);
-        return (session, runCts);
-    }
-
-    private static Func<CancellationToken, Task<IAgentSession>> FixedOpen(FakeAgentSession session) =>
-        _ => Task.FromResult<IAgentSession>(session);
-
-    private static async Task DisposeSessionAsync(RoomSession session, CancellationTokenSource runCts)
-    {
-        await runCts.CancelAsync();
-        await session.DisposeAsync();
-        runCts.Dispose();
+        Assert.Equal(60_000, owner.TokensAdded);
     }
 
     /// <summary>Waits until the Turn has written its final Draft terminator, which every Turn path ends with.</summary>

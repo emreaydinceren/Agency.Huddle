@@ -242,7 +242,7 @@ public sealed class TurnLifecycleTests
         Persona persona = new("nova", "You are Nova.");
 
         await using MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(persona, cancellationToken: ct);
-        await fixture.Agent.WaitForAsync("session/new", TimeSpan.FromSeconds(5));
+        await fixture.SessionNewAsync(ct);
 
         await fixture.DisposeAsync();
 
@@ -282,7 +282,7 @@ public sealed class TurnLifecycleTests
         string appendedBefore;
         await using (MockAdapterFixture beforeFixture = await MockAdapterFixture.StartAsync(before, beforeConfig, cancellationToken: ct))
         {
-            appendedBefore = await GetAppendedSystemPromptAsync(beforeFixture, ct);
+            appendedBefore = await beforeFixture.AppendedSystemPromptAsync(ct);
         }
 
         Assert.Contains("You are Nova, version one.", appendedBefore, StringComparison.Ordinal);
@@ -300,7 +300,7 @@ public sealed class TurnLifecycleTests
         string appendedAfter;
         await using (MockAdapterFixture afterFixture = await MockAdapterFixture.StartAsync(after, afterConfig, cancellationToken: ct))
         {
-            appendedAfter = await GetAppendedSystemPromptAsync(afterFixture, ct);
+            appendedAfter = await afterFixture.AppendedSystemPromptAsync(ct);
         }
 
         Assert.Contains("You are Nova, version two.", appendedAfter, StringComparison.Ordinal);
@@ -337,20 +337,5 @@ public sealed class TurnLifecycleTests
         Assert.NotNull(room);
 
         return (user.Id, room.Id);
-    }
-
-    /// <summary>Waits for <c>session/new</c> and pulls the appended system prompt text out of its <c>_meta</c> payload — the same shape <see cref="PromptDeliveryTests"/> and <see cref="ToolPrefixTests"/> already pin.</summary>
-    private static async Task<string> GetAppendedSystemPromptAsync(MockAdapterFixture fixture, CancellationToken ct)
-    {
-        JsonObject sessionNewRequest = await fixture.Agent.WaitForAsync("session/new", TimeSpan.FromSeconds(5));
-        ct.ThrowIfCancellationRequested();
-
-        JsonObject? parameters = sessionNewRequest["params"] as JsonObject;
-        JsonObject? meta = parameters?["_meta"] as JsonObject;
-        JsonObject? systemPrompt = meta?["systemPrompt"] as JsonObject;
-        string? appendedPrompt = (string?)systemPrompt?["append"];
-
-        Assert.NotNull(appendedPrompt);
-        return appendedPrompt;
     }
 }

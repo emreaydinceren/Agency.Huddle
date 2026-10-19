@@ -1,7 +1,6 @@
 namespace Agency.Huddle.Tests.Acp;
 
-using Microsoft.Extensions.Logging.Abstractions;
-using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.Tests.Acp.Sessions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Library;
@@ -40,21 +39,15 @@ public sealed class PersonaRunnerLibraryDocsTests
         FakeAgentSession session = new();
         session.EnqueueReply("ok");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session), libraryDocs: collector, readsFiles: true);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", $"see {uri}", [], TriggerMessageId: "trig-1")));
-            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova, LibraryDocs = collector, ReadsFiles = true });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", $"see {uri}", [], TriggerMessageId: "trig-1")));
+        await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
-            var prompt = Assert.Single(session.Prompts);
-            var header = new FakePromptSource().Render("turn.libraryDocsHeader", new Dictionary<string, string>());
-            Assert.Contains(header, prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup // contains-ok: prompt text, not markup
-            Assert.Contains(filePath, prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        var prompt = Assert.Single(session.Prompts);
+        var header = new FakePromptSource().Render("turn.libraryDocsHeader", new Dictionary<string, string>());
+        Assert.Contains(header, prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup // contains-ok: prompt text, not markup
+        Assert.Contains(filePath, prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
     }
 
     /// <summary>With <c>readsFiles: false</c>, the kept document's decoded text is inlined into the prompt.</summary>
@@ -72,19 +65,13 @@ public sealed class PersonaRunnerLibraryDocsTests
         FakeAgentSession session = new();
         session.EnqueueReply("ok");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session), libraryDocs: collector, readsFiles: false);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", $"see {uri}", [], TriggerMessageId: "trig-1")));
-            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova, LibraryDocs = collector, ReadsFiles = false });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", $"see {uri}", [], TriggerMessageId: "trig-1")));
+        await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
-            var prompt = Assert.Single(session.Prompts);
-            Assert.Contains("the document's own inlined content", prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        var prompt = Assert.Single(session.Prompts);
+        Assert.Contains("the document's own inlined content", prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
     }
 
     /// <summary>With <c>readsFiles: true</c>, the kept document's own text is never inlined - only its path, location and size line.</summary>
@@ -102,20 +89,14 @@ public sealed class PersonaRunnerLibraryDocsTests
         FakeAgentSession session = new();
         session.EnqueueReply("ok");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session), libraryDocs: collector, readsFiles: true);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", $"see {uri}", [], TriggerMessageId: "trig-1")));
-            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova, LibraryDocs = collector, ReadsFiles = true });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", $"see {uri}", [], TriggerMessageId: "trig-1")));
+        await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
-            var prompt = Assert.Single(session.Prompts);
-            Assert.Contains(filePath, prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
-            Assert.DoesNotContain("must not be inlined", prompt, StringComparison.Ordinal);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        var prompt = Assert.Single(session.Prompts);
+        Assert.Contains(filePath, prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
+        Assert.DoesNotContain("must not be inlined", prompt, StringComparison.Ordinal);
     }
 
     /// <summary>A path only in a catch-up Message (<see cref="WorkItem.MissedMessages"/>), not in the triggering Message's own text, is still collected (corrections-B6 item 7).</summary>
@@ -134,23 +115,17 @@ public sealed class PersonaRunnerLibraryDocsTests
         session.EnqueueReply("ok");
         FakeRoomSessionOwner owner = new();
         owner.ReadTranscriptHandler = (roomId, _, _, _, _) => Task.FromResult<TranscriptTail?>(null);
-        var (room, runCts) = CreateSession(owner, FixedOpen(session), libraryDocs: collector, readsFiles: true);
-        try
-        {
-            room.Enqueue(new QueuedWork(
-                1,
-                new WorkItem(
-                    "room-1", "Room 1", "Human", "hi", [new CaughtUpMessage("Friend", $"see {uri}")], TriggerMessageId: "trig-1")));
-            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova, LibraryDocs = collector, ReadsFiles = true });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(
+            1,
+            new WorkItem(
+                "room-1", "Room 1", "Human", "hi", [new CaughtUpMessage("Friend", $"see {uri}")], TriggerMessageId: "trig-1")));
+        await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
-            var prompt = Assert.Single(session.Prompts);
-            var header = new FakePromptSource().Render("turn.libraryDocsHeader", new Dictionary<string, string>());
-            Assert.Contains(header, prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        var prompt = Assert.Single(session.Prompts);
+        var header = new FakePromptSource().Render("turn.libraryDocsHeader", new Dictionary<string, string>());
+        Assert.Contains(header, prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
     }
 
     /// <summary>A path only in this Agent's own earlier post-message lines (<see cref="WorkItem.OwnPostLines"/>) is NOT scanned (corrections-B6 item 7).</summary>
@@ -173,23 +148,17 @@ public sealed class PersonaRunnerLibraryDocsTests
         // comment beside the Transcript block), so this is the only way to reach the read loop's
         // OwnPostLines path directly for this test's purpose.
         owner.ReadTranscriptHandler = (roomId, _, _, _, _) => Task.FromResult<TranscriptTail?>(null);
-        var (room, runCts) = CreateSession(owner, FixedOpen(session), libraryDocs: collector, readsFiles: true);
-        try
-        {
-            room.Enqueue(new QueuedWork(
-                1,
-                new WorkItem(
-                    "room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1", OwnPostLines: [$"see {uri}"])));
-            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova, LibraryDocs = collector, ReadsFiles = true });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(
+            1,
+            new WorkItem(
+                "room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1", OwnPostLines: [$"see {uri}"])));
+        await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
-            var prompt = Assert.Single(session.Prompts);
-            var header = new FakePromptSource().Render("turn.libraryDocsHeader", new Dictionary<string, string>());
-            Assert.DoesNotContain(header, prompt, StringComparison.Ordinal);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        var prompt = Assert.Single(session.Prompts);
+        var header = new FakePromptSource().Render("turn.libraryDocsHeader", new Dictionary<string, string>());
+        Assert.DoesNotContain(header, prompt, StringComparison.Ordinal);
     }
 
     /// <summary>A path only in the first-Turn Transcript Catch-up (<see cref="WorkItem.Transcript"/>) is collected (corrections-B6 item 7).</summary>
@@ -209,56 +178,13 @@ public sealed class PersonaRunnerLibraryDocsTests
         FakeRoomSessionOwner owner = new();
         owner.ReadTranscriptHandler = (roomId, _, _, _, _) => Task.FromResult<TranscriptTail?>(
             new TranscriptTail("req", roomId, [new ChatMessage("m1", DateTimeOffset.UtcNow, "hu", "Human", $"see {uri}")], Omitted: 0));
-        var (room, runCts) = CreateSession(owner, FixedOpen(session), libraryDocs: collector, readsFiles: true);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go on", [], TriggerMessageId: "trig-1")));
-            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova, LibraryDocs = collector, ReadsFiles = true });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go on", [], TriggerMessageId: "trig-1")));
+        await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
-            var prompt = Assert.Single(session.Prompts);
-            var header = new FakePromptSource().Render("turn.libraryDocsHeader", new Dictionary<string, string>());
-            Assert.Contains(header, prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
-    }
-
-    /// <summary>Builds a per-Room <see cref="RoomSession"/> with fakes standing in for every collaborator except resume, matching <see cref="Agency.Huddle.Tests.Acp.Sessions.TranscriptCatchUpTests"/>'s own helper.</summary>
-    private static (RoomSession Session, CancellationTokenSource RunCts) CreateSession(
-        FakeRoomSessionOwner owner,
-        Func<CancellationToken, Task<IAgentSession>> open,
-        LibraryDocumentCollector? libraryDocs = null,
-        bool readsFiles = true,
-        AcpOptions? options = null)
-    {
-        CancellationTokenSource runCts = new();
-        RoomSession session = new(
-            roomId: "room-1",
-            open: open,
-            owner: owner,
-            scheduler: new ImmediateTurnScheduler(),
-            prompts: new FakePromptSource(),
-            options: options ?? new AcpOptions(),
-            fileChanges: null,
-            declaredWatches: [],
-            logger: NullLogger.Instance,
-            runToken: runCts.Token,
-            persona: Nova,
-            libraryDocs: libraryDocs,
-            readsFiles: readsFiles);
-        return (session, runCts);
-    }
-
-    /// <summary>An open delegate that always returns the same session.</summary>
-    private static Func<CancellationToken, Task<IAgentSession>> FixedOpen(FakeAgentSession session) =>
-        _ => Task.FromResult<IAgentSession>(session);
-
-    private static async Task DisposeSessionAsync(RoomSession session, CancellationTokenSource runCts)
-    {
-        await runCts.CancelAsync();
-        await session.DisposeAsync();
-        runCts.Dispose();
+        var prompt = Assert.Single(session.Prompts);
+        var header = new FakePromptSource().Render("turn.libraryDocsHeader", new Dictionary<string, string>());
+        Assert.Contains(header, prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
     }
 }

@@ -1,6 +1,5 @@
 namespace Agency.Huddle.Tests.Acp.Sessions;
 
-using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
@@ -166,19 +165,13 @@ public sealed class RoomSessionTests
         FakeAgentSession session = new();
         session.EnqueueReplyWithUsageAndCost([100], [new UsageCost(0.0548m, "USD")], "done");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            Assert.Equal([(session.SessionId, 0.0548m, "USD")], owner.SpendAdded);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Equal([(session.SessionId, 0.0548m, "USD")], owner.SpendAdded);
     }
 
     /// <summary>An advertised command list reaches the owner with the Adapter session's id, whole, as the Adapter sent it.</summary>
@@ -191,21 +184,15 @@ public sealed class RoomSessionTests
         AvailableCommandInfo init = new("init", "Initialize", null);
         session.EnqueueToolActivity(new AvailableCommandsUpdated(session.SessionId, [compact, init]));
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            var call = Assert.Single(owner.CommandsSet);
-            Assert.Equal(session.SessionId, call.SessionId);
-            Assert.Equal([compact, init], call.Advertised);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        var call = Assert.Single(owner.CommandsSet);
+        Assert.Equal(session.SessionId, call.SessionId);
+        Assert.Equal([compact, init], call.Advertised);
     }
 
     /// <summary>A usage update with no cost reports no Spend, so a local model never shows a zero.</summary>
@@ -216,19 +203,13 @@ public sealed class RoomSessionTests
         FakeAgentSession session = new();
         session.EnqueueReplyWithUsage([100, 250], "done");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            Assert.Empty(owner.SpendAdded);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Empty(owner.SpendAdded);
     }
 
     /// <summary>Spend is not a Budget: the tokens counted, and so the token Budget, are the same with a cost on the updates as without one.</summary>
@@ -239,20 +220,14 @@ public sealed class RoomSessionTests
         FakeAgentSession session = new();
         session.EnqueueReplyWithUsageAndCost([100, 300], [new UsageCost(0.01m, "USD"), new UsageCost(9.99m, "USD")], "done");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            Assert.Equal(300, owner.TokensAdded);
-            Assert.False(owner.TokenBudgetSpent);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Equal(300, owner.TokensAdded);
+        Assert.False(owner.TokenBudgetSpent);
     }
 
     /// <summary>The first enqueued item opens the session exactly once, then prompts and posts the reply.</summary>
@@ -264,22 +239,16 @@ public sealed class RoomSessionTests
         session.EnqueueReply("hi there");
         var openCalls = 0;
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, CountingOpen(() => session, () => openCalls++));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, CountingOpen(() => session, () => openCalls++), new() { RoomId = null });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            Assert.Equal(1, openCalls);
-            PostMessage posted = Assert.Single(owner.Written.OfType<PostMessage>());
-            Assert.Equal("hi there", posted.Text);
-            Assert.Contains(owner.Written, message => message is MessageDelta { IsFinal: true });
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Equal(1, openCalls);
+        PostMessage posted = Assert.Single(owner.Written.OfType<PostMessage>());
+        Assert.Equal("hi there", posted.Text);
+        Assert.Contains(owner.Written, message => message is MessageDelta { IsFinal: true });
     }
 
     /// <summary>Two queued items run one after another, never overlapping on the shared session.</summary>
@@ -291,20 +260,14 @@ public sealed class RoomSessionTests
         session.EnqueueReply("first");
         session.EnqueueReply("second");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
-            room.Enqueue(new QueuedWork(2, RoomAItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
+        room.Enqueue(new QueuedWork(2, RoomAItem));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 2, ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 2, ct, timeout: TestBudgets.Standard);
 
-            Assert.False(session.OverlapDetected);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.False(session.OverlapDetected);
     }
 
     /// <summary>A Stop naming a different Room than the one running never cancels the active Turn (finding P-6).</summary>
@@ -315,21 +278,15 @@ public sealed class RoomSessionTests
         FakeAgentSession session = new();
         session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "a reply");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
-            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
+        await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
-            await room.StopAsync("room-b", mark: 1, ct);
+        await room.StopAsync("room-b", mark: 1, ct);
 
-            Assert.Equal(0, session.CancelCallCount);
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Equal(0, session.CancelCallCount);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
     }
 
     /// <summary>A Stop clears only its own Room's queued items; another Room's queued item still runs.</summary>
@@ -341,28 +298,22 @@ public sealed class RoomSessionTests
         session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(200), "a1 reply");
         session.EnqueueReply("b1 reply");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            var a1 = RoomAItem with { Text = "a1" };
-            var a2 = RoomAItem with { Text = "a2" };
-            var b1 = RoomBItem with { Text = "b1" };
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
+        RoomSession room = harness.Room;
+        var a1 = RoomAItem with { Text = "a1" };
+        var a2 = RoomAItem with { Text = "a2" };
+        var b1 = RoomBItem with { Text = "b1" };
 
-            room.Enqueue(new QueuedWork(1, a1));
-            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
-            room.Enqueue(new QueuedWork(2, a2));
-            room.Enqueue(new QueuedWork(3, b1));
+        room.Enqueue(new QueuedWork(1, a1));
+        await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
+        room.Enqueue(new QueuedWork(2, a2));
+        room.Enqueue(new QueuedWork(3, b1));
 
-            await room.StopAsync("room-a", mark: 2, ct);
+        await room.StopAsync("room-a", mark: 2, ct);
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(message => message.Text == "b1 reply"), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(message => message.Text == "b1 reply"), ct, timeout: TestBudgets.Standard);
 
-            Assert.DoesNotContain(session.Prompts, prompt => prompt.Contains("a2", StringComparison.Ordinal));
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.DoesNotContain(session.Prompts, prompt => prompt.Contains("a2", StringComparison.Ordinal));
     }
 
     /// <summary>TRAP 1 at unit level: a Stop latches before it cancels, so the stopped Turn reports no failure.</summary>
@@ -373,23 +324,17 @@ public sealed class RoomSessionTests
         FakeAgentSession session = new();
         session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(500), "never posted");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
-            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
+        await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
-            await room.StopAsync("room-a", mark: 1, ct);
+        await room.StopAsync("room-a", mark: 1, ct);
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
 
-            Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportTurnFailure));
-            Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportIncompleteStop));
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportTurnFailure));
+        Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportIncompleteStop));
     }
 
     /// <summary>
@@ -414,23 +359,17 @@ public sealed class RoomSessionTests
         session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "never posted");
         FakeRoomSessionOwner owner = new();
         AcpOptions options = new() { TurnIdleTimeoutSeconds = 5 };
-        var (room, runCts) = CreateSession(owner, FixedOpen(session), options: options);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
-            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null, Acp = options });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
+        await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
-            await room.StopAsync("room-a", mark: 1, ct);
+        await room.StopAsync("room-a", mark: 1, ct);
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
 
-            Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportTurnFailure));
-            Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportOffline));
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportTurnFailure));
+        Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportOffline));
     }
 
     /// <summary>TRAP 2 at unit level: the idle-timeout watchdog cancels the far side before it cancels its own Turn token.</summary>
@@ -442,24 +381,18 @@ public sealed class RoomSessionTests
         session.EnqueueDelayedReply(TimeSpan.FromSeconds(2), "too late");
         FakeRoomSessionOwner owner = new();
         AcpOptions options = new() { TurnIdleTimeoutSeconds = 1 };
-        var (room, runCts) = CreateSession(owner, FixedOpen(session), options: options);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null, Acp = options });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await Eventually.UntilAsync(() => session.CancelObservedPromptInFlight, ct, TimeSpan.FromSeconds(5));
+        await Eventually.UntilAsync(() => session.CancelObservedPromptInFlight, ct, TimeSpan.FromSeconds(5));
 
-            // The far-side cancel above is the FIRST thing the watchdog does; the Turn only fails -
-            // and reports it - once that cancel has returned and its own token has fired, so the
-            // report is waited for rather than read straight after the cancel was observed.
-            await Eventually.UntilAsync(() => owner.ReportCalls.Contains(nameof(IRoomSessionOwner.ReportTurnFailure)), ct, timeout: TestBudgets.Standard);
+        // The far-side cancel above is the FIRST thing the watchdog does; the Turn only fails -
+        // and reports it - once that cancel has returned and its own token has fired, so the
+        // report is waited for rather than read straight after the cancel was observed.
+        await Eventually.UntilAsync(() => owner.ReportCalls.Contains(nameof(IRoomSessionOwner.ReportTurnFailure)), ct, timeout: TestBudgets.Standard);
 
-            Assert.Contains(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportTurnFailure));
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Contains(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportTurnFailure));
     }
 
     /// <summary>An item queued while the Persona-wide token Budget is spent drains without ever prompting or opening.</summary>
@@ -470,20 +403,14 @@ public sealed class RoomSessionTests
         FakeAgentSession session = new();
         var openCalls = 0;
         FakeRoomSessionOwner owner = new() { TokenBudgetSpent = true };
-        var (room, runCts) = CreateSession(owner, CountingOpen(() => session, () => openCalls++));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, CountingOpen(() => session, () => openCalls++), new() { RoomId = null });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await Eventually.UntilAsync(() => owner.ReportCalls.Contains(nameof(IRoomSessionOwner.ReportTokenBudgetSpent)), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.ReportCalls.Contains(nameof(IRoomSessionOwner.ReportTokenBudgetSpent)), ct, timeout: TestBudgets.Standard);
 
-            Assert.Empty(session.Prompts);
-            Assert.Equal(0, openCalls);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Empty(session.Prompts);
+        Assert.Equal(0, openCalls);
     }
 
     /// <summary>A closed session reopens on its next enqueued item, calling the opener again.</summary>
@@ -500,22 +427,16 @@ public sealed class RoomSessionTests
             return Task.FromResult<IAgentSession>(created);
         };
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, open);
-        try
-        {
-            await room.OpenAsync(ct);
-            Assert.Equal(RoomSessionState.Idle, room.State);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, open, new() { RoomId = null });
+        RoomSession room = harness.Room;
+        await room.OpenAsync(ct);
+        Assert.Equal(RoomSessionState.Idle, room.State);
 
-            await room.CloseAsync();
-            Assert.Equal(RoomSessionState.Closed, room.State);
+        await room.CloseAsync();
+        Assert.Equal(RoomSessionState.Closed, room.State);
 
-            room.Enqueue(new QueuedWork(1, RoomAItem));
-            await Eventually.UntilAsync(() => openCalls == 2, ct, timeout: TestBudgets.Standard);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        room.Enqueue(new QueuedWork(1, RoomAItem));
+        await Eventually.UntilAsync(() => openCalls == 2, ct, timeout: TestBudgets.Standard);
     }
 
     /// <summary>Closing an Idle session never reports it Offline: the reader's own end is deliberate, not a crash.</summary>
@@ -525,22 +446,16 @@ public sealed class RoomSessionTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         FakeAgentSession session = new();
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            await room.OpenAsync(ct);
-            await room.CloseAsync();
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
+        RoomSession room = harness.Room;
+        await room.OpenAsync(ct);
+        await room.CloseAsync();
 
-            // Give the (already-ended) event reader a moment to have run its finally, if it was ever
-            // going to report anything.
-            await Task.Delay(50, ct);
+        // Give the (already-ended) event reader a moment to have run its finally, if it was ever
+        // going to report anything.
+        await Task.Delay(50, ct);
 
-            Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportLoopEnded));
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportLoopEnded));
     }
 
     /// <summary>The first item enqueued for an idle session is offered to the scheduler exactly once.</summary>
@@ -552,18 +467,12 @@ public sealed class RoomSessionTests
         session.EnqueueReply("ok");
         FakeRoomSessionOwner owner = new();
         RecordingTurnScheduler scheduler = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session), scheduler: scheduler);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null, Scheduler = scheduler });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            Assert.Equal(1, scheduler.OfferCount);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Equal(1, scheduler.OfferCount);
     }
 
     /// <summary>A Stop-marked head is still completed on the scheduler, so no admitted slot leaks.</summary>
@@ -574,23 +483,17 @@ public sealed class RoomSessionTests
         FakeAgentSession session = new();
         FakeRoomSessionOwner owner = new();
         RecordingTurnScheduler scheduler = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session), scheduler: scheduler);
-        try
-        {
-            // The mark is set before the item is even queued, so it is dropped deterministically
-            // rather than racing the consumer.
-            await room.StopAsync("room-a", mark: 100, ct);
-            room.Enqueue(new QueuedWork(1, RoomAItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null, Scheduler = scheduler });
+        RoomSession room = harness.Room;
+        // The mark is set before the item is even queued, so it is dropped deterministically
+        // rather than racing the consumer.
+        await room.StopAsync("room-a", mark: 100, ct);
+        room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await Eventually.UntilAsync(() => scheduler.CompleteCount == 1, ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => scheduler.CompleteCount == 1, ct, timeout: TestBudgets.Standard);
 
-            Assert.Equal(1, scheduler.OfferCount);
-            Assert.Empty(session.Prompts);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Equal(1, scheduler.OfferCount);
+        Assert.Empty(session.Prompts);
     }
 
     /// <summary>The second queued item is offered before the first one's ticket is completed (RS §6.1 rule 4, finding P-4).</summary>
@@ -603,24 +506,18 @@ public sealed class RoomSessionTests
         session.EnqueueReply("second");
         FakeRoomSessionOwner owner = new();
         RecordingTurnScheduler scheduler = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session), scheduler: scheduler);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
-            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
-            room.Enqueue(new QueuedWork(2, RoomAItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null, Scheduler = scheduler });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
+        await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
+        room.Enqueue(new QueuedWork(2, RoomAItem));
 
-            await Eventually.UntilAsync(() => scheduler.CompleteCount == 2, ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => scheduler.CompleteCount == 2, ct, timeout: TestBudgets.Standard);
 
-            List<string> calls = [.. scheduler.Calls];
-            var offerSecondIndex = calls.IndexOf("Offer(2)");
-            var completeFirstIndex = calls.IndexOf("Complete(1)");
-            Assert.True(offerSecondIndex >= 0 && completeFirstIndex >= 0 && offerSecondIndex < completeFirstIndex);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        List<string> calls = [.. scheduler.Calls];
+        var offerSecondIndex = calls.IndexOf("Offer(2)");
+        var completeFirstIndex = calls.IndexOf("Complete(1)");
+        Assert.True(offerSecondIndex >= 0 && completeFirstIndex >= 0 && offerSecondIndex < completeFirstIndex);
     }
 
     /// <summary>A Turn whose prompt throws still completes its ticket, so a failing Turn cannot leak a slot.</summary>
@@ -632,19 +529,13 @@ public sealed class RoomSessionTests
         session.EnqueueFailure(new InvalidOperationException("boom"));
         FakeRoomSessionOwner owner = new();
         RecordingTurnScheduler scheduler = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session), scheduler: scheduler);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null, Scheduler = scheduler });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await Eventually.UntilAsync(() => scheduler.CompleteCount == 1, ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => scheduler.CompleteCount == 1, ct, timeout: TestBudgets.Standard);
 
-            Assert.Contains(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportTurnFailure));
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Contains(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportTurnFailure));
     }
 
     /// <summary>
@@ -662,22 +553,16 @@ public sealed class RoomSessionTests
         session.EnqueueGatedReply(release.Task, "held reply");
         FakeRoomSessionOwner owner = new();
         TurnActivity turnActivity = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session), agentId: "agent-1", turnActivity: turnActivity);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null, AgentId = "agent-1", TurnActivity = turnActivity });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await Eventually.UntilAsync(() => turnActivity.IsBusyIn("agent-1", "room-a"), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => turnActivity.IsBusyIn("agent-1", "room-a"), ct, timeout: TestBudgets.Standard);
 
-            release.SetResult();
+        release.SetResult();
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
-            await Eventually.UntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-a"), ct, timeout: TestBudgets.Standard);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-a"), ct, timeout: TestBudgets.Standard);
     }
 #pragma warning restore S2699
 
@@ -696,24 +581,18 @@ public sealed class RoomSessionTests
         TurnActivity turnActivity = new();
         var busyObserved = false;
         turnActivity.Changed += () => busyObserved |= turnActivity.IsBusyIn("agent-1", "room-a");
-        var (room, runCts) = CreateSession(owner, FixedOpen(session), agentId: "agent-1", turnActivity: turnActivity);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null, AgentId = "agent-1", TurnActivity = turnActivity });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await Eventually.UntilAsync(() => owner.ReportCalls.Contains(nameof(IRoomSessionOwner.ReportTurnFailure)), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.ReportCalls.Contains(nameof(IRoomSessionOwner.ReportTurnFailure)), ct, timeout: TestBudgets.Standard);
 
-            // ReportTurnFailure runs in the catch, End in the finally after the watchdog awaits, so
-            // the failure report is visible before End has run; wait for it rather than assert it.
-            await Eventually.UntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-a"), ct, timeout: TestBudgets.Standard);
+        // ReportTurnFailure runs in the catch, End in the finally after the watchdog awaits, so
+        // the failure report is visible before End has run; wait for it rather than assert it.
+        await Eventually.UntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-a"), ct, timeout: TestBudgets.Standard);
 
-            Assert.True(busyObserved);
-            Assert.False(turnActivity.IsBusyIn("agent-1", "room-a"));
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.True(busyObserved);
+        Assert.False(turnActivity.IsBusyIn("agent-1", "room-a"));
     }
 
     /// <summary>A stopped Turn is marked busy while it runs, and <see cref="TurnActivity.End"/> still runs once it is stopped.</summary>
@@ -725,24 +604,18 @@ public sealed class RoomSessionTests
         session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(500), "never posted");
         FakeRoomSessionOwner owner = new();
         TurnActivity turnActivity = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session), agentId: "agent-1", turnActivity: turnActivity);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
-            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null, AgentId = "agent-1", TurnActivity = turnActivity });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
+        await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
 
-            Assert.True(turnActivity.IsBusyIn("agent-1", "room-a"));
+        Assert.True(turnActivity.IsBusyIn("agent-1", "room-a"));
 
-            await room.StopAsync("room-a", mark: 1, ct);
+        await room.StopAsync("room-a", mark: 1, ct);
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
 
-            Assert.False(turnActivity.IsBusyIn("agent-1", "room-a"));
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.False(turnActivity.IsBusyIn("agent-1", "room-a"));
     }
 
     /// <summary>
@@ -761,27 +634,21 @@ public sealed class RoomSessionTests
         session.EnqueueGatedReply(release.Task, "b held");
         FakeRoomSessionOwner owner = new();
         TurnActivity turnActivity = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session), agentId: "agent-1", turnActivity: turnActivity);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(message => message.Text == "a done"), ct, timeout: TestBudgets.Standard);
-            await Eventually.UntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-a"), ct, timeout: TestBudgets.Standard);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null, AgentId = "agent-1", TurnActivity = turnActivity });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(message => message.Text == "a done"), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-a"), ct, timeout: TestBudgets.Standard);
 
-            room.Enqueue(new QueuedWork(2, RoomBItem));
-            await Eventually.UntilAsync(() => turnActivity.IsBusyIn("agent-1", "room-b"), ct, timeout: TestBudgets.Standard);
+        room.Enqueue(new QueuedWork(2, RoomBItem));
+        await Eventually.UntilAsync(() => turnActivity.IsBusyIn("agent-1", "room-b"), ct, timeout: TestBudgets.Standard);
 
-            Assert.False(turnActivity.IsBusyIn("agent-1", "room-a"));
+        Assert.False(turnActivity.IsBusyIn("agent-1", "room-a"));
 
-            release.SetResult();
+        release.SetResult();
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(message => message.Text == "b held"), ct, timeout: TestBudgets.Standard);
-            await Eventually.UntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-b"), ct, timeout: TestBudgets.Standard);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(message => message.Text == "b held"), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-b"), ct, timeout: TestBudgets.Standard);
     }
 
     /// <summary>LastActivity moves forward once a Turn ends.</summary>
@@ -792,21 +659,15 @@ public sealed class RoomSessionTests
         FakeAgentSession session = new();
         session.EnqueueReply("ok");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            var before = room.LastActivity;
-            room.Enqueue(new QueuedWork(1, RoomAItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
+        RoomSession room = harness.Room;
+        var before = room.LastActivity;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
-            await Eventually.UntilAsync(() => room.LastActivity > before, ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => room.LastActivity > before, ct, timeout: TestBudgets.Standard);
 
-            Assert.True(room.LastActivity > before);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.True(room.LastActivity > before);
     }
 
     /// <summary>D23 correction 17 / D24 correction 23: opening a session reports its advertised Models to the owner, so the Model-not-in-catalog warning can fire from any Room Session's open, not only a runner's start-up one.</summary>
@@ -817,64 +678,14 @@ public sealed class RoomSessionTests
         FakeAgentSession session = new();
         session.EnqueueReply("ok");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            var reported = Assert.Single(owner.ReportedModels);
-            Assert.Same(session.Models, reported);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
-    }
-
-    /// <summary>
-    /// Builds a <see cref="RoomSession"/> with fakes standing in for every collaborator, and its own
-    /// <see cref="CancellationTokenSource"/> as the run token - the consumer's loop only ever ends
-    /// when that token is cancelled, exactly as <see cref="Agency.Huddle.App.Acp.PersonaRunner"/>'s
-    /// own <c>runCts</c> ends it in production, so a test disposes with
-    /// <see cref="DisposeSessionAsync"/> rather than a bare <c>await using</c>.
-    /// </summary>
-    private static (RoomSession Session, CancellationTokenSource RunCts) CreateSession(
-        FakeRoomSessionOwner owner,
-        Func<CancellationToken, Task<IAgentSession>> open,
-        ITurnScheduler? scheduler = null,
-        AcpOptions? options = null,
-        string? agentId = null,
-        TurnActivity? turnActivity = null)
-    {
-        CancellationTokenSource runCts = new();
-        RoomSession session = new(
-            roomId: null,
-            open: open,
-            owner: owner,
-            scheduler: scheduler ?? new ImmediateTurnScheduler(),
-            prompts: new FakePromptSource(),
-            options: options ?? new AcpOptions(),
-            fileChanges: null,
-            declaredWatches: [],
-            logger: NullLogger.Instance,
-            runToken: runCts.Token,
-            agentId: agentId,
-            turnActivity: turnActivity);
-        return (session, runCts);
-    }
-
-    /// <summary>
-    /// Cancels <paramref name="runCts"/> - the run token <paramref name="session"/>'s consumer and
-    /// event-reader loops watch - before disposing <paramref name="session"/>, so teardown ends its
-    /// loops instead of hanging on them forever.
-    /// </summary>
-    private static async Task DisposeSessionAsync(RoomSession session, CancellationTokenSource runCts)
-    {
-        await runCts.CancelAsync();
-        await session.DisposeAsync();
-        runCts.Dispose();
+        var reported = Assert.Single(owner.ReportedModels);
+        Assert.Same(session.Models, reported);
     }
 
     /// <summary>
@@ -888,24 +699,14 @@ public sealed class RoomSessionTests
         session.EnqueueToolActivity(toolEvents);
         session.EnqueueReply("done");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, RoomAItem));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            return [.. owner.Written.OfType<ToolActivity>()];
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        return [.. owner.Written.OfType<ToolActivity>()];
     }
-
-    /// <summary>An open delegate that always returns the same session.</summary>
-    private static Func<CancellationToken, Task<IAgentSession>> FixedOpen(FakeAgentSession session) =>
-        _ => Task.FromResult<IAgentSession>(session);
 
     /// <summary>An open delegate that counts its own calls through <paramref name="onOpen"/>, returning <paramref name="session"/>'s current value each time.</summary>
     private static Func<CancellationToken, Task<IAgentSession>> CountingOpen(Func<FakeAgentSession> session, Action onOpen) =>

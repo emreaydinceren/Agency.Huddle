@@ -24,7 +24,7 @@ public sealed class ToolServerHandshakeTests
 
         await using MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(persona, cancellationToken: ct);
 
-        JsonObject sessionNewRequest = await fixture.Agent.WaitForAsync("session/new", TimeSpan.FromSeconds(5));
+        JsonObject sessionNewRequest = await fixture.SessionNewAsync(ct);
 
         JsonObject? parameters = sessionNewRequest["params"] as JsonObject;
         JsonArray? mcpServers = parameters?["mcpServers"] as JsonArray;

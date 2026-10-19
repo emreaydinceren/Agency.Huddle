@@ -124,35 +124,29 @@ public sealed class RoomSessionHealthTests
         session.EnqueueFailure(new InvalidOperationException("boom 2"));
         FakePersonaHost host = new(session, ClaudeProfile()) { CanResume = true };
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateRoomSession(owner, host, store);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "one", [], TriggerMessageId: "trig-1")));
-            await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportTurnFailure)) == 1, ct, timeout: TestBudgets.Standard);
+        await using RoomSessionHarness harness = CreateRoomSession(owner, host, store);
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "one", [], TriggerMessageId: "trig-1")));
+        await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportTurnFailure)) == 1, ct, timeout: TestBudgets.Standard);
 
-            Assert.NotNull(store.Get("nova", "room-1"));
+        Assert.NotNull(store.Get("nova", "room-1"));
 
-            room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "two", [], TriggerMessageId: "trig-2")));
-            await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportTurnFailure)) == 2, ct, timeout: TestBudgets.Standard);
+        room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "two", [], TriggerMessageId: "trig-2")));
+        await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportTurnFailure)) == 2, ct, timeout: TestBudgets.Standard);
 
-            await Eventually.UntilAsync(() => room.State == RoomSessionState.Closed, ct, timeout: TestBudgets.Standard);
-            Assert.Null(store.Get("nova", "room-1"));
+        await Eventually.UntilAsync(() => room.State == RoomSessionState.Closed, ct, timeout: TestBudgets.Standard);
+        Assert.Null(store.Get("nova", "room-1"));
 
-            // A third item reopens - since the entry was forgotten, the resume lookup finds nothing,
-            // so ResumeAsync is never called even though this host is otherwise resume-capable.
-            session.EnqueueReply("fresh reply");
-            room.Enqueue(new QueuedWork(3, new WorkItem("room-1", "Room 1", "Human", "three", [], TriggerMessageId: "trig-3")));
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        // A third item reopens - since the entry was forgotten, the resume lookup finds nothing,
+        // so ResumeAsync is never called even though this host is otherwise resume-capable.
+        session.EnqueueReply("fresh reply");
+        room.Enqueue(new QueuedWork(3, new WorkItem("room-1", "Room 1", "Human", "three", [], TriggerMessageId: "trig-3")));
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            // ResumeCalls already holds "old-session" from item 1's own legitimate resume, before
-            // either failure - what this proves is that item 3, AFTER the forget, adds no new one.
-            Assert.Single(host.ResumeCalls);
-            Assert.Equal(2, host.Sessions.Count);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        // ResumeCalls already holds "old-session" from item 1's own legitimate resume, before
+        // either failure - what this proves is that item 3, AFTER the forget, adds no new one.
+        Assert.Single(host.ResumeCalls);
+        Assert.Equal(2, host.Sessions.Count);
     }
 
     /// <summary>Finding P-14: close-after-two applies in per-Room mode only - a shared session's two failures leave it open.</summary>
@@ -164,34 +158,17 @@ public sealed class RoomSessionHealthTests
         session.EnqueueFailure(new InvalidOperationException("boom 1"));
         session.EnqueueFailure(new InvalidOperationException("boom 2"));
         FakeRoomSessionOwner owner = new();
-        CancellationTokenSource runCts = new();
-        RoomSession room = new(
-            roomId: null,
-            open: _ => Task.FromResult<IAgentSession>(session),
-            owner: owner,
-            scheduler: new ImmediateTurnScheduler(),
-            prompts: new FakePromptSource(),
-            options: new AcpOptions(),
-            fileChanges: null,
-            declaredWatches: [],
-            logger: NullLogger.Instance,
-            runToken: runCts.Token);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-a", "Room A", "Human", "one", [])));
-            await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportTurnFailure)) == 1, ct, timeout: TestBudgets.Standard);
-            room.Enqueue(new QueuedWork(2, new WorkItem("room-a", "Room A", "Human", "two", [])));
-            await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportTurnFailure)) == 2, ct, timeout: TestBudgets.Standard);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-a", "Room A", "Human", "one", [])));
+        await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportTurnFailure)) == 1, ct, timeout: TestBudgets.Standard);
+        room.Enqueue(new QueuedWork(2, new WorkItem("room-a", "Room A", "Human", "two", [])));
+        await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportTurnFailure)) == 2, ct, timeout: TestBudgets.Standard);
 
-            // Give a wrongly-closing implementation every chance to have closed by now.
-            await Task.Delay(200, ct);
+        // Give a wrongly-closing implementation every chance to have closed by now.
+        await Task.Delay(200, ct);
 
-            Assert.NotEqual(RoomSessionState.Closed, room.State);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.NotEqual(RoomSessionState.Closed, room.State);
     }
 
     /// <summary>RS §9 E-10: the Adapter process disconnecting reports Offline, never counts toward the close-after-two streak, and forgets nothing.</summary>
@@ -208,24 +185,18 @@ public sealed class RoomSessionHealthTests
         session.EnqueueFailure(new AgentDisconnectedException());
         FakePersonaHost host = new(session, ClaudeProfile());
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateRoomSession(owner, host, store);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "one", [], TriggerMessageId: "trig-1")));
-            await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportOffline)) == 1, ct, timeout: TestBudgets.Standard);
-            room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "two", [], TriggerMessageId: "trig-2")));
-            await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportOffline)) == 2, ct, timeout: TestBudgets.Standard);
+        await using RoomSessionHarness harness = CreateRoomSession(owner, host, store);
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "one", [], TriggerMessageId: "trig-1")));
+        await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportOffline)) == 1, ct, timeout: TestBudgets.Standard);
+        room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "two", [], TriggerMessageId: "trig-2")));
+        await Eventually.UntilAsync(() => owner.ReportCalls.Count(call => call == nameof(IRoomSessionOwner.ReportOffline)) == 2, ct, timeout: TestBudgets.Standard);
 
-            // Give a wrongly-counting implementation every chance to have closed and forgotten by now.
-            await Task.Delay(200, ct);
+        // Give a wrongly-counting implementation every chance to have closed and forgotten by now.
+        await Task.Delay(200, ct);
 
-            Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportTurnFailure));
-            Assert.NotNull(store.Get("nova", "room-1"));
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportTurnFailure));
+        Assert.NotNull(store.Get("nova", "room-1"));
     }
 
     // --- Group C: the summed token Budget, over two real, open Room Sessions ----------------
@@ -439,7 +410,7 @@ public sealed class RoomSessionHealthTests
             NullLogger<PersonaRunner>.Instance);
 
     /// <summary>Builds a per-Room <see cref="RoomSession"/> with a real <paramref name="store"/> and a resume-capable <paramref name="host"/> - the same shape <c>RoomSessionResumeTests</c> uses.</summary>
-    private static (RoomSession Session, CancellationTokenSource RunCts) CreateRoomSession(
+    private static RoomSessionHarness CreateRoomSession(
         FakeRoomSessionOwner owner, FakePersonaHost host, RoomSessionStore store)
     {
         CancellationTokenSource runCts = new();
@@ -457,7 +428,7 @@ public sealed class RoomSessionHealthTests
             persona: Nova,
             roomSessions: store,
             host: host);
-        return (session, runCts);
+        return RoomSessionHarness.Adopt(session, runCts);
     }
 
     private static AdapterProfile ClaudeProfile() => new(
@@ -495,11 +466,4 @@ public sealed class RoomSessionHealthTests
     }
 
 
-
-    private static async Task DisposeSessionAsync(RoomSession session, CancellationTokenSource runCts)
-    {
-        await runCts.CancelAsync();
-        await session.DisposeAsync();
-        runCts.Dispose();
-    }
 }

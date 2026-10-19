@@ -38,30 +38,24 @@ public sealed class RoomSessionResumeTests
         session.EnqueueReply("hi back");
         FakePersonaHost host = new(session, ClaudeProfile());
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateRoomSession(owner, host, store);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1")));
+        await using RoomSessionHarness harness = CreateRoomSession(owner, host, store);
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1")));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            // The PostMessage is written mid-Turn; the store entry only at Turn end, after the File
-            // Changes commit - so it has to be waited for, not read straight after the post.
-            await Eventually.UntilAsync(() => store.Get("nova", "room-1") is not null, ct, timeout: TestBudgets.Standard);
+        // The PostMessage is written mid-Turn; the store entry only at Turn end, after the File
+        // Changes commit - so it has to be waited for, not read straight after the post.
+        await Eventually.UntilAsync(() => store.Get("nova", "room-1") is not null, ct, timeout: TestBudgets.Standard);
 
-            var posted = Assert.Single(owner.Written.OfType<PostMessage>());
-            var entry = store.Get("nova", "room-1");
-            Assert.NotNull(entry);
-            Assert.Equal(session.SessionId, entry.SessionId);
-            Assert.Equal("claude", entry.AdapterId);
-            Assert.Equal("m1", entry.Model);
-            Assert.Equal("e1", entry.Effort);
-            Assert.Equal(posted.MessageId, entry.LastMessageId);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        var posted = Assert.Single(owner.Written.OfType<PostMessage>());
+        var entry = store.Get("nova", "room-1");
+        Assert.NotNull(entry);
+        Assert.Equal(session.SessionId, entry.SessionId);
+        Assert.Equal("claude", entry.AdapterId);
+        Assert.Equal("m1", entry.Model);
+        Assert.Equal("e1", entry.Effort);
+        Assert.Equal(posted.MessageId, entry.LastMessageId);
     }
 
     /// <summary>At Turn end, the stored entry also carries the Persona's Work Mode, so a later open can tell whether it still matches (ADR-0033).</summary>
@@ -76,21 +70,15 @@ public sealed class RoomSessionResumeTests
         FakePersonaHost host = new(session, ClaudeProfile());
         FakeRoomSessionOwner owner = new();
         Persona persona = Nova with { WorkMode = "plan" };
-        var (room, runCts) = CreateRoomSession(owner, host, store, persona);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1")));
+        await using RoomSessionHarness harness = CreateRoomSession(owner, host, store, persona);
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1")));
 
-            await Eventually.UntilAsync(() => store.Get("nova", "room-1") is not null, ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => store.Get("nova", "room-1") is not null, ct, timeout: TestBudgets.Standard);
 
-            RoomSessionEntry? stored = store.Get("nova", "room-1");
-            Assert.NotNull(stored);
-            Assert.Equal("plan", stored.WorkMode);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        RoomSessionEntry? stored = store.Get("nova", "room-1");
+        Assert.NotNull(stored);
+        Assert.Equal("plan", stored.WorkMode);
     }
 
     /// <summary>
@@ -115,19 +103,13 @@ public sealed class RoomSessionResumeTests
         host.ResumeHandler = static id => new FakeAgentSession();
 
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateRoomSession(owner, host, store, Nova with { WorkMode = personaWorkMode });
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-5")));
+        await using RoomSessionHarness harness = CreateRoomSession(owner, host, store, Nova with { WorkMode = personaWorkMode });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-5")));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            Assert.Empty(host.ResumeCalls);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Empty(host.ResumeCalls);
     }
 
     /// <summary>An entry and a Persona that carry the same Work Mode do resume.</summary>
@@ -146,19 +128,13 @@ public sealed class RoomSessionResumeTests
         host.ResumeHandler = id => string.Equals(id, "stored-session-id", StringComparison.Ordinal) ? resumedSession : null;
 
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateRoomSession(owner, host, store, Nova with { WorkMode = "plan" });
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-2")));
+        await using RoomSessionHarness harness = CreateRoomSession(owner, host, store, Nova with { WorkMode = "plan" });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-2")));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            Assert.Contains("stored-session-id", host.ResumeCalls);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Contains("stored-session-id", host.ResumeCalls);
     }
 
     /// <summary>
@@ -179,30 +155,24 @@ public sealed class RoomSessionResumeTests
         session.EnqueueGatedReply(releaseThird.Task, "third");
         FakePersonaHost host = new(session, ClaudeProfile());
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateRoomSession(owner, host, store);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1")));
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any() && store.Get("nova", "room-1") is not null, ct, timeout: TestBudgets.Standard);
-            string? firstPostId = Assert.Single(owner.Written.OfType<PostMessage>()).MessageId;
-            Assert.NotNull(firstPostId);
+        await using RoomSessionHarness harness = CreateRoomSession(owner, host, store);
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1")));
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any() && store.Get("nova", "room-1") is not null, ct, timeout: TestBudgets.Standard);
+        string? firstPostId = Assert.Single(owner.Written.OfType<PostMessage>()).MessageId;
+        Assert.NotNull(firstPostId);
 
-            room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "@nova /compact", [], WorkItemKind.Command, TriggerMessageId: "trig-2", Command: new AdapterCommandCall("compact", string.Empty))));
-            room.Enqueue(new QueuedWork(3, new WorkItem("room-1", "Room 1", "Human", "go on", [], TriggerMessageId: "trig-3")));
+        room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "@nova /compact", [], WorkItemKind.Command, TriggerMessageId: "trig-2", Command: new AdapterCommandCall("compact", string.Empty))));
+        room.Enqueue(new QueuedWork(3, new WorkItem("room-1", "Room 1", "Human", "go on", [], TriggerMessageId: "trig-3")));
 
-            // The third Turn is held in flight, so the command Turn has fully ended (its store write
-            // included) and the third has not yet written its own.
-            await Eventually.UntilAsync(() => session.Prompts.Count == 3, ct, timeout: TestBudgets.Standard);
-            var entry = store.Get("nova", "room-1");
-            releaseThird.SetResult();
+        // The third Turn is held in flight, so the command Turn has fully ended (its store write
+        // included) and the third has not yet written its own.
+        await Eventually.UntilAsync(() => session.Prompts.Count == 3, ct, timeout: TestBudgets.Standard);
+        var entry = store.Get("nova", "room-1");
+        releaseThird.SetResult();
 
-            Assert.NotNull(entry);
-            Assert.Equal(firstPostId, entry.LastMessageId);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.NotNull(entry);
+        Assert.Equal(firstPostId, entry.LastMessageId);
     }
 
     /// <summary>
@@ -226,30 +196,24 @@ public sealed class RoomSessionResumeTests
         session.EnqueueReplyThenHang("chunk one");
         FakePersonaHost host = new(session, ClaudeProfile());
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateRoomSession(owner, host, store);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-6")));
+        await using RoomSessionHarness harness = CreateRoomSession(owner, host, store);
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-6")));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => !delta.IsFinal), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => !delta.IsFinal), ct, timeout: TestBudgets.Standard);
 
-            await room.StopAsync("room-1", mark: 0, ct);
+        await room.StopAsync("room-1", mark: 0, ct);
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
 
-            // Same Turn-end ordering as TurnEnd_StoresEntry_LastMessageIdIsReplyIdOrTrigger: the
-            // final delta precedes the store write.
-            await Eventually.UntilAsync(() => store.Get("nova", "room-1") is not null, ct, timeout: TestBudgets.Standard);
+        // Same Turn-end ordering as TurnEnd_StoresEntry_LastMessageIdIsReplyIdOrTrigger: the
+        // final delta precedes the store write.
+        await Eventually.UntilAsync(() => store.Get("nova", "room-1") is not null, ct, timeout: TestBudgets.Standard);
 
-            Assert.Empty(owner.Written.OfType<PostMessage>());
-            var entry = store.Get("nova", "room-1");
-            Assert.NotNull(entry);
-            Assert.Equal("trig-6", entry.LastMessageId);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Empty(owner.Written.OfType<PostMessage>());
+        var entry = store.Get("nova", "room-1");
+        Assert.NotNull(entry);
+        Assert.Equal("trig-6", entry.LastMessageId);
     }
 
     /// <summary>
@@ -275,19 +239,13 @@ public sealed class RoomSessionResumeTests
         host.ResumeHandler = id => string.Equals(id, "stored-session-id", StringComparison.Ordinal) ? resumedSession : null;
 
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateRoomSession(owner, host, store);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-7")));
+        await using RoomSessionHarness harness = CreateRoomSession(owner, host, store);
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-7")));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            Assert.Equal(500, owner.TokensAdded);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Equal(500, owner.TokensAdded);
     }
 
     /// <summary>A stored entry whose Adapter, Model and Effort all match, with a resume-capable host, resumes by id and reads only the Messages after the stored <c>LastMessageId</c>.</summary>
@@ -309,25 +267,19 @@ public sealed class RoomSessionResumeTests
         owner.ReadTranscriptHandler = (roomId, _, _, _, _) => Task.FromResult<TranscriptTail?>(
             new TranscriptTail("req", roomId, [new ChatMessage("m9", DateTimeOffset.UtcNow, "hu", "Human", "any update?")], Omitted: 0));
 
-        var (room, runCts) = CreateRoomSession(owner, host, store);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-2")));
+        await using RoomSessionHarness harness = CreateRoomSession(owner, host, store);
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-2")));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            Assert.Contains("stored-session-id", host.ResumeCalls);
-            Assert.Single(owner.TranscriptReadCalls);
-            Assert.Equal("msg-abc", owner.TranscriptReadCalls[0].AfterMessageId);
-            var prompt = Assert.Single(resumedSession.Prompts);
-            Assert.Contains("While this session was closed", prompt, StringComparison.Ordinal);
-            Assert.DoesNotContain("This is a new session", prompt, StringComparison.Ordinal);
-            Assert.Empty(freshSession.Prompts);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Contains("stored-session-id", host.ResumeCalls);
+        Assert.Single(owner.TranscriptReadCalls);
+        Assert.Equal("msg-abc", owner.TranscriptReadCalls[0].AfterMessageId);
+        var prompt = Assert.Single(resumedSession.Prompts);
+        Assert.Contains("While this session was closed", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("This is a new session", prompt, StringComparison.Ordinal);
+        Assert.Empty(freshSession.Prompts);
     }
 
     /// <summary>RS §9 E-1: when the Adapter answers "not found" for a resumable entry, the session opens fresh and reads the latest Messages instead.</summary>
@@ -348,22 +300,16 @@ public sealed class RoomSessionResumeTests
         owner.ReadTranscriptHandler = (roomId, _, _, _, _) => Task.FromResult<TranscriptTail?>(
             new TranscriptTail("req", roomId, [new ChatMessage("m9", DateTimeOffset.UtcNow, "hu", "Human", "earlier text")], Omitted: 0));
 
-        var (room, runCts) = CreateRoomSession(owner, host, store);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-3")));
+        await using RoomSessionHarness harness = CreateRoomSession(owner, host, store);
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-3")));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            Assert.Contains("stored-session-id", host.ResumeCalls);
-            Assert.Null(owner.TranscriptReadCalls[0].AfterMessageId);
-            var prompt = Assert.Single(freshSession.Prompts);
-            Assert.Contains("This is a new session", prompt, StringComparison.Ordinal);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Contains("stored-session-id", host.ResumeCalls);
+        Assert.Null(owner.TranscriptReadCalls[0].AfterMessageId);
+        var prompt = Assert.Single(freshSession.Prompts);
+        Assert.Contains("This is a new session", prompt, StringComparison.Ordinal);
     }
 
     /// <summary>RS §9 E-2: a resume that throws is a Turn failure, and the stored entry is kept unchanged, not overwritten or forgotten.</summary>
@@ -381,21 +327,15 @@ public sealed class RoomSessionResumeTests
         host.ResumeHandler = static _ => throw new InvalidOperationException("adapter refused to resume");
 
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateRoomSession(owner, host, store);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-4")));
+        await using RoomSessionHarness harness = CreateRoomSession(owner, host, store);
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-4")));
 
-            await Eventually.UntilAsync(() => owner.ReportCalls.Contains("ReportTurnFailure"), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.ReportCalls.Contains("ReportTurnFailure"), ct, timeout: TestBudgets.Standard);
 
-            Assert.Empty(owner.Written.OfType<PostMessage>());
-            var kept = store.Get("nova", "room-1");
-            Assert.Equal(original, kept);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Empty(owner.Written.OfType<PostMessage>());
+        var kept = store.Get("nova", "room-1");
+        Assert.Equal(original, kept);
     }
 
     /// <summary>A changed Model, Effort or Adapter id never resumes (RS §6.1's match), even when the host is resume-capable and holds the stored id.</summary>
@@ -417,19 +357,13 @@ public sealed class RoomSessionResumeTests
 
         FakeRoomSessionOwner owner = new();
         var persona = new Persona("nova", "You are Nova.", Model: model, Effort: effort);
-        var (room, runCts) = CreateRoomSession(owner, host, store, persona);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-5")));
+        await using RoomSessionHarness harness = CreateRoomSession(owner, host, store, persona);
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-5")));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            Assert.Empty(host.ResumeCalls);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Empty(host.ResumeCalls);
     }
 
     /// <summary>RS §6.6 "Pruned at start": a stored entry for a Room the Agent is no longer a Member of is dropped before the runner opens anything.</summary>
@@ -506,7 +440,7 @@ public sealed class RoomSessionResumeTests
     }
 
     /// <summary>Builds a <see cref="RoomSession"/> in per-Room mode with a real <paramref name="store"/> and a resume-capable <paramref name="host"/>.</summary>
-    private static (RoomSession Session, CancellationTokenSource RunCts) CreateRoomSession(
+    private static RoomSessionHarness CreateRoomSession(
         FakeRoomSessionOwner owner, FakePersonaHost host, RoomSessionStore store, Persona? persona = null)
     {
         CancellationTokenSource runCts = new();
@@ -524,7 +458,7 @@ public sealed class RoomSessionResumeTests
             persona: persona ?? Nova,
             roomSessions: store,
             host: host);
-        return (session, runCts);
+        return RoomSessionHarness.Adopt(session, runCts);
     }
 
     private static AdapterProfile ClaudeProfile() => new(
@@ -539,11 +473,4 @@ public sealed class RoomSessionResumeTests
         ReadsFiles: true,
         IsolateUserSettings: true,
         SessionPerRoom: true);
-
-    private static async Task DisposeSessionAsync(RoomSession session, CancellationTokenSource runCts)
-    {
-        await runCts.CancelAsync();
-        await session.DisposeAsync();
-        runCts.Dispose();
-    }
 }

@@ -4,9 +4,7 @@ namespace Agency.Huddle.Tests.Acp.Sessions;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
@@ -47,30 +45,24 @@ public sealed class TranscriptCatchUpTests
                 ],
                 Omitted: 10));
         AcpOptions options = new() { TranscriptCatchUpMessages = 20 };
-        var (room, runCts) = CreateSession(owner, FixedOpen(session), options);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go with 2", [], TriggerMessageId: "trig-1")));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova, Acp = options });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go with 2", [], TriggerMessageId: "trig-1")));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            var call = Assert.Single(owner.TranscriptReadCalls);
-            Assert.Equal("room-1", call.RoomId);
-            Assert.Null(call.AfterMessageId);
-            Assert.Equal("trig-1", call.BeforeMessageId);
-            Assert.Equal(20, call.Max);
+        var call = Assert.Single(owner.TranscriptReadCalls);
+        Assert.Equal("room-1", call.RoomId);
+        Assert.Null(call.AfterMessageId);
+        Assert.Equal("trig-1", call.BeforeMessageId);
+        Assert.Equal(20, call.Max);
 
-            var prompt = Assert.Single(session.Prompts);
-            Assert.Contains("This is a new session for this Room", prompt, StringComparison.Ordinal);
-            Assert.Contains("…10 earlier Messages are not shown.", prompt, StringComparison.Ordinal);
-            Assert.Contains("Human: three options please", prompt, StringComparison.Ordinal);
-            Assert.Contains("Nova: here are three options", prompt, StringComparison.Ordinal);
-            Assert.Contains("go with 2", prompt, StringComparison.Ordinal);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        var prompt = Assert.Single(session.Prompts);
+        Assert.Contains("This is a new session for this Room", prompt, StringComparison.Ordinal);
+        Assert.Contains("…10 earlier Messages are not shown.", prompt, StringComparison.Ordinal);
+        Assert.Contains("Human: three options please", prompt, StringComparison.Ordinal);
+        Assert.Contains("Nova: here are three options", prompt, StringComparison.Ordinal);
+        Assert.Contains("go with 2", prompt, StringComparison.Ordinal);
     }
 
     /// <summary>Only the first Turn after an open reads the Transcript; a second Turn on the same open never reads it again (D24 correction 19).</summary>
@@ -82,21 +74,15 @@ public sealed class TranscriptCatchUpTests
         session.EnqueueReply("first reply");
         session.EnqueueReply("second reply");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "hello", [], TriggerMessageId: "trig-1")));
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 1, ct, timeout: TestBudgets.Standard);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "hello", [], TriggerMessageId: "trig-1")));
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 1, ct, timeout: TestBudgets.Standard);
 
-            room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "again", [], TriggerMessageId: "trig-2")));
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 2, ct, timeout: TestBudgets.Standard);
+        room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "again", [], TriggerMessageId: "trig-2")));
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 2, ct, timeout: TestBudgets.Standard);
 
-            Assert.Single(owner.TranscriptReadCalls);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Single(owner.TranscriptReadCalls);
     }
 
     /// <summary>
@@ -113,34 +99,28 @@ public sealed class TranscriptCatchUpTests
         FakeRoomSessionOwner owner = new();
         owner.ReadTranscriptHandler = (roomId, _, _, _, _) => Task.FromResult<TranscriptTail?>(
             new TranscriptTail("req", roomId, [new ChatMessage("m1", DateTimeOffset.UtcNow, "hu", "Human", "an earlier remark")], Omitted: 0));
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "@nova /compact", [], WorkItemKind.Command, TriggerMessageId: "trig-1", Command: new AdapterCommandCall("compact", string.Empty))));
-            await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
-            room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "go on", [], TriggerMessageId: "trig-2")));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "@nova /compact", [], WorkItemKind.Command, TriggerMessageId: "trig-1", Command: new AdapterCommandCall("compact", string.Empty))));
+        await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
+        room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "go on", [], TriggerMessageId: "trig-2")));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(post => post.Text == "ok"), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(post => post.Text == "ok"), ct, timeout: TestBudgets.Standard);
 
-            var call = Assert.Single(owner.TranscriptReadCalls);
-            Assert.Equal("trig-2", call.BeforeMessageId);
-            Assert.Equal("/compact", session.Prompts[0]);
-            Assert.Equal(
-                RoomSession.BuildPrompt(
-                    new WorkItem(
-                        "room-1",
-                        "Room 1",
-                        "Human",
-                        "go on",
-                        [],
-                        Transcript: new TranscriptCatchUp(false, [new ChatMessage("m1", DateTimeOffset.UtcNow, "hu", "Human", "an earlier remark")], 0)),
-                    new FakePromptSource()),
-                session.Prompts[1]);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        var call = Assert.Single(owner.TranscriptReadCalls);
+        Assert.Equal("trig-2", call.BeforeMessageId);
+        Assert.Equal("/compact", session.Prompts[0]);
+        Assert.Equal(
+            RoomSession.BuildPrompt(
+                new WorkItem(
+                    "room-1",
+                    "Room 1",
+                    "Human",
+                    "go on",
+                    [],
+                    Transcript: new TranscriptCatchUp(false, [new ChatMessage("m1", DateTimeOffset.UtcNow, "hu", "Human", "an earlier remark")], 0)),
+                new FakePromptSource()),
+            session.Prompts[1]);
     }
 
     /// <summary>A Room's first Turn ever - the range before the trigger holds no Messages - leaves the prompt byte-identical to today's, with no Transcript block at all.</summary>
@@ -152,21 +132,15 @@ public sealed class TranscriptCatchUpTests
         session.EnqueueReply("hi there");
         FakeRoomSessionOwner owner = new();
         owner.ReadTranscriptHandler = (roomId, _, _, _, _) => Task.FromResult<TranscriptTail?>(new TranscriptTail("req", roomId, [], Omitted: 0));
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Nova & You", "You", "hello there", [], TriggerMessageId: "trig-1")));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Nova & You", "You", "hello there", [], TriggerMessageId: "trig-1")));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            var prompt = Assert.Single(session.Prompts);
-            var expected = RoomSession.BuildPrompt(new WorkItem("room-1", "Nova & You", "You", "hello there", []), new FakePromptSource());
-            Assert.Equal(expected, prompt);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        var prompt = Assert.Single(session.Prompts);
+        var expected = RoomSession.BuildPrompt(new WorkItem("room-1", "Nova & You", "You", "hello there", []), new FakePromptSource());
+        Assert.Equal(expected, prompt);
     }
 
     /// <summary>RS §9 E-3: a refused or unanswered Transcript read (<see langword="null"/>) lets the Turn go ahead without the block, rather than failing it.</summary>
@@ -178,22 +152,16 @@ public sealed class TranscriptCatchUpTests
         session.EnqueueReply("hi there");
         FakeRoomSessionOwner owner = new();
         owner.ReadTranscriptHandler = static (_, _, _, _, _) => Task.FromResult<TranscriptTail?>(null);
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Nova & You", "You", "hello there", [], TriggerMessageId: "trig-1")));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Nova & You", "You", "hello there", [], TriggerMessageId: "trig-1")));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            var posted = Assert.Single(owner.Written.OfType<PostMessage>());
-            Assert.Equal("hi there", posted.Text);
-            var prompt = Assert.Single(session.Prompts);
-            Assert.DoesNotContain("This is a new session", prompt, StringComparison.Ordinal);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        var posted = Assert.Single(owner.Written.OfType<PostMessage>());
+        Assert.Equal("hi there", posted.Text);
+        var prompt = Assert.Single(session.Prompts);
+        Assert.DoesNotContain("This is a new session", prompt, StringComparison.Ordinal);
     }
 
     /// <summary>A Greeting reads no Transcript (it has no <see cref="WorkItem.TriggerMessageId"/>), and still consumes the "first Turn after open" opportunity: the ordinary Message right after it does not read one either.</summary>
@@ -205,21 +173,15 @@ public sealed class TranscriptCatchUpTests
         session.EnqueueReply("hello!");
         session.EnqueueReply("hi back");
         FakeRoomSessionOwner owner = new();
-        var (room, runCts) = CreateSession(owner, FixedOpen(session));
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", string.Empty, string.Empty, [], WorkItemKind.Greeting)));
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 1, ct, timeout: TestBudgets.Standard);
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", string.Empty, string.Empty, [], WorkItemKind.Greeting)));
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 1, ct, timeout: TestBudgets.Standard);
 
-            room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1")));
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 2, ct, timeout: TestBudgets.Standard);
+        room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1")));
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Count() == 2, ct, timeout: TestBudgets.Standard);
 
-            Assert.Empty(owner.TranscriptReadCalls);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Empty(owner.TranscriptReadCalls);
     }
 
     /// <summary>A shared session (<c>RoomId</c> null) never reads a Transcript, unchanged from before D24.</summary>
@@ -230,30 +192,13 @@ public sealed class TranscriptCatchUpTests
         FakeAgentSession session = new();
         session.EnqueueReply("hi there");
         FakeRoomSessionOwner owner = new();
-        CancellationTokenSource runCts = new();
-        RoomSession room = new(
-            roomId: null,
-            open: FixedOpen(session),
-            owner: owner,
-            scheduler: new ImmediateTurnScheduler(),
-            prompts: new FakePromptSource(),
-            options: new AcpOptions(),
-            fileChanges: null,
-            declaredWatches: [],
-            logger: NullLogger.Instance,
-            runToken: runCts.Token);
-        try
-        {
-            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1")));
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1")));
 
-            await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
-            Assert.Empty(owner.TranscriptReadCalls);
-        }
-        finally
-        {
-            await DisposeSessionAsync(room, runCts);
-        }
+        Assert.Empty(owner.TranscriptReadCalls);
     }
 
     /// <summary>
@@ -448,36 +393,5 @@ public sealed class TranscriptCatchUpTests
         await client.WriteAsync(new Hello(agentName, null), ct);
         var welcome = Assert.IsType<Welcome>(await client.ReadAsync(ct));
         return welcome.AgentId;
-    }
-
-    /// <summary>Builds a per-Room <see cref="RoomSession"/> with fakes standing in for every collaborator except resume, which these tests do not exercise.</summary>
-    private static (RoomSession Session, CancellationTokenSource RunCts) CreateSession(
-        FakeRoomSessionOwner owner, Func<CancellationToken, Task<IAgentSession>> open, AcpOptions? options = null)
-    {
-        CancellationTokenSource runCts = new();
-        RoomSession session = new(
-            roomId: "room-1",
-            open: open,
-            owner: owner,
-            scheduler: new ImmediateTurnScheduler(),
-            prompts: new FakePromptSource(),
-            options: options ?? new AcpOptions(),
-            fileChanges: null,
-            declaredWatches: [],
-            logger: NullLogger.Instance,
-            runToken: runCts.Token,
-            persona: Nova);
-        return (session, runCts);
-    }
-
-    /// <summary>An open delegate that always returns the same session.</summary>
-    private static Func<CancellationToken, Task<IAgentSession>> FixedOpen(FakeAgentSession session) =>
-        _ => Task.FromResult<IAgentSession>(session);
-
-    private static async Task DisposeSessionAsync(RoomSession session, CancellationTokenSource runCts)
-    {
-        await runCts.CancelAsync();
-        await session.DisposeAsync();
-        runCts.Dispose();
     }
 }

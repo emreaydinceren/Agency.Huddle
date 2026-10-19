@@ -19,9 +19,8 @@ public sealed class IsolationMetaTests
 
         await using MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(persona, cancellationToken: ct);
 
-        JsonObject sessionNewRequest = await fixture.Agent.WaitForAsync("session/new", TimeSpan.FromSeconds(5));
-        JsonObject? parameters = sessionNewRequest["params"] as JsonObject;
-        JsonObject? meta = parameters?["_meta"] as JsonObject;
+        JsonObject sessionNewRequest = await fixture.SessionNewAsync(ct);
+        JsonObject? meta = MockAdapterFixture.SessionNewMeta(sessionNewRequest);
         JsonObject? claudeCode = meta?["claudeCode"] as JsonObject;
         JsonObject? options = claudeCode?["options"] as JsonObject;
 
@@ -47,9 +46,8 @@ public sealed class IsolationMetaTests
         await using MockAdapterFixture fixture =
             await MockAdapterFixture.StartAsync(persona, additionalConfig, cancellationToken: ct);
 
-        JsonObject sessionNewRequest = await fixture.Agent.WaitForAsync("session/new", TimeSpan.FromSeconds(5));
-        JsonObject? parameters = sessionNewRequest["params"] as JsonObject;
-        JsonObject? meta = parameters?["_meta"] as JsonObject;
+        JsonObject sessionNewRequest = await fixture.SessionNewAsync(ct);
+        JsonObject? meta = MockAdapterFixture.SessionNewMeta(sessionNewRequest);
 
         Assert.False(meta?.ContainsKey("claudeCode") ?? false);
     }

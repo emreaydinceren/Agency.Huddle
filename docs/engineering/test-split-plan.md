@@ -1080,7 +1080,7 @@ Ids are `<deliverable>.<task>`:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "2.3" -State Done -TrackerPath docs/engineering/test-split-plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 71 of 77 tasks Done · 4 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
+**Status:** 72 of 77 tasks Done · 4 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1176,7 +1176,7 @@ Ids are `<deliverable>.<task>`:
 | 16.2 `PipeRunnerServer` (S) | Sonnet | 16.1 | | | ✔ |
 | 16.3 Migrate the five pipe `FakeServer`s (S) | Sonnet | 16.2 | | | ✔ |
 | 16.4 `RoomSessionHarness` and `MockAdapterFixture` helpers (S) | Sonnet | D11 | | | ✔ |
-| 16.5 Migrate the session triplets and conformance helpers (H) | Haiku | 16.4 | | | |
+| 16.5 Migrate the session triplets and conformance helpers (H) | Haiku | 16.4 | | | ✔ |
 | 16.6 Pass-through decorators (S) | Sonnet | D10 | | | |
 | **D17 Close Phase 2** | Haiku | D11 to D16 | | | |
 | 17.1 The shared-helper catalogue in `Testing.md` (H) | Haiku | D11 to D16 | | | |

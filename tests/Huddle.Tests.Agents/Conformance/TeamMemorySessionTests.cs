@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using Agency.Huddle.App.Acp;
 
 namespace Agency.Huddle.Tests.Conformance;
@@ -202,15 +201,6 @@ public sealed class TeamMemorySessionTests
 
         await using MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(persona, config, cancellationToken: ct);
 
-        JsonObject sessionNewRequest = await fixture.Agent.WaitForAsync("session/new", TimeSpan.FromSeconds(5));
-        ct.ThrowIfCancellationRequested();
-
-        JsonObject? parameters = sessionNewRequest["params"] as JsonObject;
-        JsonObject? meta = parameters?["_meta"] as JsonObject;
-        JsonObject? systemPrompt = meta?["systemPrompt"] as JsonObject;
-        string? appendedPrompt = (string?)systemPrompt?["append"];
-
-        Assert.NotNull(appendedPrompt);
-        return appendedPrompt;
+        return await fixture.AppendedSystemPromptAsync(ct);
     }
 }

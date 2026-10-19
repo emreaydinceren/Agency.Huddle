@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using Agency.Huddle.App.Acp;
 
 namespace Agency.Huddle.Tests.Conformance;
@@ -20,7 +19,7 @@ public sealed class FileChangesToolOfferTests
 
         await using MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(persona, cancellationToken: ct);
 
-        string toolNames = await FileChangesToolOfferTests.GetToolNamesTextAsync(fixture, ct);
+        string toolNames = await fixture.AppendedSystemPromptAsync(ct);
 
         Assert.Contains("mcp__team__watch_folder", toolNames, StringComparison.Ordinal);
         Assert.Contains("mcp__team__unwatch_folder", toolNames, StringComparison.Ordinal);
@@ -43,7 +42,7 @@ public sealed class FileChangesToolOfferTests
         await using MockAdapterFixture fixture =
             await MockAdapterFixture.StartAsync(persona, additionalConfig, cancellationToken: ct);
 
-        string toolNames = await FileChangesToolOfferTests.GetToolNamesTextAsync(fixture, ct);
+        string toolNames = await fixture.AppendedSystemPromptAsync(ct);
 
         Assert.DoesNotContain("watch_folder", toolNames, StringComparison.Ordinal);
     }
@@ -62,23 +61,8 @@ public sealed class FileChangesToolOfferTests
         await using MockAdapterFixture fixture =
             await MockAdapterFixture.StartAsync(persona, additionalConfig, cancellationToken: ct);
 
-        string toolNames = await FileChangesToolOfferTests.GetToolNamesTextAsync(fixture, ct);
+        string toolNames = await fixture.AppendedSystemPromptAsync(ct);
 
         Assert.DoesNotContain("watch_folder", toolNames, StringComparison.Ordinal);
-    }
-
-    /// <summary>Waits for <c>session/new</c> and returns the composed system prompt's own tool-list text, where every offered tool's prefixed name is named (matching <see cref="SystemPromptComposer"/>'s <c>systemPrompt.tools</c> rendering).</summary>
-    private static async Task<string> GetToolNamesTextAsync(MockAdapterFixture fixture, CancellationToken cancellationToken)
-    {
-        JsonObject sessionNewRequest = await fixture.Agent.WaitForAsync("session/new", TimeSpan.FromSeconds(5));
-        cancellationToken.ThrowIfCancellationRequested();
-
-        JsonObject? parameters = sessionNewRequest["params"] as JsonObject;
-        JsonObject? meta = parameters?["_meta"] as JsonObject;
-        JsonObject? systemPrompt = meta?["systemPrompt"] as JsonObject;
-        string? appendedPrompt = (string?)systemPrompt?["append"];
-
-        Assert.NotNull(appendedPrompt);
-        return appendedPrompt;
     }
 }

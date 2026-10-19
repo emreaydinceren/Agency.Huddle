@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using Agency.Huddle.App.Acp;
 
 namespace Agency.Huddle.Tests.Conformance;
@@ -32,7 +31,7 @@ public sealed class ToolPrefixTests
         await using MockAdapterFixture fixture =
             await MockAdapterFixture.StartAsync(persona, additionalConfig, cancellationToken: ct);
 
-        string appendedPrompt = await ToolPrefixTests.GetAppendedSystemPromptAsync(fixture, ct);
+        string appendedPrompt = await fixture.AppendedSystemPromptAsync(ct);
 
         Assert.Contains("get_help", appendedPrompt, StringComparison.Ordinal);
         Assert.DoesNotContain("mcp__", appendedPrompt, StringComparison.Ordinal);
@@ -58,23 +57,8 @@ public sealed class ToolPrefixTests
         await using MockAdapterFixture fixture =
             await MockAdapterFixture.StartAsync(persona, additionalConfig, cancellationToken: ct);
 
-        string appendedPrompt = await ToolPrefixTests.GetAppendedSystemPromptAsync(fixture, ct);
+        string appendedPrompt = await fixture.AppendedSystemPromptAsync(ct);
 
         Assert.Contains("mcp__team__get_help", appendedPrompt, StringComparison.Ordinal);
-    }
-
-    /// <summary>Waits for <c>session/new</c> and pulls the appended system prompt text out of its <c>_meta</c> payload.</summary>
-    private static async Task<string> GetAppendedSystemPromptAsync(MockAdapterFixture fixture, CancellationToken cancellationToken)
-    {
-        JsonObject sessionNewRequest = await fixture.Agent.WaitForAsync("session/new", TimeSpan.FromSeconds(5));
-        cancellationToken.ThrowIfCancellationRequested();
-
-        JsonObject? parameters = sessionNewRequest["params"] as JsonObject;
-        JsonObject? meta = parameters?["_meta"] as JsonObject;
-        JsonObject? systemPrompt = meta?["systemPrompt"] as JsonObject;
-        string? appendedPrompt = (string?)systemPrompt?["append"];
-
-        Assert.NotNull(appendedPrompt);
-        return appendedPrompt;
     }
 }

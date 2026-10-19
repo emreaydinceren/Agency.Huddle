@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using Agency.Huddle.App.Acp;
 
 namespace Agency.Huddle.Tests.Conformance;
@@ -25,14 +24,8 @@ public sealed class PromptDeliveryTests
 
         await using MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(persona, cancellationToken: ct);
 
-        JsonObject sessionNewRequest = await fixture.Agent.WaitForAsync("session/new", TimeSpan.FromSeconds(5));
+        string appendedPrompt = await fixture.AppendedSystemPromptAsync(ct);
 
-        JsonObject? parameters = sessionNewRequest["params"] as JsonObject;
-        JsonObject? meta = parameters?["_meta"] as JsonObject;
-        JsonObject? systemPrompt = meta?["systemPrompt"] as JsonObject;
-        string? appendedPrompt = (string?)systemPrompt?["append"];
-
-        Assert.NotNull(appendedPrompt);
         Assert.Contains(personaText, appendedPrompt, StringComparison.Ordinal);
     }
 }
