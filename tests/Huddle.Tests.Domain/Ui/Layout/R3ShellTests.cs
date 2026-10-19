@@ -75,7 +75,8 @@ public sealed partial class R3ShellTests
     public void AppCss_SidebarRowsAndActivityBar_WearTheInsetShape()
     {
         string row = R3ShellTests.DeclarationsFor(".mud-drawer .mud-navmenu .mud-nav-link");
-        Assert.Matches(@"margin-inline:\s*4px", row);
+        Assert.Matches(@"margin-inline:\s*var\(--nav-inset\)", row);
+        Assert.Matches(@"--nav-inset:\s*4px", CssText.AppCss(CssNewlines.AsIs));
         Assert.Matches(@"border-radius:\s*calc\(var\(--mud-default-borderradius\) \* 0\.75\)", row);
 
         string tile = R3ShellTests.DeclarationsFor(".activity-bar-item.mud-icon-button");
@@ -89,7 +90,7 @@ public sealed partial class R3ShellTests
     public void AppCss_NeedsYou_IsEdgeOutlined_AndOneRowHigh()
     {
         Assert.Matches(@"border-color:\s*var\(--ink-edge\)", R3ShellTests.DeclarationsFor(".needs-you-card.mud-paper-outlined"));
-        Assert.Matches(@"min-height:\s*var\(--nav-row-height\)", R3ShellTests.DeclarationsFor(".needs-you-row .mud-nav-link"));
+        Assert.Matches(@"min-height:\s*var\(--nav-row-height\)", R3ShellTests.DeclarationsFor(".sidebar-views .needs-you-row.needs-you-row .mud-nav-link"));
         Assert.DoesNotMatch(@"flex-direction:\s*column", R3ShellTests.DeclarationsFor(".needs-you-text"));
     }
 

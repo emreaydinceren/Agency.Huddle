@@ -21,10 +21,11 @@ internal static class MudVariables
         // The ink ladder, declared in app-vars.css as aliases of the --hu-ink-* skin tokens (audit A1).
         "--ink-strip", "--ink-wash", "--ink-rule", "--ink-edge", "--ink-field",
 
-        // The sidebar's own layout tokens, declared once in app.css "Left menu" (UX-015, UX-017).
-        "--nav-indent-1",
-        "--nav-indent-2",
+        // The sidebar's own layout tokens, declared once in app.css "Left menu" (UX-015, UX-017): the row height
+        // and the grid every row sits on; --nav-level is set per row, and --needs-you-offset by the Needs you card.
         "--nav-row-height",
+        "--nav-inset", "--nav-pad", "--nav-slot", "--nav-gap", "--nav-step", "--nav-end", "--nav-level",
+        "--needs-you-offset",
 
         // The 18px icon of a sidebar row and of a tab-rail label, declared beside the row height (S2, C6).
         "--icon-size-row",

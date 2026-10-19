@@ -55,13 +55,13 @@ public sealed partial class R3FixTests
         Assert.Contains("display: none;", CssText.RuleBody(CssText.AppCss(), ".mud-input-control.toolbar-compact .mud-input-label"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
     }
 
-    /// <summary>A Needs you row gives the Room's name the width the icons and the time leave: the link pads 8px, the text starts flush, the name flexes and ellipsises, and the time is trailing and does not shrink.</summary>
+    /// <summary>A Needs you row gives the Room's name the width the icons and the time leave: the link pads to the sidebar grid less the card's offset, the text starts flush, the name flexes and ellipsises, and the time is trailing and does not shrink.</summary>
     [Fact]
     public void NeedsYouRow_NameTakesTheRemainingWidth()
     {
         string css = CssText.AppCss();
 
-        Assert.Contains("padding-inline: 8px;", CssText.RuleBody(css, ".needs-you-row .mud-nav-link"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("padding-inline: calc(var(--nav-pad) - var(--needs-you-offset)) calc(var(--nav-end) - var(--needs-you-offset));", CssText.RuleBody(css, ".sidebar-views .needs-you-row.needs-you-row .mud-nav-link"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("margin-inline-start: 0;", CssText.RuleBody(css, ".needs-you-row .mud-nav-link-text"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         string name = CssText.RuleBody(css, ".needs-you-name");
         Assert.Contains("flex: 1 1 auto;", name, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
@@ -74,13 +74,22 @@ public sealed partial class R3FixTests
     [InlineData(".library-tree .mud-treeview-item-content")]
     [InlineData(".settings-nav .mud-nav-link")]
     [InlineData(".mud-list-item.mud-selected-item")]
-    [InlineData(".mud-drawer .mud-navmenu .mud-nav-link")]
     public void InsetRows_AreNarrowerByTheirInset(string selector)
     {
         string rule = CssText.RuleBody(CssText.AppCss(), selector);
 
         Assert.Contains("width: calc(100% - 8px);", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("margin-inline: 4px;", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+    }
+
+    /// <summary>A left-sidebar row is inset by the grid's <c>--nav-inset</c> each side and narrower by twice it, so it never overflows the panel (round 3, and the sidebar alignment grid).</summary>
+    [Fact]
+    public void SidebarRows_AreNarrowerByTwiceTheGridInset()
+    {
+        string rule = CssText.RuleBody(CssText.AppCss(), ".mud-drawer .mud-navmenu .mud-nav-link");
+
+        Assert.Contains("width: calc(100% - 2 * var(--nav-inset));", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("margin-inline: var(--nav-inset);", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
     }
 
     /// <summary>The head outlet is interactive like the routes, or a PageTitle rendered by an interactive page never reaches the document title after the first load (round 3: the title stayed on the first page).</summary>

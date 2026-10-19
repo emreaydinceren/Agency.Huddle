@@ -594,8 +594,30 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
   8px gap to the label. A section header is `caption` (12px) at weight 600 in
   `TextSecondary`, sentence case, 16px above and 4px below (UX-014). Footer entries are rows
   too, or icon-only buttons with an `aria-label` (UX-017).
-- **Every row has a 24px leading slot.** An avatar fills it; an 18px icon is centred in it.
-  Labels at one level therefore start at one x, whether the row shows an avatar or an icon.
+- **Every row sits on two lines: an icon line and a text line.** Every row has a 24px leading
+  slot, and every leading mark is centred in it: a section's icon, a row's 18px icon, a 24px
+  avatar, a Team's chevron, the "+" of an action row, the arrow of "Show all". Every label
+  starts 8px after the slot: a section title, a name, "Show all", "New chat". A row with no
+  mark keeps the slot empty. The grid is one set of tokens in `app.css` "Left menu"
+  (`--nav-inset`, `--nav-pad`, `--nav-slot`, `--nav-gap`, `--nav-step`, `--nav-end`), and every
+  view of the Sidebar uses it, so switching views moves nothing sideways.
+- **A section header and its rows share the lines.** The header heads its list; it is not a
+  level above it.
+- **Every view starts at one top.** Its first row, a section header, a destination (Teammates,
+  Library) or the Needs you card, is 16px below the view's top, and a section that follows
+  another in the same view is 16px below it. Every row is exactly 32px, an avatar row too, so
+  rows fall on a 32px rhythm.
+- **Nesting moves a row in by exactly one step** (`--nav-step`, the slot and the gap): a
+  child's mark sits under its parent's label, and its label starts one step further in. A row
+  sets its level with `--nav-level`, never a padding of its own. A Team's Rooms and Projects
+  are level 1; "Build a team" is a top-level action, in line with the Teams.
+- **Trailing details end on one line**, `--nav-end` inside the row's right edge: a Team's
+  member count, a Needs you time and count, a section's collapse arrow. A count gives way to
+  the row's hover "..." while the row is hovered or focused; on touch, where the button always
+  shows, the count ends just before it.
+- **The selected pill is inset `--nav-inset` from the panel's sides on every row.** The Needs
+  you card's sides sit on that inset, and its rows are pulled back by the card's offset, so they
+  keep both lines.
 - **A destination is a row, not a header.** "Teammates" and "Library" are rows (13px body,
   18px icon in the leading slot); only a group with children wears the section-header style.
 - **The Needs you card is outlined in Edge.** Its row is 32px: the reason icon, the Room's
@@ -619,13 +641,14 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
 - **The Library has one home.** The sidebar has one Library link to `/library` and no
   tree, root rows or "Add folder"; the tree lives on the Library page.
 - **The first section is "Rooms"**, the defined term in [language.md](language.md).
-- **Rows at the same level share one indent**, set by one rule in `app.css` "Left menu".
+- **Rows at the same level share one indent**, set by the grid in `app.css` "Left menu".
   Within a level, either every row has an icon or none does (UX-015).
 - **A 1:1 Room shows the Teammate's small avatar; a group Room shows the Room icon**
   (UX-016). At 24px the avatar is the monogram, even when the Teammate has an image.
 - **Sidebar action links** ("New chat", "Build a team", "New view") take the
-  `nav-action-link` class: secondary text colour (not the accent), 2px between icon and
-  label. Don't set `IconColor` on them, and don't repeat those rules inline.
+  `nav-action-link` class: secondary text colour (not the accent), the "+" in the leading slot
+  and the label on the text line like any row. Don't set `IconColor` on them, and don't repeat
+  those rules inline.
 - **The sidebar is the shell's surface**, not a tinted panel; a 1px `lines-default` edge
   separates it from the workspace. Its text is `DrawerText`, which every Theme sets to
   `TextPrimary`.
