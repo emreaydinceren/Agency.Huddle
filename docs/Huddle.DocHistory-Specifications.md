@@ -1,6 +1,6 @@
 # Huddle.DocHistory — Design Specification
 
-**Date:** 2026-10-18 · **Status:** Building on `feat/doc-history` · **Decision record:**
+**Date:** 2026-10-18 · **Status:** Designed, not built · **Decision record:**
 [ADR-0060](adr/0060-a-documents-history-is-what-its-editors-report.md) · **Builds on:**
 [Huddle.Library-Specifications.md](Huddle.Library-Specifications.md),
 [Huddle.RightSidebar-Specifications.md](Huddle.RightSidebar-Specifications.md),
@@ -332,7 +332,16 @@ Add to [language.md](engineering/language.md):
 
 ## 10. Testing
 
-Test-first, per [agents/Testing.md](../agents/Testing.md).
+Test-first, per [agents/Testing.md](../agents/Testing.md). The suite is split into projects by what a test needs to
+run (Testing.md, *Where a test goes*), and every project keeps the old folder layout, so each test below lives in a
+`DocHistory/` folder of the project its row names:
+
+| Project | Holds for this feature |
+| --- | --- |
+| `tests/Huddle.Tests.Domain` | The store, view, recorder, tool and offering tests, and the `LibraryFileService` hook tests |
+| `tests/Huddle.Tests.Components` | The bUnit tests for the byline, the History and the panel |
+| `tests/Huddle.Tests.Agents` | The paid live tests below, because they start a `node` Adapter process |
+| `tests/Huddle.Tests.Common` | Every helper they share, as `internal`: test paths and entries, the `RecordingLogChangeTool`, the live-test gate. The Library tests reuse `LibraryFileServiceFixture` from `tests/Huddle.Tests.Common/Library/`, extended there rather than copied |
 
 | Area | Tests |
 | --- | --- |
@@ -353,8 +362,9 @@ which decides whether the design survives, and an **end-to-end check after** (DH
 
 **The lane.**
 
-- **Where:** `tests/Huddle.Tests/Live/DocHistory/`. The `TEAM_E2E` lane in `tests/Huddle.Acp.Tests/E2E/` belongs to
-  the ACP effort. These tests copy its shape: the real `claude-agent-acp` Adapter under `tools/acp`, an
+- **Where:** `tests/Huddle.Tests.Agents/Live/DocHistory/`, the project for tests that start a child process; the gate
+  and the `RecordingLogChangeTool` are helpers in `tests/Huddle.Tests.Common/Live/`. The `TEAM_E2E` lane in
+  `tests/Huddle.Acp.Tests/E2E/` belongs to the ACP effort. These tests copy its shape: the real `claude-agent-acp` Adapter under `tools/acp`, an
   `AppToolServer` serving the tool, `DotAcpAgentHost`, and a temp working folder. They do not edit that project.
 - **Gate:** `[Fact(SkipUnless = …)]` on `TEAM_E2E_DOCHISTORY=1`, a variable of its own. That way setting `TEAM_E2E`
   keeps the cost [manual-tests.md](engineering/manual-tests.md) documents for it, and the reverse holds too.
