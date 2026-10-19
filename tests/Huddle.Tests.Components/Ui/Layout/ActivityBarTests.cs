@@ -1,7 +1,6 @@
 using AngleSharp.Dom;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Components.Layout;
 
@@ -43,7 +42,7 @@ public sealed class ActivityBarTests
     [Fact]
     public async Task Render_SelectedView_IsTheOnlyPressedButton()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTeamOptions(options => { options.Tasks.Enabled = true; options.Library.Enabled = true; });
 
         IRenderedComponent<ActivityBar> cut = ctx.Render<ActivityBar>(p => p.Add(c => c.Selected, SidebarView.Teams));
 
@@ -59,7 +58,7 @@ public sealed class ActivityBarTests
     [Fact]
     public async Task Click_ReportsTheNextView()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTeamOptions(options => { options.Tasks.Enabled = true; options.Library.Enabled = true; });
         List<SidebarView?> reported = [];
         IRenderedComponent<ActivityBar> cut = ctx.Render<ActivityBar>(p => p
             .Add(c => c.Selected, SidebarView.Chats)
@@ -84,16 +83,5 @@ public sealed class ActivityBarTests
         Assert.True(bottom >= 0 && bottom < archived && archived < settings && settings < bottomEnd, "Archived chats and Settings must sit inside the Activity bar's Bottom slot");
         Assert.Contains("sidebarView = SidebarViews.Default", layout, StringComparison.Ordinal); // contains-ok: a source pin on one field initialiser in a file that holds much else
         Assert.Equal(SidebarView.Chats, SidebarViews.Default);
-    }
-
-    /// <summary>A bUnit context with every feature on, so all five views are offered.</summary>
-    private static MudBunitContext NewContext()
-    {
-        TeamOptions options = new();
-        options.Tasks.Enabled = true;
-        options.Library.Enabled = true;
-        MudBunitContext ctx = new();
-        ctx.Services.AddSingleton(Options.Create(options));
-        return ctx;
     }
 }

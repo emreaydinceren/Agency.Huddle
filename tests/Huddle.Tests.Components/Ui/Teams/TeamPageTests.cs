@@ -3,9 +3,7 @@ using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using MudBlazor;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Components.Teams;
@@ -480,12 +478,12 @@ public sealed class TeamPageTests
     /// <summary>The test context: the fake catalog, both feature flags, and the three tab components replaced by parameter-capturing stubs.</summary>
     private static MudBunitContext NewContext(FakeTeamCatalog catalog, bool libraryEnabled = true, bool tasksEnabled = true)
     {
-        MudBunitContext ctx = new();
-        ctx.Services.AddSingleton<ITeamCatalog>(catalog);
-        TeamOptions teamOptions = new();
-        teamOptions.Library.Enabled = libraryEnabled;
-        teamOptions.Tasks.Enabled = tasksEnabled;
-        ctx.Services.AddSingleton(Options.Create(teamOptions));
+        MudBunitContext ctx = UiTestHost.Create(services => services.AddSingleton<ITeamCatalog>(catalog))
+            .WithTeamOptions(options =>
+            {
+                options.Library.Enabled = libraryEnabled;
+                options.Tasks.Enabled = tasksEnabled;
+            });
         ctx.ComponentFactories.AddStub<TeamRoster>();
         ctx.ComponentFactories.AddStub<TeamDetails>();
         ctx.ComponentFactories.AddStub<TeamFilesTab>();
@@ -493,7 +491,6 @@ public sealed class TeamPageTests
         ctx.ComponentFactories.AddStub<TeamSpend>();
         return ctx;
     }
-
     /// <summary>Renders the page with the route values a router would bind.</summary>
     private static IRenderedComponent<TeamPage> RenderPage(MudBunitContext ctx, string team, string? project = null, string? tab = null) =>
         ctx.Render<TeamPage>(p => p

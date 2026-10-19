@@ -129,7 +129,7 @@ public sealed class TeammatesPageTests
         await using var factory = new TeamWebApplicationFactory();
         Directory.CreateDirectory(factory.TeammatesDirPath);
 
-        await using var ctx = NewContext(factory);
+        await using var ctx = UiTestHost.Create(services => services.CopyFrom(factory.Services, ServicePresets.Teammates));
         var cut = RenderPage(ctx);
 
         await ClickNewTeammateAsync(cut);
@@ -160,7 +160,7 @@ public sealed class TeammatesPageTests
         await using var factory = new TeamWebApplicationFactory();
         Directory.CreateDirectory(factory.TeammatesDirPath);
 
-        await using var ctx = NewContext(factory);
+        await using var ctx = UiTestHost.Create(services => services.CopyFrom(factory.Services, ServicePresets.Teammates));
         var cut = RenderPage(ctx);
 
         Assert.Equal(0, factory.FakeModelCatalog.ProbeCount);
@@ -226,7 +226,7 @@ public sealed class TeammatesPageTests
             "---\nName: 'Chief of Staff'\nTitle: Chief of Staff\nAlias: coo\n---\nYou keep the team honest.",
             Xunit.TestContext.Current.CancellationToken);
 
-        await using var ctx = NewContext(factory);
+        await using var ctx = UiTestHost.Create(services => services.CopyFrom(factory.Services, ServicePresets.Teammates));
         var cut = RenderPage(ctx);
 
         Assert.Contains("Chief of Staff", cut.Markup, StringComparison.Ordinal);
@@ -353,7 +353,7 @@ public sealed class TeammatesPageTests
             "---\nName: coo\nTitle: Chief of Staff\nAlias: coo\nTeams: Business, Household\n---\nbody",
             Xunit.TestContext.Current.CancellationToken);
 
-        await using var ctx = NewContext(factory);
+        await using var ctx = UiTestHost.Create(services => services.CopyFrom(factory.Services, ServicePresets.Teammates));
         var cut = RenderPage(ctx);
 
         // Found and raised in one InvokeAsync for the same reason as ClickNewTeammateAsync: the
@@ -427,26 +427,6 @@ public sealed class TeammatesPageTests
         }
 
         Assert.Contains("Offline", cut.Markup, StringComparison.Ordinal);
-    }
-
-    /// <summary>Registers this factory's real services (<see cref="PersonaStore"/> and friends) into a fresh <see cref="MudBunitContext"/>, the same pattern <see cref="SettingsPageTests"/> uses.</summary>
-    private static MudBunitContext NewContext(TeamWebApplicationFactory factory)
-    {
-        MudBunitContext ctx = new();
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ITeamDirectory>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IAgentGateway>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaHealth>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaSpend>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaCommands>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaSupervisor>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<RoomEvents>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IModelCatalog>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<AdapterCatalog>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<BuiltinTeammateReset>());
-        return ctx;
     }
 
     /// <summary>Renders the real <see cref="TeammatesPage"/> page, with the popover and dialog providers <see cref="MudBunitContext.RenderWithPopovers"/> supplies so an opened card, and any <c>MudSelect</c> inside it, actually render.</summary>

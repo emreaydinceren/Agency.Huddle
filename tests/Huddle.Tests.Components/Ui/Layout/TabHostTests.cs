@@ -12,14 +12,6 @@ namespace Agency.Huddle.Tests.Ui.Layout;
 /// <summary>Pins the tab strip as the Human meets it: <see cref="TabHost"/>, <see cref="TabStrip"/> and <see cref="NavTabLink"/> over a real <see cref="TabService"/>.</summary>
 public sealed class TabHostTests
 {
-    private static MudBunitContext NewContext()
-    {
-        MudBunitContext ctx = new();
-        ctx.Services.AddSingleton<TabService>();
-        ctx.Services.AddSingleton(StubPages.Routes());
-        return ctx;
-    }
-
     private static IRenderedComponent<TabHost> RenderHost(MudBunitContext ctx) => ctx.Render<TabHost>();
 
     // Renders the host with the popover provider a Tabs context menu paints into.
@@ -41,7 +33,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task StartingLocation_OpensAnActivePreviewTab()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teammates");
 
         var cut = RenderHost(ctx);
@@ -56,7 +48,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task Navigating_ReplacesThePreviewTab()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         nav.NavigateTo("/teammates");
         var cut = RenderHost(ctx);
@@ -70,7 +62,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task DoubleClickingATab_KeepsIt()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         nav.NavigateTo("/teammates");
         var cut = RenderHost(ctx);
@@ -91,7 +83,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task ClosingTheLastTab_ShowsTheEmptyState()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teammates");
         var cut = RenderHost(ctx);
 
@@ -106,7 +98,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task ClosingTheActiveTab_NavigatesToTheNeighbour()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         var tabs = ctx.Services.GetRequiredService<TabService>();
         nav.NavigateTo("/teammates");
@@ -125,7 +117,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task NavTabLink_Click_OpensTheTabWithTheMenusTitle()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var tabs = ctx.Services.GetRequiredService<TabService>();
         var cut = ctx.Render<NavTabLink>(parameters => parameters
             .Add(link => link.Href, "/rooms/ab12")
@@ -143,7 +135,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task NavTabLink_DoubleClick_KeepsTheTab()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var tabs = ctx.Services.GetRequiredService<TabService>();
         var cut = ctx.Render<NavTabLink>(parameters => parameters
             .Add(link => link.Href, "/settings")
@@ -159,7 +151,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task Shortcut_Close_ClosesTheActiveTabAndNavigates()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         var tabs = ctx.Services.GetRequiredService<TabService>();
         nav.NavigateTo("/teammates");
@@ -178,7 +170,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task Shortcut_NextAndPrevious_MoveBetweenTabs()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         nav.NavigateTo("/teammates");
         var cut = RenderHost(ctx);
@@ -197,7 +189,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task FirstRender_AttachesTheShortcutScript()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
 
         _ = RenderHost(ctx);
 
@@ -208,7 +200,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task ActiveTab_MountsItsPageWithTheRouteValues()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/rooms/ab12");
 
         var cut = RenderHost(ctx);
@@ -220,7 +212,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task UnknownAddress_ShowsThatThereIsNoPage()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/nowhere/at/all");
 
         var cut = RenderHost(ctx);
@@ -232,7 +224,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task MovingATabRight_ShowsTwoPanesWithTwoPages()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         var tabs = ctx.Services.GetRequiredService<TabService>();
         nav.NavigateTo("/teammates");
@@ -255,7 +247,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task PressingInTheOtherPane_FocusesItAndNavigates()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         var tabs = ctx.Services.GetRequiredService<TabService>();
         nav.NavigateTo("/teammates");
@@ -277,7 +269,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task FocusedPane_HasNoPressHandler()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         var tabs = ctx.Services.GetRequiredService<TabService>();
         nav.NavigateTo("/teammates");
@@ -299,7 +291,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task RightClickingATab_OffersTheTabMenu()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teammates");
         var cut = RenderHostWithMenus(ctx);
 
@@ -312,7 +304,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task TheTabMenu_DisablesMovesForALoneTab()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teammates");
         var cut = RenderHostWithMenus(ctx);
 
@@ -325,7 +317,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task PinTab_PinsTheTab()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var tabs = ctx.Services.GetRequiredService<TabService>();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teammates");
         var cut = RenderHostWithMenus(ctx);
@@ -345,7 +337,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task MoveRight_FromTheMenu_OpensASecondPane()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         var tabs = ctx.Services.GetRequiredService<TabService>();
         nav.NavigateTo("/teammates");
@@ -366,7 +358,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task Close_FromTheMenu_ClosesTheTab()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var tabs = ctx.Services.GetRequiredService<TabService>();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teammates");
         var cut = RenderHostWithMenus(ctx);
@@ -381,7 +373,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task HoverToolbar_DrawsOnlyThePossibleMoves()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         var tabs = ctx.Services.GetRequiredService<TabService>();
         nav.NavigateTo("/teammates");
@@ -413,7 +405,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task HoverToolbar_MoveRight_MovesTheTab()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         var tabs = ctx.Services.GetRequiredService<TabService>();
         nav.NavigateTo("/teammates");
@@ -432,7 +424,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task HoverToolbar_Chevron_OpensTheMenu_AndPinnedTabsHaveNone()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var tabs = ctx.Services.GetRequiredService<TabService>();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teammates");
         var cut = RenderHostWithMenus(ctx);
@@ -449,7 +441,7 @@ public sealed class TabHostTests
     [Fact]
     public async Task Page_ReceivesItsTabsAddressAsContext()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/tasks/new");
 
         var cut = RenderHost(ctx);

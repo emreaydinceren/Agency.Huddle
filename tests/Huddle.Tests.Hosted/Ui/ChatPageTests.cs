@@ -6,18 +6,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
-using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Circuits;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.Library;
-using Agency.Huddle.App.Pipes;
-using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
-using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Library;
 using Agency.Huddle.Tests.Css;
@@ -1206,58 +1202,7 @@ public sealed class ChatPageTests
     /// <summary>Registers this factory's real Room services into a fresh <see cref="MudBunitContext"/>, the same pattern <c>TeammatesPageTests</c> uses for <c>Teammates</c>.</summary>
     private static MudBunitContext NewContext(TeamWebApplicationFactory factory)
     {
-        MudBunitContext ctx = new();
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ITeamDirectory>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IChatStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<RoomEvents>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ChatService>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Drafts>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IAgentGateway>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaHealth>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<RoomFollows>());
-
-        // Chat.razor renders InviteTeammate as a child, which injects PersonaStore for its Team
-        // filter - needed even though these tests never open that panel.
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaStore>());
-
-        // Chat.razor injects AvatarStore itself (to subscribe to AvatarsChanged), and its child
-        // MessageList resolves every row's avatar through the same singleton (Task 6.1) - needed
-        // even though these tests never customise one.
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
-
-        // The Room's Mention pills and the Human's own row read the Human and the aliases (ADR-0057's markup).
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Profile.IHumanIdentity>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IMentionAliasSource>());
-
-        // Chat.razor now renders ProposalCard directly above the Budget prompt (Task 12.1), which
-        // injects these three even though these tests never propose a Teammate - PersonaStore and
-        // RoomEvents are already copied above, for the same reason.
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ProposalStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ProposalService>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<HireLimitGuard>());
-
-        // Chat.razor renders SprintProposalCard beside ProposalCard (Task 63), which injects these three even
-        // though these tests never propose a Sprint.
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Tasks.SprintProposalStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Tasks.SprintProposalService>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Tasks.TaskStore>());
-
-        // Chat.razor renders RetroProposalCard beside them (Task 76), which injects these two.
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Teams.RetroProposalStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Teams.RetroProposalService>());
-
-        // Chat.razor renders QuestionCard beside ProposalCard (Questions spec §6.7), which injects these
-        // two even though these tests never ask a Question - RoomEvents, Drafts and ITeamDirectory are
-        // already registered above, for Chat.razor's own sake.
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<QuestionStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<QuestionService>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IOptions<TeamOptions>>());
-
-        // Chat.razor renders ElicitationCard beside QuestionCard (elicitation bridge, E-5), which injects
-        // these two even though most of these tests never put a form to the Human - RoomEvents and
-        // ITeamDirectory are already registered above, for Chat.razor's own sake.
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ElicitationStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ElicitationService>());
+        MudBunitContext ctx = UiTestHost.Create(services => services.CopyFrom(factory.Services, ServicePresets.Chat));
 
         // Chat.razor's MessageList child now injects ITaskReferenceResolver (Task 15.1) to link Task
         // ids - needed even though these tests never resolve one.
@@ -1267,15 +1212,10 @@ public sealed class ChatPageTests
         // Library paths - needed even though these tests never resolve one.
         ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver());
 
-        // Chat.razor's Composer child now injects TaskStore for the # picker (Task 15.3) - needed
-        // even though these tests never open it. IOptions<TeamOptions> is already copied above.
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<TaskStore>());
-
         // Chat.razor navigates through ServerNavigator when a Rooms event, not the Human, moves the Human off a Room.
         ctx.Services.AddFakeCircuitConnection();
         return ctx;
     }
-
     /// <summary>
     /// Renders the real <see cref="Chat"/> page for <paramref name="roomId"/>, with the popover
     /// provider <see cref="MudBunitContext.RenderWithPopovers"/> supplies so the Rename button's

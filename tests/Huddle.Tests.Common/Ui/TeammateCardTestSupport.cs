@@ -5,12 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
-using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Pipes;
-using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
-using Agency.Huddle.App.Teammates;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -113,26 +109,12 @@ internal static class TeammateCardTestSupport
     /// <summary>Registers this factory's real services (<see cref="PersonaStore"/> and friends) into a fresh <see cref="MudBunitContext"/>, the same pattern <c>TeammatesPageTests</c> uses.</summary>
     internal static MudBunitContext NewContext(TeamWebApplicationFactory factory)
     {
-        MudBunitContext ctx = new();
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ITeamDirectory>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IAgentGateway>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaHealth>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaSpend>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaCommands>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaSupervisor>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<RoomEvents>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IModelCatalog>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<AdapterCatalog>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
+        MudBunitContext ctx = UiTestHost.Create(services => services.CopyFrom(factory.Services, ServicePresets.Teammates));
 
         // The card's avatar dialog hosts AvatarEditor, which injects the library locator and loader (U26, UX-R18).
         AvatarLibraryPickSupport.RegisterUnconfigured(ctx.Services);
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<BuiltinTeammateReset>());
         return ctx;
     }
-
     /// <summary>Renders the real <see cref="Agency.Huddle.App.Components.Pages.Teammates"/> page, with the popover and dialog providers <see cref="MudBunitContext.RenderWithPopovers"/> supplies so an opened card actually renders (see the type-level remarks) and a <c>MudSelect</c> inside it can too.</summary>
     internal static IRenderedComponent<ContainerFragment> RenderPage(MudBunitContext ctx, TeamWebApplicationFactory factory)
     {

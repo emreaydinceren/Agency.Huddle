@@ -4,9 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Components.Settings;
-using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
-using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Themes;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -25,16 +23,11 @@ public sealed class SettingsPageTests
     /// <summary>Renders the real <see cref="Settings"/> page against a <see cref="TeamWebApplicationFactory"/>'s live <see cref="PromptStore"/> and <see cref="AppearanceStore"/>, the same pattern <c>TeammatesPageTests</c> uses for <c>Teammates</c>.</summary>
     private static MudBunitContext NewContext(TeamWebApplicationFactory factory)
     {
-        MudBunitContext ctx = new();
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PromptStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<AppearanceStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<LibraryRootStore>());
+        MudBunitContext ctx = UiTestHost.Create(services => services.CopyFrom(factory.Services, ServicePresets.Settings));
         ProfileTestServices.AddProfile(ctx.Services, factory);
         SkillsTestServices.AddFromFactory(ctx.Services, factory);
         return ctx;
     }
-
     /// <summary>The section menu renders inside the page, in its own <c>nav</c>, and the Prompts section shows every group heading.</summary>
     [Fact]
     public async Task SettingsPage_Renders_SectionMenuAndGroupHeadings()

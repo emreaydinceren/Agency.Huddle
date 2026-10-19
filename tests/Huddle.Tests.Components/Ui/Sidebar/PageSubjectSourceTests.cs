@@ -10,13 +10,6 @@ namespace Agency.Huddle.Tests.Ui.Sidebar;
 /// <summary>Pins <see cref="PageSubjectSource"/>: a page publishes its Subject for its own Tab, and takes it back when it goes.</summary>
 public sealed class PageSubjectSourceTests
 {
-    private static MudBunitContext NewContext()
-    {
-        MudBunitContext ctx = new();
-        ctx.Services.AddSingleton<RightSidebarService>();
-        return ctx;
-    }
-
     private static IRenderedComponent<CascadingValue<TabPageContext>> RenderSource(MudBunitContext ctx, PageSubject? value, bool withTab = true)
     {
         TabPageContext? page = withTab ? new TabPageContext("/x", "t1") : null;
@@ -29,7 +22,7 @@ public sealed class PageSubjectSourceTests
     [Fact]
     public async Task Source_PublishesItsValue()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create();
         RoomSubject subject = new("r1");
 
         _ = RenderSource(ctx, subject);
@@ -41,7 +34,7 @@ public sealed class PageSubjectSourceTests
     [Fact]
     public async Task Source_NullValue_RemovesIt()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create();
         IRenderedComponent<CascadingValue<TabPageContext>> cut = RenderSource(ctx, new RoomSubject("r1"));
 
         cut.Render(p => p
@@ -55,7 +48,7 @@ public sealed class PageSubjectSourceTests
     [Fact]
     public async Task Source_Disposed_RemovesIt()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create();
         IRenderedComponent<CascadingValue<TabPageContext>> cut = RenderSource(ctx, new RoomSubject("r1"));
 
         cut.Render(p => p.Add(c => c.Value, new TabPageContext("/x", "t1")));
@@ -67,7 +60,7 @@ public sealed class PageSubjectSourceTests
     [Fact]
     public async Task Source_NoTab_PublishesNothing()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create();
         int raised = 0;
         ctx.Services.GetRequiredService<RightSidebarService>().Changed += () => raised++;
 

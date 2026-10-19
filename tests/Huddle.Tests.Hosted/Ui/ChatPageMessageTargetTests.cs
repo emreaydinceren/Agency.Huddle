@@ -2,22 +2,14 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using MudBlazor;
-using Agency.Huddle.App;
-using Agency.Huddle.App.Acp;
-using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.Library;
-using Agency.Huddle.App.Pipes;
-using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Tasks;
-using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Library;
 
@@ -144,40 +136,13 @@ public sealed class ChatPageMessageTargetTests
     /// <param name="factory">The factory whose composed singletons to reuse.</param>
     private static MudBunitContext NewContext(TeamWebApplicationFactory factory)
     {
-        MudBunitContext ctx = new();
-        IServiceProvider source = factory.Services;
-        ctx.Services.AddSingleton(source.GetRequiredService<ITeamDirectory>());
-        ctx.Services.AddSingleton(source.GetRequiredService<IChatStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<RoomEvents>());
-        ctx.Services.AddSingleton(source.GetRequiredService<ChatService>());
-        ctx.Services.AddSingleton(source.GetRequiredService<Drafts>());
-        ctx.Services.AddSingleton(source.GetRequiredService<IAgentGateway>());
-        ctx.Services.AddSingleton(source.GetRequiredService<PersonaHealth>());
-        ctx.Services.AddSingleton(source.GetRequiredService<RoomFollows>());
-        ctx.Services.AddSingleton(source.GetRequiredService<PersonaStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<AvatarStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<Agency.Huddle.App.Profile.IHumanIdentity>());
-        ctx.Services.AddSingleton(source.GetRequiredService<IMentionAliasSource>());
-        ctx.Services.AddSingleton(source.GetRequiredService<ProposalStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<ProposalService>());
-        ctx.Services.AddSingleton(source.GetRequiredService<HireLimitGuard>());
-        ctx.Services.AddSingleton(source.GetRequiredService<SprintProposalStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<SprintProposalService>());
-        ctx.Services.AddSingleton(source.GetRequiredService<TaskStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<Agency.Huddle.App.Teams.RetroProposalStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<Agency.Huddle.App.Teams.RetroProposalService>());
-        ctx.Services.AddSingleton(source.GetRequiredService<QuestionStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<QuestionService>());
-        ctx.Services.AddSingleton(source.GetRequiredService<IOptions<TeamOptions>>());
-        ctx.Services.AddSingleton(source.GetRequiredService<ElicitationStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<ElicitationService>());
+        MudBunitContext ctx = UiTestHost.Create(services => services.CopyFrom(factory.Services, ServicePresets.Chat));
         ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
         ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver());
         ctx.Services.AddSingleton(new TabService());
         ctx.Services.AddFakeCircuitConnection();
         return ctx;
     }
-
     /// <summary>Hosts the Room page beside the popover and dialog providers it needs, with <c>Message</c> as a parameter of its own so a test can render again with a new target.</summary>
     private sealed class Host : ComponentBase
     {

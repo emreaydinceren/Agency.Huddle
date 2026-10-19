@@ -1,11 +1,7 @@
 using System.Text.RegularExpressions;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
-using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Components.Pages;
-using Agency.Huddle.App.Library;
-using Agency.Huddle.App.Prompts;
-using Agency.Huddle.App.Skills;
 using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -21,16 +17,11 @@ public sealed partial class SettingsPanelsTests
     /// <param name="factory">The factory whose services back the stores.</param>
     private static MudBunitContext NewContext(TeamWebApplicationFactory factory)
     {
-        MudBunitContext ctx = new();
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PromptStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<AppearanceStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<LibraryRootStore>());
+        MudBunitContext ctx = UiTestHost.Create(services => services.CopyFrom(factory.Services, ServicePresets.Settings));
         ProfileTestServices.AddProfile(ctx.Services, factory);
         SkillsTestServices.AddFromFactory(ctx.Services, factory);
         return ctx;
     }
-
     /// <summary>
     /// The page has one visible <c>h1</c> reading "Settings" (UX-001, DS "A page"): every page shows its h1, and Settings
     /// has no ancestor, so it has no breadcrumb.

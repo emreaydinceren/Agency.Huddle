@@ -15,24 +15,13 @@ namespace Agency.Huddle.Tests.Ui.Layout;
 /// </summary>
 public sealed class RightSidebarTests
 {
-    private static MudBunitContext NewContext(string url)
-    {
-        MudBunitContext ctx = new();
-        ctx.Services.AddSingleton<TabService>();
-        ctx.Services.AddSingleton<RightSidebarService>();
-        ctx.Services.AddSingleton(StubPages.Routes());
-        ctx.Services.AddSingleton(new SidebarPanelCatalog([], Options.Create(new TeamOptions())));
-        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo(url);
-        return ctx;
-    }
-
     private static IElement ToggleButton(IRenderedComponent<RightSidebarToggle> toggle) => toggle.Find("button.right-sidebar-toggle");
 
     /// <summary>The sidebar starts closed; the toggle opens it and says so, then closes it again.</summary>
     [Fact]
     public async Task Toggle_OpensAndClosesTheSidebar()
     {
-        await using MudBunitContext ctx = NewContext("/sidebar");
+        await using MudBunitContext ctx = UiTestHost.Create(services => services.AddSingleton(new SidebarPanelCatalog([], Options.Create(new TeamOptions())))).WithTabs().WithRoutes("/sidebar");
         _ = ctx.Render<TabHost>();
         IRenderedComponent<RightSidebar> sidebar = ctx.Render<RightSidebar>();
         IRenderedComponent<RightSidebarToggle> toggle = ctx.Render<RightSidebarToggle>();
@@ -58,7 +47,7 @@ public sealed class RightSidebarTests
     [Fact]
     public async Task OpenSidebar_OnAPageWithNoBlocks_ShowsTheEmptyState()
     {
-        await using MudBunitContext ctx = NewContext("/sidebar");
+        await using MudBunitContext ctx = UiTestHost.Create(services => services.AddSingleton(new SidebarPanelCatalog([], Options.Create(new TeamOptions())))).WithTabs().WithRoutes("/sidebar");
         TabService tabs = ctx.Services.GetRequiredService<TabService>();
         _ = ctx.Render<TabHost>();
         IRenderedComponent<RightSidebar> sidebar = ctx.Render<RightSidebar>();

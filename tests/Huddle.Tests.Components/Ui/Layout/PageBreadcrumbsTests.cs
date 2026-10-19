@@ -12,14 +12,6 @@ namespace Agency.Huddle.Tests.Ui.Layout;
 /// <summary>Pins the breadcrumb trail every Tab page has: the <see cref="TopBar"/> draws <see cref="PageBreadcrumbs"/> for the focused pane, and no pane draws its own.</summary>
 public sealed partial class PageBreadcrumbsTests
 {
-    private static MudBunitContext NewContext()
-    {
-        MudBunitContext ctx = new();
-        ctx.Services.AddSingleton<TabService>();
-        ctx.Services.AddSingleton(StubPages.Routes());
-        return ctx;
-    }
-
     private static string Words(string text) => Whitespace().Replace(text, " ").Trim();
 
     [GeneratedRegex(@"\s+", RegexOptions.CultureInvariant)]
@@ -29,7 +21,7 @@ public sealed partial class PageBreadcrumbsTests
     [Fact]
     public async Task TabPage_HasItsTrailInTheTopBar_NotAboveThePage()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/rooms/ab12");
 
         IRenderedComponent<TabHost> host = ctx.Render<TabHost>();
@@ -44,7 +36,7 @@ public sealed partial class PageBreadcrumbsTests
     [Fact]
     public async Task Trail_LinksTheAncestorWithAPage_AndLeavesTheAreaPlain()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/Core/projects/Alpha");
         _ = ctx.Render<TabHost>();
         IRenderedComponent<TopBar> bar = ctx.Render<TopBar>();
@@ -60,7 +52,7 @@ public sealed partial class PageBreadcrumbsTests
     [Fact]
     public async Task PageWithNoAncestor_DrawsNoBreadcrumb()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teammates");
         _ = ctx.Render<TabHost>();
         IRenderedComponent<TopBar> bar = ctx.Render<TopBar>();
@@ -73,7 +65,7 @@ public sealed partial class PageBreadcrumbsTests
     [Fact]
     public async Task Trail_DoesNotRepeatTheTabTitle()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         TabService tabs = ctx.Services.GetRequiredService<TabService>();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/tasks/my-tasks");
         _ = ctx.Render<TabHost>();
@@ -88,7 +80,7 @@ public sealed partial class PageBreadcrumbsTests
     [Fact]
     public async Task ClickingAnAncestor_NavigatesTheTabInPlace()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         TabService tabs = ctx.Services.GetRequiredService<TabService>();
         NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
         nav.NavigateTo("/rooms/ab12");
@@ -110,7 +102,7 @@ public sealed partial class PageBreadcrumbsTests
     [Fact]
     public async Task SplitPanes_HaveOneTopBar_ThatFollowsFocus_AndACrumbActsOnTheFocusedPane()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         TabService tabs = ctx.Services.GetRequiredService<TabService>();
         Tab room = tabs.Open("/rooms/ab12");
         tabs.Keep(room.Id);
@@ -146,7 +138,7 @@ public sealed partial class PageBreadcrumbsTests
     [Fact]
     public async Task TopBar_HasCellsForTheTrailASearchBoxAndAToolbar()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         _ = ctx.Services.GetRequiredService<TabService>().Open("/rooms/ab12");
         IRenderedComponent<TopBar> bar = ctx.Render<TopBar>(parameters => parameters
             .Add(p => p.Search, "find")

@@ -1,7 +1,4 @@
 using Bunit;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Components.Library;
 
 namespace Agency.Huddle.Tests.Ui.Library;
@@ -17,7 +14,7 @@ public sealed class LibraryNavLinkTests
     [Fact]
     public async Task RendersOneLinkToTheLibraryPage()
     {
-        await using MudBunitContext ctx = LibraryNavLinkTests.NewContext(libraryEnabled: true);
+        await using MudBunitContext ctx = UiTestHost.Create().WithTeamOptions(options => options.Library.Enabled = true).WithTabs();
 
         var cut = ctx.Render<LibraryNavLink>();
 
@@ -30,7 +27,7 @@ public sealed class LibraryNavLinkTests
     [Fact]
     public async Task DoesNotRepeatTheLibraryTree()
     {
-        await using MudBunitContext ctx = LibraryNavLinkTests.NewContext(libraryEnabled: true);
+        await using MudBunitContext ctx = UiTestHost.Create().WithTeamOptions(options => options.Library.Enabled = true).WithTabs();
 
         var cut = ctx.Render<LibraryNavLink>();
 
@@ -47,7 +44,7 @@ public sealed class LibraryNavLinkTests
     [Fact]
     public async Task IsDrawnAsADestinationRow()
     {
-        await using MudBunitContext ctx = LibraryNavLinkTests.NewContext(libraryEnabled: true);
+        await using MudBunitContext ctx = UiTestHost.Create().WithTeamOptions(options => options.Library.Enabled = true).WithTabs();
 
         var cut = ctx.Render<LibraryNavLink>();
 
@@ -59,7 +56,7 @@ public sealed class LibraryNavLinkTests
     [Fact]
     public async Task LibraryDisabled_RendersNothing()
     {
-        await using MudBunitContext ctx = LibraryNavLinkTests.NewContext(libraryEnabled: false);
+        await using MudBunitContext ctx = UiTestHost.Create().WithTeamOptions(options => options.Library.Enabled = false).WithTabs();
 
         var cut = ctx.Render<LibraryNavLink>();
 
@@ -74,17 +71,5 @@ public sealed class LibraryNavLinkTests
 
         Assert.Single(System.Text.RegularExpressions.Regex.Matches(layout, "<LibraryNavLink"));
         Assert.DoesNotContain("library-nav-root-link", layout, StringComparison.Ordinal);
-    }
-
-    /// <summary>A bUnit context with <c>Library.Enabled</c> set and the Tab service the link opens pages through.</summary>
-    /// <param name="libraryEnabled">Whether <c>Library.Enabled</c> is set.</param>
-    private static MudBunitContext NewContext(bool libraryEnabled)
-    {
-        TeamOptions options = new();
-        options.Library.Enabled = libraryEnabled;
-        MudBunitContext ctx = new();
-        ctx.Services.AddSingleton(Options.Create(options));
-        ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
-        return ctx;
     }
 }

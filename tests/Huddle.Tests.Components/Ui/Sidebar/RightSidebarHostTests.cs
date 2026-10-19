@@ -8,7 +8,6 @@ using Agency.Huddle.App.Components.Layout;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tabs;
-using Agency.Huddle.Tests.Ui.Layout;
 
 namespace Agency.Huddle.Tests.Ui.Sidebar;
 
@@ -25,15 +24,11 @@ public sealed class RightSidebarHostTests
 
     private static MudBunitContext NewContext(string url, params SidebarPanel[] panels)
     {
-        MudBunitContext ctx = new();
-        ctx.Services.AddSingleton<TabService>();
-        ctx.Services.AddSingleton<RightSidebarService>();
-        ctx.Services.AddSingleton(StubPages.Routes());
-        ctx.Services.AddSingleton(new SidebarPanelCatalog(panels, Options.Create(new TeamOptions())));
-        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo(url);
+        MudBunitContext ctx = UiTestHost.Create(services => services.AddSingleton(new SidebarPanelCatalog(panels, Options.Create(new TeamOptions()))))
+            .WithTabs()
+            .WithRoutes(url);
         return ctx;
     }
-
     private static SidebarPanel RoomPanel(string id, string title, int order) =>
         new(id, title, Icons.Material.Filled.Toc, order, static subject => subject is RoomSubject, typeof(ProbePanel));
 

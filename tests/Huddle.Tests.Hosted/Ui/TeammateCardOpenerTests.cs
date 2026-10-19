@@ -3,13 +3,9 @@ using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using Agency.Huddle.App.Acp;
-using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
-using Agency.Huddle.App.Services;
-using Agency.Huddle.App.Skills;
-using Agency.Huddle.App.Teammates;
 using TeammatesPage = Agency.Huddle.App.Components.Pages.Teammates;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -107,20 +103,7 @@ public sealed class TeammateCardOpenerTests
     /// <param name="factory">The factory whose composed singletons to reuse.</param>
     private static MudBunitContext NewContext(TeamWebApplicationFactory factory)
     {
-        MudBunitContext ctx = new();
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ITeamDirectory>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IAgentGateway>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaHealth>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaSpend>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaCommands>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaSupervisor>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<RoomEvents>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IModelCatalog>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<AdapterCatalog>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<BuiltinTeammateReset>());
+        MudBunitContext ctx = UiTestHost.Create(services => services.CopyFrom(factory.Services, ServicePresets.Teammates));
         ctx.Services.AddTransient(provider => new TeammateCardOpener(
             provider.GetRequiredService<PersonaStore>(),
             provider.GetRequiredService<ITeamDirectory>(),
@@ -128,5 +111,4 @@ public sealed class TeammateCardOpenerTests
             provider.GetRequiredService<PersonaHealth>(),
             provider.GetRequiredService<IDialogService>()));
         return ctx;
-    }
-}
+    }}

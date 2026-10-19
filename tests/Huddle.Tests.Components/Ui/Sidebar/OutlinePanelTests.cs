@@ -18,13 +18,6 @@ public sealed class OutlinePanelTests
         "C:\\teams\\note.md",
         LibraryNodeRole.File);
 
-    private static MudBunitContext NewContext()
-    {
-        MudBunitContext ctx = new();
-        ctx.Services.AddSingleton<PageCommandBus>();
-        return ctx;
-    }
-
     private static DocumentSubject Doc(string? text) => new(NotePath, LibraryFileKind.Markdown, text);
 
     private static IRenderedComponent<CascadingValue<SidebarPanelContext>> Render(MudBunitContext ctx, SidebarPanelContext panelCtx, DocumentSubject subject)
@@ -41,7 +34,7 @@ public sealed class OutlinePanelTests
     [Fact]
     public async Task Outline_ListsHeadingsIndentedByLevel()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create();
         SidebarPanelContext panelCtx = new();
 
         IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = Render(ctx, panelCtx, Doc("## Alpha\n\n### Beta\n\n#### Gamma\n\n## Delta\n"));
@@ -56,7 +49,7 @@ public sealed class OutlinePanelTests
     [Fact]
     public async Task Outline_SetsTheCount()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create();
         SidebarPanelContext panelCtx = new();
 
         _ = Render(ctx, panelCtx, Doc("# One\n\n## Two\n\n## Three\n"));
@@ -68,7 +61,7 @@ public sealed class OutlinePanelTests
     [Fact]
     public async Task Outline_NoHeadings_ShowsEmptyLine()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create();
         SidebarPanelContext panelCtx = new();
 
         IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = Render(ctx, panelCtx, Doc("just text\n"));
@@ -82,7 +75,7 @@ public sealed class OutlinePanelTests
     [Fact]
     public async Task Outline_NewText_SameInstance_Updates()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create();
         SidebarPanelContext panelCtx = new();
         IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = Render(ctx, panelCtx, Doc("# First\n"));
         IRenderedComponent<OutlinePanel> panel = cut.FindComponent<OutlinePanel>();
@@ -99,7 +92,7 @@ public sealed class OutlinePanelTests
     [Fact]
     public async Task Outline_Click_SendsScrollToHeading()
     {
-        await using MudBunitContext ctx = NewContext();
+        await using MudBunitContext ctx = UiTestHost.Create();
         List<PageCommand> received = [];
         using IDisposable subscription = ctx.Services.GetRequiredService<PageCommandBus>().Subscribe(TabId, command =>
         {
