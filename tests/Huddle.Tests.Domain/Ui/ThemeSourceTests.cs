@@ -325,5 +325,5 @@ public sealed partial class ThemeSourceTests
     private const string ExemptScopedStylesheet = "MainLayout.razor.css";
 
     private static string AppCssPath =>
-        CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css");
+        RepoPaths.App("wwwroot", "app.css");
 }

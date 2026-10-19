@@ -11,39 +11,31 @@ namespace Agency.Huddle.Tests.Ui.Skins;
 /// </summary>
 public sealed class AppCssTokensBTests
 {
-    private const string RangeStart = "/* ---- Message layout: avatar gutter";
+    private const string RangeStart = "Message layout: avatar gutter";
 
-    private const string RangeEnd = "/* ---- Tasks ---";
+    private const string RangeEnd = "Tasks ---";
 
     private static readonly string Range = AppCssTokensBTests.ReadRange();
 
-    private static string ReadRange()
-    {
-        string css = CssText.AppCss(CssNewlines.AsIs);
-        int start = css.IndexOf(AppCssTokensBTests.RangeStart, StringComparison.Ordinal);
-        int end = css.IndexOf(AppCssTokensBTests.RangeEnd, StringComparison.Ordinal);
-        Assert.True(start >= 0 && end > start, "app.css lost the section headers that bound package B's range.");
-        return css[start..end];
-    }
+    private static string ReadRange() =>
+        CssText.Section(CssText.AppCss(CssNewlines.AsIs), AppCssTokensBTests.RangeStart, AppCssTokensBTests.RangeEnd);
 
     /// <summary>The body of the first rule in the range whose selector is exactly <paramref name="selector"/>, whitespace collapsed.</summary>
     private static string Rule(string selector)
     {
-        string wanted = AppCssTokensBTests.Collapse(selector);
+        string wanted = CssText.CollapseWhitespace(selector);
         foreach (Match rule in Regex.Matches(AppCssTokensBTests.Range, @"(?<sel>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5)))
         {
-            string candidate = AppCssTokensBTests.Collapse(Regex.Replace(rule.Groups["sel"].Value, @"/\*.*?\*/", string.Empty, RegexOptions.Singleline | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2)));
+            string candidate = CssText.CollapseWhitespace(Regex.Replace(rule.Groups["sel"].Value, @"/\*.*?\*/", string.Empty, RegexOptions.Singleline | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2)));
             if (string.Equals(candidate, wanted, StringComparison.Ordinal))
             {
-                return AppCssTokensBTests.Collapse(rule.Groups["body"].Value);
+                return CssText.CollapseWhitespace(rule.Groups["body"].Value);
             }
         }
 
         Assert.Fail($"The range has no '{selector}' rule.");
         return string.Empty;
     }
-
-    private static string Collapse(string text) => Regex.Replace(text.Trim(), @"\s+", " ", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
 
     /// <summary>The transcript body reads its line height from <c>message.line-height</c>, not the Mud typography variable.</summary>
     [Fact]

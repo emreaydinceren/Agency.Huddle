@@ -13,7 +13,7 @@ namespace Agency.Huddle.Tests.Ui.Traits;
 /// </summary>
 public sealed partial class ChromeTraitsTests
 {
-    private static readonly string Css = StripComments(File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css")));
+    private static readonly string Css = CssText.StripComments(CssText.AppCss(CssNewlines.AsIs));
 
     private static readonly string RawCss = CssText.AppCss(CssNewlines.AsIs);
 
@@ -63,7 +63,7 @@ public sealed partial class ChromeTraitsTests
     /// <summary>A chrome trait rule adds no <c>!important</c>: the scope's specificity is what wins over the base rule.</summary>
     [Fact]
     public void Traits_AddNoImportant() =>
-        Assert.DoesNotContain("!important", Section("Traits: chrome"), StringComparison.Ordinal);
+        Assert.DoesNotContain("!important", CssText.StripComments(CssText.Section(RawCss, "Traits: chrome")), StringComparison.Ordinal);
 
     /// <summary>The surface section carries a sub-header per Nordic section it lifts, so a later Theme can peel parts off.</summary>
     [Fact]
@@ -204,17 +204,6 @@ public sealed partial class ChromeTraitsTests
     private static string Kebab(string name) =>
         Regex.Replace(name, "(?<!^)([A-Z])", "-$1", RegexOptions.CultureInvariant).ToLowerInvariant();
 
-    private static string StripComments(string css) =>
-        CssComment().Replace(css, string.Empty);
-
-    /// <summary>The comment-stripped text of a section, from its header to the next section header.</summary>
-    private static string Section(string name)
-    {
-        int start = RawCss.IndexOf($"/* ---- {name}", StringComparison.Ordinal);
-        Assert.True(start >= 0, $"Section '{name}' is missing.");
-        return StripComments(RawCss[start..]);
-    }
-
     /// <summary>The merged declaration text of every rule whose selector list holds the scoped <paramref name="selector"/>.</summary>
     private static string Body(string trait, string value, string selector)
     {
@@ -234,9 +223,6 @@ public sealed partial class ChromeTraitsTests
         Assert.True(merged.Length > 0, $"No rule scoped to {trait}={value} for '{selector}'.");
         return merged.ToString();
     }
-
-    [GeneratedRegex(@"/\*.*?\*/", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
-    private static partial Regex CssComment();
 
     [GeneratedRegex(@"(?<sel>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.CultureInvariant)]
     private static partial Regex Rule();

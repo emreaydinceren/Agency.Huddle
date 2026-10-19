@@ -1,3 +1,5 @@
+using Agency.Huddle.Tests.Css;
+
 namespace Agency.Huddle.Tests.Ui.Skins;
 
 /// <summary>
@@ -7,32 +9,13 @@ namespace Agency.Huddle.Tests.Ui.Skins;
 /// </summary>
 public sealed class AppCssTokensCTests
 {
-    private const string RangeStart = "/* ---- Tasks ---";
-    private const string RangeEnd = "/* ---- The Task List at narrower widths";
+    private const string RangeStart = "Tasks ---";
+    private const string RangeEnd = "The Task List at narrower widths";
 
     /// <summary>Reads the stylesheet with LF endings, restricted to this package's range.</summary>
     /// <returns>The text between the two section headers.</returns>
-    private static string Range()
-    {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css")).Replace("\r\n", "\n", StringComparison.Ordinal);
-        int start = css.IndexOf(RangeStart, StringComparison.Ordinal);
-        int end = css.IndexOf(RangeEnd, StringComparison.Ordinal);
-        Assert.True(start >= 0 && end > start, "The range headers moved.");
-        return css[start..end];
-    }
-
-    /// <summary>The declarations of the rule whose selector text is exactly <paramref name="selector"/>.</summary>
-    /// <param name="selector">The selector, verbatim.</param>
-    /// <returns>The text between the rule's braces.</returns>
-    private static string RuleBody(string selector)
-    {
-        string range = Range();
-        string anchor = "\n" + selector + " {";
-        int start = range.IndexOf(anchor, StringComparison.Ordinal);
-        Assert.True(start >= 0, $"No rule for {selector}.");
-        int open = start + anchor.Length;
-        return range[open..range.IndexOf('}', open)];
-    }
+    private static string Range() =>
+        CssText.Section(CssText.AppCss(), RangeStart, RangeEnd);
 
     /// <summary>Each converted site now declares the token reference, not the recipe.</summary>
     /// <param name="selector">The rule's selector.</param>
@@ -68,7 +51,7 @@ public sealed class AppCssTokensCTests
     [InlineData(".library-rendered .library-ref", "color: var(--hu-accent-ink);")]
     public void Rule_ReadsTheToken(string selector, string declaration)
     {
-        Assert.Contains(declaration, RuleBody(selector), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains(declaration, CssText.RuleBody(Range(), selector), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
     /// <summary>The recipes the tokens default to no longer appear anywhere in the range.</summary>
@@ -93,7 +76,7 @@ public sealed class AppCssTokensCTests
     [Fact]
     public void Range_LaneAndCardGroundsAreTokens()
     {
-        Assert.DoesNotContain("background-color: var(--mud-palette-surface);", RuleBody(".task-board-column"), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
-        Assert.DoesNotContain("background-color: var(--mud-palette-surface);", RuleBody(".task-card"), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.DoesNotContain("background-color: var(--mud-palette-surface);", CssText.RuleBody(Range(), ".task-board-column"), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.DoesNotContain("background-color: var(--mud-palette-surface);", CssText.RuleBody(Range(), ".task-card"), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 }

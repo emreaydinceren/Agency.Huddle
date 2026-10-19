@@ -15,7 +15,7 @@ public sealed class R3SrchTests(TeamWebApplicationFactory factory) : IClassFixtu
     [Fact]
     public void SearchMatch_IsAttentionTintWithInkText()
     {
-        string rule = Rule(".search-card mark {");
+        string rule = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".search-card mark");
 
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("color-mix(in srgb, var(--mud-palette-warning) 24%, var(--mud-palette-surface))", rule, StringComparison.Ordinal);
@@ -28,8 +28,8 @@ public sealed class R3SrchTests(TeamWebApplicationFactory factory) : IClassFixtu
     [Fact]
     public void SearchNotice_IsQuietInkWithAnIconSizedToTheText()
     {
-        string notice = Rule(".search-notice {");
-        string icon = Rule(".search-notice .search-notice-icon.mud-icon-root {");
+        string notice = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".search-notice");
+        string icon = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".search-notice .search-notice-icon.mud-icon-root");
 
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("color: var(--mud-palette-text-secondary);", notice, StringComparison.Ordinal);
@@ -64,16 +64,5 @@ public sealed class R3SrchTests(TeamWebApplicationFactory factory) : IClassFixtu
 
         Assert.Equal(6, cut.FindAll(".mud-chip.filter-chip").Count);
         Assert.Single(cut.FindAll(".mud-chip.filter-chip.is-set"));
-    }
-
-    /// <summary>Extracts a rule from <c>app.css</c>, from its selector to its closing brace.</summary>
-    /// <param name="selector">The selector with its opening brace.</param>
-    /// <returns>The rule's text.</returns>
-    private static string Rule(string selector)
-    {
-        string text = CssText.AppCss(CssNewlines.AsIs);
-        int start = text.IndexOf(selector, StringComparison.Ordinal);
-        Assert.True(start >= 0, $"Expected {selector} in app.css.");
-        return text[start..(text.IndexOf('}', start) + 1)];
     }
 }

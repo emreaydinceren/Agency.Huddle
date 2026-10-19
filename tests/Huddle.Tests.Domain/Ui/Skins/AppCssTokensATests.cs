@@ -80,10 +80,10 @@ public sealed class AppCssTokensATests
         Assert.DoesNotContain("outline: 2px solid var(--mud-palette-text-primary)", range, StringComparison.Ordinal);
 
         // The avatar monogram's 20% fill is an avatar fill, not a selection (architecture C3); it stays literal.
-        Assert.Equal(1, Count(range, "var(--mud-palette-primary) 20%, var(--mud-palette-surface))"));
+        Assert.Equal(1, CssText.CountOccurrences(range, "var(--mud-palette-primary) 20%, var(--mud-palette-surface))"));
 
         // The tab group's inactive marker is an inset indicator, not a region line (architecture C4); it stays literal.
-        Assert.Equal(1, Count(range, "var(--mud-palette-lines-default)"));
+        Assert.Equal(1, CssText.CountOccurrences(range, "var(--mud-palette-lines-default)"));
     }
 
     /// <summary>The tab strip's tints, hairlines and hovers read the tokens.</summary>
@@ -131,7 +131,4 @@ public sealed class AppCssTokensATests
     private static string TabStripCss() =>
         File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Layout", "TabStrip.razor.css"));
 
-    /// <summary>How many times <paramref name="needle"/> occurs in <paramref name="haystack"/>.</summary>
-    private static int Count(string haystack, string needle) =>
-        haystack.Split(needle, StringSplitOptions.None).Length - 1;
 }

@@ -1,3 +1,5 @@
+using Agency.Huddle.Tests.Css;
+
 namespace Agency.Huddle.Tests.Ui.Skins;
 
 /// <summary>
@@ -8,7 +10,7 @@ namespace Agency.Huddle.Tests.Ui.Skins;
 /// </summary>
 public sealed class AppCssTokensDTests
 {
-    private const string RangeStart = "/* ---- The Task List at narrower widths";
+    private const string RangeStart = "The Task List at narrower widths";
 
     private const string PrimaryOverSurface14 = "color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface))";
 
@@ -154,7 +156,7 @@ public sealed class AppCssTokensDTests
     [Fact]
     public void SurfaceOutlinedButtonBackgrounds_SkipToggleItems()
     {
-        string css = StripComments(File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css")));
+        string css = CssText.StripComments(CssText.AppCss());
         List<string> offenders = [];
         int checkedRules = 0;
 
@@ -192,30 +194,6 @@ public sealed class AppCssTokensDTests
         Assert.Empty(offenders);
     }
 
-    /// <summary>The stylesheet with every <c>/* */</c> comment removed, so a comment above a rule is not read as part of its selector.</summary>
-    /// <param name="css">The stylesheet text.</param>
-    /// <returns>The text without comments.</returns>
-    private static string StripComments(string css)
-    {
-        System.Text.StringBuilder builder = new(css.Length);
-        int at = 0;
-        while (at < css.Length)
-        {
-            int start = css.IndexOf("/*", at, StringComparison.Ordinal);
-            if (start < 0)
-            {
-                builder.Append(css, at, css.Length - at);
-                break;
-            }
-
-            builder.Append(css, at, start - at);
-            int end = css.IndexOf("*/", start + 2, StringComparison.Ordinal);
-            at = end < 0 ? css.Length : end + 2;
-        }
-
-        return builder.ToString();
-    }
-
     /// <summary>The recipes the tokens replaced no longer appear in this range; only the sites the architecture leaves literal remain.</summary>
     [Fact]
     public void Range_HasNoReplacedRecipeLeft()
@@ -233,19 +211,14 @@ public sealed class AppCssTokensDTests
         }
 
         // The three decorations the architecture leaves literal: the Build a team section number, the selected team-type icon and the strongest roster tier.
-        Assert.Equal(3, Count(range, PrimaryOverSurface14));
-        Assert.Equal(1, Count(range, "color-mix(in srgb, var(--mud-palette-secondary) 14%, var(--mud-palette-surface))"));
+        Assert.Equal(3, CssText.CountOccurrences(range, PrimaryOverSurface14));
+        Assert.Equal(1, CssText.CountOccurrences(range, "color-mix(in srgb, var(--mud-palette-secondary) 14%, var(--mud-palette-surface))"));
     }
 
     /// <summary>The text of <c>app.css</c> from this package's first section header to the end, with LF line endings.</summary>
     /// <returns>The range this package owns.</returns>
-    private static string Range()
-    {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css")).Replace("\r\n", "\n", StringComparison.Ordinal);
-        int start = css.IndexOf(RangeStart, StringComparison.Ordinal);
-        Assert.True(start >= 0, "The range header is missing from app.css.");
-        return css[start..];
-    }
+    private static string Range() =>
+        CssText.Section(CssText.AppCss(), RangeStart);
 
     /// <summary>The trimmed declarations of the first rule in this package's range whose selector text is exactly <paramref name="selector"/>.</summary>
     /// <param name="selector">The selector list as written, with <c>\n</c> between selectors.</param>
@@ -268,9 +241,4 @@ public sealed class AppCssTokensDTests
         return body.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
-    /// <summary>How many times <paramref name="needle"/> occurs in <paramref name="text"/>.</summary>
-    /// <param name="text">The text to scan.</param>
-    /// <param name="needle">The substring to count.</param>
-    /// <returns>The number of non-overlapping occurrences.</returns>
-    private static int Count(string text, string needle) => text.Split(needle).Length - 1;
 }

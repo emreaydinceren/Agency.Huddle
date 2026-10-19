@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Themes.Skins;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui.Traits;
 
@@ -12,30 +13,17 @@ namespace Agency.Huddle.Tests.Ui.Traits;
 /// </summary>
 public sealed partial class ContentTraitsTests
 {
-    private const string SectionHeader = "/* ---- Traits: transcript and composer";
-    private const string NextSectionHeader = "/* ---- Room member health";
-
-    private static string AppCssPath => CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css");
+    private const string SectionHeader = "Traits: transcript and composer";
+    private const string NextSectionHeader = "Room member health";
 
     /// <summary>The whole of <c>app.css</c>.</summary>
-    private static string AppCss => File.ReadAllText(AppCssPath);
-
-    /// <summary>The text of the new section, from its header to the next section's header.</summary>
-    private static string Section()
-    {
-        string css = AppCss;
-        int start = css.IndexOf(SectionHeader, StringComparison.Ordinal);
-        Assert.True(start >= 0, "app.css has no 'Traits: transcript and composer' section.");
-        int end = css.IndexOf(NextSectionHeader, StringComparison.Ordinal);
-        Assert.True(end > start, "The traits section must come before the 'Room member health' section.");
-        return css[start..end];
-    }
+    private static string AppCss => CssText.AppCss(CssNewlines.AsIs);
 
     /// <summary>The bodies of every rule in the section with a selector ending in <paramref name="selectorPart"/>, joined.</summary>
     /// <param name="selectorPart">The tail of a selector, whitespace-normalised.</param>
     private static string Rule(string selectorPart)
     {
-        string withoutComments = Comment().Replace(Section(), string.Empty);
+        string withoutComments = CssText.StripComments(CssText.Section(AppCss, SectionHeader, NextSectionHeader));
         List<string> bodies = [];
         foreach (Match rule in RulePattern().Matches(withoutComments))
         {
@@ -102,7 +90,7 @@ public sealed partial class ContentTraitsTests
     [Fact]
     public void Section_IsPlacedBeforeRoomMemberHealth_AndEveryRuleIsTraitScoped()
     {
-        string withoutComments = Comment().Replace(Section(), string.Empty);
+        string withoutComments = CssText.StripComments(CssText.Section(AppCss, SectionHeader, NextSectionHeader));
         List<string> unscoped = [];
         foreach (Match rule in RulePattern().Matches(withoutComments))
         {
@@ -196,12 +184,9 @@ public sealed partial class ContentTraitsTests
         Has("padding: 0 48px 0 8px;", Rule("[data-hu-send=\"text\"]) .composer-send .mud-icon-button"));
         Has("var(--hu-accent-ink)", Rule(".composer-send .mud-icon-button:hover"));
 
-        Assert.DoesNotContain("--hu-send-bg:", Section(), StringComparison.Ordinal);
-        Assert.DoesNotContain("--hu-send-fg:", Section(), StringComparison.Ordinal);
+        Assert.DoesNotContain("--hu-send-bg:", CssText.Section(AppCss, SectionHeader, NextSectionHeader), StringComparison.Ordinal);
+        Assert.DoesNotContain("--hu-send-fg:", CssText.Section(AppCss, SectionHeader, NextSectionHeader), StringComparison.Ordinal);
     }
-
-    [GeneratedRegex(@"/\*.*?\*/", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
-    private static partial Regex Comment();
 
     [GeneratedRegex(@"(?<sel>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.CultureInvariant)]
     private static partial Regex RulePattern();

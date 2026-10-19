@@ -16,10 +16,10 @@ public sealed partial class Phase4ChromeTraitsTests
 
     private static readonly string RawCss = CssText.AppCss(CssNewlines.AsIs);
 
-    private static readonly string Css = StripComments(RawCss);
+    private static readonly string Css = CssText.StripComments(RawCss);
 
     /// <summary>The comment-stripped text of the phase 4 chrome section, which closes the stylesheet.</summary>
-    private static string Phase4 => StripComments(RawCss[RawCss.IndexOf(Header, StringComparison.Ordinal)..]);
+    private static string Phase4 => CssText.StripComments(RawCss[RawCss.IndexOf(Header, StringComparison.Ordinal)..]);
 
     /// <summary>The two new values, with the trait attribute each renders as.</summary>
     public static TheoryData<string, string> NewValues() =>
@@ -144,9 +144,6 @@ public sealed partial class Phase4ChromeTraitsTests
         Assert.Contains("background-color: var(--hu-ground-rail);", topBar, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
     }
 
-    private static string StripComments(string css) =>
-        CssComment().Replace(css, string.Empty);
-
     /// <summary>The merged declaration text of every rule whose selector list holds the scoped <paramref name="selector"/>.</summary>
     private static string Body(string trait, string value, string selector)
     {
@@ -173,6 +170,4 @@ public sealed partial class Phase4ChromeTraitsTests
     [GeneratedRegex(@"\s+", RegexOptions.CultureInvariant)]
     private static partial Regex Whitespace();
 
-    [GeneratedRegex(@"/\*.*?\*/", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
-    private static partial Regex CssComment();
 }

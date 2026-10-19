@@ -95,7 +95,7 @@ public sealed class LibraryLinkRouterTests : IDisposable
         Assert.Equal(nav.ToAbsoluteUri("rooms/x?library=notes%2Fa.md").ToString(), nav.Uri);
     }
 
-    /// <summary>Source-text pin (the repo's idiom, copied from <c>ProcessModeTests.FindRepoRoot</c>): <c>MainLayout.razor</c> mounts <c>&lt;LibraryLinkRouter&gt;</c> after the Library link, mounts the tab host (which draws the pages itself, so no <c>@Body</c> is rendered), and no longer names the retired pane host.</summary>
+    /// <summary>Source-text pin (the repo's idiom, reading the file through <c>RepoPaths</c>): <c>MainLayout.razor</c> mounts <c>&lt;LibraryLinkRouter&gt;</c> after the Library link, mounts the tab host (which draws the pages itself, so no <c>@Body</c> is rendered), and no longer names the retired pane host.</summary>
     [Fact]
     public void MainLayoutSource_MountsTheRouter_AndHasNoPaneHost()
     {

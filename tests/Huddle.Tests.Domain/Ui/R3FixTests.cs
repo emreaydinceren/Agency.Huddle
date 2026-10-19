@@ -11,13 +11,6 @@ public sealed partial class R3FixTests
 {
     private static readonly string[] StatusNames = ["Info", "Warning", "Error", "Success", "Secondary", "Tertiary", "Primary", "Neutral"];
 
-    private static string Rule(string css, string selector)
-    {
-        int start = css.IndexOf(selector + " {", StringComparison.Ordinal);
-        Assert.True(start >= 0, $"Expected a rule for {selector} in app.css.");
-        return css[start..css.IndexOf('}', start)];
-    }
-
     /// <summary>The chip text of every status colour reaches 4.5:1 on its tint in every built-in Theme (round 3: Light Modern's High chip measured 3.68:1, before the VS Code ports were removed).</summary>
     [Fact]
     public void StatusChipText_ReachesFloor_InEveryTheme()
@@ -59,7 +52,7 @@ public sealed partial class R3FixTests
         }
 
         Assert.Empty(labelled);
-        Assert.Contains("display: none;", Rule(CssText.AppCss(), ".mud-input-control.toolbar-compact .mud-input-label"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("display: none;", CssText.RuleBody(CssText.AppCss(), ".mud-input-control.toolbar-compact .mud-input-label"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
     }
 
     /// <summary>A Needs you row gives the Room's name the width the icons and the time leave: the link pads 8px, the text starts flush, the name flexes and ellipsises, and the time is trailing and does not shrink.</summary>
@@ -68,9 +61,9 @@ public sealed partial class R3FixTests
     {
         string css = CssText.AppCss();
 
-        Assert.Contains("padding-inline: 8px;", Rule(css, ".needs-you-row .mud-nav-link"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("margin-inline-start: 0;", Rule(css, ".needs-you-row .mud-nav-link-text"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        string name = Rule(css, ".needs-you-name");
+        Assert.Contains("padding-inline: 8px;", CssText.RuleBody(css, ".needs-you-row .mud-nav-link"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("margin-inline-start: 0;", CssText.RuleBody(css, ".needs-you-row .mud-nav-link-text"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        string name = CssText.RuleBody(css, ".needs-you-name");
         Assert.Contains("flex: 1 1 auto;", name, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("min-width: 0;", name, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains(".needs-you-detail {\n    flex: 0 0 auto;\n    min-width: max-content;", css, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
@@ -84,7 +77,7 @@ public sealed partial class R3FixTests
     [InlineData(".mud-drawer .mud-navmenu .mud-nav-link")]
     public void InsetRows_AreNarrowerByTheirInset(string selector)
     {
-        string rule = Rule(CssText.AppCss(), selector);
+        string rule = CssText.RuleBody(CssText.AppCss(), selector);
 
         Assert.Contains("width: calc(100% - 8px);", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("margin-inline: 4px;", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source

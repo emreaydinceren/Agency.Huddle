@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Agency.Huddle.App.Components.Sidebar;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
@@ -22,32 +21,24 @@ public sealed class R3RightSidebarTests
         "C:\\teams\\note.md",
         LibraryNodeRole.File);
 
-    /// <summary>The declarations of the first rule whose selector is exactly <paramref name="selector"/>.</summary>
-    private static string Rule(string selector)
-    {
-        Match match = Regex.Match(CssText.AppCss(CssNewlines.AsIs), @"(?m)^" + string.Join(@"\s+", selector.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Select(static token => Regex.Escape(token))) + @"\s*\{([^}]*)\}");
-        Assert.True(match.Success, $"app.css has no rule for {selector}.");
-        return match.Groups[1].Value;
-    }
-
     /// <summary>A panel row is a 32px line, and an Outline row is 28px (B11b).</summary>
     [Fact]
     public void AppCss_Rows_Are32pxAndTheOutlineIs28px()
     {
-        Assert.Contains("min-height: 32px", R3RightSidebarTests.Rule(".sidebar-row"), StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("min-height: 28px", R3RightSidebarTests.Rule(".sidebar-row.outline-row"), StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("min-height: 32px", CssText.RuleBody(CssText.AppCss(), ".sidebar-row"), StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("min-height: 28px", CssText.RuleBody(CssText.AppCss(), ".sidebar-row.outline-row"), StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
     /// <summary>A row's text is one ellipsised line in Ink; Accent ink is only for hover, focus and the current heading (B11a, B11b).</summary>
     [Fact]
     public void AppCss_RowText_IsInkOnOneLineWithAccentInkOnHover()
     {
-        string text = R3RightSidebarTests.Rule(".sidebar-row-text");
+        string text = CssText.RuleBody(CssText.AppCss(), ".sidebar-row-text");
         Assert.Contains("text-overflow: ellipsis", text, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("white-space: nowrap", text, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("color: var(--mud-palette-text-primary)", text, StringComparison.Ordinal); // contains-ok: stylesheet source text
 
-        string accent = R3RightSidebarTests.Rule(".sidebar-row .mud-link.sidebar-row-text:hover,\r\n.sidebar-row .mud-link.sidebar-row-text:focus-visible,\r\n.sidebar-row .mud-link.sidebar-row-text.is-current");
+        string accent = CssText.RuleBody(CssText.AppCss(), ".sidebar-row .mud-link.sidebar-row-text:hover,\n.sidebar-row .mud-link.sidebar-row-text:focus-visible,\n.sidebar-row .mud-link.sidebar-row-text.is-current");
         Assert.Contains("var(--hu-accent-ink)", accent, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
@@ -55,12 +46,12 @@ public sealed class R3RightSidebarTests
     [Fact]
     public void AppCss_PanelHeader_IsThirtyTwoPixelsWithA12pxQuietCount()
     {
-        string header = R3RightSidebarTests.Rule(".sidebar-panel-header");
+        string header = CssText.RuleBody(CssText.AppCss(), ".sidebar-panel-header");
         Assert.Contains("min-height: 32px", header, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("font-size: var(--mud-typography-body2-size)", header, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("font-weight: 600", header, StringComparison.Ordinal); // contains-ok: stylesheet source text
 
-        string count = R3RightSidebarTests.Rule(".sidebar-panel-count");
+        string count = CssText.RuleBody(CssText.AppCss(), ".sidebar-panel-count");
         Assert.Contains("font-size: var(--mud-typography-caption-size)", count, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("color: var(--mud-palette-text-secondary)", count, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
@@ -69,8 +60,8 @@ public sealed class R3RightSidebarTests
     [Fact]
     public void AppCss_Panels_AreSeparatedByAnEdgeLine()
     {
-        Assert.Contains("border-top: 1px solid var(--ink-edge)", R3RightSidebarTests.Rule(".sidebar-panel + .sidebar-panel"), StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("gap: 0", R3RightSidebarTests.Rule(".right-sidebar .mud-drawer-content"), StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("border-top: 1px solid var(--ink-edge)", CssText.RuleBody(CssText.AppCss(), ".sidebar-panel + .sidebar-panel"), StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("gap: 0", CssText.RuleBody(CssText.AppCss(), ".right-sidebar .mud-drawer-content"), StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
     /// <summary>The current Outline heading wears the Selected treatment and is the only one marked; clicking another heading moves it (B11g).</summary>

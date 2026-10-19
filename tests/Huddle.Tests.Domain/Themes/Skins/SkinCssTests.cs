@@ -1,14 +1,13 @@
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Themes;
 using Agency.Huddle.App.Themes.Skins;
-using Agency.Huddle.Tests.Ui;
 
 namespace Agency.Huddle.Tests.Themes.Skins;
 
 /// <summary>The CSS the skin layer writes: the <c>:root</c> block, its safety, and the <c>app-vars.css</c> copy of the defaults.</summary>
 public sealed partial class SkinCssTests
 {
-    private static readonly string AppVarsPath = CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app-vars.css");
+    private static readonly string AppVarsPath = RepoPaths.App("wwwroot", "app-vars.css");
 
     /// <summary>Every registered token is declared exactly once in the rendered block.</summary>
     [Fact]

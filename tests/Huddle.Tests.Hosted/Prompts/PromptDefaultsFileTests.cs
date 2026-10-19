@@ -109,25 +109,8 @@ public sealed class PromptDefaultsFileTests
     }
 
     /// <summary>
-    /// Locates <c>src/Huddle.App/prompts.default.json</c> by walking up from the test binary's own
-    /// directory until <c>Huddle.slnx</c> is found, the same approach
-    /// <c>TeamWebApplicationFactory.FindAppContentRoot</c> and <c>PromptGoldenTests.GoldenFilePath</c> use.
+    /// Locates <c>src/Huddle.App/prompts.default.json</c> through <see cref="RepoPaths"/>.
     /// </summary>
     /// <returns>The default-restore file's full path.</returns>
-    private static string DefaultsFilePath()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Huddle.slnx")))
-        {
-            directory = directory.Parent;
-        }
-
-        if (directory is null)
-        {
-            throw new InvalidOperationException(
-                $"Could not locate Huddle.slnx by walking up from '{AppContext.BaseDirectory}'.");
-        }
-
-        return Path.Combine(directory.FullName, "src", "Huddle.App", "prompts.default.json");
-    }
+    private static string DefaultsFilePath() => RepoPaths.App("prompts.default.json");
 }

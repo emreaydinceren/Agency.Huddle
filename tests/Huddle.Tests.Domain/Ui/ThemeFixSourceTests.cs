@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -61,8 +62,8 @@ public sealed partial class ThemeFixSourceTests
     [Fact]
     public void SendButton_IsColouredFromTokens_WithDefaultsInAppVars()
     {
-        string body = RuleBody(StripComments(File.ReadAllText(AppCssPath())), ".composer-send-button");
-        string vars = File.ReadAllText(AppVarsPath());
+        string body = RuleBody(CssText.StripComments(CssText.AppCss(CssNewlines.AsIs)), ".composer-send-button");
+        string vars = File.ReadAllText(RepoPaths.App("wwwroot", "app-vars.css"));
 
         Assert.Matches(@"(?<![-\w])color:\s*var\(--hu-send-fg\)", body);
         Assert.Matches(@"(?<![-\w])background:\s*var\(--hu-send-bg\)", body);
@@ -74,8 +75,8 @@ public sealed partial class ThemeFixSourceTests
     [Fact]
     public void PresenceRing_BaseRules_ReadTheRingToken()
     {
-        string css = StripComments(File.ReadAllText(AppCssPath()));
-        string vars = File.ReadAllText(AppVarsPath());
+        string css = CssText.StripComments(CssText.AppCss(CssNewlines.AsIs));
+        string vars = File.ReadAllText(RepoPaths.App("wwwroot", "app-vars.css"));
 
         string dot = RuleBody(css, ".agent-dot.on-avatar");
         string glyph = RuleBody(css, ".agent-dot.on-avatar.presence-glyph-ring");
@@ -89,7 +90,7 @@ public sealed partial class ThemeFixSourceTests
     [Fact]
     public void TaskRef_IsStyledOnTheLinkItself()
     {
-        string body = RuleBody(StripComments(File.ReadAllText(AppCssPath())), ".task-ref");
+        string body = RuleBody(CssText.StripComments(CssText.AppCss(CssNewlines.AsIs)), ".task-ref");
 
         Assert.Contains("font-family: var(--font-mono);", body, StringComparison.Ordinal);
         Assert.Contains("font-size: var(--mud-typography-caption-size);", body, StringComparison.Ordinal);
@@ -107,7 +108,7 @@ public sealed partial class ThemeFixSourceTests
         HashSet<string> emitted = EmittedTokens();
         List<string> dead = [];
 
-        foreach (string path in new[] { AppCssPath() })
+        foreach (string path in new[] { RepoPaths.App("wwwroot", "app.css") })
         {
             foreach (string selector in Selectors(File.ReadAllText(path)))
             {
@@ -166,7 +167,7 @@ public sealed partial class ThemeFixSourceTests
     /// <param name="css">Stylesheet source.</param>
     private static IEnumerable<string> Selectors(string css)
     {
-        string stripped = AttributeSelector().Replace(CssString().Replace(StripComments(css), "\"\""), "[]");
+        string stripped = AttributeSelector().Replace(CssString().Replace(CssText.StripComments(css), "\"\""), "[]");
         int start = 0;
         for (int index = 0; index < stripped.Length; index++)
         {
@@ -207,24 +208,11 @@ public sealed partial class ThemeFixSourceTests
         return string.Join('\n', bodies);
     }
 
-    /// <summary>The source with <c>/* ... */</c> comments removed.</summary>
-    /// <param name="css">Stylesheet source.</param>
-    private static string StripComments(string css) => CssComment().Replace(css, string.Empty);
-
-    /// <summary>The path of <c>app.css</c>.</summary>
-    private static string AppCssPath() => CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css");
-
-    /// <summary>The path of <c>app-vars.css</c>.</summary>
-    private static string AppVarsPath() => CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app-vars.css");
-
     [GeneratedRegex(@"<MudIconButton\b[^>]*Icons\.Material\.Filled\.Send[^>]*/>", RegexOptions.CultureInvariant | RegexOptions.Singleline)]
     private static partial Regex SendButtonElement();
 
     [GeneratedRegex(@"(?<selectors>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.CultureInvariant)]
     private static partial Regex PackRule();
-
-    [GeneratedRegex(@"/\*.*?\*/", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
-    private static partial Regex CssComment();
 
     [GeneratedRegex("\"[^\"]*\"", RegexOptions.CultureInvariant)]
     private static partial Regex CssString();

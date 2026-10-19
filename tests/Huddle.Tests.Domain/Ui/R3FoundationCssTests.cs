@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -23,7 +24,7 @@ public sealed class R3FoundationCssTests
     [InlineData("--ink-field", 30)]
     public void AppVars_DeclaresEachInkRung(string name, int percent)
     {
-        string vars = Normalise(File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app-vars.css")));
+        string vars = CssText.Read(RepoPaths.App("wwwroot", "app-vars.css"));
 
         string token = "--hu-" + name["--".Length..];
 
@@ -34,7 +35,7 @@ public sealed class R3FoundationCssTests
     [Fact]
     public void AppCss_DrawsLinesAndWashesFromTheLadderNotThePaletteGreys()
     {
-        string css = AppCss();
+        string css = CssText.AppCss();
 
         Assert.DoesNotMatch(@"var\(--mud-palette-(divider|divider-light|lines-inputs|background-gray)\)", css);
     }
@@ -43,25 +44,25 @@ public sealed class R3FoundationCssTests
     [Fact]
     public void AppCss_OneAndAHalfRadiusSurvivesOnlyOnBubbleAndComposer()
     {
-        string css = AppCss();
+        string css = CssText.AppCss();
         List<string> selectors = [];
         foreach (Match rule in Regex.Matches(css, @"(?<sel>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5)))
         {
-            bool traitVariant = StripComments(rule.Groups["sel"].Value).TrimStart().StartsWith(":root:has([data-hu-", StringComparison.Ordinal); // contains-ok: a trait variant rule is scoped to its marker attribute
+            bool traitVariant = CssText.StripComments(rule.Groups["sel"].Value).Trim().StartsWith(":root:has([data-hu-", StringComparison.Ordinal); // contains-ok: a trait variant rule is scoped to its marker attribute
             if (!traitVariant && rule.Groups["body"].Value.Contains("var(--mud-default-borderradius) * 1.5", StringComparison.Ordinal))
             {
                 selectors.Add(rule.Groups["sel"].Value.Trim());
             }
         }
 
-        Assert.Equal([".composer-drop-hint", ".composer-input", ".message-bubble"], selectors.Select(StripComments).Order(StringComparer.Ordinal));
+        Assert.Equal([".composer-drop-hint", ".composer-input", ".message-bubble"], selectors.Select(static selector => CssText.StripComments(selector).Trim()).Order(StringComparer.Ordinal));
     }
 
     /// <summary>The Group label is 12px at 600 in Quiet ink, sentence case, 8px above its fields.</summary>
     [Fact]
     public void AppCss_GroupLabel_IsCaptionSizeSemiboldQuietInk()
     {
-        string body = RuleBody(".group-label");
+        string body = CssText.RuleBody(CssText.AppCss(), ".group-label");
 
         Assert.Contains("font-size: var(--mud-typography-caption-size);", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("font-weight: 600;", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
@@ -74,21 +75,21 @@ public sealed class R3FoundationCssTests
     [Fact]
     public void AppCss_SelectedShape_IsTheSelectedTreatment()
     {
-        string body = RuleBody(".selected-shape");
+        string body = CssText.RuleBody(CssText.AppCss(), ".selected-shape");
 
         Assert.Contains("margin-inline: 4px;", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("border-radius: calc(var(--mud-default-borderradius) * 0.75);", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("var(--hu-selected-background)", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("font-weight: 500;", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("var(--hu-selected-background-hover)", RuleBody(".selected-shape:hover,\r\n.selected-shape:focus-visible"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("var(--hu-selected-background-hover)", CssText.RuleBody(CssText.AppCss(), ".selected-shape:hover,\n.selected-shape:focus-visible"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
     }
 
     /// <summary>A filter chip is a 28px pill with 0 12px padding and 13px text; unset it is a dashed Field line, set it takes the accent border and tint.</summary>
     [Fact]
     public void AppCss_FilterChip_IsA28pxPillDashedUntilSet()
     {
-        string unset = RuleBody(".mud-chip.filter-chip");
-        string set = RuleBody(".mud-chip.filter-chip.mud-chip-selected");
+        string unset = CssText.RuleBody(CssText.AppCss(), ".mud-chip.filter-chip");
+        string set = CssText.RuleBody(CssText.AppCss(), ".mud-chip.filter-chip.mud-chip-selected");
 
         Assert.Contains("height: 28px;", unset, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("padding: 0 12px;", unset, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
@@ -96,14 +97,14 @@ public sealed class R3FoundationCssTests
         Assert.Contains("font-size: var(--mud-typography-body2-size);", unset, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("border: 1px dashed var(--ink-field);", unset, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("border: 1px solid var(--mud-palette-primary);", set, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains(".mud-chip.filter-chip.is-set,", AppCss(), StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains(".mud-chip.filter-chip.is-set,", CssText.AppCss(), StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
     /// <summary>A compact toolbar field is a 28px box with 13px text.</summary>
     [Fact]
     public void AppCss_ToolbarCompact_IsA28pxBoxWithThirteenPixelText()
     {
-        string css = AppCss();
+        string css = CssText.AppCss();
 
         Assert.Matches(@"\.mud-input-control\.toolbar-compact \{[^}]*height: 28px;", css);
         Assert.Matches(@"\.toolbar-compact \.mud-input\.mud-input-outlined \.mud-input-root\.mud-input-root-outlined \{[^}]*height: 28px;[^}]*font-size: var\(--mud-typography-body2-size\);", css);
@@ -113,7 +114,7 @@ public sealed class R3FoundationCssTests
     [Fact]
     public void AppCss_DialogChrome_IsSetOnce()
     {
-        string css = AppCss();
+        string css = CssText.AppCss();
 
         Assert.Matches(@"\.mud-dialog \.mud-dialog-title \{\s*padding: 16px 24px 8px;", css);
         Assert.Matches(@"\.mud-dialog \.mud-dialog-content \{\s*padding: 8px 24px;", css);
@@ -126,7 +127,7 @@ public sealed class R3FoundationCssTests
     [Fact]
     public void AppCss_DisabledButton_UsesTheThemesFaintInkOnWash()
     {
-        string css = AppCss();
+        string css = CssText.AppCss();
 
         Assert.Matches(@"\.mud-button-root\.mud-button:disabled \{\s*color: var\(--mud-palette-text-disabled\) !important;", css);
         Assert.Matches(@"\.mud-button-filled:disabled \{\s*background-color: var\(--ink-wash\) !important;", css);
@@ -136,7 +137,7 @@ public sealed class R3FoundationCssTests
     [Fact]
     public void AppCss_OutlinedButtonTableRowsTabRailAndInputBorder_SitOnTheirRungs()
     {
-        string css = AppCss();
+        string css = CssText.AppCss();
 
         Assert.Matches(@"\.mud-button-outlined \{\s*border-color: var\(--hu-line-control\);", css);
         Assert.Matches(@"\.mud-table \.mud-table-cell \{\s*border-bottom-color: var\(--ink-edge\);", css);
@@ -149,32 +150,9 @@ public sealed class R3FoundationCssTests
     [Fact]
     public void AppCss_LinkAndSelectedListItem_AreAccentInk()
     {
-        string css = AppCss();
+        string css = CssText.AppCss();
 
         Assert.Matches(@"\.mud-link\.mud-primary-text \{\s*color: var\(--hu-accent-ink\) !important;", css);
         Assert.Matches(@"\.mud-list-item\.mud-selected-item \{[^}]*background-color: var\(--hu-selected-background\);", css);
-    }
-
-    /// <summary>The stylesheet source with line endings normalised to LF.</summary>
-    private static string AppCss() => Normalise(File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css")));
-
-    /// <summary>Normalises CRLF to LF so a pattern need not care which the checkout used.</summary>
-    /// <param name="text">The stylesheet text.</param>
-    private static string Normalise(string text) => text.Replace("\r\n", "\n", StringComparison.Ordinal);
-
-    /// <summary>The selector list with any leading comment removed, so a rule under a comment compares by its selector.</summary>
-    /// <param name="selector">The text before a rule's brace.</param>
-    private static string StripComments(string selector) => Regex.Replace(selector, @"/\*.*?\*/", string.Empty, RegexOptions.Singleline | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2)).Trim();
-
-    /// <summary>The declarations of the rule whose selector list ends with <paramref name="selector"/>.</summary>
-    /// <param name="selector">The selector, with <c>\n</c> or <c>\r\n</c> between the names of a list.</param>
-    private static string RuleBody(string selector)
-    {
-        string css = AppCss();
-        string wanted = Normalise(selector) + " {";
-        int at = css.IndexOf(wanted, StringComparison.Ordinal);
-        Assert.True(at >= 0, $"No rule for {selector}.");
-        int open = css.IndexOf('{', at);
-        return css[(open + 1)..css.IndexOf('}', open)];
     }
 }

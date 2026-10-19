@@ -11,14 +11,6 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 public sealed class R3SharedComponentsTests
 {
-
-    private static string Rule(string css, string selector)
-    {
-        int start = css.IndexOf(selector, StringComparison.Ordinal);
-        Assert.True(start >= 0, $"Expected a rule for {selector} in app.css.");
-        return css[start..css.IndexOf('}', start)];
-    }
-
     /// <summary>The drawer's Footer shows while ShowFooter is true, under the content, and carries the caller's actions.</summary>
     [Fact]
     public async Task Drawer_Footer_ShowsWhileThereAreChanges()
@@ -69,16 +61,16 @@ public sealed class R3SharedComponentsTests
         string css = CssText.AppCss();
 
         const string sidebarOpen = ":root:has(.mud-drawer.right-sidebar.mud-drawer--open) ";
-        Assert.Contains("right: 280px;", Rule(css, sidebarOpen + ".mud-drawer.resizable-drawer.mud-drawer-temporary.mud-drawer-pos-right.mud-drawer--open"), StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("right: 280px;", Rule(css, sidebarOpen + ".mud-overlay.mud-overlay-drawer"), StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("top: var(--mud-appbar-height);", Rule(css, ".mud-overlay.mud-overlay-drawer"), StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("right: 280px;", CssText.RuleBody(css, sidebarOpen + ".mud-drawer.resizable-drawer.mud-drawer-temporary.mud-drawer-pos-right.mud-drawer--open"), StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("right: 280px;", CssText.RuleBody(css, sidebarOpen + ".mud-overlay.mud-overlay-drawer"), StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("top: var(--mud-appbar-height);", CssText.RuleBody(css, ".mud-overlay.mud-overlay-drawer"), StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
     /// <summary>The footer is sticky at the bottom with a Chrome line on top, right-aligned.</summary>
     [Fact]
     public void AppCss_DrawerFooterIsStickyWithAChromeLine()
     {
-        string footer = Rule(CssText.AppCss(), ".resizable-drawer-footer");
+        string footer = CssText.RuleBody(CssText.AppCss(), ".resizable-drawer-footer");
 
         Assert.Contains("position: sticky;", footer, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("bottom: 0;", footer, StringComparison.Ordinal); // contains-ok: stylesheet source text
@@ -92,8 +84,8 @@ public sealed class R3SharedComponentsTests
     {
         string css = CssText.AppCss();
 
-        Assert.Contains("min-height: 32px;", Rule(css, ".page-header-row"), StringComparison.Ordinal); // contains-ok: stylesheet source text
-        string intro = Rule(css, ".page-lead {");
+        Assert.Contains("min-height: 32px;", CssText.RuleBody(css, ".page-header-row"), StringComparison.Ordinal); // contains-ok: stylesheet source text
+        string intro = CssText.RuleBody(css, ".page-lead");
         Assert.Contains("var(--mud-typography-body1-size)", intro, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("var(--mud-palette-text-secondary)", intro, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
@@ -104,11 +96,11 @@ public sealed class R3SharedComponentsTests
     {
         string css = CssText.AppCss();
 
-        string row = Rule(css, ".mud-list-item.picker-row");
+        string row = CssText.RuleBody(css, ".mud-list-item.picker-row");
         Assert.Contains("min-height: 32px;", row, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("var(--mud-typography-body2-size)", row, StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("width: 24px;", Rule(css, ".picker-row .mud-list-item-icon"), StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("font-size: var(--icon-size-row);", Rule(css, ".picker-row .mud-list-item-icon .mud-icon-root"), StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("width: 24px;", CssText.RuleBody(css, ".picker-row .mud-list-item-icon"), StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("font-size: var(--icon-size-row);", CssText.RuleBody(css, ".picker-row .mud-list-item-icon .mud-icon-root"), StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
     /// <summary>A chip of the cloud is the Filter chip: 28px, a dashed Field line and no fill unset, and the Accent border and tint set.</summary>
@@ -117,11 +109,11 @@ public sealed class R3SharedComponentsTests
     {
         string css = CssText.AppCss();
 
-        string chip = Rule(css, ".chip-cloud-chip,\n.chip-cloud-all");
+        string chip = CssText.RuleBody(css, ".chip-cloud-chip,\n.chip-cloud-all");
         Assert.Contains("height: 28px;", chip, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("border: 1px dashed var(--ink-field);", chip, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("background-color: transparent;", chip, StringComparison.Ordinal); // contains-ok: stylesheet source text
-        string set = Rule(css, ".chip-cloud-chip.is-set");
+        string set = CssText.RuleBody(css, ".chip-cloud-chip.is-set");
         Assert.Contains("border: 1px solid var(--mud-palette-primary);", set, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("background-color: var(--hu-selected-background);", set, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.DoesNotContain("is-quiet", css, StringComparison.Ordinal); // contains-ok: stylesheet source text

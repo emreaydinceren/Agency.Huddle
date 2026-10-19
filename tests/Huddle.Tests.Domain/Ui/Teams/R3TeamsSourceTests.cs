@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Avatars;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
 
@@ -9,23 +10,13 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 /// </summary>
 public sealed class R3TeamsSourceTests
 {
-    /// <summary>The body of the first rule in <paramref name="css"/> whose selector is exactly <paramref name="selector"/>, whitespace collapsed.</summary>
-    private static string RuleBody(string css, string selector)
-    {
-        Match rule = Regex.Match(css, string.Join(@"\s+", selector.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Select(static token => Regex.Escape(token))) + @"\s*\{(?<body>[^}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
-        Assert.True(rule.Success, $"app.css has no '{selector}' rule.");
-        return Regex.Replace(rule.Groups["body"].Value.Trim(), @"\s+", " ", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
-    }
-
-    private static string Css() => File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
-
     private static string Source(params string[] path) => File.ReadAllText(CssSource.RepoPath(["src", "Huddle.App", .. path]));
 
     /// <summary>A Teammates tile has 12px padding, as the Board card does, not 16px (B7a, design-system "Teammates").</summary>
     [Fact]
     public void Tile_HasTwelvePixelPadding()
     {
-        string tile = RuleBody(Css(), ".teammate-tile");
+        string tile = CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), ".teammate-tile");
 
         Assert.Contains("padding: 12px;", tile, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
@@ -34,7 +25,7 @@ public sealed class R3TeamsSourceTests
     [Fact]
     public void PersonaBlock_IsMonospaceAtThirteenPixelsOnTheWashWithAnEdge()
     {
-        string persona = RuleBody(Css(), ".teammate-card-persona");
+        string persona = CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), ".teammate-card-persona");
 
         Assert.Contains("font-family: var(--font-mono);", persona, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("font-size: var(--mud-typography-body2-size);", persona, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
@@ -46,7 +37,7 @@ public sealed class R3TeamsSourceTests
     [Fact]
     public void AvatarEditor_ReservesTheTallestModesHeight()
     {
-        string editor = RuleBody(Css(), ".avatar-editor");
+        string editor = CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), ".avatar-editor");
 
         Assert.Matches(@"min-height: \d+(\.\d+)?rem;", editor);
     }
@@ -55,9 +46,9 @@ public sealed class R3TeamsSourceTests
     [Fact]
     public void Swatch_IsA32pxCircleDrawnWithTheAvatarRecipeForTheMode()
     {
-        string css = Css();
-        string dot = RuleBody(css, ".avatar-swatch-dot");
-        string dark = RuleBody(css, ":root:has(.theme-mode-dark) .avatar-swatch-dot");
+        string css = CssText.AppCss(CssNewlines.AsIs);
+        string dot = CssText.RuleBodyLoose(css, ".avatar-swatch-dot");
+        string dark = CssText.RuleBodyLoose(css, ":root:has(.theme-mode-dark) .avatar-swatch-dot");
 
         Assert.Contains("width: 32px;", dot, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("height: 32px;", dot, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
@@ -74,7 +65,7 @@ public sealed class R3TeamsSourceTests
 
         Assert.Contains("class=\"avatar-swatch-input visually-hidden\"", editor, StringComparison.Ordinal); // contains-ok: haystack is the razor source
         Assert.DoesNotContain("tabindex", editor, StringComparison.Ordinal);
-        Assert.Contains(".avatar-swatch-input:focus-visible + .avatar-swatch-dot", Css(), StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
+        Assert.Contains(".avatar-swatch-input:focus-visible + .avatar-swatch-dot", CssText.AppCss(CssNewlines.AsIs), StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
     }
 
     /// <summary>Every palette colour has a colour name a person can tell from the others, never a hex code (B8h).</summary>
@@ -93,9 +84,9 @@ public sealed class R3TeamsSourceTests
     [Fact]
     public void SkinChip_IsTheFilterChip()
     {
-        string css = Css();
-        string unset = RuleBody(css, ".avatar-library-skin");
-        string set = RuleBody(css, ".avatar-library-skin[aria-pressed=\"true\"]");
+        string css = CssText.AppCss(CssNewlines.AsIs);
+        string unset = CssText.RuleBodyLoose(css, ".avatar-library-skin");
+        string set = CssText.RuleBodyLoose(css, ".avatar-library-skin[aria-pressed=\"true\"]");
 
         Assert.Contains("height: 28px;", unset, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("border: 1px dashed var(--ink-field);", unset, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
@@ -108,19 +99,19 @@ public sealed class R3TeamsSourceTests
     [Fact]
     public void ProbingField_KeepsItsNormalInkAndBorder()
     {
-        string css = Css();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
-        Assert.Equal("color: var(--mud-palette-text-primary);", RuleBody(css, ".mud-input-control.teammate-card-probing .mud-input.mud-disabled"));
-        Assert.Equal("border-color: var(--hu-line-control);", RuleBody(css, ".mud-input-control.teammate-card-probing .mud-input.mud-input-outlined.mud-disabled .mud-input-outlined-border"));
+        Assert.Equal("color: var(--mud-palette-text-primary);", CssText.RuleBodyLoose(css, ".mud-input-control.teammate-card-probing .mud-input.mud-disabled"));
+        Assert.Equal("border-color: var(--hu-line-control);", CssText.RuleBodyLoose(css, ".mud-input-control.teammate-card-probing .mud-input.mud-input-outlined.mud-disabled .mud-input-outlined-border"));
     }
 
     /// <summary>"Roles" starts 24px under the tab rail's Chrome line: the global panel padding applies and the Team page's wide layout does not override it (B7e).</summary>
     [Fact]
     public void TeamPage_ContentStartsTwentyFourPixelsUnderTheRail()
     {
-        string css = Css();
-        string rail = RuleBody(css, ".mud-tabs:not(.mud-tabs-vertical) > .mud-tabs-panels");
-        string roster = RuleBody(css, ".team-page-wide .team-tasks-tab,\r\n.team-page-wide .team-roster,\r\n.team-page-wide .team-details");
+        string css = CssText.AppCss(CssNewlines.AsIs);
+        string rail = CssText.RuleBodyLoose(css, ".mud-tabs:not(.mud-tabs-vertical) > .mud-tabs-panels");
+        string roster = CssText.RuleBodyLoose(css, ".team-page-wide .team-tasks-tab,\r\n.team-page-wide .team-roster,\r\n.team-page-wide .team-details");
 
         Assert.Equal("padding-top: 24px;", rail);
         Assert.DoesNotContain("padding-top", roster, StringComparison.Ordinal);
@@ -138,7 +129,7 @@ public sealed class R3TeamsSourceTests
             buildTeam.IndexOf("roster-leave", StringComparison.Ordinal) < buildTeam.IndexOf("<MudDivider />", StringComparison.Ordinal)
             && buildTeam.IndexOf("<MudDivider />", StringComparison.Ordinal) < buildTeam.IndexOf("menu-item-destructive", StringComparison.Ordinal),
             "Delete teammate must come last, after a divider.");
-        Assert.Contains("color-mix(in srgb, var(--mud-palette-error) 70%, var(--mud-palette-text-primary));", RuleBody(Css(), ".menu-item-destructive.mud-menu-item,\r\n.menu-item-destructive.mud-menu-item .mud-icon-root"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("color-mix(in srgb, var(--mud-palette-error) 70%, var(--mud-palette-text-primary));", CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), ".menu-item-destructive.mud-menu-item,\r\n.menu-item-destructive.mud-menu-item .mud-icon-root"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 
     /// <summary>Add a role marks optional fields "(optional)", has no asterisk, gives every field a helper line, and its primary repeats the title's verb (B10k).</summary>

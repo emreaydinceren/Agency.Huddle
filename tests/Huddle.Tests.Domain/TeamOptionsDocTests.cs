@@ -12,7 +12,7 @@ public sealed class TeamOptionsDocTests
     [Fact]
     public void EveryScalarKey_HasAGuideRow()
     {
-        string[] lines = File.ReadAllLines(Path.Combine(FindRepositoryRoot(), "docs", "Huddle.EngineeringGuide.md"));
+        string[] lines = File.ReadAllLines(RepoPaths.Combine("docs", "Huddle.EngineeringGuide.md"));
         IReadOnlyList<string> keys = [.. typeof(TeamOptions)
             .GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
             .Where(static property => property.PropertyType == typeof(string) || property.PropertyType == typeof(int) || property.PropertyType == typeof(bool))
@@ -36,17 +36,4 @@ public sealed class TeamOptionsDocTests
         Assert.Equal(["DataDir", "PipeName", "HumanName", "SkillSourcesDir", "ComputerName", "SkillsRepositoryDir", "HuddlePacksPath"], names);
     }
 
-    /// <summary>Walks up from the test binary until the directory holding <c>Huddle.slnx</c> is found.</summary>
-    /// <returns>The repository root directory.</returns>
-    private static string FindRepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Huddle.slnx")))
-        {
-            directory = directory.Parent;
-        }
-
-        Assert.NotNull(directory);
-        return directory.FullName;
-    }
 }

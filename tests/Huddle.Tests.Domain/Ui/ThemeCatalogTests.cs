@@ -187,7 +187,7 @@ public sealed class ThemeCatalogTests
     [Fact]
     public void BuiltIn_EveryThemeSetsEveryPalettePropertyAppCssReads()
     {
-        List<string> referencedTokens = [.. CssSource.ReadReferencedTokens(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"))];
+        List<string> referencedTokens = [.. CssSource.ReadReferencedTokens(RepoPaths.App("wwwroot", "app.css"))];
         var componentsDirectory = CssSource.RepoPath("src", "Huddle.App", "Components");
         foreach (var cssFile in Directory.EnumerateFiles(componentsDirectory, "*.razor.css", SearchOption.AllDirectories))
         {

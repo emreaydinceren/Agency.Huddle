@@ -14,7 +14,7 @@ public sealed partial class Phase4ContentTraitsTests
 {
     private static readonly string RawCss = CssText.AppCss(CssNewlines.AsIs);
 
-    private static readonly string Css = CssComment().Replace(RawCss, string.Empty);
+    private static readonly string Css = CssText.StripComments(RawCss);
 
     /// <summary>The three enums with their trait attribute names and the value each adds.</summary>
     public static TheoryData<string, string> NewValues() => new()
@@ -115,7 +115,7 @@ public sealed partial class Phase4ContentTraitsTests
     [Fact]
     public void StatusGlyph_LeavesTagsAlone()
     {
-        string section = Section("Traits: phase 4", "Traits: chrome");
+        string section = CssText.StripComments(CssText.Section(RawCss, "Traits: phase 4", "Traits: chrome"));
 
         Assert.DoesNotContain("tag-chip", section, StringComparison.Ordinal);
         Assert.DoesNotContain("task-tag", section, StringComparison.Ordinal);
@@ -165,7 +165,7 @@ public sealed partial class Phase4ContentTraitsTests
     [Fact]
     public void Phase4Section_AddsNoImportantOrPackToken()
     {
-        string section = Section("Traits: phase 4", "Traits: chrome");
+        string section = CssText.StripComments(CssText.Section(RawCss, "Traits: phase 4", "Traits: chrome"));
 
         Assert.DoesNotContain("!important", section, StringComparison.Ordinal);
         Assert.DoesNotContain("--n-", section, StringComparison.Ordinal);
@@ -184,15 +184,6 @@ public sealed partial class Phase4ContentTraitsTests
 
     private static string Kebab(string name) =>
         Regex.Replace(name, "(?<!^)([A-Z])", "-$1", RegexOptions.CultureInvariant).ToLowerInvariant();
-
-    /// <summary>The comment-stripped text between two section headers.</summary>
-    private static string Section(string from, string to)
-    {
-        int start = RawCss.IndexOf($"/* ---- {from}", StringComparison.Ordinal);
-        int end = RawCss.IndexOf($"/* ---- {to}", StringComparison.Ordinal);
-        Assert.True(start >= 0 && end > start, $"Section '{from}' is missing or misplaced.");
-        return CssComment().Replace(RawCss[start..end], string.Empty);
-    }
 
     /// <summary>
     /// The merged declaration text of every rule whose selector list holds the scoped <paramref name="selector"/>; with
@@ -221,14 +212,11 @@ public sealed partial class Phase4ContentTraitsTests
     /// <summary>The phase 4 section's media blocks only.</summary>
     private static string MediaText()
     {
-        string section = Section("Traits: phase 4", "Traits: chrome");
+        string section = CssText.StripComments(CssText.Section(RawCss, "Traits: phase 4", "Traits: chrome"));
         int media = section.IndexOf("@media", StringComparison.Ordinal);
         Assert.True(media >= 0, "The phase 4 section has no @media block.");
         return section[media..];
     }
-
-    [GeneratedRegex(@"/\*.*?\*/", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
-    private static partial Regex CssComment();
 
     [GeneratedRegex(@"(?<sel>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.CultureInvariant)]
     private static partial Regex Rule();
