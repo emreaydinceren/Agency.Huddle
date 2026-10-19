@@ -88,28 +88,28 @@ public sealed partial class AuditBatchBCssTests
         Assert.Matches(@"message-bubble message-body"">[^\r\n]*</div>\s*<MessageReferences Message=""@message"" />\s*</div>", markup);
     }
 
-    /// <summary>An icon in a sidebar row is centred in a 24px leading slot, the width of a small avatar, so labels at one level start at one x.</summary>
+    /// <summary>An icon in any left-sidebar row, a section header's included, is centred in the 24px leading slot, the width of a small avatar, so its centre is on one line whatever its size.</summary>
     [Fact]
     public void AppCss_SidebarRowIcon_IsCentredInA24pxSlot()
     {
-        string declarations = AuditBatchBCssTests.DeclarationsFor(".mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-icon");
+        string declarations = AuditBatchBCssTests.DeclarationsFor(".sidebar-views .mud-nav-link > .mud-nav-link-icon");
 
         Assert.Matches(@"box-sizing:\s*content-box", declarations);
-        Assert.Matches(@"padding-inline:\s*calc\(\(24px - var\(--icon-size-row\)\) / 2\)", declarations);
-        Assert.Matches(@"margin-inline-start:\s*12px", declarations);
-        Assert.Matches(@"margin-inline-end:\s*8px", declarations);
+        Assert.Matches(@"padding-inline:\s*calc\(\(var\(--nav-slot\) - 1em\) / 2\)", declarations);
+        Assert.Matches(@"margin:\s*0", declarations);
+        Assert.Matches(@"--nav-slot:\s*24px", CssText.AppCss(CssNewlines.AsIs));
     }
 
     /// <summary>
-    /// A group row's icon slot starts where a 1:1 Room's avatar does: the avatar sits after MudBlazor's 12px text inset, so
-    /// the icon takes that 12px as its own start margin and the label after an icon drops the inset.
+    /// A label after an icon starts one gap after the slot, a label whose mark sits inside it (a 1:1 Room's avatar) starts
+    /// flush, and MudBlazor's own 12px text inset is gone, so every label of a level starts on one line.
     /// </summary>
     [Fact]
     public void AppCss_SidebarRowLabelAfterIcon_DropsTheTextInset()
     {
-        string declarations = AuditBatchBCssTests.DeclarationsFor(".mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-icon + .mud-nav-link-text");
-
-        Assert.Matches(@"margin-inline-start:\s*0", declarations);
+        Assert.Matches(@"margin-inline-start:\s*var\(--nav-gap\)", AuditBatchBCssTests.DeclarationsFor(".sidebar-views .mud-nav-link > .mud-nav-link-icon + .mud-nav-link-text"));
+        Assert.Matches(@"margin-inline-start:\s*0", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".sidebar-views .mud-nav-link > .mud-nav-link-text:has(> .room-row-avatar, > .needs-you-icons)"));
+        Assert.Matches(@"margin-inline-end:\s*var\(--nav-gap\)", AuditBatchBCssTests.DeclarationsFor(".room-row-avatar"));
     }
 
     /// <summary>The destination rows (Teammates, Library) keep the section header's icon geometry, so they are not indented like a group's children.</summary>

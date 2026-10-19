@@ -92,8 +92,8 @@ button:focus-visible {
 /* The Selected shape on sidebar rows (audit A5): every row in the drawer is inset 4px, selected or not, so labels never
    shift when a row is selected, and rounds to 0.75x the base radius. The fill below is what marks the selected one. */
 .mud-drawer .mud-navmenu .mud-nav-link {
-    width: calc(100% - 8px);
-    margin-inline: 4px;
+    width: calc(100% - 2 * var(--nav-inset));
+    margin-inline: var(--nav-inset);
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
 }
 
@@ -1298,23 +1298,116 @@ a.team-ref,
     padding-block: 0;
 }
 
-/* One indent per nesting level, set here and nowhere else (UX-015). Every child row has a leading visual
-   (an icon or, for a 1:1 Room, the Teammate's small avatar), so the text of every row of a level starts at the
-   same x. Level 1 is a row inside a group (a Room, a task view, a Library entry, a Team): with the icon's 12px inset
-   it puts the row's icon a short step right of the group header's icon. Level 2 is a row inside a Team (its Rooms and
-   Projects), used by the "Teams nav" rules further down; it equals level 1 because a Team row has no leading icon, so
-   that indent already puts a child's icon under the Team's name. Every sidebar row is one height (UX-014, UX-017). */
+/* The sidebar's two lines, set here and nowhere else (UX-015). Every row of the left sidebar, in every view, is
+   laid out on one grid: the selected pill is inset --nav-inset from the panel's sides; inside it, --nav-pad leads to a
+   24px slot, and every leading mark (a section icon, a row icon, an avatar, a Team's chevron, the "+", the "Show all"
+   arrow) is centred in that slot, whatever its own size. The label starts --nav-gap after the slot, so every label (a
+   section title, a name, "Show all", "New chat") starts on one x, and a row with no leading mark keeps the slot empty.
+   Trailing details (a count, a time, a section's collapse arrow) end --nav-end inside the pill's right edge.
+
+   A section header and its rows share the two lines: the header heads its list, it is not a level above it. Nesting
+   (a Team's Rooms and Projects) moves a row in by --nav-step, one slot and one gap, so a child's mark sits under its
+   parent's label and its label starts one step further in; set --nav-level on the row, never a padding of its own.
+   Every sidebar row is one height (UX-014, UX-017). */
 :root {
-    --nav-indent-1: 1rem;
-    --nav-indent-2: 1rem;
     --nav-row-height: 32px;
     --icon-size-row: 18px;
+    --nav-inset: 4px;
+    --nav-pad: 8px;
+    --nav-slot: 24px;
+    --nav-gap: 8px;
+    --nav-step: calc(var(--nav-slot) + var(--nav-gap));
+    --nav-end: 8px;
 }
 
-/* .mud-nav-item lifts this to (0,4,0): MudBlazor's own ".mud-nav-group * .mud-navmenu .mud-nav-item .mud-nav-link"
-   sets 36px at that weight, and a weaker rule here loses to it whatever the token says. */
-.mud-nav-group .mud-collapse-container .mud-nav-item .mud-nav-link {
-    padding-left: var(--nav-indent-1);
+/* Every link, header and action row of the left sidebar. The doubled class outranks MudBlazor's (0,4,0)
+   ".mud-nav-group * .mud-navmenu .mud-nav-item .mud-nav-link", which pads a nested link by 36px. */
+.sidebar-views.sidebar-views .mud-navmenu .mud-nav-link {
+    align-items: center;
+    min-height: var(--nav-row-height);
+    padding-block: 0;
+    padding-inline: calc(var(--nav-pad) + var(--nav-level, 0) * var(--nav-step)) var(--nav-end);
+}
+
+/* Every view starts its first row the same distance from the top, whether that row is a section header (Rooms,
+   Teams, Tasks), a destination (Teammates, Library) or the Needs you card, so switching views moves nothing up or
+   down. A section after another in the same view is 16px below it; a hidden Needs you card does not count. */
+.sidebar-view {
+    padding-top: 16px;
+}
+
+.sidebar-views .mud-nav-group > .mud-nav-link {
+    margin-top: 0;
+}
+
+.sidebar-view > :not([hidden]) ~ * .mud-nav-group > .mud-nav-link {
+    margin-top: 16px;
+}
+
+/* A row with a hover "..." keeps its label one step clear of the trailing line, where the button and any count sit. */
+.sidebar-views.sidebar-views .hover-reveal-link .mud-nav-link {
+    padding-inline-end: calc(var(--nav-end) + var(--nav-step));
+}
+
+/* The mark is centred in the slot: content-box padding makes up the difference between its own size and the
+   slot's, so an 18px row icon and a larger section icon share one centre. */
+.sidebar-views .mud-nav-link > .mud-nav-link-icon {
+    box-sizing: content-box;
+    flex: 0 0 auto;
+    margin: 0;
+    padding-inline: calc((var(--nav-slot) - 1em) / 2);
+}
+
+/* A row with no leading mark (a Team, "Show all" without its arrow) keeps the slot empty; a row whose mark sits
+   inside its label (a 1:1 Room's avatar, the Needs you reasons) draws the slot and gap itself. */
+.sidebar-views .mud-nav-link > .mud-nav-link-text {
+    margin-inline: var(--nav-step) 0;
+}
+
+.sidebar-views .mud-nav-link > .mud-nav-link-icon + .mud-nav-link-text {
+    margin-inline-start: var(--nav-gap);
+}
+
+.sidebar-views .mud-nav-link > .mud-nav-link-text:has(> .room-row-avatar, > .needs-you-icons) {
+    margin-inline-start: 0;
+}
+
+/* A section's collapse arrow ends on the trailing line: the chevron glyph stops a quarter of its box short of the
+   edge, so the box gives that back. */
+.sidebar-views .mud-nav-link > .mud-nav-link-expand-icon {
+    margin-inline-end: -0.25em;
+}
+
+/* Trailing meta (a Team's member count) ends on the trailing line too. It sits over the link, not beside it, so the
+   link and its selected pill keep the full width; the hover "..." takes its place while the row is hovered or
+   focused, as it would otherwise cover it. */
+.hover-reveal-row .sidebar-row-meta {
+    position: absolute;
+    inset-inline-end: calc(var(--nav-inset) + var(--nav-end));
+    pointer-events: none;
+    transition: opacity 120ms ease;
+}
+
+.hover-reveal-row:hover .sidebar-row-meta,
+.hover-reveal-row:focus-within .sidebar-row-meta,
+.hover-reveal-row:hover .needs-you-detail,
+.hover-reveal-row:focus-within .needs-you-detail {
+    opacity: 0;
+}
+
+/* On touch there is no hover, so the row's button is always shown (see "hover: none" below); the meta then ends
+   just before it, clear of the button, instead of giving way to it. */
+@media (hover: none) {
+    .hover-reveal-row .sidebar-row-meta {
+        inset-inline-end: calc(var(--nav-inset) + var(--nav-end) + var(--nav-step));
+    }
+
+    .hover-reveal-row:hover .sidebar-row-meta,
+    .hover-reveal-row:focus-within .sidebar-row-meta,
+    .hover-reveal-row:hover .needs-you-detail,
+    .hover-reveal-row:focus-within .needs-you-detail {
+        opacity: 1;
+    }
 }
 
 /* A top-level entry that is a single link (Teammates, Library) is a destination, not a header: an ordinary row, 32px
@@ -1340,26 +1433,19 @@ a.team-ref,
     color: var(--mud-palette-text-primary);
 }
 
-/* A 1:1 Room's avatar sits where an icon would, before the name. */
+/* A 1:1 Room's avatar fills the leading slot, where an icon would sit, and keeps the gap to the name. */
 .room-row-avatar {
-    margin-right: 8px;
+    margin-inline-end: var(--nav-gap);
     vertical-align: middle;
 }
 
-/* Action links inside left nav groups ("New chat", "New view", "Add Folder"): tighten the gap between the
-   "+" icon and text label so the plus feels directly attached to the label, and use the
-   accent color consistent with "New task" and "New teammate". */
-/* Text actions in the sidebar ("New chat", "Build a team", "New view", "Add folder") are neutral: the accent
-   is kept for the selected row, links, the active mode and primary actions. */
+/* Text actions in the sidebar ("New chat", "Build a team", "New view") are neutral: the accent is kept for the
+   selected row, links, the active mode and primary actions. Their "+" sits in the leading slot and their label on
+   the text line, like any row. */
 .nav-action-link,
 .nav-action-link .mud-nav-link-text,
 .nav-action-link .mud-nav-link-icon {
     color: var(--mud-palette-text-secondary);
-}
-
-.nav-action-link .mud-nav-link-text {
-    margin-left: 2px;
-    margin-inline-start: 2px;
 }
 
 /* Page toolbars: tighten the gap between the "+" icon and label on action buttons. */
@@ -1412,7 +1498,7 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
-/* The sidebar's inline Delete? confirm: one 32px line in the rows' indent, Cancel then Delete (audit B10 "Inline confirm"). */
+/* The sidebar's inline Delete? confirm: one 32px line whose prompt starts on the rows' text line, Cancel then Delete (audit B10 "Inline confirm"). */
 .room-list-confirm-host {
     flex: 1 1 auto;
     min-width: 0;
@@ -1421,7 +1507,8 @@ a.team-ref,
 .room-list-confirm {
     align-items: center;
     height: var(--nav-row-height);
-    padding: 0 8px 0 var(--nav-indent-1);
+    padding-block: 0;
+    padding-inline: calc(var(--nav-inset) + var(--nav-pad) + var(--nav-step)) var(--nav-end);
 }
 
 .flex-1-truncate {
@@ -5552,10 +5639,14 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 /* ---- Needs You: the sidebar card of Rooms waiting on the Human ---------------------------------
-   Rows reuse .hover-reveal-row for the dismiss button. Every colour comes from a MudBlazor variable. */
+   Rows reuse .hover-reveal-row for the dismiss button. Every colour comes from a MudBlazor variable. The card's
+   sides sit on the selected pill's inset, and everything inside it is pulled back by that inset and the 1px border
+   (--needs-you-offset), so its reason icons, names, title and times stay on the sidebar's two lines and its
+   trailing line (Left menu). */
 
 .needs-you-card {
-    margin: 8px;
+    --needs-you-offset: calc(var(--nav-inset) + 1px);
+    margin: 0 var(--nav-inset);
     padding: 4px 0;
 }
 
@@ -5572,7 +5663,8 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 4px 16px;
+    padding-block: 4px;
+    padding-inline: calc(var(--nav-inset) + var(--nav-pad) + var(--nav-step) - var(--needs-you-offset)) calc(var(--nav-inset) + var(--nav-end) - var(--needs-you-offset));
 }
 
 /* The card's title is a sidebar header: caption size, 600, secondary, like the other sidebar section headers. */
@@ -5581,22 +5673,32 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     color: var(--mud-palette-text-secondary);
 }
 
-/* A row is one 32px line: the reason icon, the Room's name, and the time trailing (audit B3e). */
-.needs-you-row .mud-nav-link {
+/* A row is one 32px line: the reason icon, the Room's name, and the time trailing (audit B3e). The doubled class
+   outranks the Left menu grid's padding, which this row shifts by the card's offset. */
+.sidebar-views .needs-you-row.needs-you-row .mud-nav-link {
+    width: calc(100% - 2 * var(--nav-inset));
+    margin-inline: var(--nav-inset);
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
     align-items: center;
     min-height: var(--nav-row-height);
     padding-block: 4px;
-    padding-inline: 8px;
+    padding-inline: calc(var(--nav-pad) - var(--needs-you-offset)) calc(var(--nav-end) - var(--needs-you-offset));
 }
 
-/* The Room's name takes the width the reason icons and the time leave, and only the name ellipsises. The link's own 16px sides and the
-   12px gap MudBlazor puts before the text are given back: the 240px sidebar leaves a card row about 200px, and those 28px were what cut
-   "Launch crew" to "Laun...". */
+/* On touch the Dismiss button is always shown, so the time ends just before it rather than under it. */
+@media (hover: none) {
+    .sidebar-views .needs-you-row.needs-you-row .mud-nav-link {
+        padding-inline-end: calc(var(--nav-end) + var(--nav-step) - var(--needs-you-offset));
+    }
+}
+
+/* The Room's name takes the width the reason icons and the time leave, and only the name ellipsises. The reason icons fill the
+   leading slot and the name starts on the text line; the 12px gap MudBlazor puts before the text is given back (Left menu). */
 .needs-you-row .mud-nav-link-text {
     font-size: var(--mud-typography-body2-size);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--nav-gap);
     min-width: 0;
     margin-inline-start: 0;
     flex: 1 1 auto;
@@ -5604,8 +5706,10 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 
 .needs-you-icons {
     display: inline-flex;
+    justify-content: center;
     gap: 2px;
     flex: 0 0 auto;
+    min-width: var(--nav-slot);
 }
 
 .needs-you-icons .mud-icon-root {
@@ -5677,12 +5781,12 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 /* ---- Teams nav: the Team, Project and Room rows in the sidebar -------------------------------
-   A Team row has no leading icon, so its name starts where a row's icon slot does, and its Rooms and Projects keep
-   the level-1 indent: their icon sits directly under the Team's name, with the name after it. The chevron floats
-   in the gutter left of the name instead of pushing it right. The class sits on the .mud-nav-item itself. */
-.teams-nav-host .mud-nav-item.nav-project-link .mud-nav-link,
-.teams-nav-host .mud-nav-item.nav-team-room-link .mud-nav-link {
-    padding-left: var(--nav-indent-2);
+   A Team is a top-level row: its chevron fills the leading slot and its name starts on the text line, with the
+   teams' "Build a team" in line with them. A Team's Rooms and Projects are one level in (Left menu): their icon sits
+   under the Team's name. The level is set on the .mud-nav-item, and the link inherits it. */
+.teams-nav-host .mud-nav-item.nav-project-link,
+.teams-nav-host .mud-nav-item.nav-team-room-link {
+    --nav-level: 1;
 }
 
 .teams-nav-host .nav-project-link .mud-nav-link-icon {
@@ -5690,18 +5794,21 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     color: var(--mud-palette-text-secondary);
 }
 
+/* The chevron is a button over the Team link's empty slot, so it floats there rather than pushing the name. */
 .teams-nav-host .teams-nav-chevron {
     position: absolute;
-    left: 0.25rem;
+    inset-inline-start: calc(var(--nav-inset) + var(--nav-pad));
     z-index: 1;
+    width: var(--nav-slot);
+    height: var(--nav-slot);
     padding: 0;
     color: var(--mud-palette-text-secondary);
 }
 
 /* ---- Sidebar rows: one line each, meta trails, long lists fold --------------------------------
    A row is one line. The label truncates with an ellipsis (its full text is the span's title), and meta such
-   as a Team's member count trails the label in a fixed-width slot instead of wrapping the row. The slot's right
-   margin keeps clear of the hover "..." button, which is absolutely placed over the row's right edge. */
+   as a Team's member count trails it on the trailing line (Left menu) instead of wrapping the row. Where a row
+   starts and where its mark sits is the grid in Left menu, not a rule here. */
 .mud-nav-group .mud-collapse-container .mud-nav-link {
     min-width: 0;
     min-height: var(--nav-row-height);
@@ -5710,21 +5817,9 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     color: var(--mud-palette-text-primary);
 }
 
-/* Every row in a group has a 24px leading slot and an 8px gap to its label: a small avatar fills the slot (24px), an
-   18px icon is centred in it (3px either side). The avatar sits inside the label span, after MudBlazor's 12px text
-   inset, so the icon is moved over by the same 12px and the label loses that inset: the slot and the label start at
-   one x whichever leads the row. Top-level destinations (Teammates, Library) keep the section header's geometry, so
-   they line up with "Rooms", "Teams" and "Tasks" and do not read as children of the group above. */
+/* A row's icon is 18px; the section header's stays its own size. Both are centred in the leading slot (Left menu). */
 .mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-icon {
-    box-sizing: content-box;
     font-size: var(--icon-size-row);
-    padding-inline: calc((24px - var(--icon-size-row)) / 2);
-    margin-inline-start: 12px;
-    margin-inline-end: 8px;
-}
-
-.mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-icon + .mud-nav-link-text {
-    margin-inline-start: 0;
 }
 
 .mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-text {
@@ -5741,12 +5836,12 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 
 .sidebar-row-meta {
     flex: 0 0 auto;
-    margin-right: 32px;
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }
 
-/* "Show all (N)" under a list longer than 8 rows (13px like "New chat", audit B3c): a quiet text action, aligned with the rows above it. */
+/* "Show all (N)" under a list longer than 8 rows (13px like "New chat", audit B3c): a quiet text action whose label starts on the
+   text line, with a muted arrow in the leading slot. */
 .sidebar-show-all .mud-nav-link-text {
     font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);
@@ -6842,7 +6937,6 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 :root:has([data-hu-labels="upper"]) .mud-nav-group > .mud-nav-link {
-    margin-top: 16px;
     margin-bottom: 0;
 }
 
