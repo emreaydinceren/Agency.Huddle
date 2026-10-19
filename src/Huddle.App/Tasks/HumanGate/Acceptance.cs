@@ -53,6 +53,25 @@ internal static class Acceptance
         return new AcceptanceInfo(state, entry.At, entry.Actor, hash);
     }
 
+    /// <summary>When the Task last moved into Needs You, read from its Change log.</summary>
+    /// <param name="task">The Task.</param>
+    /// <returns>The time of the latest entry into Needs You, or <see langword="null"/> when the log records none.</returns>
+    internal static DateTimeOffset? LastEnteredNeedsYou(TaskItem task)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+
+        DateTimeOffset? entered = null;
+        foreach (ChangeLogEntry entry in task.ChangeLog)
+        {
+            if (EntersNeedsYou(entry.Summary))
+            {
+                entered = entry.At;
+            }
+        }
+
+        return entered;
+    }
+
     /// <summary>True when a Change log summary records a move into Needs You.</summary>
     /// <param name="summary">The summary.</param>
     private static bool EntersNeedsYou(string summary)

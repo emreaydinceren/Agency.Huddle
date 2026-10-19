@@ -703,6 +703,7 @@ public static class ServiceCollectionExtensions
         // it as a dependency, and AddHostedService constructs that at host start. Registered after
         // DataInitializer so the Team Directory is initialised before the scan reads it.
         services.AddSingleton<NeedsYouTracker>();
+        services.AddSingleton<NeedsYouTaskSource>();
         services.AddHostedService<NeedsYouStartupScan>();
 
         // Team chats (ADR-0052): one Team Room per Team, reconciled from the catalog. Registered after
