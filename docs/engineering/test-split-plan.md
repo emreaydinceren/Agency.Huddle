@@ -1080,7 +1080,7 @@ Ids are `<deliverable>.<task>`:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "2.3" -State Done -TrackerPath docs/engineering/test-split-plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 48 of 77 tasks Done · 2 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
+**Status:** 49 of 77 tasks Done · 2 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1149,7 +1149,7 @@ Ids are `<deliverable>.<task>`:
 | 12.1 Red: `RecordingLoggerTests` (H) | Haiku | D10 | | | ✔ |
 | 12.2 `RecordingLogger` and provider (S) | Sonnet | 12.1 | | | ✔ |
 | 12.3 Migrate the logger fakes (H) | Haiku | 12.2 | | | ✔ |
-| 12.4 Private clock copies and `FiringTimeProvider` (H) | Haiku | D10 | | ✔ | |
+| 12.4 Private clock copies and `FiringTimeProvider` (H) | Haiku | D10 | | | ✔ |
 | **D13 Repo files and CSS** | Sonnet | D10 | | | |
 | 13.1 Red: `CssTextTests` (S) | Sonnet | D10 | | | |
 | 13.2 `CssText` (S) | Sonnet | 13.1 | | | |
@@ -1231,7 +1231,7 @@ and `SweepUntilAsync` (they advance a clock or drain a pipe each turn); `StatusR
 | `RecordingLogger<T>` (generalises `Elicitation/RecordingLogger.cs`) | `sealed class RecordingLogger<T>(LogLevel minLevel = LogLevel.Trace, Exception? throwOnLog = null) : ILogger<T>`; `IReadOnlyList<LogEntry> Entries` (a locked snapshot); `Messages`; `Levels`; `IReadOnlyList<LogEntry> AtExactly(LogLevel)`; `int CountAtLeast(LogLevel)`; `readonly record struct LogEntry(LogLevel Level, string Message, Exception? Exception, string? Category)`; plus a non-generic `RecordingLogger : ILogger` | 20 hand-written logger fakes in 19 files (all with `BeginScope` → `null` and `IsEnabled` → `true`): `Acp/PersonaRenameCascadeTests.cs:957`, `Acp/PersonaRunnerTests.cs:3539`, `Library/LibraryRootStoreTests.cs:447`, `Prompts/PromptStoreTests.cs:582`, `Tasks/TaskStoreTests.cs:958`, `Acp/Sessions/RoomSessionUserInputTests.cs:846`; `WarningRecorder` ×2 (Appearance); `CapturingLogger` (`Avatars/AvatarLibraryLoaderTests.cs:363`); `ThrowingLogger` (`Acp/PersonaStoreTests.cs:1858`) | `WarningRecorder` keeps **exactly** Warning; `TeamRoomReconcilerTests` counts **at least** Warning: the two accessors keep both meanings. `ThrowingLogger` throws `ObjectDisposedException` on every call and records nothing: `throwOnLog`. Snapshots everywhere fix the unlocked lists (§R8) |
 | `RecordingLoggerProvider` | `sealed class RecordingLoggerProvider : ILoggerProvider` sharing one entry list with `Category` set | `CapturingLoggerProvider` + `CapturingLogger` in `Pipes/PipeHostFixture.cs:23` | `CapturedLogEntry` is read by `PersonaRunnerFileChangesTests.cs:436`; map it or keep it as a projection |
 | `ManualTimeProvider` (shared, `Acp/Fakes/ManualTimeProvider.cs`) | unchanged | Private copies in `Logging/FileLoggerTests.cs:14` (needs `zone: TimeZoneInfo.Utc`) and `Acp/PersonaHealthTests.cs:10` | **OP-6.** Not moved onto `FakeTimeProvider`: that type rejects moving time backwards (`CadenceServiceTests.cs:298-300` does), fires timers on `Advance` (the inert timer is deliberate for `RoomSessionPoolTests`), and starts at a different instant |
-| `FiringTimeProvider` | — | Used only by its own tests (`Acp/Fakes/FiringTimeProviderTests.cs`) | **OP-3.** It has a defect (§R8). Delete it with its tests, or fix it |
+| `FiringTimeProvider` | — | Used only by its own tests (`Acp/Fakes/FiringTimeProviderTests.cs`) | **OP-3.** It has a defect (§R8). Delete it with its tests, or fix it. *Settled 2026-10-18 in 12.4:* it is also used by `TaskTriggerTestSupport`, `PersonaRenameCascadeTests` and `SearchOrchestratorTests`, so it was fixed (a reschedule made inside the callback now wins), not deleted |
 
 ## §R3 Repo files and CSS
 

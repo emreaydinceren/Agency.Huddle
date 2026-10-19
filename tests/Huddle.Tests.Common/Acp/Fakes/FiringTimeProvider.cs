@@ -105,6 +105,9 @@ internal sealed class FiringTimeProvider : TimeProvider
         private DateTimeOffset? scheduledAt;
         private bool disposed;
 
+        /// <summary>Incremented by every <see cref="Change"/>, so <see cref="Fire"/> can tell whether the callback rescheduled the timer.</summary>
+        private long changeVersion;
+
         /// <summary>Creates a timer already scheduled relative to <paramref name="createdAt"/>.</summary>
         public FiringTimer(FiringTimeProvider owner, TimerCallback callback, object? state, DateTimeOffset createdAt, TimeSpan dueTime, TimeSpan period, long sequence)
         {
@@ -129,16 +132,20 @@ internal sealed class FiringTimeProvider : TimeProvider
 
         /// <summary>
         /// Runs this timer's callback, then reschedules it for its next period (or clears its
-        /// schedule, for a one-shot timer). The disposed check happens immediately before invoking
+        /// schedule, for a one-shot timer) - unless the callback itself called <see cref="Change"/>
+        /// or disposed the timer, in which case that schedule is left exactly as the callback set it.
+        /// The disposed check happens immediately before invoking
         /// the callback, inside the lock, so a dispose issued by an earlier callback in the same
         /// <see cref="FiringTimeProvider.Advance"/> pass is honoured.
         /// </summary>
         public void Fire()
         {
             bool shouldRun;
+            long versionBeforeCallback;
             lock (this.owner.gate)
             {
                 shouldRun = !this.disposed;
+                versionBeforeCallback = this.changeVersion;
             }
 
             if (shouldRun)
@@ -148,7 +155,7 @@ internal sealed class FiringTimeProvider : TimeProvider
 
             lock (this.owner.gate)
             {
-                if (this.disposed)
+                if (this.disposed || this.changeVersion != versionBeforeCallback)
                 {
                     return;
                 }
@@ -169,6 +176,7 @@ internal sealed class FiringTimeProvider : TimeProvider
                     return false;
                 }
 
+                this.changeVersion++;
                 this.period = period;
                 this.scheduledAt = dueTime == Timeout.InfiniteTimeSpan ? null : this.owner.utcNow + dueTime;
                 return true;

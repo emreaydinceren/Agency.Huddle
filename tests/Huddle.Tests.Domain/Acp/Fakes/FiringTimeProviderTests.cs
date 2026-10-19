@@ -226,6 +226,57 @@ public sealed class FiringTimeProviderTests
     }
 
     /// <summary>
+    /// A callback that reschedules its own one-shot timer with <see cref="ITimer.Change"/> wins over the
+    /// post-callback bookkeeping: the timer fires again at the new due time instead of being cleared.
+    /// </summary>
+    [Fact]
+    public void CallbackReschedulesViaChange_FiresAgainAtNewDueTime()
+    {
+        FiringTimeProvider clock = new();
+        var fireCount = 0;
+        ITimer? timer = null;
+        timer = clock.CreateTimer(
+            _ =>
+            {
+                fireCount++;
+                if (fireCount == 1)
+                {
+                    timer?.Change(TimeSpan.FromSeconds(5), Timeout.InfiniteTimeSpan);
+                }
+            },
+            null,
+            TimeSpan.FromSeconds(1),
+            Timeout.InfiniteTimeSpan);
+
+        clock.Advance(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(1, fireCount);
+
+        clock.Advance(TimeSpan.FromSeconds(4));
+
+        Assert.Equal(1, fireCount);
+
+        clock.Advance(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(2, fireCount);
+        timer.Dispose();
+    }
+
+    /// <summary>A one-shot timer whose callback does not call <see cref="ITimer.Change"/> fires once and never again.</summary>
+    [Fact]
+    public void OneShotWithoutReschedule_DoesNotRefire()
+    {
+        FiringTimeProvider clock = new();
+        var fireCount = 0;
+        using var timer = clock.CreateTimer(_ => fireCount++, null, TimeSpan.FromSeconds(1), Timeout.InfiniteTimeSpan);
+
+        clock.Advance(TimeSpan.FromSeconds(1));
+        clock.Advance(TimeSpan.FromSeconds(60));
+
+        Assert.Equal(1, fireCount);
+    }
+
+    /// <summary>
     /// A single <see cref="FiringTimeProvider.Advance"/> call fires at most 10,000 timer callbacks,
     /// guarding against an unbounded retrigger loop (e.g. a periodic timer whose own callback keeps
     /// rescheduling itself immediately) hanging the test run.
