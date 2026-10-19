@@ -24,7 +24,7 @@ public sealed class FieldsDialogTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(NewView(["status", "priority"]));
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> root = await OpenDialogAsync(ctx);
 
         await root.InvokeAsync(() => root.Find(".view-editor-fields-add button").ClickAsync());
@@ -47,7 +47,7 @@ public sealed class FieldsDialogTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(NewView(["status"]));
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> root = await OpenDialogAsync(ctx);
 
         await root.InvokeAsync(() => root.Find(".view-editor-fields-add button").ClickAsync());
@@ -66,7 +66,7 @@ public sealed class FieldsDialogTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(NewView(["status", "priority", "assignee"]));
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> root = await OpenDialogAsync(ctx);
 
         var container = root.FindComponent<MudDropContainer<string>>();
@@ -84,7 +84,7 @@ public sealed class FieldsDialogTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(NewView(["status", "priority"]));
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> root = await OpenDialogAsync(ctx);
 
         await root.InvokeAsync(() => root.Find(".view-editor-field-down-status").ClickAsync());
@@ -101,7 +101,7 @@ public sealed class FieldsDialogTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(NewView(["status", "priority"]));
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> root = await OpenDialogAsync(ctx);
         Assert.Equal(2, root.FindAll(".view-editor-field-row").Count);
 
@@ -121,7 +121,7 @@ public sealed class FieldsDialogTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(NewView(["status", "priority", "assignee"]));
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> root = await OpenDialogAsync(ctx);
 
         var priority = root.FindComponents<MudSwitch<bool>>().Single(HasSwitchClass("priority"));
@@ -139,7 +139,7 @@ public sealed class FieldsDialogTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(NewView(["status", "priority", "assignee"]));
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> root = await OpenDialogAsync(ctx);
 
         var priority = root.FindComponents<MudSwitch<bool>>().Single(HasSwitchClass("priority"));
@@ -159,7 +159,7 @@ public sealed class FieldsDialogTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(NewView(["status", "priority"]));
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> root = await OpenDialogAsync(ctx);
 
         await root.InvokeAsync(() => root.Find(".view-editor-field-remove-status").ClickAsync());
@@ -181,15 +181,6 @@ public sealed class FieldsDialogTests
     /// <param name="root">The rendered dialog host.</param>
     private static Task SaveAsync(IRenderedComponent<ContainerFragment> root) =>
         root.InvokeAsync(() => root.Find(".fields-dialog-save").ClickAsync());
-
-    /// <summary>A context holding the harness's services, so the dialog can reach <see cref="ViewStore"/>.</summary>
-    /// <param name="harness">Supplies the Task and View stores.</param>
-    private static MudBunitContext NewContext(TaskToolHarness harness)
-    {
-        MudBunitContext ctx = new();
-        harness.AddTo(ctx.Services);
-        return ctx;
-    }
 
     /// <summary>Opens <see cref="FieldsDialog"/> for the View <c>v1</c> through <see cref="IDialogService"/>, beside the hosts it needs, and waits for it to paint.</summary>
     /// <param name="ctx">The bUnit context.</param>

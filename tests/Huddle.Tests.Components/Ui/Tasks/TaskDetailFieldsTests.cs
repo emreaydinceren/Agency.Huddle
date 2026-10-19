@@ -35,7 +35,7 @@ public sealed class TaskDetailFieldsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Low);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
         IRenderedComponent<MudSelect<TaskPriority>> prioritySelect = cut.FindComponents<MudSelect<TaskPriority>>().Single();
@@ -65,7 +65,7 @@ public sealed class TaskDetailFieldsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
         // MudSelectItem<T> components exist even while the select is closed (BlazorTesting.md), so
@@ -85,7 +85,7 @@ public sealed class TaskDetailFieldsTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         TaskItem other = CreateTask(harness, title: "Other task");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
         Assert.Empty(cut.FindAll(".task-detail-duplicate-of"));
 
@@ -109,7 +109,7 @@ public sealed class TaskDetailFieldsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
         Assert.Empty(cut.FindAll(".task-detail-reason"));
 
@@ -132,7 +132,7 @@ public sealed class TaskDetailFieldsTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         TaskItem other = CreateTask(harness, title: "Other task");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
         await SetStatusAsync(cut, TaskState.Duplicate);
         IRenderedComponent<MudAutocomplete<TaskItem>> duplicateOf = cut.FindComponents<MudAutocomplete<TaskItem>>().Single(m => string.Equals(m.Instance.Class, "task-detail-duplicate-of", StringComparison.Ordinal));
@@ -164,7 +164,7 @@ public sealed class TaskDetailFieldsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
         await SetStatusAsync(cut, TaskState.Rejected);
         IRenderedComponent<MudTextField<string>> reason = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-reason", StringComparison.Ordinal));
@@ -192,7 +192,7 @@ public sealed class TaskDetailFieldsTests
         using TaskToolHarness harness = new();
         TaskItem blocker = CreateTask(harness, title: "Blocker task", status: TaskState.ToDo);
         TaskItem task = CreateTask(harness, title: "Blocked task");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
         Assert.Empty(cut.FindAll(".task-detail-blocked-by-chips .mud-chip"));
 
@@ -222,7 +222,7 @@ public sealed class TaskDetailFieldsTests
         using TaskToolHarness harness = new();
         TaskItem blocker = CreateTask(harness, title: "Blocker task", status: status);
         TaskItem task = CreateTask(harness, title: "Blocked task", blockedBy: [blocker.Id]);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
         string expectedText = $"{blocker.Id} {status.ToWire()}";
@@ -246,7 +246,7 @@ public sealed class TaskDetailFieldsTests
         }
 
         TaskItem task = CreateTask(harness, blockedBy: blockerIds);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
         string expected = count == 1 ? "Blocked by 1 open task" : $"Blocked by {count} open tasks";
@@ -261,7 +261,7 @@ public sealed class TaskDetailFieldsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
         Assert.Empty(cut.FindAll(".task-detail-blocked-by-summary"));
@@ -279,7 +279,7 @@ public sealed class TaskDetailFieldsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
         IRenderedComponent<MudTextField<string>> add = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-tags-add", StringComparison.Ordinal));
         await cut.InvokeAsync(() => add.Instance.ValueChanged.InvokeAsync("urgent"));
@@ -306,7 +306,7 @@ public sealed class TaskDetailFieldsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
         string cssClass = which == "start" ? "task-detail-start-date" : "task-detail-due-date";
         IRenderedComponent<MudDatePicker> picker = cut.FindComponents<MudDatePicker>().Single(m => string.Equals(m.Instance.Class, cssClass, StringComparison.Ordinal));
@@ -326,7 +326,7 @@ public sealed class TaskDetailFieldsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
         string cssClass = which == "start" ? "task-detail-start-date" : "task-detail-due-date";
 
@@ -343,7 +343,7 @@ public sealed class TaskDetailFieldsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, status: TaskState.InProgress, dueDate: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-3));
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
         Assert.Contains("task-overdue", cut.Find(".task-detail-due-date").ClassList, StringComparer.Ordinal);
@@ -357,7 +357,7 @@ public sealed class TaskDetailFieldsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, status: TaskState.Done, dueDate: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-3));
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
         Assert.DoesNotContain("task-overdue", cut.Find(".task-detail-due-date").ClassList, StringComparer.Ordinal);

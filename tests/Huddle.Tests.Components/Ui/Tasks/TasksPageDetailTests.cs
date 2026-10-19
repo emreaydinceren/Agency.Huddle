@@ -32,7 +32,7 @@ public sealed class TasksPageDetailTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, "Alpha");
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
         await ClickTaskRowAsync(cut, "Alpha");
@@ -49,7 +49,7 @@ public sealed class TasksPageDetailTests
         using TaskToolHarness harness = new();
         _ = CreateTask(harness, "Alpha");
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
         await ClickTaskRowAsync(cut, "Alpha");
@@ -68,7 +68,7 @@ public sealed class TasksPageDetailTests
     public async Task NewTaskHeaderButton_NoSingleTeamFilter_OpensCreateModeWithBlankDefaults()
     {
         using TaskToolHarness harness = new();
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
         await cut.InvokeAsync(() => cut.Find(".tasks-new-task").ClickAsync());
@@ -94,7 +94,7 @@ public sealed class TasksPageDetailTests
         };
         Assert.True(harness.Views.Save(view).Saved);
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "platform-alpha");
 
         await cut.InvokeAsync(() => cut.Find(".tasks-new-task").ClickAsync());
@@ -112,7 +112,7 @@ public sealed class TasksPageDetailTests
         TaskItem taskA = CreateTask(harness, "Alpha");
         _ = CreateTask(harness, "Bravo");
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
         await ClickTaskRowAsync(cut, "Alpha");
@@ -136,7 +136,7 @@ public sealed class TasksPageDetailTests
         _ = CreateTask(harness, "Alpha");
         TaskItem taskB = CreateTask(harness, "Bravo");
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
         await ClickTaskRowAsync(cut, "Alpha");
@@ -167,7 +167,7 @@ public sealed class TasksPageDetailTests
         using TaskToolHarness harness = new();
         _ = CreateTask(harness, "Alpha");
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
         await ClickTaskRowAsync(cut, "Alpha");
@@ -188,7 +188,7 @@ public sealed class TasksPageDetailTests
     {
         using TaskToolHarness harness = new();
         _ = CreateTask(harness, "Alpha");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
         await ClickTaskRowAsync(cut, "Alpha");
         Assert.True(cut.FindComponent<ResizableEndDrawer>().Instance.Open);
@@ -204,7 +204,7 @@ public sealed class TasksPageDetailTests
     {
         using TaskToolHarness harness = new();
         _ = CreateTask(harness, "Alpha");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
         await ClickTaskRowAsync(cut, "Alpha");
         await EditPriorityAsync(cut, TaskPriority.Urgent);
@@ -224,7 +224,7 @@ public sealed class TasksPageDetailTests
     {
         using TaskToolHarness harness = new();
         _ = CreateTask(harness, "Alpha");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
         await ClickTaskRowAsync(cut, "Alpha");
         await EditPriorityAsync(cut, TaskPriority.Urgent);
@@ -242,7 +242,7 @@ public sealed class TasksPageDetailTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, "Alpha");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
         await ClickTaskRowAsync(cut, "Alpha");
 
@@ -262,7 +262,7 @@ public sealed class TasksPageDetailTests
     public async Task Page_HostsWakeToastsAndAiReactingChip()
     {
         using TaskToolHarness harness = new();
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
         Assert.Single(cut.FindComponents<WakeToasts>());
@@ -277,7 +277,7 @@ public sealed class TasksPageDetailTests
         TaskItem taskA = CreateTask(harness, "Alpha");
         TaskItem taskB = CreateTask(harness, "Bravo");
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
         IRenderedComponent<Agency.Huddle.App.Components.Shared.SearchField> searchBox = cut.FindComponent<Agency.Huddle.App.Components.Shared.SearchField>();
@@ -288,14 +288,6 @@ public sealed class TasksPageDetailTests
         List<TaskId> watched = [.. cut.FindComponent<AiReactingChip>().Instance.Watched.OrderBy(id => id.ToString(), StringComparer.Ordinal)];
         List<TaskId> expected = [.. new[] { taskA.Id, taskB.Id }.OrderBy(id => id.ToString(), StringComparer.Ordinal)];
         Assert.Equal(expected, watched);
-    }
-
-    /// <summary>Registers the harness's services into a fresh <see cref="MudBunitContext"/> - mirrors <c>TasksPageTests</c>'s own helper.</summary>
-    private static MudBunitContext NewContext(TaskToolHarness harness)
-    {
-        MudBunitContext ctx = new();
-        harness.AddTo(ctx.Services);
-        return ctx;
     }
 
     /// <summary>Renders <see cref="TasksPage"/>, optionally routed to <paramref name="viewId"/>.</summary>

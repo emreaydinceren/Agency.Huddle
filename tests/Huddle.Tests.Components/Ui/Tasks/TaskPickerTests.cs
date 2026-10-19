@@ -24,7 +24,7 @@ public sealed class TaskPickerTests
     {
         using TaskToolHarness harness = new();
         TaskItem alpha = CreateTask(harness, "Alpha plan");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
         IRenderedComponent<ContainerFragment> cut = RenderPicker(ctx, excluding: null, onChosen: static _ => { });
 
@@ -45,7 +45,7 @@ public sealed class TaskPickerTests
         using TaskToolHarness harness = new();
         TaskItem alpha = CreateTask(harness, "Alpha plan");
         TaskItem beta = CreateTask(harness, "Beta plan");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         TaskId? chosen = null;
         IRenderedComponent<ContainerFragment> cut = RenderPicker(ctx, excluding: alpha.Id, onChosen: id => chosen = id);
         IRenderedComponent<MudAutocomplete<TaskItem>> field = cut.FindComponent<MudAutocomplete<TaskItem>>();
@@ -62,7 +62,7 @@ public sealed class TaskPickerTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
 
         await SetStatusAsync(cut, TaskState.Duplicate);
@@ -78,7 +78,7 @@ public sealed class TaskPickerTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
 
         IReadOnlyList<IRenderedComponent<TaskPicker>> pickers = cut.FindComponents<TaskPicker>();
@@ -94,7 +94,7 @@ public sealed class TaskPickerTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         TaskItem other = CreateTask(harness, "Other");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
         await SetStatusAsync(cut, TaskState.Duplicate);
         IRenderedComponent<TaskPicker> picker = cut.FindComponent<TaskPicker>();
@@ -127,7 +127,7 @@ public sealed class TaskPickerTests
     {
         using TaskToolHarness harness = new();
         TaskItem moved = CreateTask(harness, "Moved");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(static _ => { });
         IDialogService dialogs = ctx.Services.GetRequiredService<IDialogService>();
         DialogParameters<DuplicatePickerDialog> parameters = new() { { dialog => dialog.Excluding, moved.Id } };

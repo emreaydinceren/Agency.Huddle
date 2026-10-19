@@ -23,7 +23,7 @@ public sealed class TaskDetailPlacementTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
 
         IRenderedComponent<MudSelect<string>> team = cut.FindComponents<MudSelect<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-team", StringComparison.Ordinal));
@@ -39,7 +39,7 @@ public sealed class TaskDetailPlacementTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Expanded);
 
         IRenderedComponent<MudSelect<string>> team = cut.FindComponents<MudSelect<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-team", StringComparison.Ordinal));
@@ -61,7 +61,7 @@ public sealed class TaskDetailPlacementTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
         Assert.Equal("Team", cut.Find(".task-detail-team input").GetAttribute("aria-label"));
@@ -74,7 +74,7 @@ public sealed class TaskDetailPlacementTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
         IRenderedComponent<MudAutocomplete<string>> project = cut.FindComponents<MudAutocomplete<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-project", StringComparison.Ordinal));
         Assert.True(project.Instance.CoerceValue);
@@ -97,7 +97,7 @@ public sealed class TaskDetailPlacementTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
         IRenderedComponent<MudAutocomplete<TaskItem>> parent = cut.FindComponents<MudAutocomplete<TaskItem>>().Single(m => string.Equals(m.Instance.Class, "task-detail-parent", StringComparison.Ordinal));
         Assert.True(parent.Instance.Strict);
@@ -121,7 +121,7 @@ public sealed class TaskDetailPlacementTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         Room room = await harness.Directory.CreateRoomAsync("Origin room", [KnownIds.Human, harness.NovaId!], Xunit.TestContext.Current.CancellationToken);
         TaskItem task = CreateTask(harness, originRoomId: room.Id);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
         Assert.Equal($"/rooms/{room.Id}", cut.Find(".task-detail-origin a").GetAttribute("href"));
@@ -135,7 +135,7 @@ public sealed class TaskDetailPlacementTests
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         TaskItem task = CreateTask(harness, originRoomId: "no-such-room");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
         Assert.Equal("(Room no longer exists)", TextOf(cut, ".task-detail-origin"));
@@ -154,7 +154,7 @@ public sealed class TaskDetailPlacementTests
         Agency.Huddle.Tests.Acp.Fakes.ManualTimeProvider clock = new(new DateTimeOffset(2026, 10, 16, 12, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
         using TaskToolHarness harness = new(clock);
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
         Assert.Equal("Created Today", TextOf(cut, ".task-detail-created"));
@@ -171,13 +171,13 @@ public sealed class TaskDetailPlacementTests
         Agency.Huddle.Tests.Acp.Fakes.ManualTimeProvider clock = new(new DateTimeOffset(2026, 10, 16, 12, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
         using TaskToolHarness harness = new(clock);
         TaskItem openTask = CreateTask(harness, title: "Still open");
-        await using MudBunitContext openCtx = NewContext(harness);
+        await using MudBunitContext openCtx = UiTestHost.Create().WithHarness(harness);
         var openCut = RenderDetail(openCtx, openTask.Id, mode);
         Assert.Empty(openCut.FindAll(".task-detail-closed"));
 
         TaskResult closeResult = harness.Service.Close(openTask.Id, TaskActors.Human(harness.Options.Value));
         TaskItem closedTask = Assert.IsType<TaskResult.Saved>(closeResult).Task;
-        await using MudBunitContext closedCtx = NewContext(harness);
+        await using MudBunitContext closedCtx = UiTestHost.Create().WithHarness(harness);
         var closedCut = RenderDetail(closedCtx, closedTask.Id, mode);
 
         Assert.Equal("Closed Today", TextOf(closedCut, ".task-detail-closed"));

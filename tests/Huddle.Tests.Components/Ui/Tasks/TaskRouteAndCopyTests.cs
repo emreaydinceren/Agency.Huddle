@@ -44,7 +44,7 @@ public sealed class TaskRouteAndCopyTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, title: "Ship the thing");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         ctx.JSInterop.Setup<string?>("huddleStorage.get", "huddle.tasks.lastView").SetResult(null);
 
         var cut = ctx.RenderWithPopovers(builder =>
@@ -63,7 +63,7 @@ public sealed class TaskRouteAndCopyTests
     public async Task TasksPage_ItemRoute_UnknownButValidId_ShowsNoTaskAlertWithStatusRole()
     {
         using TaskToolHarness harness = new();
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         ctx.JSInterop.Setup<string?>("huddleStorage.get", "huddle.tasks.lastView").SetResult(null);
 
         var cut = ctx.RenderWithPopovers(builder =>
@@ -83,7 +83,7 @@ public sealed class TaskRouteAndCopyTests
     public async Task TasksPage_ItemRoute_MalformedIdText_ShowsNoTaskAlertWithStatusRole()
     {
         using TaskToolHarness harness = new();
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         ctx.JSInterop.Setup<string?>("huddleStorage.get", "huddle.tasks.lastView").SetResult(null);
 
         var cut = ctx.RenderWithPopovers(builder =>
@@ -104,7 +104,7 @@ public sealed class TaskRouteAndCopyTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         ctx.JSInterop.Setup<string?>("huddleStorage.get", "huddle.tasks.lastView").SetResult(null);
         BunitNavigationManager navigation = (BunitNavigationManager)ctx.Services.GetRequiredService<NavigationManager>();
 
@@ -129,7 +129,7 @@ public sealed class TaskRouteAndCopyTests
         using TaskToolHarness harness = new();
         TaskItem created = CreateTask(harness);
         TaskItem closed = Assert.IsType<TaskResult.Saved>(harness.Service.Close(created.Id, TaskActors.Human(harness.Options.Value))).Task;
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
         var cut = RenderPanel(ctx, closed.Id);
 
@@ -142,7 +142,7 @@ public sealed class TaskRouteAndCopyTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         ctx.JSInterop.Setup<bool>("huddleClipboard.copy", task.Id.ToString()).SetResult(true);
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
 
@@ -163,7 +163,7 @@ public sealed class TaskRouteAndCopyTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         ctx.JSInterop.Setup<bool>("huddleClipboard.copy", task.Id.ToString()).SetResult(false);
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
 
@@ -182,7 +182,7 @@ public sealed class TaskRouteAndCopyTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
         string expected = $"{navigation.BaseUri}tasks/item/{task.Id}";
         ctx.JSInterop.Setup<bool>("huddleClipboard.copy", expected).SetResult(true);
@@ -261,7 +261,7 @@ public sealed class TaskRouteAndCopyTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, title: "Ship the thing");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         ctx.JSInterop.Setup<string?>("huddleStorage.get", "huddle.tasks.lastView").SetResult(null);
         ctx.JSInterop.Setup<bool>("huddleClipboard.copy", task.Id.ToString()).SetResult(true);
 
@@ -302,14 +302,6 @@ public sealed class TaskRouteAndCopyTests
     /// <summary>Creates a Task through <see cref="TaskService"/> on the given harness, defaulting to no assignee (the <see cref="TaskDetailTests"/> pattern).</summary>
     private static TaskItem CreateTask(TaskToolHarness harness, string title = "T") =>
         Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft(title, "Platform", null), TaskActors.Human(harness.Options.Value))).Task;
-
-    /// <summary>Registers the harness's services into a fresh <see cref="MudBunitContext"/> (the <c>TasksPageTests</c> pattern).</summary>
-    private static MudBunitContext NewContext(TaskToolHarness harness)
-    {
-        MudBunitContext ctx = new();
-        harness.AddTo(ctx.Services);
-        return ctx;
-    }
 
     /// <summary>Renders <see cref="TaskDetail"/> in Panel mode for <paramref name="id"/> (the <see cref="TaskDetailTests"/> pattern).</summary>
     private static IRenderedComponent<ContainerFragment> RenderPanel(MudBunitContext ctx, TaskId id)

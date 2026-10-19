@@ -23,7 +23,7 @@ public sealed class TasksPageAutoSaveTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(new TaskView { Id = "custom1", Name = "Sprint Board", Kind = ViewKind.List });
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "custom1");
         IRenderedComponent<TaskToolbar> toolbar = cut.FindComponent<TaskToolbar>();
         TaskView current = toolbar.Instance.EffectiveView;
@@ -50,7 +50,7 @@ public sealed class TasksPageAutoSaveTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(new TaskView { Id = "custom1", Name = "Sprint Board", Kind = ViewKind.List, Fields = ["status", "priority"] });
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "custom1");
         IRenderedComponent<TaskListView> list = cut.FindComponent<TaskListView>();
 
@@ -80,7 +80,7 @@ public sealed class TasksPageAutoSaveTests
             ColumnWidths = new Dictionary<string, int>(StringComparer.Ordinal) { ["title"] = 321 },
         });
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "custom1");
 
         Assert.Contains("width: 321px", cut.Find("th.task-list-title-header").GetAttribute("style"), StringComparison.Ordinal);
@@ -97,15 +97,6 @@ public sealed class TasksPageAutoSaveTests
         _ = harness.Views.Save(new TaskView { Id = "a", Name = "new VIEW", Kind = ViewKind.List });
 
         Assert.Equal("New view 2", ViewActions.NewViewName(harness.Views));
-    }
-
-    /// <summary>Registers the harness's services into a fresh MudBlazor-aware bUnit context.</summary>
-    /// <param name="harness">The Tasks stack to wire in.</param>
-    private static MudBunitContext NewContext(TaskToolHarness harness)
-    {
-        MudBunitContext ctx = new();
-        harness.AddTo(ctx.Services);
-        return ctx;
     }
 
     /// <summary>Renders the Tasks page on the View <paramref name="viewId"/>, beside the popover and dialog hosts its menus need.</summary>

@@ -55,7 +55,7 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await EditPriorityAsync(cut, TaskPriority.Urgent);
 
@@ -67,7 +67,7 @@ public sealed class TaskDetailConflictTests
 
         cut.WaitForAssertion(() => Assert.Equal(
             "This task was changed outside Huddle while you were editing: priority.",
-            TextOf(cut, ".task-detail-conflict-alert")));
+            cut.TextOf(".task-detail-conflict-alert")));
     }
 
     /// <summary>
@@ -81,7 +81,7 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem panelTask = CreateTask(harness, priority: TaskPriority.Medium);
-        await using MudBunitContext panelCtx = NewContext(harness);
+        await using MudBunitContext panelCtx = UiTestHost.Create().WithHarness(harness);
         var panelCut = RenderPanel(panelCtx, panelTask.Id);
         await CausePriorityConflictAsync(panelCut, harness, panelTask, mine: TaskPriority.Urgent, theirs: TaskPriority.Low);
 
@@ -89,7 +89,7 @@ public sealed class TaskDetailConflictTests
         Assert.Empty(panelCut.FindAll(".task-detail-conflict-table"));
 
         TaskItem expandedTask = CreateTask(harness, title: "Other", priority: TaskPriority.Medium);
-        await using MudBunitContext expandedCtx = NewContext(harness);
+        await using MudBunitContext expandedCtx = UiTestHost.Create().WithHarness(harness);
         var expandedCut = RenderExpanded(expandedCtx, expandedTask.Id);
         await CausePriorityConflictAsync(expandedCut, harness, expandedTask, mine: TaskPriority.Urgent, theirs: TaskPriority.Low);
 
@@ -103,12 +103,12 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
 
         await CausePriorityConflictAsync(cut, harness, task, mine: TaskPriority.Urgent, theirs: TaskPriority.Low);
 
-        Assert.Equal("Nova changed this task while you were editing: priority.", TextOf(cut, ".task-detail-conflict-alert"));
+        Assert.Equal("Nova changed this task while you were editing: priority.", cut.TextOf(".task-detail-conflict-alert"));
     }
 
     /// <summary>
@@ -124,20 +124,20 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await CausePriorityConflictAsync(cut, harness, task, mine: TaskPriority.Urgent, theirs: TaskPriority.Low);
 
         IReadOnlyList<bool> checkedStates = [.. cut.FindAll(".task-detail-conflict-stacked input[type=\"radio\"]").Select(r => r.HasAttribute("checked"))];
         Assert.Equal([false, false], checkedStates);
-        Assert.True(FindButton(cut, "Save").HasAttribute("disabled"));
+        Assert.True(cut.FindButton("Save").HasAttribute("disabled"));
 
         IElement keepMineInput = cut.FindAll(".task-detail-conflict-stacked label.mud-radio").Single(l => l.TextContent.Contains("Keep mine", StringComparison.Ordinal)).QuerySelector("input[type=\"radio\"]")
             ?? throw new InvalidOperationException("Keep mine radio input not found.");
         await cut.InvokeAsync(() => keepMineInput.ClickAsync());
 
         Assert.True(cut.Find(".task-detail-conflict-stacked input[type=\"radio\"]").HasAttribute("checked"));
-        Assert.False(FindButton(cut, "Save").HasAttribute("disabled"));
+        Assert.False(cut.FindButton("Save").HasAttribute("disabled"));
     }
 
     /// <summary>Spec §13.7: a <see cref="TaskResult.Conflict"/> shows a warning alert with <c>role="alert"</c> and the exact banner text for one conflicting field.</summary>
@@ -146,13 +146,13 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
 
         await CausePriorityConflictAsync(cut, harness, task, mine: TaskPriority.Urgent, theirs: TaskPriority.Low);
 
         Assert.Equal("alert", cut.Find(".task-detail-conflict-alert").GetAttribute("role"));
-        Assert.Equal("Nova changed this task while you were editing: priority.", TextOf(cut, ".task-detail-conflict-alert"));
+        Assert.Equal("Nova changed this task while you were editing: priority.", cut.TextOf(".task-detail-conflict-alert"));
     }
 
     /// <summary>Spec §13.7: the table has one row for the conflicting field, with Field/Theirs/Yours cells and a <c>MudRadioGroup&lt;ConflictChoice&gt;</c>.</summary>
@@ -161,7 +161,7 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
 
         await CausePriorityConflictAsync(cut, harness, task, mine: TaskPriority.Urgent, theirs: TaskPriority.Low);
@@ -179,7 +179,7 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, title: "Original title", priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await EditTitleAsync(cut, "Retitled by the Human");
         await EditPriorityAsync(cut, TaskPriority.Urgent);
@@ -191,7 +191,7 @@ public sealed class TaskDetailConflictTests
             new TaskActor(TaskActorKind.Agent, "Nova", null));
         await ClickSaveAsync(cut);
 
-        cut.WaitForAssertion(() => Assert.Equal("Nova changed this task while you were editing: title, priority.", TextOf(cut, ".task-detail-conflict-alert")));
+        cut.WaitForAssertion(() => Assert.Equal("Nova changed this task while you were editing: title, priority.", cut.TextOf(".task-detail-conflict-alert")));
         Assert.Equal(2, cut.FindAll(".task-detail-conflict-row").Count);
         Assert.Equal(2, cut.FindComponents<MudRadioGroup<ConflictChoice?>>().Count);
     }
@@ -206,7 +206,7 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         DateOnly mine = new(2026, 11, 3);
         DateOnly theirs = new(2026, 12, 1);
@@ -219,7 +219,7 @@ public sealed class TaskDetailConflictTests
             new TaskActor(TaskActorKind.Agent, "Nova", null));
         await ClickSaveAsync(cut);
 
-        cut.WaitForAssertion(() => Assert.Equal("Nova changed this task while you were editing: due_date.", TextOf(cut, ".task-detail-conflict-alert")));
+        cut.WaitForAssertion(() => Assert.Equal("Nova changed this task while you were editing: due_date.", cut.TextOf(".task-detail-conflict-alert")));
         IElement row = cut.FindAll(".task-detail-conflict-row").Single(r => r.TextContent.Contains("due_date", StringComparison.Ordinal));
         Assert.Equal("due_date", row.QuerySelector(".task-detail-conflict-field")?.TextContent.Trim());
         Assert.Equal("2026-12-01", row.QuerySelector(".task-detail-conflict-theirs")?.TextContent.Trim());
@@ -232,7 +232,7 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         IRenderedComponent<MudTextField<string>> descriptionField = cut.FindComponents<MudTextField<string>>().Single(m => m.Instance.Class?.Contains("task-detail-description-field", StringComparison.Ordinal) is true);
         await cut.InvokeAsync(() => descriptionField.Instance.ValueChanged.InvokeAsync("Mine: some plan."));
@@ -261,14 +261,14 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await CausePriorityConflictAsync(cut, harness, task, mine: TaskPriority.Urgent, theirs: TaskPriority.Low);
-        Assert.True(FindButton(cut, "Save").HasAttribute("disabled"));
+        Assert.True(cut.FindButton("Save").HasAttribute("disabled"));
 
         await ChooseConflictAsync(cut, "priority", ConflictChoice.Mine);
 
-        Assert.False(FindButton(cut, "Save").HasAttribute("disabled"));
+        Assert.False(cut.FindButton("Save").HasAttribute("disabled"));
     }
 
     /// <summary>Spec §13.7: with two conflicting rows, Save stays disabled after only one is chosen, and enables once both are.</summary>
@@ -277,7 +277,7 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, title: "Original title", priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await EditTitleAsync(cut, "Retitled by the Human");
         await EditPriorityAsync(cut, TaskPriority.Urgent);
@@ -288,13 +288,13 @@ public sealed class TaskDetailConflictTests
             new TaskActor(TaskActorKind.Agent, "Nova", null));
         await ClickSaveAsync(cut);
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".task-detail-conflict-alert")));
-        Assert.True(FindButton(cut, "Save").HasAttribute("disabled"));
+        Assert.True(cut.FindButton("Save").HasAttribute("disabled"));
 
         await ChooseConflictAsync(cut, "title", ConflictChoice.Mine);
-        Assert.True(FindButton(cut, "Save").HasAttribute("disabled"));
+        Assert.True(cut.FindButton("Save").HasAttribute("disabled"));
 
         await ChooseConflictAsync(cut, "priority", ConflictChoice.Theirs);
-        Assert.False(FindButton(cut, "Save").HasAttribute("disabled"));
+        Assert.False(cut.FindButton("Save").HasAttribute("disabled"));
     }
 
     /// <summary>Spec §13.7: "Take theirs" drops that field from <c>pending</c> - the Priority control reverts to the server's current value, not the Human's edit.</summary>
@@ -303,7 +303,7 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await CausePriorityConflictAsync(cut, harness, task, mine: TaskPriority.Urgent, theirs: TaskPriority.Low);
 
@@ -318,7 +318,7 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await CausePriorityConflictAsync(cut, harness, task, mine: TaskPriority.Urgent, theirs: TaskPriority.Low);
 
@@ -338,7 +338,7 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await CausePriorityConflictAsync(cut, harness, task, mine: TaskPriority.Urgent, theirs: TaskPriority.Low);
         await ChooseConflictAsync(cut, "priority", ConflictChoice.Mine);
@@ -362,7 +362,7 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, title: "Original title", priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await EditTitleAsync(cut, "Retitled by the Human");
         await EditPriorityAsync(cut, TaskPriority.Urgent);
@@ -383,8 +383,8 @@ public sealed class TaskDetailConflictTests
             new TaskActor(TaskActorKind.Agent, "Nova", null));
         await ClickSaveAsync(cut);
 
-        cut.WaitForAssertion(() => Assert.Equal("Nova changed this task while you were editing: title.", TextOf(cut, ".task-detail-conflict-alert")));
-        Assert.True(FindButton(cut, "Save").HasAttribute("disabled"));
+        cut.WaitForAssertion(() => Assert.Equal("Nova changed this task while you were editing: title.", cut.TextOf(".task-detail-conflict-alert")));
+        Assert.True(cut.FindButton("Save").HasAttribute("disabled"));
     }
 
     /// <summary>
@@ -400,7 +400,7 @@ public sealed class TaskDetailConflictTests
         using TaskToolHarness harness = new();
         harness.Personas.Add(new PersonaIdentity("Zed", "Zed", "Zed", ["Design"]), "You are Zed.");
         TaskItem task = CreateTask(harness, project: "Alpha");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await EditTeamAsync(cut, "Design");
         await EditProjectAsync(cut, "Beta");
@@ -411,7 +411,7 @@ public sealed class TaskDetailConflictTests
             baseVersion: null,
             new TaskActor(TaskActorKind.Agent, "Nova", null));
         await ClickSaveAsync(cut);
-        cut.WaitForAssertion(() => Assert.Equal("Nova changed this task while you were editing: team/project.", TextOf(cut, ".task-detail-conflict-alert")));
+        cut.WaitForAssertion(() => Assert.Equal("Nova changed this task while you were editing: team/project.", cut.TextOf(".task-detail-conflict-alert")));
         Assert.Single(cut.FindAll(".task-detail-conflict-row"));
 
         await ChooseConflictAsync(cut, "team/project", ConflictChoice.Theirs);
@@ -433,7 +433,7 @@ public sealed class TaskDetailConflictTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, status: TaskState.ToDo);
         TaskItem other = CreateTask(harness, title: "Other task");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await SetStatusAsync(cut, TaskState.Duplicate);
         IRenderedComponent<MudAutocomplete<TaskItem>> duplicateOf = cut.FindComponents<MudAutocomplete<TaskItem>>().Single(m => string.Equals(m.Instance.Class, "task-detail-duplicate-of", StringComparison.Ordinal));
@@ -446,14 +446,14 @@ public sealed class TaskDetailConflictTests
             baseVersion: null,
             new TaskActor(TaskActorKind.Agent, "Nova", null));
         await ClickSaveAsync(cut);
-        cut.WaitForAssertion(() => Assert.Equal("Nova changed this task while you were editing: status.", TextOf(cut, ".task-detail-conflict-alert")));
+        cut.WaitForAssertion(() => Assert.Equal("Nova changed this task while you were editing: status.", cut.TextOf(".task-detail-conflict-alert")));
         Assert.Single(cut.FindAll(".task-detail-conflict-row"));
 
         await ChooseConflictAsync(cut, "status", ConflictChoice.Theirs);
 
         Assert.Empty(cut.FindAll(".task-detail-duplicate-of"));
         await SetStatusAsync(cut, TaskState.Duplicate);
-        Assert.True(FindButton(cut, "Save").HasAttribute("disabled"));
+        Assert.True(cut.FindButton("Save").HasAttribute("disabled"));
     }
 
     /// <summary>
@@ -467,7 +467,7 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, status: TaskState.ToDo);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await SetStatusAsync(cut, TaskState.Cancelled);
         IRenderedComponent<MudTextField<string>> reason = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-reason", StringComparison.Ordinal));
@@ -479,7 +479,7 @@ public sealed class TaskDetailConflictTests
             baseVersion: null,
             new TaskActor(TaskActorKind.Agent, "Nova", null));
         await ClickSaveAsync(cut);
-        cut.WaitForAssertion(() => Assert.Equal("Nova changed this task while you were editing: status.", TextOf(cut, ".task-detail-conflict-alert")));
+        cut.WaitForAssertion(() => Assert.Equal("Nova changed this task while you were editing: status.", cut.TextOf(".task-detail-conflict-alert")));
         Assert.Single(cut.FindAll(".task-detail-conflict-row"));
 
         await ChooseConflictAsync(cut, "status", ConflictChoice.Theirs);
@@ -502,15 +502,15 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, title: "Original title");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await EditTitleAsync(cut, "   ");
 
         await ClickSaveAsync(cut);
 
         Assert.Equal("alert", cut.Find(".task-detail-save-error").GetAttribute("role"));
-        Assert.Equal("Title is empty.", TextOf(cut, ".task-detail-save-error"));
-        Assert.Equal("Unsaved edits", TextOf(cut, ".task-detail-unsaved-text"));
+        Assert.Equal("Title is empty.", cut.TextOf(".task-detail-save-error"));
+        Assert.Equal("Unsaved edits", cut.TextOf(".task-detail-unsaved-text"));
     }
 
     /// <summary>
@@ -535,7 +535,7 @@ public sealed class TaskDetailConflictTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await EditPriorityAsync(cut, TaskPriority.Urgent);
 
@@ -543,7 +543,7 @@ public sealed class TaskDetailConflictTests
 
         await ClickSaveAsync(cut);
 
-        cut.WaitForAssertion(() => Assert.Equal("This Task was deleted", TextOf(cut, ".task-detail-deleted")));
+        cut.WaitForAssertion(() => Assert.Equal("This Task was deleted", cut.TextOf(".task-detail-deleted")));
     }
 
     /// <summary>Edits Priority to <paramref name="mine"/>, then has "Nova" concurrently save <paramref name="theirs"/> with a null <c>baseVersion</c> (merges, Spec §9.3 rule 1), then clicks Save - which must now conflict, since the Human's own patch also touches Priority.</summary>
@@ -656,14 +656,6 @@ public sealed class TaskDetailConflictTests
         return Assert.IsType<TaskResult.Saved>(result).Task;
     }
 
-    /// <summary>Registers the harness's services into a fresh <see cref="MudBunitContext"/> - mirrors <c>TaskDetailTests.NewContext</c>.</summary>
-    private static MudBunitContext NewContext(TaskToolHarness harness)
-    {
-        MudBunitContext ctx = new();
-        harness.AddTo(ctx.Services);
-        return ctx;
-    }
-
     /// <summary>Renders <c>TaskDetail</c> in Panel mode for <paramref name="id"/> - mirrors <c>TaskDetailTests.RenderPanel</c>.</summary>
     private static IRenderedComponent<ContainerFragment> RenderPanel(MudBunitContext ctx, TaskId id)
     {
@@ -688,10 +680,6 @@ public sealed class TaskDetailConflictTests
         });
     }
 
-    /// <summary>Finds the one <c>&lt;button&gt;</c> whose trimmed text is exactly <paramref name="text"/> - mirrors <c>TaskDetailTests.FindButton</c>.</summary>
-    private static IElement FindButton(IRenderedComponent<ContainerFragment> cut, string text) =>
-        cut.FindAll("button").Single(b => string.Equals(b.TextContent.Trim(), text, StringComparison.Ordinal));
-
     /// <summary>
     /// Clicks the Save button via <c>cut.InvokeAsync</c>, so the Find and the Click happen as one atomic
     /// unit on the renderer's synchronization context - the root cause of a once-seen full-suite flake
@@ -700,14 +688,10 @@ public sealed class TaskDetailConflictTests
     /// concurrent edit raises <c>TaskChanged</c>/<c>IndexChanged</c> synchronously, but <c>TaskDetail</c>'s
     /// own handler dispatches its requery fire-and-forget (<c>DispatchRefresh</c>, never awaited by
     /// anything the test can hook). Under thread-pool pressure that dispatched re-render can land between
-    /// a plain <c>FindButton(cut, "Save").Click()</c> call's Find and its Click, replacing the very button
+    /// a plain <c>cut.FindButton("Save").Click()</c> call's Find and its Click, replacing the very button
     /// instance the Find captured and throwing <c>UnknownEventHandlerIdException</c> instead of running
     /// <c>SaveAsync</c> at all - bUnit's own exception message names this exact fix.
     /// </summary>
     private static Task ClickSaveAsync(IRenderedComponent<ContainerFragment> cut) =>
-        cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
-
-    /// <summary>The trimmed text content of the one element matching <paramref name="cssSelector"/> - mirrors <c>TaskDetailTests.TextOf</c>.</summary>
-    private static string TextOf(IRenderedComponent<ContainerFragment> cut, string cssSelector) =>
-        cut.Find(cssSelector).TextContent.Trim();
+        cut.InvokeAsync(() => cut.FindButton("Save").ClickAsync());
 }

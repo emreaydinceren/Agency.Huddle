@@ -25,7 +25,7 @@ public sealed class TaskDetailAssigneeTests
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
         IRenderedComponent<MudAutocomplete<AssigneeOption>> assignee = cut.FindComponents<MudAutocomplete<AssigneeOption>>().Single(m => string.Equals(m.Instance.Class, "task-detail-assignee", StringComparison.Ordinal));
@@ -50,7 +50,7 @@ public sealed class TaskDetailAssigneeTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         harness.Gateway.SetOnline(harness.NovaId ?? throw new InvalidOperationException("NovaId missing"));
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
         IRenderedComponent<MudAutocomplete<AssigneeOption>> assignee = cut.FindComponents<MudAutocomplete<AssigneeOption>>().Single(m => string.Equals(m.Instance.Class, "task-detail-assignee", StringComparison.Ordinal));
         Func<string?, CancellationToken, Task<IEnumerable<AssigneeOption>>?> search = assignee.Instance.SearchFunc
@@ -81,7 +81,7 @@ public sealed class TaskDetailAssigneeTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         harness.Gateway.SetOnline(harness.NovaId ?? throw new InvalidOperationException("NovaId missing"));
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
         IRenderedComponent<MudAutocomplete<AssigneeOption>> assignee = cut.FindComponents<MudAutocomplete<AssigneeOption>>().Single(m => string.Equals(m.Instance.Class, "task-detail-assignee", StringComparison.Ordinal));
         Func<string?, CancellationToken, Task<IEnumerable<AssigneeOption>>?> search = assignee.Instance.SearchFunc
@@ -112,7 +112,7 @@ public sealed class TaskDetailAssigneeTests
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
         IRenderedComponent<MudAutocomplete<AssigneeOption>> assignee = cut.FindComponents<MudAutocomplete<AssigneeOption>>().Single(m => string.Equals(m.Instance.Class, "task-detail-assignee", StringComparison.Ordinal));
         Func<string?, CancellationToken, Task<IEnumerable<AssigneeOption>>?> search = assignee.Instance.SearchFunc
@@ -144,7 +144,7 @@ public sealed class TaskDetailAssigneeTests
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
         IRenderedComponent<MudAutocomplete<AssigneeOption>> assignee = cut.FindComponents<MudAutocomplete<AssigneeOption>>().Single(m => string.Equals(m.Instance.Class, "task-detail-assignee", StringComparison.Ordinal));
         Func<string?, CancellationToken, Task<IEnumerable<AssigneeOption>>?> search = assignee.Instance.SearchFunc
@@ -176,7 +176,7 @@ public sealed class TaskDetailAssigneeTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         TaskItem task = CreateTask(harness, assignee: "Nova");
         harness.TaskActivity.Record(new WakeRecord(task.Id, "Nova", "room-1", "SAML Integration", WakeOutcome.Woken, DateTimeOffset.UtcNow));
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
         Assert.Equal("Woken in Room SAML Integration", TextOf(cut, ".task-detail-woken-link"));

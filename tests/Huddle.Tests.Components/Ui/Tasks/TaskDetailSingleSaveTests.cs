@@ -32,7 +32,7 @@ public sealed class TaskDetailSingleSaveTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, mode);
         if (edited)
         {
@@ -54,7 +54,7 @@ public sealed class TaskDetailSingleSaveTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
         if (edited)
         {
@@ -72,7 +72,7 @@ public sealed class TaskDetailSingleSaveTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
         await EditPriorityAsync(cut, TaskPriority.Urgent);
 
@@ -88,7 +88,7 @@ public sealed class TaskDetailSingleSaveTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         bool closed = false;
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderDetailWithClose(ctx, task.Id, TaskDetailMode.Panel, EventCallback.Factory.Create(this, () => closed = true));
 
         File.Delete(task.Path);
@@ -111,7 +111,7 @@ public sealed class TaskDetailSingleSaveTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, mode);
         IRenderedComponent<MudTextField<string>> description = cut.FindComponents<MudTextField<string>>().Single(m => m.Instance.Class?.Contains("task-detail-description-field", StringComparison.Ordinal) is true);
         await cut.InvokeAsync(() => description.Instance.ValueChanged.InvokeAsync("Mine: some plan."));
@@ -135,7 +135,7 @@ public sealed class TaskDetailSingleSaveTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
 
         Assert.Empty(cut.FindAll("button[aria-label=\"More actions\"]"));
@@ -176,7 +176,7 @@ public sealed class TaskDetailSingleSaveTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, title: "Ship the thing");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
 
         await cut.InvokeAsync(() => cut.Find(".task-detail-expand").ClickAsync());
@@ -194,7 +194,7 @@ public sealed class TaskDetailSingleSaveTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, title: "Ship the thing");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
 
         await cut.InvokeAsync(() => cut.Find($"button[aria-label=\"Actions for {task.Id}\"]").ClickAsync());
@@ -210,7 +210,7 @@ public sealed class TaskDetailSingleSaveTests
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
         IRenderedComponent<MudAutocomplete<AssigneeOption>> assignee = cut.FindComponents<MudAutocomplete<AssigneeOption>>().Single(m => string.Equals(m.Instance.Class, "task-detail-assignee", StringComparison.Ordinal));
         RenderFragment<AssigneeOption> itemTemplate = assignee.Instance.ItemTemplate ?? throw new InvalidOperationException("The Assignee picker has no ItemTemplate.");

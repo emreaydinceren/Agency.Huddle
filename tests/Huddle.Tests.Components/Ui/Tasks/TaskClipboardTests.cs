@@ -69,7 +69,7 @@ public sealed class TaskClipboardTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         string link = $"{ctx.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().BaseUri}tasks/item/{task.Id}";
         ctx.JSInterop.Setup<bool>(CopyHelper, link).SetResult(true);
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();

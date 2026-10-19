@@ -28,7 +28,7 @@ public sealed class RenameViewTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(new TaskView { Id = "v1", Name = "Platform board", Kind = ViewKind.List });
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> root = await OpenAsync(ctx, "v1");
 
         Assert.Equal("Rename view", root.Find(".mud-dialog-title").TextContent.Trim());
@@ -45,7 +45,7 @@ public sealed class RenameViewTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(new TaskView { Id = "v1", Name = "Platform board", Kind = ViewKind.List, Dense = false, Fields = ["status"] });
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> root = await OpenAsync(ctx, "v1");
 
         await TypeAsync(root, "  Sprint review  ");
@@ -67,7 +67,7 @@ public sealed class RenameViewTests
         _ = harness.Views.Save(new TaskView { Id = "v1", Name = "Platform board", Kind = ViewKind.List });
         _ = harness.Views.Save(new TaskView { Id = "v2", Name = "Support urgent", Kind = ViewKind.List });
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> root = await OpenAsync(ctx, "v1");
 
         await TypeAsync(root, "support URGENT");
@@ -86,7 +86,7 @@ public sealed class RenameViewTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(new TaskView { Id = "v1", Name = "Platform board", Kind = ViewKind.List });
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> root = await OpenAsync(ctx, "v1");
 
         await TypeAsync(root, new string('x', 61));
@@ -103,7 +103,7 @@ public sealed class RenameViewTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(new TaskView { Id = "v1", Name = "Platform board", Kind = ViewKind.List });
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> root = await OpenAsync(ctx, "v1");
 
         await TypeAsync(root, "Something else");
@@ -117,15 +117,6 @@ public sealed class RenameViewTests
     /// <param name="text">The text to type.</param>
     private static Task TypeAsync(IRenderedComponent<ContainerFragment> root, string text) =>
         root.InvokeAsync(() => root.Find(Input).InputAsync(new ChangeEventArgs { Value = text }));
-
-    /// <summary>A context holding the harness's services, so the dialog can reach <see cref="ViewStore"/>.</summary>
-    /// <param name="harness">Supplies the Task and View stores.</param>
-    private static MudBunitContext NewContext(TaskToolHarness harness)
-    {
-        MudBunitContext ctx = new();
-        harness.AddTo(ctx.Services);
-        return ctx;
-    }
 
     /// <summary>Opens the rename dialog for <paramref name="viewId"/>, beside the hosts it needs, and waits for it to paint.</summary>
     /// <param name="ctx">The bUnit context.</param>

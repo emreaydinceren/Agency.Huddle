@@ -41,7 +41,7 @@ public sealed class RequestTaskPanelTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateRequest(harness, string.Empty, string.Empty, string.Empty, TaskState.Backlog);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
 
@@ -59,7 +59,7 @@ public sealed class RequestTaskPanelTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateRequest(harness, triage, string.Empty, string.Empty, TaskState.Backlog);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
 
@@ -72,7 +72,7 @@ public sealed class RequestTaskPanelTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateRequest(harness, string.Empty, string.Empty, string.Empty, TaskState.ToDo);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
 
@@ -86,7 +86,7 @@ public sealed class RequestTaskPanelTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateRequest(harness, "declined", "Out of scope", "Ana", TaskState.Backlog);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
 
@@ -100,7 +100,7 @@ public sealed class RequestTaskPanelTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateRequest(harness, "accepted", string.Empty, string.Empty, TaskState.Backlog);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
 
@@ -114,7 +114,7 @@ public sealed class RequestTaskPanelTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, status: TaskState.Backlog);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
 

@@ -183,7 +183,7 @@ public sealed class TaskViewNavTests
 
         await cut.InvokeAsync(() => RowFor(cut, "Sprint Board").ContextMenuAsync());
 
-        _ = Assert.Single(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Rename…", StringComparison.Ordinal));
+        _ = Assert.Single(cut.MenuItems(), item => string.Equals(item.TextContent.Trim(), "Rename…", StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -208,7 +208,7 @@ public sealed class TaskViewNavTests
 
         await cut.InvokeAsync(() => RowFor(cut, "Beta").ContextMenuAsync());
 
-        _ = Assert.Single(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view…", StringComparison.Ordinal));
+        _ = Assert.Single(cut.MenuItems(), item => string.Equals(item.TextContent.Trim(), "Delete view…", StringComparison.Ordinal));
     }
 
     /// <summary>Delete View opens <c>ShowMessageBoxAsync</c> with the exact wording the Tasks page's own Delete uses.</summary>
@@ -300,8 +300,7 @@ public sealed class TaskViewNavTests
     /// <summary>Registers the harness's services into a fresh MudBlazor-aware bUnit context, optionally overriding <see cref="TasksOptions.Enabled"/> or the harness's own <see cref="ViewStore"/> (for a reload after a hand edit to <c>views.json</c>).</summary>
     private static MudBunitContext NewContext(TaskToolHarness harness, bool tasksEnabled, ViewStore? views = null)
     {
-        MudBunitContext ctx = new();
-        harness.AddTo(ctx.Services);
+        MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
         if (views is not null)
         {
@@ -343,11 +342,7 @@ public sealed class TaskViewNavTests
 
     /// <summary>The distinct texts of the open menu items, in order (a menu opened earlier may still be open, so a text can repeat).</summary>
     private static IReadOnlyList<string> MenuTexts(IRenderedComponent<ContainerFragment> cut) =>
-        [.. MenuItems(cut).Select(item => item.TextContent.Trim()).Distinct(StringComparer.Ordinal)];
-
-    /// <summary>Every open <c>MudMenu</c> item - rendered with <c>role="menuitem"</c> and class <c>mud-menu-item</c>, not <c>mud-list-item</c> (that class belongs to <c>MudSelect</c>'s own popover).</summary>
-    private static IReadOnlyList<AngleSharp.Dom.IElement> MenuItems(IRenderedComponent<ContainerFragment> cut) =>
-        cut.FindAll("div.mud-menu-item");
+        [.. cut.MenuItems().Select(item => item.TextContent.Trim()).Distinct(StringComparer.Ordinal)];
 
     /// <summary>
     /// Clicks the open menu's <c>Delete view</c> item and returns once the confirm dialog's buttons are rendered. The handler
@@ -360,7 +355,7 @@ public sealed class TaskViewNavTests
     /// <returns>The click's task, for the test to await once it has answered the dialog.</returns>
     private static async Task<Task> OpenDeleteDialogAsync(IRenderedComponent<ContainerFragment> cut)
     {
-        Task deleting = cut.InvokeAsync(() => MenuItems(cut).First(item => string.Equals(item.TextContent.Trim(), "Delete view…", StringComparison.Ordinal)).ClickAsync());
+        Task deleting = cut.InvokeAsync(() => cut.MenuItems().First(item => string.Equals(item.TextContent.Trim(), "Delete view…", StringComparison.Ordinal)).ClickAsync());
         Task shown = cut.WaitForAssertionAsync(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
 
         // A click that fails (no such item, a stale handler) completes first; awaiting it surfaces that error instead of a bare wait timeout.

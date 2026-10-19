@@ -22,7 +22,7 @@ public sealed class TaskDetailFormLayoutTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
         string[] headings = [.. cut.FindAll(".task-detail-group > .group-label").Select(h => h.TextContent.Trim())];
@@ -37,7 +37,7 @@ public sealed class TaskDetailFormLayoutTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
 
         Assert.Single(cut.FindAll(".task-detail-groups"));
@@ -57,7 +57,7 @@ public sealed class TaskDetailFormLayoutTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
         IReadOnlyList<IElement> inputs = [.. cut.FindAll(".task-detail-prop-value input, .task-detail-prop-value textarea").Where(i => !string.Equals(i.GetAttribute("type"), "hidden", StringComparison.Ordinal))];
@@ -82,7 +82,7 @@ public sealed class TaskDetailFormLayoutTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
 
         Assert.Equal("Team", RowLabel(cut.Find(".task-detail-team")));

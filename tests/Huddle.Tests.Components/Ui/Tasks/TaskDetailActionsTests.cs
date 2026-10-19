@@ -41,7 +41,7 @@ public sealed class TaskDetailActionsTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, title: "Ship the thing");
         bool closed = false;
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => closed = true));
 
         await cut.InvokeAsync(() => cut.Find(".task-detail-expand").ClickAsync());
@@ -61,7 +61,7 @@ public sealed class TaskDetailActionsTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
         bool closed = false;
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => closed = true));
         await EditPriorityAsync(cut, TaskPriority.Urgent);
 
@@ -74,7 +74,7 @@ public sealed class TaskDetailActionsTests
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Empty(cut.FindComponents<TaskDetailDialog>());
-        Assert.Equal("Unsaved edits", TextOf(cut, ".task-detail-unsaved-text"));
+        Assert.Equal("Unsaved edits", cut.TextOf(".task-detail-unsaved-text"));
         Assert.False(closed);
     }
 
@@ -85,7 +85,7 @@ public sealed class TaskDetailActionsTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
         bool closed = false;
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => closed = true));
         await EditPriorityAsync(cut, TaskPriority.Urgent);
 
@@ -109,7 +109,7 @@ public sealed class TaskDetailActionsTests
         TaskItem task = CreateTask(harness);
         IRenderedComponent<ContainerFragment>? cut = null;
         int? dialogsWhenClosed = null;
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => dialogsWhenClosed = cut?.FindComponents<TaskDetailDialog>().Count));
 
         await cut.InvokeAsync(() => cut.Find(".task-detail-expand").ClickAsync());
@@ -129,7 +129,7 @@ public sealed class TaskDetailActionsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("/tasks/item/" + task.Id);
         bool closed = false;
@@ -150,7 +150,7 @@ public sealed class TaskDetailActionsTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
         int closes = 0;
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => closes++));
         await EditPriorityAsync(cut, TaskPriority.Urgent);
 
@@ -168,7 +168,7 @@ public sealed class TaskDetailActionsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         TaskDetail detail = cut.FindComponent<TaskDetail>().Instance;
 
@@ -185,7 +185,7 @@ public sealed class TaskDetailActionsTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
         bool closed = false;
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => closed = true));
         await EditPriorityAsync(cut, TaskPriority.Urgent);
 
@@ -202,7 +202,7 @@ public sealed class TaskDetailActionsTests
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         TaskItem task = CreateTask(harness, title: "Ship the thing", priority: TaskPriority.Medium, assignee: "Nova");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await EditPriorityAsync(cut, TaskPriority.Urgent);
         int tasksBefore = harness.Store.All.Count;
@@ -228,7 +228,7 @@ public sealed class TaskDetailActionsTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         int logCountBefore = task.ChangeLog.Count;
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
 
         await CloseTaskAsync(cut);
@@ -248,7 +248,7 @@ public sealed class TaskDetailActionsTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
         int logCountBefore = task.ChangeLog.Count;
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await EditPriorityAsync(cut, TaskPriority.Urgent);
 
@@ -268,7 +268,7 @@ public sealed class TaskDetailActionsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await EditPriorityAsync(cut, TaskPriority.Urgent);
         TaskResult outsideEdit = harness.Service.Update(task.Id, new TaskPatch { Priority = TaskPriority.Low }, baseVersion: null, TaskActors.Human(harness.Options.Value));
@@ -277,7 +277,7 @@ public sealed class TaskDetailActionsTests
         await CloseTaskAsync(cut);
 
         Assert.False(harness.Store.Get(task.Id)?.Location.Closed);
-        Assert.Equal("Unsaved edits", TextOf(cut, ".task-detail-unsaved-text"));
+        Assert.Equal("Unsaved edits", cut.TextOf(".task-detail-unsaved-text"));
     }
 
     /// <summary>When the pending edit's <see cref="TaskService.Update"/> half is refused (an empty Title), Close task stops there: the Task stays open, the problem is shown, and the edit is kept.</summary>
@@ -286,7 +286,7 @@ public sealed class TaskDetailActionsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await cut.InvokeAsync(() => cut.Find("button[aria-label='Edit title']").ClickAsync());
         IRenderedComponent<MudTextField<string>> titleField = cut.FindComponents<MudTextField<string>>().Single(HasClass<MudTextField<string>>("task-detail-title"));
@@ -295,7 +295,7 @@ public sealed class TaskDetailActionsTests
         await CloseTaskAsync(cut);
 
         Assert.False(harness.Store.Get(task.Id)?.Location.Closed);
-        Assert.Equal("Title is empty.", TextOf(cut, ".task-detail-save-error-problem"));
+        Assert.Equal("Title is empty.", cut.TextOf(".task-detail-save-error-problem"));
     }
 
     /// <summary>A Closed Task shows Reopen instead of Close task; clicking it reopens the Task with a "reopened" Change log entry.</summary>
@@ -306,7 +306,7 @@ public sealed class TaskDetailActionsTests
         TaskItem task = CreateTask(harness);
         TaskResult closeResult = harness.Service.Close(task.Id, TaskActors.Human(harness.Options.Value));
         TaskItem closed = Assert.IsType<TaskResult.Saved>(closeResult).Task;
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         Assert.DoesNotContain(await OpenMenuItemsAsync(cut), HasText("Close task…"));
 
@@ -330,7 +330,7 @@ public sealed class TaskDetailActionsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
 
         Assert.Equal("Change log (1)", cut.Find(".task-detail-changelog .mud-expand-panel-text").TextContent.Trim());
@@ -338,7 +338,7 @@ public sealed class TaskDetailActionsTests
         await cut.InvokeAsync(() => cut.Find(".task-detail-changelog .mud-expand-panel-header").ClickAsync());
 
         Assert.Single(cut.FindAll(".task-detail-changelog-entry"));
-        Assert.Equal($"{harness.Options.Value.HumanName}: created", TextOf(cut, ".task-detail-changelog-entry"));
+        Assert.Equal($"{harness.Options.Value.HumanName}: created", cut.TextOf(".task-detail-changelog-entry"));
         Assert.All(cut.FindComponents<MudTimelineItem>(), item => Assert.Equal(Size.Small, item.Instance.Size));
     }
 
@@ -348,10 +348,10 @@ public sealed class TaskDetailActionsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, title: "Original", priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await EditPriorityAsync(cut, TaskPriority.Urgent);
-        await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
+        await cut.InvokeAsync(() => cut.FindButton("Save").ClickAsync());
         cut.WaitForAssertion(() => Assert.DoesNotContain("Unsaved edits", cut.Markup, StringComparison.Ordinal));
 
         await cut.InvokeAsync(() => cut.Find(".task-detail-changelog .mud-expand-panel-header").ClickAsync());
@@ -379,7 +379,7 @@ public sealed class TaskDetailActionsTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(
             ct, new ManualTimeProvider(TaskDetailActionsTests.FixedUtcNow, TaskDetailActionsTests.FixedZone));
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
 
         await cut.InvokeAsync(() => cut.Find(".task-detail-changelog .mud-expand-panel-header").ClickAsync());
@@ -393,7 +393,7 @@ public sealed class TaskDetailActionsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
 
         Assert.True(cut.FindComponent<MudExitPrompt>().Instance.Disabled);
@@ -418,7 +418,7 @@ public sealed class TaskDetailActionsTests
             TaskActors.Human(harness.Options.Value)) is TaskResult.Saved saved
             ? saved.Task
             : throw new InvalidOperationException("Create failed.");
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderExpanded(ctx, task.Id);
 
         IElement fieldsColumn = cut.Find(".task-detail-col-fields");
@@ -439,7 +439,7 @@ public sealed class TaskDetailActionsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
 
         Assert.Empty(cut.FindAll(".task-detail-col-fields"));
@@ -460,7 +460,7 @@ public sealed class TaskDetailActionsTests
             harness.TaskActivity.CountAgentWake(task.Id);
         }
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
 
         Assert.Equal("status", cut.Find(".task-detail-budget-banner").GetAttribute("role"));
@@ -479,7 +479,7 @@ public sealed class TaskDetailActionsTests
             task.Version,
             TaskActors.Human(harness.Options.Value));
         Assert.IsType<TaskResult.Saved>(described);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
 
         await cut.InvokeAsync(() => cut.Find(".task-detail-description-toggle").QuerySelectorAll("button")
@@ -495,17 +495,17 @@ public sealed class TaskDetailActionsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
         await cut.InvokeAsync(() => cut.Find("button[aria-label='Edit title']").ClickAsync());
         IRenderedComponent<MudTextField<string>> titleField = cut.FindComponents<MudTextField<string>>().Single(HasClass<MudTextField<string>>("task-detail-title"));
         await cut.InvokeAsync(() => titleField.Instance.ValueChanged.InvokeAsync(""));
 
-        await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
+        await cut.InvokeAsync(() => cut.FindButton("Save").ClickAsync());
 
-        Assert.Equal("Title is empty.", TextOf(cut, ".task-detail-save-error-problem"));
+        Assert.Equal("Title is empty.", cut.TextOf(".task-detail-save-error-problem"));
         Assert.Equal("alert", cut.Find(".task-detail-save-error").GetAttribute("role"));
-        Assert.Equal("Unsaved edits", TextOf(cut, ".task-detail-unsaved-text"));
+        Assert.Equal("Unsaved edits", cut.TextOf(".task-detail-unsaved-text"));
     }
 
     /// <summary>Create mode's Save calls <see cref="TaskService.Create"/> with the draft's fields and shows the created Task (corrections-B7 "14.4" item 2 - the path manual test TASKS-01 exercises).</summary>
@@ -515,16 +515,16 @@ public sealed class TaskDetailActionsTests
         using TaskToolHarness harness = new();
         TaskDraft draft = new("Copy of Ship the thing", "Platform", null, Priority: TaskPriority.Urgent);
         int tasksBefore = harness.Store.All.Count;
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderCreate(ctx, draft);
 
-        await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
+        await cut.InvokeAsync(() => cut.FindButton("Save").ClickAsync());
 
         Assert.Equal(tasksBefore + 1, harness.Store.All.Count);
         TaskItem created = harness.Store.All.Single(t => string.Equals(t.Title, "Copy of Ship the thing", StringComparison.Ordinal));
         Assert.Equal(TaskPriority.Urgent, created.Priority);
         Assert.Equal(TaskState.Backlog, created.Status);
-        Assert.Equal($"{created.Id}: Copy of Ship the thing", TextOf(cut, ".task-detail-title-display"));
+        Assert.Equal($"{created.Id}: Copy of Ship the thing", cut.TextOf(".task-detail-title-display"));
     }
 
     /// <summary>
@@ -537,13 +537,13 @@ public sealed class TaskDetailActionsTests
     {
         using TaskToolHarness harness = new();
         TaskDraft draft = new("Ship the thing", "Platform", null);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderCreate(ctx, draft);
 
-        await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
+        await cut.InvokeAsync(() => cut.FindButton("Save").ClickAsync());
 
         TaskItem created = harness.Store.All.Single(t => string.Equals(t.Title, "Ship the thing", StringComparison.Ordinal));
-        Assert.Equal(created.Id.ToString(), TextOf(cut, ".task-id"));
+        Assert.Equal(created.Id.ToString(), cut.TextOf(".task-id"));
         Assert.Single(cut.FindAll(".task-detail-copy-id"));
     }
 
@@ -554,13 +554,13 @@ public sealed class TaskDetailActionsTests
         using TaskToolHarness harness = new();
         TaskDraft draft = new("", "Platform", null);
         int tasksBefore = harness.Store.All.Count;
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderCreate(ctx, draft);
 
-        await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
+        await cut.InvokeAsync(() => cut.FindButton("Save").ClickAsync());
 
         Assert.Equal(tasksBefore, harness.Store.All.Count);
-        Assert.Equal("Title is empty.", TextOf(cut, ".task-detail-save-error-problem"));
+        Assert.Equal("Title is empty.", cut.TextOf(".task-detail-save-error-problem"));
     }
 
     /// <summary>Edits <c>Priority</c> through the one <see cref="MudSelect{T}"/> the Panel renders and waits for the render this produces - the same interaction <see cref="TaskDetailTests"/> uses.</summary>
@@ -579,7 +579,7 @@ public sealed class TaskDetailActionsTests
         where TComponent : MudComponentBase =>
         component => (component.Instance.Class ?? "").Contains(className, StringComparison.Ordinal);
 
-    /// <summary>A predicate matching a rendered <see cref="IElement"/> button whose trimmed text equals <paramref name="text"/> - for asserting absence with <c>Where</c>/<c>Empty</c> rather than <see cref="FindButton"/>'s single-match lookup.</summary>
+    /// <summary>A predicate matching a rendered <see cref="IElement"/> button whose trimmed text equals <paramref name="text"/> - for asserting absence with <c>Where</c>/<c>Empty</c> rather than <c>FindButton</c>'s single-match lookup.</summary>
     /// <param name="text">The button's exact text.</param>
     private static Predicate<IElement> HasText(string text) =>
         element => string.Equals(element.TextContent.Trim(), text, StringComparison.Ordinal);
@@ -595,14 +595,6 @@ public sealed class TaskDetailActionsTests
             new TaskDraft(title, "Platform", null, Priority: priority, Assignee: assignee),
             TaskActors.Human(harness.Options.Value));
         return Assert.IsType<TaskResult.Saved>(result).Task;
-    }
-
-    /// <summary>Registers the harness's services into a fresh <see cref="MudBunitContext"/> - mirrors <see cref="TaskDetailTests"/>'s own helper.</summary>
-    private static MudBunitContext NewContext(TaskToolHarness harness)
-    {
-        MudBunitContext ctx = new();
-        harness.AddTo(ctx.Services);
-        return ctx;
     }
 
     /// <summary>Renders <c>TaskDetail</c> in Panel mode for <paramref name="id"/>, inside <see cref="MudBunitContext.RenderWithPopovers"/> - mirrors <see cref="TaskDetailTests"/>'s own helper, with an optional <c>OnClose</c> so a test can observe whether the Panel actually closed.</summary>
@@ -698,14 +690,6 @@ public sealed class TaskDetailActionsTests
         await shown;
         return closing;
     }
-
-    /// <summary>Finds the one <c>&lt;button&gt;</c> whose trimmed text is exactly <paramref name="text"/> - mirrors <see cref="TaskDetailTests"/>'s own helper.</summary>
-    private static IElement FindButton(IRenderedComponent<ContainerFragment> cut, string text) =>
-        cut.FindAll("button").Single(b => string.Equals(b.TextContent.Trim(), text, StringComparison.Ordinal));
-
-    /// <summary>The trimmed text content of the one element matching <paramref name="cssSelector"/> - mirrors <see cref="TaskDetailTests"/>'s own helper.</summary>
-    private static string TextOf(IRenderedComponent<ContainerFragment> cut, string cssSelector) =>
-        cut.Find(cssSelector).TextContent.Trim();
 
     /// <summary>The trimmed text content of the one element matching <paramref name="cssSelector"/>, inside a dialog rendered through the real <see cref="IDialogService"/> rather than the Panel's own root.</summary>
     private static string TextOf(IRenderedComponent<TaskDetailDialog> dialog, string cssSelector) =>

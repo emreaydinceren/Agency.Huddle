@@ -25,7 +25,7 @@ public sealed class TasksPageSelectedRowTests
         _ = CreateTask(harness, "Alpha");
         _ = CreateTask(harness, "Bravo");
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
         Assert.Empty(cut.FindAll("tr.task-row-selected"));
@@ -48,7 +48,7 @@ public sealed class TasksPageSelectedRowTests
         _ = CreateTask(harness, "Alpha");
         _ = CreateTask(harness, "Bravo");
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
         await ClickTaskRowAsync(cut, "Alpha");
@@ -65,7 +65,7 @@ public sealed class TasksPageSelectedRowTests
         using TaskToolHarness harness = new();
         _ = CreateTask(harness, "Alpha");
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
         await ClickTaskRowAsync(cut, "Alpha");
@@ -87,7 +87,7 @@ public sealed class TasksPageSelectedRowTests
         TaskView board = new() { Id = "board-sel", Name = "Board", Kind = ViewKind.Kanban, Columns = BoardLayout.DefaultColumns };
         Assert.True(harness.Views.Save(board).Saved);
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "board-sel");
 
         Assert.Empty(cut.FindAll(".task-card-selected"));
@@ -120,14 +120,6 @@ public sealed class TasksPageSelectedRowTests
         // contains-ok: source-fact test, no CSS parser - app.css's own text is what's pinned.
         Assert.Contains("var(--hu-selected-task-background)", rule, StringComparison.Ordinal);
         Assert.DoesNotContain('#', rule);
-    }
-
-    /// <summary>Wraps the harness services in a bUnit context.</summary>
-    private static MudBunitContext NewContext(TaskToolHarness harness)
-    {
-        MudBunitContext ctx = new();
-        harness.AddTo(ctx.Services);
-        return ctx;
     }
 
     /// <summary>Renders the Tasks page, optionally routed to <paramref name="viewId"/>.</summary>

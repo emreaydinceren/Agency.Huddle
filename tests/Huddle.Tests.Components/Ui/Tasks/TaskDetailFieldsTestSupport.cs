@@ -77,14 +77,6 @@ internal static class TaskDetailFieldsTestSupport
         return Assert.IsType<TaskResult.Saved>(result).Task;
     }
 
-    /// <summary>Registers the harness's services into a fresh <see cref="MudBunitContext"/> (the <c>TaskDetailTests</c> pattern).</summary>
-    internal static MudBunitContext NewContext(TaskToolHarness harness)
-    {
-        MudBunitContext ctx = new();
-        harness.AddTo(ctx.Services);
-        return ctx;
-    }
-
     /// <summary>Renders <c>TaskDetail</c> for <paramref name="id"/> in <paramref name="mode"/>, inside <see cref="MudBunitContext.RenderWithPopovers"/> (the Won't-do menu and pickers are popovers).</summary>
     internal static IRenderedComponent<ContainerFragment> RenderDetail(MudBunitContext ctx, TaskId id, TaskDetailMode mode)
     {

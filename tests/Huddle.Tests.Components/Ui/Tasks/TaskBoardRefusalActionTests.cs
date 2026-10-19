@@ -26,7 +26,7 @@ public sealed class TaskBoardRefusalActionTests
         using TaskToolHarness harness = new(gates: TaskGateText.BuildGates(gateDir, TaskGateText.Process(TaskGateText.QaGate)));
         TaskItem moved = CreateTask(harness, "Ship it", TaskState.ToDo);
         TaskId? opened = null;
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         (IRenderedComponent<TaskBoard> board, IRenderedComponent<MudPopoverProvider> popovers, IRenderedComponent<MudSnackbarProvider> toasts) = RenderBoard(ctx, moved, id => opened = id);
 
         await MoveViaMenuAsync(board, popovers, moved, TaskState.Done);
@@ -45,7 +45,7 @@ public sealed class TaskBoardRefusalActionTests
     {
         using TaskToolHarness harness = new();
         TaskItem moved = CreateTask(harness, "Ship it", TaskState.ToDo);
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         (IRenderedComponent<TaskBoard> board, IRenderedComponent<MudPopoverProvider> popovers, IRenderedComponent<MudSnackbarProvider> toasts) = RenderBoard(ctx, moved, static _ => { });
         File.Delete(moved.Path);
         harness.Store.RebuildFromWatcher();

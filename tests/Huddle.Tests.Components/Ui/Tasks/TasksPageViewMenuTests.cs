@@ -29,7 +29,7 @@ public sealed class TasksPageViewMenuTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(new TaskView { Id = "custom1", Name = "Sprint Board", Kind = ViewKind.List });
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "custom1");
 
         await OpenMenuAsync(cut);
@@ -44,7 +44,7 @@ public sealed class TasksPageViewMenuTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, ViewStore.AllTasksId);
         await OpenMenuAsync(cut);
 
@@ -59,7 +59,7 @@ public sealed class TasksPageViewMenuTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(new TaskView { Id = "custom1", Name = "Sprint Board", Kind = ViewKind.List });
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "custom1");
 
         await OpenMenuAsync(cut);
@@ -81,7 +81,7 @@ public sealed class TasksPageViewMenuTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(new TaskView { Id = "custom1", Name = "Sprint Board", Kind = ViewKind.List });
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
         string before = navigation.Uri;
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "custom1");
@@ -103,7 +103,7 @@ public sealed class TasksPageViewMenuTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = harness.Views.Save(new TaskView { Id = "custom1", Name = "Sprint Board", Kind = ViewKind.List });
 
-        await using MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("/tasks/custom1");
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "custom1");
@@ -134,14 +134,6 @@ public sealed class TasksPageViewMenuTests
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, ViewStore.AllTasksId);
 
         Assert.Empty(cut.FindAll(".tasks-header button[aria-label^='Actions for ']"));
-    }
-
-    /// <summary>Registers the harness's services into a fresh <see cref="MudBunitContext"/>.</summary>
-    private static MudBunitContext NewContext(TaskToolHarness harness)
-    {
-        MudBunitContext ctx = new();
-        harness.AddTo(ctx.Services);
-        return ctx;
     }
 
     /// <summary>
