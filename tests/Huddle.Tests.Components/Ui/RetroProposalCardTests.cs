@@ -71,7 +71,7 @@ public sealed class RetroProposalCardTests
         IRenderedComponent<RetroProposalCard> cut = RenderCard(ctx, fixture.RoomId);
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".retro-change").Count));
 
-        cut.FindAll(".retro-change-accept")[0].Click();
+        await cut.InvokeAsync(() => cut.FindAll(".retro-change-accept")[0].ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Equal(["Title 2"], cut.FindAll(".retro-change-title").Select(static each => each.TextContent.Trim())));
         Assert.Equal("# Process\n\nReview before done.\n" + Squash + "\n", fixture.ProcessNow);
@@ -92,7 +92,7 @@ public sealed class RetroProposalCardTests
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".retro-change")));
         cut.Find(".retro-proposal-reason input").Change("Too strict.");
 
-        cut.Find(".retro-change-decline").Click();
+        await cut.InvokeAsync(() => cut.Find(".retro-change-decline").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".retro-change")));
         Assert.Equal(RetroProposalFixture.ProcessText, fixture.ProcessNow);

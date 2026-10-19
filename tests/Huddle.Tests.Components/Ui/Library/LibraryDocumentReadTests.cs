@@ -186,7 +186,7 @@ public sealed class LibraryDocumentReadTests : IDisposable
         NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button.library-document-pop-out")));
-        await cut.InvokeAsync(() => cut.Find("button.library-document-pop-out").Click());
+        await cut.InvokeAsync(() => cut.Find("button.library-document-pop-out").ClickAsync());
 
         Assert.Equal(navigation.ToAbsoluteUri(LibraryLinkQuery.BuildPageUri(path)).AbsoluteUri, navigation.Uri);
     }
@@ -205,7 +205,7 @@ public sealed class LibraryDocumentReadTests : IDisposable
             ctx, path, onClose: EventCallback.Factory.Create(this, () => closed++));
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button.library-document-close")));
-        await cut.InvokeAsync(() => cut.Find("button.library-document-close").Click());
+        await cut.InvokeAsync(() => cut.Find("button.library-document-close").ClickAsync());
 
         Assert.Equal(1, closed);
     }
@@ -239,7 +239,7 @@ public sealed class LibraryDocumentReadTests : IDisposable
             ctx, path, onAction: EventCallback.Factory.Create<LibraryTreeAction>(this, action => received = action));
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button.library-document-open-default")));
-        await cut.InvokeAsync(() => cut.Find("button.library-document-open-default").Click());
+        await cut.InvokeAsync(() => cut.Find("button.library-document-open-default").ClickAsync());
 
         Assert.NotNull(received);
         Assert.Equal(LibraryTreeActionKind.OpenInDefaultApp, received.Kind);

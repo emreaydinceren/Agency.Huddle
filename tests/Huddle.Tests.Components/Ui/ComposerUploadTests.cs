@@ -146,7 +146,7 @@ public sealed class ComposerUploadTests
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("button[aria-label='Remove notes.txt']")));
         string path = rig.PathOf(0);
 
-        await cut.InvokeAsync(() => cut.Find("button[aria-label='Remove notes.txt']").Click());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='Remove notes.txt']").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".upload-chip")));
         Assert.Empty(rig.Pending.For(rig.RoomId));

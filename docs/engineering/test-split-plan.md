@@ -1080,7 +1080,7 @@ Ids are `<deliverable>.<task>`:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "2.3" -State Done -TrackerPath docs/engineering/test-split-plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 59 of 77 tasks Done · 3 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
+**Status:** 60 of 77 tasks Done · 3 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1162,7 +1162,7 @@ Ids are `<deliverable>.<task>`:
 | 14.3 Migrate `NewContext` group A (H) | Haiku | 14.2 | | | ✔ |
 | 14.4 Migrate groups B, D, E, G (H) | Haiku | 14.2 | | | ✔ |
 | 14.5 Disposal and re-registration defects (S) | Sonnet | 14.3 | | | ✔ |
-| 14.6 Synchronous clicks (H) | Haiku | 14.4 | | | |
+| 14.6 Synchronous clicks (H) | Haiku | 14.4 | | | ✔ |
 | **D15 Building the domain** | Sonnet | D10 | | | |
 | 15.1 Red: `TestFactoriesTests` (H) | Haiku | D10 | | | |
 | 15.2 `TestOptions`, `TestStores`, `ChatServiceFactory`, `TestPersonas` (S) | Sonnet | 15.1 | | | |

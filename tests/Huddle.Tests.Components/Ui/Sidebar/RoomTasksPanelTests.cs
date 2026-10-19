@@ -230,7 +230,7 @@ public sealed class RoomTasksPanelTests
         IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = setup.Render(tab.Id);
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("button[aria-label='Show where it was mentioned']")), TimeSpan.FromSeconds(5));
 
-        await cut.InvokeAsync(() => cut.Find("button[aria-label='Show where it was mentioned']").Click());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='Show where it was mentioned']").ClickAsync());
 
         Assert.Equal("/rooms/" + RoomId + "?message=m2", setup.Tabs.Active?.Url);
         Assert.Equal(tab.Id, setup.Tabs.Active?.Id);

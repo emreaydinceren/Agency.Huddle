@@ -127,7 +127,7 @@ public sealed class PacksTabTests : IDisposable
         Assert.NotNull(cut.Find("tr:has([data-skill='docx'])").QuerySelector(".skill-state-chip-new"));
         Assert.Contains("skill:docx", this.fixture.Host.Registry.Current.NewKeys);
 
-        await cut.InvokeAsync(() => cut.FindAll(".mud-tab")[1].Click());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-tab")[1].ClickAsync());
 
         Assert.DoesNotContain("skill:docx", this.fixture.Host.Registry.Current.NewKeys);
         Assert.Contains("skill:docx", this.fixture.Host.Settings.Seen ?? []);

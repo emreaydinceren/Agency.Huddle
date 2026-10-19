@@ -87,7 +87,7 @@ public sealed partial class PageBreadcrumbsTests
         _ = ctx.Render<TabHost>();
         IRenderedComponent<TopBar> bar = ctx.Render<TopBar>();
 
-        bar.Find(".page-breadcrumbs a[href]").Click();
+        await bar.InvokeAsync(() => bar.Find(".page-breadcrumbs a[href]").ClickAsync());
 
         bar.WaitForAssertion(() =>
         {
@@ -125,7 +125,7 @@ public sealed partial class PageBreadcrumbsTests
             Assert.Equal("Rooms", Words(bar.Find(".page-breadcrumbs").TextContent));
             Assert.Equal(left, tabs.FocusedGroupId);
         });
-        bar.Find("a.page-crumb-link").Click();
+        await bar.InvokeAsync(() => bar.Find("a.page-crumb-link").ClickAsync());
 
         bar.WaitForAssertion(() =>
         {

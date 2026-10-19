@@ -114,7 +114,7 @@ public sealed class LibraryExplorerTests : IDisposable
         await cut.InvokeAsync(() => cut.Find("div.library-tree-node").ContextMenuAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-menu-item")));
         int newNoteIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("New note…");
-        _ = cut.InvokeAsync(() => cut.FindAll(".mud-menu-item")[newNoteIndex].Click());
+        _ = cut.InvokeAsync(() => { _ = cut.FindAll(".mud-menu-item")[newNoteIndex].ClickAsync(); });
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-content input")));
         await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Idea" }));
@@ -625,7 +625,7 @@ public sealed class LibraryExplorerTests : IDisposable
 
         await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll(".library-tree-node-name").Count));
-        _ = cut.InvokeAsync(() => cut.FindAll(".library-tree-node-name").First(el => el.TextContent.Trim() == "Second.md").Click());
+        _ = cut.InvokeAsync(() => { _ = cut.FindAll(".library-tree-node-name").First(el => el.TextContent.Trim() == "Second.md").ClickAsync(); });
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").ClickAsync());
 
@@ -656,10 +656,10 @@ public sealed class LibraryExplorerTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(NodeRows(cut, "Old.md")));
         await cut.InvokeAsync(() => NodeRows(cut, "Old.md").Single().ContextMenuAsync());
         int renameIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("Rename…");
-        _ = cut.InvokeAsync(() => cut.FindAll(".mud-menu-item")[renameIndex].Click());
+        _ = cut.InvokeAsync(() => { _ = cut.FindAll(".mud-menu-item")[renameIndex].ClickAsync(); });
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-content input")));
         await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "New" }));
-        _ = cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].Click());
+        _ = cut.InvokeAsync(() => { _ = cut.FindAll(".mud-dialog-actions button")[1].ClickAsync(); });
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").ClickAsync());
@@ -688,7 +688,7 @@ public sealed class LibraryExplorerTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(NodeRows(cut, "Sub")));
         await cut.InvokeAsync(() => NodeRows(cut, "Sub").Single().ContextMenuAsync());
         int deleteIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("Delete…");
-        _ = cut.InvokeAsync(() => cut.FindAll(".mud-menu-item")[deleteIndex].Click());
+        _ = cut.InvokeAsync(() => { _ = cut.FindAll(".mud-menu-item")[deleteIndex].ClickAsync(); });
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Delete").ClickAsync());
 

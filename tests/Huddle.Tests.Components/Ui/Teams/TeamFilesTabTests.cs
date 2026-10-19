@@ -199,7 +199,7 @@ public sealed class TeamFilesTabTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx, "Business");
         cut.WaitForAssertion(() => Assert.Equal(["Existing.md"], NodeNames(cut)));
 
-        _ = cut.InvokeAsync(() => cut.Find(ActionButton).Click());
+        _ = cut.InvokeAsync(() => { _ = cut.Find(ActionButton).ClickAsync(); });
 
         cut.WaitForAssertion(() => Assert.Equal("New note in Business", cut.Find(".mud-dialog-title").TextContent.Trim()));
         await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Idea" }));
@@ -222,7 +222,7 @@ public sealed class TeamFilesTabTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx, "Business");
         cut.WaitForAssertion(() => Assert.Equal(["Existing.md"], SortedNodeNames(cut)));
 
-        _ = cut.InvokeAsync(() => cut.Find(ActionButton).Click());
+        _ = cut.InvokeAsync(() => { _ = cut.Find(ActionButton).ClickAsync(); });
         cut.WaitForAssertion(() => Assert.Equal("New note in Business", cut.Find(".mud-dialog-title").TextContent.Trim()));
         await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Idea" }));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
@@ -241,7 +241,7 @@ public sealed class TeamFilesTabTests : IDisposable
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx, "Business");
 
-        _ = cut.InvokeAsync(() => cut.Find(NewFolderButton).Click());
+        _ = cut.InvokeAsync(() => { _ = cut.Find(NewFolderButton).ClickAsync(); });
         cut.WaitForAssertion(() => Assert.Equal("New folder in Business", cut.Find(".mud-dialog-title").TextContent.Trim()));
         await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Plans" }));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());

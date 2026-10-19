@@ -296,7 +296,7 @@ public sealed class BuildTeamTests
         await cut.InvokeAsync(() => cut.FindAll(Card)[0].ClickAsync());
         await cut.InvokeAsync(() => cut.Find(".build-team-workspace input").InputAsync(fixture.DirPath));
 
-        _ = cut.InvokeAsync(() => cut.Find("[aria-label='Browse for library folder']").Click());
+        _ = cut.InvokeAsync(() => { _ = cut.Find("[aria-label='Browse for library folder']").ClickAsync(); });
 
         Assert.Equal("Choose a folder", cut.Find(".mud-dialog-title").TextContent.Trim());
         IElement item = cut.FindAll(".folder-picker-item").Single(candidate => string.Equals(candidate.TextContent.Trim(), "repo", StringComparison.Ordinal));
@@ -566,7 +566,7 @@ public sealed class BuildTeamTests
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
         await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
 
-        _ = cut.InvokeAsync(() => cut.Find("[aria-label='Add a custom role']").Click());
+        _ = cut.InvokeAsync(() => { _ = cut.Find("[aria-label='Add a custom role']").ClickAsync(); });
         Assert.Equal("Add a role", cut.Find(".mud-dialog-title").TextContent.Trim());
         Assert.True(cut.Find("button.custom-role-save").HasAttribute("disabled"));
         await cut.InvokeAsync(() => cut.Find(".custom-role-title input").InputAsync("Gardener"));
@@ -591,7 +591,7 @@ public sealed class BuildTeamTests
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
         await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
 
-        _ = cut.InvokeAsync(() => cut.Find("[aria-label='Edit Gardener']").Click());
+        _ = cut.InvokeAsync(() => { _ = cut.Find("[aria-label='Edit Gardener']").ClickAsync(); });
         Assert.Equal("Edit role", cut.Find(".mud-dialog-title").TextContent.Trim());
         Assert.Equal("Gardener", cut.Find(".custom-role-title input").GetAttribute("value"));
         await cut.InvokeAsync(() => cut.Find(".custom-role-title input").InputAsync("Head gardener"));
@@ -599,7 +599,7 @@ public sealed class BuildTeamTests
 
         Assert.Equal("Head gardener", fixture.Roles.Find(role.Id)?.Title);
 
-        _ = cut.InvokeAsync(() => cut.Find("[aria-label='Delete Head gardener']").Click());
+        _ = cut.InvokeAsync(() => { _ = cut.Find("[aria-label='Delete Head gardener']").ClickAsync(); });
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog button").Single(button => string.Equals(button.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Empty(fixture.Roles.Roles);
@@ -759,7 +759,7 @@ public sealed class BuildTeamTests
         Assert.Empty(cut.FindAll(".roster-card-removed"));
         await PickRemoveAsync(cut, "Bo", ".menu-item-destructive");
 
-        _ = cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").Click());
+        _ = cut.InvokeAsync(() => { _ = cut.Find("button.build-team-approve-button").ClickAsync(); });
         Assert.Equal("Delete 1 Teammate?", cut.Find(".mud-dialog-title").TextContent.Trim());
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog button").Single(button => string.Equals(button.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
 
@@ -787,7 +787,7 @@ public sealed class BuildTeamTests
 
         Assert.False(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
 
-        _ = cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").Click());
+        _ = cut.InvokeAsync(() => { _ = cut.Find("button.build-team-approve-button").ClickAsync(); });
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog button").Single(button => string.Equals(button.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Equal(successor, fixture.Folders.ReadResult?.Manager);

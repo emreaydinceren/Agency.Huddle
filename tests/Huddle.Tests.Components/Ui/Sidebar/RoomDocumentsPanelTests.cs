@@ -152,7 +152,7 @@ public sealed class RoomDocumentsPanelTests
         IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = rig.Render(new RoomSubject(RoomDocumentsPanelTests.RoomId), tab.Id);
         cut.WaitForElement("button[aria-label='Show where it was mentioned']");
 
-        cut.Find("button[aria-label='Show where it was mentioned']").Click();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='Show where it was mentioned']").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Equal("/rooms/r1?message=m%202", rig.Tabs.Tabs.Single(t => t.Id == tab.Id).Url));
     }

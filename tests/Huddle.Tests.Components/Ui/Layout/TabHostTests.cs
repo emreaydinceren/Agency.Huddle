@@ -87,7 +87,7 @@ public sealed class TabHostTests
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teammates");
         var cut = RenderHost(ctx);
 
-        cut.Find(".tab-close").Click();
+        await cut.InvokeAsync(() => cut.Find(".tab-close").ClickAsync());
 
         Assert.Empty(cut.FindAll(".tab-item"));
         Assert.NotNull(cut.Find(".tab-empty"));
@@ -107,7 +107,7 @@ public sealed class TabHostTests
         nav.NavigateTo("/settings");
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".tab-item").Count));
 
-        cut.FindAll(".tab-close")[1].Click();
+        await cut.InvokeAsync(() => cut.FindAll(".tab-close")[1].ClickAsync());
 
         Assert.Equal("/teammates", new Uri(nav.Uri).AbsolutePath);
         Assert.Equal("teammates", tabs.Active?.Key);
@@ -124,7 +124,7 @@ public sealed class TabHostTests
             .Add(link => link.TabTitle, "Design")
             .Add(link => link.ChildContent, (RenderFragment)(builder => builder.AddContent(0, "Design"))));
 
-        cut.Find(".nav-tab-link").Click();
+        await cut.InvokeAsync(() => cut.Find(".nav-tab-link").ClickAsync());
 
         Tab tab = Assert.Single(tabs.Tabs);
         Assert.Equal("Design", tab.Title);
@@ -141,7 +141,7 @@ public sealed class TabHostTests
             .Add(link => link.Href, "/settings")
             .Add(link => link.ChildContent, (RenderFragment)(builder => builder.AddContent(0, "Settings"))));
 
-        cut.Find(".nav-tab-link").Click();
+        await cut.InvokeAsync(() => cut.Find(".nav-tab-link").ClickAsync());
         cut.Find(".nav-tab-link").DoubleClick();
 
         Assert.False(Assert.Single(tabs.Tabs).IsPreview);
@@ -414,7 +414,7 @@ public sealed class TabHostTests
         nav.NavigateTo("/settings");
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".tab-item").Count));
 
-        cut.Find("button[aria-label='Move Settings right']").Click();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='Move Settings right']").ClickAsync());
 
         Assert.Equal(2, tabs.Groups.Count);
         Assert.Equal("settings", tabs.Groups[1].Active?.Key);

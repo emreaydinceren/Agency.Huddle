@@ -118,7 +118,7 @@ public sealed class TasksPageDetailTests
         await ClickTaskRowAsync(cut, "Alpha");
         await EditPriorityAsync(cut, TaskPriority.Urgent);
 
-        _ = cut.InvokeAsync(() => FindTaskRow(cut, "Bravo").Click());
+        _ = cut.InvokeAsync(() => { _ = FindTaskRow(cut, "Bravo").ClickAsync(); });
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
         Assert.Equal("Discard changes?", cut.Find(".mud-dialog-title").TextContent.Trim());
 
@@ -142,7 +142,7 @@ public sealed class TasksPageDetailTests
         await ClickTaskRowAsync(cut, "Alpha");
         await EditPriorityAsync(cut, TaskPriority.Urgent);
 
-        _ = cut.InvokeAsync(() => FindTaskRow(cut, "Bravo").Click());
+        _ = cut.InvokeAsync(() => { _ = FindTaskRow(cut, "Bravo").ClickAsync(); });
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
 
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Discard", StringComparison.Ordinal)).ClickAsync());
@@ -337,7 +337,7 @@ public sealed class TasksPageDetailTests
     /// Clicks the mounted <see cref="TaskDetail"/>'s Revert button. Per the R8 "J57" note, a click
     /// right after a render must go through <c>InvokeAsync</c> even when nothing else is awaited in
     /// between - <see cref="TaskDetail"/> can re-render on its own after its first render, and a bare
-    /// <c>Find(...).Click()</c> can then hit a stale element id.
+    /// <c>Find(...)</c> plus a click can then hit a stale element id.
     /// </summary>
     private static Task ClickRevertAsync(IRenderedComponent<ContainerFragment> cut) =>
         cut.InvokeAsync(() => cut.FindComponent<TaskDetail>().FindAll("button").Single(b => string.Equals(b.TextContent.Trim(), "Revert", StringComparison.Ordinal)).ClickAsync());

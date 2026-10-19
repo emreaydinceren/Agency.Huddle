@@ -65,7 +65,7 @@ public sealed class TaskDetailActionsTests
         var cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => closed = true));
         await EditPriorityAsync(cut, TaskPriority.Urgent);
 
-        _ = cut.InvokeAsync(() => cut.Find(".task-detail-expand").Click());
+        _ = cut.InvokeAsync(() => { _ = cut.Find(".task-detail-expand").ClickAsync(); });
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
         Assert.Equal("Discard changes?", cut.Find(".mud-dialog-title").TextContent.Trim());
         Assert.Equal("Your unsaved edits to this task will be lost.", cut.Find(".mud-dialog-content").TextContent.Trim());
@@ -89,7 +89,7 @@ public sealed class TaskDetailActionsTests
         var cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => closed = true));
         await EditPriorityAsync(cut, TaskPriority.Urgent);
 
-        _ = cut.InvokeAsync(() => cut.Find(".task-detail-expand").Click());
+        _ = cut.InvokeAsync(() => { _ = cut.Find(".task-detail-expand").ClickAsync(); });
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
         Assert.Equal("Discard changes?", cut.Find(".mud-dialog-title").TextContent.Trim());
         Assert.Equal("Your unsaved edits to this task will be lost.", cut.Find(".mud-dialog-content").TextContent.Trim());
@@ -154,7 +154,7 @@ public sealed class TaskDetailActionsTests
         var cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => closes++));
         await EditPriorityAsync(cut, TaskPriority.Urgent);
 
-        _ = cut.InvokeAsync(() => cut.Find(".task-detail-expand").Click());
+        _ = cut.InvokeAsync(() => { _ = cut.Find(".task-detail-expand").ClickAsync(); });
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).ClickAsync());
 

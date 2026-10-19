@@ -688,7 +688,7 @@ public sealed class TaskDetailConflictTests
     /// concurrent edit raises <c>TaskChanged</c>/<c>IndexChanged</c> synchronously, but <c>TaskDetail</c>'s
     /// own handler dispatches its requery fire-and-forget (<c>DispatchRefresh</c>, never awaited by
     /// anything the test can hook). Under thread-pool pressure that dispatched re-render can land between
-    /// a plain <c>cut.FindButton("Save").Click()</c> call's Find and its Click, replacing the very button
+    /// a plain <c>cut.FindButton("Save")</c> call's Find and the click that follows it, replacing the very button
     /// instance the Find captured and throwing <c>UnknownEventHandlerIdException</c> instead of running
     /// <c>SaveAsync</c> at all - bUnit's own exception message names this exact fix.
     /// </summary>

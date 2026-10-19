@@ -159,7 +159,7 @@ public sealed class SprintProposalCardTests
         IRenderedComponent<SprintProposalCard> cut = RenderCard(ctx, fixture.RoomId);
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".sprint-proposal-card")));
 
-        cut.Find(".sprint-proposal-approve").Click();
+        await cut.InvokeAsync(() => cut.Find(".sprint-proposal-approve").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".sprint-proposal-card")));
         Sprint sprint = ((SprintStore)fixture.Harness.Sprints).FindByName("Launch") ?? throw new InvalidOperationException("Sprint was not created.");
@@ -181,7 +181,7 @@ public sealed class SprintProposalCardTests
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".sprint-proposal-card")));
 
         cut.Find(".sprint-proposal-reason input").Change("Not this week.");
-        cut.Find(".sprint-proposal-decline").Click();
+        await cut.InvokeAsync(() => cut.Find(".sprint-proposal-decline").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".sprint-proposal-card")));
         Assert.Null(((SprintStore)fixture.Harness.Sprints).FindByName("Launch"));

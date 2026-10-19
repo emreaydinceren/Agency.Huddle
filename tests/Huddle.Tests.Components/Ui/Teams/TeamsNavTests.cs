@@ -891,7 +891,7 @@ public sealed class TeamsNavTests
     private static async Task OpenNewProjectDialog(IRenderedComponent<ContainerFragment> cut, string team)
     {
         await cut.InvokeAsync(() => MenuButton(cut, team).ClickAsync());
-        _ = cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(item => string.Equals(item.TextContent.Trim(), "New project…", StringComparison.Ordinal)).Click());
+        _ = cut.InvokeAsync(() => { _ = cut.FindAll("div.mud-menu-item").Single(item => string.Equals(item.TextContent.Trim(), "New project…", StringComparison.Ordinal)).ClickAsync(); });
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
     }
 
