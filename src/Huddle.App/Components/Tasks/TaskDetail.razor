@@ -29,7 +29,11 @@
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Pipes
 @using Agency.Huddle.App.Services
+@using Agency.Huddle.App.Components.Library
+@using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Teams
+@using Agency.Huddle.App.Uploads
+@using Microsoft.AspNetCore.Components.Forms
 @inject TaskStore Store
 @inject IServiceProvider Provider
 @inject TaskEvents Events
@@ -50,6 +54,8 @@
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject TaskUploadService Uploader
+@inject ILibraryReferenceResolver LibraryResolver
 @implements IDisposable
 
 <div class="task-detail">
@@ -461,12 +467,34 @@ else if (this.loaded is { } task)
                    (kept in the DOM, visually hidden) overlaps nothing (audit B4n). *@
                 <div class="task-detail-description-header">
                     <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label" id="task-detail-heading-description">Description</MudText>
+                    @if (this.Options.Value.Library.Enabled)
+                    {
+                        <MudTooltip Text="Link a Library file">
+                            <MudIconButton Icon="@Icons.Material.Outlined.Link" Size="Size.Small" aria-label="Link a Library file"
+                                           Class="task-detail-link-file" OnClick="this.LinkLibraryFileAsync" />
+                        </MudTooltip>
+                        <MudFileUpload @ref="this.attachPicker" T="IReadOnlyList<IBrowserFile>" MaximumFileCount="AttachPickLimit"
+                                       FilesChanged="this.OnFilesPickedAsync" Disabled="@(this.createMode || this.uploading)">
+                            <CustomContent Context="fileUpload">
+                                <MudTooltip Text="@(this.createMode ? "Save the Task first to attach files." : "Attach a file from this computer")">
+                                    <MudIconButton Icon="@Icons.Material.Outlined.AttachFile" Size="Size.Small" aria-label="Attach a file"
+                                                   Class="task-detail-attach-file" Disabled="@(this.createMode || this.uploading)"
+                                                   OnClick="@(() => fileUpload.OpenFilePickerAsync())" />
+                                </MudTooltip>
+                            </CustomContent>
+                        </MudFileUpload>
+                    }
                     <HuddleSegmentedControl T="DescriptionViewMode" Value="this.descriptionMode" ValueChanged="this.OnDescriptionModeChanged"
                                      Class="task-detail-description-toggle" ItemCount="2">
                         <MudToggleItem Value="DescriptionViewMode.Edit" Text="Edit" />
                         <MudToggleItem Value="DescriptionViewMode.Preview" Text="Preview" />
                     </HuddleSegmentedControl>
                 </div>
+
+                @if (this.uploading)
+                {
+                    <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="task-detail-upload-progress" aria-label="Uploading" />
+                }
 
                 @if (this.descriptionMode == DescriptionViewMode.Edit)
                 {
@@ -475,7 +503,7 @@ else if (this.loaded is { } task)
                 }
                 else
                 {
-                    <div class="task-detail-description-preview">@((MarkupString)MarkdownRenderer.ToHtml(effective.Description, this.Store))</div>
+                    <div class="task-detail-description-preview">@((MarkupString)MarkdownRenderer.ToHtml(effective.Description, this.Store, this.Options.Value.Library.Enabled ? this.LibraryResolver : null))</div>
                 }
             </div>
 
@@ -581,6 +609,17 @@ else if (this.loaded is { } task)
     private DescriptionViewMode descriptionMode = DescriptionViewMode.Edit;
     private string tagInput = string.Empty;
     private string? originRoomName;
+    private MudFileUpload<IReadOnlyList<IBrowserFile>>? attachPicker;
+
+    private bool uploading;
+    private bool disposed;
+    private CancellationTokenSource uploadCts = new();
+
+    /// <summary>The most files one pick may hold; the per-edit cap is enforced by <see cref="OnFilesPickedAsync"/>, so a pick past it gets the spec's own text and not the file input's.</summary>
+    private const int AttachPickLimit = 50;
+
+    /// <summary>The files uploaded since the last Save; Revert deletes them (TaskAttachments spec 6.5), Save keeps them.</summary>
+    private readonly List<LibraryPath> unsavedUploads = [];
 
     /// <summary>The Task to show, or <see langword="null"/> when creating or copying (a later dispatch's job).</summary>
     [Parameter]
@@ -930,6 +969,164 @@ else if (this.loaded is { } task)
 
     private void OnDescriptionModeChanged(DescriptionViewMode value) => this.descriptionMode = value;
 
+    /// <summary>Appends the path line of <paramref name="absolutePath"/> to the pending description and shows the Edit view, so the Human sees it (TaskAttachments spec 6.4, 6.5).</summary>
+    /// <param name="absolutePath">The Library file's absolute path.</param>
+    private void AppendAttachment(string absolutePath)
+    {
+        string current = this.Effective?.Description ?? this.loaded?.Description ?? string.Empty;
+        this.SetPending(this.pending with { Description = TaskAttachmentText.AppendPathLine(current, absolutePath) });
+        this.descriptionMode = DescriptionViewMode.Edit;
+    }
+
+    /// <summary>Opens the Library file picker and, on a pick, appends the file's path line.</summary>
+    private async Task LinkLibraryFileAsync()
+    {
+        IDialogReference reference = await this.Dialogs.ShowAsync<LibraryFilePickerDialog>("Link a Library file", LibraryFilePickerDialog.Options);
+        DialogResult? result = await reference.Result;
+        if (result is { Canceled: false, Data: LibraryPath file })
+        {
+            this.AppendAttachment(file.FullPath);
+        }
+    }
+
+    /// <summary>
+    /// Saves each picked file into the Task's upload folder and appends its path line. A refusal is shown and the next file is
+    /// still tried; the per-edit cap stops the rest. Resetting the picker raises this callback again with no files.
+    /// </summary>
+    /// <param name="files">The files the Human picked, or none after a reset.</param>
+    private async Task OnFilesPickedAsync(IReadOnlyList<IBrowserFile>? files)
+    {
+        if (this.loaded is not { } task || this.createMode || files is null || files.Count == 0)
+        {
+            return;
+        }
+
+        LibraryOptions library = this.Options.Value.Library;
+        CancellationToken ct = this.uploadCts.Token;
+        this.uploading = true;
+        try
+        {
+            foreach (IBrowserFile file in files)
+            {
+                if (ct.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                if (this.unsavedUploads.Count >= library.MaxUploadsPerMessage)
+                {
+                    this.NotifyAttach($"A Task edit can attach up to {library.MaxUploadsPerMessage} files. Save, then attach more.", Severity.Warning);
+                    break;
+                }
+
+                if (file.Size > library.MaxUploadBytes)
+                {
+                    this.NotifyAttach(LibraryFileService.UploadTooLargeMessage(file.Name, library.MaxUploadBytes), Severity.Warning);
+                    continue;
+                }
+
+                if (!await this.TryAttachAsync(task.Id, file, library, ct))
+                {
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            this.uploading = false;
+            if (this.attachPicker is not null && !this.disposed)
+            {
+                await this.attachPicker.ClearAsync();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Saves one picked file and appends its path line. A failure to read or write the file is shown and the caller goes on to the next
+    /// file; an upload that finishes after Revert, Cancel or the page closing is deleted at once, so no file is left without a line.
+    /// </summary>
+    /// <param name="id">The Task the file is attached to.</param>
+    /// <param name="file">The picked file.</param>
+    /// <param name="library">The Library options, for the size cap.</param>
+    /// <param name="ct">Cancelled by Revert, Cancel or Dispose.</param>
+    /// <returns><see langword="false"/> when the rest of the pick must be dropped because the edit was cancelled.</returns>
+    private async Task<bool> TryAttachAsync(TaskId id, IBrowserFile file, LibraryOptions library, CancellationToken ct)
+    {
+        try
+        {
+            await using Stream stream = file.OpenReadStream(library.MaxUploadBytes + 1);
+            LibraryResult<LibraryUpload> saved = await this.Uploader.SaveAsync(id.ToString(), file.Name, stream, ct);
+            if (saved.Value is not { } upload)
+            {
+                this.NotifyAttach(saved.Error ?? $"Couldn't attach {file.Name}.", Severity.Warning);
+                return true;
+            }
+
+            if (ct.IsCancellationRequested)
+            {
+                await this.DeleteUploadsAsync([upload.File]);
+                return false;
+            }
+
+            this.unsavedUploads.Add(upload.File);
+            this.AppendAttachment(upload.File.FullPath);
+            this.NotifyAttach($"Attached {System.IO.Path.GetFileName(upload.File.FullPath)}.", Severity.Success);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            this.NotifyAttach($"Couldn't attach {file.Name}.", Severity.Warning);
+            return true;
+        }
+    }
+
+    /// <summary>Stops uploads still running and gives the next pick a fresh token; called by Revert and Cancel so an upload cannot land after the Human discarded the edit.</summary>
+    private void CancelUploads()
+    {
+        this.uploadCts.Cancel();
+        this.uploadCts.Dispose();
+        this.uploadCts = new CancellationTokenSource();
+    }
+
+    /// <summary>Shows an attach message under the one key <c>task-attach</c>. A snackbar already showing under a key would swallow a new one, so the old one is removed first and a burst of uploads replaces rather than stacks (spec 7).</summary>
+    /// <param name="message">The text to show.</param>
+    /// <param name="severity">Success for an attached file, Warning for a refusal.</param>
+    private void NotifyAttach(string message, Severity severity)
+    {
+        this.Snackbar.RemoveByKey("task-attach");
+        this.Snackbar.Add(message, severity, key: "task-attach");
+    }
+
+    /// <summary>Deletes the files uploaded since the last Save, as an unsent chat upload is deleted. A file that cannot be deleted stays in the Library.</summary>
+    private void DeleteUnsavedUploads()
+    {
+        LibraryPath[] doomed = [.. this.unsavedUploads];
+        this.unsavedUploads.Clear();
+        if (doomed.Length > 0)
+        {
+            _ = this.DeleteUploadsAsync(doomed);
+        }
+    }
+
+    private async Task DeleteUploadsAsync(IReadOnlyList<LibraryPath> files)
+    {
+        foreach (LibraryPath file in files)
+        {
+            try
+            {
+                await this.Uploader.DeleteUnsentAsync(file, CancellationToken.None);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // The file stays in the Task's folder; the Library lists it and the Human can delete it there.
+            }
+        }
+    }
+
     /// <summary>
     /// Sets the new Status; leaving Duplicate for any other state clears <see cref="TaskPatch.DuplicateOf"/>
     /// (Settled corrections-B5 D12 item 8, applies to TaskDetail too), and leaving Cancelled or Rejected
@@ -1184,6 +1381,8 @@ else if (this.loaded is { } task)
 
     private void Revert()
     {
+        this.CancelUploads();
+        this.DeleteUnsavedUploads();
         this.ClearPending();
         if (!this.createMode)
         {
@@ -1364,6 +1563,11 @@ else if (this.loaded is { } task)
         this.conflictChoices = new Dictionary<TaskField, ConflictChoice>(this.conflictChoices) { [field] = resolvedChoice };
         if (resolvedChoice == ConflictChoice.Theirs)
         {
+            if (field == TaskField.Description)
+            {
+                this.DeleteUnsavedUploads();
+            }
+
             this.SetPending(TaskDetail.DropField(this.pending, field), field == TaskField.Sprint ? null : this.sprintInput);
         }
 
@@ -1516,6 +1720,7 @@ else if (this.loaded is { } task)
                 case TaskResult.Saved saved:
                     this.loaded = saved.Task;
                     this.baseVersion = saved.Task.Version;
+                    this.unsavedUploads.Clear();
                     this.ClearPending();
                     this.conflict = null;
                     this.conflictChoices = [];
@@ -1525,6 +1730,7 @@ else if (this.loaded is { } task)
                 case TaskResult.Unchanged unchanged:
                     this.loaded = unchanged.Task;
                     this.baseVersion = unchanged.Task.Version;
+                    this.unsavedUploads.Clear();
                     this.ClearPending();
                     this.conflict = null;
                     this.conflictChoices = [];
@@ -1611,5 +1817,8 @@ else if (this.loaded is { } task)
         this.Events.TasksReloaded -= this.OnTasksReloaded;
         this.Activity.Changed -= this.OnActivityChanged;
         this.Sprints.SprintsChanged -= this.OnSprintsChanged;
+        this.disposed = true;
+        this.uploadCts.Cancel();
+        this.uploadCts.Dispose();
     }
 }

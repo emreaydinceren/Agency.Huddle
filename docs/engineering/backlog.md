@@ -93,6 +93,28 @@ Expect two kinds of failure:
   cannot set `Size` or `Variant`, and `MudHotkey` modifiers are side-specific. The
   release notes mention none of them, so each probably still holds.
 
+## Finishing the tests for Task attachments
+
+**Raised:** 2026-10-18, after the review of the first build of
+[TaskAttachments](../Huddle.TaskAttachments-Specifications.md) (branch `feat/task-attachments`).
+The review's code gaps are fixed: "take theirs" deletes the files, a read or write error on one file does not stop the rest,
+Revert, Cancel and closing the page cancel a running upload, a pick past the cap shows the spec text, the progress bar shows,
+both services are injected normally, and the picker search leaves folders out of its hit budget and shows the path as dimmed text.
+Writing the tests also found, and fixed, a snackbar bug: one already showing under the key `task-attach` swallowed the next message.
+
+Three behaviours have no test, because bUnit cannot drive them without a change to the code or the harness:
+
+- A stream error on one file does not stop the next. `InputFileContent` cannot make `OpenReadStream` throw; it needs an `IBrowserFile` fake.
+- Cancel or Revert during an upload leaves no file behind. It needs a save that can be held open while the test clicks Revert.
+- The progress bar shows while an upload runs. The upload finishes before a test can look.
+
+**Also:** write the manual tests for A1, A3, A8, A10, A11 and A14 in
+[manual-tests/tasks.md](manual-tests/tasks.md) and update the Index row, which says "none yet". The spec's case "`TaskUploadFolders.For`
+returns `null` with no Uploads root" cannot be set up, because the Uploads root is always built in; drop it from Appendix A.
+
+**Done when:** the three tests exist (add a hook to `TaskUploadService` only if there is no other way), the manual tests are written,
+and `dotnet build Huddle.slnx` and `dotnet test Huddle.slnx --` pass.
+
 ## Packages evaluated and declined
 
 These were checked against the code they would supposedly replace, and rejected. Read
