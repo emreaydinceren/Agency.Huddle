@@ -1,3 +1,5 @@
+using Agency.Huddle.Tests.Css;
+
 namespace Agency.Huddle.Tests.Ui.Sidebar;
 
 /// <summary>
@@ -35,7 +37,7 @@ public sealed class SidebarCollapseSourceTests
     [Fact]
     public void AppCss_SidebarPanel_UsesOnlyPaletteColours()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
         int start = css.IndexOf(".sidebar-panel-header {", StringComparison.Ordinal);
         int bodyStart = css.IndexOf(".sidebar-panel-body {", StringComparison.Ordinal);
         Assert.True(start >= 0 && bodyStart > start, "Expected the .sidebar-panel-header rules to be followed by .sidebar-panel-body.");

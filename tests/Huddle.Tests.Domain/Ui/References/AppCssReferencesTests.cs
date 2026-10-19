@@ -1,3 +1,5 @@
+using Agency.Huddle.Tests.Css;
+
 namespace Agency.Huddle.Tests.Ui.References;
 
 /// <summary>
@@ -38,22 +40,18 @@ public sealed class AppCssReferencesTests
     [Fact]
     public void RoomAndTeamRefs_StyledLikeTaskRef()
     {
-        string text = ReadAppCss();
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(@"\.task-ref,\s*\.library-ref,\s*a\.room-ref,\s*a\.team-ref,\s*\.ref-link\s*\{", text);
 
         Assert.Matches(@"\.ref-link\s*\{[^}]*text-decoration:\s*underline dotted", text);
     }
 
-    /// <summary>Reads <c>app.css</c> as the source fact every test in this class pins.</summary>
-    /// <returns>The full text of <c>app.css</c>.</returns>
-    private static string ReadAppCss() => File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
-
     /// <summary>Returns the <c>/* References */</c> block, from its marker to the end of the file.</summary>
     /// <returns>The block's text.</returns>
     private static string Block()
     {
-        string text = ReadAppCss();
+        string text = CssText.AppCss(CssNewlines.AsIs);
         int start = text.IndexOf(BlockMarker, StringComparison.Ordinal);
         Assert.True(start >= 0, "Expected a /* References */ block in app.css.");
         return text[start..];

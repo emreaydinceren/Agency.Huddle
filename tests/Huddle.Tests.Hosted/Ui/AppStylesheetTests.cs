@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -66,7 +67,7 @@ public sealed partial class AppStylesheetTests
     [Fact]
     public void AppCss_DeclaresFocusVisibleRule()
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Contains(":focus-visible", text, StringComparison.Ordinal);
     }
@@ -83,7 +84,7 @@ public sealed partial class AppStylesheetTests
     [Fact]
     public void AppCss_FocusRingUsesTextPrimaryForContrast()
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
         Agency.Huddle.App.Themes.Skins.Token focus = Assert.Single(
             Agency.Huddle.App.Themes.Skins.SkinTokens.All, static token => string.Equals(token.Key, "focus", StringComparison.Ordinal));
 
@@ -100,7 +101,7 @@ public sealed partial class AppStylesheetTests
     [Fact]
     public void AppCss_ScalesAnAvatarImageToItsCircle()
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         Match rule = Regex.Match(text, @"\.mud-avatar img\s*\{(?<body>[^}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
 
@@ -117,7 +118,7 @@ public sealed partial class AppStylesheetTests
     [Fact]
     public void AppCss_DrawsTheAvatarEditorPaletteAsCircles()
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         Match dot = Regex.Match(text, @"\.avatar-swatch-dot\s*\{(?<body>[^}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
 
@@ -137,7 +138,7 @@ public sealed partial class AppStylesheetTests
     [Fact]
     public void AppCss_DoesNotDeclareTeammatesDangerClass()
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.DoesNotContain(".teammates-danger", text, StringComparison.Ordinal);
     }

@@ -1,3 +1,5 @@
+using Agency.Huddle.Tests.Css;
+
 namespace Agency.Huddle.Tests.Ui.Tasks;
 
 using Bunit;
@@ -286,7 +288,7 @@ public sealed class TaskFieldAdoptionTests : IDisposable
     [Fact]
     public void AppCss_OverdueMarksTheDateInErrorNotTheWholeCardInWarning()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         int card = css.IndexOf(".task-overdue {", StringComparison.Ordinal);
         if (card >= 0)

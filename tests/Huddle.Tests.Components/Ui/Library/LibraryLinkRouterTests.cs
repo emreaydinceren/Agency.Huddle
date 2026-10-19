@@ -99,7 +99,7 @@ public sealed class LibraryLinkRouterTests : IDisposable
     [Fact]
     public void MainLayoutSource_MountsTheRouter_AndHasNoPaneHost()
     {
-        string repoRoot = FindRepoRoot();
+        string repoRoot = RepoPaths.Root;
         string text = File.ReadAllText(Path.Combine(repoRoot, "src", "Huddle.App", "Components", "Layout", "MainLayout.razor"));
 
         int taskViewNavIndex = text.IndexOf("<TaskViewNav", StringComparison.Ordinal);
@@ -112,24 +112,6 @@ public sealed class LibraryLinkRouterTests : IDisposable
         Assert.True(tabHostIndex > 0);
         Assert.DoesNotContain("@Body", text, StringComparison.Ordinal);
         Assert.DoesNotContain("LibraryPaneHost", text, StringComparison.Ordinal);
-    }
-
-    /// <summary>Walks up from <see cref="AppContext.BaseDirectory"/> until it finds the directory containing <c>Huddle.slnx</c>.</summary>
-    private static string FindRepoRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            string candidate = Path.Combine(directory.FullName, "Huddle.slnx");
-            if (File.Exists(candidate))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException($"Could not find 'Huddle.slnx' above '{AppContext.BaseDirectory}'.");
     }
 
     private sealed class RouterFixture : IDisposable

@@ -1,3 +1,5 @@
+using Agency.Huddle.Tests.Css;
+
 namespace Agency.Huddle.Tests.Ui.Library;
 
 /// <summary>
@@ -23,7 +25,7 @@ public sealed class LibrarySplitLayoutSourceTests
     [Fact]
     public void AppCss_LibraryPage_IsAFullHeightShrinkableColumn()
     {
-        string body = RuleBody(ReadAppCss(), ".library-page");
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".library-page");
 
         Assert.Contains("height: 100%;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("display: flex;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
@@ -35,7 +37,7 @@ public sealed class LibrarySplitLayoutSourceTests
     [Fact]
     public void AppCss_LibraryExplorer_FillsAndMayShrink()
     {
-        string body = RuleBody(ReadAppCss(), ".library-page .library-explorer");
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".library-page .library-explorer");
 
         Assert.Contains("flex: 1 1 auto;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("min-height: 0;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
@@ -46,7 +48,7 @@ public sealed class LibrarySplitLayoutSourceTests
     [Fact]
     public void AppCss_LibrarySplit_IsFullHeightAndMayShrink()
     {
-        string body = RuleBody(ReadAppCss(), ".library-explorer-split");
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".library-explorer-split");
 
         Assert.Contains("height: 100%;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("min-height: 0;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
@@ -56,7 +58,7 @@ public sealed class LibrarySplitLayoutSourceTests
     [Fact]
     public void AppCss_LibrarySplitPanels_AreFullHeightAndScroll()
     {
-        string body = RuleBody(ReadAppCss(), ".library-explorer-split-side-by-side > .child-panel");
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".library-explorer-split-side-by-side > .child-panel");
 
         Assert.Contains("height: 100%;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("overflow: auto;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
@@ -66,26 +68,9 @@ public sealed class LibrarySplitLayoutSourceTests
     [Fact]
     public void AppCss_LibrarySplitDivider_IsAVisibleHairline()
     {
-        string body = RuleBody(ReadAppCss(), ".library-explorer-split > .divider");
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".library-explorer-split > .divider");
 
         Assert.Contains("background-color: var(--hu-line-region);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
-    /// <summary>Reads <c>app.css</c> from the repository.</summary>
-    /// <returns>The stylesheet's text.</returns>
-    private static string ReadAppCss() => File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
-
-    /// <summary>The declarations inside the rule whose selector is exactly <paramref name="selector"/>, so <c>.a</c> never matches <c>.a-b</c>.</summary>
-    /// <param name="css">The stylesheet's text.</param>
-    /// <param name="selector">The selector, as written at the start of a line.</param>
-    /// <returns>The text between the rule's braces.</returns>
-    private static string RuleBody(string css, string selector)
-    {
-        string opening = "\n" + selector + " {";
-        int start = css.IndexOf(opening, StringComparison.Ordinal);
-        Assert.True(start >= 0, $"app.css has no rule with the selector '{selector}'.");
-
-        int end = css.IndexOf('}', start);
-        return css[(start + opening.Length)..end];
-    }
 }

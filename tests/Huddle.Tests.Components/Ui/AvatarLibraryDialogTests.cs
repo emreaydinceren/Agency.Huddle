@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.Tests.Avatars;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -403,7 +404,7 @@ public sealed class AvatarLibraryDialogTests
     [Fact]
     public void AppCss_NarrowViewport_FilterChildrenDoNotShrink()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         int block = css.IndexOf(".mud-dialog.avatar-library-dialog", StringComparison.Ordinal);
         Assert.True(block >= 0);

@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Agency.Huddle.App.Components.Settings;
 using Agency.Huddle.App.Themes;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -79,7 +80,7 @@ public sealed partial class R3SettingsTests
     [Fact]
     public void AppCss_SectionNavUsesTheSidebarRowGeometry()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(NavRow(), css);
         Assert.Matches(IntroMeasure(), css);
@@ -89,7 +90,7 @@ public sealed partial class R3SettingsTests
     [Fact]
     public void AppCss_ThemePickerHasNoInnerScroll()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
         Match rule = ThemePickerRule().Match(css);
 
         Assert.True(rule.Success);

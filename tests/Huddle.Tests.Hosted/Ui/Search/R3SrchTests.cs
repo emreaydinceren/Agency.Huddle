@@ -1,6 +1,7 @@
 using Bunit;
 using Bunit.Rendering;
 using Agency.Huddle.App.Search;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui.Search;
 
@@ -70,7 +71,7 @@ public sealed class R3SrchTests(TeamWebApplicationFactory factory) : IClassFixtu
     /// <returns>The rule's text.</returns>
     private static string Rule(string selector)
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
         int start = text.IndexOf(selector, StringComparison.Ordinal);
         Assert.True(start >= 0, $"Expected {selector} in app.css.");
         return text[start..(text.IndexOf('}', start) + 1)];

@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Library;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Library;
 
@@ -143,7 +144,7 @@ public sealed class LibraryFileServiceRecycleTests
     [Fact]
     public void Recycle_NeverDeletesPermanently()
     {
-        string repoRoot = FindRepoRoot();
+        string repoRoot = RepoPaths.Root;
         string appRoot = Path.Combine(repoRoot, "src", "Huddle.App");
         List<string> files =
         [
@@ -157,43 +158,9 @@ public sealed class LibraryFileServiceRecycleTests
             string relative = Path.GetRelativePath(appRoot, file).Replace('\\', '/');
             int allowed = AllowedFileDeletes.FirstOrDefault(entry => string.Equals(entry.RelativePath, relative, StringComparison.Ordinal)).Count;
 
-            Assert.True(CountOccurrences(text, "File.Delete(") == allowed, $"{relative}: unexpected File.Delete( count (allowed {allowed}).");
+            Assert.True(CssText.CountOccurrences(text, "File.Delete(") == allowed, $"{relative}: unexpected File.Delete( count (allowed {allowed}).");
             Assert.DoesNotContain("Directory.Delete(", text, StringComparison.Ordinal);
         }
     }
 
-    /// <summary>Counts non-overlapping ordinal occurrences of <paramref name="needle"/> in <paramref name="text"/>.</summary>
-    /// <param name="text">The text to search.</param>
-    /// <param name="needle">The text to count.</param>
-    private static int CountOccurrences(string text, string needle)
-    {
-        int count = 0;
-        int index = text.IndexOf(needle, StringComparison.Ordinal);
-        while (index >= 0)
-        {
-            count++;
-            index = text.IndexOf(needle, index + needle.Length, StringComparison.Ordinal);
-        }
-
-        return count;
-    }
-
-    /// <summary>Walks up from <see cref="AppContext.BaseDirectory"/> until it finds the directory containing
-    /// <c>Huddle.slnx</c>.</summary>
-    private static string FindRepoRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            string candidate = Path.Combine(directory.FullName, "Huddle.slnx");
-            if (File.Exists(candidate))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Could not find Huddle.slnx above the test's base directory.");
-    }
 }

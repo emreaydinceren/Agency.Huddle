@@ -1,3 +1,5 @@
+using Agency.Huddle.Tests.Css;
+
 namespace Agency.Huddle.Tests.Ui.Tasks;
 
 /// <summary>
@@ -89,7 +91,7 @@ public sealed class AppJsSourceTests
     [Fact]
     public void AppCss_SearchHitFlash_IsInTheGlobalSearchBlockAndHonoursReducedMotion()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
         int blockStart = css.IndexOf("/* ---- Global search ", StringComparison.Ordinal);
         Assert.True(blockStart >= 0, "Expected a /* Global search */ block in app.css.");
         int flashStart = css.IndexOf("/* The Room jump", blockStart, StringComparison.Ordinal);
@@ -130,7 +132,7 @@ public sealed class AppJsSourceTests
             "window.addEventListener(\"keydown\", window.huddleSearch._handler, true)",
             "detach()",
             "window.removeEventListener(\"keydown\", window.huddleSearch._handler, true)");
-        Assert.Equal(1, AppJsSourceTests.CountOccurrences(block, "addEventListener("));
+        Assert.Equal(1, CssText.CountOccurrences(block, "addEventListener("));
     }
 
     /// <summary><c>Ctrl+K</c> (no Shift, either letter case) calls <c>preventDefault</c>, remembers the focused element, focuses the box and tells C# to open (Global Search spec §5.2, D-3).</summary>
@@ -200,7 +202,7 @@ public sealed class AppJsSourceTests
         Assert.DoesNotContain("getBoundingClientRect().width", block, StringComparison.Ordinal);
         // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
         Assert.Contains("drawer.offsetWidth", block, StringComparison.Ordinal);
-        Assert.Equal(3, AppJsSourceTests.CountOccurrences(block, "drawer.offsetWidth"));
+        Assert.Equal(3, CssText.CountOccurrences(block, "drawer.offsetWidth"));
     }
 
     /// <summary>The text of the <c>window.huddleSearch</c> object, up to the closing <c>};</c> at the start of a line.</summary>
@@ -234,7 +236,7 @@ public sealed class AppJsSourceTests
     {
         string composerBlock = AppJsSourceTests.TeamComposerBlock();
 
-        Assert.Equal(1, AppJsSourceTests.CountOccurrences(composerBlock, "addEventListener(\"keydown\""));
+        Assert.Equal(1, CssText.CountOccurrences(composerBlock, "addEventListener(\"keydown\""));
         // contains-ok: source-fact test, no JS runner
         Assert.Contains("el._picker", composerBlock, StringComparison.Ordinal);
     }
@@ -430,17 +432,4 @@ public sealed class AppJsSourceTests
         return text[start..(end + 3)];
     }
 
-    /// <summary>Counts non-overlapping occurrences of <paramref name="needle"/> in <paramref name="haystack"/>, ordinally.</summary>
-    private static int CountOccurrences(string haystack, string needle)
-    {
-        int count = 0;
-        int index = 0;
-        while ((index = haystack.IndexOf(needle, index, StringComparison.Ordinal)) >= 0)
-        {
-            count++;
-            index += needle.Length;
-        }
-
-        return count;
-    }
 }

@@ -38,7 +38,7 @@ public sealed class MainLayoutTeamsTests
     [Fact]
     public void MainLayoutSource_HasTeamsNavAfterRoomList_AndBeforeTheTeammatesLink()
     {
-        string repoRoot = FindRepoRoot();
+        string repoRoot = RepoPaths.Root;
         string text = File.ReadAllText(Path.Combine(repoRoot, "src", "Huddle.App", "Components", "Layout", "MainLayout.razor"));
 
         int roomListIndex = text.IndexOf("<RoomList", StringComparison.Ordinal);
@@ -52,21 +52,4 @@ public sealed class MainLayoutTeamsTests
         Assert.True(teammatesIndex > teamsNavIndex, "the Teammates link must come after '<TeamsNav'");
     }
 
-    /// <summary>Walks up from <see cref="AppContext.BaseDirectory"/> until it finds the directory containing <c>Huddle.slnx</c>.</summary>
-    private static string FindRepoRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            string candidate = Path.Combine(directory.FullName, "Huddle.slnx");
-            if (File.Exists(candidate))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException($"Could not find 'Huddle.slnx' above '{AppContext.BaseDirectory}'.");
-    }
 }

@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Avatars;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -10,8 +11,6 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 public sealed partial class R3OpenItemsTests
 {
-    private static string ReadCss() => File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
-
     private static string ReadSource(params string[] segments) => File.ReadAllText(CssSource.RepoPath(segments));
 
     [GeneratedRegex(@"\s+", RegexOptions.CultureInvariant)]
@@ -64,7 +63,7 @@ public sealed partial class R3OpenItemsTests
     public void TeammateCard_ModelEffortWorkModeAreOneRow()
     {
         string card = ReadSource("src", "Huddle.App", "Components", "Shared", "TeammateCard.razor");
-        string css = Whitespace().Replace(ReadCss(), " ");
+        string css = Whitespace().Replace(CssText.AppCss(CssNewlines.AsIs), " ");
         int row = card.IndexOf("teammate-card-model-row", StringComparison.Ordinal);
         string rowTail = card[row..];
         string rowBody = rowTail[..rowTail.IndexOf("The reset below is deliberate", StringComparison.Ordinal)];
@@ -79,7 +78,7 @@ public sealed partial class R3OpenItemsTests
     [Fact]
     public void RoleAndRosterGrids_HideTheScrollbarUntilHoverOrFocus()
     {
-        string css = Whitespace().Replace(ReadCss(), " ");
+        string css = Whitespace().Replace(CssText.AppCss(CssNewlines.AsIs), " ");
 
         Assert.Contains("scrollbar-width: thin; scrollbar-color: transparent transparent; }", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains(".role-grid:hover, .role-grid:focus-within, .roster-grid:hover, .roster-grid:focus-within { scrollbar-color: var(--ink-edge) transparent; }", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
@@ -89,7 +88,7 @@ public sealed partial class R3OpenItemsTests
     [Fact]
     public void AvatarEditor_ReservesTheTallestModesHeight()
     {
-        Match rule = AvatarEditorRule().Match(ReadCss());
+        Match rule = AvatarEditorRule().Match(CssText.AppCss(CssNewlines.AsIs));
 
         Assert.True(rule.Success);
         Assert.True(double.Parse(rule.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) >= 27);

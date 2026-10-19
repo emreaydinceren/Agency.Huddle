@@ -13,6 +13,7 @@ using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -100,7 +101,7 @@ public sealed class SidebarConsistencyTests
     [Fact]
     public void TeamsNav_ProjectAndTeamRoomRows_UseTheLevelTwoToken()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.DoesNotContain("3.875rem", css, StringComparison.Ordinal);
         ShellSidebarRowsTests.SourceHas(css, "padding-left: var(--nav-indent-2)");
@@ -109,7 +110,7 @@ public sealed class SidebarConsistencyTests
     /// <summary>The "Left menu" block of <c>app.css</c>: from its banner comment to the next banner comment.</summary>
     private static string LeftMenuSection()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
         int start = css.IndexOf("/* ---- Left menu", StringComparison.Ordinal);
         Assert.True(start >= 0, "app.css has no 'Left menu' section.");
         int end = css.IndexOf("/* ---- ", start + 10, StringComparison.Ordinal);

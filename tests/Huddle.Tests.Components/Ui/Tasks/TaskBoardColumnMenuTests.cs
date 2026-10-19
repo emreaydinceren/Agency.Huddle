@@ -1,3 +1,5 @@
+using Agency.Huddle.Tests.Css;
+
 namespace Agency.Huddle.Tests.Ui.Tasks;
 
 using System.Text.RegularExpressions;
@@ -308,7 +310,7 @@ public sealed partial class TaskBoardColumnMenuTests
     [Fact]
     public void AppCss_GhostBucketSelector_MatchesTheMarkup()
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(TaskGhostBucketSelector(), text);
         Assert.DoesNotMatch(BareGhostBucketSelector(), text);
@@ -318,7 +320,7 @@ public sealed partial class TaskBoardColumnMenuTests
     [Fact]
     public void AppCss_FocusRing_IsOnTheOpenButton()
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(OpenButtonFocusSelector(), text);
         Assert.DoesNotMatch(CardDivFocusSelector(), text);

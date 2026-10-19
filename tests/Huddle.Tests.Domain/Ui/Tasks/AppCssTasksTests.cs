@@ -1,3 +1,5 @@
+using Agency.Huddle.Tests.Css;
+
 namespace Agency.Huddle.Tests.Ui.Tasks;
 
 /// <summary>
@@ -10,7 +12,7 @@ public sealed class AppCssTasksTests
     [Fact]
     public void AppCss_HasTasksBlock()
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         // contains-ok: source-fact test, no CSS parser - app.css's own text is what's pinned.
         Assert.Contains("/* ---- Tasks ", text, StringComparison.Ordinal);
@@ -20,7 +22,7 @@ public sealed class AppCssTasksTests
     [Fact]
     public void AppCss_DeclaresTaskBoardLane()
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         // contains-ok: source-fact test, no CSS parser - app.css's own text is what's pinned.
         Assert.Contains(".task-board-lane", text, StringComparison.Ordinal);
@@ -30,35 +32,21 @@ public sealed class AppCssTasksTests
     [Fact]
     public void AppCss_BoardScrollsBothWays_WithStickyColumnHeaders()
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
-        string board = RuleBody(text, ".task-board");
-        string header = RuleBody(text, ".task-board-columns");
+        string board = CssText.RuleBodyInList(text, ".task-board");
+        string header = CssText.RuleBodyInList(text, ".task-board-columns");
         // contains-ok: source-fact test, no CSS parser - app.css's own declarations are what's pinned.
         Assert.Contains("overflow: auto", board, StringComparison.Ordinal);
         Assert.Contains("position: sticky", header, StringComparison.Ordinal);
         Assert.Contains("top: 0", header, StringComparison.Ordinal);
     }
 
-    /// <summary>The declarations of the first rule whose selector list ends with <paramref name="selector"/>.</summary>
-    /// <param name="css">The stylesheet text.</param>
-    /// <param name="selector">The selector, for example <c>.task-board</c>.</param>
-    private static string RuleBody(string css, string selector)
-    {
-        System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(
-            css,
-            @"(?:^|\n)(?:[^{}\n]*,\s*)?" + System.Text.RegularExpressions.Regex.Escape(selector) + @"\s*(?:,[^{}]*)?\{(?<body>[^}]*)\}",
-            System.Text.RegularExpressions.RegexOptions.CultureInvariant,
-            TimeSpan.FromSeconds(2));
-        Assert.True(match.Success, $"No rule for {selector}.");
-        return match.Groups["body"].Value;
-    }
-
     /// <summary>The per-state coloured left edge is gone: the Board column names the state, so the edge repeated it.</summary>
     [Fact]
     public void AppCss_DeclaresNoTaskColEdge()
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.DoesNotContain("task-col-edge", text, StringComparison.Ordinal);
     }
@@ -74,7 +62,7 @@ public sealed class AppCssTasksTests
     [InlineData(".task-ref-closed")]
     public void AppCss_DeclaresRemainingTaskClasses(string className)
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         // contains-ok: source-fact test, no CSS parser - app.css's own text is what's pinned.
         Assert.Contains(className, text, StringComparison.Ordinal);
@@ -84,7 +72,7 @@ public sealed class AppCssTasksTests
     [Fact]
     public void AppCss_DeclaresTaskId_WithUserSelectAll()
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         int classIndex = text.IndexOf(".task-id", StringComparison.Ordinal);
         Assert.True(classIndex >= 0, "Expected a .task-id rule in app.css.");
@@ -198,7 +186,7 @@ public sealed class AppCssTasksTests
     /// <param name="selector">The selector text to find, verbatim as written in <c>app.css</c>.</param>
     private static string RuleFor(string selector)
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         string anchor = $"{selector} {{";
         int selectorIndex = text.IndexOf(anchor, StringComparison.Ordinal);
@@ -213,7 +201,7 @@ public sealed class AppCssTasksTests
     [Fact]
     public void AppCss_DeclaresConflictStackedRow_ScopedAndColumnLaidOut()
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         int classIndex = text.IndexOf(".task-detail-conflict-stacked .task-detail-conflict-row", StringComparison.Ordinal);
         Assert.True(classIndex >= 0, "Expected a scoped .task-detail-conflict-stacked .task-detail-conflict-row rule in app.css.");
@@ -228,7 +216,7 @@ public sealed class AppCssTasksTests
     [Fact]
     public void AppCss_ListHeaderRowsAndColumns_FollowTheSpec()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains(".mud-table.task-list-grid .mud-table-head .mud-table-row .mud-table-cell {\n    font-size: var(--mud-typography-caption-size);\n    font-weight: 600;\n    color: var(--mud-palette-text-secondary);", css.Replace("\r\n", "\n"), StringComparison.Ordinal);
@@ -257,7 +245,7 @@ public sealed class AppCssTasksTests
     [Fact]
     public void AppCss_TaskDrawer_FollowsTheSpec()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("grid-template-columns: 120px minmax(0, 1fr);", css, StringComparison.Ordinal);

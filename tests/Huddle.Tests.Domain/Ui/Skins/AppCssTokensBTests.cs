@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui.Skins;
 
@@ -18,7 +19,7 @@ public sealed class AppCssTokensBTests
 
     private static string ReadRange()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
         int start = css.IndexOf(AppCssTokensBTests.RangeStart, StringComparison.Ordinal);
         int end = css.IndexOf(AppCssTokensBTests.RangeEnd, StringComparison.Ordinal);
         Assert.True(start >= 0 && end > start, "app.css lost the section headers that bound package B's range.");

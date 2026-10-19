@@ -1,3 +1,5 @@
+using Agency.Huddle.Tests.Css;
+
 namespace Agency.Huddle.Tests.Ui.Skins;
 
 /// <summary>
@@ -59,7 +61,7 @@ public sealed class AppCssTokensATests
     [InlineData(".mud-overlay.mud-overlay-dialog .mud-overlay-scrim.mud-overlay-dark", "background-color: var(--hu-scrim);")]
     public void AppCss_Site_ReadsTheToken(string selector, string declaration)
     {
-        string body = RuleBody(AppCssRange(), selector);
+        string body = CssText.RuleBody(AppCssRange(), selector);
 
         Assert.Contains(declaration, body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
     }
@@ -99,7 +101,7 @@ public sealed class AppCssTokensATests
     [InlineData(".tab-action:hover", "background-color: var(--hu-hover);")]
     public void TabStripCss_Site_ReadsTheToken(string selector, string declaration)
     {
-        string body = RuleBody(TabStripCss(), selector);
+        string body = CssText.RuleBody(TabStripCss(), selector);
 
         Assert.Contains(declaration, body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
     }
@@ -119,7 +121,7 @@ public sealed class AppCssTokensATests
     /// <summary>The text of <c>app.css</c> from the file start to the line before the Message layout section.</summary>
     private static string AppCssRange()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
         int end = css.IndexOf(RangeEnd, StringComparison.Ordinal);
         Assert.True(end > 0, "The Message layout section header is missing.");
         return css[..end];
@@ -128,19 +130,6 @@ public sealed class AppCssTokensATests
     /// <summary>The text of <c>TabStrip.razor.css</c>.</summary>
     private static string TabStripCss() =>
         File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Layout", "TabStrip.razor.css"));
-
-    /// <summary>The body of the rule whose selector list ends with the line <paramref name="selector"/>.</summary>
-    /// <param name="css">The stylesheet text.</param>
-    /// <param name="selector">The last selector line of the rule, which starts a line.</param>
-    /// <returns>The text between the rule's braces.</returns>
-    private static string RuleBody(string css, string selector)
-    {
-        string needle = "\n" + selector + " {";
-        int at = ("\n" + css).IndexOf(needle, StringComparison.Ordinal);
-        Assert.True(at >= 0, $"No rule for {selector}.");
-        int open = css.IndexOf('{', at);
-        return css[(open + 1)..css.IndexOf('}', open)];
-    }
 
     /// <summary>How many times <paramref name="needle"/> occurs in <paramref name="haystack"/>.</summary>
     private static int Count(string haystack, string needle) =>

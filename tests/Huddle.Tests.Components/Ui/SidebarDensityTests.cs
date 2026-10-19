@@ -24,6 +24,7 @@ using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Tools;
 using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Ui.Teams;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -55,7 +56,7 @@ public sealed class SidebarDensityTests
     [Fact]
     public void AppCss_SidebarLabels_AreNoWrapAndEllipsised()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
         Match match = Regex.Match(css, @"(?m)^\.mud-nav-group \.mud-collapse-container \.mud-nav-link \.mud-nav-link-text\s*\{([^}]*)\}");
 
         Assert.True(match.Success, "app.css has no truncation rule for the nav link text.");

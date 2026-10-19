@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Themes.Skins;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui.Traits;
 
@@ -14,7 +15,7 @@ public sealed partial class ChromeTraitsTests
 {
     private static readonly string Css = StripComments(File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css")));
 
-    private static readonly string RawCss = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+    private static readonly string RawCss = CssText.AppCss(CssNewlines.AsIs);
 
     /// <summary>Every non-default value of the five chrome trait enums, with the trait attribute it renders as.</summary>
     public static TheoryData<string, string> NonDefaultValues()

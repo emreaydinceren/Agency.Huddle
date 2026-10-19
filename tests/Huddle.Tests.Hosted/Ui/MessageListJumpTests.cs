@@ -9,6 +9,7 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Library;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -56,7 +57,7 @@ public sealed class MessageListJumpTests
         string[] expected = ["profile-avatar", "message-meta"];
         Assert.Equal(expected, extraChildren);
 
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
         foreach (string name in extraChildren)
         {
             Assert.Contains($".message-row.human > .{name}", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source

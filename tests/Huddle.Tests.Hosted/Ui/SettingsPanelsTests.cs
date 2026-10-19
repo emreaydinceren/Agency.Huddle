@@ -6,6 +6,7 @@ using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Skills;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -106,7 +107,7 @@ public sealed partial class SettingsPanelsTests
     [Fact]
     public void AppCss_PromptsActionRowIsSticky()
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(StickyActionRow(), text);
     }

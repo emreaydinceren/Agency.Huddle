@@ -1,3 +1,5 @@
+using Agency.Huddle.Tests.Css;
+
 namespace Agency.Huddle.Tests.Ui.Search;
 
 /// <summary>
@@ -30,7 +32,7 @@ public sealed class AppCssSearchTests
     [Fact]
     public void SearchRules_NeverSetZoom()
     {
-        string text = ReadAppCss();
+        string text = CssText.AppCss(CssNewlines.AsIs);
         int start = text.IndexOf("/* ---- Global search ", StringComparison.Ordinal);
         Assert.True(start >= 0, "Expected a /* Global search */ block in app.css.");
 
@@ -45,7 +47,7 @@ public sealed class AppCssSearchTests
     [Fact]
     public void AppCss_SetsNoZoomAnywhere()
     {
-        string[] lines = ReadAppCss().Split('\n');
+        string[] lines = CssText.AppCss(CssNewlines.AsIs).Split('\n');
 
         // A declaration line, not the comment prose: the property name opens the trimmed line.
         Assert.DoesNotContain(lines, line => line.TrimStart().StartsWith("zoom:", StringComparison.Ordinal));
@@ -56,7 +58,7 @@ public sealed class AppCssSearchTests
     [Fact]
     public void SearchCardMark_IsBold()
     {
-        string text = ReadAppCss();
+        string text = CssText.AppCss(CssNewlines.AsIs);
         int block = text.IndexOf("/* ---- Global search ", StringComparison.Ordinal);
         int rule = text.IndexOf(".search-card mark {", block, StringComparison.Ordinal);
         Assert.True(rule > block, "Expected a .search-card mark rule in the Global search block.");
@@ -69,7 +71,7 @@ public sealed class AppCssSearchTests
     [Fact]
     public void SearchBox_FillMatchesTheComposer()
     {
-        string text = ReadAppCss();
+        string text = CssText.AppCss(CssNewlines.AsIs);
         int composer = text.IndexOf(".composer-input {", StringComparison.Ordinal);
         string composerRule = text[composer..(text.IndexOf('}', composer) + 1)];
         int block = text.IndexOf("/* ---- Global search ", StringComparison.Ordinal);
@@ -85,15 +87,11 @@ public sealed class AppCssSearchTests
         Assert.Contains(".mud-focused", searchRule, StringComparison.Ordinal);
     }
 
-    /// <summary>Reads <c>app.css</c> as the source fact every test in this class pins.</summary>
-    /// <returns>The full text of <c>app.css</c>.</returns>
-    private static string ReadAppCss() => File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
-
     /// <summary>Extracts the <c>.search-dropdown</c> rule from <c>app.css</c>, from its selector to its closing brace.</summary>
     /// <returns>The rule's text, selector included.</returns>
     private static string DropdownRule()
     {
-        string text = ReadAppCss();
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         // The selector with its brace: the zoom comment at the top of the file mentions the bare name.
         int classIndex = text.IndexOf(".search-dropdown {", StringComparison.Ordinal);

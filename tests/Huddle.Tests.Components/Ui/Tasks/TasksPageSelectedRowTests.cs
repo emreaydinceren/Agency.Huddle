@@ -1,3 +1,5 @@
+using Agency.Huddle.Tests.Css;
+
 namespace Agency.Huddle.Tests.Ui.Tasks;
 
 using AngleSharp.Dom;
@@ -107,7 +109,7 @@ public sealed class TasksPageSelectedRowTests
     [Fact]
     public void AppCss_DeclaresSelectedRowAndCard_FromPaletteVariables()
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         // contains-ok: source-fact test, no CSS parser - app.css's own text is what's pinned.
         Assert.Contains("tr.task-row-selected", text, StringComparison.Ordinal);

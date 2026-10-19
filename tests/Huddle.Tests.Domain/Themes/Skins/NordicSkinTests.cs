@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Agency.Huddle.App.Themes.Skins;
 using Agency.Huddle.Tests.Ui;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Themes.Skins;
 
@@ -123,42 +124,34 @@ public sealed class NordicSkinTests
     [Fact]
     public void ProbeFixes_RulesAreInAppCss()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
         const string paper = ":root:has([data-hu-surface=\"paper\"]) ";
 
         // 1 and 7: an outlined input is filled from the field token and carries the radius, beating the toolbar search fill.
-        string input = RuleBody(css, paper + ".mud-input.mud-input-outlined");
+        string input = CssText.RuleBody(css, paper + ".mud-input.mud-input-outlined");
         Assert.True(input.Contains("background-color: var(--hu-field-background);", StringComparison.Ordinal) && input.Contains("border-radius: var(--mud-default-borderradius);", StringComparison.Ordinal));
         // 2: the active tab reads TextPrimary.
-        Assert.True(RuleBody(css, paper + ".tab-item.active").Contains("color: var(--mud-palette-text-primary);", StringComparison.Ordinal));
+        Assert.True(CssText.RuleBody(css, paper + ".tab-item.active").Contains("color: var(--mud-palette-text-primary);", StringComparison.Ordinal));
         // 3: the segmented track has the region hairline.
-        Assert.True(RuleBody(css, paper + ".huddle-segmented-control").Contains("border: 1px solid var(--hu-line-region);", StringComparison.Ordinal));
+        Assert.True(CssText.RuleBody(css, paper + ".huddle-segmented-control").Contains("border: 1px solid var(--hu-line-region);", StringComparison.Ordinal));
         // 4: the selected card keeps the paper shadow beside the inset bar.
-        Assert.True(RuleBody(css, paper + ".task-card.task-card-selected").Contains("var(--hu-selected-task-bar), var(--hu-shadow-card);", StringComparison.Ordinal));
+        Assert.True(CssText.RuleBody(css, paper + ".task-card.task-card-selected").Contains("var(--hu-selected-task-bar), var(--hu-shadow-card);", StringComparison.Ordinal));
         // 5: the need-you count wears the warning ink at 600.
-        string count = RuleBody(css, paper + ".tasks-count-need-you:not(.is-zero)");
+        string count = CssText.RuleBody(css, paper + ".tasks-count-need-you:not(.is-zero)");
         Assert.True(count.Contains("color: var(--hu-tone-warning-ink);", StringComparison.Ordinal) && count.Contains("font-weight: 600;", StringComparison.Ordinal));
         // 6: the clay priority recipe never applied under the pack and is not carried over.
         Assert.DoesNotContain("priority-high,", css[css.IndexOf("Traits: status", StringComparison.Ordinal)..css.IndexOf("Traits: surface", StringComparison.Ordinal)], StringComparison.Ordinal);
         // 8: the Library split's panes read the page and sunk grounds.
-        Assert.True(RuleBody(css, ".library-explorer-split > .child-panel").Contains("var(--hu-ground-page)", StringComparison.Ordinal));
-        Assert.True(RuleBody(css, ".library-explorer-split > .child-panel:first-child").Contains("var(--hu-ground-sunk)", StringComparison.Ordinal));
+        Assert.True(CssText.RuleBody(css, ".library-explorer-split > .child-panel").Contains("var(--hu-ground-page)", StringComparison.Ordinal));
+        Assert.True(CssText.RuleBody(css, ".library-explorer-split > .child-panel:first-child").Contains("var(--hu-ground-sunk)", StringComparison.Ordinal));
         // 9: the outlined avatar group border is the ring.
-        Assert.True(RuleBody(css, ".mud-avatar-group.mud-avatar-group-outlined .mud-avatar.mud-avatar-small").Contains("border: 2px solid var(--hu-ring);", StringComparison.Ordinal));
+        Assert.True(CssText.RuleBody(css, ".mud-avatar-group.mud-avatar-group-outlined .mud-avatar.mud-avatar-small").Contains("border: 2px solid var(--hu-ring);", StringComparison.Ordinal));
         // ... and it outweighs MudBlazor's own Surface ring, which is one class stronger than the rule above.
-        Assert.Equal("border-color: var(--hu-ring);", RuleBody(css, ".mud-avatar-group.mud-avatar-group-outlined.mud-avatar-group-outlined-surface .mud-avatar:not(.mud-avatar-outlined)").Trim());
+        Assert.Equal("border-color: var(--hu-ring);", CssText.RuleBody(css, ".mud-avatar-group.mud-avatar-group-outlined.mud-avatar-group-outlined-surface .mud-avatar:not(.mud-avatar-outlined)").Trim());
         // 10: the input label does not track.
-        Assert.True(RuleBody(css, paper + ".mud-input-label").Contains("letter-spacing: normal;", StringComparison.Ordinal));
+        Assert.True(CssText.RuleBody(css, paper + ".mud-input-label").Contains("letter-spacing: normal;", StringComparison.Ordinal));
         // 11: body paints the page ground, so the layout needs no background of its own.
-        Assert.True(RuleBody(css, "html, body").Contains("background: var(--hu-ground-page);", StringComparison.Ordinal));
-    }
-
-    private static string RuleBody(string css, string selector)
-    {
-        int at = css.IndexOf("\n" + selector + " {", StringComparison.Ordinal);
-        Assert.True(at >= 0, $"app.css has no rule '{selector}'.");
-        int open = css.IndexOf('{', at);
-        return css[(open + 1)..css.IndexOf('}', open)];
+        Assert.True(CssText.RuleBody(css, "html, body").Contains("background: var(--hu-ground-page);", StringComparison.Ordinal));
     }
 
     private static Skin SkinOf(string id) =>

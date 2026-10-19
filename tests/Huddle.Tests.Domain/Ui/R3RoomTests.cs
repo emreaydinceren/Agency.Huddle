@@ -1,3 +1,5 @@
+using Agency.Huddle.Tests.Css;
+
 namespace Agency.Huddle.Tests.Ui;
 
 using System.Globalization;
@@ -68,7 +70,7 @@ public sealed class R3RoomTests
     public void ReferenceChip_IsATagChipWithAnEdge()
     {
         string chip = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "References", "MessageReferences.razor"));
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
         int rule = css.IndexOf("\n.mud-chip.tag-chip {", StringComparison.Ordinal);
 
         Assert.Contains("tag-chip", chip, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
@@ -80,7 +82,7 @@ public sealed class R3RoomTests
     [Fact]
     public void AgentCard_SitsInTheTranscriptColumnWithAnEdge()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
         int rule = css.IndexOf("\n.mud-paper.agent-card {", StringComparison.Ordinal);
 
         Assert.True(rule >= 0, "app.css has no .mud-paper.agent-card rule.");

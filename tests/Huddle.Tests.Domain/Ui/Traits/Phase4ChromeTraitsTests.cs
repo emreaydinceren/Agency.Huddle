@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Themes.Skins;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui.Traits;
 
@@ -13,7 +14,7 @@ public sealed partial class Phase4ChromeTraitsTests
 {
     private const string Header = "/* ==== Traits: phase 4 chrome";
 
-    private static readonly string RawCss = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+    private static readonly string RawCss = CssText.AppCss(CssNewlines.AsIs);
 
     private static readonly string Css = StripComments(RawCss);
 

@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Agency.Huddle.App.Components.Layout;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Components.Shared.Dialogs;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui.Layout;
 
@@ -136,7 +137,7 @@ public sealed partial class R3ShellTests
     /// <param name="selector">The exact selector.</param>
     private static string DeclarationsFor(string selector)
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
         List<string> bodies = [];
         foreach (Match match in RulePattern().Matches(css))
         {

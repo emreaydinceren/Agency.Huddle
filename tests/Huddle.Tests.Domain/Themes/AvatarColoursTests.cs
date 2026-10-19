@@ -1,7 +1,7 @@
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Themes;
-using Agency.Huddle.Tests.Ui;
 using MudBlazor.Utilities;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Themes;
 
@@ -54,7 +54,7 @@ public sealed class AvatarColoursTests
     [Fact]
     public void Stylesheet_StatesBothRecipes()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Contains("background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
         Assert.Contains("color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-text-primary));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source

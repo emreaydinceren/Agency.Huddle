@@ -9,6 +9,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.Tests.Acp.Fakes;
 using TeammatesPage = Agency.Huddle.App.Components.Pages.Teammates;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
 
@@ -66,7 +67,7 @@ public sealed class TeammateTileTests
     [Fact]
     public void Stylesheet_TheGridFillsTheWidthAndTheTileTextFollowsTheSpec()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Contains("grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
         Assert.Contains(".teammates-item-name {\r\n    font-size: var(--mud-typography-subtitle1-size);\r\n    font-weight: 600;", css.ReplaceLineEndings("\r\n"), StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
@@ -103,7 +104,7 @@ public sealed class TeammateTileTests
     [Fact]
     public void Stylesheet_HasNoTeammateAvatarOverride()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.DoesNotContain(".teammate-avatar", css, StringComparison.Ordinal);
     }
@@ -131,7 +132,7 @@ public sealed class TeammateTileTests
     [Fact]
     public void Stylesheet_TileContentIsLeftAligned()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
         int start = css.IndexOf(".teammate-tile {", StringComparison.Ordinal);
         int end = css.IndexOf('}', start);
         string tile = css[start..end];
@@ -158,7 +159,7 @@ public sealed class TeammateTileTests
     [Fact]
     public void Stylesheet_ContextLineIsLeftAlignedOnTheNameEdge()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
         int start = css.IndexOf(".teammate-tile-context {", StringComparison.Ordinal);
         int end = css.IndexOf('}', start);
         string context = css[start..end];

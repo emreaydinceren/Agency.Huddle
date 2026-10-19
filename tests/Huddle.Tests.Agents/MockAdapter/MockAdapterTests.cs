@@ -246,7 +246,7 @@ public sealed class MockAdapterTests
     {
         get
         {
-            string repoRoot = FindRepoRoot();
+            string repoRoot = RepoPaths.Root;
             string normalizedBaseDirectory = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             string targetFramework = Path.GetFileName(normalizedBaseDirectory);
             string? configurationDirectory = Path.GetDirectoryName(normalizedBaseDirectory);
@@ -265,25 +265,6 @@ public sealed class MockAdapterTests
 
             return executablePath;
         }
-    }
-
-    /// <summary>Walks up from <see cref="AppContext.BaseDirectory"/> until it finds the directory containing <c>Huddle.slnx</c>.</summary>
-    private static string FindRepoRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            string candidate = Path.Combine(directory.FullName, "Huddle.slnx");
-            if (File.Exists(candidate))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException(
-            $"Could not locate the repository root (a directory containing 'Huddle.slnx') by walking up from '{AppContext.BaseDirectory}'.");
     }
 
     /// <summary>

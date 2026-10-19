@@ -6,6 +6,7 @@ using MudBlazor;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.Tests.Avatars;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -86,7 +87,7 @@ public sealed class AvatarLibraryChipCloudTests
     [Fact]
     public void Stylesheet_HasNoDuplicateAvatarLibraryChipRules()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.DoesNotContain(".avatar-library-chip", css, StringComparison.Ordinal);
         Assert.DoesNotContain(".avatar-library-cloud", css, StringComparison.Ordinal);

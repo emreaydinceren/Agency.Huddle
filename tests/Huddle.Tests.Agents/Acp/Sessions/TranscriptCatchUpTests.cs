@@ -1,3 +1,5 @@
+using Agency.Huddle.Tests.Css;
+
 namespace Agency.Huddle.Tests.Acp.Sessions;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -373,7 +375,7 @@ public sealed class TranscriptCatchUpTests
         Assert.Contains("You: note 29", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("You: note 9\n", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("note 0", prompt, StringComparison.Ordinal);
-        Assert.Equal(1, CountOccurrences(prompt, "go with option 2"));
+        Assert.Equal(1, CssText.CountOccurrences(prompt, "go with option 2"));
     }
 
     /// <summary>RS §9 E-11: an Agent Mentioned in a Room it was just invited to gets a fresh session whose Catch-up shows what was said before it joined.</summary>
@@ -425,20 +427,6 @@ public sealed class TranscriptCatchUpTests
         var prompt = novaFactory.Host.Sessions[1].Prompts[0];
         Assert.Contains("let's plan the trip", prompt, StringComparison.Ordinal);
         Assert.Contains("welcome, what do you think?", prompt, StringComparison.Ordinal);
-    }
-
-    /// <summary>How many non-overlapping times <paramref name="needle"/> occurs in <paramref name="haystack"/>.</summary>
-    private static int CountOccurrences(string haystack, string needle)
-    {
-        var count = 0;
-        var index = 0;
-        while ((index = haystack.IndexOf(needle, index, StringComparison.Ordinal)) >= 0)
-        {
-            count++;
-            index += needle.Length;
-        }
-
-        return count;
     }
 
 
