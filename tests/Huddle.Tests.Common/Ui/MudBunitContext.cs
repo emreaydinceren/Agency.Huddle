@@ -107,6 +107,26 @@ internal sealed class MudBunitContext : BunitContext
     public Task DisposeComponentsOnDispatcherAsync() => this.Renderer.Dispatcher.InvokeAsync(this.DisposeComponentsAsync);
 
     /// <summary>
+    /// Copies the JS calls recorded for <paramref name="identifier"/>, reading them on the renderer's
+    /// dispatcher.
+    /// </summary>
+    /// <remarks>
+    /// bUnit records a component's JS call into a plain list on the dispatcher thread. A test reading
+    /// <c>JSInterop.Invocations</c> from its own thread while the component is still rendering, retrying
+    /// or saving can see a stale count or throw "Collection was modified". Read here instead whenever
+    /// the component may still be calling JS - inside a wait, a poll, or after work the test did not
+    /// await.
+    /// </remarks>
+    /// <param name="identifier">The JS function's identifier, e.g. <c>huddleStorage.set</c>.</param>
+    /// <returns>A snapshot of the calls, oldest first, that later calls do not change.</returns>
+    public Task<IReadOnlyList<JSRuntimeInvocation>> InvocationsOnDispatcherAsync(string identifier)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
+
+        return this.Renderer.Dispatcher.InvokeAsync<IReadOnlyList<JSRuntimeInvocation>>(() => [.. this.JSInterop.Invocations[identifier]]);
+    }
+
+    /// <summary>
     /// Renders <paramref name="content"/> alongside a <see cref="MudPopoverProvider"/> and a
     /// <see cref="MudDialogProvider"/> in one synthetic root, so a component under test that opens a
     /// popover (<c>MudSelect</c>, <c>MudMenu</c>, <c>MudAutocomplete</c>) or a dialog (anything shown

@@ -88,6 +88,21 @@ in-progress state. A converted click that hangs until the test's timeout is one 
 re-rendering when nothing changed — look for spurious events in the product (this found three real
 store bugs), don't add a wait.
 
+**Read recorded JS calls on the dispatcher.** bUnit adds each JS call a component makes to a plain
+list, on the renderer's dispatcher. A test that reads `ctx.JSInterop.Invocations` (or calls
+`VerifyInvoke`) while the component may still be calling JS — inside `WaitForAssertion`, in a poll
+loop, after work the test did not await — can see a stale count or throw `Collection was modified`.
+Snapshot the calls there instead:
+
+```csharp
+await cut.WaitForAssertionAsync(async () =>
+    Assert.NotEmpty(await ctx.InvocationsOnDispatcherAsync("huddleStorage.set")));
+```
+
+A read straight after a synchronous `cut.Render(...)` with nothing in flight is safe as it is
+(`ResizableEndDrawerTests`). The `NameDialogTests` focus checks and the `LibraryExplorerTests` divider
+retries are the cases that raced.
+
 Never count a bare word in server-rendered HTML (`client.GetStringAsync(…)`): the Blazor prerender
 markers carry random base64, which contains a short name like `Amy` by chance about once in a
 hundred runs. Count the element — `class="teammates-item-name">Amy<` — instead.

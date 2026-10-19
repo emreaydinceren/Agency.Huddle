@@ -67,14 +67,15 @@ public sealed class TabPersistenceTests
         var cut = ctx.Render<TabPersistence>();
 
         // The first save happens only after the restore and the subscription, so it marks "now watching".
-        cut.WaitForAssertion(() => ctx.JSInterop.VerifyInvoke("huddleStorage.set"));
+        // The saves are recorded on the dispatcher while the test waits, so they are read there.
+        await cut.WaitForAssertionAsync(async () => Assert.NotEmpty(await ctx.InvocationsOnDispatcherAsync("huddleStorage.set")));
         Assert.Equal(2, tabs.Tabs.Count);
 
         await cut.InvokeAsync(() => tabs.Open("/settings"));
 
-        cut.WaitForAssertion(() =>
+        await cut.WaitForAssertionAsync(async () =>
         {
-            var saves = ctx.JSInterop.Invocations["huddleStorage.set"];
+            IReadOnlyList<JSRuntimeInvocation> saves = await ctx.InvocationsOnDispatcherAsync("huddleStorage.set");
             Assert.Equal("huddle:tabs", saves[^1].Arguments[0]);
             Assert.Contains("/settings", (string?)saves[^1].Arguments[1], StringComparison.Ordinal);
         });
