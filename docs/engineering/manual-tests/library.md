@@ -2,15 +2,15 @@
 
 Reading, writing, navigating and copying documents from any folder — [Spec §2 use cases](../../Huddle.Library-Specifications.md#2-use-cases)
 
-**19 tests** · 18 free, 1 paid 💰 · about 2.9 hours.
+**22 tests** · 21 free, 1 paid 💰 · about 3.6 hours.
 
-Cases L0–L13 come from the Spec; L14–L18 are UAT and migration cases.
+Cases L0–L13 come from the Spec; L14–L18 are UAT and migration cases; L19–L21 cover the editor's Markdown toolbar and `[[` note suggestions ([Spec §6.7](../../Huddle.Library-Specifications.md#67-the-editor)).
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort convention, and the rules for concluding a result — then [Common procedures](common.md), which defines the terminals, states, procedures and oracles this page names. Both are assumed below.
 
 ## Setup
 
-Unless a test says otherwise, run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat) from [Common procedures](common.md). The lane gives you **Ada** and **Bo** on the free mock adapter, each with an empty one-to-one Room, and `<data>` is `C:\seeds\huddle\uat\data`. Tests that need no Teammate (L2, L4, L6, L8, L11, L14, L15, L17) also run there. L16 and L18 say which lane and data folder they use.
+Unless a test says otherwise, run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat) from [Common procedures](common.md). The lane gives you **Ada** and **Bo** on the free mock adapter, each with an empty one-to-one Room, and `<data>` is `C:\seeds\huddle\uat\data`. Tests that need no Teammate (L2, L4, L6, L8, L11, L14, L15, L17, L19, L20, L21) also run there. L16 and L18 say which lane and data folder they use.
 
 This area adds one scratch folder and two pinned roots. Create the folder in `T-B` before you start, so nothing below edits a real repository file:
 
@@ -22,6 +22,14 @@ Set-Content "$vault\index.md" "# Index`n`nSee [[auth]] for sign-in and [[auth]] 
 Set-Content "$vault\plan.md" "# Plan`n`nLaunch in Q4.`n"
 Set-Content "$vault\draft-old.md" "Delete me.`n"
 Set-Content "$vault\data.json" '{ "name": "huddle", "ok": true }'
+# L19-L21: the Markdown toolbar and [[ suggestions
+New-Item -ItemType Directory -Force "$vault\notes" | Out-Null
+Set-Content -NoNewline "$vault\toolbar.md" "# Toolbar`n`nalpha beta gamma`n**bold** word`nfirst item`nsecond item`nthird item`n"
+[IO.File]::WriteAllText("$vault\crlf-bom.md", "# CRLF note`r`n`r`nPlain words here.`r`nSecond line.`r`n", [Text.UTF8Encoding]::new($true))
+Set-Content "$vault\runbook.md" "# Runbook"
+Set-Content "$vault\specs\run-log.md" "# Run log"
+Set-Content "$vault\specs\meeting.md" "# Spec meeting"
+Set-Content "$vault\notes\meeting.md" "# Team meeting"
 ```
 
 Also copy any `.png` to `$vault\report.png` and any `.pptx` to `$vault\deck.pptx`. Then in the app open **Settings → Library** (the last tab). In the **Name** and **Path** fields add two roots, pressing **Add** after each:
@@ -687,6 +695,127 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 - The script builds or starts the app.
 - Anything beyond the database and the definition files is deleted.
 - A definition file is left behind.
+
+---
+
+### L19 — The Markdown toolbar and its shortcuts toggle markers, undo in one step and are keyboard-reachable
+
+**Free** · about 20 min
+
+*Spec §6.7 (Markdown toolbar, PR #217): in Edit and Split, for an editable `.md` file only, a row of Bold, Italic, Heading, Code, Bulleted list, Task list and `[[ ]]` edits the selection in the browser. A second click removes what the first added, each command is one undo step, `Mod-b` / `Mod-i` / `Mod-e` run Bold, Italic and Code, and the row is a WAI-ARIA toolbar with one tab stop.*
+
+**Before you start**
+
+- The app is running, `Vault` is pinned, and Setup's `toolbar.md` exists. Nothing in this test saves.
+
+**Steps**
+
+1. In the Library open **Vault** → `toolbar.md`. It opens in **Read**: confirm there is no formatting row above the document.
+2. Switch to **Edit**. A row of seven buttons appears above the editor. Hover each: the tooltips read `Bold (Ctrl+B)`, `Italic (Ctrl+I)`, `Heading`, `Code (Ctrl+E)`, `Bulleted list`, `Task list` and `Link to a note`.
+3. Double-click `beta` on line 3 and click **Bold**. The line reads `alpha **beta** gamma` and `beta` is still selected. Click **Bold** again: the line is back to `alpha beta gamma`. Repeat with **Italic** (`*beta*`, then off) and **Code** (`` `beta` ``, then off).
+4. Double-click `bold` on line 4 (the word inside the `**`) and click **Italic**. The line reads `***bold*** word`. Click **Italic** again: `**bold** word`.
+5. Put the caret anywhere on the `# Toolbar` line and click **Heading** three times. The line reads `## Toolbar`, then `Toolbar`, then `## Toolbar`. Press Ctrl+Z three times: each press undoes exactly one click, ending on `# Toolbar`.
+6. Select from the start of `first item` to the middle of `third item`. Click **Bulleted list**: all three lines start with `- `. Click it again: the prefixes are gone. Click **Task list**: all three start with `- [ ] `. Press Ctrl+Z once: all three prefixes go in that one step.
+7. Put the caret at the start of `first item` and press Shift+Down twice, so the selection ends at the very start of the `third item` line. Click **Bulleted list**: only `first item` and `second item` get `- `. Press Ctrl+Z.
+8. Double-click `gamma` and press Ctrl+B, then Ctrl+B again; Ctrl+I, then Ctrl+I again; Ctrl+E, then Ctrl+E again. Each pair wraps `gamma` and unwraps it, as the buttons did. No browser action fires (no bookmarks panel, no focus jump to the address or search bar).
+9. Click at the end of line 3 with nothing selected and press Ctrl+B. `****` is inserted with the caret between the pairs; type `x` and the text is `**x**`. Press Ctrl+Z until `x` and the markers are gone.
+10. Keyboard: with the caret in the editor, press Shift+Tab until the row takes focus. Focus lands on one button (Bold the first time). Press Right twice (Heading), End (`[[ ]]`), Home (Bold). Press Tab once: focus leaves the row instead of walking to Italic. Press Shift+Tab: focus is back on Bold.
+11. Double-click `alpha`, press Shift+Tab into the row, press Right to reach **Italic** and press Enter. The line reads `*alpha* beta gamma`. Press Escape: focus is back in the editor with the selection where it was; type nothing, press Ctrl+Z.
+12. Switch to **Split**. The row is above the editor; Bold `gamma` and confirm the preview renders it bold within a second. Press Ctrl+Z.
+13. Open **Vault** → `data.json` and choose **Discard** when asked about `toolbar.md`. Confirm there is no formatting row for the JSON file. In `T-B`, `O-FILE` on `C:\seeds\huddle\uat\vault\toolbar.md`: it is exactly what Setup wrote.
+
+**Pass if — all of these**
+
+- The row shows only in Edit and Split for the `.md` note, never in Read and never for `data.json`.
+- Bold, Italic and Code wrap the selection and a second run removes the same markers; Italic on `**bold**` gives `***bold***` and back.
+- Heading cycles `#` → `##` → none → `##`; the list commands prefix every selected line and remove the prefix when all have it, and a selection ending at a line's start leaves that line alone.
+- Every command, from a button or a shortcut, is undone by exactly one Ctrl+Z.
+- The row has one tab stop; Left/Right/Home/End move inside it, Enter runs the focused button, and Escape returns to the editor.
+- `toolbar.md` on disk is unchanged.
+
+**Fail if — any of these**
+
+- The row appears in Read mode or for a non-Markdown file, or is missing in Edit or Split.
+- A command changes text beyond the markers, or a second run adds instead of removing.
+- One command takes more than one Ctrl+Z, or one Ctrl+Z undoes two commands.
+- Clicking a button loses the editor's selection, or a shortcut also triggers the browser's own action.
+- Tab walks through all seven buttons, or Escape leaves focus outside the editor.
+
+---
+
+### L20 — A toolbar edit saves byte-exact on a CRLF note with a BOM
+
+**Free** · about 10 min
+
+*Spec §6.7 and ADR-0028: each toolbar command changes only marker characters at the selection or at the start of the chosen lines, a line's `\r` is never touched, and the save restores the recorded encoding, BOM and line ending. L17 checks the same promise for typing; this checks it for the toolbar.*
+
+**Before you start**
+
+- The app is running, `Vault` is pinned, and Setup's `crlf-bom.md` exists. Confirm its first three bytes are the BOM: `Format-Hex C:\seeds\huddle\uat\vault\crlf-bom.md | Select-Object -First 1` starts `EF BB BF`.
+
+**Steps**
+
+1. In the Library open **Vault** → `crlf-bom.md` and switch to **Edit**. No mixed-line-endings notice is shown.
+2. Double-click `words` on line 3 and click **Bold**.
+3. Put the caret on the `Second line.` line and click **Heading**.
+4. Press Ctrl+S. The `●` goes away.
+5. In `T-B`, compare the bytes with what the two commands should have produced, and nothing else:
+
+   ```powershell
+   [byte[]]$expected = @(0xEF, 0xBB, 0xBF) + [Text.Encoding]::UTF8.GetBytes("# CRLF note`r`n`r`nPlain **words** here.`r`n## Second line.`r`n")
+   [byte[]]$actual = [IO.File]::ReadAllBytes('C:\seeds\huddle\uat\vault\crlf-bom.md')
+   [Linq.Enumerable]::SequenceEqual($expected, $actual)
+   ```
+
+6. If the last line printed `False`, record `Format-Hex C:\seeds\huddle\uat\vault\crlf-bom.md` in the Notes column.
+
+**Pass if — all of these**
+
+- Step 5 prints `True`: the BOM is kept, every line still ends in CRLF, and the only new bytes are `**`, `**` and `## `.
+
+**Fail if — any of these**
+
+- The BOM is dropped, any line ending becomes LF, or a stray `\r` appears inside a line.
+- Any byte other than the markers differs (re-wrapped text, a trailing newline added or removed).
+
+---
+
+### L21 — `[[` suggests notes from the note's own root, nearest first, and does not double `]]`
+
+**Free** · about 15 min
+
+*Spec §6.7 (`[[` completion, PR #217): after `[[` the editor lists Markdown notes of the open note's own Library Root whose name contains the query, the open note left out, nearest folder first, each written in its shortest unique form. Picking one closes the link with `]]` unless that is already there. It stays silent inside inline code. The picked row wears the app's Selected treatment in any theme.*
+
+**Before you start**
+
+- The app is running, `Vault` and `Docs` are pinned, and Setup's `runbook.md`, `specs\run-log.md`, `specs\meeting.md` and `notes\meeting.md` exist.
+
+**Steps**
+
+1. In the Library open **Vault** → `specs` → `auth.md` and switch to **Edit**. Click at the end of the last line and press Enter.
+2. Type `[[run`. Within a moment a list opens with `run-log` first and `runbook` after it (same folder before the parent folder). Press Enter. The line reads `[[run-log]]`.
+3. On a new line type `[[meet`. The list shows `meeting` first and a second entry written with its folder, such as `notes/meeting`. Pick the second with the mouse. The line reads `[[notes/meeting]]`.
+4. On a new line click the **`[[ ]]`** button. `[[]]` is inserted with the caret inside, and the list opens with no typing. Its first entries are the `specs` notes (`meeting`, `run-log`), then the root's notes; `auth` itself is not listed. Pick `meeting`. The line reads `[[meeting]]`, not `[[meeting]]]]`.
+5. On a new line type `` `[[]]` `` (a closed code span), put the caret between `[[` and `]]` and type `ru`. No list opens. Remove the line.
+6. On a new line type `[[Huddle`. No list opens, or nothing in it comes from the `Docs` root. Remove the line.
+7. On a new line type `[[run|` and then `x`. The list does not reopen after the `|`. Remove the line.
+8. Type `[[` and pick nothing yet; with the list open, look at the highlighted row and move it with Down. In **Settings → Appearance** note the current theme, choose **Huddle Dark**, return to the Library, and open the list again with `[[`.
+9. Return to **Settings → Appearance** and select the theme you noted. Back in `auth.md`, open another file and choose **Discard**. In `T-B`, `O-FILE` on `C:\seeds\huddle\uat\vault\specs\auth.md`: it is unchanged.
+
+**Pass if — all of these**
+
+- Suggestions come only from the `Vault` root, never list `auth` itself, and put the open note's folder first.
+- A note whose name is not unique is offered in a form that resolves to it (`notes/meeting`).
+- Picking from a typed `[[run` writes `run-log]]`; picking inside `[[]]` writes only the name, leaving one `]]`.
+- No list opens inside the closed code span or after `[[x|`.
+- In both themes the list matches the surface and its highlighted row uses the app's selected-row colours, readable against the list (not CodeMirror's blue-on-white).
+
+**Fail if — any of these**
+
+- A note from another root, or the open note, is suggested.
+- A pick produces `]]]]`, or leaves the link unclosed.
+- The list opens inside inline code.
+- In Huddle Dark the list or its highlighted row is white or near-white, or its text is unreadable.
 
 ---
 
