@@ -1,6 +1,6 @@
 # Huddle.HumanGate — Design Specification
 
-**Date:** 2026-10-19 · **Status:** Designed, not built · **Decision records:**
+**Date:** 2026-10-19 · **Status:** Built 2026-10-19 · **Decision records:**
 [ADR-0061](adr/0061-a-human-gated-task-waits-in-needs-you-for-the-humans-acceptance.md),
 [ADR-0062](adr/0062-a-teams-definition-of-done-is-a-proof-checklist-in-process-md.md); amends
 [ADR-0039](adr/0039-process-gates-live-in-process-md-and-are-enforced-in-taskservice-and-the-permission-handler.md)

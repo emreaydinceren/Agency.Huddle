@@ -146,6 +146,7 @@ the per-area tables below.
 | [Right sidebar: the panels by Subject, Outline, collapse and focus](right-sidebar.md) | [below](#right-sidebar) |
 | [References in a Message: the @ picker, Copy link and the Referenced items header](at-tagging.md) | [below](#at-tagging) |
 | [Document history: the byline, the History and the Recent edits panel](doc-history.md) | [below](#doc-history) |
+| [Human gate: the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page](human-gate.md) | [below](#human-gate) |
 ---
 
 ## at-tagging
@@ -1098,6 +1099,22 @@ Document history: the byline, the History and the Recent edits panel — [area f
 | [DOCHISTORY-04](doc-history.md#dochistory-04--renaming-and-moving-a-document-carries-its-history) |  | Active |  |  |
 | [DOCHISTORY-05](doc-history.md#dochistory-05--how-often-do-real-agents-log-their-edits) | 💰 | Active |  |  |
 | [DOCHISTORY-06](doc-history.md#dochistory-06--the-history-is-grouped-by-day-whole-and-the-byline-leads-to-it) |  | Active |  |  |
+
+## human-gate
+
+Human gate: the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page — [area file](human-gate.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [HUMANGATE-01](human-gate.md#humangate-01--requires-your-acceptance-only-the-human-can-mark-the-task-done-u-1) |  | Active |  |  |
+| [HUMANGATE-02](human-gate.md#humangate-02--an-action-locks-the-gate-on-and-accept-wakes-the-assignee-u-2) |  | Active |  |  |
+| [HUMANGATE-03](human-gate.md#humangate-03--proof-34-accept-is-locked-request-changes-works-ask-posts-a-mention-u-3) |  | Active |  |  |
+| [HUMANGATE-04](human-gate.md#humangate-04--an-agent-cannot-mark-a-gated-task-done-u-4) |  | Active |  |  |
+| [HUMANGATE-05](human-gate.md#humangate-05--dragging-a-gated-card-to-done-on-the-board-u-5) |  | Active |  |  |
+| [HUMANGATE-06](human-gate.md#humangate-06--editing-the-task-after-accept-takes-the-acceptance-away-u-6) |  | Active |  |  |
+| [HUMANGATE-07](human-gate.md#humangate-07--decline-closes-the-task-with-its-reason-u-7) |  | Active |  |  |
+| [HUMANGATE-08](human-gate.md#humangate-08--an-outside-edit-that-removes-the-action-is-put-back-u-8) |  | Active |  |  |
+| [HUMANGATE-09](human-gate.md#humangate-09--restart-keeps-every-waiting-task-on-the-needs-you-page-u-9) |  | Active |  |  |
 
 ---
 
