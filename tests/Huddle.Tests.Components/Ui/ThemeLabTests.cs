@@ -267,7 +267,7 @@ public sealed class ThemeLabTests : IDisposable
         JSRuntimeInvocation call = Assert.Single(module.Invocations["inspect"]);
         Assert.True(Assert.IsType<bool>(call.Arguments[0]));
 
-        await ctx.DisposeComponentsAsync();
+        await ctx.DisposeComponentsOnDispatcherAsync();
         Assert.NotEmpty(module.Invocations["reset"]);
     }
 

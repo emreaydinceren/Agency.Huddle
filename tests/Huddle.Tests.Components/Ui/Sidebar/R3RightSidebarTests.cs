@@ -69,7 +69,6 @@ public sealed class R3RightSidebarTests
     public async Task Outline_ClickedHeading_WearsTheSelectedTreatment()
     {
         await using MudBunitContext ctx = new();
-        ctx.Services.AddSingleton<PageCommandBus>();
         SidebarPanelContext panelCtx = new();
         IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = ctx.Render<CascadingValue<SidebarPanelContext>>(p => p
             .Add(c => c.Value, panelCtx)

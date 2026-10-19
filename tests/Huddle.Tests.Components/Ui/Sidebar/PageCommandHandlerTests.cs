@@ -38,7 +38,7 @@ public sealed class PageCommandHandlerTests
             .AddCascadingValue(new TabPageContext("/x", "t1"))
             .Add(handler => handler.OnCommand, command => received.Add(command)));
 
-        await ctx.DisposeComponentsAsync();
+        await ctx.DisposeComponentsOnDispatcherAsync();
         await bus.SendAsync("t1", new ScrollToHeading("h", 3));
 
         Assert.Empty(received);
@@ -60,10 +60,9 @@ public sealed class PageCommandHandlerTests
         Assert.Empty(received);
     }
 
-    /// <summary>Registers the bus as a singleton and returns it.</summary>
+    /// <summary>Returns the bus the context constructor already registered as a singleton.</summary>
     private static PageCommandBus AddBus(MudBunitContext ctx)
     {
-        ctx.Services.AddSingleton<PageCommandBus>();
         return ctx.Services.GetRequiredService<PageCommandBus>();
     }
 }

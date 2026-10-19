@@ -1080,7 +1080,7 @@ Ids are `<deliverable>.<task>`:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "2.3" -State Done -TrackerPath docs/engineering/test-split-plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 58 of 77 tasks Done · 2 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
+**Status:** 59 of 77 tasks Done · 3 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1161,7 +1161,7 @@ Ids are `<deliverable>.<task>`:
 | 14.2 `UiTestHost`, presets and extensions (S) | Sonnet | 14.1 | | | ✔ |
 | 14.3 Migrate `NewContext` group A (H) | Haiku | 14.2 | | | ✔ |
 | 14.4 Migrate groups B, D, E, G (H) | Haiku | 14.2 | | | ✔ |
-| 14.5 Disposal and re-registration defects (S) | Sonnet | 14.3 | | | |
+| 14.5 Disposal and re-registration defects (S) | Sonnet | 14.3 | | | ✔ |
 | 14.6 Synchronous clicks (H) | Haiku | 14.4 | | | |
 | **D15 Building the domain** | Sonnet | D10 | | | |
 | 15.1 Red: `TestFactoriesTests` (H) | Haiku | D10 | | | |
@@ -1181,7 +1181,7 @@ Ids are `<deliverable>.<task>`:
 | **D17 Close Phase 2** | Haiku | D11 to D16 | | | |
 | 17.1 The shared-helper catalogue in `Testing.md` (H) | Haiku | D11 to D16 | | | |
 | 17.2 Full verification and load run (H) | Haiku | 17.1 | | | |
-| R3 Retrospective at 45 Done | Opus | 45 Done | | | |
+| R3 Retrospective at 45 Done | Opus | 45 Done | | | ✔ |
 | R4 Retrospective at 60 Done | Opus | 60 Done | | | |
 | R5 Retrospective at 75 Done | Opus | 75 Done | | | |
 
@@ -1209,6 +1209,15 @@ below is `tests/Huddle.Tests.<Project>/Acp/Sessions/RoomSessionTests.cs`; find t
 3. A shared helper lives in `tests/Huddle.Tests.Common/<Area>/`, is `internal`, has a `///` summary on
    every member, and has its own tests in the Domain project under the same folder.
 4. Only remove a private copy when every caller in that file moved. Never leave a forwarder in a test file.
+5. A migration task's *Read first* gives the exact call-site list (file:line) from a pre-run `rg`, and the
+   agent pipes grep output through `| head -40`. Budget: 35 calls and 150K context; at either one it writes
+   the handoff and stops (R3, 2026-10-18: migrations cost about twice what new-helper tasks cost, mostly
+   grep output).
+6. Split a migration by folder so no task touches more than about 15 files. Flag any copy whose behaviour
+   differs (first vs last match, whole-list joins, suffix matches) as Sonnet work up front, never as
+   Haiku leftovers.
+7. Before dispatch, the manager greps the "remove X" precondition (no callers left) and puts the result in
+   the brief (12.4: `FiringTimeProvider` still had three callers).
 
 ## §R1 Waiting and budgets
 

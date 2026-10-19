@@ -124,7 +124,6 @@ public sealed class LibraryDocumentSubjectTests : IDisposable
         ctx.Services.AddSingleton(this.library.Index);
         ctx.Services.AddSingleton<ILibraryNoteResolver>(new FakeLibraryNoteResolver());
         ctx.Services.AddSingleton<Agency.Huddle.App.Tasks.ITaskReferenceResolver>(new FakeTaskReferenceResolver());
-        ctx.Services.AddSingleton<RightSidebarService>();
         return ctx;
     }
 }

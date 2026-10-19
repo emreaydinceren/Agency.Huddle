@@ -69,7 +69,7 @@ public sealed class SkillsPanelTests : IDisposable
     public async Task Dispose_UnsubscribesAllThree()
     {
         await this.fixture.SeedAsync();
-        MudBunitContext ctx = this.fixture.NewContext();
+        await using MudBunitContext ctx = this.fixture.NewContext();
         int registry = Subscribers(this.fixture.Host.Registry, "Changed");
         int store = Subscribers(this.fixture.Host.Skills, "SkillsChanged");
         int settings = Subscribers(this.fixture.Host.Settings, "Changed");

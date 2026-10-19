@@ -280,9 +280,9 @@ public sealed class TaskRouteAndCopyTests
 
     /// <summary>Corrections-B7 "15.2.i" item 1: the wake toast's Task link becomes a real <c>href</c>, so it is keyboard-activatable (an <c>&lt;a role="button"&gt;</c> is not).</summary>
     [Fact]
-    public void WakeToasts_WokenTaskLink_HasHrefToTheItemRoute()
+    public async Task WakeToasts_WokenTaskLink_HasHrefToTheItemRoute()
     {
-        MudBunitContext ctx = new();
+        await using MudBunitContext ctx = new();
         TaskActivity activity = new(Microsoft.Extensions.Options.Options.Create(new Agency.Huddle.App.TeamOptions()));
         ctx.Services.AddSingleton(activity);
         var cut = ctx.Render(builder =>

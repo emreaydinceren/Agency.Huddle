@@ -38,7 +38,7 @@ public sealed class ComposerTests
         await using MudBunitContext ctx = ComposerTests.NewContext(harness);
         _ = ComposerTests.RenderComposer(ctx);
 
-        await ctx.DisposeComponentsAsync();
+        await ctx.DisposeComponentsOnDispatcherAsync();
 
         var invocation = ctx.JSInterop.VerifyInvoke("teamComposer.detach");
         Assert.Single(invocation.Arguments);

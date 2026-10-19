@@ -383,7 +383,7 @@ public sealed class TasksPageTests
     public async Task TasksPage_Dispose_UnsubscribesFromAllThreeHubs()
     {
         using TaskToolHarness harness = new();
-        MudBunitContext ctx = NewContext(harness);
+        await using MudBunitContext ctx = NewContext(harness);
 
         ctx.RenderWithPopovers(builder =>
         {

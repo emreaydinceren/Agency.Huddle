@@ -203,7 +203,7 @@ public sealed class TaskSprintViewsTests
     {
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
         _ = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Work", "Platform", null, Sprint: new SprintId(2)), TaskActors.Human(harness.Options.Value)));
-        MudBunitContext ctx = new();
+        await using MudBunitContext ctx = new();
         harness.AddTo(ctx.Services);
         _ = RenderPage(ctx, null);
         Assert.True(HandlerCount(harness.Sprints) > 0);
