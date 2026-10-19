@@ -15,6 +15,7 @@ using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Pipes;
 using Agency.Huddle.Tests.Waiting;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -36,7 +37,7 @@ public sealed class PersonaRunnerFileChangesTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("ok");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
 
         await using var agentHost = CreateHost(fixture, persona, factory, tracker);
@@ -75,7 +76,7 @@ public sealed class PersonaRunnerFileChangesTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("first");
         factory.Session.EnqueueReply("second");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
 
         await using var agentHost = CreateHost(fixture, persona, factory, tracker);
@@ -124,7 +125,7 @@ public sealed class PersonaRunnerFileChangesTests
         factory.Session.EnqueueReply("first");
         factory.Session.EnqueueReply();
         factory.Session.EnqueueReply("third");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
 
         await using var agentHost = CreateHost(fixture, persona, factory, tracker, new PersonaCommands(Microsoft.Extensions.Logging.Abstractions.NullLogger<PersonaCommands>.Instance));
@@ -176,7 +177,7 @@ public sealed class PersonaRunnerFileChangesTests
         FakeTimeProvider clock = new();
         var factory = new FakeAgentHostFactory(clock);
         var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory, tracker);
         await agentHost.StartAsync(ct);
@@ -245,7 +246,7 @@ public sealed class PersonaRunnerFileChangesTests
         FakeTimeProvider clock = new();
         var factory = new FakeAgentHostFactory(clock);
         var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory, tracker);
         await agentHost.StartAsync(ct);
@@ -296,7 +297,7 @@ public sealed class PersonaRunnerFileChangesTests
 
         var factory = new FakeAgentHostFactory();
         var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory, tracker);
         await agentHost.StartAsync(ct);
@@ -342,7 +343,7 @@ public sealed class PersonaRunnerFileChangesTests
         var factory = new FakeAgentHostFactory();
         var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
         var store = fixture.Services.GetRequiredService<FileStateStore>();
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory, tracker);
         await agentHost.StartAsync(ct);
@@ -414,7 +415,7 @@ public sealed class PersonaRunnerFileChangesTests
         factory.Session.EnqueueReply("one");
         factory.Session.EnqueueReply("two");
         factory.Session.EnqueueReply("three");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
 
         await using var agentHost = CreateHost(fixture, persona, factory, tracker);
@@ -461,7 +462,7 @@ public sealed class PersonaRunnerFileChangesTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("one");
         factory.Session.EnqueueReply("two");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory, fileChanges: null);
         await agentHost.StartAsync(ct);

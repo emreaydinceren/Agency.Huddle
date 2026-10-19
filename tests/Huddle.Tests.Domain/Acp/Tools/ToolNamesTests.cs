@@ -1,8 +1,6 @@
 namespace Agency.Huddle.Tests.Acp.Tools;
 
-using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Tools;
@@ -31,11 +29,11 @@ public sealed class ToolNamesTests
             new ListAgentsTool(directory, gateway, personaStore, new FakePromptSource()),
             new CreateRoomTool(chat, directory, "caller-id", aliasSource, new FakePromptSource()),
             new InviteAgentTool(chat, directory, aliasSource, new FakePromptSource()),
-            new PostMessageTool(chat, "caller-id", new FakePromptSource(), new OwnPosts(Options.Create(new TeamOptions()))),
+            new PostMessageTool(chat, "caller-id", new FakePromptSource(), new OwnPosts(TestOptions.Create())),
             new FollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new ValidateTeammateTool(checker, new FakePromptSource()),
-            new ProposeTeammatesTool(proposals, checker, directory, new HireLimitGuard(new Agency.Huddle.Tests.Teams.FakeTeamCatalog(), Options.Create(new TeamOptions()), static () => 0), TimeProvider.System, "caller-id", new FakePromptSource()),
+            new ProposeTeammatesTool(proposals, checker, directory, new HireLimitGuard(new Agency.Huddle.Tests.Teams.FakeTeamCatalog(), TestOptions.Create(), static () => 0), TimeProvider.System, "caller-id", new FakePromptSource()),
             new GetHelpTool([], new FakePromptSource(), "mcp__team__"),
             new CreateTaskTool(taskHarness.Service, taskHarness.Triggers, taskHarness.Directory, taskHarness.Sprints, new FakePromptSource(), "caller-id"),
             new GetTaskTool(taskHarness.Store, taskHarness.Sprints, new FakePromptSource()),

@@ -19,6 +19,7 @@ using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Tools;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Pins Spec §13.6's core state machine for <c>TaskDetail</c>, RED-only (14.1.t): loading a Task by
@@ -515,13 +516,9 @@ public sealed class TaskDetailTests
 
         private DisabledWakeStack()
         {
-            this.options = Options.Create(new TeamOptions { DataDir = this.dir.Path, Tasks = new TasksOptions { WakeEnabled = false } });
+            this.options = this.dir.Options(opts => opts.Tasks = new TasksOptions { WakeEnabled = false });
 
-            this.personas = new PersonaStore(
-                new TeammatePaths(this.options),
-                new PersonaModelStore(this.options),
-                new PersonaEffortStore(this.options), new PersonaWorkModeStore(this.options),
-                NullLogger<PersonaStore>.Instance);
+            this.personas = this.options.CreatePersonaStore();
             this.personas.Add(new PersonaIdentity("Nova", "Nova", "Nova", ["Platform"]), "You are Nova.");
 
             this.store = new TaskStore(this.options, this.personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
@@ -536,7 +533,7 @@ public sealed class TaskDetailTests
             this.gateway = new Agency.Huddle.Tests.Ui.FakeAgentGateway();
             this.avatars = new Agency.Huddle.App.Avatars.AvatarStore(this.options, NullLogger<Agency.Huddle.App.Avatars.AvatarStore>.Instance);
 
-            this.directory = new SqliteTeamDirectory(this.options);
+            this.directory = this.options.CreateDirectory();
             FileChatStore chatStore = new(this.options, NullLogger<FileChatStore>.Instance);
             RoomEvents roomEvents = new(NullLogger<RoomEvents>.Instance);
             ProposalStore proposals = new(roomEvents);

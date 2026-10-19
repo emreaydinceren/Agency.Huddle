@@ -1,9 +1,7 @@
 namespace Agency.Huddle.Tests.Acp;
 
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Library;
@@ -12,6 +10,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Agency.Huddle.Tests.Library;
 using Agency.Huddle.Tests.Waiting;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Pins Task 10.4: the plumbing that carries a <see cref="LibraryDocumentCollector"/> and a
@@ -36,7 +35,7 @@ public sealed class PersonaRunnerLibraryDocsTests
         string filePath = Path.Combine(rootPath, "doc.md");
         File.WriteAllText(filePath, "doc contents");
         string uri = new Uri(filePath).AbsoluteUri;
-        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), Options.Create(new TeamOptions()));
+        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), TestOptions.Create());
 
         FakeAgentSession session = new();
         session.EnqueueReply("ok");
@@ -68,7 +67,7 @@ public sealed class PersonaRunnerLibraryDocsTests
         string filePath = Path.Combine(rootPath, "doc.md");
         File.WriteAllText(filePath, "the document's own inlined content");
         string uri = new Uri(filePath).AbsoluteUri;
-        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), Options.Create(new TeamOptions()));
+        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), TestOptions.Create());
 
         FakeAgentSession session = new();
         session.EnqueueReply("ok");
@@ -98,7 +97,7 @@ public sealed class PersonaRunnerLibraryDocsTests
         string filePath = Path.Combine(rootPath, "doc.md");
         File.WriteAllText(filePath, "must not be inlined");
         string uri = new Uri(filePath).AbsoluteUri;
-        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), Options.Create(new TeamOptions()));
+        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), TestOptions.Create());
 
         FakeAgentSession session = new();
         session.EnqueueReply("ok");
@@ -129,7 +128,7 @@ public sealed class PersonaRunnerLibraryDocsTests
         string filePath = Path.Combine(rootPath, "doc.md");
         File.WriteAllText(filePath, "doc contents");
         string uri = new Uri(filePath).AbsoluteUri;
-        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), Options.Create(new TeamOptions()));
+        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), TestOptions.Create());
 
         FakeAgentSession session = new();
         session.EnqueueReply("ok");
@@ -164,7 +163,7 @@ public sealed class PersonaRunnerLibraryDocsTests
         string filePath = Path.Combine(rootPath, "doc.md");
         File.WriteAllText(filePath, "doc contents");
         string uri = new Uri(filePath).AbsoluteUri;
-        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), Options.Create(new TeamOptions()));
+        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), TestOptions.Create());
 
         FakeAgentSession session = new();
         session.EnqueueReply("ok");
@@ -203,7 +202,7 @@ public sealed class PersonaRunnerLibraryDocsTests
         string filePath = Path.Combine(rootPath, "doc.md");
         File.WriteAllText(filePath, "doc contents");
         string uri = new Uri(filePath).AbsoluteUri;
-        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), Options.Create(new TeamOptions()));
+        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), TestOptions.Create());
 
         FakeAgentSession session = new();
         session.EnqueueReply("ok");

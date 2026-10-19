@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp.Sessions;
 
@@ -12,7 +13,7 @@ public sealed class OwnPostsTests
     [Fact]
     public void RecordThenTake_ReturnsInOrder()
     {
-        var ownPosts = new OwnPosts(Options.Create(new TeamOptions()));
+        var ownPosts = new OwnPosts(TestOptions.Create());
 
         ownPosts.Record("nova", "room-b", "first");
         ownPosts.Record("nova", "room-b", "second");
@@ -26,7 +27,7 @@ public sealed class OwnPostsTests
     [Fact]
     public void Take_Clears()
     {
-        var ownPosts = new OwnPosts(Options.Create(new TeamOptions()));
+        var ownPosts = new OwnPosts(TestOptions.Create());
         ownPosts.Record("nova", "room-b", "first");
 
         _ = ownPosts.Take("nova", "room-b");
@@ -55,7 +56,7 @@ public sealed class OwnPostsTests
     [Fact]
     public void Record_WhileThatRoomIsBusy_NotRecorded()
     {
-        var ownPosts = new OwnPosts(Options.Create(new TeamOptions()));
+        var ownPosts = new OwnPosts(TestOptions.Create());
         ownPosts.BeginTurn("nova", "room-b");
 
         ownPosts.Record("nova", "room-b", "should not be recorded");
@@ -67,7 +68,7 @@ public sealed class OwnPostsTests
     [Fact]
     public void Record_WhileSharedSessionBusy_NotRecorded()
     {
-        var ownPosts = new OwnPosts(Options.Create(new TeamOptions()));
+        var ownPosts = new OwnPosts(TestOptions.Create());
         ownPosts.BeginTurn("nova", null);
 
         ownPosts.Record("nova", "room-b", "should not be recorded");
@@ -81,7 +82,7 @@ public sealed class OwnPostsTests
     [Fact]
     public void EndTurn_ThenRecord_Recorded()
     {
-        var ownPosts = new OwnPosts(Options.Create(new TeamOptions()));
+        var ownPosts = new OwnPosts(TestOptions.Create());
         ownPosts.BeginTurn("nova", "room-b");
         ownPosts.EndTurn("nova", "room-b");
 
@@ -94,7 +95,7 @@ public sealed class OwnPostsTests
     [Fact]
     public void ClearAgent_DropsOnlyThatAgent()
     {
-        var ownPosts = new OwnPosts(Options.Create(new TeamOptions()));
+        var ownPosts = new OwnPosts(TestOptions.Create());
         ownPosts.Record("nova", "room-b", "nova's post");
         ownPosts.Record("friend", "room-b", "friend's post");
 

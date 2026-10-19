@@ -2,13 +2,10 @@ namespace Agency.Huddle.Tests.Acp;
 
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Tools;
-using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
@@ -19,6 +16,7 @@ using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Tools;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Golden-output safety net for task T1.1. Every model-facing string produced by
@@ -869,14 +867,13 @@ public sealed class PromptGoldenTests
     private static async Task<(GetHelpTool GetHelp, IReadOnlyList<IAppTool> Others)> BuildToolsAsync(CancellationToken ct)
     {
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
-        using var personaStore = new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
-        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        using var personaStore = dir.CreatePersonaStore();
+        var store = dir.CreateChatStore();
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var aliasSource = new FakeMentionAliasSource();
         var proposals = new ProposalStore(events);
-        var options = Options.Create(new TeamOptions());
+        var options = TestOptions.Create();
         var chat = new ChatService(directory, store, events, aliasSource, options, proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
 
         var gateway = new FakeAgentGateway();

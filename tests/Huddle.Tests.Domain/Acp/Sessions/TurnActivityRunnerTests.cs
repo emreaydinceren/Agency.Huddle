@@ -3,7 +3,6 @@ namespace Agency.Huddle.Tests.Acp.Sessions;
 using System.IO.Pipes;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
@@ -11,6 +10,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Waiting;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Pins <see cref="TurnActivity"/> at the runner level (D8 correction 6): a
@@ -36,9 +36,9 @@ public sealed class TurnActivityRunnerTests
         var factory = new FakeAgentHostFactory();
         var release = new TaskCompletionSource();
         factory.Session.EnqueueGatedReply(release.Task, "held reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var room = GroupRoom("room-a", "Room A");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
         var turnActivity = new TurnActivity();
 
         await using var runner = new PersonaRunner(

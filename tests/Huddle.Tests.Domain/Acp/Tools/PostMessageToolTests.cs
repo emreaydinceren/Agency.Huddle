@@ -1,8 +1,6 @@
 namespace Agency.Huddle.Tests.Acp.Tools;
 
-using Microsoft.Extensions.Options;
 using System.Text.Json.Nodes;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
@@ -22,7 +20,7 @@ public sealed class PostMessageToolTests
         Assert.NotNull(echo);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
         var (chat, store, _, _, _) = ChatServiceFactory.Create(directory, dir.Options());
-        var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), new OwnPosts(Options.Create(new TeamOptions())));
+        var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), new OwnPosts(TestOptions.Create()));
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello there" };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -44,7 +42,7 @@ public sealed class PostMessageToolTests
         Assert.NotNull(echo);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var (chat, store, _, _, _) = ChatServiceFactory.Create(directory, dir.Options());
-        var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), new OwnPosts(Options.Create(new TeamOptions())));
+        var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), new OwnPosts(TestOptions.Create()));
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello" };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -65,7 +63,7 @@ public sealed class PostMessageToolTests
         Assert.NotNull(echo);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
         var (chat, _, _, _, _) = ChatServiceFactory.Create(directory, dir.Options());
-        var ownPosts = new OwnPosts(Options.Create(new TeamOptions()));
+        var ownPosts = new OwnPosts(TestOptions.Create());
         var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), ownPosts);
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello there" };
 
@@ -85,7 +83,7 @@ public sealed class PostMessageToolTests
         Assert.NotNull(echo);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var (chat, _, _, _, _) = ChatServiceFactory.Create(directory, dir.Options());
-        var ownPosts = new OwnPosts(Options.Create(new TeamOptions()));
+        var ownPosts = new OwnPosts(TestOptions.Create());
         var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), ownPosts);
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello" };
 
@@ -104,7 +102,7 @@ public sealed class PostMessageToolTests
         Assert.NotNull(echo);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
         var (chat, _, events, _, _) = ChatServiceFactory.Create(directory, dir.Options());
-        var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), new OwnPosts(Options.Create(new TeamOptions())));
+        var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), new OwnPosts(TestOptions.Create()));
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "from a threadpool thread" };
         var tcs = new TaskCompletionSource<MessagePostedEvent>(TaskCreationOptions.RunContinuationsAsynchronously);
         events.MessagePosted += e => tcs.TrySetResult(e);
@@ -137,7 +135,7 @@ public sealed class PostMessageToolTests
         using var dir = new TempDataDir();
         var directory = await dir.CreateDirectoryAsync(ct);
         var (chat, _, _, _, _) = ChatServiceFactory.Create(directory, dir.Options());
-        var tool = new PostMessageTool(chat, "echo-id", new FakePromptSource(), new OwnPosts(Options.Create(new TeamOptions())));
+        var tool = new PostMessageTool(chat, "echo-id", new FakePromptSource(), new OwnPosts(TestOptions.Create()));
         var arguments = new JsonObject { ["roomId"] = "some-room", ["text"] = "hello" };
         arguments[wrongArgument] = 42;
 

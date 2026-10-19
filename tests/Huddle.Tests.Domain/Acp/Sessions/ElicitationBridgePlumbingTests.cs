@@ -9,6 +9,7 @@ using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Agency.Huddle.Tests.Waiting;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp.Sessions;
 
@@ -37,7 +38,7 @@ public sealed class ElicitationBridgePlumbingTests
             "room-1",
             "Direct",
             [new MemberInfo("human", "Human", UserKind.Human), new MemberInfo("agent-1", "nova", UserKind.Agent)]);
-        IOptions<TeamOptions> options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        IOptions<TeamOptions> options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
         await using PersonaRunner runner = new(
             persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, elicitationBridge: bridge);
         await server.HandshakeAsync(runner, [room], ct);

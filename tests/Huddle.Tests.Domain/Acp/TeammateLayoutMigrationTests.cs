@@ -3,6 +3,7 @@ using Agency.Huddle.App.Acp;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.Tests.Elicitation;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -18,14 +19,14 @@ public sealed class TeammateLayoutMigrationTests
     public void Run_FlatDefinitions_MoveIntoTeammateFolders()
     {
         using TempDataDir dataDir = new();
-        WriteTeamsFile(dataDir.Path, "wrong-filename.md", PersonaText("Nova"));
+        WriteTeamsFile(dataDir.Path, "wrong-filename.md", TestPersonas.FrontmatterText("Nova"));
         RecordingLogger<TeammateLayoutMigrationTests> logger = new();
 
         TeammateLayoutMigration.Run(dataDir.Options(), logger);
 
         string target = Path.Combine(dataDir.Path, "Teammates", "Nova", "Nova.md");
         Assert.True(File.Exists(target));
-        Assert.Equal(PersonaText("Nova"), File.ReadAllText(target));
+        Assert.Equal(TestPersonas.FrontmatterText("Nova"), File.ReadAllText(target));
         Assert.False(File.Exists(Path.Combine(dataDir.Path, "Teams", "wrong-filename.md")));
     }
 
@@ -34,7 +35,7 @@ public sealed class TeammateLayoutMigrationTests
     public void Run_OrganisationalSubfolder_MovesAndRemovesEmptyFolder()
     {
         using TempDataDir dataDir = new();
-        WriteTeamsFile(dataDir.Path, Path.Combine("Marketing", "Ada.md"), PersonaText("Ada"));
+        WriteTeamsFile(dataDir.Path, Path.Combine("Marketing", "Ada.md"), TestPersonas.FrontmatterText("Ada"));
         RecordingLogger<TeammateLayoutMigrationTests> logger = new();
 
         TeammateLayoutMigration.Run(dataDir.Options(), logger);
@@ -49,7 +50,7 @@ public sealed class TeammateLayoutMigrationTests
     public void Run_WorkDirs_MoveUnderTeammate()
     {
         using TempDataDir dataDir = new();
-        WriteTeamsFile(dataDir.Path, "Nova.md", PersonaText("Nova"));
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
         WriteWorkFile(dataDir.Path, Path.Combine("Nova", "memory", "x.md"), "hello");
         RecordingLogger<TeammateLayoutMigrationTests> logger = new();
 
@@ -112,7 +113,7 @@ public sealed class TeammateLayoutMigrationTests
     public void Run_SecondRun_IsNoOp()
     {
         using TempDataDir dataDir = new();
-        WriteTeamsFile(dataDir.Path, "Nova.md", PersonaText("Nova"));
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
         RecordingLogger<TeammateLayoutMigrationTests> firstLogger = new();
         TeammateLayoutMigration.Run(dataDir.Options(), firstLogger);
         string target = Path.Combine(dataDir.Path, "Teammates", "Nova", "Nova.md");
@@ -130,7 +131,7 @@ public sealed class TeammateLayoutMigrationTests
     public void Run_Success_WritesMarker()
     {
         using TempDataDir dataDir = new();
-        WriteTeamsFile(dataDir.Path, "Nova.md", PersonaText("Nova"));
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
         RecordingLogger<TeammateLayoutMigrationTests> logger = new();
 
         TeammateLayoutMigration.Run(dataDir.Options(), logger);
@@ -166,7 +167,7 @@ public sealed class TeammateLayoutMigrationTests
 
         using TempDataDir dataDir = new();
         string source = Path.Combine(dataDir.Path, "Teams", "Nova.md");
-        WriteTeamsFile(dataDir.Path, "Nova.md", PersonaText("Nova"));
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
         string markerPath = Path.Combine(dataDir.Path, "Teammates", ".layout-migrated");
         RecordingLogger<TeammateLayoutMigrationTests> firstLogger = new();
 
@@ -191,7 +192,7 @@ public sealed class TeammateLayoutMigrationTests
     public void Run_TargetIdenticalExists_Skipped()
     {
         using TempDataDir dataDir = new();
-        string content = PersonaText("Nova");
+        string content = TestPersonas.FrontmatterText("Nova");
         WriteTeamsFile(dataDir.Path, "Nova.md", content);
         string target = Path.Combine(dataDir.Path, "Teammates", "Nova", "Nova.md");
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
@@ -211,12 +212,12 @@ public sealed class TeammateLayoutMigrationTests
         using TempDataDir dataDir = new();
         string existing = Path.Combine(dataDir.Path, "Teammates", "Nova", "Nova.md");
         Directory.CreateDirectory(Path.GetDirectoryName(existing)!);
-        File.WriteAllText(existing, PersonaText("Nova"));
+        File.WriteAllText(existing, TestPersonas.FrontmatterText("Nova"));
         RecordingLogger<TeammateLayoutMigrationTests> logger = new();
 
         TeammateLayoutMigration.Run(dataDir.Options(), logger);
 
-        Assert.Equal(PersonaText("Nova"), File.ReadAllText(existing));
+        Assert.Equal(TestPersonas.FrontmatterText("Nova"), File.ReadAllText(existing));
     }
 
     /// <summary>When a move cannot complete (the target is blocked), the migration throws naming the path and leaves the old layout readable.</summary>
@@ -224,7 +225,7 @@ public sealed class TeammateLayoutMigrationTests
     public void Run_MoveFails_ThrowsAndLeavesOldLayoutReadable()
     {
         using TempDataDir dataDir = new();
-        WriteTeamsFile(dataDir.Path, "Nova.md", PersonaText("Nova"));
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
         string blocker = Path.Combine(dataDir.Path, "Teammates", "Nova");
         Directory.CreateDirectory(Path.Combine(dataDir.Path, "Teammates"));
         File.WriteAllText(blocker, "this is a file, not a folder");
@@ -245,8 +246,8 @@ public sealed class TeammateLayoutMigrationTests
     public void Run_LogsEveryMove()
     {
         using TempDataDir dataDir = new();
-        WriteTeamsFile(dataDir.Path, "Nova.md", PersonaText("Nova"));
-        WriteTeamsFile(dataDir.Path, "Ada.md", PersonaText("Ada"));
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
+        WriteTeamsFile(dataDir.Path, "Ada.md", TestPersonas.FrontmatterText("Ada"));
         RecordingLogger<TeammateLayoutMigrationTests> logger = new();
 
         TeammateLayoutMigration.Run(dataDir.Options(), logger);
@@ -266,8 +267,8 @@ public sealed class TeammateLayoutMigrationTests
     public void Run_DuplicateNames_BothGoToUnsorted()
     {
         using TempDataDir dataDir = new();
-        WriteTeamsFile(dataDir.Path, "a.md", PersonaText("Nova"));
-        WriteTeamsFile(dataDir.Path, "b.md", PersonaText("Nova"));
+        WriteTeamsFile(dataDir.Path, "a.md", TestPersonas.FrontmatterText("Nova"));
+        WriteTeamsFile(dataDir.Path, "b.md", TestPersonas.FrontmatterText("Nova"));
         RecordingLogger<TeammateLayoutMigrationTests> logger = new();
 
         TeammateLayoutMigration.Run(dataDir.Options(), logger);
@@ -285,7 +286,7 @@ public sealed class TeammateLayoutMigrationTests
         string markerPath = Path.Combine(dataDir.Path, "Teammates", ".layout-migrated");
         Directory.CreateDirectory(Path.GetDirectoryName(markerPath)!);
         File.WriteAllText(markerPath, string.Empty);
-        WriteTeamsFile(dataDir.Path, "Nova.md", PersonaText("Nova"));
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
         RecordingLogger<TeammateLayoutMigrationTests> logger = new();
 
         TeammateLayoutMigration.Run(dataDir.Options(), logger);
@@ -302,7 +303,7 @@ public sealed class TeammateLayoutMigrationTests
         string markerPath = Path.Combine(dataDir.Path, "Teammates", ".layout-migrated");
         Directory.CreateDirectory(Path.GetDirectoryName(markerPath)!);
         File.WriteAllText(markerPath, string.Empty);
-        WriteTeamsFile(dataDir.Path, Path.Combine("Marketing", "Ada.md"), PersonaText("Ada"));
+        WriteTeamsFile(dataDir.Path, Path.Combine("Marketing", "Ada.md"), TestPersonas.FrontmatterText("Ada"));
         RecordingLogger<TeammateLayoutMigrationTests> logger = new();
 
         TeammateLayoutMigration.Run(dataDir.Options(), logger);
@@ -329,12 +330,8 @@ public sealed class TeammateLayoutMigrationTests
     public void Run_TeamsDirOverride_DoesNotChangeSource()
     {
         using TempDataDir dataDir = new();
-        WriteTeamsFile(dataDir.Path, "Nova.md", PersonaText("Nova"));
-        IOptions<TeamOptions> options = Options.Create(new TeamOptions
-        {
-            DataDir = dataDir.Path,
-            Teams = new TeamsOptions { Dir = "CustomTeams" },
-        });
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
+        IOptions<TeamOptions> options = dataDir.Options(opts => opts.Teams = new TeamsOptions { Dir = "CustomTeams" });
         RecordingLogger<TeammateLayoutMigrationTests> logger = new();
 
         TeammateLayoutMigration.Run(options, logger);
@@ -368,7 +365,7 @@ public sealed class TeammateLayoutMigrationTests
     public void Run_TasksAfterPersonas_OrgFolderRemovedThenTeamFolderCreated()
     {
         using TempDataDir dataDir = new();
-        WriteTeamsFile(dataDir.Path, Path.Combine("Marketing", "Ada.md"), PersonaText("Ada"));
+        WriteTeamsFile(dataDir.Path, Path.Combine("Marketing", "Ada.md"), TestPersonas.FrontmatterText("Ada"));
         WriteTasksFile(dataDir.Path, Path.Combine("Platform", "PLAT-1.md"), "flat");
         RecordingLogger<TeammateLayoutMigrationTests> logger = new();
 
@@ -415,7 +412,7 @@ public sealed class TeammateLayoutMigrationTests
     public void Run_TasksAbsent_NoOp()
     {
         using TempDataDir dataDir = new();
-        WriteTeamsFile(dataDir.Path, "Nova.md", PersonaText("Nova"));
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
         RecordingLogger<TeammateLayoutMigrationTests> logger = new();
 
         TeammateLayoutMigration.Run(dataDir.Options(), logger);
@@ -482,7 +479,4 @@ public sealed class TeammateLayoutMigrationTests
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, text);
     }
-
-    /// <summary>A minimal, valid Persona file's raw text: only the required identity fields.</summary>
-    private static string PersonaText(string name) => $"---\nName: {name}\nTitle: {name}\nAlias: {name}\n---\nYou are {name}.";
 }

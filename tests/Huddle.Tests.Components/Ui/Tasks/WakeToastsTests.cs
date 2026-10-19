@@ -5,10 +5,9 @@ using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using MudBlazor;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Pins Spec §13.8's toast rules: <see cref="WakeOutcome.Woken"/> adds one info toast keyed
@@ -253,7 +252,7 @@ public sealed class WakeToastsTests
     private static (MudBunitContext Ctx, IRenderedComponent<ContainerFragment> Cut, ISnackbar Snackbar, TaskActivity Activity) RenderToasts(Action<TaskId>? onOpenTask = null)
     {
         MudBunitContext ctx = new();
-        TaskActivity activity = new(Options.Create(new TeamOptions()));
+        TaskActivity activity = new(TestOptions.Create());
         ctx.Services.AddSingleton(activity);
 
         IRenderedComponent<ContainerFragment> cut = ctx.Render(builder =>

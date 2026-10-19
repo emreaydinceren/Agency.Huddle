@@ -3,13 +3,13 @@ namespace Agency.Huddle.Tests.Acp.Sessions;
 using System.IO.Pipes;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Waiting;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Pins <see cref="Agency.Huddle.App.Acp.Sessions.RoomSessionPool"/> (RS §6.2), findings P-4, P-5 and
@@ -29,7 +29,7 @@ public sealed class RoomSessionPoolTests
 
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
         var roomB = GroupRoom("room-b", "Room B");
 
@@ -65,7 +65,7 @@ public sealed class RoomSessionPoolTests
 
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
         var roomB = GroupRoom("room-b", "Room B");
 
@@ -85,7 +85,7 @@ public sealed class RoomSessionPoolTests
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
         factory.OnHostStarted = host => host.FailNextOpenWith(new InvalidOperationException("boom"));
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
 
         await using var runner = CreateRunner(server, persona, factory);
@@ -102,7 +102,7 @@ public sealed class RoomSessionPoolTests
 
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomB = GroupRoom("room-b", "Room B");
 
         await using var runner = CreateRunner(server, persona, factory);
@@ -153,7 +153,7 @@ public sealed class RoomSessionPoolTests
 
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = false };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
         var roomB = GroupRoom("room-b", "Room B");
 
@@ -179,7 +179,7 @@ public sealed class RoomSessionPoolTests
         var acp = new AcpOptions { SessionIdleMinutes = 5 };
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
         var roomB = GroupRoom("room-b", "Room B");
 
@@ -213,7 +213,7 @@ public sealed class RoomSessionPoolTests
         var acp = new AcpOptions { SessionIdleMinutes = 0 };
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
 
         await using var runner = CreateRunner(server, persona, factory, acp, time);
@@ -236,7 +236,7 @@ public sealed class RoomSessionPoolTests
         var acp = new AcpOptions { SessionIdleMinutes = 1 };
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = false };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
 
         await using var runner = CreateRunner(server, persona, factory, acp, time);
@@ -258,7 +258,7 @@ public sealed class RoomSessionPoolTests
         var acp = new AcpOptions { MaxLiveSessions = 3 };
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
         var roomB = GroupRoom("room-b", "Room B");
         var roomC = GroupRoom("room-c", "Room C");
@@ -293,7 +293,7 @@ public sealed class RoomSessionPoolTests
         var acp = new AcpOptions { MaxConcurrentTurns = 1, MaxLiveSessions = 3 };
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
         var roomC = GroupRoom("room-c", "Room C");
         var roomG = GroupRoom("room-g", "Room G");
@@ -357,7 +357,7 @@ public sealed class RoomSessionPoolTests
         var acp = new AcpOptions { MaxConcurrentTurns = 4, MaxLiveSessions = 3 };
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomB = GroupRoom("room-b", "Room B");
         var roomC = GroupRoom("room-c", "Room C");
         var roomE = GroupRoom("room-e", "Room E");
@@ -399,7 +399,7 @@ public sealed class RoomSessionPoolTests
 
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
         var roomB = GroupRoom("room-b", "Room B");
 
@@ -450,7 +450,7 @@ public sealed class RoomSessionPoolTests
         var acp = new AcpOptions { MaxConcurrentTurns = 2 };
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
         var roomB = GroupRoom("room-b", "Room B");
 
@@ -493,7 +493,7 @@ public sealed class RoomSessionPoolTests
         var acp = new AcpOptions { MaxLiveSessions = 1, MaxConcurrentTurns = 2 };
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
         var roomB = GroupRoom("room-b", "Room B");
 
@@ -520,7 +520,7 @@ public sealed class RoomSessionPoolTests
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
         factory.OnHostStarted = host => host.OpenDelay = TimeSpan.FromMilliseconds(150);
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomB = GroupRoom("room-b", "Room B");
         var roomC = GroupRoom("room-c", "Room C");
         var roomD = GroupRoom("room-d", "Room D");
@@ -562,7 +562,7 @@ public sealed class RoomSessionPoolTests
         // No Room holds only the Human, so nothing opens at start and Room C's lazy open is the
         // host's first - which hands back factory.Session, scripted here to hold its Turn in flight.
         factory.Session.EnqueueGatedReply(releaseC.Task, "c reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomB = GroupRoom("room-b", "Room B");
         var roomC = GroupRoom("room-c", "Room C");
         var roomD = GroupRoom("room-d", "Room D");
@@ -626,7 +626,11 @@ public sealed class RoomSessionPoolTests
     private static PersonaRunner CreateRunner(
         FakeServer server, Persona persona, FakeAgentHostFactory factory, AcpOptions? acp = null, TimeProvider? timeProvider = null)
     {
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName, Acp = acp ?? new AcpOptions() });
+        var options = TestOptions.Create(opts =>
+        {
+            opts.PipeName = server.PipeName;
+            opts.Acp = acp ?? new AcpOptions();
+        });
         return new PersonaRunner(
             persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, timeProvider: timeProvider);
     }

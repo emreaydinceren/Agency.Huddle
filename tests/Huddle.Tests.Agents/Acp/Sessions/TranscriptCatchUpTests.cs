@@ -17,6 +17,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Agency.Huddle.Tests.Pipes;
 using Agency.Huddle.Tests.Waiting;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Pins <see cref="RoomSession"/>'s Transcript Catch-up (RS §6.5): the first Turn after any open
@@ -281,7 +282,7 @@ public sealed class TranscriptCatchUpTests
         novaFactory.Session.EnqueueGatedReply(gate.Task, "held reply");
 
         await using PersonaRunner novaRunner = new(
-            new Persona("nova", "You are Nova."), options, novaFactory, new FakePromptSource(), new RoomFollows(), logger, roomSessions: roomSessions);
+            TestPersonas.Nova, options, novaFactory, new FakePromptSource(), new RoomFollows(), logger, roomSessions: roomSessions);
         await novaRunner.StartAsync(ct);
 
         var (novaId, roomXId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
@@ -340,7 +341,7 @@ public sealed class TranscriptCatchUpTests
         var friendFactory = new FakeAgentHostFactory { SessionPerRoom = true };
 
         await using PersonaRunner novaRunner = new(
-            new Persona("nova", "You are Nova."), options, novaFactory, new FakePromptSource(), new RoomFollows(), logger, roomSessions: roomSessions);
+            TestPersonas.Nova, options, novaFactory, new FakePromptSource(), new RoomFollows(), logger, roomSessions: roomSessions);
         await using PersonaRunner friendRunner = new(
             new Persona("friend", "You are Friend."), options, friendFactory, new FakePromptSource(), new RoomFollows(), logger, roomSessions: roomSessions);
         await novaRunner.StartAsync(ct);
@@ -397,7 +398,7 @@ public sealed class TranscriptCatchUpTests
         await using PersonaRunner friendRunner = new(
             new Persona("friend", "You are Friend."), options, friendFactory, new FakePromptSource(), new RoomFollows(), logger, roomSessions: roomSessions);
         await using PersonaRunner novaRunner = new(
-            new Persona("nova", "You are Nova."), options, novaFactory, new FakePromptSource(), new RoomFollows(), logger, roomSessions: roomSessions);
+            TestPersonas.Nova, options, novaFactory, new FakePromptSource(), new RoomFollows(), logger, roomSessions: roomSessions);
         await friendRunner.StartAsync(ct);
         await novaRunner.StartAsync(ct);
 

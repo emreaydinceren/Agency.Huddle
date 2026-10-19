@@ -1,10 +1,9 @@
 using Agency.Huddle.Acp.Abstractions;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.Tests.Elicitation;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -77,6 +76,6 @@ public sealed class DotAcpPersonaHostWorkModeTests
 
     private static WorkModePolicy Policy()
     {
-        return new WorkModePolicy(Options.Create(new TeamOptions()));
+        return new WorkModePolicy(TestOptions.Create());
     }
 }

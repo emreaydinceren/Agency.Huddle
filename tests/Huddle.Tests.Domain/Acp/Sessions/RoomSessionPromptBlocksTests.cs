@@ -1,7 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Library;
@@ -10,6 +8,7 @@ using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Agency.Huddle.Tests.Library;
 using Agency.Huddle.Tests.Waiting;
 using Agency.Huddle.Tests.Elicitation;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp.Sessions;
 
@@ -41,7 +40,7 @@ public sealed class RoomSessionPromptBlocksTests
         ILogger? logger = null)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), Options.Create(new TeamOptions()));
+        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), TestOptions.Create());
         FakeAgentSession session = new();
         session.EnqueueReply("ok");
         FakePersonaHost? host = withHost

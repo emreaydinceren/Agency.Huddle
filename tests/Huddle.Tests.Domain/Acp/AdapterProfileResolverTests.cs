@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -69,7 +70,7 @@ public sealed class AdapterProfileResolverTests
                 new AdapterProfileOptions { Id = "claude", DisplayName = "Claude", Command = "node" },
             ],
         };
-        IOptions<TeamOptions> options = Options.Create(new TeamOptions { Acp = acp });
+        IOptions<TeamOptions> options = TestOptions.Create(opts => opts.Acp = acp);
 
         catalog = new AdapterCatalog(options);
         return new AdapterProfileResolver(catalog);

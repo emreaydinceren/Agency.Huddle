@@ -13,6 +13,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Conformance;
 using Agency.Huddle.Tests.Pipes;
 using Agency.Huddle.Tests.Waiting;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -145,7 +146,7 @@ public sealed class PersonaSupervisorFileChangesTests
     public async Task MockAdapterFixture_PassesTracker()
     {
         var ct = TestContext.Current.CancellationToken;
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var fixture = await MockAdapterFixture.StartAsync(persona, cancellationToken: ct);
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();

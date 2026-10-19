@@ -1,6 +1,6 @@
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
-using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -15,7 +15,7 @@ public sealed class PersonaStoreWorkModeTests
     public void Get_JoinsTheStoredWorkModeToTheFile()
     {
         using TempDataDir dir = new();
-        TestPersonaFiles.Write(new TeammatePaths(dir.Options()), "coo", PersonaText("coo", "You are the Chief of Staff."));
+        TestPersonaFiles.Write(new TeammatePaths(dir.Options()), "coo", TestPersonas.FrontmatterText("coo", "You are the Chief of Staff."));
         new PersonaWorkModeStore(dir.Options()).Set("coo", "plan");
         using PersonaStore store = CreateStore(dir);
 
@@ -32,7 +32,7 @@ public sealed class PersonaStoreWorkModeTests
         using TempDataDir dir = new();
         using PersonaStore store = CreateStore(dir);
 
-        Persona persona = store.Add(Identity("coo"), "text", "claude-opus-4", "high", "acceptEdits");
+        Persona persona = store.Add(TestPersonas.Identity("coo"), "text", "claude-opus-4", "high", "acceptEdits");
 
         Assert.Equal("acceptEdits", persona.WorkMode);
         Assert.Equal("acceptEdits", StoredWorkMode(store, "coo"));
@@ -45,7 +45,7 @@ public sealed class PersonaStoreWorkModeTests
         using TempDataDir dir = new();
         using PersonaStore store = CreateStore(dir);
 
-        Persona persona = store.Add(Identity("coo"), "text");
+        Persona persona = store.Add(TestPersonas.Identity("coo"), "text");
 
         Assert.Null(persona.WorkMode);
         Assert.Null(StoredWorkMode(store, "coo"));
@@ -57,11 +57,11 @@ public sealed class PersonaStoreWorkModeTests
     {
         using TempDataDir dir = new();
         using PersonaStore store = CreateStore(dir);
-        store.Add(Identity("coo"), "unchanged text", "claude-opus-4", "high");
+        store.Add(TestPersonas.Identity("coo"), "unchanged text", "claude-opus-4", "high");
 
-        Persona updated = store.Update("coo", PersonaText("coo", "unchanged text"), "claude-opus-4", "high", "plan");
+        Persona updated = store.Update("coo", TestPersonas.FrontmatterText("coo", "unchanged text"), "claude-opus-4", "high", "plan");
 
-        Assert.Equal(PersonaText("coo", "unchanged text"), updated.Text);
+        Assert.Equal(TestPersonas.FrontmatterText("coo", "unchanged text"), updated.Text);
         Assert.Equal("claude-opus-4", updated.Model);
         Assert.Equal("high", updated.Effort);
         Assert.Equal("plan", updated.WorkMode);
@@ -74,9 +74,9 @@ public sealed class PersonaStoreWorkModeTests
     {
         using TempDataDir dir = new();
         using PersonaStore store = CreateStore(dir);
-        store.Add(Identity("coo"), "text", workMode: "plan");
+        store.Add(TestPersonas.Identity("coo"), "text", workMode: "plan");
 
-        store.Update("coo", PersonaText("coo", "text"), model: null, effort: null, workMode: null);
+        store.Update("coo", TestPersonas.FrontmatterText("coo", "text"), model: null, effort: null, workMode: null);
 
         Assert.Null(StoredWorkMode(store, "coo"));
     }
@@ -87,9 +87,9 @@ public sealed class PersonaStoreWorkModeTests
     {
         using TempDataDir dir = new();
         using PersonaStore store = CreateStore(dir);
-        store.Add(Identity("coo"), "You are the Chief of Staff.", workMode: "plan");
+        store.Add(TestPersonas.Identity("coo"), "You are the Chief of Staff.", workMode: "plan");
 
-        Persona updated = store.Update("coo", PersonaText("vp", "You are the VP."), model: null, effort: null, workMode: "plan");
+        Persona updated = store.Update("coo", TestPersonas.FrontmatterText("vp", "You are the VP."), model: null, effort: null, workMode: "plan");
 
         Assert.Equal("vp", updated.Name);
         Assert.Equal("plan", StoredWorkMode(store, "vp"));
@@ -102,10 +102,10 @@ public sealed class PersonaStoreWorkModeTests
     {
         using TempDataDir dir = new();
         using PersonaStore store = CreateStore(dir);
-        store.Add(Identity("coo"), "text", workMode: "plan");
+        store.Add(TestPersonas.Identity("coo"), "text", workMode: "plan");
 
         store.Remove("coo");
-        Persona recreated = store.Add(Identity("coo"), "new text");
+        Persona recreated = store.Add(TestPersonas.Identity("coo"), "new text");
 
         Assert.Null(recreated.WorkMode);
     }
@@ -119,21 +119,6 @@ public sealed class PersonaStoreWorkModeTests
 
     private static PersonaStore CreateStore(TempDataDir dir)
     {
-        return new PersonaStore(
-            new TeammatePaths(dir.Options()),
-            new PersonaModelStore(dir.Options()),
-            new PersonaEffortStore(dir.Options()),
-            new PersonaWorkModeStore(dir.Options()),
-            NullLogger<PersonaStore>.Instance);
-    }
-
-    private static PersonaIdentity Identity(string name)
-    {
-        return new PersonaIdentity(name, name, name, []);
-    }
-
-    private static string PersonaText(string name, string body)
-    {
-        return $"---\nName: {name}\nTitle: {name}\nAlias: {name}\n---\n{body}";
+        return dir.CreatePersonaStore();
     }
 }

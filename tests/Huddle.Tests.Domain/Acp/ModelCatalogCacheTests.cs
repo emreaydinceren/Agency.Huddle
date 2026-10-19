@@ -289,7 +289,7 @@ public sealed class ModelCatalogCacheTests
                 new AdapterProfileOptions { Id = "agency", DisplayName = "Agency", Command = "agency-acp", Args = ["--flag"] },
             ],
         };
-        IOptions<TeamOptions> options = Options.Create(new TeamOptions { DataDir = dir.Path, Acp = acp });
+        IOptions<TeamOptions> options = dir.Options(opts => opts.Acp = acp);
         AdapterCatalog catalog = new(options);
         AdapterProfileResolver resolver = new(catalog);
 

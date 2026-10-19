@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -13,7 +14,7 @@ public sealed class AdapterCatalogTests
     public void Profiles_AdaptersNull_SynthesisesOneClaudeProfile()
     {
         var acp = new AcpOptions { Command = "node", AdapterPath = "index.js", Args = ["a", "b"] };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var catalog = new AdapterCatalog(options);
 
@@ -31,7 +32,7 @@ public sealed class AdapterCatalogTests
     public void Profiles_AdaptersEmpty_SynthesisesOneClaudeProfile()
     {
         var acp = new AcpOptions { Command = "node", AdapterPath = "index.js", Args = ["a", "b"], Adapters = [] };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var catalog = new AdapterCatalog(options);
 
@@ -56,7 +57,7 @@ public sealed class AdapterCatalogTests
                 new AdapterProfileOptions { Id = "claude", DisplayName = "Claude", Command = "node" },
             ],
         };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var catalog = new AdapterCatalog(options);
 
@@ -77,7 +78,7 @@ public sealed class AdapterCatalogTests
                 new AdapterProfileOptions { Id = "agency", DisplayName = "Agency", Command = "agency-acp" },
             ],
         };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var catalog = new AdapterCatalog(options);
 
@@ -97,7 +98,7 @@ public sealed class AdapterCatalogTests
                 new AdapterProfileOptions { Id = "agency", DisplayName = "Agency", Command = "   " },
             ],
         };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var exception = Assert.Throws<InvalidOperationException>(() => new AdapterCatalog(options));
 
@@ -116,7 +117,7 @@ public sealed class AdapterCatalogTests
                 new AdapterProfileOptions { Id = "AGENCY", DisplayName = "Agency again", Command = "agency-acp" },
             ],
         };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var exception = Assert.Throws<InvalidOperationException>(() => new AdapterCatalog(options));
 
@@ -144,7 +145,7 @@ public sealed class AdapterCatalogTests
                 },
             ],
         };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var catalog = new AdapterCatalog(options);
 
@@ -163,7 +164,7 @@ public sealed class AdapterCatalogTests
     public void Profiles_AdaptersNull_SynthesisedProfileHasNullEnvironmentOverrides()
     {
         var acp = new AcpOptions { Command = "node", AdapterPath = "index.js", Args = ["a", "b"] };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var catalog = new AdapterCatalog(options);
 
@@ -215,7 +216,7 @@ public sealed class AdapterCatalogTests
                 new AdapterProfileOptions { Id = "agency", DisplayName = "Agency", Command = "agency-acp", EnvironmentOverrides = source },
             ],
         };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var catalog = new AdapterCatalog(options);
         source["Agent__DefaultModel"] = "opus";
@@ -248,7 +249,7 @@ public sealed class AdapterCatalogTests
                 },
             ],
         };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var catalog = new AdapterCatalog(options);
 
@@ -261,7 +262,7 @@ public sealed class AdapterCatalogTests
     public void Legacy_ReadsFilesTrue()
     {
         var acp = new AcpOptions { Command = "node", AdapterPath = "index.js", Args = ["a", "b"] };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var catalog = new AdapterCatalog(options);
 
@@ -280,7 +281,7 @@ public sealed class AdapterCatalogTests
                 new AdapterProfileOptions { Id = "agency", DisplayName = "Agency", Command = "agency-acp" },
             ],
         };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var catalog = new AdapterCatalog(options);
 
@@ -315,7 +316,7 @@ public sealed class AdapterCatalogTests
     public void Legacy_IsolateUserSettingsTrue()
     {
         var acp = new AcpOptions { Command = "node", AdapterPath = "index.js", Args = ["a", "b"] };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var catalog = new AdapterCatalog(options);
 
@@ -334,7 +335,7 @@ public sealed class AdapterCatalogTests
                 new AdapterProfileOptions { Id = "agency", DisplayName = "Agency", Command = "agency-acp" },
             ],
         };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var catalog = new AdapterCatalog(options);
 
@@ -351,7 +352,7 @@ public sealed class AdapterCatalogTests
     public void Legacy_SessionPerRoomTrue()
     {
         var acp = new AcpOptions { Command = "node", AdapterPath = "index.js", Args = ["a", "b"] };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var catalog = new AdapterCatalog(options);
 
@@ -410,7 +411,7 @@ public sealed class AdapterCatalogTests
     [Fact]
     public void Profiles_AdaptersNull_SynthesisedProfileAllowsPromptBlocks()
     {
-        var options = Options.Create(new TeamOptions { Acp = new AcpOptions { Command = "node" } });
+        var options = TestOptions.Create(opts => opts.Acp = new AcpOptions { Command = "node" });
 
         var catalog = new AdapterCatalog(options);
 
@@ -423,7 +424,7 @@ public sealed class AdapterCatalogTests
     {
         var acp = new AcpOptions { Adapters = [new AdapterProfileOptions { Id = "claude", Command = "node" }] };
 
-        var catalog = new AdapterCatalog(Options.Create(new TeamOptions { Acp = acp }));
+        var catalog = new AdapterCatalog(TestOptions.Create(opts => opts.Acp = acp));
 
         Assert.True(Assert.Single(catalog.Profiles).PromptBlocks);
     }
@@ -453,7 +454,7 @@ public sealed class AdapterCatalogTests
     public void Profiles_AdaptersNull_SynthesisedProfileAllowsCompact()
     {
         var acp = new AcpOptions { Command = "node", AdapterPath = "index.js", Args = ["a", "b"] };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var catalog = new AdapterCatalog(options);
 
@@ -469,7 +470,7 @@ public sealed class AdapterCatalogTests
         {
             Adapters = [new AdapterProfileOptions { Id = "agency", Command = "agency-acp" }],
         };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var catalog = new AdapterCatalog(options);
 
@@ -485,7 +486,7 @@ public sealed class AdapterCatalogTests
         {
             Adapters = [new AdapterProfileOptions { Id = "claude", Command = "node", Commands = ["compact", " ", "", "init"] }],
         };
-        var options = Options.Create(new TeamOptions { Acp = acp });
+        var options = TestOptions.Create(opts => opts.Acp = acp);
 
         var catalog = new AdapterCatalog(options);
 
@@ -499,7 +500,7 @@ public sealed class AdapterCatalogTests
     {
         string[] configured = ["compact"];
         var entry = new AdapterProfileOptions { Id = "claude", Command = "node", Commands = configured };
-        var options = Options.Create(new TeamOptions { Acp = new AcpOptions { Adapters = [entry] } });
+        var options = TestOptions.Create(opts => opts.Acp = new AcpOptions { Adapters = [entry] });
         var catalog = new AdapterCatalog(options);
 
         configured[0] = "init";

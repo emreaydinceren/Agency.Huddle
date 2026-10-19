@@ -2,9 +2,7 @@ namespace Agency.Huddle.Tests.Acp.Tools;
 
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Tools;
@@ -34,7 +32,7 @@ public sealed class GetHelpToolTests
             new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakePromptSource()),
             new CreateRoomTool(chat, directory, "caller-id", aliasSource, new FakePromptSource()),
             new InviteAgentTool(chat, directory, aliasSource, new FakePromptSource()),
-            new PostMessageTool(chat, "caller-id", new FakePromptSource(), new OwnPosts(Options.Create(new TeamOptions()))),
+            new PostMessageTool(chat, "caller-id", new FakePromptSource(), new OwnPosts(TestOptions.Create())),
             new FollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
         ];

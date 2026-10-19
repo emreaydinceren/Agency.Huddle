@@ -1080,7 +1080,7 @@ Ids are `<deliverable>.<task>`:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "2.3" -State Done -TrackerPath docs/engineering/test-split-plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 64 of 77 tasks Done · 4 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
+**Status:** 65 of 77 tasks Done · 4 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1168,7 +1168,7 @@ Ids are `<deliverable>.<task>`:
 | 15.2 `TestOptions`, `TestStores`, `ChatServiceFactory`, `TestPersonas` (S) | Sonnet | 15.1 | | | ✔ |
 | 15.3 `TeamTypeJson` with its tests (S) | Sonnet | 15.2 | | | ✔ |
 | 15.4 Migrate `Acp/Tools` (H) | Haiku | 15.2 | | | ✔ |
-| 15.5 Migrate store and options construction, `Acp` and `Tasks` (H) | Haiku | 15.2 | | | |
+| 15.5 Migrate store and options construction, `Acp` and `Tasks` (H) | Haiku | 15.2 | | | ✔ |
 | 15.6 Migrate store and options construction, the rest (H) | Haiku | 15.5 | | | |
 | 15.7 Migrate the team-type manifests (H) | Haiku | 15.3 | | | |
 | **D16 Agent and session harnesses** | Sonnet | D11 | | | |

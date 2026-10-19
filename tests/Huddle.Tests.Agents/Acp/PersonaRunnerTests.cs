@@ -16,6 +16,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Pipes;
 using Agency.Huddle.Tests.Waiting;
 using Agency.Huddle.Tests.Elicitation;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -48,7 +49,7 @@ public sealed class PersonaRunnerTests
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -134,7 +135,7 @@ public sealed class PersonaRunnerTests
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var runner = CreateHost(fixture, persona, factory);
         await runner.StartAsync(ct);
@@ -399,7 +400,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("pong");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -425,7 +426,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("probe reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -463,7 +464,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("mentioned reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -501,7 +502,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("group reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -538,7 +539,7 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("scoped reply");
         factory.Session.EnqueueReply("root reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -574,7 +575,7 @@ public sealed class PersonaRunnerTests
         await directory.CreateRoomAsync("Plans", [KnownIds.Human, nova.Id], "Marketing", ct: ct);
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
 
-        await using var runner = CreateHost(fixture, new Persona("nova", "You are Nova."), factory);
+        await using var runner = CreateHost(fixture, TestPersonas.Nova, factory);
         await runner.StartAsync(ct);
 
         var (_, rootRoomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
@@ -648,7 +649,7 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("first reply");
         factory.Session.EnqueueReply("second reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -675,7 +676,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("Hello, ", "world!");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -702,7 +703,7 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "first");
         factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "second");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory, clock: clock);
         await agentHost.StartAsync(ct);
@@ -740,7 +741,7 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueFailure(new InvalidOperationException("boom"));
         factory.Session.EnqueueReply("recovered");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -775,7 +776,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "never posted");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -815,7 +816,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "never posted");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var logger = new RecordingLogger<PersonaRunner>();
 
         await using var agentHost = CreateHost(fixture, persona, factory, logger);
@@ -852,8 +853,8 @@ public sealed class PersonaRunnerTests
         await using var server = new FakePersonaServer();
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("hi back");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
@@ -892,8 +893,8 @@ public sealed class PersonaRunnerTests
         await using var server = new FakePersonaServer();
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("Hello, ", "world!");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
@@ -945,8 +946,8 @@ public sealed class PersonaRunnerTests
                 break;
         }
 
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
@@ -985,8 +986,8 @@ public sealed class PersonaRunnerTests
             new ToolCallStarted("session-1", "call-1", "Reading a file", ToolKind.Read, ToolCallStatus.Pending, null),
             new ToolCallUpdated("session-1", "call-1", "Reading a file", ToolKind.Read, ToolCallStatus.Completed, null));
         factory.Session.EnqueueReply("done reading");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
@@ -1015,8 +1016,8 @@ public sealed class PersonaRunnerTests
         await using var server = new FakePersonaServer();
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyWithUsageAndCost([100], [new UsageCost(0.05m, "USD")], "done");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
         using TempDataDir spendDir = new();
         PersonaSpend spend = new(NullLogger<PersonaSpend>.Instance, new PersonaSpendStore(spendDir.Options()));
 
@@ -1043,8 +1044,8 @@ public sealed class PersonaRunnerTests
         await using var server = new FakePersonaServer();
         var factory = new FakeAgentHostFactory { Commands = ["COMPACT"] };
         factory.Session.EnqueueToolActivity(new AvailableCommandsUpdated(factory.Session.SessionId, AdvertisedCommands(83)));
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
         PersonaCommands commands = new(NullLogger<PersonaCommands>.Instance);
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, commands: commands);
@@ -1067,8 +1068,8 @@ public sealed class PersonaRunnerTests
         await using var server = new FakePersonaServer();
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueToolActivity(new AvailableCommandsUpdated(factory.Session.SessionId, AdvertisedCommands(83)));
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
         PersonaCommands commands = new(NullLogger<PersonaCommands>.Instance);
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, commands: commands);
@@ -1091,8 +1092,8 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory { Commands = ["compact"] };
         factory.Session.EnqueueToolActivity(new AvailableCommandsUpdated(factory.Session.SessionId, AdvertisedCommands(83)));
         factory.Session.EnqueueToolActivity(new AvailableCommandsUpdated(factory.Session.SessionId, [new AvailableCommandInfo("init", "Initialize", null)]));
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
         PersonaCommands commands = new(NullLogger<PersonaCommands>.Instance);
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, commands: commands);
@@ -1117,8 +1118,8 @@ public sealed class PersonaRunnerTests
         await using var server = new FakePersonaServer();
         var factory = new FakeAgentHostFactory { Commands = ["compact"] };
         factory.Session.EnqueueToolActivity(new AvailableCommandsUpdated(factory.Session.SessionId, AdvertisedCommands(5)));
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
         PersonaCommands commands = new(NullLogger<PersonaCommands>.Instance);
         var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, commands: commands);
         await server.HandshakeAsync(runner, ct);
@@ -1360,10 +1361,10 @@ public sealed class PersonaRunnerTests
                 factory.Session.EnqueueToolActivity(new AvailableCommandsUpdated(factory.Session.SessionId, AdvertisedCommands(83)));
             }
 
-            var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+            var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
             var ownPosts = new OwnPosts(options);
             var runner = new PersonaRunner(
-                persona ?? new Persona("nova", "You are Nova."),
+                persona ?? TestPersonas.Nova,
                 options,
                 factory,
                 new FakePromptSource(),
@@ -1457,8 +1458,8 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "live reply");
         factory.Session.EnqueueReply("probe reply");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
@@ -1505,8 +1506,8 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "never posted");
         factory.Session.EnqueueReply("after the stop");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
@@ -1540,8 +1541,8 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "should not be posted");
         factory.Session.EnqueueReply("probe reply");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
@@ -1577,9 +1578,9 @@ public sealed class PersonaRunnerTests
         await using var server = new FakePersonaServer();
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "should not be posted");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var logger = new RecordingLogger<PersonaRunner>();
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger);
         await server.HandshakeAsync(runner, ct);
@@ -1617,8 +1618,8 @@ public sealed class PersonaRunnerTests
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "A1 live reply");
         factory.Session.EnqueueReply("B1 reply");
         factory.Session.EnqueueReply("probe reply");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
@@ -1667,8 +1668,8 @@ public sealed class PersonaRunnerTests
         await using var server = new FakePersonaServer();
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "A1 reply");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
@@ -1700,8 +1701,8 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "B1 live reply");
         factory.Session.EnqueueReply("probe reply");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, timeProvider: clock);
         await server.HandshakeAsync(runner, ct);
@@ -1748,9 +1749,9 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "A1 live reply");
         factory.Session.EnqueueReply("B1 reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var logger = new RecordingLogger<PersonaRunner>();
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger);
         await server.HandshakeAsync(runner, ct);
@@ -1785,7 +1786,7 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyEndingIn(StopReason.Refusal, "I can't help with that.");
         factory.Session.EnqueueReply("probe reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -1821,7 +1822,7 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("   ");
         factory.Session.EnqueueReply("probe reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -1856,7 +1857,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("probe reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -1894,7 +1895,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("caught up");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -1933,7 +1934,7 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("first catch up");
         factory.Session.EnqueueReply("second catch up");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -1970,7 +1971,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("reply for room b");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -2009,7 +2010,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(additionalConfig, ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("bounded reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -2045,7 +2046,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("pong");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -2096,7 +2097,7 @@ public sealed class PersonaRunnerTests
     [Fact]
     public void SystemPromptComposer_PromptOverride_ReachesTheComposedPrompt()
     {
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var prompts = new FakePromptSource();
         prompts.SetOverride("systemPrompt.identity", "You are, unusually, called \"{{personaName}}\" here.");
 
@@ -2132,7 +2133,7 @@ public sealed class PersonaRunnerTests
             new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("probe reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -2167,7 +2168,7 @@ public sealed class PersonaRunnerTests
             new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("woken by the human");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -2197,7 +2198,7 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("resumed");
         factory.Session.EnqueueReply("probe reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -2242,7 +2243,7 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyWithUsage([150], "first reply");
         factory.Session.EnqueueReply("second reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
@@ -2294,7 +2295,7 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyWithUsage([100, 150, 20, 60], "first reply");
         factory.Session.EnqueueReply("second reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -2326,7 +2327,7 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyWithUsage([150], "first reply");
         factory.Session.EnqueueReply("after the human spoke");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -2358,7 +2359,7 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyWithUsage([999_999], "first reply");
         factory.Session.EnqueueReply("second reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
@@ -2440,7 +2441,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueFailure(new InvalidOperationException("boom"));
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
@@ -2473,7 +2474,7 @@ public sealed class PersonaRunnerTests
         factory.Session.EnqueueFailure(new InvalidOperationException("one"));
         factory.Session.EnqueueFailure(new InvalidOperationException("two"));
         factory.Session.EnqueueFailure(new InvalidOperationException("three"));
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
@@ -2506,7 +2507,7 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueFailure(new InvalidOperationException("boom"));
         factory.Session.EnqueueReply("recovered");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
@@ -2541,7 +2542,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueFailure(new AgentDisconnectedException());
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
@@ -2567,7 +2568,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyEndingIn(reason, "partial");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
@@ -2602,8 +2603,8 @@ public sealed class PersonaRunnerTests
         await using var server = new FakePersonaServer();
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "never posted");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
         StatusRecorder statuses = new();
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
@@ -2640,8 +2641,8 @@ public sealed class PersonaRunnerTests
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "never posted");
         factory.Session.EnqueueFailure(new InvalidOperationException("three"));
         factory.Session.EnqueueFailure(new InvalidOperationException("four"));
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
         StatusRecorder statuses = new();
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
@@ -2687,7 +2688,7 @@ public sealed class PersonaRunnerTests
             ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyWithUsage([150], "first reply");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
@@ -2723,7 +2724,7 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyWithUsage([150], "first reply");
         factory.Session.EnqueueReply("after the human spoke");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
@@ -2766,12 +2767,12 @@ public sealed class PersonaRunnerTests
         TrackedFakeTimeProvider clock = new();
         var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "should not be posted");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var logger = new RecordingLogger<PersonaRunner>();
-        var options = Options.Create(new TeamOptions
+        var options = TestOptions.Create(opts =>
         {
-            PipeName = server.PipeName,
-            Acp = new AcpOptions { TurnIdleTimeoutSeconds = 5 },
+            opts.PipeName = server.PipeName;
+            opts.Acp = new AcpOptions { TurnIdleTimeoutSeconds = 5 };
         });
         StatusRecorder statuses = new();
 
@@ -2819,11 +2820,11 @@ public sealed class PersonaRunnerTests
         TrackedFakeTimeProvider clock = new();
         var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "should not be posted");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts =>
         {
-            PipeName = server.PipeName,
-            Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 },
+            opts.PipeName = server.PipeName;
+            opts.Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 };
         });
         StatusRecorder statuses = new();
 
@@ -2859,11 +2860,11 @@ public sealed class PersonaRunnerTests
         TrackedFakeTimeProvider clock = new();
         var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "should not be posted");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts =>
         {
-            PipeName = server.PipeName,
-            Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 },
+            opts.PipeName = server.PipeName;
+            opts.Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 };
         });
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, timeProvider: clock);
@@ -2889,11 +2890,11 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "should not be posted");
         factory.Session.EnqueueReply("probe reply");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts =>
         {
-            PipeName = server.PipeName,
-            Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 },
+            opts.PipeName = server.PipeName;
+            opts.Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 };
         });
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, timeProvider: clock);
@@ -2927,11 +2928,11 @@ public sealed class PersonaRunnerTests
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "one");
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "two");
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "three");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts =>
         {
-            PipeName = server.PipeName,
-            Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 },
+            opts.PipeName = server.PipeName;
+            opts.Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 };
         });
         StatusRecorder statuses = new();
 
@@ -2976,11 +2977,11 @@ public sealed class PersonaRunnerTests
         TrackedFakeTimeProvider clock = new();
         var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDripFedReply(TimeSpan.FromMilliseconds(250), chunks);
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts =>
         {
-            PipeName = server.PipeName,
-            Acp = new AcpOptions { TurnIdleTimeoutSeconds = 2 },
+            opts.PipeName = server.PipeName;
+            opts.Acp = new AcpOptions { TurnIdleTimeoutSeconds = 2 };
         });
         StatusRecorder statuses = new();
 
@@ -3018,11 +3019,11 @@ public sealed class PersonaRunnerTests
         TrackedFakeTimeProvider clock = new();
         var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(2), "still here");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts =>
         {
-            PipeName = server.PipeName,
-            Acp = new AcpOptions { TurnIdleTimeoutSeconds = 0 },
+            opts.PipeName = server.PipeName;
+            opts.Acp = new AcpOptions { TurnIdleTimeoutSeconds = 0 };
         });
         StatusRecorder statuses = new();
 
@@ -3057,11 +3058,11 @@ public sealed class PersonaRunnerTests
         TrackedFakeTimeProvider clock = new();
         var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "should not be posted");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts =>
         {
-            PipeName = server.PipeName,
-            Acp = new AcpOptions { TurnIdleTimeoutSeconds = 5 },
+            opts.PipeName = server.PipeName;
+            opts.Acp = new AcpOptions { TurnIdleTimeoutSeconds = 5 };
         });
         StatusRecorder statuses = new();
 
@@ -3092,8 +3093,8 @@ public sealed class PersonaRunnerTests
 
         var server = new FakePersonaServer();
         var factory = new FakeAgentHostFactory();
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
         StatusRecorder statuses = new();
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
@@ -3124,8 +3125,8 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("first");
         factory.Session.EnqueueReply("second");
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
         var logger = new RecordingLogger<PersonaRunner>();
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger);
@@ -3155,7 +3156,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "never posted");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
@@ -3181,7 +3182,7 @@ public sealed class PersonaRunnerTests
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         StatusRecorder statuses = new();
 
         var agentHost = CreateHost(fixture, persona, factory);
@@ -3203,8 +3204,8 @@ public sealed class PersonaRunnerTests
 
         await using var server = new FakePersonaServer();
         var factory = new FakeAgentHostFactory();
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
         StatusRecorder statuses = new();
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
@@ -3227,8 +3228,8 @@ public sealed class PersonaRunnerTests
 
         await using var server = new FakePersonaServer();
         var factory = new FakeAgentHostFactory();
-        var persona = new Persona("nova", "You are Nova.");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
         StatusRecorder statuses = new();
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);

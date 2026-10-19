@@ -6,6 +6,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Pipes;
 using static Agency.Huddle.Tests.Acp.PersonaSupervisorTestSupport;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -30,12 +31,7 @@ public sealed class PersonaSupervisorLifecycleTests
         var options = dataDir.Options();
         WritePersonaFile(options, "nova");
 
-        using var personaStore = new PersonaStore(
-            new TeammatePaths(options),
-            new Agency.Huddle.App.Data.PersonaModelStore(options),
-            new Agency.Huddle.App.Data.PersonaEffortStore(options),
-            new Agency.Huddle.App.Data.PersonaWorkModeStore(options),
-            NullLogger<PersonaStore>.Instance);
+        using var personaStore = options.CreatePersonaStore();
         var factory = new FakeAgentHostFactory();
         var resolver = new AdapterProfileResolver(new AdapterCatalog(options));
         using var skillStore = NewSkillStore(options);

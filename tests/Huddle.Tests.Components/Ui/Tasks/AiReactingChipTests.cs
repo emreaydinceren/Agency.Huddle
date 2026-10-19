@@ -4,6 +4,7 @@ using Bunit;
 using Bunit.Rendering;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Tools;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Pins the "AI reacting" chip (Spec §13.8, §10.8): it shows only while one of the watched Tasks has
@@ -34,7 +35,7 @@ public sealed class AiReactingChipTests
     public async Task Reacting_AWatchedTasksLastWakeRoomIsBusy_ShowsTheChip()
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
-        string novaId = RequireNovaId(harness);
+        string novaId = harness.NovaIdOrThrow();
         _ = TaskId.TryParse("PLAT-0001", out TaskId taskId);
         harness.TaskActivity.Record(new WakeRecord(taskId, "Nova", "room-1", "SAML", WakeOutcome.Woken, DateTimeOffset.UtcNow));
 
@@ -51,7 +52,7 @@ public sealed class AiReactingChipTests
     public async Task StopsReacting_WhenTheTurnEnds_HidesTheChip()
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
-        string novaId = RequireNovaId(harness);
+        string novaId = harness.NovaIdOrThrow();
         _ = TaskId.TryParse("PLAT-0001", out TaskId taskId);
         harness.TaskActivity.Record(new WakeRecord(taskId, "Nova", "room-1", "SAML", WakeOutcome.Woken, DateTimeOffset.UtcNow));
         harness.TurnActivity.Begin(novaId, "room-1");
@@ -70,7 +71,7 @@ public sealed class AiReactingChipTests
     public async Task Reacting_OnlyOneOfSeveralWatchedTasksIsBusy_StillShowsTheChip()
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
-        string novaId = RequireNovaId(harness);
+        string novaId = harness.NovaIdOrThrow();
         _ = TaskId.TryParse("PLAT-0001", out TaskId quietTask);
         _ = TaskId.TryParse("PLAT-0002", out TaskId busyTask);
         harness.TaskActivity.Record(new WakeRecord(quietTask, "Nova", "room-1", "SAML", WakeOutcome.Woken, DateTimeOffset.UtcNow));
@@ -123,14 +124,6 @@ public sealed class AiReactingChipTests
         IRenderedComponent<ContainerFragment> cut = RenderChip(ctx, harness, [taskId]);
 
         Assert.DoesNotContain("ai-reacting-chip", cut.Markup, StringComparison.Ordinal);
-    }
-
-    /// <summary>Narrows <see cref="TaskToolHarness.NovaId"/>, seeded by <see cref="TaskToolHarness.CreateAsync"/>, to a non-null Agent id.</summary>
-    private static string RequireNovaId(TaskToolHarness harness)
-    {
-        string? novaId = harness.NovaId;
-        Assert.NotNull(novaId);
-        return novaId;
     }
 
     /// <summary>Registers <paramref name="harness"/>'s real services into <paramref name="ctx"/> and renders the chip watching <paramref name="watched"/>.</summary>

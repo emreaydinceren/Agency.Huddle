@@ -3,9 +3,7 @@ namespace Agency.Huddle.Tests.Acp.Sessions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
@@ -15,6 +13,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Agency.Huddle.Tests.Pipes;
 using Agency.Huddle.Tests.Waiting;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Pins RS §6.8's health and token-Budget rules across Room Sessions: one Persona-wide failure
@@ -416,8 +415,8 @@ public sealed class RoomSessionHealthTests
         PersonaCommands commands = new(NullLogger<PersonaCommands>.Instance);
         commands.Set("nova", [new AdapterCommand("compact", "Free up context", null)]);
         PersonaRunner runner = new(
-            new Persona("nova", "You are Nova."),
-            Options.Create(new TeamOptions()),
+            TestPersonas.Nova,
+            TestOptions.Create(),
             new FakeAgentHostFactory(),
             new FakePromptSource(),
             new RoomFollows(),
@@ -432,8 +431,8 @@ public sealed class RoomSessionHealthTests
 
     private static PersonaRunner CreateBareRunner() =>
         new(
-            new Persona("nova", "You are Nova."),
-            Options.Create(new TeamOptions()),
+            TestPersonas.Nova,
+            TestOptions.Create(),
             new FakeAgentHostFactory(),
             new FakePromptSource(),
             new RoomFollows(),
@@ -476,7 +475,11 @@ public sealed class RoomSessionHealthTests
 
     private static PersonaRunner CreateRunner(PipeHostFixture fixture, Persona persona, FakeAgentHostFactory factory, AcpOptions acp)
     {
-        var options = Options.Create(new TeamOptions { PipeName = fixture.PipeName, Acp = acp });
+        var options = TestOptions.Create(opts =>
+        {
+            opts.PipeName = fixture.PipeName;
+            opts.Acp = acp;
+        });
         var logger = fixture.Services.GetRequiredService<ILogger<PersonaRunner>>();
         return new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger);
     }

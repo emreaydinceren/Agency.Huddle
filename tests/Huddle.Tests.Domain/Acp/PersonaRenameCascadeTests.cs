@@ -12,6 +12,7 @@ using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Elicitation;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -34,11 +35,11 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
         var echo = await harness.TeamDirectory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
 
-        harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
 
         var renamed = harness.TeamDirectory.FindUserByName("echoprime");
         Assert.NotNull(renamed);
@@ -53,12 +54,12 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
         var echo = await harness.TeamDirectory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var room = await harness.TeamDirectory.CreateRoomAsync("Support", [KnownIds.Human, echo.Id], ct);
 
-        harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
 
         var renamed = harness.TeamDirectory.FindUserByName("echoprime");
         Assert.NotNull(renamed);
@@ -76,13 +77,13 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
         var echo = await harness.TeamDirectory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var room = await harness.TeamDirectory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
         CreateWorkDir(dir, "echo");
 
-        harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
         await harness.FolderMoves.WhenSettledAsync("echoprime", ct);
 
         var updated = await harness.TeamDirectory.GetRoomAsync(room.Id, ct);
@@ -97,14 +98,14 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
         var echo = await harness.TeamDirectory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var teamRoom = await harness.TeamDirectory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], "echo", true, ct);
         var chat = await harness.TeamDirectory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], team: "echo", ct: ct);
         CreateWorkDir(dir, "echo");
 
-        harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
         await harness.FolderMoves.WhenSettledAsync("echoprime", ct);
 
         Assert.Equal("echo", (await harness.TeamDirectory.GetRoomAsync(teamRoom.Id, ct))?.Name);
@@ -118,14 +119,14 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
         var echo = await harness.TeamDirectory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var room = await harness.TeamDirectory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
         await harness.TeamDirectory.RenameRoomAsync(room.Id, "Customer Support", ct);
         CreateWorkDir(dir, "echo");
 
-        harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
         await harness.FolderMoves.WhenSettledAsync("echoprime", ct);
 
         var updated = await harness.TeamDirectory.GetRoomAsync(room.Id, ct);
@@ -140,9 +141,9 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("ghost"), "Nobody has ever started this one.");
+        harness.PersonaStore.Add(TestPersonas.Identity("ghost"), "Nobody has ever started this one.");
 
-        harness.PersonaStore.Update("ghost", PersonaText("ghostprime", "Nobody has ever started this one."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("ghost", TestPersonas.FrontmatterText("ghostprime", "Nobody has ever started this one."), model: null, effort: null, workMode: null);
 
         Assert.Null(harness.TeamDirectory.FindUserByName("ghost"));
         Assert.Null(harness.TeamDirectory.FindUserByName("ghostprime"));
@@ -156,13 +157,13 @@ public sealed class PersonaRenameCascadeTests
         using var dir = new TempDataDir();
         var recordingLogger = new RecordingLogger<PersonaRenameCascade>();
         using var harness = await CreateHarnessAsync(dir, ct, recordingLogger);
-        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
         var echo = await harness.TeamDirectory.UpsertAgentUserAsync("echo", null, ct);
         var alpha = await harness.TeamDirectory.UpsertAgentUserAsync("alpha", null, ct);
         Assert.NotNull(echo);
         Assert.NotNull(alpha);
 
-        harness.PersonaStore.Update("echo", PersonaText("alpha", "You answer support questions."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("alpha", "You answer support questions."), model: null, effort: null, workMode: null);
 
         var stillEcho = harness.TeamDirectory.FindUserByName("echo");
         Assert.NotNull(stillEcho);
@@ -177,9 +178,9 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("You"), "A coincidental namesake of the Human.");
+        harness.PersonaStore.Add(TestPersonas.Identity("You"), "A coincidental namesake of the Human.");
 
-        harness.PersonaStore.Update("You", PersonaText("Someone", "A coincidental namesake of the Human."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("You", TestPersonas.FrontmatterText("Someone", "A coincidental namesake of the Human."), model: null, effort: null, workMode: null);
 
         var human = await harness.TeamDirectory.GetHumanAsync(ct);
         Assert.Equal("You", human.Name);
@@ -193,13 +194,13 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
         var echo = await harness.TeamDirectory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var oldWorkDir = CreateWorkDir(dir, "echo");
         await File.WriteAllTextAsync(Path.Combine(oldWorkDir, "CLAUDE.md"), "notes to self", ct);
 
-        harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
         await harness.FolderMoves.WhenSettledAsync("echoprime", ct);
 
         Assert.False(Directory.Exists(oldWorkDir));
@@ -214,7 +215,7 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
         var echo = await harness.TeamDirectory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var oldWorkDir = CreateWorkDir(dir, "echo");
@@ -226,7 +227,7 @@ public sealed class PersonaRenameCascadeTests
         // rename the Agent and then wait for that synchronous half to commit, followed by a room
         // create/derive round trip that must complete after the Work Dir step in the same detached
         // task - proving the detached task ran to completion before the assertions below run.
-        harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
         await WaitForAgentRenameToSettleAsync(harness.TeamDirectory, "echoprime", ct);
 
         Assert.True(Directory.Exists(oldWorkDir));
@@ -246,22 +247,22 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
         var echo = await harness.TeamDirectory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var room = await harness.TeamDirectory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
         CreateWorkDir(dir, "echo");
 
         // Forward: echo -> echoprime.
-        harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
         await harness.FolderMoves.WhenSettledAsync("echoprime", ct);
 
         // Back: echoprime -> echo.
-        harness.PersonaStore.Update("echoprime", PersonaText("echo", "You answer support questions."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("echoprime", TestPersonas.FrontmatterText("echo", "You answer support questions."), model: null, effort: null, workMode: null);
         await harness.FolderMoves.WhenSettledAsync("echo", ct);
 
         // Forward again: the exact same (echo -> echoprime) transition as the first step.
-        harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
         await harness.FolderMoves.WhenSettledAsync("echoprime", ct);
 
         var renamed = harness.TeamDirectory.FindUserByName("echoprime");
@@ -295,10 +296,10 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("ghost"), "Nobody has ever started this one.");
+        harness.PersonaStore.Add(TestPersonas.Identity("ghost"), "Nobody has ever started this one.");
         harness.AvatarStore.Save("ghost", new Avatar(Label: null, Image: null, Background: "#4a154b"));
 
-        harness.PersonaStore.Update("ghost", PersonaText("ghostprime", "Nobody has ever started this one."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("ghost", TestPersonas.FrontmatterText("ghostprime", "Nobody has ever started this one."), model: null, effort: null, workMode: null);
 
         Assert.Equal("#4a154b", harness.AvatarStore.Get("ghostprime").Background);
         Assert.Equal(Avatar.None, harness.AvatarStore.Get("ghost"));
@@ -311,12 +312,12 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
         var echo = await harness.TeamDirectory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         harness.AvatarStore.Save("echo", new Avatar(Label: "E", Image: null, Background: "#123456"));
 
-        harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
 
         Assert.Equal("#123456", harness.AvatarStore.Get("echoprime").Background);
         Assert.Equal(Avatar.None, harness.AvatarStore.Get("echo"));
@@ -329,12 +330,12 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
         var imageFile = harness.AvatarStore.WriteImage([1, 2, 3], ".png");
         harness.AvatarStore.Save("echo", new Avatar(Label: null, Image: imageFile, Background: null));
         var imagePath = Path.Combine(harness.AvatarStore.ImageDirectory, imageFile);
 
-        harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
 
         Assert.True(File.Exists(imagePath));
         Assert.Equal(imageFile, harness.AvatarStore.Get("echoprime").Image);
@@ -352,10 +353,10 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("ghost"), "Nobody has ever started this one.");
+        harness.PersonaStore.Add(TestPersonas.Identity("ghost"), "Nobody has ever started this one.");
         harness.Spend.Add("ghost", "s1", 0.25m, "USD");
 
-        harness.PersonaStore.Update("ghost", PersonaText("ghostprime", "Nobody has ever started this one."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("ghost", TestPersonas.FrontmatterText("ghostprime", "Nobody has ever started this one."), model: null, effort: null, workMode: null);
 
         Assert.Equal([new SpendAmount(0.25m, "USD")], harness.Spend.Get("ghostprime"));
         Assert.Empty(harness.Spend.Get("ghost"));
@@ -371,11 +372,11 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("ghost"), "Nobody has ever started this one.");
+        harness.PersonaStore.Add(TestPersonas.Identity("ghost"), "Nobody has ever started this one.");
         var compact = new AdapterCommand("compact", "Free up context", null);
         harness.Commands.Set("ghost", [compact]);
 
-        harness.PersonaStore.Update("ghost", PersonaText("ghostprime", "Nobody has ever started this one."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("ghost", TestPersonas.FrontmatterText("ghostprime", "Nobody has ever started this one."), model: null, effort: null, workMode: null);
 
         Assert.Equal([compact], harness.Commands.Get("ghostprime"));
         Assert.Empty(harness.Commands.Get("ghost"));
@@ -388,7 +389,7 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
         harness.Commands.Set("echo", [new AdapterCommand("compact", "Free up context", null)]);
 
         harness.PersonaStore.Remove("echo");
@@ -403,7 +404,7 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
         harness.Spend.Add("echo", "s1", 0.25m, "USD");
 
         harness.PersonaStore.Remove("echo");
@@ -418,7 +419,7 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
         var imageFile = harness.AvatarStore.WriteImage([1, 2, 3], ".png");
         harness.AvatarStore.Save("echo", new Avatar(Label: null, Image: imageFile, Background: null));
         var imagePath = Path.Combine(harness.AvatarStore.ImageDirectory, imageFile);
@@ -441,10 +442,10 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("ghost"), "Nobody has ever started this one.");
+        harness.PersonaStore.Add(TestPersonas.Identity("ghost"), "Nobody has ever started this one.");
         harness.FileState.Save("ghost", FileState.Empty with { Subscribed = ["Shared"] });
 
-        harness.PersonaStore.Update("ghost", PersonaText("ghostprime", "Nobody has ever started this one."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("ghost", TestPersonas.FrontmatterText("ghostprime", "Nobody has ever started this one."), model: null, effort: null, workMode: null);
 
         FileState? renamed = harness.FileState.Load("ghostprime");
         Assert.NotNull(renamed);
@@ -459,11 +460,11 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("Nova"), "You are Nova.");
-        harness.PersonaStore.Add(Identity("Coach"), "You are Coach.");
+        harness.PersonaStore.Add(TestPersonas.Identity("Nova"), "You are Nova.");
+        harness.PersonaStore.Add(TestPersonas.Identity("Coach"), "You are Coach.");
         harness.FileState.Save("Coach", FileState.Empty with { Subscribed = ["Nova"] });
 
-        harness.PersonaStore.Update("Nova", PersonaText("Star", "You are Nova."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("Nova", TestPersonas.FrontmatterText("Star", "You are Nova."), model: null, effort: null, workMode: null);
 
         FileState? coach = harness.FileState.Load("Coach");
         Assert.NotNull(coach);
@@ -477,7 +478,7 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
         harness.FileState.Save("echo", FileState.Empty with { Subscribed = ["Shared"] });
         Assert.NotNull(harness.FileState.Load("echo"));
 
@@ -497,12 +498,12 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("Nova"), "You are Nova.");
+        harness.PersonaStore.Add(TestPersonas.Identity("Nova"), "You are Nova.");
         const string coachText = "---\nName: Coach\nTitle: Coach\nAlias: Coach\nwatches: [Nova]\n---\nYou are Coach.";
-        harness.PersonaStore.Add(Identity("Coach"), "You are Coach.");
+        harness.PersonaStore.Add(TestPersonas.Identity("Coach"), "You are Coach.");
         harness.PersonaStore.Update("Coach", coachText, model: null, effort: null, workMode: null);
 
-        harness.PersonaStore.Update("Nova", PersonaText("Star", "You are Nova."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("Nova", TestPersonas.FrontmatterText("Star", "You are Nova."), model: null, effort: null, workMode: null);
 
         var coach = harness.PersonaStore.Get("Coach");
         Assert.NotNull(coach);
@@ -516,10 +517,10 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("ghost"), "Nobody has ever started this one.");
+        harness.PersonaStore.Add(TestPersonas.Identity("ghost"), "Nobody has ever started this one.");
         harness.RoomSessions.Put("ghost", "room-1", new RoomSessionEntry("sess-1", "claude", null, null, null, DateTimeOffset.UtcNow));
 
-        harness.PersonaStore.Update("ghost", PersonaText("ghostprime", "Nobody has ever started this one."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("ghost", TestPersonas.FrontmatterText("ghostprime", "Nobody has ever started this one."), model: null, effort: null, workMode: null);
 
         Assert.NotNull(harness.RoomSessions.Get("ghostprime", "room-1"));
         Assert.Null(harness.RoomSessions.Get("ghost", "room-1"));
@@ -532,7 +533,7 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
         harness.RoomSessions.Put("echo", "room-1", new RoomSessionEntry("sess-1", "claude", null, null, null, DateTimeOffset.UtcNow));
         Assert.NotNull(harness.RoomSessions.Get("echo", "room-1"));
 
@@ -553,7 +554,7 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("nova"), "You help.");
+        harness.PersonaStore.Add(TestPersonas.Identity("nova"), "You help.");
 
         // Seeded through TaskStore.Create, not a raw file write: a raw write is an "outside edit", which
         // TaskService.OnOutsideEdit answers by appending a Change log entry - and when the store's own
@@ -566,7 +567,7 @@ public sealed class PersonaRenameCascadeTests
         TaskId id = created.Id;
         Assert.NotNull(harness.TaskStore.Get(id));
 
-        harness.PersonaStore.Update("nova", PersonaText("novaprime", "You help."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("nova", TestPersonas.FrontmatterText("novaprime", "You help."), model: null, effort: null, workMode: null);
 
         TaskItem renamed = harness.TaskStore.Get(id) ?? throw new InvalidOperationException("fixture task missing");
         Assert.Equal("novaprime", renamed.Assignee);
@@ -583,7 +584,7 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("nova"), "You help.");
+        harness.PersonaStore.Add(TestPersonas.Identity("nova"), "You help.");
         harness.ViewStore.Save(new TaskView
         {
             Id = "custom-1",
@@ -592,7 +593,7 @@ public sealed class PersonaRenameCascadeTests
             Filter = new TaskFilter { Assignees = ["nova"] },
         });
 
-        harness.PersonaStore.Update("nova", PersonaText("novaprime", "You help."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("nova", TestPersonas.FrontmatterText("novaprime", "You help."), model: null, effort: null, workMode: null);
 
         TaskView updated = harness.ViewStore.Get("custom-1") ?? throw new InvalidOperationException("fixture view missing");
         Assert.Equal(["novaprime"], updated.Filter.Assignees);
@@ -605,12 +606,12 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("Old"), "You help.");
+        harness.PersonaStore.Add(TestPersonas.Identity("Old"), "You help.");
         var paths = new TeammatePaths(dir.Options());
         Directory.CreateDirectory(Path.Combine(paths.WorkDir("Old"), "memory"));
         await File.WriteAllTextAsync(Path.Combine(paths.WorkDir("Old"), "memory", "x.md"), "notes", ct);
 
-        harness.PersonaStore.Update("Old", PersonaText("New", "You help."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("Old", TestPersonas.FrontmatterText("New", "You help."), model: null, effort: null, workMode: null);
         await harness.FolderMoves.WhenSettledAsync("New", ct);
 
         Assert.True(File.Exists(paths.DefinitionFile("New")));
@@ -625,10 +626,10 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("Old"), "You help.");
+        harness.PersonaStore.Add(TestPersonas.Identity("Old"), "You help.");
         var paths = new TeammatePaths(dir.Options());
 
-        harness.PersonaStore.Update("Old", PersonaText("New", "You help."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("Old", TestPersonas.FrontmatterText("New", "You help."), model: null, effort: null, workMode: null);
         await harness.FolderMoves.WhenSettledAsync("New", ct);
 
         var topLevelFiles = Directory.GetFiles(paths.TeammateFolder("New")).Select(Path.GetFileName).ToList();
@@ -643,13 +644,13 @@ public sealed class PersonaRenameCascadeTests
         using var dir = new TempDataDir();
         var recordingLogger = new RecordingLogger<PersonaRenameCascade>();
         using var harness = await CreateHarnessAsync(dir, ct, recordingLogger);
-        harness.PersonaStore.Add(Identity("Old"), "You help.");
+        harness.PersonaStore.Add(TestPersonas.Identity("Old"), "You help.");
         var echo = await harness.TeamDirectory.UpsertAgentUserAsync("Old", null, ct);
         Assert.NotNull(echo);
         var paths = new TeammatePaths(dir.Options());
         Directory.CreateDirectory(paths.TeammateFolder("New"));
 
-        harness.PersonaStore.Update("Old", PersonaText("New", "You help."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("Old", TestPersonas.FrontmatterText("New", "You help."), model: null, effort: null, workMode: null);
         await WaitForAgentRenameToSettleAsync(harness.TeamDirectory, "New", ct);
 
         Assert.True(Directory.Exists(paths.TeammateFolder("Old")));
@@ -672,7 +673,7 @@ public sealed class PersonaRenameCascadeTests
         var recordingLogger = new RecordingLogger<PersonaRenameCascade>();
         var timeProvider = new FiringTimeProvider();
         using var harness = await CreateHarnessAsync(dir, ct, recordingLogger, timeProvider);
-        harness.PersonaStore.Add(Identity("Old"), "You help.");
+        harness.PersonaStore.Add(TestPersonas.Identity("Old"), "You help.");
         var echo = await harness.TeamDirectory.UpsertAgentUserAsync("Old", null, ct);
         Assert.NotNull(echo);
         var paths = new TeammatePaths(dir.Options());
@@ -681,7 +682,7 @@ public sealed class PersonaRenameCascadeTests
         await File.WriteAllTextAsync(heldFile, "locked", ct);
         using var lockHandle = new FileStream(heldFile, FileMode.Open, FileAccess.Read, FileShare.None);
 
-        harness.PersonaStore.Update("Old", PersonaText("New", "You help."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("Old", TestPersonas.FrontmatterText("New", "You help."), model: null, effort: null, workMode: null);
         await AdvanceUntilAsync(timeProvider, () => recordingLogger.Entries.Any(e => e.Level == LogLevel.Warning), TimeSpan.FromMilliseconds(250), ct);
 
         Assert.True(Directory.Exists(paths.TeammateFolder("Old")));
@@ -695,10 +696,10 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("ghost"), "Nobody has ever started this one.");
+        harness.PersonaStore.Add(TestPersonas.Identity("ghost"), "Nobody has ever started this one.");
         var paths = new TeammatePaths(dir.Options());
 
-        harness.PersonaStore.Update("ghost", PersonaText("ghostprime", "Nobody has ever started this one."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("ghost", TestPersonas.FrontmatterText("ghostprime", "Nobody has ever started this one."), model: null, effort: null, workMode: null);
         await harness.FolderMoves.WhenSettledAsync("ghostprime", ct);
 
         Assert.True(Directory.Exists(paths.TeammateFolder("ghostprime")));
@@ -712,11 +713,11 @@ public sealed class PersonaRenameCascadeTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
-        harness.PersonaStore.Add(Identity("Nova"), "You are Nova.");
+        harness.PersonaStore.Add(TestPersonas.Identity("Nova"), "You are Nova.");
         var paths = new TeammatePaths(dir.Options());
         Directory.CreateDirectory(Path.Combine(paths.WorkDir("Nova"), "memory"));
 
-        harness.PersonaStore.Update("Nova", PersonaText("NOVA", "You are Nova."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("Nova", TestPersonas.FrontmatterText("NOVA", "You are Nova."), model: null, effort: null, workMode: null);
         await WaitForExactCasingAsync(paths.DefinitionsRoot, "NOVA", ct);
 
         Assert.True(File.Exists(paths.DefinitionFile("NOVA")));
@@ -739,7 +740,7 @@ public sealed class PersonaRenameCascadeTests
         using var dir = new TempDataDir();
         var timeProvider = new FiringTimeProvider();
         using var harness = await CreateHarnessAsync(dir, ct, timeProvider: timeProvider);
-        harness.PersonaStore.Add(Identity("Old"), "You help.");
+        harness.PersonaStore.Add(TestPersonas.Identity("Old"), "You help.");
         var echo = await harness.TeamDirectory.UpsertAgentUserAsync("Old", null, ct);
         Assert.NotNull(echo);
         var paths = new TeammatePaths(dir.Options());
@@ -748,7 +749,7 @@ public sealed class PersonaRenameCascadeTests
         await File.WriteAllTextAsync(heldFile, "locked", ct);
         using var lockHandle = new FileStream(heldFile, FileMode.Open, FileAccess.Read, FileShare.None);
 
-        harness.PersonaStore.Update("Old", PersonaText("New", "You help."), model: null, effort: null, workMode: null);
+        harness.PersonaStore.Update("Old", TestPersonas.FrontmatterText("New", "You help."), model: null, effort: null, workMode: null);
         var settled = harness.FolderMoves.WhenSettledAsync("New", ct);
         Assert.False(settled.IsCompleted);
 
@@ -766,14 +767,9 @@ public sealed class PersonaRenameCascadeTests
     /// <param name="timeProvider">Drives the Teammate folder move's retry backoff, or <see langword="null"/> for <see cref="TimeProvider.System"/>.</param>
     private static async Task<Harness> CreateHarnessAsync(TempDataDir dir, CancellationToken ct, ILogger<PersonaRenameCascade>? cascadeLogger = null, TimeProvider? timeProvider = null)
     {
-        var teamDirectory = new SqliteTeamDirectory(dir.Options());
-        await teamDirectory.InitializeAsync("You", ct);
+        var teamDirectory = await dir.CreateDirectoryAsync(ct);
 
-        var personaStore = new PersonaStore(
-            new TeammatePaths(dir.Options()),
-            new PersonaModelStore(dir.Options()),
-            new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()),
-            NullLogger<PersonaStore>.Instance);
+        var personaStore = dir.CreatePersonaStore();
         var roomEvents = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var avatarStore = new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance);
         var fileState = new FileStateStore(dir.Options(), NullLogger<FileStateStore>.Instance);
@@ -899,12 +895,6 @@ public sealed class PersonaRenameCascadeTests
             await Task.Delay(20, linked.Token);
         }
     }
-
-    /// <summary>A valid <see cref="PersonaIdentity"/> for <paramref name="name"/>, with Title and Alias defaulting to <paramref name="name"/>.</summary>
-    private static PersonaIdentity Identity(string name) => new(name, name, name, []);
-
-    /// <summary>Minimal valid Persona frontmatter (Name, Title and Alias all <paramref name="name"/>) wrapped around <paramref name="body"/>.</summary>
-    private static string PersonaText(string name, string body) => $"---\nName: {name}\nTitle: {name}\nAlias: {name}\n---\n{body}";
 
     /// <summary>The wired-up components one test needs, bundled so a single <see langword="using"/> disposes both the store and the cascade.</summary>
     private sealed class Harness : IDisposable

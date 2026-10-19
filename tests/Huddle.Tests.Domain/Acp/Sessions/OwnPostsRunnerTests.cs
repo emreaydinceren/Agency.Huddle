@@ -3,12 +3,12 @@ namespace Agency.Huddle.Tests.Acp.Sessions;
 using System.IO.Pipes;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Pins <see cref="OwnPosts"/> at the runner level (D27 correction 10): the Take call the read loop
@@ -34,9 +34,9 @@ public sealed class OwnPostsRunnerTests
 
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomB = GroupRoom("room-b", "Room B");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
         var ownPosts = new OwnPosts(options);
 
         await using var runner = new PersonaRunner(
@@ -73,9 +73,9 @@ public sealed class OwnPostsRunnerTests
 
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomB = GroupRoom("room-b", "Room B");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
         var ownPosts = new OwnPosts(options);
 
         await using var runner = new PersonaRunner(
@@ -103,9 +103,9 @@ public sealed class OwnPostsRunnerTests
 
         await using var server = new FakeServer { RefuseTranscriptReads = true };
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomB = GroupRoom("room-b", "Room B");
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
         var ownPosts = new OwnPosts(options);
 
         await using var runner = new PersonaRunner(

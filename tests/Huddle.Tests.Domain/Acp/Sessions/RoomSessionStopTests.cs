@@ -3,7 +3,6 @@ namespace Agency.Huddle.Tests.Acp.Sessions;
 using System.IO.Pipes;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
@@ -12,6 +11,7 @@ using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Agency.Huddle.Tests.Waiting;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Pins RS §6.8 "Stop" routed to a Room's own <see cref="RoomSession"/> (finding P-6, RS §9 E-4),
@@ -33,7 +33,7 @@ public sealed class RoomSessionStopTests
 
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
         var roomB = GroupRoom("room-b", "Room B");
 
@@ -73,7 +73,7 @@ public sealed class RoomSessionStopTests
 
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
         var roomB = GroupRoom("room-b", "Room B");
 
@@ -118,7 +118,7 @@ public sealed class RoomSessionStopTests
 
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
         var roomB = GroupRoom("room-b", "Room B");
 
@@ -152,7 +152,7 @@ public sealed class RoomSessionStopTests
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
         TaskCompletionSource openGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         factory.OnHostStarted = host => host.OpenGate = openGate;
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomB = GroupRoom("room-b", "Room B");
 
         await using var runner = CreateRunner(server, persona, factory, new AcpOptions { MaxConcurrentTurns = 1 });
@@ -182,7 +182,7 @@ public sealed class RoomSessionStopTests
 
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
 
         StatusRecorder statuses = new();
@@ -214,7 +214,7 @@ public sealed class RoomSessionStopTests
 
         await using var server = new FakeServer();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
 
         await using var runner = CreateRunner(server, persona, factory);
@@ -313,7 +313,11 @@ public sealed class RoomSessionStopTests
 
     private static PersonaRunner CreateRunner(FakeServer server, Persona persona, FakeAgentHostFactory factory, AcpOptions? acp = null)
     {
-        var options = Options.Create(new TeamOptions { PipeName = server.PipeName, Acp = acp ?? new AcpOptions() });
+        var options = TestOptions.Create(opts =>
+        {
+            opts.PipeName = server.PipeName;
+            opts.Acp = acp ?? new AcpOptions();
+        });
         return new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
     }
 

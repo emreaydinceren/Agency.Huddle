@@ -10,8 +10,6 @@ using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Tasks;
@@ -336,7 +334,7 @@ public sealed class TasksPageTests
         ctx.Services.AddSingleton(sprints);
         ctx.Services.AddSingleton<ISprintCatalog>(sprints);
         ctx.Services.AddSingleton<Agency.Huddle.App.Data.ITeamDirectory>(new Agency.Huddle.App.Data.SqliteTeamDirectory(dir.Options()));
-        ctx.Services.AddSingleton(Options.Create(new TeamOptions()));
+        ctx.Services.AddSingleton(TestOptions.Create());
         ctx.Services.AddSingleton<Agency.Huddle.App.Profile.IHumanIdentity>(new Agency.Huddle.App.Profile.ConfiguredHumanIdentity("You"));
         ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
         // 14.5.i: the page always hosts WakeToasts (Spec §13.8), which @injects TaskActivity.

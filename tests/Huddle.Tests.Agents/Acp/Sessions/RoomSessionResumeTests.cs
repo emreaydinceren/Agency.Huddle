@@ -16,6 +16,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Agency.Huddle.Tests.Pipes;
 using Agency.Huddle.Tests.Waiting;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Pins <see cref="RoomSession"/>'s resume decision and <see cref="RoomSessionStore"/> read/write
@@ -444,7 +445,7 @@ public sealed class RoomSessionResumeTests
 
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
         factory.Session.EnqueueReply("ok");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var logger = fixture.Services.GetRequiredService<ILogger<PersonaRunner>>();
 
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
@@ -467,7 +468,7 @@ public sealed class RoomSessionResumeTests
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("ok");
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
         var logger = fixture.Services.GetRequiredService<ILogger<PersonaRunner>>();
 
         await using PersonaRunner runner = new(
