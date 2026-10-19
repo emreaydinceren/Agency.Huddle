@@ -9,6 +9,11 @@ there before guessing an API.
 
 Distilled from the Tasks delivery (September 2026), which added ~40 component test classes.
 
+Start from the shared bUnit helpers in `tests/Huddle.Tests.Common/Ui`: `UiTestHost.Create` and its `With*`
+extensions, `ServicePresets.CopyFrom`, `RenderWithPopovers<T>`, `RenderedComponentExtensions` and
+`DialogExtensions`. The catalogue, with the cases where a private copy stayed, is in
+[Testing.md](Testing.md) under *Shared helpers*.
+
 ## Setting up a test
 
 ```csharp

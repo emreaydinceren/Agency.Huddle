@@ -201,6 +201,109 @@ Rules that avoid the traps:
 - File-watcher tests use real time: wait on a `TaskCompletionSource` with a 10 s cancel for positive
   checks, and a fixed ~750 ms window for "nothing happened" checks (`PersonaStoreTests`).
 
+## Shared helpers
+
+Before writing a private helper, search `tests/Huddle.Tests.Common`. If a shared helper does the job,
+use it; if it nearly does, extend it there rather than copying it. Every helper is `internal`, and each
+row names the file that holds it. A "Not for" note means a report recorded a case where the helper does
+not fit, so the private copy stayed.
+
+### Waiting and budgets
+
+| Helper | File | Use it when |
+| --- | --- | --- |
+| `Eventually.UntilAsync` | `Waiting/Eventually.cs` | Polling a `Func<bool>` until it holds. A timeout fails with `Timed out waiting for: <condition>`. Use it instead of a loop with a silent deadline. |
+| `Eventually.ValueAsync<T>` | `Waiting/Eventually.cs` | Polling a probe that returns a value, with `done` deciding when it is good enough. `onTick` advances a fake clock on each poll. |
+| `Eventually.HistoryCountAsync` | `Waiting/Eventually.cs` | Waiting for a room's history in an `IChatStore` to reach a count. |
+| `Eventually.DirectRoomAsync` | `Waiting/Eventually.cs` | Waiting for an agent's direct room to exist. It has an `ITeamDirectory` overload. |
+| `TestBudgets` | `Waiting/TestBudgets.cs` | Naming a timeout: `Short` 2 s, `Standard` 5 s, `Slow` 10 s, `Slowest` 30 s. A migrated call keeps its own value, written as the budget of the same length. A value with no named budget stays literal. |
+
+Not for: quiet-period `Task.Delay` pauses (they sleep, they do not poll), bUnit waits (use
+`WaitForAssertion`), and event-driven waits that already exist (`StatusRecorder.WaitForAsync`,
+`FakeElicitationBridge.WaitForCallsAsync`). There is no default wait budget, by design: one default
+would shorten or lengthen some wait that `Testing.md` forbids changing.
+
+### Loggers and clocks
+
+| Helper | File | Use it when |
+| --- | --- | --- |
+| `RecordingLogger<T>` | `Logging/RecordingLogger.cs` | Asserting what a class logged. Read `Entries`, `Messages` or `Levels`, or ask `AtExactly(level)` and `CountAtLeast(level)`. Pass `throwOnLog` to simulate a logger that throws. Snapshots are taken under a lock. |
+| `RecordingLogger` (non-generic) | `Logging/RecordingLogger.cs` | There is no `ILogger<T>` to inject, or the test needs a plain `ILogger`. |
+| `RecordingLoggerProvider` | `Logging/RecordingLoggerProvider.cs` | Several loggers must feed one list, with each entry carrying its category. Pipe and host tests use it. |
+| `ManualTimeProvider` | `Acp/Fakes/ManualTimeProvider.cs` | A clock you move with `Advance`, when the code under test only reads time. Its timers never fire. |
+| `FiringTimeProvider` | `Acp/Fakes/FiringTimeProvider.cs` | A timer must fire when `Advance` passes its due time, including a callback that reschedules itself with `Change`. |
+
+`FakeTimeProvider` is not replaced and `ManualTimeProvider` is not moved onto it: `FakeTimeProvider`
+rejects moving time backwards, fires timers on `Advance`, and starts at a different instant, and
+`RoomSessionPoolTests` relies on the timers staying inert. Not for: a logger that must be exactly
+`Warning` (`WarningRecorder` keeps that meaning, and `RecordingLogger` counts at least `Warning`
+through `CountAtLeast`).
+
+### Repo files and CSS
+
+| Helper | File | Use it when |
+| --- | --- | --- |
+| `RepoPaths` | `RepoPaths.cs` | Reading a file in this checkout. `Root`, `Combine(...)`, `Src(...)` (under `src`), `App(...)` (under `src/Huddle.App`), and `Data(...)` (relative to the calling source file). A missing path names the start folder. |
+| `CssText.AppCss` | `Css/CssText.cs` | Reading `app.css`. The default `CssNewlines.Lf` removes the dependence on the checkout's line endings. Use `AsIs` only when the test asserts line endings. `CssText.Read(path, newlines)` reads any other stylesheet. |
+| `CssText.RuleBody` | `Css/CssText.cs` | Reading one rule body by selector. `RuleMatch.First` is the default, `Last` is the rule that wins the cascade, and `All` merges every definition. The match is anchored to a line start. |
+| `CssText.RuleBodyLoose`, `CssText.RuleBodyInList` | `Css/CssText.cs` | A selector that may have different whitespace, or a comma-list selector. These match mid-line on purpose. |
+| `CssText.StripComments`, `Section`, `CollapseWhitespace`, `CountOccurrences` | `Css/CssText.cs` | Removing comments, slicing between two headers, collapsing whitespace and counting a needle. `Section` callers that disagree on the end marker keep their own. |
+
+Not for: `Normalise`, which had four unrelated jobs; the token-based `Rule(selector)` helpers (R3RightSidebar,
+R3Fix, R3Shared, R3Srch, AppCssTokensB), which are not `RuleBody`; list-aware `RuleBody` in
+`ThemeFixSourceTests`; and the bespoke section markers in the Chrome and Content trait tests. Reads of
+`.razor` and `.js` sources are not CSS readers and stay inline.
+
+### bUnit (see [BlazorTesting.md](BlazorTesting.md))
+
+| Helper | File | Use it when |
+| --- | --- | --- |
+| `UiTestHost.Create` and the `With*` extensions | `Ui/UiTestHost.cs` | Building a `MudBunitContext`: `Create(configure)`, then `WithHarness`, `WithTabs` (it uses `TryAdd`), `WithTeamOptions`, `WithRoutes(url, panels)`, `WithChatStack`. |
+| `ServicePresets` and `CopyFrom` | `Ui/ServicePresets.cs` | Copying services from a `TeamWebApplicationFactory` into a context: `services.CopyFrom(source, ServicePresets.Chat)`, or `Teammates` or `Settings`. |
+| `RenderWithPopovers<T>` | `Ui/RenderedComponentExtensions.cs` | Rendering any component that opens a popover, menu or dialog host. Use plain `Render<T>` only where the component has none. |
+| `FindButton`, `FindFirstButton`, `TextOf`, `MenuItems`, `ClickMenuItemAsync` | `Ui/RenderedComponentExtensions.cs` | Querying a rendered fragment. `FindButton` needs exactly one match; use `FindFirstButton` when several can match. |
+| `ShowDialogAsync<TDialog>`, `EditSelectAsync<T>` | `Ui/DialogExtensions.cs` | Opening a dialog through the dialog service and waiting for its title, or setting a `MudSelect` value. |
+
+Not for: `RenderWithPopovers` reaches two bUnit internals by reflection
+(`ComponentParameterCollectionBuilder.Build` and `ToRenderFragment`), so it fails loudly if bUnit renames them.
+The `RenderPanel` wrappers (`TaskDetail*`) and the `RenderPage` copies (`TasksPage*`, R3) stay, because each
+wraps a builder body or a `viewId`. `ClickMenuItemAsync` in `TaskDetailActionsTests` stays, because it
+opens the menu first. The `TextOf` overload for `TaskDetailDialog` stays, because it has a different
+component type.
+
+### Building the domain
+
+| Helper | File | Use it when |
+| --- | --- | --- |
+| `TestOptions.Create`, `TestOptions.For`, `TempDataDir.Options` | `Factories/TestOptions.cs` | Building an `IOptions<TeamOptions>` with `DataDir` set to a temporary folder. |
+| `TestStores` | `Factories/TestStores.cs` | `CreateDirectory()`, `CreateDirectoryAsync(ct, humanName)`, `CreateChatStore()` and `CreatePersonaStore()`, on a `TempDataDir` or an `IOptions<TeamOptions>`. |
+| `ChatServiceFactory.Create` | `Factories/ChatServiceFactory.cs` | Building a `ChatService` with its store and events. It returns a `ChatStack` record, so a test gets the store, events, proposals and questions back. |
+| `TestPersonas` | `Factories/TestPersonas.cs` | `Nova` (the lowercase id `nova`), `Named(name)`, `FrontmatterText(...)` for persona files and `Identity(...)`. Alias casing stays a parameter. |
+| `TaskToolHarnessExtensions` | `Factories/TaskToolHarnessExtensions.cs` | `CreateTask(...)`, `NovaIdOrThrow()` and `HumanActor()` on a `TaskToolHarness`. The namespace is `Agency.Huddle.Tests.Factories`, so add the `using`. Defaults are null, so pass explicitly any value a test relied on. |
+| `TeamTypeJson` | `Factories/TeamTypeJson.cs` | A valid team-type manifest: `Manifest(id, ...)` and `WriteManifest(folder, ...)`. |
+
+Not for: `TeamTypeJson` leaves the deliberately malformed manifests in `TeamTypeManifestTests` raw, and the
+manifests with a different workspace or process file (`ProcessProvisionerFixtures`, `TeamDuplicatorTests`,
+`HireServicePooledRoleTests`). SkillPacks `schemaVersion` fixtures are a different schema. `Persona("nova", ...)`
+with another body, model or effort stays literal. A store built from fixture-owned paths, not a
+`TempDataDir`, stays on its own paths. Private `CreatePersonaStore` copies in `ReadSkillToolTests` and
+`TaskServiceTests` were out of scope and remain.
+
+### Agent and session harnesses
+
+| Helper | File | Use it when |
+| --- | --- | --- |
+| `PipeRunnerServer` | `Acp/Sessions/PipeRunnerServer.cs` | Playing the hub end of a runner pipe. `HandshakeAsync`, `SendAsync`, `ReceiveUntilAsync<T>` and `Received`. It always answers transcript reads, and `RefuseTranscriptReads` refuses them. A pump fault fails on dispose. |
+| `RoomSessionHarness` | `Acp/Sessions/RoomSessionHarness.cs` | Running a `RoomSession` with its run token and disposal in the right order. `Create(owner, open, options)`, `Adopt(session, runCts)` and `FixedOpen(session)`. Use `await using` instead of `try/finally`. |
+| `MockAdapterFixture` members | `Conformance/MockAdapterFixture.cs` | Conformance tests against the mock agent: `SessionNewAsync(ct)`, `AppendedSystemPromptAsync(ct)` and `SessionNewMeta(request)`. |
+| `ChatStoreDecorator` | `Fakes/ChatStoreDecorator.cs` | Injecting a fault or a gate into one `IChatStore` member. Subclass it and override that member; the rest delegates to `Inner`. |
+| `ScriptedReadStream` | `Fakes/ScriptedReadStream.cs` | A read stream with scripted `ReadAsync`. Subclass it and choose seekability in the constructor. |
+| `ScriptedAgentHostFactory` | `Fakes/ScriptedAgentHostFactory.cs` | Making an `IAgentHostFactory` fail for one persona: `FailFor` on every start, `FailOnceFor` on the first start only (the counter is `Interlocked`). |
+
+Not for: `FakePersonaServer` (synchronous reads, `PersonaRunnerTests`) stays as it is. Health and Resume
+tests keep a private `CreateRoomSession`, because it needs the room-session pool and host, which
+`RoomSessionHarnessOptions` does not carry. Desktop `FakeServer` stubs share only the name.
+
 ## Changing prompts and golden files
 
 `src/Huddle.App/prompts.default.json` must equal `PromptCatalog.All` (key → `Default`). After
