@@ -1098,6 +1098,8 @@ Document history: the byline, the History and the Recent edits panel — [area f
 | [DOCHISTORY-04](doc-history.md#dochistory-04--renaming-and-moving-a-document-carries-its-history) |  | Active |  |  |
 | [DOCHISTORY-05](doc-history.md#dochistory-05--how-often-do-real-agents-log-their-edits) | 💰 | Active |  |  |
 | [DOCHISTORY-06](doc-history.md#dochistory-06--the-history-is-grouped-by-day-whole-and-the-byline-leads-to-it) |  | Active |  |  |
+| [DOCHISTORY-07](doc-history.md#dochistory-07--a-teammate-offered-log_change-gets-the-stop-hook-and-existing-settings-stay) |  | Active |  |  |
+| [DOCHISTORY-08](doc-history.md#dochistory-08--the-hook-sends-a-teammate-back-to-log-and-leaves-other-turns-alone) | 💰 | Active |  |  |
 
 ---
 
