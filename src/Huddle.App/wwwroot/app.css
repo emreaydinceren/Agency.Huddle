@@ -5068,6 +5068,32 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     margin: 16px 0;
 }
 
+/* ---- Human gate section of the Task panel (TaskHumanGate) ---- */
+.task-human-gate {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.task-human-gate-header,
+.task-human-gate-switch,
+.task-human-gate-done-rule {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-human-gate-subheading,
+.task-human-gate-helper,
+.task-human-gate-explanation {
+    color: var(--mud-palette-text-secondary);
+}
+
+.task-human-gate-lock {
+    color: var(--mud-palette-text-secondary);
+}
+
 /* ---- Team page toolbar -----------------------------------------------------------------------
    The Team page toolbar (action button and search box) sits in a column that the persistent 240px
    drawer leaves very narrow on a phone: let the two wrap onto their own lines and let the search box
