@@ -43,6 +43,37 @@ internal static class HumanGateCopy
     /// <param name="human">The Human's display name.</param>
     public static string DoneRuleChip(string human) => $"{human} only";
 
+    /// <summary>The Proof heading of an ordinary Task (row 9).</summary>
+    public const string ProofHeadingUngated = "Definition of Done (for information)";
+
+    /// <summary>The Proof heading of a gated Task (row 10).</summary>
+    public const string ProofHeadingGated = "Proof";
+
+    /// <summary>The text of the Ask button (row 11).</summary>
+    /// <param name="owner">The owner the Ask goes to.</param>
+    public static string AskButton(string? owner) => $"Ask {owner}";
+
+    /// <summary>The Ask button's accessible name (row 11).</summary>
+    /// <param name="owner">The owner the Ask goes to.</param>
+    /// <param name="label">The Proof item's label.</param>
+    public static string AskAccessibleName(string? owner, string label) => $"Ask {owner} for {label}";
+
+    /// <summary>The Message an Ask posts (row 12).</summary>
+    /// <param name="owner">The owner the Ask goes to.</param>
+    /// <param name="taskId">The Task's id.</param>
+    /// <param name="label">The Proof item's label.</param>
+    public static string AskMessage(string owner, string taskId, string label) =>
+        $"@{owner}, {taskId} needs {label} before it can come to me.";
+
+    /// <summary>The snackbar after an Ask that posted (row 13).</summary>
+    /// <param name="owner">The owner asked.</param>
+    /// <param name="room">The Room's display name.</param>
+    public static string AskedSnackbar(string owner, string room) => $"Asked {owner} in {room}.";
+
+    /// <summary>The snackbar after an Ask that could not be posted (row 13).</summary>
+    /// <param name="owner">The owner who could not be reached.</param>
+    public static string AskFailedSnackbar(string owner) => $"Couldn't reach {owner}.";
+
     /// <summary>The explanation of a gated Task that names an Action.</summary>
     /// <param name="assignee">The assignee's name, or <see cref="UnassignedAssignee"/>.</param>
     /// <param name="action">The Action text.</param>
