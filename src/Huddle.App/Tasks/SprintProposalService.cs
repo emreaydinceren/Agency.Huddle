@@ -37,7 +37,7 @@ internal sealed class SprintProposalService(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
 
-        IReadOnlyList<User> members = await directory.GetRoomMembersAsync(roomId, ct);
+        IReadOnlyList<User> members = await directory.GetRoomMembersAsync(roomId, ct).ConfigureAwait(false);
         List<SprintProposal> pending = [];
         foreach (TeamSummary team in teams.Teams)
         {
@@ -67,10 +67,10 @@ internal sealed class SprintProposalService(
 
         // One approval of a proposal at a time, so a second approve finds it gone (idempotence) while a failed one leaves it pending.
         SemaphoreSlim gate = this.approveGates.GetOrAdd(proposalId, static _ => new SemaphoreSlim(1, 1));
-        await gate.WaitAsync(ct);
+        await gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            return await this.ApproveCoreAsync(roomId, proposalId, ct);
+            return await this.ApproveCoreAsync(roomId, proposalId, ct).ConfigureAwait(false);
         }
         finally
         {
@@ -84,7 +84,7 @@ internal sealed class SprintProposalService(
     /// <param name="ct">Cancels the lookups and the post.</param>
     private async Task<SprintProposalOutcome> ApproveCoreAsync(string roomId, string proposalId, CancellationToken ct)
     {
-        IReadOnlyList<SprintProposal> pending = await this.PendingAsync(roomId, ct);
+        IReadOnlyList<SprintProposal> pending = await this.PendingAsync(roomId, ct).ConfigureAwait(false);
         SprintProposal? proposal = pending.FirstOrDefault(each => string.Equals(each.Id, proposalId, StringComparison.Ordinal));
         if (proposal is null)
         {
@@ -128,7 +128,7 @@ internal sealed class SprintProposalService(
             }
         }
 
-        string mention = await this.MentionAsync(proposal.Proposer, ct);
+        string mention = await this.MentionAsync(proposal.Proposer, ct).ConfigureAwait(false);
         string added = applied.Count == 0 ? "none" : string.Join(", ", applied);
         string text = $"Approved Sprint '{proposal.Name}'{(existed ? " (it already existed)" : string.Empty)}. Added: {added}.";
         if (skipped.Count > 0)
@@ -138,7 +138,7 @@ internal sealed class SprintProposalService(
         }
 
         text += mention;
-        await this.PostAsync(roomId, text, ct);
+        await this.PostAsync(roomId, text, ct).ConfigureAwait(false);
         return new SprintProposalOutcome(SprintProposalOutcomeKind.Approved, existed, applied, skipped, text);
     }
 
@@ -154,16 +154,16 @@ internal sealed class SprintProposalService(
         ArgumentException.ThrowIfNullOrWhiteSpace(proposalId);
         ArgumentNullException.ThrowIfNull(reason);
 
-        SprintProposal? proposal = await this.TakeAsync(roomId, proposalId, ct);
+        SprintProposal? proposal = await this.TakeAsync(roomId, proposalId, ct).ConfigureAwait(false);
         if (proposal is null)
         {
             return Gone();
         }
 
-        string mention = await this.MentionAsync(proposal.Proposer, ct);
+        string mention = await this.MentionAsync(proposal.Proposer, ct).ConfigureAwait(false);
         string reasonText = string.IsNullOrWhiteSpace(reason) ? NoDeclineReason : reason.Trim();
         string text = $"Declined the proposed Sprint '{proposal.Name}': {reasonText}{mention}";
-        await this.PostAsync(roomId, text, ct);
+        await this.PostAsync(roomId, text, ct).ConfigureAwait(false);
         return new SprintProposalOutcome(SprintProposalOutcomeKind.Declined, false, [], [], text);
     }
 
@@ -176,7 +176,7 @@ internal sealed class SprintProposalService(
     /// <param name="ct">Cancels the member lookup.</param>
     private async Task<SprintProposal?> TakeAsync(string roomId, string proposalId, CancellationToken ct)
     {
-        IReadOnlyList<SprintProposal> pending = await this.PendingAsync(roomId, ct);
+        IReadOnlyList<SprintProposal> pending = await this.PendingAsync(roomId, ct).ConfigureAwait(false);
         SprintProposal? proposal = pending.FirstOrDefault(each => string.Equals(each.Id, proposalId, StringComparison.Ordinal));
         return proposal is not null && proposals.Remove(proposal.Id) ? proposal : null;
     }
@@ -214,7 +214,7 @@ internal sealed class SprintProposalService(
     /// <param name="ct">Cancels the lookup.</param>
     private async Task<string> MentionAsync(string proposer, CancellationToken ct)
     {
-        User? user = await directory.FindUserByNameAsync(proposer, ct);
+        User? user = await directory.FindUserByNameAsync(proposer, ct).ConfigureAwait(false);
         return user is null ? string.Empty : " @" + user.Name;
     }
 
@@ -224,10 +224,10 @@ internal sealed class SprintProposalService(
     /// <param name="ct">Cancels the post.</param>
     private async Task PostAsync(string roomId, string text, CancellationToken ct)
     {
-        User human = await directory.GetHumanAsync(ct);
+        User human = await directory.GetHumanAsync(ct).ConfigureAwait(false);
         try
         {
-            _ = await chat.PostAsync(roomId, human.Id, text, ct: ct);
+            _ = await chat.PostAsync(roomId, human.Id, text, ct: ct).ConfigureAwait(false);
         }
         catch (ChatException ex)
         {

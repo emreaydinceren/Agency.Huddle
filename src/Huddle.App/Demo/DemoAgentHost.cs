@@ -40,21 +40,22 @@ public sealed class DemoAgentHost : BackgroundService
 
         var names = this.options.DemoAgent.Names is { Count: > 0 } configured ? configured : DefaultNames;
         var runs = names.Select(name => this.RunAgentAsync(name, stoppingToken));
-        await Task.WhenAll(runs);
+        await Task.WhenAll(runs).ConfigureAwait(false);
     }
 
     private async Task RunAgentAsync(string name, CancellationToken ct)
     {
         try
         {
-            var pipe = await this.ConnectAsync(name, ct);
+            var pipe = await this.ConnectAsync(name, ct).ConfigureAwait(false);
             if (pipe is null)
             {
                 return;
             }
 
-            await using var stream = new JsonLineStream(pipe);
-            await stream.WriteAsync(new Hello(name, "Built-in demo agent"), ct);
+            var stream = new JsonLineStream(pipe);
+            await using var streamScope = stream.ConfigureAwait(false);
+            await stream.WriteAsync(new Hello(name, "Built-in demo agent"), ct).ConfigureAwait(false);
             if (this.logger.IsEnabled(LogLevel.Information))
             {
                 this.logger.LogInformation("Demo agent {AgentName} connected.", name);
@@ -62,7 +63,7 @@ public sealed class DemoAgentHost : BackgroundService
 
             while (true)
             {
-                var message = await stream.ReadAsync(ct);
+                var message = await stream.ReadAsync(ct).ConfigureAwait(false);
                 if (message is null)
                 {
                     return;
@@ -80,24 +81,7 @@ public sealed class DemoAgentHost : BackgroundService
                     && ReplyGate.Decide(posted.Mentioned, posted.Members.Count, posted.AgentMessagesSinceHuman, posted.Budget, following: false)
                         == ReplyDecision.Reply)
                 {
-                    // Strip '@' before quoting so the reply cannot reproduce mentions and re-trigger
-                    // another agent (Team-Specifications.md §6.8, "Loop safety").
-                    var quoted = posted.Message.Text.Replace("@", string.Empty, StringComparison.Ordinal);
-                    var replyText = $"**{name}:** {quoted}";
-                    var messageId = Guid.CreateVersion7().ToString("N");
-
-                    // Mirrors PersonaRunner's own sequence exactly - a MessageDelta per chunk of text
-                    // as it "arrives", then the PostMessage that persists it under the same id, then
-                    // the IsFinal terminator - so the demo path exercises the real Draft-streaming
-                    // path at zero token cost (Team-Specifications.md §6.8).
-                    foreach (var chunk in SplitIntoChunks(replyText))
-                    {
-                        await stream.WriteAsync(new MessageDelta(posted.RoomId, messageId, chunk, IsFinal: false), ct);
-                        await Task.Delay(ReplyChunkDelay, ct);
-                    }
-
-                    await stream.WriteAsync(new PostMessage(posted.RoomId, messageId, replyText), ct);
-                    await stream.WriteAsync(new MessageDelta(posted.RoomId, messageId, string.Empty, IsFinal: true), ct);
+                    await StreamReplyAsync(stream, posted, name, ct).ConfigureAwait(false);
                 }
             }
         }
@@ -111,6 +95,33 @@ public sealed class DemoAgentHost : BackgroundService
         }
     }
 
+    /// <summary>Streams the echo reply to <paramref name="posted"/> as chunked deltas, then the persisted message and the final terminator.</summary>
+    /// <param name="stream">The agent's pipe stream.</param>
+    /// <param name="posted">The message being answered.</param>
+    /// <param name="name">The demo agent's name.</param>
+    /// <param name="ct">Cancellation token.</param>
+    private static async Task StreamReplyAsync(JsonLineStream stream, MessagePosted posted, string name, CancellationToken ct)
+    {
+        // Strip '@' before quoting so the reply cannot reproduce mentions and re-trigger
+        // another agent (Team-Specifications.md §6.8, "Loop safety").
+        var quoted = posted.Message.Text.Replace("@", string.Empty, StringComparison.Ordinal);
+        var replyText = $"**{name}:** {quoted}";
+        var messageId = Guid.CreateVersion7().ToString("N");
+
+        // Mirrors PersonaRunner's own sequence exactly - a MessageDelta per chunk of text
+        // as it "arrives", then the PostMessage that persists it under the same id, then
+        // the IsFinal terminator - so the demo path exercises the real Draft-streaming
+        // path at zero token cost (Team-Specifications.md §6.8).
+        foreach (var chunk in SplitIntoChunks(replyText))
+        {
+            await stream.WriteAsync(new MessageDelta(posted.RoomId, messageId, chunk, IsFinal: false), ct).ConfigureAwait(false);
+            await Task.Delay(ReplyChunkDelay, ct).ConfigureAwait(false);
+        }
+
+        await stream.WriteAsync(new PostMessage(posted.RoomId, messageId, replyText), ct).ConfigureAwait(false);
+        await stream.WriteAsync(new MessageDelta(posted.RoomId, messageId, string.Empty, IsFinal: true), ct).ConfigureAwait(false);
+    }
+
     private async Task<NamedPipeClientStream?> ConnectAsync(string name, CancellationToken ct)
     {
         for (var attempt = 1; attempt <= MaxConnectAttempts; attempt++)
@@ -118,27 +129,29 @@ public sealed class DemoAgentHost : BackgroundService
             var client = new NamedPipeClientStream(".", this.options.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
             try
             {
-                await client.ConnectAsync(100, ct);
+                await client.ConnectAsync(100, ct).ConfigureAwait(false);
                 return client;
             }
             catch (TimeoutException)
             {
-                client.Dispose();
+                await client.DisposeAsync().ConfigureAwait(false);
             }
             catch (IOException)
             {
-                client.Dispose();
+                await client.DisposeAsync().ConfigureAwait(false);
             }
 
             if (attempt < MaxConnectAttempts)
             {
-                await Task.Delay(ConnectRetryDelay, ct);
+                await Task.Delay(ConnectRetryDelay, ct).ConfigureAwait(false);
             }
         }
 
         this.logger.LogWarning(
             "Demo agent {AgentName} failed to connect to pipe {PipeName} after {Attempts} attempts.",
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
             name, this.options.PipeName, MaxConnectAttempts);
+#pragma warning restore HAA0601
         return null;
     }
 

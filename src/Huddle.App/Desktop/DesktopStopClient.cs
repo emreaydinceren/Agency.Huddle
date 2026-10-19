@@ -42,26 +42,65 @@ internal static class DesktopStopClient
             if (probe is not null)
             {
                 InstanceFile.Delete(dataDir);
-                output.WriteLine("Agency Huddle is not running.");
+                await output.WriteLineAsync("Agency Huddle is not running.").ConfigureAwait(false);
                 return 0;
             }
         }
 
         TimeSpan recordWait = stopTimeout < MaxRecordWait ? stopTimeout : MaxRecordWait;
-        InstanceInfo? info = await WaitForRecordAsync(dataDir, recordWait, ct);
+        InstanceInfo? info = await WaitForRecordAsync(dataDir, recordWait, ct).ConfigureAwait(false);
         if (info is null)
         {
-            output.WriteLine("Agency Huddle is starting or not answering.");
+            await output.WriteLineAsync("Agency Huddle is starting or not answering.").ConfigureAwait(false);
             return 1;
         }
 
         if (!Uri.TryCreate(info.Url, UriKind.Absolute, out Uri? baseUrl))
         {
-            output.WriteLine("Agency Huddle is starting or not answering.");
+            await output.WriteLineAsync("Agency Huddle is starting or not answering.").ConfigureAwait(false);
             return 1;
         }
 
         Uri stopUrl = new(baseUrl, DesktopStopEndpoint.Route);
+        HttpStatusCode? sent = await SendStopRequestAsync(stopUrl, info, handler, output, ct).ConfigureAwait(false);
+        if (sent is not { } status)
+        {
+            return 1;
+        }
+
+        int code = (int)status;
+        if (code is >= 200 and < 300)
+        {
+            return await WaitForExitAsync(dataDir, output, stopTimeout, ct).ConfigureAwait(false);
+        }
+
+        if (status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            await output.WriteLineAsync(string.Create(
+                CultureInfo.InvariantCulture, $"Agency Huddle refused the stop request: {code} {status}.")).ConfigureAwait(false);
+            return 1;
+        }
+
+        await output.WriteLineAsync(string.Create(CultureInfo.InvariantCulture, $"Unexpected status {code}.")).ConfigureAwait(false);
+        return 1;
+    }
+
+    /// <summary>
+    /// Posts the stop request carrying the stop token and returns the status the instance answered with.
+    /// </summary>
+    /// <param name="stopUrl">The instance's stop endpoint.</param>
+    /// <param name="info">The instance record, which carries the stop token.</param>
+    /// <param name="handler">The HTTP handler to use, or <see langword="null"/> for a real network handler.</param>
+    /// <param name="output">Where a failure is printed.</param>
+    /// <param name="ct">Cancels the call.</param>
+    /// <returns>The response status, or <see langword="null"/> when the instance did not answer (the failure is already printed).</returns>
+    private static async Task<HttpStatusCode?> SendStopRequestAsync(
+        Uri stopUrl,
+        InstanceInfo info,
+        HttpMessageHandler? handler,
+        TextWriter output,
+        CancellationToken ct)
+    {
         using HttpClient client = new(handler ?? new SocketsHttpHandler(), disposeHandler: handler is null)
         {
             Timeout = RequestTimeout,
@@ -69,39 +108,22 @@ internal static class DesktopStopClient
         using HttpRequestMessage request = new(HttpMethod.Post, stopUrl);
         _ = request.Headers.TryAddWithoutValidation(DesktopStopEndpoint.TokenHeader, info.StopToken);
 
-        HttpStatusCode status;
         try
         {
-            using HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-            status = response.StatusCode;
+            using HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+            return response.StatusCode;
         }
         catch (HttpRequestException)
         {
             // The lock is held, so a live instance is starting or stuck: keep its record.
-            output.WriteLine("Agency Huddle is starting or not answering.");
-            return 1;
+            await output.WriteLineAsync("Agency Huddle is starting or not answering.").ConfigureAwait(false);
+            return null;
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            output.WriteLine("Agency Huddle did not answer.");
-            return 1;
+            await output.WriteLineAsync("Agency Huddle did not answer.").ConfigureAwait(false);
+            return null;
         }
-
-        int code = (int)status;
-        if (code is >= 200 and < 300)
-        {
-            return await WaitForExitAsync(dataDir, output, stopTimeout, ct);
-        }
-
-        if (status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
-        {
-            output.WriteLine(string.Create(
-                CultureInfo.InvariantCulture, $"Agency Huddle refused the stop request: {code} {status}."));
-            return 1;
-        }
-
-        output.WriteLine(string.Create(CultureInfo.InvariantCulture, $"Unexpected status {code}."));
-        return 1;
     }
 
     /// <summary>
@@ -129,7 +151,7 @@ internal static class DesktopStopClient
                 return null;
             }
 
-            await Task.Delay(remaining < PollInterval ? remaining : PollInterval, ct);
+            await Task.Delay(remaining < PollInterval ? remaining : PollInterval, ct).ConfigureAwait(false);
         }
     }
 
@@ -151,7 +173,7 @@ internal static class DesktopStopClient
             {
                 if (probe is not null)
                 {
-                    output.WriteLine("Stopped.");
+                    await output.WriteLineAsync("Stopped.").ConfigureAwait(false);
                     return 0;
                 }
             }
@@ -160,11 +182,11 @@ internal static class DesktopStopClient
             if (remaining <= TimeSpan.Zero)
             {
                 string seconds = stopTimeout.TotalSeconds.ToString("0.##", CultureInfo.InvariantCulture);
-                output.WriteLine(string.Create(CultureInfo.InvariantCulture, $"Did not stop within {seconds} s."));
+                await output.WriteLineAsync(string.Create(CultureInfo.InvariantCulture, $"Did not stop within {seconds} s.")).ConfigureAwait(false);
                 return 1;
             }
 
-            await Task.Delay(remaining < PollInterval ? remaining : PollInterval, ct);
+            await Task.Delay(remaining < PollInterval ? remaining : PollInterval, ct).ConfigureAwait(false);
         }
     }
 }

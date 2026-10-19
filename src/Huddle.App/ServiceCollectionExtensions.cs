@@ -35,6 +35,30 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
 
+        ThrowOnRetiredConfigurationKeys(configuration);
+
+        return services
+            .AddOptionsAndChatCore(configuration)
+            .AddFileAndStoreSingletons()
+            .AddIdentityAndAgentHostServices()
+            .AddTaskPromptAndSkillStores()
+            .AddSkillSourceServices()
+            .AddProposalQuestionAndElicitationServices()
+            .AddHiringAndProcessServices()
+            .AddAppearanceAvatarAndLibraryBasics()
+            .AddLibraryFileAndUploadServices()
+            .AddTeamFolderCatalogAndSprintServices()
+            .AddCircuitTabSidebarSearchAndReferenceServices()
+            .AddProbeAndRenameServices()
+            .AddStartupHostedServices()
+            .AddBackgroundHostedServices();
+    }
+
+    /// <summary>Fails start-up when a retired configuration key is still set, naming its replacement.</summary>
+    /// <param name="configuration">The application configuration to inspect.</param>
+    /// <exception cref="InvalidOperationException">A retired key is still set.</exception>
+    private static void ThrowOnRetiredConfigurationKeys(IConfiguration configuration)
+    {
         // Acp.PersonaDir was renamed to Acp.TeamsDir (the "Teams" rename), and Acp.TeamsDir was in
         // turn renamed to Acp.TeammatesDir (Spec §6.15, the Teammates-beside-Teams layout), with no
         // back-compat fallback either time: nothing in appsettings*.json still sets either old key,
@@ -72,7 +96,14 @@ public static class ServiceCollectionExtensions
                 $"'{TeamOptions.SectionName}:Teams:Dir'. Tasks now live in each Team folder's _tasks/ folder; " +
                 "remove the key (the start-up migration reads {DataDir}/Tasks). There is no automatic fallback.");
         }
+    }
 
+    /// <summary>Binds <see cref="TeamOptions"/> and registers the chat core, per-Persona health and spend, follows and the activity singletons.</summary>
+    /// <param name="services">The service collection to add to.</param>
+    /// <param name="configuration">The application configuration.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddOptionsAndChatCore(this IServiceCollection services, IConfiguration configuration)
+    {
         services.Configure<TeamOptions>(configuration.GetSection(TeamOptions.SectionName));
         services.PostConfigure<TeamOptions>(options =>
         {
@@ -125,6 +156,14 @@ public static class ServiceCollectionExtensions
         // the Tasks UI's "AI reacting" badge. A leaf singleton, same shape as OwnPosts just above.
         services.AddSingleton<TurnActivity>();
 
+        return services;
+    }
+
+    /// <summary>Registers the task activity, watched-folder, file-state and room-session stores, the agent gateway, the catalogs and the file change tracker.</summary>
+    /// <param name="services">The service collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddFileAndStoreSingletons(this IServiceCollection services)
+    {
         // Spec §10.6-§10.7: per-Task wake history and the Agent-wake budget that guards against a
         // looping Agent. A leaf singleton, same shape as TurnActivity just above.
         services.AddSingleton<TaskActivity>();
@@ -165,6 +204,14 @@ public static class ServiceCollectionExtensions
         // every runner share it through DI.
         services.AddSingleton<FileChangeTracker>();
 
+        return services;
+    }
+
+    /// <summary>Registers the mention alias source, the Human profile, the agent host factory and the per-Persona stores.</summary>
+    /// <param name="services">The service collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddIdentityAndAgentHostServices(this IServiceCollection services)
+    {
         // Same instance as PersonaStore above, not a second registration - mirrors the
         // AgentGateway/IAgentGateway pair just above. A second, independently constructed PersonaStore
         // would mean a second FileSystemWatcher on the same Teams directory, which
@@ -203,6 +250,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Agency.Huddle.App.Teams.RetroProposalService>();
         services.AddSingleton<TaskIdAllocator>();
 
+        return services;
+    }
+
+    /// <summary>Registers the task, prompt and skill stores and their forwarding registrations.</summary>
+    /// <param name="services">The service collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddTaskPromptAndSkillStores(this IServiceCollection services)
+    {
         // No interface, same reasoning as AvatarStore/PromptStore above: a second, independently
         // constructed TaskStore would scan the Tasks folder twice and (once a later task adds one)
         // run a second FileSystemWatcher over it. TaskEvents and TaskService are registered here too
@@ -230,6 +285,14 @@ public static class ServiceCollectionExtensions
         // running their own FileSystemWatcher over it.
         services.AddSingleton<SkillStore>();
 
+        return services;
+    }
+
+    /// <summary>Registers the Skill Sources registry, its stores, the move, copy and install-file services.</summary>
+    /// <param name="services">The service collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddSkillSourceServices(this IServiceCollection services)
+    {
         // Skill Sources (Skill Packs spec §6.5): the registry of SKILLS.md and the stores beside it. Plain singletons; the
         // watcher below is the hosted half and the only thing that rebuilds the registry besides Reload.
         services.AddSingleton<Agency.Huddle.App.SkillSources.SkillSourcesSettings>();
@@ -252,7 +315,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Agency.Huddle.App.SkillSources.PackUpdater>();
         services.AddScoped<Agency.Huddle.App.SkillSources.PathFormatChoice>();
 
+        return services;
+    }
 
+    /// <summary>Registers the candidate checker and the proposal, question and elicitation stores and services.</summary>
+    /// <param name="services">The service collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddProposalQuestionAndElicitationServices(this IServiceCollection services)
+    {
         // No interface, same reasoning as PromptStore/SkillStore above: nothing needs to
         // substitute this, and it is built entirely from other singletons already registered
         // above (PersonaStore, ITeamDirectory, IAgentGateway), so a second, independently
@@ -294,6 +364,14 @@ public static class ServiceCollectionExtensions
         // ProposalService back - construction order is safe and there is no cycle.
         services.AddSingleton<ProposalService>();
 
+        return services;
+    }
+
+    /// <summary>Registers the hire-limit guard and the hiring, onboarding and process-gate services.</summary>
+    /// <param name="services">The service collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddHiringAndProcessServices(this IServiceCollection services)
+    {
         // The one hire-limit check ProposalService, ProposeTeammatesTool and ProposalCard share. The
         // live-process count reads PersonaSupervisor lazily, per call, so registering it here (before
         // the supervisor) creates no construction cycle.
@@ -321,6 +399,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMergeGate, Agency.Huddle.App.Teams.ProcessMergeGate>();
         services.AddSingleton<Agency.Huddle.App.Teams.TeamDuplicator>();
 
+        return services;
+    }
+
+    /// <summary>Registers the appearance and avatar stores, the avatar library and the Library root and path resolvers.</summary>
+    /// <param name="services">The service collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddAppearanceAvatarAndLibraryBasics(this IServiceCollection services)
+    {
         // No interface: nothing needs to substitute this, and CSharpPrinciples.md says not to add
         // abstraction a feature has not asked for. This is state the app writes (a chosen theme, a
         // few token overrides), not host-supplied configuration, so it is registered here rather
@@ -352,6 +438,14 @@ public static class ServiceCollectionExtensions
         // on nothing else, and the constructor never throws on bad configuration either.
         services.AddSingleton<LibraryPathResolver>();
 
+        return services;
+    }
+
+    /// <summary>Registers the recycle bin, the wiki-link index, the Library reference resolver and file service, chat uploads and the document collector.</summary>
+    /// <param name="services">The service collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddLibraryFileAndUploadServices(this IServiceCollection services)
+    {
         // The real recycle bin on Windows (Task 6.9.i); everywhere else, a placeholder that refuses
         // every recycle so nothing is ever silently, permanently deleted.
         services.AddSingleton<IRecycleBin>(_ => OperatingSystem.IsWindows() ? new WindowsRecycleBin() : new NotAvailableRecycleBin());
@@ -383,6 +477,14 @@ public static class ServiceCollectionExtensions
         // PersonaSupervisor passes a null collector when the Library is disabled.
         services.AddSingleton<LibraryDocumentCollector>();
 
+        return services;
+    }
+
+    /// <summary>Registers the Team folder provisioner, the Team catalog and membership, the view store and the Sprint stores.</summary>
+    /// <param name="services">The service collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddTeamFolderCatalogAndSprintServices(this IServiceCollection services)
+    {
         // Same instance as the hosted service, the same singleton-plus-factory idiom as
         // PersonaSupervisor/TaskTriggerService above (corrections-B4 item 33): the Library Pane's
         // "New Project" trigger needs to call EnsureProject on the very instance the host is running.
@@ -421,6 +523,14 @@ public static class ServiceCollectionExtensions
         // Answers a Sprint proposal (Task 63): Approve is the only path that creates a Sprint.
         services.AddSingleton<SprintProposalService>();
 
+        return services;
+    }
+
+    /// <summary>Registers the per-circuit services, the Right sidebar panels, Global Search and the reference services.</summary>
+    /// <param name="services">The service collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddCircuitTabSidebarSearchAndReferenceServices(this IServiceCollection services)
+    {
         // Scoped: whether one circuit's client is still connected, and the navigator that skips a server-driven
         // navigation once it is not (docs/engineering/rules.md).
         services.AddCircuitConnection();
@@ -470,6 +580,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<References.ReferenceExpander>();
         services.AddSingleton(new Tabs.TabPageRoutes(typeof(ServiceCollectionExtensions).Assembly));
 
+        return services;
+    }
+
+    /// <summary>Registers the adapter probe, work-mode policy, model catalog, built-in Teammate reset and the Human rename cascade.</summary>
+    /// <param name="services">The service collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddProbeAndRenameServices(this IServiceCollection services)
+    {
         // Unconditional too, and for the same reason: the probe spends nothing on its own (it never
         // calls PromptAsync), so registering it costs nothing when Team:Acp:Enabled is off. What
         // keeps it honest is WHEN it runs — the /teammates page only calls it on card-open, never on
@@ -489,6 +607,14 @@ public static class ServiceCollectionExtensions
         // rename made while the app was stopped, and the hosted half subscribes to HumanRenamed.
         services.AddSingleton<HumanRenameCascade>();
 
+        return services;
+    }
+
+    /// <summary>Registers the hosted services in their required start-up order, up to and including the Persona supervisor.</summary>
+    /// <param name="services">The service collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddStartupHostedServices(this IServiceCollection services)
+    {
         // Before every other hosted service that reads Teammates (Skill Packs spec §6.5, "Start-up order"): the move, the
         // repair of Skills/.trash and the first full read of the registry finish before BuiltinTeammateSeeder,
         // DataInitializer and PersonaSupervisor start, because the host awaits each StartAsync in registration order.
@@ -515,6 +641,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PersonaSupervisor>();
         services.AddHostedService(sp => sp.GetRequiredService<PersonaSupervisor>());
 
+        return services;
+    }
+
+    /// <summary>Registers the task trigger, cadence, rename cascade, Needs You and Team room hosted services.</summary>
+    /// <param name="services">The service collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddBackgroundHostedServices(this IServiceCollection services)
+    {
         // Same instance as the hosted service, the same shape as PersonaSupervisor's pair just
         // above: Spec §10.1 models TaskTriggerService's registration on this app's existing
         // singleton-plus-AddHostedService(sp => sp.GetRequiredService<...>()) idiom, so something

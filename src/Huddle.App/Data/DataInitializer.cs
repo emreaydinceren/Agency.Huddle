@@ -39,9 +39,9 @@ internal sealed class DataInitializer : IHostedService
     {
         Directory.CreateDirectory(this.options.DataDir);
 
-        var previous = await this.teamDirectory.ReadHumanNameAsync(cancellationToken);
+        var previous = await this.teamDirectory.ReadHumanNameAsync(cancellationToken).ConfigureAwait(false);
         var name = this.human.Name;
-        await this.teamDirectory.InitializeAsync(name, cancellationToken);
+        await this.teamDirectory.InitializeAsync(name, cancellationToken).ConfigureAwait(false);
 
         if (previous is not null && !string.Equals(previous, name, StringComparison.Ordinal))
         {

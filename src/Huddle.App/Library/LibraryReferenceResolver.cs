@@ -99,6 +99,27 @@ internal sealed partial class LibraryReferenceResolver(LibraryPathResolver paths
 
         string decoded = Uri.UnescapeDataString(path);
 
+        string? relativePath = NormalizeRelative(from, decoded);
+        if (relativePath is null)
+        {
+            return null;
+        }
+
+        if (!this.paths.TryResolve(from.Root.Id, relativePath, out LibraryPath? resolved, out _))
+        {
+            return null;
+        }
+
+        bool exists = File.Exists(resolved.FullPath) || Directory.Exists(resolved.FullPath);
+        return new LibraryReference(resolved.Root.Id, resolved.RelativePath, exists);
+    }
+
+    /// <summary>Joins a decoded relative link path onto the directory of <paramref name="from"/>, collapsing <c>.</c> and <c>..</c> segments.</summary>
+    /// <param name="from">The note the link appears in.</param>
+    /// <param name="decoded">The unescaped link path, without fragment or query.</param>
+    /// <returns>The root-relative path, or <see langword="null"/> when the link climbs above the root.</returns>
+    private static string? NormalizeRelative(LibraryPath from, string decoded)
+    {
         List<string> stack = [];
         if (!decoded.StartsWith('/'))
         {
@@ -131,13 +152,6 @@ internal sealed partial class LibraryReferenceResolver(LibraryPathResolver paths
             stack.Add(segment);
         }
 
-        string relativePath = string.Join('/', stack);
-        if (!this.paths.TryResolve(from.Root.Id, relativePath, out LibraryPath? resolved, out _))
-        {
-            return null;
-        }
-
-        bool exists = File.Exists(resolved.FullPath) || Directory.Exists(resolved.FullPath);
-        return new LibraryReference(resolved.Root.Id, resolved.RelativePath, exists);
+        return string.Join('/', stack);
     }
 }

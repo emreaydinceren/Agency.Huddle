@@ -58,23 +58,74 @@ internal static partial class TaskFileFormat
             return false;
         }
 
-        if (!TryGetField(fields, "id", out string? idRaw))
+        if (!TryParseRequired(fields, out RequiredFields? required, out error))
         {
             task = null;
+            return false;
+        }
+
+        if (!TryParseRelations(fields, required.Id, required.Status, out Relations? relations, out error))
+        {
+            task = null;
+            return false;
+        }
+
+        string? assignee = TryGetField(fields, "assignee", out string? assigneeRaw) ? NullIfEmpty(assigneeRaw) : null;
+        string? originRoomId = TryGetField(fields, "origin", out string? originRaw) ? NullIfEmpty(originRaw) : null;
+        (string description, IReadOnlyList<ChangeLogEntry> changeLog) = SplitChangeLog(body);
+
+        task = new TaskItem
+        {
+            Id = required.Id,
+            Title = required.Title,
+            Status = required.Status,
+            Priority = required.Priority,
+            Creator = required.Creator,
+            Assignee = assignee,
+            OriginRoomId = originRoomId,
+            Parent = relations.Parent,
+            BlockedBy = relations.BlockedBy,
+            DuplicateOf = relations.DuplicateOf,
+            Tags = relations.Tags,
+            StartDate = relations.StartDate,
+            DueDate = relations.DueDate,
+            Sprint = relations.Sprint,
+            Description = description,
+            Location = location,
+            ChangeLog = changeLog,
+            UnknownFields = UnknownFieldsOf(fields),
+            Path = path,
+            Version = ComputeVersion(text),
+            ClosedAt = ComputeClosedAt(changeLog, location.Closed),
+        };
+        error = "";
+        return true;
+    }
+
+    /// <summary>The keys a Task file must carry, validated per Spec §7.2.</summary>
+    private sealed record RequiredFields(TaskId Id, string Title, TaskState Status, TaskPriority Priority, string Creator);
+
+    /// <summary>The optional keys that point at other records or carry dates, validated per Spec §7.2.</summary>
+    private sealed record Relations(TaskId? Parent, IReadOnlyList<TaskId> BlockedBy, TaskId? DuplicateOf, IReadOnlyList<string> Tags, DateOnly? StartDate, DateOnly? DueDate, SprintId? Sprint);
+
+    /// <summary>Validates <c>id</c>, <c>title</c>, <c>status</c>, <c>priority</c> and <c>creator</c>; the first violation is <paramref name="error"/>.</summary>
+    private static bool TryParseRequired(IReadOnlyList<PersonaFrontmatterField> fields, [NotNullWhen(true)] out RequiredFields? required, out string error)
+    {
+        required = null;
+        if (!TryGetField(fields, "id", out string? idRaw))
+        {
             error = "missing required key: id";
             return false;
         }
 
         if (!TaskId.TryParse(idRaw, out TaskId id))
         {
-            task = null;
             error = string.Create(CultureInfo.InvariantCulture, $"invalid id: '{idRaw}'");
             return false;
         }
 
         if (!TryGetField(fields, "title", out string? titleRaw))
         {
-            task = null;
             error = "missing required key: title";
             return false;
         }
@@ -82,93 +133,67 @@ internal static partial class TaskFileFormat
         string title = titleRaw.Trim();
         if (title.Length is < 1 or > 200)
         {
-            task = null;
             error = string.Create(CultureInfo.InvariantCulture, $"title must be 1-200 characters: '{title}'");
             return false;
         }
 
         if (!TryGetField(fields, "status", out string? statusRaw))
         {
-            task = null;
             error = "missing required key: status";
             return false;
         }
 
         if (!TaskStates.TryParse(statusRaw, out TaskState status))
         {
-            task = null;
             error = string.Create(CultureInfo.InvariantCulture, $"invalid status: '{statusRaw}'");
             return false;
         }
 
         if (!TryGetField(fields, "priority", out string? priorityRaw))
         {
-            task = null;
             error = "missing required key: priority";
             return false;
         }
 
         if (!TaskPriorities.TryParse(priorityRaw, out TaskPriority priority))
         {
-            task = null;
             error = string.Create(CultureInfo.InvariantCulture, $"invalid priority: '{priorityRaw}'");
             return false;
         }
 
         if (!TryGetField(fields, "creator", out string? creatorRaw) || creatorRaw.Trim().Length == 0)
         {
-            task = null;
             error = "missing required key: creator";
             return false;
         }
 
-        string creator = creatorRaw.Trim();
+        required = new RequiredFields(id, title, status, priority, creatorRaw.Trim());
+        error = "";
+        return true;
+    }
 
-        string? assignee = TryGetField(fields, "assignee", out string? assigneeRaw) ? NullIfEmpty(assigneeRaw) : null;
-        string? originRoomId = TryGetField(fields, "origin", out string? originRaw) ? NullIfEmpty(originRaw) : null;
-
-        if (!TryParseParent(fields, id, out TaskId? parent, out error))
+    /// <summary>Validates <c>parent</c>, <c>blocked_by</c>, <c>duplicate_of</c>, <c>tags</c>, both dates and <c>sprint</c>; the first violation is <paramref name="error"/>.</summary>
+    private static bool TryParseRelations(IReadOnlyList<PersonaFrontmatterField> fields, TaskId id, TaskState status, [NotNullWhen(true)] out Relations? relations, out string error)
+    {
+        relations = null;
+        if (!TryParseParent(fields, id, out TaskId? parent, out error)
+            || !TryParseBlockedBy(fields, id, out IReadOnlyList<TaskId> blockedBy, out error)
+            || !TryParseDuplicateOf(fields, id, status, out TaskId? duplicateOf, out error)
+            || !TryParseTags(fields, out IReadOnlyList<string> tags, out error)
+            || !TryParseDate(fields, "start_date", out DateOnly? startDate, out error)
+            || !TryParseDate(fields, "due_date", out DateOnly? dueDate, out error)
+            || !TryParseSprint(fields, out SprintId? sprint, out error))
         {
-            task = null;
             return false;
         }
 
-        if (!TryParseBlockedBy(fields, id, out IReadOnlyList<TaskId> blockedBy, out error))
-        {
-            task = null;
-            return false;
-        }
+        relations = new Relations(parent, blockedBy, duplicateOf, tags, startDate, dueDate, sprint);
+        return true;
+    }
 
-        if (!TryParseDuplicateOf(fields, id, status, out TaskId? duplicateOf, out error))
-        {
-            task = null;
-            return false;
-        }
-
-        if (!TryParseTags(fields, out IReadOnlyList<string> tags, out error))
-        {
-            task = null;
-            return false;
-        }
-
-        if (!TryParseDate(fields, "start_date", out DateOnly? startDate, out error))
-        {
-            task = null;
-            return false;
-        }
-
-        if (!TryParseDate(fields, "due_date", out DateOnly? dueDate, out error))
-        {
-            task = null;
-            return false;
-        }
-
-        if (!TryParseSprint(fields, out SprintId? sprint, out error))
-        {
-            task = null;
-            return false;
-        }
-
+    /// <summary>The frontmatter fields whose keys this parser does not recognise, in file order.</summary>
+    private static List<KeyValuePair<string, string>> UnknownFieldsOf(IReadOnlyList<PersonaFrontmatterField> fields)
+    {
         List<KeyValuePair<string, string>> unknownFields = [];
         foreach (PersonaFrontmatterField field in fields)
         {
@@ -178,34 +203,7 @@ internal static partial class TaskFileFormat
             }
         }
 
-        (string description, IReadOnlyList<ChangeLogEntry> changeLog) = SplitChangeLog(body);
-
-        task = new TaskItem
-        {
-            Id = id,
-            Title = title,
-            Status = status,
-            Priority = priority,
-            Creator = creator,
-            Assignee = assignee,
-            OriginRoomId = originRoomId,
-            Parent = parent,
-            BlockedBy = blockedBy,
-            DuplicateOf = duplicateOf,
-            Tags = tags,
-            StartDate = startDate,
-            DueDate = dueDate,
-            Sprint = sprint,
-            Description = description,
-            Location = location,
-            ChangeLog = changeLog,
-            UnknownFields = unknownFields,
-            Path = path,
-            Version = ComputeVersion(text),
-            ClosedAt = ComputeClosedAt(changeLog, location.Closed),
-        };
-        error = "";
-        return true;
+        return unknownFields;
     }
 
     /// <summary>Composes a Task's canonical file text (Spec §7.4): the §7.2 keys in order, then
@@ -269,6 +267,22 @@ internal static partial class TaskFileFormat
             lines.Add(ComposeScalarLine("origin", origin));
         }
 
+        AddRelationLines(lines, task);
+        foreach (KeyValuePair<string, string> field in task.UnknownFields)
+        {
+            lines.Add(ComposeScalarLine(field.Key, field.Value));
+        }
+
+        lines.Add("---");
+        lines.Add(task.Description);
+        lines.Add("");
+
+        return lines;
+    }
+
+    /// <summary>Adds the <c>parent</c>, <c>blocked_by</c>, <c>duplicate_of</c>, <c>tags</c>, date and <c>sprint</c> lines a Task has, in Spec §7.4 order.</summary>
+    private static void AddRelationLines(List<string> lines, TaskItem task)
+    {
         if (task.Parent is { } parent)
         {
             lines.Add(string.Create(CultureInfo.InvariantCulture, $"parent: {parent}"));
@@ -311,17 +325,6 @@ internal static partial class TaskFileFormat
         {
             lines.Add(string.Create(CultureInfo.InvariantCulture, $"sprint: {sprint}"));
         }
-
-        foreach (KeyValuePair<string, string> field in task.UnknownFields)
-        {
-            lines.Add(ComposeScalarLine(field.Key, field.Value));
-        }
-
-        lines.Add("---");
-        lines.Add(task.Description);
-        lines.Add("");
-
-        return lines;
     }
 
     /// <summary>True when <paramref name="description"/> has a line that trims (case-insensitively) to <see cref="ChangeLogHeading"/> outside a fenced code block.</summary>
@@ -330,7 +333,7 @@ internal static partial class TaskFileFormat
     {
         ArgumentNullException.ThrowIfNull(description);
 
-        string normalized = description.Replace("\r\n", "\n", StringComparison.Ordinal).Replace("\r", "\n", StringComparison.Ordinal);
+        string normalized = description.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
         return FindChangeLogHeadingLineIndex(normalized.Split('\n')) >= 0;
     }
 
@@ -407,7 +410,7 @@ internal static partial class TaskFileFormat
         ArgumentNullException.ThrowIfNull(entry);
 
         string formatted = FormatEntry(entry);
-        string normalized = fileText.Replace("\r\n", "\n", StringComparison.Ordinal).Replace("\r", "\n", StringComparison.Ordinal);
+        string normalized = fileText.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
         string[] lines = normalized.Split('\n');
         int headingIndex = FindChangeLogHeadingLineIndex(lines);
 
@@ -429,7 +432,7 @@ internal static partial class TaskFileFormat
         ArgumentNullException.ThrowIfNull(fileText);
         ArgumentException.ThrowIfNullOrWhiteSpace(evidenceLine);
 
-        string normalized = fileText.Replace("\r\n", "\n", StringComparison.Ordinal).Replace("\r", "\n", StringComparison.Ordinal);
+        string normalized = fileText.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
         List<string> lines = [.. normalized.Split('\n')];
         int changeLog = FindChangeLogHeadingLineIndex([.. lines]);
         int limit = changeLog < 0 ? lines.Count : changeLog;
@@ -493,7 +496,7 @@ internal static partial class TaskFileFormat
     /// </summary>
     private static bool HasFrontmatterBlock(string text)
     {
-        string normalized = text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace("\r", "\n", StringComparison.Ordinal);
+        string normalized = text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
         string[] lines = normalized.Split('\n');
         if (lines.Length < 2 || lines[0].Trim() != "---")
         {
@@ -819,8 +822,8 @@ internal static partial class TaskFileFormat
             .Replace("\\", "\\\\", StringComparison.Ordinal)
             .Replace("|", "\\|", StringComparison.Ordinal)
             .Replace("\r\n", " ", StringComparison.Ordinal)
-            .Replace("\n", " ", StringComparison.Ordinal)
-            .Replace("\r", " ", StringComparison.Ordinal);
+            .Replace('\n', ' ')
+            .Replace('\r', ' ');
 
     /// <summary>
     /// Reverses <see cref="EscapeEntryField"/> in a single left-to-right pass, so an escaped

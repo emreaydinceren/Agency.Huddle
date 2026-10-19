@@ -1,12 +1,7 @@
-using System.Diagnostics.CodeAnalysis;
 using Agency.Huddle.App.Services;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Agency.Huddle.App.Acp;
-
-/// <summary>An Adapter command a Human asked a Teammate to run: its name, and the free text that follows it.</summary>
-/// <param name="Name">The name after the slash, without it.</param>
-/// <param name="Arguments">Everything after the name, trimmed; empty when there is none. Passed to the Adapter verbatim.</param>
-internal sealed record AdapterCommandCall(string Name, string Arguments);
 
 /// <summary>
 /// Decides, from a Message's text alone, whether it is an Adapter command addressed to one Teammate:

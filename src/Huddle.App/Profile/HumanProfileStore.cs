@@ -1,18 +1,11 @@
+using Agency.Huddle.App.Watching;
+using Agency.Huddle.Contracts;
+using Microsoft.Extensions.Options;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App.Watching;
-using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Profile;
-
-/// <summary>
-/// The old and new Name of a Human rename, raised by <see cref="HumanProfileStore.HumanRenamed"/>.
-/// </summary>
-/// <param name="OldName">The Name the Human had before.</param>
-/// <param name="NewName">The Name the Human has now.</param>
-internal sealed record HumanRenamed(string OldName, string NewName);
 
 /// <summary>
 /// Stores the Human's profile in a Human-editable file at <c>{DataDir}/profile.json</c> and serves it

@@ -8,9 +8,3 @@ namespace Agency.Huddle.App.Search;
 /// <param name="MaxHits">The per-group cap for this view.</param>
 /// <param name="Purpose">Why the search runs; <see cref="SearchPurpose.Box"/> unless the Composer's picker asked (D-4).</param>
 public sealed record SearchQuery(string Text, SearchFilter Filter, string? OpenTeam, SearchScope Scope, int MaxHits, SearchPurpose Purpose = SearchPurpose.Box);
-
-/// <summary>What the box text means: its filter, its phrase, and whether it searches (spec §7.2). Built by the parser.</summary>
-/// <param name="Filter">The filter the prefix sets, or the chip's filter when there is none.</param>
-/// <param name="Phrase">The text after any prefix, trimmed.</param>
-/// <param name="IsSearchable">Whether the phrase is long enough, or is a browse of Teams or Teammates.</param>
-public sealed record SearchParse(SearchFilter Filter, string Phrase, bool IsSearchable);

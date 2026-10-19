@@ -340,53 +340,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                 return null;
             }
 
-            string? targetDirectory = Path.GetDirectoryName(targetPath);
-            if (targetDirectory is not null)
-            {
-                Directory.CreateDirectory(targetDirectory);
-            }
-
-            bool sameLocation = string.Equals(task.Path, targetPath, StringComparison.Ordinal);
-
-            if (!sameLocation)
-            {
-                bool caseOnlyRename = FolderSnapshot.PathComparer.Equals(task.Path, targetPath);
-
-                if (caseOnlyRename)
-                {
-                    string tempPath = task.Path + ".tmp-move";
-                    File.Move(task.Path, tempPath, overwrite: false);
-                    File.Move(tempPath, targetPath, overwrite: false);
-                }
-                else
-                {
-                    if (File.Exists(targetPath))
-                    {
-                        throw new IOException(string.Create(
-                            CultureInfo.InvariantCulture,
-                            $"A file named {Path.GetFileName(targetPath)} already exists in {targetDirectory}."));
-                    }
-
-                    File.Move(task.Path, targetPath, overwrite: false);
-                }
-            }
-
-            try
-            {
-                AtomicFile.WriteText(targetPath, text);
-            }
-            catch (IOException)
-            {
-                // Roll back the rename, so a failed write never leaves the Task missing from both
-                // the source and the target (Settled corrections-B2 D5 item 2: "On failure of the
-                // write, move it back"). Nothing to roll back when the target was the source all along.
-                if (!sameLocation)
-                {
-                    File.Move(targetPath, task.Path, overwrite: false);
-                }
-
-                throw;
-            }
+            MoveAndWrite(task.Path, targetPath, text);
 
             written = ReparseWritten(targetPath, canonicalTo, task.Id, "moved");
             this.lastSeenVersion.Remove(task.Path);
@@ -397,6 +351,65 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
 
         changed?.Invoke();
         return written;
+    }
+
+    /// <summary>
+    /// Renames the Task file from <paramref name="sourcePath"/> to <paramref name="targetPath"/> (creating the target
+    /// folder, going through a temp name for a case-only change, and writing in place when they are the same path),
+    /// then writes <paramref name="text"/> there. A failed write moves the file back before the exception propagates.
+    /// </summary>
+    /// <param name="sourcePath">The Task file's current path.</param>
+    /// <param name="targetPath">The Task file's new path.</param>
+    /// <param name="text">The full file text to write at the target.</param>
+    private static void MoveAndWrite(string sourcePath, string targetPath, string text)
+    {
+        string? targetDirectory = Path.GetDirectoryName(targetPath);
+        if (targetDirectory is not null)
+        {
+            Directory.CreateDirectory(targetDirectory);
+        }
+
+        bool sameLocation = string.Equals(sourcePath, targetPath, StringComparison.Ordinal);
+
+        if (!sameLocation)
+        {
+            bool caseOnlyRename = FolderSnapshot.PathComparer.Equals(sourcePath, targetPath);
+
+            if (caseOnlyRename)
+            {
+                string tempPath = sourcePath + ".tmp-move";
+                File.Move(sourcePath, tempPath, overwrite: false);
+                File.Move(tempPath, targetPath, overwrite: false);
+            }
+            else
+            {
+                if (File.Exists(targetPath))
+                {
+                    throw new IOException(string.Create(
+                        CultureInfo.InvariantCulture,
+                        $"A file named {Path.GetFileName(targetPath)} already exists in {targetDirectory}."));
+                }
+
+                File.Move(sourcePath, targetPath, overwrite: false);
+            }
+        }
+
+        try
+        {
+            AtomicFile.WriteText(targetPath, text);
+        }
+        catch (IOException)
+        {
+            // Roll back the rename, so a failed write never leaves the Task missing from both
+            // the source and the target (Settled corrections-B2 D5 item 2: "On failure of the
+            // write, move it back"). Nothing to roll back when the target was the source all along.
+            if (!sameLocation)
+            {
+                File.Move(targetPath, sourcePath, overwrite: false);
+            }
+
+            throw;
+        }
     }
 
     /// <summary>
@@ -922,9 +935,42 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     {
         (List<TeamFolder> rawTeams, Dictionary<string, string> aliasToCanonical) = this.BuildTeams();
 
-        List<(TaskItem Task, string Path)> parsed = [];
         List<RejectedTaskFile> rejected = [];
+        List<(TaskItem Task, string Path)> parsed = this.ParseTaskFiles(aliasToCanonical, rejected);
 
+        List<TaskItem> all = [];
+        Dictionary<TaskId, TaskItem> byId = [];
+        foreach (IGrouping<TaskId, (TaskItem Task, string Path)> group in parsed.GroupBy(item => item.Task.Id))
+        {
+            List<(TaskItem Task, string Path)> items = group.ToList();
+            if (items.Count == 1)
+            {
+                all.Add(items[0].Task);
+                byId[items[0].Task.Id] = items[0].Task;
+                continue;
+            }
+
+            foreach ((TaskItem Task, string Path) item in items)
+            {
+                string othersJoined = string.Join(
+                    ", ",
+                    items.Where(other => !string.Equals(other.Path, item.Path, StringComparison.Ordinal)).Select(other => other.Path));
+                rejected.Add(new RejectedTaskFile(item.Path, $"duplicate id {item.Task.Id}, also in {othersJoined}"));
+            }
+        }
+
+        return new TaskSnapshot(all, byId.ToFrozenDictionary(), rejected, this.RecomputeOrphans(rawTeams));
+    }
+
+    /// <summary>
+    /// Reads and parses every candidate Task file under <see cref="RootDirectory"/>; a file in a duplicate-cased Team
+    /// folder, or that cannot be read or parsed, is added to <paramref name="rejected"/> instead.
+    /// </summary>
+    /// <param name="aliasToCanonical">Each Team folder name's canonical spelling.</param>
+    /// <param name="rejected">Receives every rejected file.</param>
+    private List<(TaskItem Task, string Path)> ParseTaskFiles(Dictionary<string, string> aliasToCanonical, List<RejectedTaskFile> rejected)
+    {
+        List<(TaskItem Task, string Path)> parsed = [];
         List<string> files = this.EnumerateTaskFiles();
 
         foreach (string path in files)
@@ -968,28 +1014,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             parsed.Add((task, path));
         }
 
-        List<TaskItem> all = [];
-        Dictionary<TaskId, TaskItem> byId = [];
-        foreach (IGrouping<TaskId, (TaskItem Task, string Path)> group in parsed.GroupBy(item => item.Task.Id))
-        {
-            List<(TaskItem Task, string Path)> items = group.ToList();
-            if (items.Count == 1)
-            {
-                all.Add(items[0].Task);
-                byId[items[0].Task.Id] = items[0].Task;
-                continue;
-            }
-
-            foreach ((TaskItem Task, string Path) item in items)
-            {
-                string othersJoined = string.Join(
-                    ", ",
-                    items.Where(other => !string.Equals(other.Path, item.Path, StringComparison.Ordinal)).Select(other => other.Path));
-                rejected.Add(new RejectedTaskFile(item.Path, $"duplicate id {item.Task.Id}, also in {othersJoined}"));
-            }
-        }
-
-        return new TaskSnapshot(all, byId.ToFrozenDictionary(), rejected, this.RecomputeOrphans(rawTeams));
+        return parsed;
     }
 
     /// <summary>

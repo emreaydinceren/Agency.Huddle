@@ -1,36 +1,6 @@
 namespace Agency.Huddle.App.Library;
 
 /// <summary>
-/// The kind of problem found in a path segment by <see cref="LibrarySegments.Check(string)"/>.
-/// </summary>
-internal enum SegmentProblemKind
-{
-    /// <summary>The segment is empty.</summary>
-    Empty,
-
-    /// <summary>The segment is <c>.</c> or <c>..</c>.</summary>
-    DotSegment,
-
-    /// <summary>The segment contains a character that is invalid in a file or folder name.</summary>
-    InvalidCharacter,
-
-    /// <summary>The segment ends with a dot or a space.</summary>
-    TrailingDotOrSpace,
-
-    /// <summary>The segment's stem is a name reserved by Windows (e.g. <c>CON</c>, <c>NUL</c>).</summary>
-    ReservedDeviceName,
-
-    /// <summary>The segment is shaped like a Windows 8.3 short-name alias (e.g. <c>ROOM-S~1</c>).</summary>
-    ShortNameAlias,
-}
-
-/// <summary>A single problem found in a path segment by <see cref="LibrarySegments.Check(string)"/>.</summary>
-/// <param name="Kind">The kind of problem found.</param>
-/// <param name="Character">The offending character, when <paramref name="Kind"/> is <see cref="SegmentProblemKind.InvalidCharacter"/>.</param>
-/// <param name="DeviceName">The reserved device name, when <paramref name="Kind"/> is <see cref="SegmentProblemKind.ReservedDeviceName"/>.</param>
-internal sealed record SegmentProblem(SegmentProblemKind Kind, char Character = '\0', string? DeviceName = null);
-
-/// <summary>
 /// The single per-segment rule set shared by <see cref="LibraryPathResolver"/>'s step 2 and
 /// <c>LibraryNames.Validate</c> (corrections-B3 Addendum A1), so the two can never drift. Every rule
 /// lives once in <see cref="Check(string)"/>; <see cref="Refusal(string)"/> and <c>LibraryNames.Validate</c>

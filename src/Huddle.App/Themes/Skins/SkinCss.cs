@@ -4,14 +4,6 @@ using System.Text;
 namespace Agency.Huddle.App.Themes.Skins;
 
 /// <summary>
-/// The two font stacks a skin sets, already formatted as CSS <c>font-family</c> values (family names quoted with
-/// <c>"</c>). Either may be <see langword="null"/> to leave the matching variable to <c>app-vars.css</c>.
-/// </summary>
-/// <param name="Read">The reading face, written as <c>--font-read</c>.</param>
-/// <param name="Mono">The monospace face, written as <c>--font-mono</c>.</param>
-internal sealed record SkinFacesCss(string? Read, string? Mono);
-
-/// <summary>
 /// Writes the <c>:root{...}</c> block that declares every skin token, either the registry defaults (which
 /// <c>app-vars.css</c> carries verbatim) or a skin's overrides merged over them. The output holds none of
 /// <c>&lt; &gt; &amp; @</c>, so the layout can write it as raw markup inside a <c>style</c> element.

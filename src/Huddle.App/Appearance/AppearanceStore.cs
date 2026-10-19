@@ -625,7 +625,9 @@ internal sealed partial class AppearanceStore : IDisposable
                 this.path,
                 key,
                 candidate ?? node.ToJsonString(),
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                 mode);
+#pragma warning restore HAA0601
         }
 
         return active.Mode == mode ? active.Id : null;
@@ -716,7 +718,9 @@ internal sealed partial class AppearanceStore : IDisposable
                 ex,
                 "Could not read appearance file '{Path}' after {Attempts} attempts; keeping the previously resolved appearance.",
                 this.path,
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                 RetryingFileRead.Attempts);
+#pragma warning restore HAA0601
         }
 
         return null;

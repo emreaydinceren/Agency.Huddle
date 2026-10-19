@@ -383,32 +383,7 @@ internal sealed class TaskService : IDisposable
     /// <param name="newName">The Teammate's new Name.</param>
     private void RenameTeammateCore(string oldName, string newName)
     {
-        List<(TaskItem Task, string ExpectedVersion, string Text)> writes = [];
-        foreach (TaskItem task in this.store.All)
-        {
-            bool matchesAssignee = task.Assignee is { Length: > 0 } assignee && string.Equals(assignee, oldName, StringComparison.OrdinalIgnoreCase);
-            bool matchesCreator = string.Equals(task.Creator, oldName, StringComparison.OrdinalIgnoreCase);
-            if (!matchesAssignee && !matchesCreator)
-            {
-                continue;
-            }
-
-            string? currentText = this.store.ReadText(task.Id);
-            if (currentText is null)
-            {
-                continue;
-            }
-
-            TaskItem candidate = task with
-            {
-                Assignee = matchesAssignee ? newName : task.Assignee,
-                Creator = matchesCreator ? newName : task.Creator,
-            };
-
-            string newText = TaskFileFormat.ReplaceHead(currentText, candidate);
-            writes.Add((task, task.Version, newText));
-        }
-
+        List<(TaskItem Task, string ExpectedVersion, string Text)> writes = this.CollectRenameWrites(oldName, newName);
         if (writes.Count == 0)
         {
             return;
@@ -444,19 +419,79 @@ internal sealed class TaskService : IDisposable
                     "Could not rename Teammate '{OldName}' to '{NewName}' in Task '{TaskId}': the file changed on disk since it was read.",
                     oldName,
                     newName,
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                     writes[i].Task.Id);
+#pragma warning restore HAA0601
             }
         }
+    }
+
+    /// <summary>The write for each Task whose creator or assignee is <paramref name="oldName"/>, with the head recomposed under <paramref name="newName"/>.</summary>
+    /// <param name="oldName">The Teammate's current Name.</param>
+    /// <param name="newName">The Teammate's new Name.</param>
+    private List<(TaskItem Task, string ExpectedVersion, string Text)> CollectRenameWrites(string oldName, string newName)
+    {
+        List<(TaskItem Task, string ExpectedVersion, string Text)> writes = [];
+        foreach (TaskItem task in this.store.All)
+        {
+            bool matchesAssignee = task.Assignee is { Length: > 0 } assignee && string.Equals(assignee, oldName, StringComparison.OrdinalIgnoreCase);
+            bool matchesCreator = string.Equals(task.Creator, oldName, StringComparison.OrdinalIgnoreCase);
+            if (!matchesAssignee && !matchesCreator)
+            {
+                continue;
+            }
+
+            string? currentText = this.store.ReadText(task.Id);
+            if (currentText is null)
+            {
+                continue;
+            }
+
+            TaskItem candidate = task with
+            {
+                Assignee = matchesAssignee ? newName : task.Assignee,
+                Creator = matchesCreator ? newName : task.Creator,
+            };
+
+            string newText = TaskFileFormat.ReplaceHead(currentText, candidate);
+            writes.Add((task, task.Version, newText));
+        }
+
+        return writes;
     }
 
     /// <summary>The body of <see cref="Create"/>, run under <see cref="mutateGate"/>. Returns the change to raise, or <see langword="null"/> when nothing was written.</summary>
     private (TaskResult Result, TaskChange? Change) CreateCore(TaskDraft draft, TaskActor actor, bool humanOverridesGates)
     {
+        TaskItem candidate = this.BuildCandidate(draft, actor);
+        string team = candidate.Location.Team;
+
+        List<string> problems = this.Validate(candidate, touchedFields: null, reason: null);
+        if (problems.Count > 0)
+        {
+            return (new TaskResult.Refused(problems), null);
+        }
+
+        // A Task may be created in a gated status only when no gate refuses it (the Human may override on request).
+        GateRefusal? refusal = candidate.Status is TaskState.InProgress or TaskState.Review or TaskState.Done
+            ? this.CheckGates(candidate with { Status = TaskState.Backlog }, candidate, string.Empty, actor)
+            : null;
+        if (refusal is not null && (actor.Kind != TaskActorKind.Human || !humanOverridesGates))
+        {
+            return (new TaskResult.GateRefused(refusal.Gate, refusal.Message), null);
+        }
+
+        return this.WriteNewTask(candidate, team, refusal, actor);
+    }
+
+    /// <summary>The not-yet-numbered Task a draft asks for: its Team and Project made canonical and its assignee resolved.</summary>
+    private TaskItem BuildCandidate(TaskDraft draft, TaskActor actor)
+    {
         string team = this.CanonicalizeTeam(draft.Team);
         string? project = this.CanonicalizeProject(team, draft.Project);
         string? assignee = this.ResolveAssignee(draft.Assignee);
 
-        TaskItem candidate = new()
+        return new()
         {
             Id = default,
             Title = draft.Title,
@@ -478,22 +513,11 @@ internal sealed class TaskService : IDisposable
             Path = "",
             Version = "",
         };
+    }
 
-        List<string> problems = this.Validate(candidate, touchedFields: null, reason: null);
-        if (problems.Count > 0)
-        {
-            return (new TaskResult.Refused(problems), null);
-        }
-
-        // A Task may be created in a gated status only when no gate refuses it (the Human may override on request).
-        GateRefusal? refusal = candidate.Status is TaskState.InProgress or TaskState.Review or TaskState.Done
-            ? this.CheckGates(candidate with { Status = TaskState.Backlog }, candidate, string.Empty, actor)
-            : null;
-        if (refusal is not null && (actor.Kind != TaskActorKind.Human || !humanOverridesGates))
-        {
-            return (new TaskResult.GateRefused(refusal.Gate, refusal.Message), null);
-        }
-
+    /// <summary>Numbers and writes a validated candidate, noting a gate the Human overrode; throws when the allocated path is taken.</summary>
+    private (TaskResult Result, TaskChange? Change) WriteNewTask(TaskItem candidate, string team, GateRefusal? refusal, TaskActor actor)
+    {
         string prefix = this.ids.PrefixFor(team);
         int highestSeen = this.store.HighestNumber(prefix);
         TaskId id = this.ids.Next(team, highestSeen);
@@ -520,7 +544,9 @@ internal sealed class TaskService : IDisposable
             // an invariant break, not an expected failure, so it's logged and thrown rather than a
             // TaskResult (house principle: expected failures are TaskResults, invariant breaks are
             // exceptions).
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
             this.logger.LogError("Task '{TaskId}' could not be created: a file already exists at '{Path}'.", id, toWrite.Path);
+#pragma warning restore HAA0601
             throw new InvalidOperationException(string.Create(CultureInfo.InvariantCulture, $"Task '{id}' already exists."));
         }
 
@@ -586,6 +612,12 @@ internal sealed class TaskService : IDisposable
             return (new TaskResult.GateRefused(refusal.Gate, refusal.Message), null);
         }
 
+        return this.WriteUpdate(current, candidate, resolvedPatch, diff, currentText, refusal, actor);
+    }
+
+    /// <summary>Appends the Change log entry for an accepted update and writes the Task, moving it when its Team or Project changed.</summary>
+    private (TaskResult Result, TaskChange? Change) WriteUpdate(TaskItem current, TaskItem candidate, TaskPatch resolvedPatch, IReadOnlyList<FieldChange> diff, string currentText, GateRefusal? refusal, TaskActor actor)
+    {
         DateTimeOffset at = TruncateToSeconds(this.clock.GetUtcNow());
         string summary = TaskDiff.Summarise(diff);
         if (resolvedPatch.Reason is { Length: > 0 } reason)
@@ -612,7 +644,7 @@ internal sealed class TaskService : IDisposable
 
         if (written is null)
         {
-            return (new TaskResult.Conflict(this.store.Get(id) ?? current, []), null);
+            return (new TaskResult.Conflict(this.store.Get(current.Id) ?? current, []), null);
         }
 
         TaskChange change = new(current, written, diff, actor, entry);

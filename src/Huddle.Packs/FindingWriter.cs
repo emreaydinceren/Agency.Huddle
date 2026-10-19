@@ -1,17 +1,10 @@
+using Agency.Huddle.SkillPacks.Checking;
 using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Agency.Huddle.SkillPacks.Checking;
 
 namespace Agency.Huddle.Packs;
-
-/// <summary>One line of <c>validate</c> output before the columns are padded.</summary>
-/// <param name="Severity"><c>ERROR</c>, <c>WARN</c> or <c>OK</c>.</param>
-/// <param name="Code">The code; empty for <c>OK</c>.</param>
-/// <param name="File">The file as shown.</param>
-/// <param name="Message">The message on one line.</param>
-internal sealed record OutputLine(string Severity, string Code, string File, string Message);
 
 /// <summary>Writes <c>validate</c>'s lines and JSON (§6.4, "Output lines").</summary>
 internal static class FindingWriter

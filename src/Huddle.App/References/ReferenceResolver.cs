@@ -44,7 +44,7 @@ internal sealed class ReferenceResolver(
     /// <returns>The capped references and how many non-file references resolved before the cap.</returns>
     public async Task<ResolvedSet> ResolveCurrentAsync(IReadOnlyList<ReferenceCandidate> candidates, CancellationToken ct)
     {
-        IReadOnlyList<ResolvedReference> all = await this.ResolveCoreAsync(candidates, true, ct);
+        IReadOnlyList<ResolvedReference> all = await this.ResolveCoreAsync(candidates, true, ct).ConfigureAwait(false);
         int eligible = all.Count(static reference => reference is not ResolvedLibraryFile);
         return new ResolvedSet(ReferenceResolver.Cap(all), eligible);
     }
@@ -95,8 +95,8 @@ internal sealed class ReferenceResolver(
             ResolvedReference? reference = candidate.Kind switch
             {
                 ReferenceKind.Task => this.ResolveTask(candidate.Key, dropUnresolvedTasksAndFiles),
-                ReferenceKind.Room => await this.ResolveRoomAsync(candidate.Key, ct),
-                ReferenceKind.Team => await this.ResolveTeamAsync(candidate.Key, ct),
+                ReferenceKind.Room => await this.ResolveRoomAsync(candidate.Key, ct).ConfigureAwait(false),
+                ReferenceKind.Team => await this.ResolveTeamAsync(candidate.Key, ct).ConfigureAwait(false),
                 ReferenceKind.LibraryFile => this.ResolveFile(candidate.Key, dropUnresolvedTasksAndFiles),
                 _ => null,
             };
@@ -135,13 +135,13 @@ internal sealed class ReferenceResolver(
     /// <returns>The resolved or gone Room.</returns>
     private async Task<ResolvedReference> ResolveRoomAsync(string key, CancellationToken ct)
     {
-        Room? room = await directory.GetRoomAsync(key, ct);
+        Room? room = await directory.GetRoomAsync(key, ct).ConfigureAwait(false);
         if (room is null)
         {
             return new GoneReference(ReferenceKind.Room, key);
         }
 
-        IReadOnlyList<User> members = await directory.GetRoomMembersAsync(key, ct);
+        IReadOnlyList<User> members = await directory.GetRoomMembersAsync(key, ct).ConfigureAwait(false);
         return new ResolvedRoom(room.Id, room.Name, members.Count, room.Team, room.IsTeamRoom);
     }
 
@@ -159,7 +159,7 @@ internal sealed class ReferenceResolver(
 
         string? typeId = team.TeamType?.Id;
         string? typeLabel = typeId is null ? null : (types.Find(typeId)?.DisplayName ?? typeId);
-        Room? teamRoom = await directory.FindTeamRoomAsync(team.Name, ct);
+        Room? teamRoom = await directory.FindTeamRoomAsync(team.Name, ct).ConfigureAwait(false);
         return new ResolvedTeam(team.Name, typeLabel, team.Members, teamRoom?.Id);
     }
 

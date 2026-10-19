@@ -142,7 +142,7 @@ internal static class TaskToolText
         ArgumentNullException.ThrowIfNull(directory);
         ArgumentException.ThrowIfNullOrWhiteSpace(callerAgentId);
 
-        User? user = await directory.GetUserAsync(callerAgentId, cancellationToken);
+        User? user = await directory.GetUserAsync(callerAgentId, cancellationToken).ConfigureAwait(false);
         if (user is null)
         {
             return (null, $"Could not identify caller '{callerAgentId}' as a Teammate.");

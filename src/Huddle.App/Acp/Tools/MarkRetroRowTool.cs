@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
@@ -49,41 +50,26 @@ internal sealed class MarkRetroRowTool(
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
+        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
         if (actor is null)
         {
             return actorRefusal;
         }
 
-        if (!TaskToolText.TryGetString(arguments, "team", out string? teamText, out string teamRefusal))
+        if (!TryReadTexts(arguments, out RetroTexts? texts, out string textsRefusal))
         {
-            return teamRefusal;
+            return textsRefusal;
         }
 
-        if (!TaskToolText.TryGetString(arguments, "rowId", out string? rowId, out string rowRefusal))
-        {
-            return rowRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "status", out string? statusText, out string statusRefusal))
-        {
-            return statusRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "evidence", out string? evidence, out string evidenceRefusal))
-        {
-            return evidenceRefusal;
-        }
-
-        if (string.IsNullOrWhiteSpace(teamText))
+        if (string.IsNullOrWhiteSpace(texts.Team))
         {
             return "team is required.";
         }
 
-        TeamSummary? team = teams.Find(teamText);
+        TeamSummary? team = teams.Find(texts.Team);
         if (team is null)
         {
-            return $"There is no Team named {teamText}.";
+            return $"There is no Team named {texts.Team}.";
         }
 
         string? refusal = RetroCaller.Check(personas, types, team, actor.Name, "Only the Team's manager or its Retro agent may mark its register rows.");
@@ -92,19 +78,49 @@ internal sealed class MarkRetroRowTool(
             return refusal;
         }
 
-        if (!TryParseTarget(statusText, out RetroStatus status))
+        if (!TryParseTarget(texts.Status, out RetroStatus status))
         {
             return "status must be Verified, Partial or Changed.";
         }
 
-        if (string.IsNullOrWhiteSpace(evidence))
+        if (string.IsNullOrWhiteSpace(texts.Evidence))
         {
             return "evidence is required.";
         }
 
+        return this.MarkRow(team.Name, texts.RowId, status, texts.Evidence);
+    }
+
+    /// <summary>Reads the four text arguments in order, each checked to be a string.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="texts">The argument texts when this returns <see langword="true"/>.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryReadTexts(JsonObject arguments, [NotNullWhen(true)] out RetroTexts? texts, out string refusal)
+    {
+        texts = null;
+        if (!TaskToolText.TryGetString(arguments, "team", out string? teamText, out refusal)
+            || !TaskToolText.TryGetString(arguments, "rowId", out string? rowId, out refusal)
+            || !TaskToolText.TryGetString(arguments, "status", out string? statusText, out refusal)
+            || !TaskToolText.TryGetString(arguments, "evidence", out string? evidence, out refusal))
+        {
+            return false;
+        }
+
+        texts = new RetroTexts(teamText, rowId, statusText, evidence);
+        refusal = string.Empty;
+        return true;
+    }
+
+    /// <summary>Checks the register row is due and the evidence suits the target status, then writes the new status.</summary>
+    /// <param name="teamName">The Team whose register is edited.</param>
+    /// <param name="rowId">The row id the model sent.</param>
+    /// <param name="status">The target status.</param>
+    /// <param name="evidence">The non-blank evidence text.</param>
+    private string MarkRow(string teamName, string? rowId, RetroStatus status, string evidence)
+    {
         try
         {
-            RegisterRow? row = register.ReadRegister(team.Name).FirstOrDefault(r => string.Equals(r.Id, rowId?.Trim(), StringComparison.Ordinal));
+            RegisterRow? row = register.ReadRegister(teamName).FirstOrDefault(r => string.Equals(r.Id, rowId?.Trim(), StringComparison.Ordinal));
             if (row is null)
             {
                 return $"The register has no row {rowId?.Trim()}.";
@@ -120,7 +136,7 @@ internal sealed class MarkRetroRowTool(
                 return "Verified needs evidence from after the change.";
             }
 
-            register.SetStatus(team.Name, row.Id, status, evidence.Trim());
+            register.SetStatus(teamName, row.Id, status, evidence.Trim());
             return $"Row {row.Id} is now {status}.";
         }
         catch (InvalidOperationException ex)
@@ -134,7 +150,9 @@ internal sealed class MarkRetroRowTool(
     {
         foreach (RetroStatus candidate in new[] { RetroStatus.Verified, RetroStatus.Partial, RetroStatus.Changed })
         {
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
             if (string.Equals(candidate.ToString(), text?.Trim(), StringComparison.OrdinalIgnoreCase))
+#pragma warning restore HAA0102
             {
                 status = candidate;
                 return true;
@@ -144,4 +162,11 @@ internal sealed class MarkRetroRowTool(
         status = RetroStatus.Open;
         return false;
     }
+
+    /// <summary>The four text arguments, once each is known to be a string.</summary>
+    /// <param name="Team">The Team name, if any.</param>
+    /// <param name="RowId">The register row id, if any.</param>
+    /// <param name="Status">The target status word, if any.</param>
+    /// <param name="Evidence">The evidence text, if any.</param>
+    private sealed record RetroTexts(string? Team, string? RowId, string? Status, string? Evidence);
 }

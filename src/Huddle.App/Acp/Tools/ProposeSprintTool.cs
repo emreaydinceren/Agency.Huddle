@@ -51,7 +51,7 @@ internal sealed class ProposeSprintTool(
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
+        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
         if (actor is null)
         {
             return actorRefusal;
@@ -63,58 +63,21 @@ internal sealed class ProposeSprintTool(
             return "Only the manager of a Team can propose a Sprint.";
         }
 
-        if (!TaskToolText.TryGetString(arguments, "name", out string? nameText, out string nameRefusal))
+        if (!TryReadName(arguments, out string name, out string nameRefusal))
         {
             return nameRefusal;
         }
 
-        string name = nameText?.Trim() ?? string.Empty;
-        if (name.Length == 0)
+        if (!this.TryResolveTasks(arguments, out List<TaskItem> found, out string tasksRefusal))
         {
-            return "Give the Sprint a name in 'name'.";
-        }
-
-        if (SprintFileFormat.ValidateName(name) is { } nameProblem)
-        {
-            return nameProblem;
-        }
-
-        if (!TaskToolText.TryGetStringList(arguments, "taskIds", out IReadOnlyList<string>? idTexts, out string idsRefusal))
-        {
-            return idsRefusal;
-        }
-
-        if (idTexts is null || idTexts.Count == 0)
-        {
-            return "Give at least one task id in 'taskIds'.";
-        }
-
-        List<TaskItem> found = [];
-        foreach (string idText in idTexts)
-        {
-            if (!TaskToolText.TryResolve(tasks, idText, out TaskItem? task, out string taskRefusal))
-            {
-                return taskRefusal;
-            }
-
-            if (found.All(each => each.Id != task.Id))
-            {
-                found.Add(task);
-            }
+            return tasksRefusal;
         }
 
         TeamSummary team = managed.FirstOrDefault(each => string.Equals(each.Name, found[0].Location.Team, StringComparison.OrdinalIgnoreCase)) ?? managed[0];
-        foreach (TaskItem task in found)
+        string? membershipRefusal = CheckTasksBelongTo(team, found);
+        if (membershipRefusal is not null)
         {
-            if (!string.Equals(task.Location.Team, team.Name, StringComparison.OrdinalIgnoreCase))
-            {
-                return $"Task {task.Id} belongs to Team {task.Location.Team}, not Team {team.Name}.";
-            }
-
-            if (task.Status == TaskState.Done)
-            {
-                return $"Task {task.Id} is already Done.";
-            }
+            return membershipRefusal;
         }
 
         Sprint? existing = sprints.FindByName(name);
@@ -132,5 +95,92 @@ internal sealed class ProposeSprintTool(
         return proposals.Add(proposal)
             ? "Proposal sent to the Human."
             : "The proposal could not be saved; try again.";
+    }
+
+    /// <summary>Reads the Sprint <c>name</c> argument: present, valid for a Sprint file and trimmed.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="name">The trimmed name when this returns <see langword="true"/>.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryReadName(JsonObject arguments, out string name, out string refusal)
+    {
+        name = string.Empty;
+        if (!TaskToolText.TryGetString(arguments, "name", out string? nameText, out refusal))
+        {
+            return false;
+        }
+
+        string trimmed = nameText?.Trim() ?? string.Empty;
+        if (trimmed.Length == 0)
+        {
+            refusal = "Give the Sprint a name in 'name'.";
+            return false;
+        }
+
+        if (SprintFileFormat.ValidateName(trimmed) is { } nameProblem)
+        {
+            refusal = nameProblem;
+            return false;
+        }
+
+        name = trimmed;
+        refusal = string.Empty;
+        return true;
+    }
+
+    /// <summary>Resolves the <c>taskIds</c> argument to distinct Tasks; at least one id is required.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="found">The distinct Tasks, in the order named, when this returns <see langword="true"/>.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private bool TryResolveTasks(JsonObject arguments, out List<TaskItem> found, out string refusal)
+    {
+        found = [];
+        if (!TaskToolText.TryGetStringList(arguments, "taskIds", out IReadOnlyList<string>? idTexts, out refusal))
+        {
+            return false;
+        }
+
+        if (idTexts is null || idTexts.Count == 0)
+        {
+            refusal = "Give at least one task id in 'taskIds'.";
+            return false;
+        }
+
+        foreach (string idText in idTexts)
+        {
+            if (!TaskToolText.TryResolve(tasks, idText, out TaskItem? task, out refusal))
+            {
+                return false;
+            }
+
+            if (found.All(each => each.Id != task.Id))
+            {
+                found.Add(task);
+            }
+        }
+
+        refusal = string.Empty;
+        return true;
+    }
+
+    /// <summary>Checks that every Task belongs to <paramref name="team"/> and none is Done yet.</summary>
+    /// <param name="team">The Team the Sprint is proposed for.</param>
+    /// <param name="found">The Tasks to check.</param>
+    /// <returns>The refusal text, or <see langword="null"/> when every Task is fine.</returns>
+    private static string? CheckTasksBelongTo(TeamSummary team, List<TaskItem> found)
+    {
+        foreach (TaskItem task in found)
+        {
+            if (!string.Equals(task.Location.Team, team.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                return $"Task {task.Id} belongs to Team {task.Location.Team}, not Team {team.Name}.";
+            }
+
+            if (task.Status == TaskState.Done)
+            {
+                return $"Task {task.Id} is already Done.";
+            }
+        }
+
+        return null;
     }
 }

@@ -170,27 +170,61 @@ internal static class LibraryFileKinds
     /// <summary>Checks if the content head contains image magic bytes.</summary>
     private static bool IsImageMagic(ReadOnlySpan<byte> head) => ImageContentType(head) is not null;
 
-    /// <summary>Sniffs the file kind based on content.</summary>
-    private static LibraryFileKind SniffFileKind(ReadOnlySpan<byte> head)
+    /// <summary>Checks if the content head starts with a UTF-16 LE, UTF-16 BE or UTF-8 byte order mark.</summary>
+    private static bool HasTextBom(ReadOnlySpan<byte> head)
     {
-        // Check for BOM first (before NUL check, as UTF-16 can contain legitimate NULs)
         if (head.Length >= 2)
         {
             // UTF-16 LE BOM
             if (head[0] == 0xFF && head[1] == 0xFE && !(head.Length >= 4 && head[2] == 0x00 && head[3] == 0x00))
             {
-                return LibraryFileKind.Text;
+                return true;
             }
 
             // UTF-16 BE BOM
             if (head[0] == 0xFE && head[1] == 0xFF)
             {
-                return LibraryFileKind.Text;
+                return true;
             }
         }
 
         // UTF-8 BOM
-        if (head.Length >= 3 && head[0] == 0xEF && head[1] == 0xBB && head[2] == 0xBF)
+        return head.Length >= 3 && head[0] == 0xEF && head[1] == 0xBB && head[2] == 0xBF;
+    }
+
+    /// <summary>Checks if the content head starts with a known binary file signature (ZIP, PDF, EXE/DLL or ELF).</summary>
+    private static bool HasBinarySignature(ReadOnlySpan<byte> head)
+    {
+        if (head.Length >= 2)
+        {
+            // ZIP/PPTX/DOCX (PK..)
+            if (head[0] == 0x50 && head[1] == 0x4B)
+            {
+                return true;
+            }
+
+            // PDF (%PDF)
+            if (head.Length >= 4 && head[0] == 0x25 && head[1] == 0x50 && head[2] == 0x44 && head[3] == 0x46)
+            {
+                return true;
+            }
+
+            // EXE/DLL (MZ)
+            if (head[0] == 0x4D && head[1] == 0x5A)
+            {
+                return true;
+            }
+        }
+
+        // ELF executable (\x7fELF)
+        return head.Length >= 4 && head[0] == 0x7F && head[1] == 0x45 && head[2] == 0x4C && head[3] == 0x46;
+    }
+
+    /// <summary>Sniffs the file kind based on content.</summary>
+    private static LibraryFileKind SniffFileKind(ReadOnlySpan<byte> head)
+    {
+        // Check for BOM first (before NUL check, as UTF-16 can contain legitimate NULs)
+        if (HasTextBom(head))
         {
             return LibraryFileKind.Text;
         }
@@ -202,29 +236,7 @@ internal static class LibraryFileKinds
         }
 
         // Check for known binary file signatures
-        if (head.Length >= 2)
-        {
-            // ZIP/PPTX/DOCX (PK..)
-            if (head[0] == 0x50 && head[1] == 0x4B)
-            {
-                return LibraryFileKind.Other;
-            }
-
-            // PDF (%PDF)
-            if (head.Length >= 4 && head[0] == 0x25 && head[1] == 0x50 && head[2] == 0x44 && head[3] == 0x46)
-            {
-                return LibraryFileKind.Other;
-            }
-
-            // EXE/DLL (MZ)
-            if (head[0] == 0x4D && head[1] == 0x5A)
-            {
-                return LibraryFileKind.Other;
-            }
-        }
-
-        // ELF executable (\x7fELF)
-        if (head.Length >= 4 && head[0] == 0x7F && head[1] == 0x45 && head[2] == 0x4C && head[3] == 0x46)
+        if (HasBinarySignature(head))
         {
             return LibraryFileKind.Other;
         }

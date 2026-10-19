@@ -13,6 +13,13 @@ public readonly partial record struct TaskId(string Prefix, int Number)
     public override string ToString() =>
         string.Create(CultureInfo.InvariantCulture, $"{this.Prefix}-{this.Number:D4}");
 
+    /// <summary>Writes the same text as <see cref="ToString"/> into <paramref name="destination"/> without allocating a string.</summary>
+    /// <param name="destination">The buffer to write into.</param>
+    /// <param name="charsWritten">How many characters were written; zero when <paramref name="destination"/> is too small.</param>
+    /// <returns><see langword="true"/> when the whole id fit; otherwise <see langword="false"/>.</returns>
+    public bool TryFormat(Span<char> destination, out int charsWritten) =>
+        destination.TryWrite(CultureInfo.InvariantCulture, $"{this.Prefix}-{this.Number:D4}", out charsWritten);
+
     /// <summary>Parses a TaskId from a string (case-insensitive, trims whitespace).</summary>
     public static bool TryParse(string? text, out TaskId id)
     {

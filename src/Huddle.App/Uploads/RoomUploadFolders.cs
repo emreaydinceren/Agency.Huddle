@@ -66,7 +66,7 @@ internal sealed class RoomUploadFolders(LibraryPathResolver resolver, LibraryFil
                 continue;
             }
 
-            LibraryResult<LibraryPath> result = await files.RecycleAsync(folder, ct);
+            LibraryResult<LibraryPath> result = await files.RecycleAsync(folder, ct).ConfigureAwait(false);
             if (result.Error is not null)
             {
                 failures.Add(result.Error);

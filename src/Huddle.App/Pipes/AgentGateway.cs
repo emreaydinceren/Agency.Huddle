@@ -54,7 +54,7 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
             return;
         }
 
-        await connection.SendAsync(new StopTurn(roomId), cancellationToken);
+        await connection.SendAsync(new StopTurn(roomId), cancellationToken).ConfigureAwait(false);
     }
 
     internal void Register(AgentConnection connection)
@@ -147,7 +147,7 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
             sends.Add(this.SendSafeAsync(connection, payload, ct));
         }
 
-        await Task.WhenAll(sends);
+        await Task.WhenAll(sends).ConfigureAwait(false);
     }
 
     public Task CloseAllAsync()
@@ -170,7 +170,7 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
     {
         try
         {
-            await connection.SendAsync(payload, ct);
+            await connection.SendAsync(payload, ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

@@ -26,7 +26,7 @@ internal static class PromptClipboard
         ArgumentNullException.ThrowIfNull(snackbar);
         ArgumentNullException.ThrowIfNull(text);
 
-        bool copied = await js.InvokeAsync<bool>(CopyHelper, ct, new object?[] { text });
+        bool copied = await js.InvokeAsync<bool>(CopyHelper, ct, new object?[] { text }).ConfigureAwait(false);
         if (copied)
         {
             snackbar.Add(CopiedMessage, Severity.Success, configure: null, key: SnackbarKey);

@@ -1,8 +1,8 @@
-using System.Text.Encodings.Web;
-using System.Text.Json;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.Contracts;
+using Microsoft.Extensions.Options;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 
 namespace Agency.Huddle.App.FileChanges;
 
@@ -329,22 +329,3 @@ internal sealed class FileStateStore(IOptions<TeamOptions> options, ILogger<File
         return new FileStateDocument([.. state.Subscribed], rooms, writers);
     }
 }
-
-/// <summary>The JSON shape of a <see cref="FileState"/> file, per FC §6.6.</summary>
-/// <param name="Subscribed">Entries added by <c>watch_folder</c>, in call order.</param>
-/// <param name="Rooms">Keyed by Room id.</param>
-/// <param name="Writers">Keyed by entry, then by relative path.</param>
-internal sealed record FileStateDocument(
-    List<string> Subscribed,
-    Dictionary<string, RoomBaselineDocument> Rooms,
-    Dictionary<string, Dictionary<string, FileWriterDocument>> Writers);
-
-/// <summary>The JSON shape of a <see cref="RoomBaseline"/>.</summary>
-/// <param name="Folders">Keyed by entry, then by relative path.</param>
-internal sealed record RoomBaselineDocument(Dictionary<string, Dictionary<string, FileEntryDocument>> Folders);
-
-/// <summary>The JSON shape of a <see cref="FileEntry"/>.</summary>
-internal sealed record FileEntryDocument(long Size, DateTimeOffset ModifiedUtc);
-
-/// <summary>The JSON shape of a <see cref="FileWriter"/>: its own entry's <see cref="FileEntry"/> fields flattened alongside the Room id.</summary>
-internal sealed record FileWriterDocument(string RoomId, long Size, DateTimeOffset ModifiedUtc);

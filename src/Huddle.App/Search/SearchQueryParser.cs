@@ -64,7 +64,9 @@ internal static class SearchQueryParser
             SearchFilter.Library => "lib:",
             SearchFilter.Tasks => "task:",
             SearchFilter.Rooms => "room:",
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
             _ => throw new ArgumentOutOfRangeException(nameof(filter), filter, "Unknown search filter."),
+#pragma warning restore HAA0601
         };
     }
 

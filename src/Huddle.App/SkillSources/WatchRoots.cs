@@ -3,16 +3,6 @@ using Agency.Huddle.SkillPacks.Resolving;
 
 namespace Agency.Huddle.App.SkillSources;
 
-/// <summary>One folder a watcher covers.</summary>
-/// <param name="Path">The folder.</param>
-/// <param name="Recursive">Whether sub-folders count.</param>
-internal sealed record WatchRoot(string Path, bool Recursive);
-
-/// <summary>What to watch and what to poll.</summary>
-/// <param name="Watched">At most <see cref="WatchRoots.MaxWatchers"/> roots with a <see cref="FileSystemWatcher"/>.</param>
-/// <param name="Polled">Roots polled every 30 seconds: missing paths, network paths and roots past the cap.</param>
-internal sealed record WatchPlan(IReadOnlyList<WatchRoot> Watched, IReadOnlyList<WatchRoot> Polled);
-
 /// <summary>The watch-root rule of §8.5, as a pure function.</summary>
 internal static class WatchRoots
 {

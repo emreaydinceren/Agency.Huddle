@@ -2,19 +2,6 @@ using Agency.Huddle.SkillPacks.Resolving;
 
 namespace Agency.Huddle.App.Skills.Ui;
 
-/// <summary>Where a Skills tab row comes from, for its Source column.</summary>
-internal enum SkillRowOrigin
-{
-    /// <summary>Shipped with Huddle (a default, or a default overridden on disk).</summary>
-    BuiltIn,
-
-    /// <summary>A folder put straight into <c>Skills/</c> with no <c>.source.json</c>.</summary>
-    Yours,
-
-    /// <summary>Known to the registry: fetched by the AI tool, copied, or listed but not on this computer yet.</summary>
-    Registry,
-}
-
 /// <summary>One row of the Skills tab (Skill Packs spec §6.9.3): a <see cref="SkillStore"/> Skill and/or a registry
 /// <see cref="SkillEntry"/>, joined by name.</summary>
 /// <param name="Name">The Skill name.</param>

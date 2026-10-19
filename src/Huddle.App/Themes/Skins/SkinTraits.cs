@@ -33,6 +33,7 @@ internal sealed record SkinTraits(
     public IReadOnlyDictionary<string, object> ToMarkerAttributes() =>
         new Dictionary<string, object>(StringComparer.Ordinal)
         {
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
             ["data-hu-message"] = SkinLoader.Kebab(this.Message.ToString()),
             ["data-hu-send"] = SkinLoader.Kebab(this.Send.ToString()),
             ["data-hu-status"] = SkinLoader.Kebab(this.Status.ToString()),
@@ -42,5 +43,6 @@ internal sealed record SkinTraits(
             ["data-hu-surface"] = SkinLoader.Kebab(this.Surface.ToString()),
             ["data-hu-marks"] = SkinLoader.Kebab(this.Marks.ToString()),
             ["data-hu-reading"] = SkinLoader.Kebab(this.Reading.ToString()),
+#pragma warning restore HAA0102
         };
 }

@@ -67,7 +67,7 @@ internal sealed class ProposeRetroChangesTool(
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
+        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
         if (actor is null)
         {
             return actorRefusal;
@@ -95,34 +95,9 @@ internal sealed class ProposeRetroChangesTool(
             return refusal;
         }
 
-        JsonArray items = arguments["proposals"] as JsonArray ?? [];
-        if (items.Count == 0)
+        if (!TryParseChanges(arguments, team, out List<RetroChange> changes, out string changesRefusal))
         {
-            return "Propose at least one change.";
-        }
-
-        if (items.Count > MaxChanges)
-        {
-            return "Propose at most 3 changes.";
-        }
-
-        List<RetroChange> changes = [];
-        foreach (JsonNode? item in items)
-        {
-            string title = Text(item, "title").Trim();
-            string file = Text(item, "targetFile");
-            string find = Text(item, "find");
-            if (title.Length == 0 || file.Length == 0 || find.Length == 0)
-            {
-                return "Each proposal needs a title, a targetFile and a find text.";
-            }
-
-            if (!IsAllowed(team, file))
-            {
-                return "targetFile must be Process.md, _team.md or the file of a Team member (Name.md).";
-            }
-
-            changes.Add(new RetroChange((changes.Count + 1).ToString(CultureInfo.InvariantCulture), title, file, find, Text(item, "replace")));
+            return changesRefusal;
         }
 
         foreach (RetroProposalSet earlier in proposals.Pending(team.Name).Where(set => string.Equals(set.Proposer, actor.Name, StringComparison.OrdinalIgnoreCase)))
@@ -134,6 +109,51 @@ internal sealed class ProposeRetroChangesTool(
         return proposals.Add(proposal)
             ? "Proposal sent to the Human."
             : "The proposal could not be saved; try again.";
+    }
+
+    /// <summary>Reads the <c>proposals</c> array into one to three changes, refusing a missing field or a file the Human may not be asked to edit.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="team">The Team the proposal is for.</param>
+    /// <param name="changes">The parsed changes when this returns <see langword="true"/>.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryParseChanges(JsonObject arguments, TeamSummary team, out List<RetroChange> changes, out string refusal)
+    {
+        changes = [];
+        JsonArray items = arguments["proposals"] as JsonArray ?? [];
+        if (items.Count == 0)
+        {
+            refusal = "Propose at least one change.";
+            return false;
+        }
+
+        if (items.Count > MaxChanges)
+        {
+            refusal = "Propose at most 3 changes.";
+            return false;
+        }
+
+        foreach (JsonNode? item in items)
+        {
+            string title = Text(item, "title").Trim();
+            string file = Text(item, "targetFile");
+            string find = Text(item, "find");
+            if (title.Length == 0 || file.Length == 0 || find.Length == 0)
+            {
+                refusal = "Each proposal needs a title, a targetFile and a find text.";
+                return false;
+            }
+
+            if (!IsAllowed(team, file))
+            {
+                refusal = "targetFile must be Process.md, _team.md or the file of a Team member (Name.md).";
+                return false;
+            }
+
+            changes.Add(new RetroChange((changes.Count + 1).ToString(CultureInfo.InvariantCulture), title, file, find, Text(item, "replace")));
+        }
+
+        refusal = string.Empty;
+        return true;
     }
 
     /// <summary>Whether <paramref name="file"/> is one of the three kinds the Human may be asked to edit. The file is matched by name only and never used as a path.</summary>

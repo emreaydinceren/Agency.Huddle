@@ -6,24 +6,6 @@ using Agency.Huddle.SkillPacks.Resolving;
 
 namespace Agency.Huddle.App.SkillSources;
 
-/// <summary>What happens to the Teammates that hold a Pack being removed (§6.12.2).</summary>
-internal enum HolderChoice
-{
-    /// <summary>No Teammate holds it.</summary>
-    None,
-
-    /// <summary>Keep their Skills: drop only the <c>_packs</c> entry.</summary>
-    Keep,
-
-    /// <summary>Remove from Teammates too: take off the Skills nobody else gave them and the phrase.</summary>
-    RemoveToo,
-}
-
-/// <summary>How a removal ended, in words the snackbar shows.</summary>
-/// <param name="Ok">Whether every step ran.</param>
-/// <param name="Message">The snackbar text.</param>
-internal sealed record RemovalOutcome(bool Ok, string Message);
-
 /// <summary>The remove and hide flows of §6.12. Huddle deletes only inside the Skill Sources folder and only what each flow
 /// names; a clone, a file outside the folder and a <c>Skills/</c> copy are never deleted. Order is safest first, Teammates,
 /// then the row, then the file, then notes, so a failure leaves something re-runnable. Every flow logs to the Source's
@@ -205,7 +187,7 @@ internal sealed partial class SkillSourcesRemover(
     /// <summary>Deletes a directory tree, unlinking a reparse point instead of following it.</summary>
     private static void DeleteTree(DirectoryInfo directory)
     {
-        if (directory.Attributes.HasFlag(FileAttributes.ReparsePoint))
+        if ((directory.Attributes & FileAttributes.ReparsePoint) != 0)
         {
             directory.Delete(recursive: false);
             return;

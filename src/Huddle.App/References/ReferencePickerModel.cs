@@ -2,49 +2,6 @@ using Agency.Huddle.App.Search;
 
 namespace Agency.Huddle.App.References;
 
-/// <summary>One selectable row of the reference picker: a hit, the text it inserts, and how it is drawn (spec §5.3, §11).</summary>
-/// <param name="Id">The element id of the row, <c>{listboxId}-{n}</c>, counted from zero across the groups.</param>
-/// <param name="Hit">The result the row shows.</param>
-/// <param name="InsertText">The text the pick writes into the Composer.</param>
-/// <param name="Dimmed">Whether the row is drawn dimmed: a Teammate who is not a Member.</param>
-/// <param name="Note">The line the card shows under its title, or null.</param>
-/// <param name="AccessibleName">The card's own text, with the note after a comma when there is one.</param>
-public sealed record ReferencePickerRow(string Id, SearchHit Hit, string InsertText, bool Dimmed, string? Note, string AccessibleName);
-
-/// <summary>A group of the picker: its heading and its rows, in render order (spec §5.3).</summary>
-/// <param name="Heading">The heading text, as spec §5.7 names it.</param>
-/// <param name="Rows">The rows of the group.</param>
-public sealed record ReferencePickerGroup(string Heading, IReadOnlyList<ReferencePickerRow> Rows);
-
-/// <summary>Everything the picker draws for one search: the groups, the lines outside them, and the highlight (spec §5.3, §5.7, §11).</summary>
-/// <param name="Groups">The groups that have rows, in order.</param>
-/// <param name="EmptyText">The line shown when there is no row, or null.</param>
-/// <param name="Footer">The footer line that names the prefixes.</param>
-/// <param name="LiveText">The text for the polite live region.</param>
-/// <param name="HighlightIndex">The index of the highlighted row among all rows, clamped into them.</param>
-public sealed record ReferencePickerView(IReadOnlyList<ReferencePickerGroup> Groups, string? EmptyText, string Footer, string LiveText, int HighlightIndex);
-
-/// <summary>The state the picker is built from: the parsed trigger and token, the group states and the Room's Members (spec §5.3).</summary>
-/// <param name="Trigger">The trigger character, <c>@</c> or <c>#</c>.</param>
-/// <param name="Token">The text after the trigger.</param>
-/// <param name="Filter">The filter the box is set to.</param>
-/// <param name="Groups">The state of each group and side, keyed by filter and scope. A missing key is an update that has not arrived.</param>
-/// <param name="MemberNames">The names of the Room's Members, compared ignoring case.</param>
-/// <param name="LibraryRootPaths">The full path of each Library Root, keyed by root id.</param>
-/// <param name="InviteCommand">Whether the box starts with <c>/invite </c>, which shows the Teammates group only.</param>
-/// <param name="ListboxId">The element id of the list, which the row ids extend.</param>
-/// <param name="Highlight">The index the highlight was last set to.</param>
-internal sealed record ReferencePickerInput(
-    char Trigger,
-    string Token,
-    SearchFilter Filter,
-    IReadOnlyDictionary<(SearchFilter Group, SearchScope Scope), SearchGroupState> Groups,
-    IReadOnlySet<string> MemberNames,
-    IReadOnlyDictionary<string, string> LibraryRootPaths,
-    bool InviteCommand,
-    string ListboxId,
-    int Highlight);
-
 /// <summary>Turns the picker's state into its groups, rows and lines, with no renderer (spec §5.3, §5.7, §11; D-6, D-22, D-23, D-25, D-27).</summary>
 internal static class ReferencePickerModel
 {

@@ -66,8 +66,8 @@ internal sealed partial class ElicitationService(
         string? posted = null;
         try
         {
-            User human = await directory.GetHumanAsync(ct);
-            ChatMessage? message = await chat.PostHumanAnswerAsync(roomId, human.Id, answer.Text, taken.AskerAgentId, ct);
+            User human = await directory.GetHumanAsync(ct).ConfigureAwait(false);
+            ChatMessage? message = await chat.PostHumanAnswerAsync(roomId, human.Id, answer.Text, taken.AskerAgentId, ct).ConfigureAwait(false);
             posted = message?.Text;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

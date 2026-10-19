@@ -79,30 +79,18 @@ internal sealed class ReadRecordsTool(
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
+        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
         if (actor is null)
         {
             return actorRefusal;
         }
 
-        if (!TaskToolText.TryGetString(arguments, "team", out string? teamText, out string teamRefusal))
+        if (!TaskToolText.TryGetString(arguments, "team", out string? teamText, out string teamRefusal)
+            || !TaskToolText.TryGetString(arguments, "since", out string? sinceText, out teamRefusal)
+            || !TaskToolText.TryGetString(arguments, "room", out string? roomText, out teamRefusal)
+            || !TaskToolText.TryGetString(arguments, "taskId", out string? taskIdText, out teamRefusal))
         {
             return teamRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "since", out string? sinceText, out string sinceRefusal))
-        {
-            return sinceRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "room", out string? roomText, out string roomRefusal))
-        {
-            return roomRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "taskId", out string? taskIdText, out string taskIdRefusal))
-        {
-            return taskIdRefusal;
         }
 
         if (string.IsNullOrWhiteSpace(teamText))
@@ -129,9 +117,18 @@ internal sealed class ReadRecordsTool(
 
         if (!string.IsNullOrWhiteSpace(roomText))
         {
-            return await this.ReadRoomAsync(team, roomText, cancellationToken);
+            return await this.ReadRoomAsync(team, roomText, cancellationToken).ConfigureAwait(false);
         }
 
+        return this.ReadBundle(team, sinceText);
+    }
+
+    /// <summary>Renders the compact records bundle since the given date, or since the newest report when none is given.</summary>
+    /// <param name="team">The named Team.</param>
+    /// <param name="sinceText">The <c>since</c> argument, if any.</param>
+    /// <returns>The text, or a refusal.</returns>
+    private string ReadBundle(TeamSummary team, string? sinceText)
+    {
         DateTimeOffset since;
         if (string.IsNullOrWhiteSpace(sinceText))
         {
@@ -276,7 +273,7 @@ internal sealed class ReadRecordsTool(
         IReadOnlyList<ChatMessage> messages;
         try
         {
-            messages = await chat.ReadAllAsync(roomId, cancellationToken);
+            messages = await chat.ReadAllAsync(roomId, cancellationToken).ConfigureAwait(false);
         }
         catch (ArgumentException)
         {
@@ -284,10 +281,10 @@ internal sealed class ReadRecordsTool(
         }
 
         // The Human's older Messages carry the Name they had then; show the current one (rules.md).
-        string human = (await directory.GetUserAsync(KnownIds.Human, cancellationToken))?.Name ?? string.Empty;
+        string human = (await directory.GetUserAsync(KnownIds.Human, cancellationToken).ConfigureAwait(false))?.Name ?? string.Empty;
         messages = [.. messages.Select(message => SenderDisplay.WithCurrentName(message, human.Length == 0 ? null : human))];
 
-        Room? scoped = await directory.GetRoomAsync(roomId, cancellationToken);
+        Room? scoped = await directory.GetRoomAsync(roomId, cancellationToken).ConfigureAwait(false);
         if (scoped?.Team is { } scopedTeam)
         {
             if (!string.Equals(scopedTeam, team.Name, StringComparison.OrdinalIgnoreCase))

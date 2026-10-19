@@ -12,7 +12,7 @@ internal static class SkillNotes
         ArgumentNullException.ThrowIfNull(path);
         try
         {
-            return string.Join("\n", File.ReadLines(path).Take(count));
+            return string.Join('\n', File.ReadLines(path).Take(count));
         }
         catch (IOException)
         {

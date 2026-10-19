@@ -142,7 +142,9 @@ internal static class ReferencedItemsFormatter
             case GoneReference gone:
                 return prompts.Render("turn.referenceGone", new Dictionary<string, string>(StringComparer.Ordinal)
                 {
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
                     ["{{kind}}"] = gone.Kind.ToString(),
+#pragma warning restore HAA0102
                     ["{{key}}"] = ReferencedItemsFormatter.Quote(gone.Key),
                 });
 

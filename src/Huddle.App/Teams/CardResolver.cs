@@ -2,50 +2,6 @@ using Agency.Huddle.App.TeamTypes;
 
 namespace Agency.Huddle.App.Teams;
 
-/// <summary>Whether a hire card can be hired as it stands.</summary>
-internal enum CardReadiness
-{
-    /// <summary>Every default resolved; the card can be hired.</summary>
-    Ready,
-
-    /// <summary>A default is missing; the user must complete setup first.</summary>
-    NeedsSetup,
-}
-
-/// <summary>Reports whether a connector, such as <c>email:read</c>, is connected.</summary>
-internal interface IConnectorStatus
-{
-    /// <summary>Tells whether <paramref name="connector"/> is connected.</summary>
-    /// <param name="connector">The connector id from a role's <c>requires</c>.</param>
-    /// <returns><see langword="true"/> when the connector is connected.</returns>
-    bool IsConnected(string connector);
-
-    /// <summary>Where a user records a connected connector, or <see langword="null"/> when there is no such place.</summary>
-    string? Location => null;
-}
-
-/// <summary>A connector status that reports nothing connected.</summary>
-internal sealed class EmptyConnectorStatus : IConnectorStatus
-{
-    /// <inheritdoc />
-    public string? Location => null;
-
-    /// <inheritdoc />
-    public bool IsConnected(string connector) => false;
-}
-
-/// <summary>A hire card with every default resolved (HR-6, HR-7).</summary>
-/// <param name="RoleId">The role the card hires.</param>
-/// <param name="Name">The resolved Teammate name.</param>
-/// <param name="Pick">The adapter and model, or <see langword="null"/> when no adapter qualified.</param>
-/// <param name="Skills">The role's skills plus its packs' skills, without duplicates.</param>
-/// <param name="Packs">The role's packs that exist, at their version.</param>
-/// <param name="Readiness">Ready, or Needs setup when a default is missing.</param>
-/// <param name="Reasons">Why the card needs setup; empty when Ready. Holds one line per <paramref name="SkillSetup"/> item too.</param>
-/// <param name="SkillSetup">The Packs and Skills that are not ready to hire (Skill Packs spec §6.10.2); empty when none.</param>
-internal sealed record CardState(string RoleId, string Name, ModelPick? Pick, IReadOnlyList<SkillRef> Skills,
-    IReadOnlyList<VersionedRef> Packs, CardReadiness Readiness, IReadOnlyList<string> Reasons, IReadOnlyList<SkillSetupItem> SkillSetup);
-
 /// <summary>Resolves every default on a hire card and decides Ready or Needs setup (HR-6, HR-7).</summary>
 internal static class CardResolver
 {
@@ -75,24 +31,7 @@ internal static class CardResolver
 
         List<string> reasons = [];
 
-        string name;
-        if (chosenName is not null)
-        {
-            name = chosenName;
-            if (CardResolver.InUse(namesInUse, name))
-            {
-                reasons.Add("name conflict");
-            }
-        }
-        else
-        {
-            string? free = role.SuggestedNames.FirstOrDefault(suggested => !CardResolver.InUse(namesInUse, suggested));
-            name = free ?? (role.SuggestedNames.Count > 0 ? role.SuggestedNames[0] : string.Empty);
-            if (free is null)
-            {
-                reasons.Add("name conflict");
-            }
-        }
+        string name = CardResolver.ChooseName(role, namesInUse, chosenName, reasons);
 
         ModelPick? pick = TierModelPicker.Pick(role.Model.Tier, answered, tierMap, avoidAdapters);
         if (pick is null)
@@ -128,6 +67,36 @@ internal static class CardResolver
         IReadOnlyList<SkillRef> distinctSkills = [.. names.Distinct(StringComparer.Ordinal).Select(static skillName => new SkillRef(skillName, RegistrySource, null))];
         CardReadiness readiness = reasons.Count == 0 ? CardReadiness.Ready : CardReadiness.NeedsSetup;
         return new CardState(role.Id, name, pick, distinctSkills, usedPacks, readiness, reasons, setup);
+    }
+
+    /// <summary>Picks the card's name: the chosen one, else the first free suggestion, else the first suggestion.</summary>
+    /// <param name="role">The role being hired.</param>
+    /// <param name="namesInUse">The Teammate names already taken, compared without case.</param>
+    /// <param name="chosenName">A name the user chose, or <see langword="null"/> to take the first free suggestion.</param>
+    /// <param name="reasons">Receives "name conflict" when the name is taken.</param>
+    /// <returns>The name for the card.</returns>
+    private static string ChooseName(RoleSpec role, IReadOnlyCollection<string> namesInUse, string? chosenName, List<string> reasons)
+    {
+        string name;
+        if (chosenName is not null)
+        {
+            name = chosenName;
+            if (CardResolver.InUse(namesInUse, name))
+            {
+                reasons.Add("name conflict");
+            }
+        }
+        else
+        {
+            string? free = role.SuggestedNames.FirstOrDefault(suggested => !CardResolver.InUse(namesInUse, suggested));
+            name = free ?? (role.SuggestedNames.Count > 0 ? role.SuggestedNames[0] : string.Empty);
+            if (free is null)
+            {
+                reasons.Add("name conflict");
+            }
+        }
+
+        return name;
     }
 
     /// <summary>The reason a card gives when <paramref name="connector"/> is not connected.</summary>
