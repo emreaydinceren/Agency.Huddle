@@ -131,16 +131,33 @@ public sealed class SkillRegistryTests
         Assert.False(ready.IsReady);
     }
 
-    /// <summary>A burst of rebuild requests while one runs merges into at most one follow-up.</summary>
+    /// <summary>
+    /// A burst of rebuild requests while one runs merges into at most one follow-up. The first publish is held open until
+    /// every request is in, so the burst arrives while a rebuild runs however fast the machine is; without that, a quick
+    /// first build finishes before the last request arrives and a second or third build starts (seen on a loaded CI runner).
+    /// </summary>
     [Fact]
     public async Task Rebuild_BurstOfScopes_MergesIntoOneFollowUp()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RegistryHost host = WithPack();
+        using ManualResetEventSlim firstPublishReached = new(false);
+        using ManualResetEventSlim burstIssued = new(false);
         int publishes = 0;
-        host.Registry.Changed += _ => Interlocked.Increment(ref publishes);
+        host.Registry.Changed += _ =>
+        {
+            if (Interlocked.Increment(ref publishes) == 1)
+            {
+                firstPublishReached.Set();
+                burstIssued.Wait(ct);
+            }
+        };
 
-        await Task.WhenAll(Enumerable.Range(0, 10).Select(i => host.Registry.RebuildAsync(new RebuildScope(false, [$"f{i}"], []), ct)));
+        Task first = host.Registry.RebuildAsync(new RebuildScope(false, ["f0"], []), ct);
+        Assert.True(firstPublishReached.Wait(TimeSpan.FromSeconds(30), ct));
+        List<Task> burst = [first, .. Enumerable.Range(1, 9).Select(i => host.Registry.RebuildAsync(new RebuildScope(false, [$"f{i}"], []), ct))];
+        burstIssued.Set();
+        await Task.WhenAll(burst);
 
         Assert.InRange(publishes, 1, 2);
     }
