@@ -2,6 +2,7 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -118,7 +119,7 @@ public sealed class PlanModePermissionHandlerTests
     public async Task Plan_SwitchModeRequest_LogsTheRefusalAtInformation()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        RecordingLogger logger = new();
+        RecordingLogger<PlanModePermissionHandler> logger = new();
         PlanModePermissionHandler handler = new(new StubHandler(), "plan", logger);
 
         _ = await handler.DecideAsync(Request(ToolKind.SwitchMode, ExitPlanOptions), ct);
@@ -143,28 +144,6 @@ public sealed class PlanModePermissionHandlerTests
         {
             this.Calls++;
             return Task.FromResult<PermissionDecision>(new SelectedDecision("inner"));
-        }
-    }
-
-    /// <summary>Records the level of every entry it is given.</summary>
-    private sealed class RecordingLogger : ILogger<PlanModePermissionHandler>
-    {
-        public List<LogLevel> Levels { get; } = [];
-
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull
-        {
-            return null;
-        }
-
-        public bool IsEnabled(LogLevel logLevel)
-        {
-            return true;
-        }
-
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            this.Levels.Add(logLevel);
         }
     }
 }

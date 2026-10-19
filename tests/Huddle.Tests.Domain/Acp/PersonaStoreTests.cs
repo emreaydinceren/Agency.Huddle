@@ -1,10 +1,10 @@
 using System.Runtime.Versioning;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -1312,7 +1312,7 @@ public sealed class PersonaStoreTests
     /// <see cref="FileSystemWatcher"/> Error event arriving after <see cref="PersonaStore.Dispose"/> -
     /// during host teardown, when the logging provider itself can already be disposed - threw an
     /// unhandled <see cref="ObjectDisposedException"/> on the watcher callback thread and crashed the
-    /// process. <see cref="ThrowingLogger{T}"/> stands in for that disposed logging provider: it
+    /// process. <see cref="RecordingLogger{T}"/> with <c>throwOnLog</c> stands in for that disposed logging provider: it
     /// throws on every call, so if the handler still reaches the logger after <c>Dispose</c>, this
     /// test surfaces the exact same exception type the real crash did. Invokes the handler directly
     /// (narrowed to <c>internal</c> for exactly this) rather than via reflection or a real watcher
@@ -1322,7 +1322,7 @@ public sealed class PersonaStoreTests
     public void OnWatcherError_AfterDispose_DoesNotLog()
     {
         using var dir = new TempDataDir();
-        var throwingLogger = new ThrowingLogger<PersonaStore>();
+        var throwingLogger = new RecordingLogger<PersonaStore>(throwOnLog: new ObjectDisposedException(nameof(PersonaStore)));
         using var store = new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), throwingLogger);
         store.Dispose();
 
@@ -1846,44 +1846,4 @@ public sealed class PersonaStoreTests
 
     /// <summary>Overload of <see cref="PersonaText(string, string)"/> that also hand-writes an <c>Adapter:</c> line, for tests pinning Spec §7.2/§7.3's Adapter round trip.</summary>
     private static string PersonaText(string name, string body, string adapter) => $"---\nName: {name}\nTitle: {name}\nAlias: {name}\nAdapter: {adapter}\n---\n{body}";
-
-    /// <summary>
-    /// A hand-written fake <see cref="ILogger{T}"/> that throws <see cref="ObjectDisposedException"/>
-    /// on every call, standing in for a logging provider that has already been disposed during host
-    /// teardown - the scenario <see cref="OnWatcherError_AfterDispose_DoesNotLog"/> exists to prove
-    /// <see cref="PersonaStore.OnWatcherError"/> never reaches once <see cref="PersonaStore.Dispose"/>
-    /// has run.
-    /// </summary>
-    /// <typeparam name="T">The category type the fake logger stands in for.</typeparam>
-    private sealed class ThrowingLogger<T> : ILogger<T>
-    {
-        /// <summary>Not used by this fake: scoping is irrelevant to the ordering this fake exists to prove.</summary>
-        /// <typeparam name="TState">The scope state type.</typeparam>
-        /// <param name="state">The scope state.</param>
-        /// <returns>A no-op <see cref="IDisposable"/>.</returns>
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
-
-        /// <summary>Always enabled, so a call that should never happen is never accidentally skipped by a level check.</summary>
-        /// <param name="logLevel">The level being checked.</param>
-        /// <returns><see langword="true"/>, always.</returns>
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        /// <summary>Throws unconditionally, simulating a disposed logging provider.</summary>
-        /// <typeparam name="TState">The state type carrying this call's structured values.</typeparam>
-        /// <param name="logLevel">Unused; this fake throws regardless of level.</param>
-        /// <param name="eventId">Unused.</param>
-        /// <param name="state">Unused.</param>
-        /// <param name="exception">Unused.</param>
-        /// <param name="formatter">Unused.</param>
-        public void Log<TState>(
-            LogLevel logLevel,
-            EventId eventId,
-            TState state,
-            Exception? exception,
-            Func<TState, Exception?, string> formatter)
-        {
-            throw new ObjectDisposedException(nameof(PersonaStore));
-        }
-    }
 }

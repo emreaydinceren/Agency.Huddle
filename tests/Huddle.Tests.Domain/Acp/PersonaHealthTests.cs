@@ -1,36 +1,12 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.Tests.Acp.Fakes;
 
 namespace Agency.Huddle.Tests.Acp;
 
 /// <summary>Tests for <see cref="PersonaHealth"/>.</summary>
 public sealed class PersonaHealthTests
 {
-    /// <summary>A hand-written, controllable <see cref="TimeProvider"/> so a test can move time without racing the real clock.</summary>
-    private sealed class ManualTimeProvider : TimeProvider
-    {
-        private DateTimeOffset now;
-
-        /// <summary>Creates a clock fixed at <paramref name="start"/>.</summary>
-        /// <param name="start">The instant this clock reports until <see cref="Advance"/> is called.</param>
-        public ManualTimeProvider(DateTimeOffset start)
-        {
-            this.now = start;
-        }
-
-        /// <inheritdoc/>
-        public override DateTimeOffset GetUtcNow()
-        {
-            return this.now;
-        }
-
-        /// <summary>Moves this clock forward by <paramref name="delta"/>.</summary>
-        /// <param name="delta">How far forward to move.</param>
-        public void Advance(TimeSpan delta)
-        {
-            this.now += delta;
-        }
-    }
 
     private static readonly DateTimeOffset Start = new(2026, 9, 1, 12, 0, 0, TimeSpan.Zero);
 

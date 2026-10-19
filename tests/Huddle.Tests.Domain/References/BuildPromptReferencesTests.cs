@@ -11,6 +11,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.Tests.Waiting;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.References;
 
@@ -295,52 +296,6 @@ public sealed class BuildPromptReferencesTests
         AgentPrompt prompt = await BuildPromptReferencesTests.RunTurnAsync(item, expander);
 
         Assert.Equal(RoomSession.BuildPrompt(item, new FakePromptSource()), prompt.Text);
-    }
-
-    /// <summary>A logger that keeps the text of every message, so a test can see that a failure was logged.</summary>
-    private sealed class RecordingLogger : Microsoft.Extensions.Logging.ILogger
-    {
-        private readonly Lock gate = new();
-        private readonly List<string> messages = [];
-
-        /// <summary>Every message logged so far, in order.</summary>
-        public IReadOnlyList<string> Messages
-        {
-            get
-            {
-                lock (this.gate)
-                {
-                    return [.. this.messages];
-                }
-            }
-        }
-
-        /// <summary>Scopes are not used, so none is returned.</summary>
-        /// <typeparam name="TState">The scope state type.</typeparam>
-        /// <param name="state">The scope state.</param>
-        /// <returns>Always <see langword="null"/>.</returns>
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
-
-        /// <summary>Every level is enabled, so every message is kept.</summary>
-        /// <param name="logLevel">The level.</param>
-        /// <returns>Always <see langword="true"/>.</returns>
-        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
-
-        /// <summary>Keeps the formatted message.</summary>
-        /// <typeparam name="TState">The message state type.</typeparam>
-        /// <param name="logLevel">The level.</param>
-        /// <param name="eventId">The event id.</param>
-        /// <param name="state">The message state.</param>
-        /// <param name="exception">The exception, if any.</param>
-        /// <param name="formatter">Formats the state into text.</param>
-        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            lock (this.gate)
-            {
-                this.messages.Add(formatter(state, exception));
-            }
-        }
     }
 
     private sealed class ThrowingCatalog : ITeamCatalog

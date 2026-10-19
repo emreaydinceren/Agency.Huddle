@@ -7,6 +7,7 @@ using Agency.Huddle.App.Components.Settings;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Waiting;
+using Agency.Huddle.Tests.Elicitation;
 
 /// <summary>
 /// Tests for <see cref="PromptStore"/>: that it joins <see cref="PromptCatalog"/>'s defaults with an
@@ -541,51 +542,6 @@ public sealed class PromptStoreTests
         var json = File.ReadAllText(path);
         return JsonSerializer.Deserialize<Dictionary<string, string>>(json, ProtocolJson.Options)
             ?? throw new InvalidOperationException("prompts.json deserialised to null.");
-    }
-
-    /// <summary>
-    /// A hand-written fake <see cref="ILogger{T}"/> that records every call, since this repo has no
-    /// mocking framework. Modelled as a minimal store of each entry's level and formatted message —
-    /// enough for <see cref="Constructor_MalformedJson_FallsBackToDefaultsAndLogsWarning"/> and
-    /// <see cref="Constructor_FileHasUnknownKey_LogsAtInformationOrDebugNeverWarning"/> to assert on
-    /// both what was logged and at what severity.
-    /// </summary>
-    /// <typeparam name="T">The category type the recorded logger stands in for.</typeparam>
-    private sealed class RecordingLogger<T> : ILogger<T>
-    {
-        /// <summary>Every call made to this logger so far, in call order.</summary>
-        public List<(LogLevel Level, string Message)> Entries { get; } = [];
-
-        /// <summary>Not used by this fake: scoping is irrelevant to the tests that need it, so this returns a no-op.</summary>
-        /// <typeparam name="TState">The scope state type.</typeparam>
-        /// <param name="state">The scope state.</param>
-        /// <returns>A no-op <see cref="IDisposable"/>.</returns>
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
-
-        /// <summary>Always enabled, so every call this fake receives is actually recorded.</summary>
-        /// <param name="logLevel">The level being checked.</param>
-        /// <returns><see langword="true"/>, always.</returns>
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        /// <summary>Records one log call's level and formatted message.</summary>
-        /// <typeparam name="TState">The state type carrying this call's structured values.</typeparam>
-        /// <param name="logLevel">The call's severity.</param>
-        /// <param name="eventId">Unused by this fake.</param>
-        /// <param name="state">The call's structured state, passed to <paramref name="formatter"/>.</param>
-        /// <param name="exception">The call's exception, if any.</param>
-        /// <param name="formatter">Formats <paramref name="state"/> and <paramref name="exception"/> into the message text.</param>
-        public void Log<TState>(
-            LogLevel logLevel,
-            EventId eventId,
-            TState state,
-            Exception? exception,
-            Func<TState, Exception?, string> formatter)
-        {
-            ArgumentNullException.ThrowIfNull(formatter);
-
-            this.Entries.Add((logLevel, formatter(state, exception)));
-        }
     }
 
     /// <summary>

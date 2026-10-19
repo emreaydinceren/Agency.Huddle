@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Reflection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
@@ -15,6 +14,7 @@ using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
 using FakeAgentGateway = Agency.Huddle.Tests.Acp.Tools.FakeAgentGateway;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Tasks;
 
@@ -384,41 +384,6 @@ internal static class TaskTriggerTestSupport
                 // No second entrant arrived inside the window: the fires were serialised, which is
                 // the passing case - nothing to record.
             }
-        }
-    }
-
-    /// <summary>A thread-safe fake <see cref="ILogger{T}"/> that records every call (this repo has no mocking framework).</summary>
-    /// <typeparam name="T">The category type the logger stands in for.</typeparam>
-    internal sealed class RecordingLogger<T> : ILogger<T>
-    {
-        private readonly ConcurrentQueue<(LogLevel Level, string Message, Exception? Exception)> entries = new();
-
-        /// <summary>Every call made so far, in call order.</summary>
-        public IReadOnlyList<(LogLevel Level, string Message, Exception? Exception)> Entries => [.. this.entries];
-
-        /// <summary>Scoping is irrelevant to these tests, so this returns no scope.</summary>
-        /// <typeparam name="TState">The scope state type.</typeparam>
-        /// <param name="state">The scope state.</param>
-        /// <returns><see langword="null"/>.</returns>
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
-
-        /// <summary>Always enabled, so every call is recorded.</summary>
-        /// <param name="logLevel">The level being checked.</param>
-        /// <returns><see langword="true"/>.</returns>
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        /// <summary>Records one call's level, formatted message and exception.</summary>
-        /// <typeparam name="TState">The state type.</typeparam>
-        /// <param name="logLevel">The call's severity.</param>
-        /// <param name="eventId">Unused.</param>
-        /// <param name="state">The call's structured state.</param>
-        /// <param name="exception">The call's exception, if any.</param>
-        /// <param name="formatter">Formats <paramref name="state"/> and <paramref name="exception"/>.</param>
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            ArgumentNullException.ThrowIfNull(formatter);
-            this.entries.Enqueue((logLevel, formatter(state, exception), exception));
         }
     }
 

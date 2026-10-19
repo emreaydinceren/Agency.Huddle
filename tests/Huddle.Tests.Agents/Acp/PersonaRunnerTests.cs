@@ -15,6 +15,7 @@ using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Pipes;
 using Agency.Huddle.Tests.Waiting;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -3404,81 +3405,6 @@ public sealed class PersonaRunnerTests
             }
 
             await Task.Delay(5, ct);
-        }
-    }
-
-    /// <summary>
-    /// A capturing <see cref="ILogger{TCategoryName}"/> fake, for the one test in this file that must
-    /// assert against a log call rather than a chat side effect. Every other test in this file uses
-    /// <see cref="NullLogger{T}"/>, which by design cannot be asserted against.
-    /// </summary>
-    /// <remarks>
-    /// A <see cref="PersonaRunner"/> under test logs concurrently from three long-lived background
-    /// loops - its read loop, its consumer, and its event reader - while the test thread reads
-    /// <see cref="Entries"/>. A plain <see cref="List{T}"/> enumerated on one thread while another
-    /// appends to it throws "Collection was modified; enumeration operation may not execute.", which
-    /// is exactly the intermittent failure this fake once produced. <see cref="gate"/> serialises
-    /// every write, and <see cref="Entries"/> hands back a snapshot taken under the same lock, so a
-    /// caller enumerating it can never observe a background loop's in-progress mutation. Do not
-    /// "simplify" this back to a bare <see cref="List{T}"/> property - that is the bug this type
-    /// exists to avoid.
-    /// </remarks>
-    /// <typeparam name="T">The logger's category type.</typeparam>
-    private sealed class RecordingLogger<T> : ILogger<T>
-    {
-        private readonly Lock gate = new();
-
-        private readonly List<(LogLevel Level, string Message)> entries = [];
-
-        /// <summary>
-        /// An immutable snapshot of every call made to this logger so far, in call order. Each read
-        /// takes a fresh copy under <see cref="gate"/>, so two calls in a row may return different
-        /// snapshots if a background loop logged in between - which is expected, not a bug.
-        /// </summary>
-        public IReadOnlyList<(LogLevel Level, string Message)> Entries
-        {
-            get
-            {
-                lock (this.gate)
-                {
-                    return [.. this.entries];
-                }
-            }
-        }
-
-        /// <summary>Not used by this fake: scoping is irrelevant to the one test that needs it, so this returns a no-op.</summary>
-        /// <typeparam name="TState">The scope state type.</typeparam>
-        /// <param name="state">The scope state.</param>
-        /// <returns>A no-op <see cref="IDisposable"/>.</returns>
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
-
-        /// <summary>Always enabled, so every call this fake receives is actually recorded.</summary>
-        /// <param name="logLevel">The level being checked.</param>
-        /// <returns><see langword="true"/>, always.</returns>
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        /// <summary>Records one log call's level and formatted message.</summary>
-        /// <typeparam name="TState">The state type carrying this call's structured values.</typeparam>
-        /// <param name="logLevel">The call's severity.</param>
-        /// <param name="eventId">Unused by this fake.</param>
-        /// <param name="state">The call's structured state, passed to <paramref name="formatter"/>.</param>
-        /// <param name="exception">The call's exception, if any.</param>
-        /// <param name="formatter">Formats <paramref name="state"/> and <paramref name="exception"/> into the message text.</param>
-        public void Log<TState>(
-            LogLevel logLevel,
-            EventId eventId,
-            TState state,
-            Exception? exception,
-            Func<TState, Exception?, string> formatter)
-        {
-            ArgumentNullException.ThrowIfNull(formatter);
-
-            var message = formatter(state, exception);
-            lock (this.gate)
-            {
-                this.entries.Add((logLevel, message));
-            }
         }
     }
 

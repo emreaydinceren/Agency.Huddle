@@ -2,9 +2,8 @@ namespace Agency.Huddle.Tests.Acp.Fakes;
 
 /// <summary>
 /// A settable <see cref="TimeProvider"/> for driving <c>RoomSessionPool</c>'s idle sweep (RS §6.2)
-/// deterministically in a test, without waiting out real wall-clock minutes. Two private copies of
-/// this idea already exist, in <c>PersonaHealthTests</c> and <c>FileLoggerTests</c>; this one is the
-/// shared version Room Session tests use.
+/// deterministically in a test, without waiting out real wall-clock minutes. Every test that needs a settable clock uses this one,
+/// including <c>PersonaHealthTests</c> and <c>FileLoggerTests</c>.
 /// </summary>
 internal sealed class ManualTimeProvider : TimeProvider
 {

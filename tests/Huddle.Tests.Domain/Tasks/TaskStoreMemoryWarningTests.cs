@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Tasks;
 
@@ -229,44 +230,5 @@ public sealed class TaskStoreMemoryWarningTests
 
         File.WriteAllText(path, text);
         return path;
-    }
-
-    /// <summary>An <see cref="ILogger{TCategoryName}"/> that records every call made to it.</summary>
-    /// <typeparam name="T">The logger's category type.</typeparam>
-    private sealed class RecordingLogger<T> : ILogger<T>
-    {
-        private readonly Lock gate = new();
-        private readonly List<(LogLevel Level, string Message)> entries = [];
-
-        /// <summary>Every call made so far, in call order.</summary>
-        public IReadOnlyList<(LogLevel Level, string Message)> Entries => this.entries;
-
-        /// <summary>Scoping is irrelevant to this fake, so this returns no scope.</summary>
-        /// <typeparam name="TState">The scope state type.</typeparam>
-        /// <param name="state">The scope state.</param>
-        /// <returns><see langword="null"/>.</returns>
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
-
-        /// <summary>Always enabled, so every call is recorded.</summary>
-        /// <param name="logLevel">The level being checked.</param>
-        /// <returns><see langword="true"/>.</returns>
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        /// <summary>Records one call's level and formatted message.</summary>
-        /// <typeparam name="TState">The state type.</typeparam>
-        /// <param name="logLevel">The call's severity.</param>
-        /// <param name="eventId">Unused.</param>
-        /// <param name="state">The call's structured state.</param>
-        /// <param name="exception">The call's exception, if any.</param>
-        /// <param name="formatter">Formats <paramref name="state"/> and <paramref name="exception"/>.</param>
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            ArgumentNullException.ThrowIfNull(formatter);
-            lock (this.gate)
-            {
-                this.entries.Add((logLevel, formatter(state, exception)));
-            }
-        }
     }
 }

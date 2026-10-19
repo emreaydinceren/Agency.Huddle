@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Appearance;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Appearance;
 
@@ -140,14 +141,14 @@ public sealed class AppearanceCustomizationTests
     public void Migrate_AnUnknownId_FallsBackToLumenLightAndLeavesTheFileAlone()
     {
         using TempDataDir dataDir = new();
-        WarningRecorder logger = new();
+        RecordingLogger<AppearanceStore> logger = new();
 
         using AppearanceStore store = Open(dataDir, """{"theme":"solarized","accentColor":"#00b294"}""", logger);
 
         Assert.Null(store.Current.ThemeId);
         Assert.Equal("lumen-light", store.Current.PreferredLightId);
         Assert.Equal("""{"theme":"solarized","accentColor":"#00b294"}""", File.ReadAllText(Path.Combine(dataDir.Path, "appearance.json")));
-        Assert.Contains("solarized", Assert.Single(logger.Warnings), StringComparison.Ordinal);
+        Assert.Contains("solarized", Assert.Single(logger.AtExactly(LogLevel.Warning)).Message, StringComparison.Ordinal);
     }
 
     /// <summary>A valid <c>accentColor</c> with no Custom Accent Theme chosen has nothing to move into, so it is left in the file untouched and customises nothing.</summary>
@@ -167,7 +168,7 @@ public sealed class AppearanceCustomizationTests
     public void Migrate_AMalformedAccentColor_WarnsAndIsKept()
     {
         using TempDataDir dataDir = new();
-        WarningRecorder logger = new();
+        RecordingLogger<AppearanceStore> logger = new();
 
         using AppearanceStore store = Open(dataDir, """{"theme":"custom-accent","accentColor":"not-a-colour"}""", logger);
 
@@ -175,7 +176,7 @@ public sealed class AppearanceCustomizationTests
         Assert.Empty(store.Current.Customizations);
         JsonObject file = ReadFile(dataDir);
         Assert.Equal("not-a-colour", file["accentColor"]?.GetValue<string>());
-        Assert.Contains("not-a-colour", Assert.Single(logger.Warnings), StringComparison.Ordinal);
+        Assert.Contains("not-a-colour", Assert.Single(logger.AtExactly(LogLevel.Warning)).Message, StringComparison.Ordinal);
     }
 
     /// <summary>A customization already stored for Lumen Light is not overwritten by the legacy accent.</summary>
@@ -240,7 +241,7 @@ public sealed class AppearanceCustomizationTests
     public void Current_ACustomizationForADeletedThemeId_WarnsAndIsIgnored()
     {
         using TempDataDir dataDir = new();
-        WarningRecorder logger = new();
+        RecordingLogger<AppearanceStore> logger = new();
 
         using AppearanceStore store = Open(dataDir, """
             {"theme":"nordic-light","customizations":{
@@ -250,7 +251,7 @@ public sealed class AppearanceCustomizationTests
 
         Assert.Null(store.Current.CustomizationFor("huddle"));
         Assert.Equal("#445566", store.Current.CustomizationFor("nordic-light")?.Palette["primary"]);
-        Assert.Contains("huddle", Assert.Single(logger.Warnings), StringComparison.Ordinal);
+        Assert.Contains("huddle", Assert.Single(logger.AtExactly(LogLevel.Warning)).Message, StringComparison.Ordinal);
         Assert.Contains("#112233", File.ReadAllText(Path.Combine(dataDir.Path, "appearance.json")), StringComparison.Ordinal);
     }
 
@@ -278,13 +279,13 @@ public sealed class AppearanceCustomizationTests
     public void Current_AnInvalidCustomization_IsDroppedWithOneWarning(string customizations, string expectedWarningPart)
     {
         using TempDataDir dataDir = new();
-        WarningRecorder logger = new();
+        RecordingLogger<AppearanceStore> logger = new();
         string text = $$"""{"theme":"lumen-light","customizations":{{customizations}}}""";
 
         using AppearanceStore store = Open(dataDir, text, logger);
 
         Assert.Empty(store.Current.Customizations);
-        Assert.Contains(expectedWarningPart, Assert.Single(logger.Warnings), StringComparison.Ordinal);
+        Assert.Contains(expectedWarningPart, Assert.Single(logger.AtExactly(LogLevel.Warning)).Message, StringComparison.Ordinal);
         Assert.Equal(text, File.ReadAllText(Path.Combine(dataDir.Path, "appearance.json")));
     }
 
@@ -293,7 +294,7 @@ public sealed class AppearanceCustomizationTests
     public void Current_ValidAndInvalidEntriesTogether_KeepsTheValidOnes()
     {
         using TempDataDir dataDir = new();
-        WarningRecorder logger = new();
+        RecordingLogger<AppearanceStore> logger = new();
 
         using AppearanceStore store = Open(dataDir, """
             {"customizations":{"lumen-light":{
@@ -304,7 +305,7 @@ public sealed class AppearanceCustomizationTests
         SkinCustomizationView view = new(store.Current.CustomizationFor("lumen-light"));
         Assert.Equal("#112233", view.Primary);
         Assert.Equal("#abcdef", view.Rail);
-        Assert.Equal(2, logger.Warnings.Count);
+        Assert.Equal(2, logger.AtExactly(LogLevel.Warning).Count);
     }
 
     /// <summary>Customizations survive a Theme change and a toggle: they belong to the Theme id, not to what is shown.</summary>
@@ -525,28 +526,5 @@ public sealed class AppearanceCustomizationTests
 
         /// <summary>The <c>tokens["ground.rail"]</c> text, or <see langword="null"/>.</summary>
         public string? Rail { get; }
-    }
-
-    /// <summary>Collects the formatted text of every warning an <see cref="AppearanceStore"/> logs.</summary>
-    private sealed class WarningRecorder : ILogger<AppearanceStore>
-    {
-        /// <summary>The formatted warning messages, in order.</summary>
-        public List<string> Warnings { get; } = [];
-
-        /// <inheritdoc />
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
-
-        /// <inheritdoc />
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        /// <inheritdoc />
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            if (logLevel == LogLevel.Warning)
-            {
-                this.Warnings.Add(formatter(state, exception));
-            }
-        }
     }
 }

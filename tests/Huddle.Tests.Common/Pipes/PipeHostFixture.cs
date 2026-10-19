@@ -7,6 +7,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Pipes;
 
@@ -15,66 +16,6 @@ namespace Agency.Huddle.Tests.Pipes;
 /// <param name="Category">The logger's category name, typically the logging type's full name.</param>
 /// <param name="Message">The rendered message, with its <c>{Placeholder}</c> arguments already substituted.</param>
 public sealed record CapturedLogEntry(LogLevel Level, string Category, string Message);
-
-/// <summary>
-/// An <see cref="ILoggerProvider"/> that stores every line the fixture's host logs, so a pipe end-to-end test can
-/// assert on <see cref="PipeHostFixture.LogEntries"/> instead of parsing console output.
-/// </summary>
-internal sealed class CapturingLoggerProvider : ILoggerProvider
-{
-    private readonly Lock gate = new();
-    private readonly List<CapturedLogEntry> entries = [];
-
-    /// <summary>A snapshot of every entry captured so far, in emission order.</summary>
-    public IReadOnlyList<CapturedLogEntry> Entries
-    {
-        get
-        {
-            lock (this.gate)
-            {
-                return this.entries.ToArray();
-            }
-        }
-    }
-
-    /// <inheritdoc/>
-    public ILogger CreateLogger(string categoryName) => new CapturingLogger(categoryName, this);
-
-    /// <summary>Records one entry. Called only by <see cref="CapturingLogger"/>.</summary>
-    /// <param name="entry">The entry to record.</param>
-    internal void Record(CapturedLogEntry entry)
-    {
-        lock (this.gate)
-        {
-            this.entries.Add(entry);
-        }
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-    }
-
-    /// <summary>An <see cref="ILogger"/> that forwards every write to its owning <see cref="CapturingLoggerProvider"/>.</summary>
-    /// <param name="categoryName">This logger's category name.</param>
-    /// <param name="owner">The provider to record entries into.</param>
-    private sealed class CapturingLogger(string categoryName, CapturingLoggerProvider owner) : ILogger
-    {
-        /// <inheritdoc/>
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
-
-        /// <inheritdoc/>
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        /// <inheritdoc/>
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            ArgumentNullException.ThrowIfNull(formatter);
-            owner.Record(new CapturedLogEntry(logLevel, categoryName, formatter(state, exception)));
-        }
-    }
-}
 
 /// <summary>
 /// Hosts a real <see cref="Agency.Huddle.App"/> composition root (via <see cref="ServiceCollectionExtensions.AddTeamServices"/>)
@@ -90,9 +31,9 @@ public sealed class PipeHostFixture : IAsyncDisposable
 {
     private readonly TempDataDir dataDir;
     private readonly IHost host;
-    private readonly CapturingLoggerProvider loggerProvider;
+    private readonly RecordingLoggerProvider loggerProvider;
 
-    private PipeHostFixture(IHost host, string pipeName, TempDataDir dataDir, CapturingLoggerProvider loggerProvider)
+    private PipeHostFixture(IHost host, string pipeName, TempDataDir dataDir, RecordingLoggerProvider loggerProvider)
     {
         this.host = host;
         this.PipeName = pipeName;
@@ -105,7 +46,7 @@ public sealed class PipeHostFixture : IAsyncDisposable
     public string PipeName { get; }
 
     /// <summary>Every line this fixture's host has logged so far, in emission order.</summary>
-    public IReadOnlyList<CapturedLogEntry> LogEntries => this.loggerProvider.Entries;
+    public IReadOnlyList<CapturedLogEntry> LogEntries => [.. this.loggerProvider.Entries.Select(entry => new CapturedLogEntry(entry.Level, entry.Category ?? string.Empty, entry.Message))];
 
     public static Task<PipeHostFixture> StartAsync(CancellationToken ct = default) => StartAsync(null, ct);
 
@@ -138,7 +79,7 @@ public sealed class PipeHostFixture : IAsyncDisposable
         RemovePersonaSupervisorHostedService(builder.Services);
         RemoveBuiltinTeammateSeederHostedService(builder.Services);
 
-        var loggerProvider = new CapturingLoggerProvider();
+        var loggerProvider = new RecordingLoggerProvider();
         builder.Logging.AddProvider(loggerProvider);
 
         var host = builder.Build();

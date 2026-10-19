@@ -7,6 +7,7 @@ using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Agency.Huddle.Tests.Waiting;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Acp.Sessions;
 
@@ -213,7 +214,7 @@ public sealed class RoomSessionUserInputTests
         Assert.DoesNotContain(rig.Owner.ReportCalls, reported => reported == nameof(IRoomSessionOwner.ReportOffline));
 
         // Only the bound running out is logged as a dropped question; a Stop is the Human's own doing.
-        Assert.DoesNotContain(logger.Snapshot(), entry => entry.Message.Contains("dropped a question", StringComparison.Ordinal));
+        Assert.DoesNotContain(logger.Entries, entry => entry.Message.Contains("dropped a question", StringComparison.Ordinal));
     }
 
     /// <summary>A run shutdown cancels the open question without waiting for the Adapter to end the Turn.</summary>
@@ -294,7 +295,7 @@ public sealed class RoomSessionUserInputTests
         clock.Advance(TimeSpan.FromSeconds(30));
         await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);
 
-        (LogLevel Level, string Message) entry = Assert.Single(logger.Snapshot());
+        LogEntry entry = Assert.Single(logger.Entries);
         Assert.Equal(LogLevel.Warning, entry.Level);
         Assert.Equal("Persona 'nova' dropped a question in room room-a: no answer after 30 seconds.", entry.Message);
     }
@@ -826,41 +827,6 @@ public sealed class RoomSessionUserInputTests
             await this.RunCts.CancelAsync();
             await this.Room.DisposeAsync();
             this.RunCts.Dispose();
-        }
-    }
-
-    /// <summary>An <see cref="ILogger"/> that keeps every entry's level and formatted message.</summary>
-    private sealed class RecordingLogger : ILogger
-    {
-        private readonly Lock gate = new();
-        private readonly List<(LogLevel Level, string Message)> entries = [];
-
-        /// <summary>A copy of every entry logged so far.</summary>
-        /// <returns>The entries, in order.</returns>
-        public IReadOnlyList<(LogLevel Level, string Message)> Snapshot()
-        {
-            lock (this.gate)
-            {
-                return [.. this.entries];
-            }
-        }
-
-        /// <inheritdoc />
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
-
-        /// <inheritdoc />
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        /// <inheritdoc />
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            ArgumentNullException.ThrowIfNull(formatter);
-
-            lock (this.gate)
-            {
-                this.entries.Add((logLevel, formatter(state, exception)));
-            }
         }
     }
 }

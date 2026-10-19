@@ -2,6 +2,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -484,47 +485,4 @@ public sealed class TeammateLayoutMigrationTests
 
     /// <summary>A minimal, valid Persona file's raw text: only the required identity fields.</summary>
     private static string PersonaText(string name) => $"---\nName: {name}\nTitle: {name}\nAlias: {name}\n---\nYou are {name}.";
-
-    /// <summary>
-    /// A hand-written fake <see cref="ILogger{T}"/> that records every call, since this repo has no
-    /// mocking framework. Copied from <c>PersonaRenameCascadeTests.RecordingLogger</c> (no shared fake
-    /// logger exists).
-    /// </summary>
-    /// <typeparam name="T">The category type the recorded logger stands in for.</typeparam>
-    private sealed class RecordingLogger<T> : ILogger<T>
-    {
-        /// <summary>Every call made to this logger so far, in call order.</summary>
-        public List<(LogLevel Level, string Message)> Entries { get; } = [];
-
-        /// <summary>Not used by this fake: scoping is irrelevant to the tests that need it, so this returns a no-op.</summary>
-        /// <typeparam name="TState">The scope state type.</typeparam>
-        /// <param name="state">The scope state.</param>
-        /// <returns>A no-op <see cref="IDisposable"/>.</returns>
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
-
-        /// <summary>Always enabled, so every call this fake receives is actually recorded.</summary>
-        /// <param name="logLevel">The level being checked.</param>
-        /// <returns><see langword="true"/>, always.</returns>
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        /// <summary>Records one log call's level and formatted message.</summary>
-        /// <typeparam name="TState">The state type carrying this call's structured values.</typeparam>
-        /// <param name="logLevel">The call's severity.</param>
-        /// <param name="eventId">Unused by this fake.</param>
-        /// <param name="state">The call's structured state, passed to <paramref name="formatter"/>.</param>
-        /// <param name="exception">The call's exception, if any.</param>
-        /// <param name="formatter">Formats <paramref name="state"/> and <paramref name="exception"/> into the message text.</param>
-        public void Log<TState>(
-            LogLevel logLevel,
-            EventId eventId,
-            TState state,
-            Exception? exception,
-            Func<TState, Exception?, string> formatter)
-        {
-            ArgumentNullException.ThrowIfNull(formatter);
-
-            this.Entries.Add((logLevel, formatter(state, exception)));
-        }
-    }
 }

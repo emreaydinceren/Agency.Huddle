@@ -4,6 +4,7 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.Tests.Elicitation;
 using static Agency.Huddle.Tests.Tasks.TaskTriggerTestSupport;
 
 namespace Agency.Huddle.Tests.Tasks;
@@ -357,7 +358,7 @@ public sealed class TaskTriggerCoalescingTests
 
         MessagePostedEvent post = Assert.Single(harness.Posts);
         Assert.Equal("PLAT-0002", post.Message.Text);
-        (LogLevel Level, string Message, Exception? Exception) logged = Assert.Single(harness.Logger.Entries, e => e.Level == LogLevel.Information);
+        LogEntry logged = Assert.Single(harness.Logger.Entries, e => e.Level == LogLevel.Information);
         Assert.Equal("Not waking anyone for Task PLAT-0001: it no longer exists.", logged.Message);
     }
 }

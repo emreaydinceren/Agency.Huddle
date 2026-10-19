@@ -7,6 +7,7 @@ using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Teams;
 
@@ -409,7 +410,7 @@ public sealed class TeamRoomReconcilerTests
         gated.Open();
         await reconciler.LastRun;
 
-        Assert.Equal(0, log.Warnings);
+        Assert.Equal(0, log.CountAtLeast(LogLevel.Warning));
     }
 
     /// <summary>Stopping while a run is in flight waits for it, then disposing logs no failure.</summary>
@@ -431,7 +432,7 @@ public sealed class TeamRoomReconcilerTests
         await stopping;
         reconciler.Dispose();
 
-        Assert.Equal(0, log.Warnings);
+        Assert.Equal(0, log.CountAtLeast(LogLevel.Warning));
     }
 
     /// <summary>Builds a Team summary with the given member names.</summary>
@@ -565,31 +566,6 @@ public sealed class TeamRoomReconcilerTests
         {
             this.gate.Dispose();
             this.Entered.Dispose();
-        }
-    }
-
-    /// <summary>A logger that only counts how many warnings or worse it was given.</summary>
-    private sealed class RecordingLogger<T> : ILogger<T>
-    {
-        private int warnings;
-
-        /// <summary>How many entries at warning level or above were logged.</summary>
-        public int Warnings => Volatile.Read(ref this.warnings);
-
-        /// <inheritdoc />
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
-
-        /// <inheritdoc />
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        /// <inheritdoc />
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            if (logLevel >= LogLevel.Warning)
-            {
-                _ = Interlocked.Increment(ref this.warnings);
-            }
         }
     }
 }

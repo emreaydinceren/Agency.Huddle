@@ -2,6 +2,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Avatars;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Avatars;
 
@@ -19,7 +20,7 @@ public sealed class AvatarLibraryLoaderTests : IDisposable
 
     private readonly string root = Path.Combine(Path.GetTempPath(), "huddle-avatar-loader-" + Guid.NewGuid().ToString("N"));
 
-    private readonly CapturingLogger logger = new();
+    private readonly RecordingLogger<AvatarLibraryLoader> logger = new();
 
     /// <summary>Creates the per-test library folder.</summary>
     public AvatarLibraryLoaderTests()
@@ -277,7 +278,7 @@ public sealed class AvatarLibraryLoaderTests : IDisposable
         AvatarLibraryLoadResult result = await loader.LoadAsync(ct);
 
         Assert.Equal(8, result.Skipped);
-        CapturedLog warning = Assert.Single(this.logger.Entries, e => e.Level == LogLevel.Warning);
+        LogEntry warning = Assert.Single(this.logger.Entries, e => e.Level == LogLevel.Warning);
         Assert.Contains("missing0.png", warning.Message, StringComparison.Ordinal);
         Assert.Contains("missing4.png", warning.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("missing5.png", warning.Message, StringComparison.Ordinal);
@@ -352,30 +353,5 @@ public sealed class AvatarLibraryLoaderTests : IDisposable
             AvatarLibrary = new AvatarLibraryOptions { Dir = dir },
         };
         return new AvatarLibraryLoader(new AvatarLibraryLocator(Options.Create(options)), this.logger);
-    }
-
-    /// <summary>One captured log call.</summary>
-    /// <param name="Level">The level logged at.</param>
-    /// <param name="Message">The formatted message.</param>
-    private sealed record CapturedLog(LogLevel Level, string Message);
-
-    /// <summary>A logger that records every call, so a test can count and read the warnings.</summary>
-    private sealed class CapturingLogger : ILogger<AvatarLibraryLoader>
-    {
-        /// <summary>Every call made so far.</summary>
-        internal List<CapturedLog> Entries { get; } = [];
-
-        /// <inheritdoc />
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
-
-        /// <inheritdoc />
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        /// <inheritdoc />
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            this.Entries.Add(new CapturedLog(logLevel, formatter(state, exception)));
-        }
     }
 }

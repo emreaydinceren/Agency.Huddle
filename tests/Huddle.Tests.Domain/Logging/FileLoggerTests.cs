@@ -1,43 +1,13 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Agency.Huddle.App.Logging;
+using Agency.Huddle.Tests.Acp.Fakes;
 
 namespace Agency.Huddle.Tests.Logging;
 
 /// <summary>Tests for the per-run file log: <see cref="FileLoggerProvider"/> and its registration.</summary>
 public sealed class FileLoggerTests
 {
-    /// <summary>
-    /// A controllable <see cref="TimeProvider"/> pinned to UTC, so the file name this clock produces
-    /// is the same on every machine rather than shifting with the runner's time zone.
-    /// </summary>
-    private sealed class ManualTimeProvider : TimeProvider
-    {
-        private DateTimeOffset now;
-
-        /// <summary>Creates a clock fixed at <paramref name="start"/>.</summary>
-        /// <param name="start">The instant this clock reports until <see cref="Advance"/> is called.</param>
-        public ManualTimeProvider(DateTimeOffset start)
-        {
-            this.now = start;
-        }
-
-        /// <inheritdoc/>
-        public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
-
-        /// <inheritdoc/>
-        public override DateTimeOffset GetUtcNow()
-        {
-            return this.now;
-        }
-
-        /// <summary>Moves this clock forward by <paramref name="delta"/>.</summary>
-        /// <param name="delta">How far forward to move.</param>
-        public void Advance(TimeSpan delta)
-        {
-            this.now += delta;
-        }
-    }
 
     private static readonly DateTimeOffset Start = new(2026, 9, 21, 14, 33, 18, TimeSpan.Zero);
 
@@ -48,7 +18,7 @@ public sealed class FileLoggerTests
         using TempDataDir dataDir = new();
         var logDirectory = Path.Combine(dataDir.Path, "logs");
 
-        FileLoggerProvider provider = new(logDirectory, 20, "Development", new ManualTimeProvider(Start));
+        FileLoggerProvider provider = new(logDirectory, 20, "Development", new ManualTimeProvider(Start, TimeZoneInfo.Utc));
         var path = provider.Writer.FilePath;
         provider.Dispose();
 
@@ -70,7 +40,7 @@ public sealed class FileLoggerTests
     {
         using TempDataDir dataDir = new();
 
-        FileLoggerProvider provider = new(dataDir.Path, 20, "Development", new ManualTimeProvider(Start));
+        FileLoggerProvider provider = new(dataDir.Path, 20, "Development", new ManualTimeProvider(Start, TimeZoneInfo.Utc));
         var path = provider.Writer.FilePath;
         ILogger logger = provider.CreateLogger("Agency.Huddle.App.Services.ChatService");
 
@@ -95,7 +65,7 @@ public sealed class FileLoggerTests
     {
         using TempDataDir dataDir = new();
 
-        FileLoggerProvider provider = new(dataDir.Path, 20, "Development", new ManualTimeProvider(Start));
+        FileLoggerProvider provider = new(dataDir.Path, 20, "Development", new ManualTimeProvider(Start, TimeZoneInfo.Utc));
         var path = provider.Writer.FilePath;
         ILogger logger = provider.CreateLogger("Agency.Huddle.App.Acp.PersonaRunner");
 
@@ -118,7 +88,7 @@ public sealed class FileLoggerTests
     {
         using TempDataDir dataDir = new();
 
-        FileLoggerProvider provider = new(dataDir.Path, 20, "Development", new ManualTimeProvider(Start));
+        FileLoggerProvider provider = new(dataDir.Path, 20, "Development", new ManualTimeProvider(Start, TimeZoneInfo.Utc));
         var path = provider.Writer.FilePath;
         ILogger logger = provider.CreateLogger("Agency.Huddle.App.Services.ChatService");
 
@@ -139,7 +109,7 @@ public sealed class FileLoggerTests
     {
         using TempDataDir dataDir = new();
 
-        FileLoggerProvider provider = new(dataDir.Path, 20, "Development", new ManualTimeProvider(Start));
+        FileLoggerProvider provider = new(dataDir.Path, 20, "Development", new ManualTimeProvider(Start, TimeZoneInfo.Utc));
         var path = provider.Writer.FilePath;
         ILogger logger = provider.CreateLogger("Cat");
 
@@ -157,7 +127,7 @@ public sealed class FileLoggerTests
     public void Constructor_PrunesTheOldestFilesBeyondTheRetainedCount()
     {
         using TempDataDir dataDir = new();
-        ManualTimeProvider clock = new(Start);
+        ManualTimeProvider clock = new(Start, TimeZoneInfo.Utc);
 
         for (var i = 0; i < 5; i++)
         {

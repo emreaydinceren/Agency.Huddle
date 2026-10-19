@@ -67,7 +67,7 @@ public sealed class AppearanceStoreTests
         using var dataDir = new TempDataDir();
         var path = Path.Combine(dataDir.Path, "appearance.json");
         File.WriteAllText(path, "{\"theme\":\"dark-modern\"}");
-        WarningRecorder logger = new();
+        RecordingLogger<AppearanceStore> logger = new();
 
         using var store = new AppearanceStore(dataDir.Options(), logger);
 
@@ -76,30 +76,7 @@ public sealed class AppearanceStoreTests
         Assert.Equal("{\"theme\":\"dark-modern\"}", File.ReadAllText(path));
         Assert.Equal(
             $"Appearance file '{path}' selects theme 'dark-modern', which is not a known theme; the default theme is used instead and the file is left unchanged.",
-            Assert.Single(logger.Warnings));
-    }
-
-    /// <summary>Collects the formatted text of every warning an <see cref="AppearanceStore"/> logs.</summary>
-    private sealed class WarningRecorder : ILogger<AppearanceStore>
-    {
-        /// <summary>The formatted warning messages, in order.</summary>
-        public List<string> Warnings { get; } = [];
-
-        /// <inheritdoc />
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
-
-        /// <inheritdoc />
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        /// <inheritdoc />
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            if (logLevel == LogLevel.Warning)
-            {
-                this.Warnings.Add(formatter(state, exception));
-            }
-        }
+            Assert.Single(logger.AtExactly(LogLevel.Warning)).Message);
     }
 
     /// <summary>

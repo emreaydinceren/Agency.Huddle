@@ -9,6 +9,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Agency.Huddle.Tests.Library;
 using Agency.Huddle.Tests.Waiting;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Acp.Sessions;
 
@@ -248,42 +249,10 @@ public sealed class RoomSessionPromptBlocksTests
         AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"look {Link(fake)}"), ImageAndText, logger: logger);
 
         Assert.Empty(prompt.Blocks!);
-        (LogLevel Level, string Message) entry = Assert.Single(logger.Entries, e => e.Message.Contains("path lines instead of blocks", StringComparison.Ordinal)); // contains-ok: log text
+        LogEntry entry = Assert.Single(logger.Entries, e => e.Message.Contains("path lines instead of blocks", StringComparison.Ordinal)); // contains-ok: log text
         Assert.Equal(LogLevel.Information, entry.Level);
         Assert.Contains("TooLarge=1", entry.Message, StringComparison.Ordinal); // contains-ok: log text
         Assert.DoesNotContain(fake, entry.Message, StringComparison.Ordinal);
     }
 
-
-    private sealed class RecordingLogger : ILogger
-    {
-        private readonly Lock gate = new();
-
-        private readonly List<(LogLevel Level, string Message)> entries = [];
-
-        public IReadOnlyList<(LogLevel Level, string Message)> Entries
-        {
-            get
-            {
-                lock (this.gate)
-                {
-                    return [.. this.entries];
-                }
-            }
-        }
-
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
-
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            ArgumentNullException.ThrowIfNull(formatter);
-            lock (this.gate)
-            {
-                this.entries.Add((logLevel, formatter(state, exception)));
-            }
-        }
-    }
 }
