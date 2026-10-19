@@ -1,10 +1,7 @@
 namespace Agency.Huddle.Tests.Acp.Sessions;
 
-using System.IO.Pipes;
-using System.Threading.Channels;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.Acp.Abstractions;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.Contracts;
@@ -16,7 +13,7 @@ using Agency.Huddle.Tests.Factories;
 /// <summary>
 /// Pins RS §6.8 "Stop" routed to a Room's own <see cref="RoomSession"/> (finding P-6, RS §9 E-4),
 /// over a real <see cref="PersonaRunner"/> talking to a hand-scripted pipe server
-/// (<see cref="FakeServer"/>) - the same harness <c>RoomSessionPoolTests</c> uses, so a test here can
+/// (<see cref="PipeRunnerServer"/>) - the same harness <c>RoomSessionPoolTests</c> uses, so a test here can
 /// script the Welcome's Room list and drive two Rooms' Turns independently. One test
 /// (<see cref="StopDuringTranscriptRead_NoPromptSent"/>) instead builds a bare
 /// <see cref="RoomSession"/> with a <see cref="FakeRoomSessionOwner"/>, since it needs to gate the
@@ -31,7 +28,7 @@ public sealed class RoomSessionStopTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
-        await using var server = new FakeServer();
+        await using var server = new PipeRunnerServer("room-session-stop-tests");
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
         var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
@@ -58,7 +55,7 @@ public sealed class RoomSessionStopTests
         // room-a's stopped Turn writes no reply (its FakeAgentSession never got to complete),
         // but does still write the terminating (empty) MessageDelta.
         await server.ReceiveUntilAsync<MessageDelta>(delta => delta.RoomId == roomA.Id && delta.IsFinal, ct);
-        var postedB = await server.ReceiveUntilAsync<PostMessage>(ct);
+        var postedB = await server.ReceiveUntilAsync<PostMessage>(null, ct);
 
         Assert.Equal(roomB.Id, postedB.RoomId);
         Assert.DoesNotContain(server.Received.OfType<PostMessage>(), message => message.RoomId == roomA.Id);
@@ -71,7 +68,7 @@ public sealed class RoomSessionStopTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
-        await using var server = new FakeServer();
+        await using var server = new PipeRunnerServer("room-session-stop-tests");
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
         var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
@@ -116,7 +113,7 @@ public sealed class RoomSessionStopTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
-        await using var server = new FakeServer();
+        await using var server = new PipeRunnerServer("room-session-stop-tests");
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
         var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
@@ -148,7 +145,7 @@ public sealed class RoomSessionStopTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
-        await using var server = new FakeServer();
+        await using var server = new PipeRunnerServer("room-session-stop-tests");
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
         TaskCompletionSource openGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         factory.OnHostStarted = host => host.OpenGate = openGate;
@@ -180,7 +177,7 @@ public sealed class RoomSessionStopTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
-        await using var server = new FakeServer();
+        await using var server = new PipeRunnerServer("room-session-stop-tests");
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
         var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
@@ -212,7 +209,7 @@ public sealed class RoomSessionStopTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var server = new FakeServer();
+        await using var server = new PipeRunnerServer("room-session-stop-tests");
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
         var persona = TestPersonas.Nova;
         var roomA = HumanRoom("room-a");
@@ -222,6 +219,8 @@ public sealed class RoomSessionStopTests
 
         await server.SendAsync(new StopTurn("room-never-seen"), ct);
         await Task.Delay(200, ct);
+
+        Assert.Empty(server.Received.OfType<PostMessage>());
     }
 
     /// <summary>
@@ -311,7 +310,7 @@ public sealed class RoomSessionStopTests
             AgentMessagesSinceHuman: 0,
             Budget: 0);
 
-    private static PersonaRunner CreateRunner(FakeServer server, Persona persona, FakeAgentHostFactory factory, AcpOptions? acp = null)
+    private static PersonaRunner CreateRunner(PipeRunnerServer server, Persona persona, FakeAgentHostFactory factory, AcpOptions? acp = null)
     {
         var options = TestOptions.Create(opts =>
         {
@@ -319,153 +318,5 @@ public sealed class RoomSessionStopTests
             opts.Acp = acp ?? new AcpOptions();
         });
         return new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
-    }
-
-
-    /// <summary>A hand-scripted pipe server giving a test full control over the Welcome a <see cref="PersonaRunner"/> receives, and over what a Stop reaches (RS §9 E-4's own harness, duplicated from <c>RoomSessionPoolTests</c> per this plan's per-file fake convention).</summary>
-    private sealed class FakeServer : IAsyncDisposable
-    {
-        private readonly NamedPipeServerStream pipe;
-        private readonly Channel<ProtocolMessage> received = Channel.CreateUnbounded<ProtocolMessage>();
-        private readonly List<ProtocolMessage> receivedLog = [];
-        private readonly Lock gate = new();
-
-        private JsonLineStream? stream;
-        private Task? pumpTask;
-
-        /// <summary>Creates the server-side pipe instance, unconnected, under a unique per-test name.</summary>
-        public FakeServer()
-        {
-            this.PipeName = "room-session-stop-tests-" + Guid.NewGuid().ToString("N");
-            this.pipe = new NamedPipeServerStream(
-                this.PipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-        }
-
-        /// <summary>The named pipe this server listens on; hand it to the runner's <see cref="TeamOptions.PipeName"/>.</summary>
-        public string PipeName { get; }
-
-        /// <summary>Every envelope received so far, in arrival order - a snapshot, safe to enumerate while the pump keeps writing.</summary>
-        public IReadOnlyList<ProtocolMessage> Received
-        {
-            get
-            {
-                lock (this.gate)
-                {
-                    return [.. this.receivedLog];
-                }
-            }
-        }
-
-        /// <summary>Starts <paramref name="runner"/>, accepts its connection, and answers the handshake with <paramref name="rooms"/>.</summary>
-        public async Task HandshakeAsync(PersonaRunner runner, IReadOnlyList<RoomInfo> rooms, CancellationToken ct)
-        {
-            ArgumentNullException.ThrowIfNull(runner);
-            ArgumentNullException.ThrowIfNull(rooms);
-
-            var startTask = runner.StartAsync(ct);
-            await this.pipe.WaitForConnectionAsync(ct);
-
-            var lineStream = new JsonLineStream(this.pipe);
-            this.stream = lineStream;
-
-            var hello = Assert.IsType<Hello>(await lineStream.ReadAsync(ct));
-            await lineStream.WriteAsync(new Welcome("agent-1", hello.Name, rooms), ct);
-
-            await startTask;
-
-            this.pumpTask = this.PumpAsync();
-        }
-
-        /// <summary>Writes one envelope to the connected runner.</summary>
-        public Task SendAsync(ProtocolMessage message, CancellationToken ct) => this.stream!.WriteAsync(message, ct);
-
-        /// <summary>Reads received envelopes until one of type <typeparamref name="T"/> arrives, discarding everything else.</summary>
-        public async Task<T> ReceiveUntilAsync<T>(CancellationToken ct)
-            where T : ProtocolMessage
-        {
-            while (true)
-            {
-                var message = await this.received.Reader.ReadAsync(ct);
-                if (message is T typed)
-                {
-                    return typed;
-                }
-            }
-        }
-
-        /// <summary>Reads received envelopes until one of type <typeparamref name="T"/> also matching <paramref name="predicate"/> arrives, discarding everything else.</summary>
-        public async Task<T> ReceiveUntilAsync<T>(Func<T, bool> predicate, CancellationToken ct)
-            where T : ProtocolMessage
-        {
-            ArgumentNullException.ThrowIfNull(predicate);
-
-            while (true)
-            {
-                var message = await this.received.Reader.ReadAsync(ct);
-                if (message is T typed && predicate(typed))
-                {
-                    return typed;
-                }
-            }
-        }
-
-        /// <summary>Continuously reads from the pipe into <see cref="received"/> and <see cref="Received"/> until the stream ends or faults.</summary>
-        private async Task PumpAsync()
-        {
-            try
-            {
-                while (true)
-                {
-                    var message = await this.stream!.ReadAsync(CancellationToken.None);
-                    if (message is null)
-                    {
-                        break;
-                    }
-
-                    if (message is ReadTranscript read)
-                    {
-                        await this.stream.WriteAsync(new TranscriptTail(read.RequestId, read.RoomId, [], Omitted: 0), CancellationToken.None);
-                        continue;
-                    }
-
-                    lock (this.gate)
-                    {
-                        this.receivedLog.Add(message);
-                    }
-
-                    await this.received.Writer.WriteAsync(message, CancellationToken.None);
-                }
-            }
-            catch (Exception)
-            {
-                // The pipe closed (this server disposing, or the runner tearing down); nothing more
-                // to pump.
-            }
-        }
-
-        /// <summary>Disposes the line stream if the handshake reached it, otherwise the bare pipe.</summary>
-        public async ValueTask DisposeAsync()
-        {
-            if (this.stream is not null)
-            {
-                await this.stream.DisposeAsync();
-            }
-            else
-            {
-                await this.pipe.DisposeAsync();
-            }
-
-            if (this.pumpTask is not null)
-            {
-                try
-                {
-                    await this.pumpTask;
-                }
-                catch (Exception)
-                {
-                    // Teardown must not throw regardless of how the pump ended.
-                }
-            }
-        }
     }
 }
