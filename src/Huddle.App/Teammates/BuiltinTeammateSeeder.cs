@@ -59,7 +59,9 @@ internal sealed class BuiltinTeammateSeeder(PersonaStore personas, ILogger<Built
 
         if (!this.TryFindFreeNameAndAlias(out var name, out var alias))
         {
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
             logger.LogError("Could not seed the Chief of Staff: no free Name/Alias pair was found within {MaxAttempts} attempts.", MaxFreeNameAttempts);
+#pragma warning restore HAA0601
             return Task.CompletedTask;
         }
 

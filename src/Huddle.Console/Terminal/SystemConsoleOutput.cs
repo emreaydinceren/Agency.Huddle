@@ -60,7 +60,9 @@ internal sealed class SystemConsoleOutput : IConsoleOutput
             ConsoleStyle.Prompt => ConsoleColor.Green,
             ConsoleStyle.Error => ConsoleColor.Red,
             ConsoleStyle.Info => ConsoleColor.DarkCyan,
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
             _ => throw new ArgumentOutOfRangeException(nameof(style), style, "Unknown console style."),
+#pragma warning restore HAA0601
         };
     }
 }

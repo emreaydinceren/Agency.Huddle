@@ -46,7 +46,7 @@ internal static class SeedRootGuard
             return null;
         }
 
-        if (new DirectoryInfo(full).Attributes.HasFlag(FileAttributes.ReparsePoint))
+        if ((new DirectoryInfo(full).Attributes & FileAttributes.ReparsePoint) != 0)
         {
             return $"'{full}' is a symbolic link or junction.";
         }
@@ -160,7 +160,7 @@ internal static class SeedRootGuard
         EnumerationOptions options = new() { RecurseSubdirectories = true, AttributesToSkip = 0, IgnoreInaccessible = true };
         foreach (string entry in Directory.EnumerateFileSystemEntries(folder, "*", options))
         {
-            if (File.GetAttributes(entry).HasFlag(FileAttributes.ReparsePoint))
+            if ((File.GetAttributes(entry) & FileAttributes.ReparsePoint) != 0)
             {
                 return entry;
             }

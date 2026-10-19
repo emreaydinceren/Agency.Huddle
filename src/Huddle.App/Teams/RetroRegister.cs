@@ -73,6 +73,7 @@ internal static class RetroRegister
     /// <returns>The line, without a line ending.</returns>
     internal static string RenderRow(RegisterRow row)
     {
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
         return string.Join(
             ' ',
             "|",
@@ -88,6 +89,7 @@ internal static class RetroRegister
             "|",
             Escape(row.EvidenceNextCheck),
             "|");
+#pragma warning restore HAA0102
     }
 
     /// <summary>Whether a line belongs to the table (it starts with a pipe).</summary>
@@ -122,11 +124,13 @@ internal static class RetroRegister
     {
         foreach (RetroStatus candidate in Enum.GetValues<RetroStatus>())
         {
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
             if (string.Equals(candidate.ToString(), word, StringComparison.OrdinalIgnoreCase))
             {
                 status = candidate;
                 return true;
             }
+#pragma warning restore HAA0102
         }
 
         status = RetroStatus.Open;

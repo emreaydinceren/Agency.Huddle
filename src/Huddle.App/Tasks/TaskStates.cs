@@ -44,7 +44,9 @@ public static class TaskStates
 
     /// <summary>Returns the wire name for the state.</summary>
     public static string ToWire(this TaskState state) =>
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
         WireNames.TryGetValue(state, out string? wire) ? wire : state.ToString();
+#pragma warning restore HAA0102
 
     /// <summary>Parses a wire name or enum identifier (case-insensitive, trims, accepts snake_case).</summary>
     public static bool TryParse(string? wire, out TaskState state)
@@ -87,7 +89,9 @@ public static class TaskStates
         // Try enum identifier (e.g., "ToDo")
         foreach (var (stateValue, _) in WireNames)
         {
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
             string enumName = stateValue.ToString();
+#pragma warning restore HAA0102
             string normalizedEnum = NormalizeInput(enumName);
             if (string.Equals(normalized, normalizedEnum, StringComparison.OrdinalIgnoreCase))
             {

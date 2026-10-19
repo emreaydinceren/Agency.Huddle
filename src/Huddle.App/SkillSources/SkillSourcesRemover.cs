@@ -187,7 +187,7 @@ internal sealed partial class SkillSourcesRemover(
     /// <summary>Deletes a directory tree, unlinking a reparse point instead of following it.</summary>
     private static void DeleteTree(DirectoryInfo directory)
     {
-        if (directory.Attributes.HasFlag(FileAttributes.ReparsePoint))
+        if ((directory.Attributes & FileAttributes.ReparsePoint) != 0)
         {
             directory.Delete(recursive: false);
             return;

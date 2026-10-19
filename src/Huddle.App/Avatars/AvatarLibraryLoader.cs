@@ -191,7 +191,9 @@ internal sealed class AvatarLibraryLoader(AvatarLibraryLocator locator, ILogger<
         {
             logger.LogWarning(
                 "The Avatar Library skipped {Skipped} records, for example: {Examples}.",
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                 skipped,
+#pragma warning restore HAA0601
                 string.Join(", ", examples));
         }
 

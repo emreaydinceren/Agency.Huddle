@@ -461,7 +461,7 @@ internal sealed class TeamTypeCatalog
             while (current is not null && current.Length > typeDir.Length)
             {
                 FileSystemInfo info = Directory.Exists(current) ? new DirectoryInfo(current) : new FileInfo(current);
-                if (info.Attributes.HasFlag(FileAttributes.ReparsePoint))
+                if ((info.Attributes & FileAttributes.ReparsePoint) != 0)
                 {
                     FileSystemInfo? target = info.ResolveLinkTarget(returnFinalTarget: true);
                     if (target is null || !(target.FullName + Path.DirectorySeparatorChar).StartsWith(prefix, StringComparison.OrdinalIgnoreCase))

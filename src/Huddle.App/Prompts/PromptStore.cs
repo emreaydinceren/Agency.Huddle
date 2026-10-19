@@ -496,7 +496,9 @@ internal sealed class PromptStore : IPromptSource, IDisposable
                 ex,
                 "Could not read prompt overrides file '{Path}' after {Attempts} attempts; keeping the previously resolved prompt text.",
                 this.path,
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                 RetryingFileRead.Attempts);
+#pragma warning restore HAA0601
         }
 
         return null;

@@ -141,7 +141,9 @@ internal static class BoardLayout
         TaskGroupField.Assignee => task.Assignee ?? NullSentinel,
         TaskGroupField.State => task.Status.ToWire(),
         TaskGroupField.Sprint => task.Sprint?.ToString() ?? NullSentinel,
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(field), field, "Unknown grouping field."),
+#pragma warning restore HAA0601
     };
 
     /// <summary>Encodes a string as Base64Url (no padding), so any character survives inside a zone id.</summary>

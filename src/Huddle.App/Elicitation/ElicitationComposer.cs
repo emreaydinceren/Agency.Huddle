@@ -173,6 +173,7 @@ internal static partial class ElicitationComposer
         {
             case ElicitationFieldKind.Number:
                 _ = TryParseNumber(entries[0], out double number);
+#pragma warning disable HAA0601 // The tuple item is an object by design; one box per elicitation field.
                 return (number, number.ToString(CultureInfo.InvariantCulture));
             case ElicitationFieldKind.Integer:
                 _ = TryParseWhole(entries[0], out long whole);
@@ -180,6 +181,7 @@ internal static partial class ElicitationComposer
             case ElicitationFieldKind.Boolean:
                 _ = bool.TryParse(entries[0], out bool flag);
                 return (flag, flag ? "Yes" : "No");
+#pragma warning restore HAA0601
             case ElicitationFieldKind.SingleSelect:
                 ElicitationOption chosen = field.Options.First(option => string.Equals(option.Value, entries[0], StringComparison.Ordinal));
                 return (chosen.Value, chosen.Label);

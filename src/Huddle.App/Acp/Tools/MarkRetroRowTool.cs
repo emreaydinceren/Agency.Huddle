@@ -150,7 +150,9 @@ internal sealed class MarkRetroRowTool(
     {
         foreach (RetroStatus candidate in new[] { RetroStatus.Verified, RetroStatus.Partial, RetroStatus.Changed })
         {
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
             if (string.Equals(candidate.ToString(), text?.Trim(), StringComparison.OrdinalIgnoreCase))
+#pragma warning restore HAA0102
             {
                 status = candidate;
                 return true;

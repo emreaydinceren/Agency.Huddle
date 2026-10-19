@@ -14,7 +14,9 @@ public static class TaskPriorities
 
     /// <summary>Returns the wire name for the priority.</summary>
     public static string ToWire(this TaskPriority priority) =>
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
         WireNames.TryGetValue(priority, out string? wire) ? wire : priority.ToString();
+#pragma warning restore HAA0102
 
     /// <summary>Parses a wire name or enum identifier (case-insensitive, trims, accepts snake_case).</summary>
     public static bool TryParse(string? wire, out TaskPriority priority)
@@ -57,7 +59,9 @@ public static class TaskPriorities
         // Try enum identifier (e.g., "Low")
         foreach (var (priorityValue, _) in WireNames)
         {
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
             string enumName = priorityValue.ToString();
+#pragma warning restore HAA0102
             string normalizedEnum = NormalizeInput(enumName);
             if (string.Equals(normalized, normalizedEnum, StringComparison.OrdinalIgnoreCase))
             {

@@ -111,7 +111,9 @@ public sealed record SourceFile(
     /// <summary>The lowercase name an enum value is written with.</summary>
     public static string Lower<TEnum>(TEnum value) where TEnum : struct, Enum
     {
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
         return new string([.. value.ToString().Select(char.ToLowerInvariant)]);
+#pragma warning restore HAA0102
     }
 
     /// <summary>An enum value from its lowercase name, or null.</summary>

@@ -1336,9 +1336,11 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         }
         else
         {
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
             this.logger.LogError(
                 "PersonaStore gave up retrying a locked Persona file after {Retries} consecutive attempts; it will try again on the next change.",
                 this.consecutiveLockRetries);
+#pragma warning restore HAA0601
         }
     }
 }

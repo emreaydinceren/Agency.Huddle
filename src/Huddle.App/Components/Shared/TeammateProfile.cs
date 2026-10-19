@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.TeamTypes;
@@ -27,6 +28,7 @@ public sealed record TeammateProfile(string Name, string Title, string Descripti
     public IReadOnlyList<string> SetupReasons { get; init; } = [];
 
     /// <summary>An unsaved avatar image, passed through to the avatar, or <see langword="null"/>.</summary>
+    [SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Passed through unchanged to the byte[] PendingImage parameter of the avatar components; a ReadOnlyMemory would force a copy on every render.")]
     public byte[]? PendingImage { get; init; }
 
     /// <summary>The file extension of <see cref="PendingImage"/>, or <see langword="null"/>.</summary>

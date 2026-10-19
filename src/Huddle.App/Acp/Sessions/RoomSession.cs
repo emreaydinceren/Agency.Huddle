@@ -330,11 +330,13 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             // only the bound running out is worth a line, because the Human sees a question vanish.
             if (timeout.IsCancellationRequested)
             {
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                 this.logger.LogWarning(
                     "Persona '{PersonaName}' dropped a question in room {RoomId}: no answer after {TimeoutSeconds} seconds.",
                     this.owner.PersonaName,
                     lease.RoomId,
                     bound.TotalSeconds);
+#pragma warning restore HAA0601
             }
 
             return new ElicitationCancelled();
@@ -404,9 +406,10 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         // Unblocks ProcessWorkItemAsync's await on this Turn immediately, without waiting on the
         // agent process to acknowledge the cancel notification below. A plain Cancel(), not
         // CancelAsync(), so this call - and the read loop awaiting it - returns at once.
-#pragma warning disable MA0042 // Deliberate: a plain Cancel(), not CancelAsync(), so this call returns at once (see the comment above).
+#pragma warning disable CA1849, MA0042 // Deliberately synchronous: CancelAsync would let the callbacks finish after this returns, and the consumer's await on this Turn must be released before the cancel notification below is sent.
         turn.Cancellation.Cancel();
 #pragma warning restore MA0042
+#pragma warning restore CA1849
 
         // Safe from any thread: locks internally and no-ops when no prompt is in flight. NOT awaited
         // here - a queued Turn in a different Room must not reach PromptAsync on the shared session
@@ -1219,18 +1222,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             // the latches each producer writes BEFORE it cancels, not the exception. A genuine Stop
             // wins any tie - only StopAsync sets StopRequested, and this filter demands it be absent -
             // because a Human's own Stop must never be reported as a failure.
-            this.owner.ReportTurnFailure(
-                run.Item.RoomName,
-                string.Create(
-                    CultureInfo.InvariantCulture,
-                    $"the Adapter sent nothing for {run.IdleBound.TotalSeconds} seconds, so the Turn was abandoned and cancelled"));
-            run.RoomFailureThisTurn = true;
-            this.logger.LogWarning(
-                "Persona '{PersonaName}' turn in room {RoomId} was abandoned after {IdleBoundSeconds} seconds of silence.",
-                this.owner.PersonaName,
-                run.Item.RoomId,
-                run.IdleBound.TotalSeconds);
+            this.ReportIdleTimeout(run);
         }
+
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             // The Human stopped this Turn; the run itself is not shutting down. A Turn ends in one
@@ -1267,6 +1261,25 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             run.RoomFailureThisTurn = true;
             this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to process a turn in room {RoomId}.", this.owner.PersonaName, run.Item.RoomId);
         }
+    }
+
+    /// <summary>Reports a Turn the idle-timeout watchdog abandoned: tells the Room and logs the silence that triggered it.</summary>
+    /// <param name="run">The abandoned Turn.</param>
+    private void ReportIdleTimeout(TurnRun run)
+    {
+        this.owner.ReportTurnFailure(
+            run.Item.RoomName,
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"the Adapter sent nothing for {run.IdleBound.TotalSeconds} seconds, so the Turn was abandoned and cancelled"));
+        run.RoomFailureThisTurn = true;
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
+        this.logger.LogWarning(
+            "Persona '{PersonaName}' turn in room {RoomId} was abandoned after {IdleBoundSeconds} seconds of silence.",
+            this.owner.PersonaName,
+            run.Item.RoomId,
+            run.IdleBound.TotalSeconds);
+#pragma warning restore HAA0601
     }
 
     /// <summary>Sends the prompt, waits for the Turn's outcome, posts the reply and reports the outcome's health.</summary>
@@ -1606,11 +1619,13 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             // OperationCanceledException there.
             turn.MarkTimedOut();
 
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
             this.logger.LogWarning(
                 "Persona '{PersonaName}' turn in room {RoomId} sent nothing for {IdleBoundSeconds} seconds; cancelling it.",
                 this.owner.PersonaName,
                 item.RoomId,
                 idleBound.TotalSeconds);
+#pragma warning restore HAA0601
 
             try
             {

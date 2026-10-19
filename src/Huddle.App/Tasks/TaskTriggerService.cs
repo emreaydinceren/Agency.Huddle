@@ -370,7 +370,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
                 batch = new Batch(key) { FirstChangeAt = this.clock.GetUtcNow() };
                 if (!fireNow)
                 {
+#pragma warning disable HAA0601 // The framework API takes the state as object, so the box cannot be avoided.
                     batch.Timer = this.clock.CreateTimer(this.OnTimerFired, key, TimeSpan.FromSeconds(seconds), Timeout.InfiniteTimeSpan);
+#pragma warning restore HAA0601
                 }
 
                 this.batches[key] = batch;

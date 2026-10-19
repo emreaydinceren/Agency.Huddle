@@ -365,7 +365,9 @@ internal sealed class InstallFileWriter : IHostedService, IInstallFileLocation, 
             ItemState.UpdateAvailable => "Update available",
             ItemState.NotDownloaded => "Not downloaded",
             ItemState.New or ItemState.Available => "Available",
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
             _ => state.ToString(),
+#pragma warning restore HAA0102
         };
     }
 

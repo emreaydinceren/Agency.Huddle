@@ -257,7 +257,9 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                 this.logger.LogWarning(ex, "Could not remove the unused sprint {SprintId} from '{Path}'.", id, this.path);
+#pragma warning restore HAA0601
                 return false;
             }
         }

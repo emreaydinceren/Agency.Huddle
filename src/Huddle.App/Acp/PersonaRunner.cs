@@ -262,10 +262,12 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     void IRoomSessionOwner.ReportTokenBudgetSpent()
     {
         var tokenBudget = this.options.Acp.TokenBudget;
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
         this.logger.LogWarning(
             "Persona '{PersonaName}' has spent its token budget of {TokenBudget} and is taking no more turns until a human speaks to it.",
             this.persona.Name,
             tokenBudget);
+#pragma warning restore HAA0601
         this.RaiseStatusChanged(
             PersonaState.Degraded,
             string.Create(
@@ -693,11 +695,13 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                 // context only, the next time this Agent is Mentioned in that Room.
                 if (this.logger.IsEnabled(LogLevel.Information))
                 {
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                     this.logger.LogInformation(
                         "Persona '{PersonaName}' read a message in room {RoomId} as context only: it was not mentioned and the room has {MemberCount} members.",
                         this.persona.Name,
                         posted.RoomId,
                         posted.Members.Count);
+#pragma warning restore HAA0601
                 }
 
                 this.AppendCatchUp(posted.RoomId, posted.Message.SenderName, posted.Message.Text);
@@ -708,11 +712,13 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                 // one is being held, and if the Human extends the Room's Budget this exact
                 // Message is delivered again - at which point a buffered copy would reach the
                 // model twice in one prompt.
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                 this.logger.LogWarning(
                     "Persona '{PersonaName}' declined a turn in room {RoomId}: the room has spent its budget of {Budget} agent messages.",
                     this.persona.Name,
                     posted.RoomId,
                     posted.Budget);
+#pragma warning restore HAA0601
                 break;
         }
     }
@@ -912,7 +918,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         StopReason.MaxTokens => "it ran out of tokens",
         StopReason.MaxTurnRequests => "it made too many requests",
         StopReason.Refusal => "the Model refused to answer",
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, "Not an incomplete-stop reason."),
+#pragma warning restore HAA0601
     };
 
     /// <summary>

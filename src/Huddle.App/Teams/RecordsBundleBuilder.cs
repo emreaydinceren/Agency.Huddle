@@ -53,7 +53,9 @@ internal sealed class RecordsBundleBuilder(TaskStore tasks, ITeamCatalog teams, 
             taskRecords.Add(new TaskRecord(id, task.Title, status, task.Assignee));
             if (RequestFields.TryRead(task, out RequestFields? fields) && fields is not null)
             {
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
                 requests.Add(new RequestRecord(id, task.Title, fields.Kind.ToString(), fields.FromTeam, fields.Triage.ToString(), status));
+#pragma warning restore HAA0102
             }
 
             foreach (ChangeLogEntry entry in task.ChangeLog.Where(entry => entry.At >= since))

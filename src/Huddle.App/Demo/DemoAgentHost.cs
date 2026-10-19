@@ -149,7 +149,9 @@ public sealed class DemoAgentHost : BackgroundService
 
         this.logger.LogWarning(
             "Demo agent {AgentName} failed to connect to pipe {PipeName} after {Attempts} attempts.",
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
             name, this.options.PipeName, MaxConnectAttempts);
+#pragma warning restore HAA0601
         return null;
     }
 

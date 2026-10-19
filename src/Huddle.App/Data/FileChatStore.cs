@@ -91,7 +91,9 @@ public sealed class FileChatStore : IChatStore
                     }
                     catch (JsonException ex)
                     {
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                         this.logger.LogWarning(ex, "Skipping unparsable line {LineNumber} in room {RoomId}.", lineNumber, roomId);
+#pragma warning restore HAA0601
                     }
                 }
             }

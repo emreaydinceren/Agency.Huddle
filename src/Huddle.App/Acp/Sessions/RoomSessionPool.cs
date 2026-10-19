@@ -124,16 +124,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         var configuredConcurrency = Math.Max(1, options.MaxConcurrentTurns);
         this.gate = new TurnGate(configuredConcurrency);
 
-        var configuredLiveCap = options.MaxLiveSessions;
-        this.effectiveMaxLiveSessions = Math.Max(configuredLiveCap, configuredConcurrency);
-        if (this.effectiveMaxLiveSessions != configuredLiveCap)
-        {
-            this.logger.LogWarning(
-                "MaxLiveSessions {Configured} is below MaxConcurrentTurns {Concurrent}; raised to {Effective}.",
-                configuredLiveCap,
-                configuredConcurrency,
-                this.effectiveMaxLiveSessions);
-        }
+        this.effectiveMaxLiveSessions = RoomSessionPool.ResolveLiveSessionCap(logger, options.MaxLiveSessions, configuredConcurrency);
+
 
         if (!this.sessionPerRoom)
         {
@@ -152,6 +144,26 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         }
     }
 
+    /// <summary>The live-session cap actually used: the configured cap, raised to the concurrency limit when it is lower (with a warning).</summary>
+    /// <param name="logger">Receives the warning when the cap is raised.</param>
+    /// <param name="configuredLiveCap">The configured <c>MaxLiveSessions</c>.</param>
+    /// <param name="configuredConcurrency">The effective concurrent-Turn limit.</param>
+    private static int ResolveLiveSessionCap(ILogger logger, int configuredLiveCap, int configuredConcurrency)
+    {
+        int effective = Math.Max(configuredLiveCap, configuredConcurrency);
+        if (effective != configuredLiveCap)
+        {
+            logger.LogWarning(
+                "MaxLiveSessions {Configured} is below MaxConcurrentTurns {Concurrent}; raised to {Effective}.",
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
+                configuredLiveCap,
+                configuredConcurrency,
+                effective);
+#pragma warning restore HAA0601
+        }
+
+        return effective;
+    }
     /// <summary>The models the session opened at start advertises, or empty when nothing opened yet.</summary>
     internal IReadOnlyList<AgentModelOption> Models => this.startupSession?.Models ?? [];
 
@@ -287,7 +299,9 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         if (victim is null)
         {
             this.logger.LogWarning(
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                 "No Idle Room Session was evictable at the live cap of {Cap}; opening anyway.", this.effectiveMaxLiveSessions);
+#pragma warning restore HAA0601
             return;
         }
 

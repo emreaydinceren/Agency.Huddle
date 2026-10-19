@@ -11,6 +11,9 @@ internal static class TaskQuery
         new("id", SortDirection.Ascending),
     ];
 
+    /// <summary>Room for a formatted <see cref="TaskId"/> on the stack: a prefix of up to eight letters or digits, a dash and a number; a longer id falls back to <c>ToString</c>.</summary>
+    private const int IdBufferLength = 32;
+
     /// <summary>Declaration-order index of every <see cref="TaskState"/>, used to sort by status.</summary>
     private static readonly Dictionary<TaskState, int> StateOrder = TaskStates.All
         .Select((state, index) => (state, index))
@@ -46,7 +49,7 @@ internal static class TaskQuery
     {
         // Blockers are looked up across every Task, not just the ones in scope: a Done blocker sits in
         // the Closed folder, and must still read as terminal while the Active scope is showing.
-        Dictionary<TaskId, TaskItem>? byId = filter.Blocked == BlockedFilter.All ? null : all.ToDictionary(task => task.Id);
+        Dictionary<TaskId, TaskItem>? byId = filter.Blocked == BlockedFilter.All ? null : IndexById(all);
         List<TaskItem> matches = [];
         foreach (TaskItem task in all)
         {
@@ -66,6 +69,18 @@ internal static class TaskQuery
         }
 
         return matches;
+    }
+
+    /// <summary>Indexes <paramref name="all"/> by id in one pre-sized dictionary, with no lambda or resizing. A duplicate id throws, as <c>ToDictionary</c> did.</summary>
+    private static Dictionary<TaskId, TaskItem> IndexById(IReadOnlyList<TaskItem> all)
+    {
+        Dictionary<TaskId, TaskItem> byId = new(all.Count);
+        foreach (TaskItem task in all)
+        {
+            byId.Add(task.Id, task);
+        }
+
+        return byId;
     }
 
     /// <summary>Whether the Task's closed-ness matches the requested scope.</summary>
@@ -150,7 +165,16 @@ internal static class TaskQuery
             return true;
         }
 
-        bool isBlocked = task.BlockedBy.Any(id => byId.TryGetValue(id, out TaskItem? blocker) && !blocker.Status.IsTerminal());
+        bool isBlocked = false;
+        foreach (TaskId id in task.BlockedBy)
+        {
+            if (byId.TryGetValue(id, out TaskItem? blocker) && !blocker.Status.IsTerminal())
+            {
+                isBlocked = true;
+                break;
+            }
+        }
+
         return isBlocked == (blocked == BlockedFilter.Blocked);
     }
 
@@ -162,8 +186,20 @@ internal static class TaskQuery
             return true;
         }
 
-        return task.Id.ToString().Contains(search, StringComparison.OrdinalIgnoreCase) ||
-            task.Title.Contains(search, StringComparison.OrdinalIgnoreCase);
+        return MatchesId(task.Id, search) || task.Title.Contains(search, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Whether the formatted <paramref name="id"/> contains <paramref name="search"/>, case-insensitively, formatting into a stack buffer so a search over every Task allocates no string per Task.</summary>
+    private static bool MatchesId(TaskId id, string search)
+    {
+        Span<char> buffer = stackalloc char[IdBufferLength];
+        if (!id.TryFormat(buffer, out int written))
+        {
+            return id.ToString().Contains(search, StringComparison.OrdinalIgnoreCase);
+        }
+
+        ReadOnlySpan<char> formatted = buffer[..written];
+        return formatted.Contains(search, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -219,7 +255,9 @@ internal static class TaskQuery
         TaskGroupField.Assignee => task.Assignee ?? "Unassigned",
         TaskGroupField.State => task.Status.ToWire(),
         TaskGroupField.Sprint => SprintLabel(task, sprintName),
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(field), field, "Unknown grouping field."),
+#pragma warning restore HAA0601
     };
 
     /// <summary>The Sprint group label: "No sprint" when unset, the name when resolved, "S5 (missing)" when the resolver does not know it, else the bare id.</summary>
@@ -268,7 +306,9 @@ internal static class TaskQuery
         TaskGroupField.Assignee => task.Assignee ?? NullGroupSentinel,
         TaskGroupField.State => task.Status.ToWire(),
         TaskGroupField.Sprint => task.Sprint?.ToString() ?? NullGroupSentinel,
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(field), field, "Unknown grouping field."),
+#pragma warning restore HAA0601
     };
 
     /// <summary>The Project raw grouping key: <see cref="NullGroupSentinel"/> when unset, else the same text as <see cref="ProjectLabel"/>.</summary>
