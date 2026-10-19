@@ -54,6 +54,12 @@ internal sealed record SeedTask
     /// <summary>The Markdown description.</summary>
     public string Body { get; init; } = string.Empty;
 
+    /// <summary>
+    /// Files attached to the Task, as paths below the data folder: a Library file it links, or a <see cref="SeedTaskUpload.RelativePath"/>.
+    /// Each is written after <see cref="Body"/> as its own code-span line with the absolute path, the form the Task's attach buttons write.
+    /// </summary>
+    public IReadOnlyList<string> Attachments { get; init; } = [];
+
     /// <summary>How many days before the run date the Task was created.</summary>
     public int CreatedDaysAgo { get; init; } = 14;
 

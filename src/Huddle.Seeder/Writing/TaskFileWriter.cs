@@ -83,8 +83,9 @@ internal static class TaskFileWriter
     /// <param name="task">The Task.</param>
     /// <param name="today">The run date the offsets are measured from.</param>
     /// <param name="originRoomId">The id of the Room named by <see cref="SeedTask.OriginRoom"/>, or <see langword="null"/>.</param>
+    /// <param name="dataDir">The data folder, which turns <see cref="SeedTask.Attachments"/> into absolute paths.</param>
     /// <returns>The file text, ending in a newline.</returns>
-    internal static string Render(SeedTask task, DateOnly today, string? originRoomId)
+    internal static string Render(SeedTask task, DateOnly today, string? originRoomId, string dataDir)
     {
         StringBuilder text = new();
         text.Append("---\n");
@@ -126,7 +127,7 @@ internal static class TaskFileWriter
 
         text.Append("---\n");
 
-        string body = task.Body.ReplaceLineEndings("\n").Trim();
+        string body = Description(task, dataDir);
         if (body.Length > 0)
         {
             text.Append(body).Append("\n\n");
@@ -150,7 +151,38 @@ internal static class TaskFileWriter
     internal static string Date(DateOnly today, int offset) =>
         today.AddDays(offset).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-    private static DateTimeOffset At(DateOnly day, int offset, string time)
+    /// <summary>
+    /// The description: the body, then each attachment as its own code-span line holding the absolute path. Mirrors
+    /// <c>TaskAttachmentText.AppendPathLine</c>: a blank line separates the run of paths from the prose, and the paths follow
+    /// one another directly.
+    /// </summary>
+    /// <param name="task">The Task.</param>
+    /// <param name="dataDir">The data folder the attachment paths are below.</param>
+    /// <returns>The description without trailing line breaks; empty when the Task has neither.</returns>
+    internal static string Description(SeedTask task, string dataDir)
+    {
+        StringBuilder body = new(task.Body.ReplaceLineEndings("\n").Trim());
+        bool afterPath = false;
+        foreach (string attachment in task.Attachments)
+        {
+            if (body.Length > 0)
+            {
+                body.Append(afterPath ? "\n" : "\n\n");
+            }
+
+            body.Append('`').Append(SeedIo.Resolve(dataDir, attachment)).Append('`');
+            afterPath = true;
+        }
+
+        return body.ToString();
+    }
+
+    /// <summary>A UTC instant on a run-date offset.</summary>
+    /// <param name="day">The run date.</param>
+    /// <param name="offset">Whole days from the run date.</param>
+    /// <param name="time">The UTC time of day, <c>HH:mm</c>.</param>
+    /// <returns>The instant.</returns>
+    internal static DateTimeOffset At(DateOnly day, int offset, string time)
     {
         TimeOnly timeOfDay = TimeOnly.ParseExact(time, "HH:mm", CultureInfo.InvariantCulture);
         return new DateTimeOffset(day.AddDays(offset).ToDateTime(timeOfDay), TimeSpan.Zero);
