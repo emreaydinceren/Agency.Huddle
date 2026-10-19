@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -199,6 +200,39 @@ public sealed class MockAdapterFixture : IAsyncDisposable
         }
 
         return new MockAdapterFixture(host, dataDir, runner, launcher.Agent, pipeName);
+    }
+
+    /// <summary>Waits up to five seconds for the <c>session/new</c> request the real host sends the scripted peer.</summary>
+    /// <param name="cancellationToken">Cancels the wait.</param>
+    /// <returns>The <c>session/new</c> request.</returns>
+    internal async Task<JsonObject> SessionNewAsync(CancellationToken cancellationToken)
+    {
+        JsonObject request = await this.Agent.WaitForAsync("session/new", TimeSpan.FromSeconds(5));
+        cancellationToken.ThrowIfCancellationRequested();
+        return request;
+    }
+
+    /// <summary>Waits for <c>session/new</c> and returns the system prompt text the host appended in its <c>_meta</c> payload.</summary>
+    /// <param name="cancellationToken">Cancels the wait.</param>
+    /// <returns>The appended system prompt.</returns>
+    internal async Task<string> AppendedSystemPromptAsync(CancellationToken cancellationToken)
+    {
+        JsonObject request = await this.SessionNewAsync(cancellationToken);
+        JsonObject? systemPrompt = SessionNewMeta(request)?["systemPrompt"] as JsonObject;
+        string? appended = (string?)systemPrompt?["append"];
+
+        Assert.NotNull(appended);
+        return appended;
+    }
+
+    /// <summary>Walks a <c>session/new</c> request down to <c>params._meta</c>.</summary>
+    /// <param name="request">The request.</param>
+    /// <returns>The <c>_meta</c> object, or <see langword="null"/> when the request has none.</returns>
+    internal static JsonObject? SessionNewMeta(JsonObject request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        return (request["params"] as JsonObject)?["_meta"] as JsonObject;
     }
 
     /// <summary>
