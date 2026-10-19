@@ -10,4 +10,13 @@ namespace Agency.Huddle.App.Tasks;
 /// <param name="Changes">What changed, from <see cref="TaskDiff.Compare(TaskItem, TaskItem)"/>.</param>
 /// <param name="Actor">Who made the change.</param>
 /// <param name="Entry">The Change log entry recorded for this change.</param>
-internal sealed record TaskChange(TaskItem? Before, TaskItem After, IReadOnlyList<FieldChange> Changes, TaskActor Actor, ChangeLogEntry Entry);
+/// <param name="Decision">The Human's decision when this change records one, otherwise <see langword="null"/>.</param>
+/// <param name="Note">The note given with the decision, otherwise <see langword="null"/>.</param>
+internal sealed record TaskChange(
+    TaskItem? Before,
+    TaskItem After,
+    IReadOnlyList<FieldChange> Changes,
+    TaskActor Actor,
+    ChangeLogEntry Entry,
+    Agency.Huddle.App.Tasks.HumanGate.TaskDecision? Decision = null,
+    string? Note = null);

@@ -185,6 +185,185 @@ internal sealed class TaskService : IDisposable
     }
 
     /// <summary>
+    /// Records the Human's decision on a Task waiting for them (Human gate Spec §6.6): Accept, Request changes or Decline.
+    /// </summary>
+    /// <param name="id">The Task.</param>
+    /// <param name="decision">What the Human decides.</param>
+    /// <param name="note">The reason or the requested changes; required for Request changes and Decline.</param>
+    /// <param name="baseVersion">The version the Human was shown; a mismatch returns <see cref="TaskResult.Conflict"/>.</param>
+    /// <param name="actor">Who decides; must be the Human.</param>
+    public TaskResult Decide(TaskId id, TaskDecision decision, string? note, string baseVersion, TaskActor actor)
+    {
+        ArgumentNullException.ThrowIfNull(baseVersion);
+        ArgumentNullException.ThrowIfNull(actor);
+
+        TaskChange? change;
+        TaskResult result;
+        lock (this.mutateGate)
+        {
+            (result, change) = this.DecideCore(id, decision, note, baseVersion, actor);
+        }
+
+        if (change is not null)
+        {
+            this.events.RaiseTaskChanged(change);
+        }
+
+        return result;
+    }
+
+    /// <summary>The body of <see cref="Decide"/>, run under <see cref="mutateGate"/>: checks, then one write.</summary>
+    /// <param name="id">The Task.</param>
+    /// <param name="decision">What the Human decides.</param>
+    /// <param name="note">The note.</param>
+    /// <param name="baseVersion">The version the Human was shown.</param>
+    /// <param name="actor">Who decides.</param>
+    private (TaskResult Result, TaskChange? Change) DecideCore(TaskId id, TaskDecision decision, string? note, string baseVersion, TaskActor actor)
+    {
+        TaskItem? current = this.store.Get(id);
+        string? text = this.store.ReadText(id);
+        if (current is null || text is null)
+        {
+            return (new TaskResult.NotFound(id), null);
+        }
+
+        if (actor.Kind != TaskActorKind.Human)
+        {
+            return (new TaskResult.Refused([string.Create(CultureInfo.InvariantCulture, $"Only {this.human.Name} can decide on {id}.")]), null);
+        }
+
+        if (!string.Equals(baseVersion, current.Version, StringComparison.Ordinal))
+        {
+            return (new TaskResult.Conflict(current, []), null);
+        }
+
+        string? problem = this.DecisionProblem(current, decision, note);
+        if (problem is not null)
+        {
+            return (new TaskResult.Refused([problem]), null);
+        }
+
+        DateTimeOffset at = TruncateToSeconds(this.clock.GetUtcNow());
+        string? trimmed = note?.Trim();
+        return decision switch
+        {
+            TaskDecision.Accept => this.AcceptCore(current, text, at, actor),
+            TaskDecision.RequestChanges => this.RewriteCore(current, text, TaskState.InProgress, "changes requested: " + trimmed, at, actor, decision, trimmed),
+            _ => this.DeclineCore(current, text, "declined: " + trimmed, at, actor, trimmed),
+        };
+    }
+
+    /// <summary>The refusal text for a decision that does not apply, or <see langword="null"/> when it does.</summary>
+    /// <param name="current">The Task now.</param>
+    /// <param name="decision">The decision.</param>
+    /// <param name="note">The note.</param>
+    private string? DecisionProblem(TaskItem current, TaskDecision decision, string? note)
+    {
+        string notWaiting = string.Create(CultureInfo.InvariantCulture, $"{current.Id} isn't waiting for your decision.");
+        bool waiting = decision == TaskDecision.Accept
+            ? current.Status == TaskState.NeedsYou && Acceptance.Of(current).State != AcceptanceState.Valid && this.ProofOf(current).IsComplete
+            : current.Status is TaskState.Review or TaskState.NeedsYou;
+        if (!waiting)
+        {
+            return notWaiting;
+        }
+
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            return decision switch
+            {
+                TaskDecision.RequestChanges => "Say what needs to change.",
+                TaskDecision.Decline => "Say why you're declining.",
+                _ => null,
+            };
+        }
+
+        return null;
+    }
+
+    /// <summary>Accept: appends <c>accepted &lt;hash&gt;</c>, and for a Task with no Action also moves it to Done, in one write.</summary>
+    /// <param name="current">The Task now, in Needs You.</param>
+    /// <param name="text">Its file text.</param>
+    /// <param name="at">When.</param>
+    /// <param name="actor">The Human.</param>
+    private (TaskResult Result, TaskChange? Change) AcceptCore(TaskItem current, string text, DateTimeOffset at, TaskActor actor)
+    {
+        ChangeLogEntry accepted = new(at, actor.Name, "accepted " + ContentFingerprint.Of(current.Title, current.Action, current.Description));
+        if (!string.IsNullOrWhiteSpace(current.Action))
+        {
+            return this.WriteDecision(current, TaskFileFormat.AppendEntry(text, accepted), current.Location, [], accepted, actor, TaskDecision.Accept, null);
+        }
+
+        TaskItem withAcceptance = current with { ChangeLog = [.. current.ChangeLog, accepted] };
+        TaskItem done = withAcceptance with { Status = TaskState.Done };
+        if (HumanGateRules.Check(withAcceptance, done, actor, this.ProofOf(done), this.human.Name) is { } refusal)
+        {
+            return (new TaskResult.GateRefused(refusal.Gate, refusal.Message, CanOverride: false), null);
+        }
+
+        return this.RewriteCore(current, TaskFileFormat.AppendEntry(text, accepted), TaskState.Done, null, at, actor, TaskDecision.Accept, null);
+    }
+
+    /// <summary>Writes a status change with an optional leading note entry and the status entry, in one write.</summary>
+    /// <param name="current">The Task now.</param>
+    /// <param name="text">Its file text (possibly with entries already appended).</param>
+    /// <param name="status">The new status.</param>
+    /// <param name="noteEntry">The note entry summary, or <see langword="null"/> for none.</param>
+    /// <param name="at">When.</param>
+    /// <param name="actor">The Human.</param>
+    /// <param name="decision">The decision.</param>
+    /// <param name="note">The note.</param>
+    private (TaskResult Result, TaskChange? Change) RewriteCore(TaskItem current, string text, TaskState status, string? noteEntry, DateTimeOffset at, TaskActor actor, TaskDecision decision, string? note)
+    {
+        TaskItem candidate = current with { Status = status };
+        IReadOnlyList<FieldChange> diff = TaskDiff.Compare(current, candidate);
+        string withNote = noteEntry is null ? text : TaskFileFormat.AppendEntry(text, new ChangeLogEntry(at, actor.Name, noteEntry));
+        ChangeLogEntry statusEntry = new(at, actor.Name, TaskDiff.Summarise(diff));
+        string finalText = TaskFileFormat.AppendEntry(TaskFileFormat.ReplaceHead(withNote, candidate), statusEntry);
+        return this.WriteDecision(current, finalText, current.Location, diff, statusEntry, actor, decision, note);
+    }
+
+    /// <summary>Decline: rejects the Task and moves it to the closed location in one <see cref="TaskStore.Move"/>.</summary>
+    /// <param name="current">The Task now.</param>
+    /// <param name="text">Its file text.</param>
+    /// <param name="declined">The <c>declined: ...</c> entry summary.</param>
+    /// <param name="at">When.</param>
+    /// <param name="actor">The Human.</param>
+    /// <param name="note">The reason.</param>
+    private (TaskResult Result, TaskChange? Change) DeclineCore(TaskItem current, string text, string declined, DateTimeOffset at, TaskActor actor, string? note)
+    {
+        TaskItem candidate = current with { Status = TaskState.Rejected };
+        IReadOnlyList<FieldChange> diff = TaskDiff.Compare(current, candidate);
+        ChangeLogEntry closed = new(at, actor.Name, "closed");
+        string withDeclined = TaskFileFormat.AppendEntry(TaskFileFormat.ReplaceHead(text, candidate), new ChangeLogEntry(at, actor.Name, declined));
+        string finalText = TaskFileFormat.AppendEntry(withDeclined, closed);
+        return this.WriteDecision(current, finalText, current.Location with { Closed = true }, diff, closed, actor, TaskDecision.Decline, note);
+    }
+
+    /// <summary>Writes the decided text (moving it when the location changed) and builds the result and the one change.</summary>
+    /// <param name="current">The Task now.</param>
+    /// <param name="finalText">The full new file text.</param>
+    /// <param name="location">Where the Task ends up.</param>
+    /// <param name="diff">What changed.</param>
+    /// <param name="entry">The last entry written.</param>
+    /// <param name="actor">The Human.</param>
+    /// <param name="decision">The decision.</param>
+    /// <param name="note">The note.</param>
+    private (TaskResult Result, TaskChange? Change) WriteDecision(TaskItem current, string finalText, TaskLocation location, IReadOnlyList<FieldChange> diff, ChangeLogEntry entry, TaskActor actor, TaskDecision decision, string? note)
+    {
+        TaskItem? written = location == current.Location
+            ? this.store.Write(current, current.Version, finalText)
+            : this.store.Move(current, current.Version, location, finalText);
+        if (written is null)
+        {
+            return (new TaskResult.Conflict(this.store.Get(current.Id) ?? current, []), null);
+        }
+
+        TaskChange change = new(current, written, diff, actor, entry, decision, note);
+        return (new TaskResult.Saved(written, change), change);
+    }
+
+    /// <summary>
     /// Moves <paramref name="id"/> into its Team's (or Project's) "_closed" folder (Spec §9): refused
     /// when it's already Closed. Unlike <see cref="Update"/>, there is no <c>baseVersion</c> - a
     /// concurrent change to the file since it was last read is instead caught by
