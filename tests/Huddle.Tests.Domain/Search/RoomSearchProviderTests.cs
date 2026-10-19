@@ -3,6 +3,7 @@ using Agency.Huddle.App.Search;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Tools;
 using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Search;
 
@@ -196,7 +197,7 @@ public sealed class RoomSearchProviderTests
 
     private static FileChatStore Chats(TaskToolHarness harness)
     {
-        return new FileChatStore(harness.Options, NullLogger<FileChatStore>.Instance);
+        return harness.Options.CreateChatStore();
     }
 
     private static RoomSearchProvider Provider(TaskToolHarness harness, IChatStore chats)

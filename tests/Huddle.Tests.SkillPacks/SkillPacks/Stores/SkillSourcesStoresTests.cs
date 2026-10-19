@@ -15,7 +15,11 @@ internal static class StoreFixture
     /// <summary>Settings over <paramref name="dir"/>, with an optional configured folder and computer name.</summary>
     public static SkillSourcesSettings Settings(TempDataDir dir, string? skillSourcesDir = null, string computer = "DESK-01")
     {
-        IOptions<TeamOptions> options = Options.Create(new TeamOptions { DataDir = dir.Path, SkillSourcesDir = skillSourcesDir ?? string.Empty, ComputerName = computer });
+        IOptions<TeamOptions> options = dir.Options(opts =>
+        {
+            opts.SkillSourcesDir = skillSourcesDir ?? string.Empty;
+            opts.ComputerName = computer;
+        });
         return new SkillSourcesSettings(options, NullLogger<SkillSourcesSettings>.Instance);
     }
 }

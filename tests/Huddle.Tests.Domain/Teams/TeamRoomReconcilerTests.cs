@@ -1,13 +1,12 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Elicitation;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Teams;
 
@@ -449,14 +448,14 @@ public sealed class TeamRoomReconcilerTests
         {
             this.dir = dir;
             this.Directory = directory;
-            this.Store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+            this.Store = dir.CreateChatStore();
             this.Events = new RoomEvents(NullLogger<RoomEvents>.Instance);
             this.Chat = new ChatService(
                 directory,
                 this.Store,
                 this.Events,
                 new FakeMentionAliasSource { Aliases = [] },
-                Options.Create(new TeamOptions()),
+                TestOptions.Create(),
                 new ProposalStore(this.Events),
                 new QuestionStore(this.Events),
                 NullLogger<ChatService>.Instance)

@@ -11,6 +11,7 @@ using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using static Agency.Huddle.Tests.Elicitation.ElicitationTestSupport;
 using Agency.Huddle.Tests.Waiting;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Conformance;
 
@@ -336,7 +337,7 @@ public sealed class ElicitationConformanceTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         Dictionary<string, string?> config = new(StringComparer.Ordinal) { [AdvertiseKey] = "true" };
-        await using MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(new Persona("nova", "You are Nova."), config, cancellationToken: ct);
+        await using MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(TestPersonas.Nova, config, cancellationToken: ct);
         JsonObject parameters = new()
         {
             ["sessionId"] = "no-such-session",
@@ -483,7 +484,7 @@ public sealed class ElicitationConformanceTests
             }
 
             MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(
-                new Persona("nova", "You are Nova."),
+                TestPersonas.Nova,
                 config,
                 clock,
                 agent => agent.OnPrompt = script.RunAsync,

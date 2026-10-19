@@ -1,6 +1,5 @@
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
-using Agency.Huddle.App.Data;
 using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.SkillSources;
 using Agency.Huddle.App.Skills;
@@ -8,6 +7,7 @@ using Agency.Huddle.Tests.Teammates;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.SkillPacks.RegistryService;
 
@@ -23,7 +23,7 @@ internal sealed class RegistryHost : IDisposable
         this.Options = Microsoft.Extensions.Options.Options.Create(new TeamOptions { DataDir = this.dir.Path, ComputerName = computer });
         this.Settings = new SkillSourcesSettings(this.Options, NullLogger<SkillSourcesSettings>.Instance);
         this.Skills = new SkillStore(this.Options, NullLogger<SkillStore>.Instance);
-        this.Personas = new PersonaStore(new TeammatePaths(this.Options), new PersonaModelStore(this.Options), new PersonaEffortStore(this.Options), new PersonaWorkModeStore(this.Options), NullLogger<PersonaStore>.Instance);
+        this.Personas = this.Options.CreatePersonaStore();
         this.Hidden = new HiddenStore(this.Settings);
         this.Log = new SourceLog(this.Settings, this.Clock);
         this.Types = RoleFixtures.Types(this.dir);

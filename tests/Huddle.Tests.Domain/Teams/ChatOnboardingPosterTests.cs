@@ -1,11 +1,10 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Teams;
 
@@ -24,7 +23,7 @@ public sealed class ChatOnboardingPosterTests
         FileChatStore store = new(dir.Options(), NullLogger<FileChatStore>.Instance);
         RoomEvents events = new(NullLogger<RoomEvents>.Instance);
         ChatService chat = new(
-            directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance);
+            directory, store, events, new FakeMentionAliasSource(), TestOptions.Create(), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance);
         List<MessagePostedEvent> posts = [];
         events.MessagePosted += posts.Add;
         User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
@@ -164,7 +163,7 @@ public sealed class ChatOnboardingPosterTests
         List<MessagePostedEvent> posts = [];
         events.MessagePosted += posts.Add;
         ChatService refusing = new(
-            emptyDirectory, new FileChatStore(otherDir.Options(), NullLogger<FileChatStore>.Instance), events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance);
+            emptyDirectory, otherDir.CreateChatStore(), events, new FakeMentionAliasSource(), TestOptions.Create(), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance);
         ChatOnboardingPoster poster = new(refusing, setup.Directory);
 
         bool posted = await poster.PostToTeamAsync("Marketing", "Nova", "Weekly digest please.", ct);

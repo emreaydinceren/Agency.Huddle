@@ -13,6 +13,7 @@ using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Acp.Tools;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Pins <see cref="ProposalService"/> against Spec §6.10's happy path and non-happy paths, Spec
@@ -523,17 +524,16 @@ public sealed class ProposalServiceTests
                 Acp = new AcpOptions { MaxTeammatesPerTeam = maxPerTeam, MaxLiveProcesses = maxLive },
             });
 
-            var directory = new SqliteTeamDirectory(options);
+            var directory = options.CreateDirectory();
             await directory.InitializeAsync("You", ct);
 
-            var personas = new PersonaStore(
-                new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
+            var personas = options.CreatePersonaStore();
             var gateway = new FakeAgentGateway();
             TeamTypeCatalog? types = withRoles ? RoleFixtures.Types(dataDir) : null;
             var checker = new CandidateChecker(personas, directory, gateway, types, new FakeTeamCatalog());
             var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
             var proposals = new ProposalStore(events);
-            var store = new FileChatStore(options, NullLogger<FileChatStore>.Instance);
+            var store = options.CreateChatStore();
             var chat = new ChatService(directory, store, events, personas, options, proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
             var limits = new HireLimitHarness(options);
             RoleHirer? roleHirer = null;

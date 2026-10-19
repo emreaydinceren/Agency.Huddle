@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Data;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Data;
 
@@ -108,8 +109,7 @@ public sealed class PersonaModelStoreTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
 
         var store = new PersonaModelStore(dir.Options());
         store.Set("nova", "claude-opus-4");

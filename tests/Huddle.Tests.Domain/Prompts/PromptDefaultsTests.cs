@@ -3,6 +3,7 @@ namespace Agency.Huddle.Tests.Prompts;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Assertions about <see cref="PromptCatalog"/>'s shipped defaults as they reach a fully composed system
@@ -59,7 +60,7 @@ public sealed class PromptDefaultsTests
     [Fact]
     public void Compose_WithCatalogDefaults_NamesEveryToolWithMcpPrefix()
     {
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         var prompt = SystemPromptComposer.Compose(persona, new FakePromptSource(), "mcp__team__get_help", ToolNames);
 
@@ -77,7 +78,7 @@ public sealed class PromptDefaultsTests
     [Fact]
     public void Compose_WithCatalogDefaults_OpensWithOrientationNamingGetHelpBeforePersonaText()
     {
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         var prompt = SystemPromptComposer.Compose(persona, new FakePromptSource(), "mcp__team__get_help", ToolNames);
 
@@ -123,7 +124,7 @@ public sealed class PromptDefaultsTests
     [Fact]
     public void DefaultSystemPrompt_ValidatesCleanAgainstTheRealToolNames()
     {
-        var persona = new Persona("nova", "You are Nova.");
+        var persona = TestPersonas.Nova;
 
         var prompt = SystemPromptComposer.Compose(persona, new FakePromptSource(), "mcp__team__get_help", ToolNames);
 

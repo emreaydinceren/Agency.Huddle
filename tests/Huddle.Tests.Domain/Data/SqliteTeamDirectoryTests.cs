@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using System.Globalization;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Data;
 
@@ -12,8 +13,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
 
         await directory.InitializeAsync("Someone Else", ct);
 
@@ -30,8 +30,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
 
         var agent = await directory.UpsertAgentUserAsync("echo", "an echo agent", ct);
 
@@ -46,8 +45,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
 
         var first = await directory.UpsertAgentUserAsync("Echo", "first description", ct);
         var second = await directory.UpsertAgentUserAsync("echo", "second description", ct);
@@ -63,8 +61,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
 
         var result = await directory.UpsertAgentUserAsync("You", null, ct);
 
@@ -79,8 +76,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
 
@@ -96,8 +92,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", "an echo agent", ct);
         Assert.NotNull(echo);
 
@@ -117,8 +112,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var coo = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(coo);
 
@@ -136,8 +130,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
 
@@ -155,8 +148,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
 
         var renamed = directory.RenameUser("no-such-id", "newname");
 
@@ -169,8 +161,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
 
         var renamed = directory.RenameUser(KnownIds.Human, "SomeoneElse");
 
@@ -185,8 +176,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
         Assert.NotNull(echo);
@@ -206,8 +196,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
 
@@ -225,8 +214,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
@@ -246,8 +234,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
         Assert.NotNull(echo);
@@ -269,8 +256,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
@@ -287,8 +273,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
         Assert.NotNull(echo);
@@ -307,8 +292,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
 
         await directory.RenameRoomAsync(room.Id, "echo, alpha", ct);
@@ -323,8 +307,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
         Assert.NotNull(echo);
@@ -349,8 +332,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
 
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
 
@@ -369,8 +351,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
 
         await directory.SetRoomArchivedAsync(room.Id, true, ct);
@@ -389,8 +370,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         await directory.SetRoomArchivedAsync(room.Id, true, ct);
 
@@ -411,8 +391,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
@@ -438,8 +417,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
 
         await directory.DeleteRoomAsync("no-such-room", ct);
 
@@ -456,8 +434,7 @@ public sealed class SqliteTeamDirectoryTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
@@ -539,8 +516,7 @@ public sealed class SqliteTeamDirectoryTests
             }
         }
 
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
 
         await directory.SetRoomArchivedAsync(roomId, true, ct);
 

@@ -1,8 +1,7 @@
 using System.Buffers.Binary;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Avatars;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Avatars;
 
@@ -21,7 +20,7 @@ public sealed class BundledAvatarLibraryTests
     private const uint ExpectedSide = 256;
 
     private static AvatarLibraryLocator Locator() =>
-        new(Options.Create(new TeamOptions()), AvatarLibraryLocator.BundledDir);
+        new(TestOptions.Create(), AvatarLibraryLocator.BundledDir);
 
     private static async Task<AvatarLibraryLoadResult> LoadAsync(CancellationToken ct) =>
         await new AvatarLibraryLoader(Locator(), NullLogger<AvatarLibraryLoader>.Instance).LoadAsync(ct);

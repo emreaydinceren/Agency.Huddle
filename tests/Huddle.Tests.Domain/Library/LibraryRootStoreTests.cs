@@ -1,8 +1,6 @@
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.Tests.Elicitation;
@@ -85,11 +83,7 @@ public sealed class LibraryRootStoreTests
         var docsPath = Path.Combine(dataDir.Path, "Docs");
         Directory.CreateDirectory(docsPath);
         var paths = new TeammatePaths(dataDir.Options());
-        var options = Options.Create(new TeamOptions
-        {
-            DataDir = dataDir.Path,
-            Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Huddle docs", Path = docsPath }] },
-        });
+        var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Huddle docs", Path = docsPath }] });
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
 
@@ -106,11 +100,7 @@ public sealed class LibraryRootStoreTests
         using var dataDir = new TempDataDir();
         Directory.CreateDirectory(Path.Combine(dataDir.Path, "Docs"));
         var paths = new TeammatePaths(dataDir.Options());
-        var options = Options.Create(new TeamOptions
-        {
-            DataDir = dataDir.Path,
-            Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Docs", Path = "Docs" }] },
-        });
+        var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Docs", Path = "Docs" }] });
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
 
@@ -125,11 +115,7 @@ public sealed class LibraryRootStoreTests
         var docsPath = Path.Combine(dataDir.Path, "Docs");
         Directory.CreateDirectory(docsPath);
         var paths = new TeammatePaths(dataDir.Options());
-        var options = Options.Create(new TeamOptions
-        {
-            DataDir = dataDir.Path,
-            Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Docs", Path = docsPath + Path.DirectorySeparatorChar }] },
-        });
+        var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Docs", Path = docsPath + Path.DirectorySeparatorChar }] });
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
 
@@ -142,11 +128,7 @@ public sealed class LibraryRootStoreTests
     {
         using var dataDir = new TempDataDir();
         var paths = new TeammatePaths(dataDir.Options());
-        var options = Options.Create(new TeamOptions
-        {
-            DataDir = dataDir.Path,
-            Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Blank", Path = "   " }] },
-        });
+        var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Blank", Path = "   " }] });
         var logger = new RecordingLogger<LibraryRootStore>();
 
         var store = new LibraryRootStore(options, paths, logger);
@@ -162,11 +144,7 @@ public sealed class LibraryRootStoreTests
         using var dataDir = new TempDataDir();
         var missingPath = Path.Combine(dataDir.Path, "Gone");
         var paths = new TeammatePaths(dataDir.Options());
-        var options = Options.Create(new TeamOptions
-        {
-            DataDir = dataDir.Path,
-            Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Gone", Path = missingPath }] },
-        });
+        var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Gone", Path = missingPath }] });
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
 
@@ -218,11 +196,7 @@ public sealed class LibraryRootStoreTests
     {
         using var dataDir = new TempDataDir();
         var paths = new TeammatePaths(dataDir.Options());
-        var options = Options.Create(new TeamOptions
-        {
-            DataDir = dataDir.Path,
-            Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Old", Path = dataDir.Path }] },
-        });
+        var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Old", Path = dataDir.Path }] });
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
 
         store.Save([new PinnedRootEntry("New", dataDir.Path)]);
@@ -252,11 +226,7 @@ public sealed class LibraryRootStoreTests
     {
         using var dataDir = new TempDataDir();
         var paths = new TeammatePaths(dataDir.Options());
-        var options = Options.Create(new TeamOptions
-        {
-            DataDir = dataDir.Path,
-            Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Configured", Path = dataDir.Path }] },
-        });
+        var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Configured", Path = dataDir.Path }] });
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
         store.Save([new PinnedRootEntry("Saved", dataDir.Path)]);
 
@@ -289,11 +259,7 @@ public sealed class LibraryRootStoreTests
     {
         using var dataDir = new TempDataDir();
         var paths = new TeammatePaths(dataDir.Options());
-        var options = Options.Create(new TeamOptions
-        {
-            DataDir = dataDir.Path,
-            Library = new LibraryOptions { Uploads = new LibraryUploadsOptions { Dir = "Attachments" } },
-        });
+        var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Uploads = new LibraryUploadsOptions { Dir = "Attachments" } });
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
 
@@ -355,11 +321,7 @@ public sealed class LibraryRootStoreTests
     {
         using var dataDir = new TempDataDir();
         var paths = new TeammatePaths(dataDir.Options());
-        var options = Options.Create(new TeamOptions
-        {
-            DataDir = dataDir.Path,
-            Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Docs", Path = dataDir.Path }] },
-        });
+        var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Docs", Path = dataDir.Path }] });
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
 
         store.SetHidden("teams", true);
@@ -383,11 +345,7 @@ public sealed class LibraryRootStoreTests
     {
         using var dataDir = new TempDataDir();
         var paths = new TeammatePaths(dataDir.Options());
-        var options = Options.Create(new TeamOptions
-        {
-            DataDir = dataDir.Path,
-            Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Docs", Path = dataDir.Path }] },
-        });
+        var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Docs", Path = dataDir.Path }] });
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
         var pinnedId = Assert.Single(store.Roots, r => r.Kind == LibraryRootKind.Pinned).Id;
 
@@ -416,11 +374,7 @@ public sealed class LibraryRootStoreTests
         using var dataDir = new TempDataDir();
         File.WriteAllText(Path.Combine(dataDir.Path, "library-roots.json"), "{ this is not valid json");
         var paths = new TeammatePaths(dataDir.Options());
-        var options = Options.Create(new TeamOptions
-        {
-            DataDir = dataDir.Path,
-            Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Docs", Path = dataDir.Path }] },
-        });
+        var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Docs", Path = dataDir.Path }] });
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
 

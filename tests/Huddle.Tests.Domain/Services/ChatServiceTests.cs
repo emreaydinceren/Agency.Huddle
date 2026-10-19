@@ -1,7 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Questions;
@@ -9,6 +7,7 @@ using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Teams;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Services;
 
@@ -19,8 +18,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var (service, events) = CreateService(dir, directory);
@@ -44,8 +42,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
@@ -56,7 +53,7 @@ public sealed class ChatServiceTests
         var message = await service.PostAsync(room.Id, KnownIds.Human, "hi @echo", ct: ct);
 
         Assert.Equal("hi @echo", message.Text);
-        var stored = await new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance).ReadAllAsync(room.Id, ct);
+        var stored = await dir.CreateChatStore().ReadAllAsync(room.Id, ct);
         Assert.Single(stored);
         Assert.Equal(message.Id, stored[0].Id);
         Assert.NotNull(published);
@@ -71,8 +68,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
@@ -94,8 +90,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var (service, _) = CreateService(dir, directory);
 
@@ -103,7 +98,7 @@ public sealed class ChatServiceTests
             () => service.PostAsync(room.Id, "not-a-member", "hi", ct: ct));
 
         Assert.Equal(ErrorCodes.NotMember, exception.Code);
-        var stored = await new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance).ReadAllAsync(room.Id, ct);
+        var stored = await dir.CreateChatStore().ReadAllAsync(room.Id, ct);
         Assert.Empty(stored);
     }
 
@@ -112,8 +107,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var (service, _) = CreateService(dir, directory);
 
         var exception = await Assert.ThrowsAsync<ChatException>(
@@ -127,8 +121,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var (service, _) = CreateService(dir, directory);
 
@@ -143,8 +136,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var (service, _) = CreateService(dir, directory);
 
@@ -158,8 +150,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var (service, _) = CreateService(dir, directory);
 
@@ -179,8 +170,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var (service, _) = CreateService(dir, directory);
 
@@ -197,8 +187,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
@@ -218,7 +207,7 @@ public sealed class ChatServiceTests
         Assert.NotNull(updatedRoom);
         Assert.Equal("echo, alpha", updatedRoom.Name);
         Assert.Equal(1, roomsChangedCount);
-        var stored = await new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance).ReadAllAsync(room.Id, ct);
+        var stored = await dir.CreateChatStore().ReadAllAsync(room.Id, ct);
         Assert.Empty(stored);
     }
 
@@ -227,8 +216,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
@@ -250,8 +238,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var emily = await directory.UpsertAgentUserAsync("Emily Lee", null, ct);
@@ -277,8 +264,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var chief = await directory.UpsertAgentUserAsync("Chief of Staff", null, ct);
@@ -305,8 +291,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var jarvis = await directory.UpsertAgentUserAsync("Jarvis", null, ct);
@@ -339,8 +324,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
@@ -360,8 +344,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
@@ -380,8 +363,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var (service, events) = CreateService(dir, directory);
         var roomsChangedCount = 0;
@@ -399,8 +381,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var (service, _) = CreateService(dir, directory);
 
@@ -416,8 +397,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var (service, _) = CreateService(dir, directory);
 
         var exception = await Assert.ThrowsAsync<ChatException>(
@@ -431,8 +411,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var (service, _) = CreateService(dir, directory);
 
@@ -448,8 +427,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var (service, _) = CreateService(dir, directory);
 
@@ -464,8 +442,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var (service, events) = CreateService(dir, directory);
         var publishedIds = new ConcurrentQueue<string>();
@@ -476,7 +453,7 @@ public sealed class ChatServiceTests
             await service.PostAsync(room.Id, KnownIds.Human, $"message {i}", ct: token);
         });
 
-        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        var store = dir.CreateChatStore();
         var stored = await store.ReadAllAsync(room.Id, ct);
 
         Assert.Equal(50, stored.Count);
@@ -489,8 +466,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
@@ -510,8 +486,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
         Assert.NotNull(alpha);
         var beta = await directory.UpsertAgentUserAsync("beta", null, ct);
@@ -536,8 +511,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var (service, _) = CreateService(dir, directory);
@@ -555,8 +529,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var (service, _) = CreateService(dir, directory);
 
         var exception = await Assert.ThrowsAsync<ChatException>(
@@ -570,8 +543,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var (service, _) = CreateService(dir, directory);
 
         var exception = await Assert.ThrowsAsync<ChatException>(
@@ -586,8 +558,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
@@ -604,8 +575,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
@@ -622,8 +592,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
@@ -635,7 +604,7 @@ public sealed class ChatServiceTests
             () => service.PostAsync(room.Id, agent.Id, "three", ct: ct));
 
         Assert.Equal(ErrorCodes.BudgetExhausted, exception.Code);
-        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        var store = dir.CreateChatStore();
         var stored = await store.ReadAllAsync(room.Id, ct);
         Assert.Equal(2, stored.Count);
     }
@@ -645,8 +614,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
@@ -663,8 +631,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
@@ -682,8 +649,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var first = await directory.CreateRoomAsync("one", [KnownIds.Human, agent.Id], ct);
@@ -704,8 +670,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
@@ -723,8 +688,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
@@ -743,8 +707,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
@@ -761,7 +724,7 @@ public sealed class ChatServiceTests
     public async Task GetBudget_ForARoomWithNoAgentMessages_ReturnsZeroUsed()
     {
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
+        var directory = dir.CreateDirectory();
         var (service, _) = CreateService(dir, directory, agentMessageBudget: 7);
 
         var budget = service.GetBudget("a-room-nobody-has-posted-to");
@@ -777,8 +740,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
@@ -797,7 +759,7 @@ public sealed class ChatServiceTests
             }
         });
 
-        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        var store = dir.CreateChatStore();
         var stored = await store.ReadAllAsync(room.Id, ct);
         Assert.Equal(10, stored.Count);
         Assert.Equal(40, refused);
@@ -808,8 +770,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
@@ -828,8 +789,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
@@ -851,8 +811,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
@@ -878,8 +837,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var author = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(author);
         var mentioned = await directory.UpsertAgentUserAsync("Jarvis", null, ct);
@@ -906,8 +864,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
@@ -927,8 +884,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
@@ -946,8 +902,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var (service, _) = CreateService(dir, directory, agentMessageBudget: 1);
 
@@ -966,8 +921,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var (service, _) = CreateService(dir, directory, agentMessageBudget: 7);
 
@@ -984,8 +938,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
@@ -1004,8 +957,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var (service, events) = CreateService(dir, directory);
         var roomsChangedCount = 0;
@@ -1023,8 +975,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var (service, events) = CreateService(dir, directory);
         var roomsChangedCount = 0;
@@ -1043,8 +994,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var (service, _) = CreateService(dir, directory);
 
         var exception = await Assert.ThrowsAsync<ChatException>(
@@ -1059,8 +1009,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var (service, _) = CreateService(dir, directory);
 
         var exception = await Assert.ThrowsAsync<ChatException>(
@@ -1078,15 +1027,14 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var (service, _) = CreateService(dir, directory);
         await service.PostAsync(room.Id, KnownIds.Human, "hello", ct: ct);
 
         await service.DeleteRoomAsync(room.Id, ct);
 
-        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        var store = dir.CreateChatStore();
         var stored = await store.ReadAllAsync(room.Id, ct);
         Assert.Empty(stored);
     }
@@ -1103,8 +1051,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var proposals = new ProposalStore(new RoomEvents(NullLogger<RoomEvents>.Instance));
         var (service, _) = CreateService(dir, directory, proposals: proposals);
@@ -1126,8 +1073,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var proposals = new ProposalStore(new RoomEvents(NullLogger<RoomEvents>.Instance));
         var (service, _) = CreateService(dir, directory, proposals: proposals);
@@ -1149,8 +1095,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var proposals = new ProposalStore(new RoomEvents(NullLogger<RoomEvents>.Instance));
         var (service, _) = CreateService(dir, directory, proposals: proposals);
@@ -1171,8 +1116,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var coach = await directory.UpsertAgentUserAsync("Coach", null, ct);
         Assert.NotNull(coach);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, coach.Id], ct);
@@ -1194,8 +1138,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var coach = await directory.UpsertAgentUserAsync("Coach", null, ct);
         Assert.NotNull(coach);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, coach.Id], ct);
@@ -1215,8 +1158,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var coach = await directory.UpsertAgentUserAsync("Coach", null, ct);
         Assert.NotNull(coach);
         var first = await directory.CreateRoomAsync("one", [KnownIds.Human, coach.Id], ct);
@@ -1237,8 +1179,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var questions = new QuestionStore(new RoomEvents(NullLogger<RoomEvents>.Instance));
         var (service, _) = CreateService(dir, directory, questions: questions);
@@ -1255,8 +1196,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var questions = new QuestionStore(new RoomEvents(NullLogger<RoomEvents>.Instance));
         var (service, _) = CreateService(dir, directory, questions: questions);
@@ -1274,8 +1214,7 @@ public sealed class ChatServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
         var questions = new QuestionStore(new RoomEvents(NullLogger<RoomEvents>.Instance));
         var (service, _) = CreateService(dir, directory, questions: questions);
@@ -1318,10 +1257,10 @@ public sealed class ChatServiceTests
         QuestionStore? questions = null,
         ITeamCatalog? teams = null)
     {
-        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        var store = dir.CreateChatStore();
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var aliasSource = new FakeMentionAliasSource { Aliases = aliases ?? [] };
-        var options = Options.Create(new TeamOptions { AgentMessageBudget = agentMessageBudget });
+        var options = TestOptions.Create(opts => opts.AgentMessageBudget = agentMessageBudget);
         var service = new ChatService(directory, store, events, aliasSource, options, proposals ?? new ProposalStore(events), questions ?? new QuestionStore(events), NullLogger<ChatService>.Instance) { TeamCatalog = teams };
         return (service, events);
     }

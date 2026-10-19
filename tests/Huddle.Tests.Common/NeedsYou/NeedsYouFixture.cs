@@ -1,13 +1,12 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.NeedsYou;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.NeedsYou;
 
@@ -24,8 +23,8 @@ internal sealed class NeedsYouFixture : IDisposable
     {
         this.dir = dir;
         this.Events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        this.Team = new SqliteTeamDirectory(dir.Options());
-        this.Transcript = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        this.Team = dir.CreateDirectory();
+        this.Transcript = dir.CreateChatStore();
         this.Questions = new QuestionStore(this.Events);
         this.Forms = new ElicitationStore(this.Events);
         this.Clock = new FakeTimeProvider(new DateTimeOffset(2026, 10, 12, 9, 0, 0, TimeSpan.Zero));
@@ -34,7 +33,7 @@ internal sealed class NeedsYouFixture : IDisposable
             this.Transcript,
             this.Events,
             new FakeMentionAliasSource(),
-            Options.Create(new TeamOptions { AgentMessageBudget = 3 }),
+            TestOptions.Create(opts => opts.AgentMessageBudget = 3),
             new ProposalStore(this.Events),
             this.Questions,
             NullLogger<ChatService>.Instance,

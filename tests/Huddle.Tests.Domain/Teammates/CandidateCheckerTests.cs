@@ -8,6 +8,7 @@ using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Acp;
 using Agency.Huddle.Tests.Acp.Tools;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Teammates;
 
@@ -406,8 +407,7 @@ public sealed partial class CandidateCheckerTests
         var paths = new TeammatePaths(dataDir.Options());
         seedTeamsDir?.Invoke(paths);
 
-        var directory = new SqliteTeamDirectory(dataDir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dataDir.CreateDirectoryAsync(ct);
 
         var personas = new PersonaStore(
             paths, new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), new PersonaWorkModeStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);

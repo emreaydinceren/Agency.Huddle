@@ -9,6 +9,7 @@ using Agency.Huddle.Tests.Library;
 using Agency.Huddle.Tests.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.References;
 
@@ -372,7 +373,7 @@ public sealed class ReferencePurposeProviderTests
     /// <returns>The store.</returns>
     private static FileChatStore Chats(TaskToolHarness harness)
     {
-        return new FileChatStore(harness.Options, NullLogger<FileChatStore>.Instance);
+        return harness.Options.CreateChatStore();
     }
 
     /// <summary>The Room provider over the harness's directory.</summary>

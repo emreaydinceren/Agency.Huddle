@@ -1,6 +1,5 @@
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Library;
 
@@ -13,7 +12,7 @@ namespace Agency.Huddle.Tests.Library;
 public sealed class LibraryReferenceResolverTests
 {
     private static LibraryReferenceResolver CreateResolver(LibraryFileServiceFixture fixture, bool enabled = true) =>
-        new(fixture.Resolver, fixture.Index, Options.Create(new TeamOptions { Library = new LibraryOptions { Enabled = enabled } }));
+        new(fixture.Resolver, fixture.Index, TestOptions.Create(opts => opts.Library = new LibraryOptions { Enabled = enabled }));
 
     /// <summary>A path that resolves inside a root and exists on disk resolves with <c>Exists</c> true.</summary>
     [Fact]

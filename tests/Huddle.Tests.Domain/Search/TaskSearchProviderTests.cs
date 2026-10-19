@@ -4,6 +4,7 @@ using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Tools;
 using Agency.Huddle.Tests.Tasks;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Search;
 
@@ -142,7 +143,7 @@ public sealed class TaskSearchProviderTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         harness.SeedOnDisk(MakeTask("PLAT-0001", "Fix login page"));
-        IOptions<TeamOptions> disabled = Options.Create(new TeamOptions { Tasks = new TasksOptions { Enabled = false } });
+        IOptions<TeamOptions> disabled = TestOptions.Create(opts => opts.Tasks = new TasksOptions { Enabled = false });
         TaskSearchProvider provider = new(harness.Store, harness.Personas, disabled);
 
         SearchResult result = await provider.SearchAsync(Query("login"), ct);

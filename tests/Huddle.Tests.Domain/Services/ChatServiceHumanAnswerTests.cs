@@ -1,12 +1,11 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Services;
 
@@ -512,7 +511,7 @@ public sealed class ChatServiceHumanAnswerTests
                 appendTarget,
                 events,
                 new FakeMentionAliasSource { Aliases = [] },
-                Options.Create(new TeamOptions { AgentMessageBudget = agentMessageBudget }),
+                TestOptions.Create(opts => opts.AgentMessageBudget = agentMessageBudget),
                 new ProposalStore(events),
                 questions,
                 NullLogger<ChatService>.Instance);

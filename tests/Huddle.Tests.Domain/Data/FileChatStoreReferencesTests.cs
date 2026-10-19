@@ -1,7 +1,7 @@
 using System.Globalization;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.Contracts;
-using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Data;
 
@@ -67,6 +67,6 @@ public sealed class FileChatStoreReferencesTests
 
     private static FileChatStore CreateStore(TempDataDir dir)
     {
-        return new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        return dir.CreateChatStore();
     }
 }

@@ -114,7 +114,7 @@ internal sealed class ReferenceFixture : IDisposable
     public ChatService Chat(IReferenceSnapshotter? snapshotter, RoomEvents events) =>
         new(
             this.Directory,
-            new FileChatStore(this.dir.Options(), NullLogger<FileChatStore>.Instance),
+            this.dir.CreateChatStore(),
             events,
             new FakeMentionAliasSource(),
             this.Options,

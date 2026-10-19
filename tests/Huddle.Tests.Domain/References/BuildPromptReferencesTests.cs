@@ -12,6 +12,7 @@ using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.Tests.Waiting;
 using Agency.Huddle.Tests.Elicitation;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.References;
 
@@ -136,7 +137,7 @@ public sealed class BuildPromptReferencesTests
             asked++;
             return null;
         });
-        ReferenceExpander expander = new(fixture.Resolver(libraryOverride: recording), new FakePromptSource(), Options.Create(new TeamOptions()));
+        ReferenceExpander expander = new(fixture.Resolver(libraryOverride: recording), new FakePromptSource(), TestOptions.Create());
 
         string? header = await expander.ExpandAsync($"see `C:\\Docs\\plan.md` and [Launch](/rooms/{room.Id})", true, ct);
 
@@ -183,7 +184,7 @@ public sealed class BuildPromptReferencesTests
     public async Task CommandTurn_ReferenceIsNotLookedUp()
     {
         using ReferenceFixture fixture = await ReferenceFixture.BuildAsync(TestContext.Current.CancellationToken);
-        ReferenceExpander expander = new(fixture.Resolver(new ThrowingCatalog()), new FakePromptSource(), Options.Create(new TeamOptions()));
+        ReferenceExpander expander = new(fixture.Resolver(new ThrowingCatalog()), new FakePromptSource(), TestOptions.Create());
         WorkItem item = new(
             "room-1",
             "Room 1",
@@ -206,7 +207,7 @@ public sealed class BuildPromptReferencesTests
     public async Task Greeting_ReferenceIsNotLookedUp()
     {
         using ReferenceFixture fixture = await ReferenceFixture.BuildAsync(TestContext.Current.CancellationToken);
-        ReferenceExpander expander = new(fixture.Resolver(new ThrowingCatalog()), new FakePromptSource(), Options.Create(new TeamOptions()));
+        ReferenceExpander expander = new(fixture.Resolver(new ThrowingCatalog()), new FakePromptSource(), TestOptions.Create());
         WorkItem item = new("room-1", "Room 1", string.Empty, "see [Growth](/teams/Growth)", [], WorkItemKind.Greeting);
         RecordingLogger logger = new();
 
@@ -290,7 +291,7 @@ public sealed class BuildPromptReferencesTests
     {
         using ReferenceFixture fixture = await ReferenceFixture.BuildAsync(TestContext.Current.CancellationToken);
         ReferenceResolver resolver = fixture.Resolver(new ThrowingCatalog());
-        ReferenceExpander expander = new(resolver, new FakePromptSource(), Options.Create(new TeamOptions()));
+        ReferenceExpander expander = new(resolver, new FakePromptSource(), TestOptions.Create());
         WorkItem item = BuildPromptReferencesTests.MessageWith("see [Growth](/teams/Growth)");
 
         AgentPrompt prompt = await BuildPromptReferencesTests.RunTurnAsync(item, expander);

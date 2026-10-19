@@ -1,6 +1,7 @@
 using Agency.Huddle.App;
 using Agency.Huddle.App.Sidebar;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Sidebar;
 
@@ -14,7 +15,7 @@ public sealed class SidebarPanelCatalogTests
         SidebarPanel documentOnly = Panel("a", 30, static subject => subject is DocumentSubject);
         SidebarPanel second = Panel("c", 20, static subject => subject is RoomSubject);
         SidebarPanel first = Panel("b", 10, static subject => subject is RoomSubject);
-        SidebarPanelCatalog catalog = new([documentOnly, second, first], Options.Create(new TeamOptions()));
+        SidebarPanelCatalog catalog = new([documentOnly, second, first], TestOptions.Create());
 
         IReadOnlyList<SidebarPanel> panels = catalog.For(new RoomSubject("ab12"));
 
@@ -56,7 +57,7 @@ public sealed class SidebarPanelCatalogTests
     {
         SidebarPanel first = Panel("first", 10, static subject => subject is RoomSubject);
         SidebarPanel second = Panel("second", 10, static subject => subject is RoomSubject);
-        SidebarPanelCatalog catalog = new([first, second], Options.Create(new TeamOptions()));
+        SidebarPanelCatalog catalog = new([first, second], TestOptions.Create());
 
         IReadOnlyList<SidebarPanel> panels = catalog.For(new RoomSubject("ab12"));
 

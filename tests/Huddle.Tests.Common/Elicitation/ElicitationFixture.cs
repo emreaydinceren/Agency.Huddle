@@ -76,7 +76,7 @@ internal sealed class ElicitationFixture : IDisposable
     public static async Task<ElicitationFixture> CreateAsync(CancellationToken ct, Func<IChatStore, IChatStore>? wrapStore = null)
     {
         TempDataDir dataDir = new();
-        IOptions<TeamOptions> options = Options.Create(new TeamOptions { DataDir = dataDir.Path });
+        IOptions<TeamOptions> options = dataDir.Options();
         SqliteTeamDirectory directory = new(options);
         await directory.InitializeAsync("You", ct);
         FileChatStore transcript = new(options, NullLogger<FileChatStore>.Instance);

@@ -2,6 +2,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Uploads;
+using Agency.Huddle.Tests.Factories;
 using Agency.Huddle.Tests.Library;
 using Microsoft.Extensions.Options;
 
@@ -45,7 +46,7 @@ internal sealed class UploadServiceHarness : IDisposable
     public RoomUploadFolders Folders { get; }
 
     /// <summary>The options a <see cref="PendingUploads"/> over this harness reads its cap from.</summary>
-    public IOptions<TeamOptions> Options { get; private init; } = Microsoft.Extensions.Options.Options.Create(new TeamOptions());
+    public IOptions<TeamOptions> Options { get; private init; } = TestOptions.Create();
 
     /// <summary>Builds the harness.</summary>
     /// <param name="ct">Cancels the directory setup.</param>

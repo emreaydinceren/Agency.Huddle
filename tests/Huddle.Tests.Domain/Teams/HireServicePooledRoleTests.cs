@@ -1,10 +1,10 @@
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Factories;
 using Agency.Huddle.Tests.Teammates;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -45,7 +45,7 @@ public sealed class HireServicePooledRoleTests
         };
         TeamTypeCatalog types = new(dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins, pool);
         FakeSkillAvailability packs = new();
-        HireLimitHarness harness = new(Microsoft.Extensions.Options.Options.Create(new TeamOptions()));
+        HireLimitHarness harness = new(TestOptions.Create());
         AvatarStore avatars = new(dir.Options(), NullLogger<AvatarStore>.Instance);
         HireService service = new(personas, types, packs, avatars, harness.Guard, new FakeSkillCopier(), new FakeStartGate(), NullLogger<HireService>.Instance);
         CardState card = new("tutor", "Tess", new ModelPick("claude-agent-acp", "sonnet"), [], [], CardReadiness.Ready, [], []);
