@@ -22,6 +22,13 @@ internal static class DocHistoryStopHook
     private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
 
     /// <summary>
+    /// Serialises writes of the one script every Work Dir shares. Teammates start sessions at the same time, and on Windows
+    /// a move over a file another thread is reading is refused with <see cref="UnauthorizedAccessException"/>, which cost
+    /// those teammates their hook. The settings files are per Work Dir and need no gate.
+    /// </summary>
+    private static readonly Lock ScriptGate = new();
+
+    /// <summary>
     /// Writes the script under <paramref name="dataDir"/> and adds the hook to the Agent's Work Dir settings, keeping every
     /// other setting. Safe to call on every session start. A settings file that is not valid JSON is left alone, and a
     /// failure to write is logged: the hook is a nudge, never a reason to refuse to start a session.
@@ -40,7 +47,11 @@ internal static class DocHistoryStopHook
         try
         {
             string script = Path.Combine(dataDir, "hooks", ScriptName);
-            WriteIfChanged(script, Script);
+            lock (ScriptGate)
+            {
+                WriteIfChanged(script, Script);
+            }
+
             AddToSettings(Path.Combine(workDir, ".claude", SettingsFile), $"node \"{script}\" {logChangeToolName}", logger);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
