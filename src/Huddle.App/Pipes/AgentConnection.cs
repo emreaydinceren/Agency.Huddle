@@ -151,7 +151,7 @@ internal sealed class AgentConnection
                 }
             }
 
-            this.pipe.Dispose();
+            await this.pipe.DisposeAsync();
         }
     }
 

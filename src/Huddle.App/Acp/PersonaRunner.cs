@@ -748,11 +748,11 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             }
             catch (TimeoutException)
             {
-                client.Dispose();
+                await client.DisposeAsync();
             }
             catch (IOException)
             {
-                client.Dispose();
+                await client.DisposeAsync();
             }
 
             if (attempt < MaxConnectAttempts)

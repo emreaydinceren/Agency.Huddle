@@ -45,11 +45,10 @@ internal sealed class DesktopLifetimeService(
     /// </summary>
     /// <param name="cancellationToken">Not used.</param>
     /// <returns>A completed task.</returns>
-    public Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
-        this.startedRegistration.Dispose();
+        await this.startedRegistration.DisposeAsync();
         InstanceFile.Delete(team.Value.DataDir);
-        return Task.CompletedTask;
     }
 
     /// <summary>

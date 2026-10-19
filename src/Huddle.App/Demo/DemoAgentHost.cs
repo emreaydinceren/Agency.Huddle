@@ -123,11 +123,11 @@ public sealed class DemoAgentHost : BackgroundService
             }
             catch (TimeoutException)
             {
-                client.Dispose();
+                await client.DisposeAsync();
             }
             catch (IOException)
             {
-                client.Dispose();
+                await client.DisposeAsync();
             }
 
             if (attempt < MaxConnectAttempts)

@@ -42,7 +42,7 @@ internal static class DesktopStopClient
             if (probe is not null)
             {
                 InstanceFile.Delete(dataDir);
-                output.WriteLine("Agency Huddle is not running.");
+                await output.WriteLineAsync("Agency Huddle is not running.");
                 return 0;
             }
         }
@@ -51,13 +51,13 @@ internal static class DesktopStopClient
         InstanceInfo? info = await WaitForRecordAsync(dataDir, recordWait, ct);
         if (info is null)
         {
-            output.WriteLine("Agency Huddle is starting or not answering.");
+            await output.WriteLineAsync("Agency Huddle is starting or not answering.");
             return 1;
         }
 
         if (!Uri.TryCreate(info.Url, UriKind.Absolute, out Uri? baseUrl))
         {
-            output.WriteLine("Agency Huddle is starting or not answering.");
+            await output.WriteLineAsync("Agency Huddle is starting or not answering.");
             return 1;
         }
 
@@ -78,12 +78,12 @@ internal static class DesktopStopClient
         catch (HttpRequestException)
         {
             // The lock is held, so a live instance is starting or stuck: keep its record.
-            output.WriteLine("Agency Huddle is starting or not answering.");
+            await output.WriteLineAsync("Agency Huddle is starting or not answering.");
             return 1;
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            output.WriteLine("Agency Huddle did not answer.");
+            await output.WriteLineAsync("Agency Huddle did not answer.");
             return 1;
         }
 
@@ -95,12 +95,12 @@ internal static class DesktopStopClient
 
         if (status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
         {
-            output.WriteLine(string.Create(
+            await output.WriteLineAsync(string.Create(
                 CultureInfo.InvariantCulture, $"Agency Huddle refused the stop request: {code} {status}."));
             return 1;
         }
 
-        output.WriteLine(string.Create(CultureInfo.InvariantCulture, $"Unexpected status {code}."));
+        await output.WriteLineAsync(string.Create(CultureInfo.InvariantCulture, $"Unexpected status {code}."));
         return 1;
     }
 
@@ -151,7 +151,7 @@ internal static class DesktopStopClient
             {
                 if (probe is not null)
                 {
-                    output.WriteLine("Stopped.");
+                    await output.WriteLineAsync("Stopped.");
                     return 0;
                 }
             }
@@ -160,7 +160,7 @@ internal static class DesktopStopClient
             if (remaining <= TimeSpan.Zero)
             {
                 string seconds = stopTimeout.TotalSeconds.ToString("0.##", CultureInfo.InvariantCulture);
-                output.WriteLine(string.Create(CultureInfo.InvariantCulture, $"Did not stop within {seconds} s."));
+                await output.WriteLineAsync(string.Create(CultureInfo.InvariantCulture, $"Did not stop within {seconds} s."));
                 return 1;
             }
 

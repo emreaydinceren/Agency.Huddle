@@ -93,13 +93,13 @@ internal sealed class PipeServer : BackgroundService
             }
             catch (OperationCanceledException)
             {
-                server.Dispose();
+                await server.DisposeAsync();
                 break;
             }
             catch (IOException ex)
             {
                 this.logger.LogWarning(ex, "Failed to accept a connection on pipe {PipeName}.", this.options.PipeName);
-                server.Dispose();
+                await server.DisposeAsync();
                 await Task.Delay(TimeSpan.FromMilliseconds(250), stoppingToken);
                 continue;
             }

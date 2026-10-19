@@ -156,7 +156,7 @@ app.MapDesktopEndpoints();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.Run();
+await app.RunAsync();
 
 return 0;
 

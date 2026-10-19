@@ -597,7 +597,7 @@ internal sealed class LibraryFileService(
                     return new LibraryImageRefused(LibraryImageRefusal.TooLarge);
                 }
 
-                buffer.Write(chunk, 0, read);
+                await buffer.WriteAsync(chunk.AsMemory(0, read), ct);
             }
 
             byte[] bytes = buffer.ToArray();
