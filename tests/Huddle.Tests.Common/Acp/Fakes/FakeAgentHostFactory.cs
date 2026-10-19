@@ -11,6 +11,8 @@ namespace Agency.Huddle.Tests.Acp.Fakes;
 /// </summary>
 internal sealed class FakeAgentHostFactory : IAgentHostFactory
 {
+    private readonly Lock callsGate = new();
+    private readonly List<(Persona Persona, string AgentId)> calls = [];
     private Exception? failure;
 
     /// <summary>Initializes a new instance of the <see cref="FakeAgentHostFactory"/> class.</summary>
@@ -55,7 +57,22 @@ internal sealed class FakeAgentHostFactory : IAgentHostFactory
     /// </summary>
     public Action<FakePersonaHost>? OnHostStarted { get; set; }
 
-    public List<(Persona Persona, string AgentId)> Calls { get; } = [];
+    /// <summary>
+    /// A snapshot of every <see cref="StartAsync"/> call so far, in arrival order. The supervisor starts
+    /// every Persona's host concurrently, so the recording is guarded by a lock: an unguarded
+    /// <see cref="List{T}.Add"/> from two threads can lose an entry, which showed up as
+    /// <c>Enabled_StartsOneHostPerPersonaFile</c> seeing one call for two Personas.
+    /// </summary>
+    public IReadOnlyList<(Persona Persona, string AgentId)> Calls
+    {
+        get
+        {
+            lock (this.callsGate)
+            {
+                return [.. this.calls];
+            }
+        }
+    }
 
     /// <summary>
     /// Configures every future <see cref="StartAsync"/> call to fail with <paramref name="exception"/>
@@ -80,7 +97,10 @@ internal sealed class FakeAgentHostFactory : IAgentHostFactory
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
 
-        this.Calls.Add((persona, agentId));
+        lock (this.callsGate)
+        {
+            this.calls.Add((persona, agentId));
+        }
 
         if (this.failure is not null)
         {
