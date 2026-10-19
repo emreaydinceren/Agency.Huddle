@@ -10,6 +10,8 @@ using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Elicitation;
+using Agency.Huddle.Tests.Fakes;
+using Agency.Huddle.Tests.Waiting;
 using static Agency.Huddle.Tests.Elicitation.ElicitationTestSupport;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -1302,31 +1304,21 @@ public sealed class ElicitationCardTests
     /// <summary>A Transcript store whose append waits for a gate, so a test can hold an answer in flight, and forwards everything else.</summary>
     /// <param name="inner">The real store.</param>
     /// <param name="gate">Completed when the append may go on.</param>
-    private sealed class GatedStore(IChatStore inner, Task gate) : IChatStore
+    private sealed class GatedStore(IChatStore inner, Task gate) : ChatStoreDecorator(inner)
     {
         /// <inheritdoc/>
-        public async Task AppendAsync(string roomId, ChatMessage message, CancellationToken ct = default)
+        public override async Task AppendAsync(string roomId, ChatMessage message, CancellationToken ct = default)
         {
-            await gate.WaitAsync(ct);
-            await inner.AppendAsync(roomId, message, ct);
-        }
+            try
+            {
+                await gate.WaitAsync(TestBudgets.Standard, ct);
+            }
+            catch (TimeoutException)
+            {
+                throw new TimeoutException($"The test never opened the append gate within {TestBudgets.Standard}.");
+            }
 
-        /// <inheritdoc/>
-        public Task<IReadOnlyList<ChatMessage>> ReadAllAsync(string roomId, CancellationToken ct = default)
-        {
-            return inner.ReadAllAsync(roomId, ct);
-        }
-
-        /// <inheritdoc/>
-        public Task DeleteAsync(string roomId, CancellationToken ct = default)
-        {
-            return inner.DeleteAsync(roomId, ct);
-        }
-
-        /// <inheritdoc/>
-        public Task<bool> HasMessagesAsync(string roomId, CancellationToken ct = default)
-        {
-            return inner.HasMessagesAsync(roomId, ct);
+            await base.AppendAsync(roomId, message, ct);
         }
     }
 }

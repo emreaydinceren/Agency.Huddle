@@ -4,6 +4,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.Tests.Fakes;
 using static Agency.Huddle.Tests.Elicitation.ElicitationTestSupport;
 
 namespace Agency.Huddle.Tests.Elicitation;
@@ -267,30 +268,12 @@ public sealed class ElicitationServiceTests
     /// <summary>A Transcript store whose append throws what it was given, and forwards everything else.</summary>
     /// <param name="inner">The real store the reads are forwarded to.</param>
     /// <param name="failure">What every append throws.</param>
-    private sealed class ThrowingStore(IChatStore inner, Exception failure) : IChatStore
+    private sealed class ThrowingStore(IChatStore inner, Exception failure) : ChatStoreDecorator(inner)
     {
         /// <inheritdoc/>
-        public Task AppendAsync(string roomId, ChatMessage message, CancellationToken ct = default)
+        public override Task AppendAsync(string roomId, ChatMessage message, CancellationToken ct = default)
         {
             throw failure;
-        }
-
-        /// <inheritdoc/>
-        public Task<IReadOnlyList<ChatMessage>> ReadAllAsync(string roomId, CancellationToken ct = default)
-        {
-            return inner.ReadAllAsync(roomId, ct);
-        }
-
-        /// <inheritdoc/>
-        public Task DeleteAsync(string roomId, CancellationToken ct = default)
-        {
-            return inner.DeleteAsync(roomId, ct);
-        }
-
-        /// <inheritdoc/>
-        public Task<bool> HasMessagesAsync(string roomId, CancellationToken ct = default)
-        {
-            return inner.HasMessagesAsync(roomId, ct);
         }
     }
 }

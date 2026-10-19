@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.NeedsYou;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.Tests.Fakes;
 
 namespace Agency.Huddle.Tests.NeedsYou;
 
@@ -95,21 +96,14 @@ public sealed class NeedsYouStartupScanTests
     /// <summary>A Transcript store whose tail read throws for one Room.</summary>
     /// <param name="inner">The real store every other Room reads through.</param>
     /// <param name="failingRoomId">The Room whose tail read throws.</param>
-    private sealed class ThrowingTailStore(IChatStore inner, string failingRoomId) : IChatStore
+    private sealed class ThrowingTailStore(IChatStore inner, string failingRoomId) : ChatStoreDecorator(inner)
     {
-        public Task AppendAsync(string roomId, ChatMessage message, CancellationToken ct = default) => inner.AppendAsync(roomId, message, ct);
-
-        public Task<IReadOnlyList<ChatMessage>> ReadAllAsync(string roomId, CancellationToken ct = default) => inner.ReadAllAsync(roomId, ct);
-
-        public Task DeleteAsync(string roomId, CancellationToken ct = default) => inner.DeleteAsync(roomId, ct);
-
-        public Task<bool> HasMessagesAsync(string roomId, CancellationToken ct = default) => inner.HasMessagesAsync(roomId, ct);
-
-        public Task<IReadOnlyList<ChatMessage>> ReadTailAsync(string roomId, int count, CancellationToken ct = default)
+        /// <inheritdoc/>
+        public override Task<IReadOnlyList<ChatMessage>> ReadTailAsync(string roomId, int count, CancellationToken ct = default)
         {
             return string.Equals(roomId, failingRoomId, StringComparison.Ordinal)
                 ? throw new IOException("disk gone")
-                : inner.ReadTailAsync(roomId, count, ct);
+                : base.ReadTailAsync(roomId, count, ct);
         }
     }
 }

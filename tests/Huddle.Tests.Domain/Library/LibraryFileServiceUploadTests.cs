@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Library;
+using Agency.Huddle.Tests.Fakes;
 
 namespace Agency.Huddle.Tests.Library;
 
@@ -297,73 +298,26 @@ public sealed class LibraryFileServiceUploadTests
     }
 
     /// <summary>A readable stream that reports it cannot seek and has no length.</summary>
-    private sealed class NonSeekableStream(byte[] data) : Stream
+    private sealed class NonSeekableStream(byte[] data) : ScriptedReadStream(canSeek: false)
     {
         private readonly MemoryStream inner = new(data);
 
-        public override bool CanRead => true;
-
-        public override bool CanSeek => false;
-
-        public override bool CanWrite => false;
-
-        public override long Length => throw new NotSupportedException();
-
-        public override long Position
-        {
-            get => throw new NotSupportedException();
-            set => throw new NotSupportedException();
-        }
-
-        public override void Flush()
-        {
-        }
-
+        /// <inheritdoc/>
         public override int Read(byte[] buffer, int offset, int count) => this.inner.Read(buffer, offset, count);
 
+        /// <inheritdoc/>
         public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) => this.inner.ReadAsync(buffer, cancellationToken);
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     /// <summary>A stream whose first read hands over some bytes and cancels the source, so the copy is cancelled mid-flight.</summary>
-    private sealed class CancelOnReadStream(CancellationTokenSource source) : Stream
+    private sealed class CancelOnReadStream(CancellationTokenSource source) : ScriptedReadStream(canSeek: false)
     {
-        public override bool CanRead => true;
-
-        public override bool CanSeek => false;
-
-        public override bool CanWrite => false;
-
-        public override long Length => throw new NotSupportedException();
-
-        public override long Position
-        {
-            get => throw new NotSupportedException();
-            set => throw new NotSupportedException();
-        }
-
-        public override void Flush()
-        {
-        }
-
-        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-
+        /// <inheritdoc/>
         public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
             source.Cancel();
             buffer.Span[..100].Clear();
             return ValueTask.FromResult(100);
         }
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }

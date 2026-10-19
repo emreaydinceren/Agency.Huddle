@@ -6,6 +6,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.Tests.Fakes;
 
 namespace Agency.Huddle.Tests.Services;
 
@@ -409,7 +410,7 @@ public sealed class ChatServiceHumanAnswerTests
     /// writer get in while the first one held the lock".
     /// </summary>
     /// <param name="inner">The real store every call is forwarded to.</param>
-    private sealed class GatedStore(IChatStore inner) : IChatStore
+    private sealed class GatedStore(IChatStore inner) : ChatStoreDecorator(inner)
     {
         private readonly TaskCompletionSource firstEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource releaseFirst = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -429,7 +430,7 @@ public sealed class ChatServiceHumanAnswerTests
         }
 
         /// <inheritdoc/>
-        public async Task AppendAsync(string roomId, ChatMessage message, CancellationToken ct = default)
+        public override async Task AppendAsync(string roomId, ChatMessage message, CancellationToken ct = default)
         {
             if (Interlocked.Increment(ref this.appends) == 1)
             {
@@ -441,25 +442,7 @@ public sealed class ChatServiceHumanAnswerTests
                 _ = this.secondEntered.TrySetResult();
             }
 
-            await inner.AppendAsync(roomId, message, ct);
-        }
-
-        /// <inheritdoc/>
-        public Task<IReadOnlyList<ChatMessage>> ReadAllAsync(string roomId, CancellationToken ct = default)
-        {
-            return inner.ReadAllAsync(roomId, ct);
-        }
-
-        /// <inheritdoc/>
-        public Task DeleteAsync(string roomId, CancellationToken ct = default)
-        {
-            return inner.DeleteAsync(roomId, ct);
-        }
-
-        /// <inheritdoc/>
-        public Task<bool> HasMessagesAsync(string roomId, CancellationToken ct = default)
-        {
-            return inner.HasMessagesAsync(roomId, ct);
+            await base.AppendAsync(roomId, message, ct);
         }
     }
 

@@ -1,6 +1,7 @@
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Uploads;
+using Agency.Huddle.Tests.Fakes;
 
 namespace Agency.Huddle.Tests.Uploads;
 
@@ -11,24 +12,15 @@ namespace Agency.Huddle.Tests.Uploads;
 public sealed class PendingUploadsTests
 {
     /// <summary>A stream that blocks every read until released, so a chip can be held in the Uploading state.</summary>
-    private sealed class GatedStream : Stream
+    private sealed class GatedStream : ScriptedReadStream
     {
         private readonly TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly byte[] content = "hello"u8.ToArray();
         private int position;
 
-        public override bool CanRead => true;
-
-        public override bool CanSeek => false;
-
-        public override bool CanWrite => false;
-
-        public override long Length => throw new NotSupportedException();
-
-        public override long Position
+        public GatedStream()
+            : base(canSeek: false)
         {
-            get => throw new NotSupportedException();
-            set => throw new NotSupportedException();
         }
 
         public void Release() => this.gate.TrySetResult();
@@ -41,18 +33,6 @@ public sealed class PendingUploadsTests
             this.position += count;
             return count;
         }
-
-        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-
-        public override void Flush()
-        {
-        }
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     /// <summary>A finished upload is a Done chip carrying the saved path, size and kind, in the Room's list.</summary>

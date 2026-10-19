@@ -4,6 +4,7 @@ using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Tools;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.Tests.Fakes;
 
 namespace Agency.Huddle.Tests.Search;
 
@@ -221,42 +222,24 @@ public sealed class RoomSearchProviderTests
     }
 
     /// <summary>A Transcript store that cancels the search once its first Room has been read.</summary>
-    private sealed class CancelAfterFirstReadChatStore(IChatStore inner, CancellationTokenSource cancellation) : IChatStore
+    private sealed class CancelAfterFirstReadChatStore(IChatStore inner, CancellationTokenSource cancellation) : ChatStoreDecorator(inner)
     {
         private int reads;
 
         /// <summary>How many Transcripts the search has read so far.</summary>
-        public int Reads => this.reads;
-
-        /// <summary>Appends through the real store.</summary>
-        public Task AppendAsync(string roomId, ChatMessage message, CancellationToken ct = default)
-        {
-            return inner.AppendAsync(roomId, message, ct);
-        }
+        public int Reads => Volatile.Read(ref this.reads);
 
         /// <summary>Reads through the real store, then cancels the search after the first read.</summary>
-        public async Task<IReadOnlyList<ChatMessage>> ReadAllAsync(string roomId, CancellationToken ct = default)
+        public override async Task<IReadOnlyList<ChatMessage>> ReadAllAsync(string roomId, CancellationToken ct = default)
         {
-            this.reads++;
-            IReadOnlyList<ChatMessage> messages = await inner.ReadAllAsync(roomId, ct);
-            if (this.reads == 1)
+            int read = Interlocked.Increment(ref this.reads);
+            IReadOnlyList<ChatMessage> messages = await base.ReadAllAsync(roomId, ct);
+            if (read == 1)
             {
                 cancellation.Cancel();
             }
 
             return messages;
-        }
-
-        /// <summary>Deletes through the real store.</summary>
-        public Task DeleteAsync(string roomId, CancellationToken ct = default)
-        {
-            return inner.DeleteAsync(roomId, ct);
-        }
-
-        /// <summary>Asks the real store.</summary>
-        public Task<bool> HasMessagesAsync(string roomId, CancellationToken ct = default)
-        {
-            return inner.HasMessagesAsync(roomId, ct);
         }
     }
 }

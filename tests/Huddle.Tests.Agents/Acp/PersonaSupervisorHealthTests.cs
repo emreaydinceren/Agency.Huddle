@@ -6,6 +6,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Fakes;
 using Agency.Huddle.Tests.Pipes;
 using static Agency.Huddle.Tests.Acp.PersonaSupervisorTestSupport;
 
@@ -250,7 +251,7 @@ public sealed class PersonaSupervisorHealthTests
         var exception = new InvalidOperationException(
             "No ACP adapter is installed for Persona 'nova'. Run tools/acp/install.ps1 "
             + "(or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.");
-        var factory = new FailingForOneAgentHostFactory("nova", exception, new FakeAgentHostFactory());
+        var factory = ScriptedAgentHostFactory.FailFor(new FakeAgentHostFactory(), "nova", exception);
         var health = NewHealth();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
         using var skillStore = NewSkillStore(options);
@@ -279,7 +280,7 @@ public sealed class PersonaSupervisorHealthTests
         WritePersonaFile(options, "nova");
 
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
-        var factory = new FailingForOneAgentHostFactory("nova", new InvalidOperationException("No ACP adapter is installed."), new FakeAgentHostFactory());
+        var factory = ScriptedAgentHostFactory.FailFor(new FakeAgentHostFactory(), "nova", new InvalidOperationException("No ACP adapter is installed."));
         var health = NewHealth();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
         using var skillStore = NewSkillStore(options);
@@ -309,7 +310,7 @@ public sealed class PersonaSupervisorHealthTests
 
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var exception = new AgentAuthenticationRequiredException([new AuthMethodInfo("oauth", "OAuth", null)]);
-        var factory = new FailingForOneAgentHostFactory("nova", exception, new FakeAgentHostFactory());
+        var factory = ScriptedAgentHostFactory.FailFor(new FakeAgentHostFactory(), "nova", exception);
         var health = NewHealth();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
         using var skillStore = NewSkillStore(options);
@@ -339,7 +340,7 @@ public sealed class PersonaSupervisorHealthTests
 
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var exception = new AgentProcessStartException("Failed to start 'node'.", new IOException("No such file or directory"));
-        var factory = new FailingForOneAgentHostFactory("nova", exception, new FakeAgentHostFactory());
+        var factory = ScriptedAgentHostFactory.FailFor(new FakeAgentHostFactory(), "nova", exception);
         var health = NewHealth();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
         using var skillStore = NewSkillStore(options);
@@ -369,7 +370,7 @@ public sealed class PersonaSupervisorHealthTests
 
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var exception = new AgentException("session/new failed: the adapter rejected the request.");
-        var factory = new FailingForOneAgentHostFactory("nova", exception, new FakeAgentHostFactory());
+        var factory = ScriptedAgentHostFactory.FailFor(new FakeAgentHostFactory(), "nova", exception);
         var health = NewHealth();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
         using var skillStore = NewSkillStore(options);
@@ -399,7 +400,7 @@ public sealed class PersonaSupervisorHealthTests
 
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var exception = new FormatException("weird format.");
-        var factory = new FailingForOneAgentHostFactory("nova", exception, new FakeAgentHostFactory());
+        var factory = ScriptedAgentHostFactory.FailFor(new FakeAgentHostFactory(), "nova", exception);
         var health = NewHealth();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
         using var skillStore = NewSkillStore(options);

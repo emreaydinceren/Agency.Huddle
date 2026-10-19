@@ -5,6 +5,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Fakes;
 using Agency.Huddle.Tests.Pipes;
 using static Agency.Huddle.Tests.Acp.PersonaSupervisorTestSupport;
 
@@ -35,8 +36,8 @@ public sealed class PersonaSupervisorRestartTests
 
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var inner = new FakeAgentHostFactory();
-        var factory = new FailOnceThenSucceedAgentHostFactory(
-            "nova", new InvalidOperationException("Simulated failure starting Persona 'nova'."), inner);
+        var factory = ScriptedAgentHostFactory.FailOnceFor(
+            inner, "nova", new InvalidOperationException("Simulated failure starting Persona 'nova'."));
         var health = NewHealth();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
         using var skillStore = NewSkillStore(options);

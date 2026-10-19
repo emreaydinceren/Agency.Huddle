@@ -7,6 +7,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Pipes;
 using static Agency.Huddle.Tests.Acp.PersonaSupervisorTestSupport;
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.Tests.Fakes;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -203,7 +204,7 @@ public sealed class PersonaSupervisorLifecycleTests
         personaStore.Add(Identity("bad"), "You are a persona.");
         personaStore.Add(Identity("good"), "You are a persona.");
         var inner = new FakeAgentHostFactory();
-        var factory = new FailingForOneAgentHostFactory("bad", new InvalidOperationException("Simulated failure starting Persona 'bad'."), inner);
+        var factory = ScriptedAgentHostFactory.FailFor(inner, "bad", new InvalidOperationException("Simulated failure starting Persona 'bad'."));
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
         using var skillStore = NewSkillStore(options);
         using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);

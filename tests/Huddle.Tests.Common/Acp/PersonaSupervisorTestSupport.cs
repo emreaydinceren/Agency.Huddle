@@ -4,7 +4,6 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Skills;
-using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Acp;
@@ -68,45 +67,5 @@ internal static class PersonaSupervisorTestSupport
         Func<bool> condition, CancellationToken ct, [CallerArgumentExpression(nameof(condition))] string conditionText = "")
     {
         return Eventually.UntilAsync(condition, ct, interval: TimeSpan.FromMilliseconds(5), conditionText: conditionText);
-    }
-
-    /// <summary>A test double for <see cref="IAgentHostFactory"/> that throws a caller-supplied exception for one named Persona and otherwise delegates to <paramref name="inner"/>.</summary>
-    internal sealed class FailingForOneAgentHostFactory(string failingPersonaName, Exception exception, FakeAgentHostFactory inner) : IAgentHostFactory
-    {
-        public Task<IPersonaHost> StartAsync(Persona persona, string agentId, CancellationToken cancellationToken)
-        {
-            ArgumentNullException.ThrowIfNull(persona);
-
-            if (string.Equals(persona.Name, failingPersonaName, StringComparison.Ordinal))
-            {
-                throw exception;
-            }
-
-            return inner.StartAsync(persona, agentId, cancellationToken);
-        }
-    }
-
-    /// <summary>
-    /// A test double for <see cref="IAgentHostFactory"/> that throws a caller-supplied exception the
-    /// FIRST time it is asked to start the named Persona's host, and delegates to
-    /// <paramref name="inner"/> every time after that - the shape a Restart actually fixes (the
-    /// adapter got installed, authentication completed) rather than one that keeps failing forever.
-    /// </summary>
-    internal sealed class FailOnceThenSucceedAgentHostFactory(string failingPersonaName, Exception exception, FakeAgentHostFactory inner) : IAgentHostFactory
-    {
-        private bool hasFailedOnce;
-
-        public Task<IPersonaHost> StartAsync(Persona persona, string agentId, CancellationToken cancellationToken)
-        {
-            ArgumentNullException.ThrowIfNull(persona);
-
-            if (!this.hasFailedOnce && string.Equals(persona.Name, failingPersonaName, StringComparison.Ordinal))
-            {
-                this.hasFailedOnce = true;
-                throw exception;
-            }
-
-            return inner.StartAsync(persona, agentId, cancellationToken);
-        }
     }
 }
