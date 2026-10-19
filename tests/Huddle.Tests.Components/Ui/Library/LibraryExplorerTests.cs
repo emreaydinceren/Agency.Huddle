@@ -561,11 +561,11 @@ public sealed class LibraryExplorerTests : IDisposable
         ctx.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetResult(null);
         IRenderedComponent<ContainerFragment> cut = RenderExplorer(ctx, scopes: null, layout: layout, stateKey: "k");
 
-        cut.WaitForAssertion(() => Assert.Contains(
-            ctx.JSInterop.Invocations["huddleStorage.get"],
+        await cut.WaitForAssertionAsync(async () => Assert.Contains(
+            await ctx.InvocationsOnDispatcherAsync("huddleStorage.get"),
             invocation => Equals(invocation.Arguments[0], expectedKey)));
         Assert.DoesNotContain(
-            ctx.JSInterop.Invocations["huddleStorage.get"],
+            await ctx.InvocationsOnDispatcherAsync("huddleStorage.get"),
             invocation => Equals(invocation.Arguments[0], "library:k:divider"));
     }
 
@@ -594,13 +594,14 @@ public sealed class LibraryExplorerTests : IDisposable
         timeout.CancelAfter(TimeSpan.FromSeconds(10));
 
         // The retries are delays with no render in between, so poll the calls instead of waiting on renders.
-        while (ctx.JSInterop.Invocations["mudSplitPanel_setDividerPosition"].Count < LibraryExplorer.DividerRestoreAttempts)
+        // Each retry records its call on the dispatcher, so the poll reads there too.
+        while ((await ctx.InvocationsOnDispatcherAsync("mudSplitPanel_setDividerPosition")).Count < LibraryExplorer.DividerRestoreAttempts)
         {
             await Task.Delay(TimeSpan.FromMilliseconds(25), timeout.Token);
         }
 
         await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
-        Assert.Equal(LibraryExplorer.DividerRestoreAttempts, ctx.JSInterop.Invocations["mudSplitPanel_setDividerPosition"].Count);
+        Assert.Equal(LibraryExplorer.DividerRestoreAttempts, (await ctx.InvocationsOnDispatcherAsync("mudSplitPanel_setDividerPosition")).Count);
         Assert.NotEmpty(cut.FindAll(".library-tree-node-name"));
     }
 

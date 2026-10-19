@@ -144,6 +144,9 @@ grep -l "\[FAIL\]" "$TEMP"/flake/*.txt | wc -l
 Record the failure rate before changing anything, find the cause (instrument if needed), and
 prove the fix with the same harness and run count. Never add a sleep, a retry, or a longer timeout.
 
+Before calling it timing, ask whether the product is wrong: three rows below were product bugs that
+only showed under load. A test-only fix changes what the test waits for or holds, never how long it waits.
+
 Causes found, all fixed at the root:
 
 | Symptom | Cause |
@@ -151,10 +154,14 @@ Causes found, all fixed at the root:
 | `UnknownEventHandlerIdException` on a click | A fire-and-forget re-render landed between `Find` and `Click` — see [BlazorTesting.md](BlazorTesting.md) |
 | A reload ~500 ms after setup | The store raised change events when nothing changed (a record comparing a list by reference; a write not refreshing its in-memory index). A real product bug |
 | Order-dependent asserts flipping | Seeding a file on disk under a live `TaskService` logged an "outside edit" stamped with the real clock, overwriting `Updated` |
-| `Collection was modified` | A test enumerated a `List<T>` another thread appended to |
+| `Collection was modified` | A test enumerated a `List<T>` another thread appended to. Collect events raised from a store's or registry's own thread in a `ConcurrentQueue<T>` (`SkillPacksEndToEndTests`). bUnit's `JSInterop.Invocations` is such a list too — see [BlazorTesting.md](BlazorTesting.md) |
 | A test that races on purpose | Rewritten to reach the same branch without the race |
 | A bUnit assert reads the old state after a click | Synchronous `Click()` returned before its handler ran — await `ClickAsync()`; see [BlazorTesting.md](BlazorTesting.md) |
-| A log line or event missing right after the state it follows | The product sets the state first and logs after (`AgentConnection`'s disconnect) — wait for what you assert, not for something that precedes it |
+| A log line or event missing right after the state it follows | The product sets the state first and logs after (`AgentConnection`'s disconnect) — wait for what you assert, not for something that precedes it. The same shape: a failure is reported in a `catch` and the cleanup runs in the `finally` after it (`RoomSessionTests.Turn_Throws_EndStillCalled`), and a store's first `Changed` arrives before the condition the test asserts (`PersonaStoreTests`) |
+| An exact count too high by the setup's own events (expected 1, actual 3) | The setup's work is coalesced or debounced (a new Task's wakes are held for a second), so under load it landed after the test's "before" snapshot and was counted with the event under test. Count only the event the test is about (`TeamsPhase4EndToEndTests`) |
+| A burst test sees more runs than "at most N" (3 publishes, not 2) | The assertion holds only if every request arrives while the first run is still going; a fast first run finished early and a second and third ran. Hold the first run open until the whole burst is issued, so the test checks merging and not speed (`SkillRegistryTests.Rebuild_BurstOfScopes_MergesIntoOneFollowUp`) |
+| A `TestHost` GET fails with a bare `OperationCanceledException` under load | A real product bug: a component's `Dispose` looked a service up through `IServiceProvider` after the request scope was already disposed, threw `ObjectDisposedException` before unsubscribing, and left its handler on a singleton. Keep the instance you subscribed to. `HostingExceptionLog` names the exception Hosting hid (`BuildTeam`, `TeamPageRouteTests`) |
+| Red on `main`, but both PRs were green | Not a flake: two PRs met. One added a service every renderer of a page must register, and the other added a test with its own context that does not register it (`ChatSubjectTests`). Fix the test's setup, and look for other private context builders |
 | A count off by one in server-rendered HTML, ~1 run in 100 | A bare word matched inside the prerender marker's random base64 — count the element |
 | A rename not visible right after `Update` returns | A real product bug: the watcher's debounce rescan ran inside `Update` and raised the rename from its timer thread (`PersonaStore`, fixed by lock order) |
 | The run ends red with `failed: 0` and "Foreground threads were left running" | Pooled SQLite connections kept every temp `team.db` open until exit — `TempDataDir.Dispose` clears them |
@@ -263,6 +270,7 @@ R3Fix, R3Shared, R3Srch, AppCssTokensB), which are not `RuleBody`; list-aware `R
 | `RenderWithPopovers<T>` | `Ui/RenderedComponentExtensions.cs` | Rendering any component that opens a popover, menu or dialog host. Use plain `Render<T>` only where the component has none. |
 | `FindButton`, `FindFirstButton`, `TextOf`, `MenuItems`, `ClickMenuItemAsync` | `Ui/RenderedComponentExtensions.cs` | Querying a rendered fragment. `FindButton` needs exactly one match; use `FindFirstButton` when several can match. |
 | `ShowDialogAsync<TDialog>`, `EditSelectAsync<T>` | `Ui/DialogExtensions.cs` | Opening a dialog through the dialog service and waiting for its title, or setting a `MudSelect` value. |
+| `InvocationsOnDispatcherAsync`, `DisposeComponentsOnDispatcherAsync` | `Ui/MudBunitContext.cs` | Reading recorded JS calls while the component may still be calling JS, or disposing before an assert on what disposal did. Both run on the renderer's dispatcher. |
 
 Not for: `RenderWithPopovers` reaches two bUnit internals by reflection
 (`ComponentParameterCollectionBuilder.Build` and `ToRenderFragment`), so it fails loudly if bUnit renames them.
