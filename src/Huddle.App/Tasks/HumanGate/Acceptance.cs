@@ -10,6 +10,17 @@ internal static class Acceptance
     private const string PartSeparator = "; ";
     private const int HashLength = 12;
 
+    /// <summary>The start of the Change log summary of an outside edit the Human gate refused; one after an acceptance voids it.</summary>
+    public const string RefusedPrefix = "outside edit refused by Human gate: ";
+
+    /// <summary>How many <c>accepted</c> entries the Task's Change log holds.</summary>
+    /// <param name="task">The Task.</param>
+    public static int AcceptedCount(TaskItem task)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        return task.ChangeLog.Count(static entry => HashOf(entry.Summary) is not null);
+    }
+
     /// <summary>Works out the acceptance of a Task.</summary>
     /// <param name="task">The Task.</param>
     /// <returns>
@@ -28,8 +39,14 @@ internal static class Acceptance
         IReadOnlyList<ChangeLogEntry> log = task.ChangeLog;
         int entered = -1;
         int accepted = -1;
+        int refused = -1;
         for (int index = 0; index < log.Count; index++)
         {
+            if (log[index].Summary.StartsWith(RefusedPrefix, StringComparison.Ordinal))
+            {
+                refused = index;
+            }
+
             if (EntersNeedsYou(log[index].Summary))
             {
                 entered = index;
@@ -41,7 +58,7 @@ internal static class Acceptance
             }
         }
 
-        if (entered < 0 || accepted < entered)
+        if (entered < 0 || accepted < entered || refused > accepted)
         {
             return AcceptanceInfo.NoAcceptance;
         }

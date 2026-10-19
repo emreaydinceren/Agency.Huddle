@@ -100,7 +100,7 @@ internal sealed class TaskService : IDisposable
         this.logger = logger;
         this.gates = gates;
         this.proofSource = proof;
-        this.human =human ?? new ConfiguredHumanIdentity(options.Value.HumanName);
+        this.human = human ?? new ConfiguredHumanIdentity(options.Value.HumanName);
 
         // Settled corrections-B2 D6 item 13: TaskEvents is a plain hub; this is the one place that
         // turns TaskStore's own index-rebuild notification into the same event a Task mutation
@@ -260,9 +260,10 @@ internal sealed class TaskService : IDisposable
     private string? DecisionProblem(TaskItem current, TaskDecision decision, string? note)
     {
         string notWaiting = string.Create(CultureInfo.InvariantCulture, $"{current.Id} isn't waiting for your decision.");
-        bool waiting = decision == TaskDecision.Accept
-            ? current.Status == TaskState.NeedsYou && Acceptance.Of(current).State != AcceptanceState.Valid && this.ProofOf(current).IsComplete
-            : current.Status is TaskState.Review or TaskState.NeedsYou;
+        bool waiting = !current.Location.Closed
+            && (decision == TaskDecision.Accept
+                ? current.Status == TaskState.NeedsYou && Acceptance.Of(current).State != AcceptanceState.Valid && this.ProofOf(current).IsComplete
+                : current.Status is TaskState.Review or TaskState.NeedsYou);
         if (!waiting)
         {
             return notWaiting;
@@ -505,18 +506,29 @@ internal sealed class TaskService : IDisposable
         // diff against) gets the bare summary, with no diff suffix.
         if (edit.Before is null)
         {
-            if (edit.After.IsGated && this.ResetGatedCreation(edit.After, actor, at) is { } reset)
-            {
-                return reset;
-            }
+            return this.OnOutsideCreation(edit.After, actor, at);
+        }
 
-            ChangeLogEntry bareEntry = new(at, actor.Name, "edited outside Huddle");
-            TaskItem? bareWritten = this.store.AppendEntry(edit.After.Id, edit.After.Version, bareEntry);
+        if (Acceptance.AcceptedCount(edit.After) > Acceptance.AcceptedCount(edit.Before))
+        {
+            // The forged entry is refused and logged, then the rest of the same write (a status move, a gate switch) is
+            // judged against the re-read Task, so one write cannot forge an acceptance and use it.
+            TaskChange? forged = this.RefuseForgedAcceptance(edit.After, actor, at);
+            return forged is null ? null : this.ContinueOutsideEdit(new OutsideEdit(edit.Before, forged.After), actor, at) ?? forged;
+        }
 
-            // null means the disk version moved again before this append reached it; a newer save
-            // will be reported by the next rebuild, so this one is silently skipped (Settled
-            // corrections-B2 D6 item 8).
-            return bareWritten is null ? null : new TaskChange(null, bareWritten, [], actor, bareEntry);
+        return this.ContinueOutsideEdit(edit, actor, at);
+    }
+
+    /// <summary>The part of an outside edit of an existing Task that follows the forged-acceptance check: the Human gate, the process gates and the log entry.</summary>
+    /// <param name="edit">The Task's state before and after the outside edit.</param>
+    /// <param name="actor">The outside-edit actor.</param>
+    /// <param name="at">When the edit was seen.</param>
+    private TaskChange? ContinueOutsideEdit(OutsideEdit edit, TaskActor actor, DateTimeOffset at)
+    {
+        if (edit.Before is null)
+        {
+            return null;
         }
 
         IReadOnlyList<FieldChange> changes = this.LabelSprintChange(TaskDiff.Compare(edit.Before, edit.After), edit.Before, edit.After);
@@ -559,6 +571,26 @@ internal sealed class TaskService : IDisposable
         return written is null ? null : new TaskChange(edit.Before, written, changes, actor, entry);
     }
 
+    /// <summary>A file created outside Huddle: reset when the Human gate refuses its status, else logged with the bare summary.</summary>
+    /// <param name="created">The new Task as the file reads.</param>
+    /// <param name="actor">The outside-edit actor.</param>
+    /// <param name="at">When the file was seen.</param>
+    private TaskChange? OnOutsideCreation(TaskItem created, TaskActor actor, DateTimeOffset at)
+    {
+        if (this.ResetGatedCreation(created, actor, at) is { } reset)
+        {
+            return reset;
+        }
+
+        ChangeLogEntry bareEntry = new(at, actor.Name, "edited outside Huddle");
+        TaskItem? bareWritten = this.store.AppendEntry(created.Id, created.Version, bareEntry);
+
+        // null means the disk version moved again before this append reached it; a newer save
+        // will be reported by the next rebuild, so this one is silently skipped (Settled
+        // corrections-B2 D6 item 8).
+        return bareWritten is null ? null : new TaskChange(null, bareWritten, [], actor, bareEntry);
+    }
+
     /// <summary>
     /// Reverts what the Human gate refuses in an outside edit: the status, <c>human_gate</c> and <c>action</c> go back to
     /// what they were, while the rest of the edit (title, description, Evidence) stays, and the refusal is logged.
@@ -587,7 +619,24 @@ internal sealed class TaskService : IDisposable
     }
 
     /// <summary>
-    /// A Human-gated Task that appears outside Huddle already in Needs You or Done (H-5) is reset to Review and the refusal logged.
+    /// An <c>accepted</c> entry that an outside edit added is not an acceptance: only Huddle's Accept writes one. The refusal
+    /// is logged, and <see cref="Acceptance.Of"/> reads that entry as voiding the acceptance.
+    /// </summary>
+    /// <param name="after">The Task as the file now reads.</param>
+    /// <param name="actor">The outside-edit actor.</param>
+    /// <param name="at">When the edit was seen.</param>
+    /// <returns>The change to raise, or <see langword="null"/> when the file moved on.</returns>
+    private TaskChange? RefuseForgedAcceptance(TaskItem after, TaskActor actor, DateTimeOffset at)
+    {
+        string summary = string.Create(CultureInfo.InvariantCulture, $"{Acceptance.RefusedPrefix}only {this.human.Name} can accept {after.Id}, in Huddle.");
+        ChangeLogEntry refused = new(at, actor.Name, summary);
+        return this.store.AppendEntry(after.Id, after.Version, refused) is { } written
+            ? new TaskChange(after, written, TaskDiff.Compare(after, written), actor, refused)
+            : null;
+    }
+
+    /// <summary>
+    /// A Task that appears outside Huddle already in Needs You or Done against the Human gate (H-5, H-3) is reset to Review and the refusal logged.
     /// </summary>
     /// <param name="created">The new Task as the file reads.</param>
     /// <param name="actor">The outside-edit actor.</param>

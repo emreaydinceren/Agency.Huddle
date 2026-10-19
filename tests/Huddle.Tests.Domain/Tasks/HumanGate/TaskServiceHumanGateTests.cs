@@ -39,23 +39,19 @@ public sealed class TaskServiceHumanGateTests
     /// <summary>Creates a gated Task and moves it into Needs You with a complete Proof.</summary>
     /// <param name="harness">The harness.</param>
     /// <param name="proof">The Proof source, which is left complete.</param>
-    private static TaskItem CreateInNeedsYou(TaskToolHarness harness, FixedProofSource proof)
+    /// <param name="action">The Action, or <see langword="null"/>.</param>
+    private static TaskItem CreateInNeedsYou(TaskToolHarness harness, FixedProofSource proof, string? action = null)
     {
-        TaskItem task = CreateGated(harness);
+        TaskItem task = CreateGated(harness, action: action);
         proof.Current = FixedProofSource.Complete;
         return Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, MoveTo(TaskState.NeedsYou), null, Nova)).Task;
     }
 
-    /// <summary>Appends an <c>accepted</c> entry for the Task's current content, as the Human's Accept does, by editing the file.</summary>
+    /// <summary>Accepts the Task as the Human does, through <see cref="TaskService.Decide"/>; the Task must have an Action so it stays in Needs You.</summary>
     /// <param name="harness">The harness.</param>
     /// <param name="task">The Task, in Needs You.</param>
-    private static TaskItem Accept(TaskToolHarness harness, TaskItem task)
-    {
-        ChangeLogEntry entry = new(Noon, "You", "accepted " + ContentFingerprint.Of(task.Title, task.Action, task.Description));
-        File.WriteAllText(task.Path, TaskFileFormat.Compose(task with { ChangeLog = [.. task.ChangeLog, entry] }));
-        harness.Store.RebuildFromWatcher();
-        return harness.Store.Get(task.Id) ?? throw new InvalidOperationException("accepted task missing");
-    }
+    private static TaskItem Accept(TaskToolHarness harness, TaskItem task) =>
+        Assert.IsType<TaskResult.Saved>(harness.Service.Decide(task.Id, TaskDecision.Accept, null, task.Version, HumanOf(harness))).Task;
 
     /// <summary>A patch moving a Task to <paramref name="status"/>.</summary>
     /// <param name="status">The new status.</param>
@@ -160,7 +156,7 @@ public sealed class TaskServiceHumanGateTests
         FixedProofSource proof = new(FixedProofSource.Complete);
         using TempDataDir gateDir = new();
         using TaskToolHarness harness = Build(proof, BuildGates(gateDir, Process(QaGate)));
-        TaskItem accepted = Accept(harness, CreateInNeedsYou(harness, proof));
+        TaskItem accepted = Accept(harness, CreateInNeedsYou(harness, proof, "Send the reply"));
 
         TaskResult result = harness.Service.Update(accepted.Id, MoveTo(TaskState.Done), null, HumanOf(harness), humanOverridesGates: true);
 
@@ -314,7 +310,7 @@ public sealed class TaskServiceHumanGateTests
     {
         FixedProofSource proof = new(FixedProofSource.Complete);
         using TaskToolHarness harness = Build(proof);
-        TaskItem accepted = Accept(harness, CreateInNeedsYou(harness, proof));
+        TaskItem accepted = Accept(harness, CreateInNeedsYou(harness, proof, "Send the reply"));
         Assert.Equal(AcceptanceState.Valid, Acceptance.Of(accepted).State);
 
         TaskResult result = harness.Service.Update(accepted.Id, new TaskPatch { Description = "Changed after acceptance" }, null, HumanOf(harness));
