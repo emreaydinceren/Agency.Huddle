@@ -1222,7 +1222,7 @@ public sealed class BuildTeamTests
             ctx.Services.AddSingleton<IHireContext>(new RoleFixtures.Context());
             ctx.Services.AddSingleton<ITeamMembership>(this.Membership);
             ctx.Services.AddSingleton(this.Avatars);
-            ctx.Services.AddSingleton<ITeamDirectory>(new SqliteTeamDirectory(this.dir.Options()));
+            ctx.Services.AddSingleton<ITeamDirectory>(this.dir.CreateDirectory());
             ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
             ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
             return ctx;

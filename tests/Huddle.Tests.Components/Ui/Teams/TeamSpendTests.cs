@@ -1,13 +1,12 @@
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Components.Teams;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Teams;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
 
@@ -44,7 +43,7 @@ public sealed class TeamSpendTests
         FakeTeamCatalog catalog = new() { Teams = [new TeamSummary("Business", [], ["Nova", "Kit"], true)] };
         await using MudBunitContext ctx = new();
         ctx.Services.AddSingleton<ITeamCatalog>(catalog);
-        ctx.Services.AddSingleton(Options.Create(new TeamOptions()));
+        ctx.Services.AddSingleton(TestOptions.Create());
         ctx.ComponentFactories.AddStub<TeamRoster>();
         ctx.ComponentFactories.AddStub<TeamFilesTab>();
         ctx.ComponentFactories.AddStub<TeamTasksTab>();

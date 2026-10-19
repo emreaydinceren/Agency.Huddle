@@ -24,6 +24,7 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.Tests.Library;
 using Agency.Huddle.App.Components.Teams;
 using Agency.Huddle.Tests.Ui.Teams;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui.References;
 
@@ -151,7 +152,7 @@ public sealed class RoomCopyLinkTests
         await directory.InitializeAsync("You", ct);
         User? agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        ChatService chat = RoomCopyLinkTests.CreateChatService(dir, directory, events);
+        ChatService chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
         _ = await directory.CreateRoomAsync("Lunch plans", [KnownIds.Human, agent.Id], ct);
 
         await using MudBunitContext ctx = RoomCopyLinkTests.NewListContext(directory, chat, events);
@@ -172,7 +173,7 @@ public sealed class RoomCopyLinkTests
         await directory.InitializeAsync("You", ct);
         User? agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        ChatService chat = RoomCopyLinkTests.CreateChatService(dir, directory, events);
+        ChatService chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
         Room room = await directory.CreateRoomAsync("Lunch plans", [KnownIds.Human, agent.Id], ct);
         string expected = $"[Lunch plans](/rooms/{room.Id})";
 
@@ -196,7 +197,7 @@ public sealed class RoomCopyLinkTests
         ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
         script.Rooms.Add(new Room("room-marketing", "Marketing", DateTimeOffset.UnixEpoch) { Team = "Marketing", IsTeamRoom = true });
         Agency.Huddle.Tests.Teams.FakeTeamCatalog catalog = new() { Teams = [new TeamSummary("Marketing", [], ["Nova"], true)] };
-        ChatService chat = RoomCopyLinkTests.CreateChatService(dir, directory, events);
+        ChatService chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
         string expected = "[Marketing Team Room](/rooms/room-marketing)";
 
         await using MudBunitContext ctx = RoomCopyLinkTests.NewTeamsNavContext(directory, catalog, chat, events);
@@ -228,8 +229,8 @@ public sealed class RoomCopyLinkTests
         ctx.Services.AddSingleton(events);
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
-        ctx.Services.AddSingleton(new AvatarStore(Options.Create(new TeamOptions()), NullLogger<AvatarStore>.Instance));
-        ctx.Services.AddSingleton(Options.Create(new TeamOptions()));
+        ctx.Services.AddSingleton(new AvatarStore(TestOptions.Create(), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddSingleton(TestOptions.Create());
         ctx.Services.AddSingleton<TabService>();
         return ctx;
     }
@@ -310,18 +311,6 @@ public sealed class RoomCopyLinkTests
             builder.CloseComponent();
         });
 
-    /// <summary>Builds a chat service over the temp directory, for the sidebar tests.</summary>
-    /// <param name="dir">The temp data directory.</param>
-    /// <param name="directory">The Room directory.</param>
-    /// <param name="events">The hub it publishes on.</param>
-    /// <returns>The service.</returns>
-    private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory, RoomEvents events)
-    {
-        FileChatStore store = new(dir.Options(), NullLogger<FileChatStore>.Instance);
-        ProposalStore proposals = new(events);
-        return new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
-    }
-
     /// <summary>Registers the services the sidebar's list injects.</summary>
     /// <param name="directory">The Room directory.</param>
     /// <param name="chat">The chat service.</param>
@@ -336,7 +325,7 @@ public sealed class RoomCopyLinkTests
         ctx.Services.AddSingleton(events);
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
-        ctx.Services.AddSingleton(new AvatarStore(Options.Create(new TeamOptions()), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddSingleton(new AvatarStore(TestOptions.Create(), NullLogger<AvatarStore>.Instance));
         ctx.Services.AddSingleton<TabService>();
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         return ctx;

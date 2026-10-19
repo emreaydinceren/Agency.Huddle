@@ -8,7 +8,7 @@ using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -517,14 +517,13 @@ public sealed class QuestionCardTests
         public static async Task<Fixture> CreateAsync(CancellationToken ct)
         {
             TempDataDir dataDir = new();
-            IOptions<TeamOptions> options = Microsoft.Extensions.Options.Options.Create(new TeamOptions { DataDir = dataDir.Path });
-            SqliteTeamDirectory directory = new(options);
-            await directory.InitializeAsync("You", ct);
-            FileChatStore store = new(options, NullLogger<FileChatStore>.Instance);
-            RoomEvents events = new(NullLogger<RoomEvents>.Instance);
-            QuestionStore questions = new(events);
-            ChatService chat = new(
-                directory, store, events, new FakeMentionAliasSource(), options, new ProposalStore(events), questions, NullLogger<ChatService>.Instance);
+            IOptions<TeamOptions> options = dataDir.Options();
+            SqliteTeamDirectory directory = await options.CreateDirectoryAsync(ct);
+            FileChatStore store = options.CreateChatStore();
+            ChatStack stack = ChatServiceFactory.Create(directory, options, store);
+            RoomEvents events = stack.Events;
+            QuestionStore questions = stack.Questions;
+            ChatService chat = stack.Chat;
             ITeamDirectory serviceDirectory = DirectoryGate.Wrap(directory, out DirectoryGate gate);
             QuestionService service = new(questions, chat, serviceDirectory, NullLogger<QuestionService>.Instance);
 

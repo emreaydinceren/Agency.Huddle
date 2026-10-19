@@ -10,6 +10,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Library;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -229,7 +230,7 @@ public sealed class MessageListTests
         const string PlanPath = @"E:\Data\Teams\Marketing\plan.md";
         await using var factory = new TeamWebApplicationFactory();
         FakeLibraryNoteResolver library = MessageListTests.LibraryResolverFor(PlanPath, "teams", "Marketing/plan.md");
-        IOptions<TeamOptions> options = Options.Create(new TeamOptions { Library = new LibraryOptions { Enabled = false } });
+        IOptions<TeamOptions> options = TestOptions.Create(opts => opts.Library = new LibraryOptions { Enabled = false });
         await using var ctx = MessageListTests.NewContext(factory, library, options);
         var message = MessageListTests.MessageWithText("u-1", string.Concat("See ", PlanPath));
 

@@ -11,6 +11,7 @@ using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Library;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui.Sidebar;
 
@@ -42,7 +43,7 @@ public sealed class RoomDocumentsPanelTests
         public Rig(Func<string, LibraryReference?> resolvePath)
         {
             this.Context = new MudBunitContext();
-            this.Store = new FileChatStore(this.dir.Options(), NullLogger<FileChatStore>.Instance);
+            this.Store = this.dir.CreateChatStore();
             this.Events = new RoomEvents(NullLogger<RoomEvents>.Instance);
             this.Tabs = new TabService();
             this.Context.Services.AddSingleton<IChatStore>(this.Store);

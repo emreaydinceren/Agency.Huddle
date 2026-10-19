@@ -1,8 +1,6 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Components.NeedsYou;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Teammates;
@@ -11,6 +9,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.Tests.NeedsYou;
 using Agency.Huddle.Tests.Css;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -186,7 +185,7 @@ public sealed class ShellSidebarRowsTests
         await directory.InitializeAsync("You", ct);
         FileChatStore store = new(dir.Options(), NullLogger<FileChatStore>.Instance);
         ProposalStore proposals = new(events);
-        ChatService chat = new(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
+        ChatService chat = new(directory, store, events, new FakeMentionAliasSource(), TestOptions.Create(), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
         return (chat, directory);
     }
 }

@@ -4,17 +4,14 @@ using Bunit;
 using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using MudBlazor;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
-using Agency.Huddle.App.Questions;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Renders <see cref="ArchivedChatsDialog"/> through the real <c>IDialogService</c> (the same door
@@ -34,11 +31,10 @@ public sealed class ArchivedChatsDialogTests
         var ct = Xunit.TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        var chat = CreateChatService(dir, directory, events);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
         var room = await chat.EnsureRoomForAsync(agent, ct);
         _ = await chat.SetRoomArchivedAsync(room.Id, archived: true, ct);
 
@@ -56,11 +52,10 @@ public sealed class ArchivedChatsDialogTests
         var ct = Xunit.TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        var chat = CreateChatService(dir, directory, events);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
         var room = await chat.EnsureRoomForAsync(agent, ct);
 
         await using var ctx = NewContext(directory, chat, events);
@@ -81,11 +76,10 @@ public sealed class ArchivedChatsDialogTests
         var ct = Xunit.TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        var chat = CreateChatService(dir, directory, events);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
         var room = await chat.EnsureRoomForAsync(agent, ct);
         _ = await chat.SetRoomArchivedAsync(room.Id, archived: true, ct);
 
@@ -113,11 +107,10 @@ public sealed class ArchivedChatsDialogTests
         var ct = Xunit.TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        var chat = CreateChatService(dir, directory, events);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
         var room = await chat.EnsureRoomForAsync(agent, ct);
         _ = await chat.SetRoomArchivedAsync(room.Id, archived: true, ct);
 
@@ -136,11 +129,10 @@ public sealed class ArchivedChatsDialogTests
         var ct = Xunit.TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        var chat = CreateChatService(dir, directory, events);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
         var room = await chat.EnsureRoomForAsync(agent, ct);
         _ = await chat.SetRoomArchivedAsync(room.Id, archived: true, ct);
 
@@ -159,11 +151,10 @@ public sealed class ArchivedChatsDialogTests
         var ct = Xunit.TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        var chat = CreateChatService(dir, directory, events);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
         var rootRoom = await chat.EnsureRoomForAsync(agent, ct);
         var teamRoom = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human, agent.Id], "Marketing", false, ct);
         _ = await chat.SetRoomArchivedAsync(rootRoom.Id, archived: true, ct);
@@ -187,11 +178,10 @@ public sealed class ArchivedChatsDialogTests
         var ct = Xunit.TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        var chat = CreateChatService(dir, directory, events);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
         chat.UploadFolders = new Agency.Huddle.Tests.Uploads.FakeRoomUploadFolders { Count = count };
         var room = await chat.EnsureRoomForAsync(agent, ct);
         _ = await chat.SetRoomArchivedAsync(room.Id, archived: true, ct);
@@ -210,11 +200,10 @@ public sealed class ArchivedChatsDialogTests
         var ct = Xunit.TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        var chat = CreateChatService(dir, directory, events);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
         chat.UploadFolders = new Agency.Huddle.Tests.Uploads.FakeRoomUploadFolders { Count = 0 };
         var room = await chat.EnsureRoomForAsync(agent, ct);
         _ = await chat.SetRoomArchivedAsync(room.Id, archived: true, ct);
@@ -233,11 +222,10 @@ public sealed class ArchivedChatsDialogTests
         var ct = Xunit.TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        var chat = CreateChatService(dir, directory, events);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
         var room = await chat.EnsureRoomForAsync(agent, ct);
         _ = await chat.SetRoomArchivedAsync(room.Id, archived: true, ct);
 
@@ -255,13 +243,6 @@ public sealed class ArchivedChatsDialogTests
         await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").First(item => string.Equals(item.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
     }
 
-    private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory, RoomEvents events)
-    {
-        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
-        var proposals = new ProposalStore(events);
-        return new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
-    }
-
     private static MudBunitContext NewContext(ITeamDirectory directory, ChatService chat, RoomEvents events, TempDataDir? dir = null)
     {
         MudBunitContext ctx = new();
@@ -271,7 +252,7 @@ public sealed class ArchivedChatsDialogTests
         ctx.Services.AddSingleton(events);
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
-        ctx.Services.AddSingleton(new AvatarStore(dir?.Options() ?? Options.Create(new TeamOptions()), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddSingleton(new AvatarStore(dir?.Options() ?? TestOptions.Create(), NullLogger<AvatarStore>.Instance));
         ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
         return ctx;
     }

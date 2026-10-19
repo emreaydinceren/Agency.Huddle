@@ -3,17 +3,14 @@ using Bunit;
 using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
-using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
-using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Css;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -38,7 +35,7 @@ public sealed class SidebarConsistencyTests
         await directory.InitializeAsync("You", ct);
         User? agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        ChatService chat = SidebarConsistencyTests.CreateChatService(dir, directory, events);
+        ChatService chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
         _ = await chat.EnsureRoomForAsync(agent, ct);
 
         await using MudBunitContext ctx = SidebarConsistencyTests.NewContext(directory, chat, events, dir);
@@ -62,7 +59,7 @@ public sealed class SidebarConsistencyTests
         User? second = await directory.UpsertAgentUserAsync("cfo", null, ct);
         Assert.NotNull(first);
         Assert.NotNull(second);
-        ChatService chat = SidebarConsistencyTests.CreateChatService(dir, directory, events);
+        ChatService chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
         _ = await chat.CreateRoomForAsync([first.Id, second.Id], ct);
 
         await using MudBunitContext ctx = SidebarConsistencyTests.NewContext(directory, chat, events, dir);
@@ -115,13 +112,6 @@ public sealed class SidebarConsistencyTests
         Assert.True(start >= 0, "app.css has no 'Left menu' section.");
         int end = css.IndexOf("/* ---- ", start + 10, StringComparison.Ordinal);
         return end < 0 ? css[start..] : css[start..end];
-    }
-
-    private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory, RoomEvents events)
-    {
-        FileChatStore store = new(dir.Options(), NullLogger<FileChatStore>.Instance);
-        ProposalStore proposals = new(events);
-        return new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
     }
 
     private static MudBunitContext NewContext(ITeamDirectory directory, ChatService chat, RoomEvents events, TempDataDir dir)

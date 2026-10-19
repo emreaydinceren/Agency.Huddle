@@ -4,8 +4,6 @@ using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Shared;
@@ -16,6 +14,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Teams;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -166,7 +165,7 @@ public sealed class NewChatTests
 
         FakeTeamCatalog catalog = new() { Teams = [new TeamSummary("Marketing", [], members, true)] };
         FileChatStore store = new(dir.Options(), NullLogger<FileChatStore>.Instance);
-        ChatService chat = new(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance) { TeamCatalog = catalog };
+        ChatService chat = new(directory, store, events, new FakeMentionAliasSource(), TestOptions.Create(), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance) { TeamCatalog = catalog };
 
         MudBunitContext ctx = new();
         ctx.Services.AddSingleton<ITeamDirectory>(directory);

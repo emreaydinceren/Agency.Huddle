@@ -1,13 +1,12 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using MudBlazor;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Components.Layout;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tabs;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui.Sidebar;
 
@@ -24,7 +23,7 @@ public sealed class RightSidebarHostTests
 
     private static MudBunitContext NewContext(string url, params SidebarPanel[] panels)
     {
-        MudBunitContext ctx = UiTestHost.Create(services => services.AddSingleton(new SidebarPanelCatalog(panels, Options.Create(new TeamOptions()))))
+        MudBunitContext ctx = UiTestHost.Create(services => services.AddSingleton(new SidebarPanelCatalog(panels, TestOptions.Create())))
             .WithTabs()
             .WithRoutes(url);
         return ctx;

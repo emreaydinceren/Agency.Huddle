@@ -55,7 +55,7 @@ public sealed class AgentCardBaseTests
     /// <param name="ct">Cancels the directory set-up.</param>
     private static async Task<IRenderedComponent<ProbeCard>> RenderProbeAsync(MudBunitContext ctx, TempDataDir dataDir, CancellationToken ct)
     {
-        IOptions<TeamOptions> options = Options.Create(new TeamOptions { DataDir = dataDir.Path });
+        IOptions<TeamOptions> options = dataDir.Options();
         SqliteTeamDirectory directory = new(options);
         await directory.InitializeAsync("You", ct);
         ctx.Services.AddSingleton<ITeamDirectory>(directory);

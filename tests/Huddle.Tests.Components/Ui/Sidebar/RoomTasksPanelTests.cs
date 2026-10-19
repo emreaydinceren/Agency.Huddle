@@ -9,6 +9,7 @@ using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui.Sidebar;
 
@@ -54,7 +55,7 @@ public sealed class RoomTasksPanelTests
 
         public Setup()
         {
-            this.Store = new FileChatStore(this.dir.Options(), NullLogger<FileChatStore>.Instance);
+            this.Store = this.dir.CreateChatStore();
             this.Counting = new CountingResolver(this.Resolver);
             this.Ctx.Services.AddSingleton<IChatStore>(this.Store);
             this.Ctx.Services.AddSingleton(this.Events);

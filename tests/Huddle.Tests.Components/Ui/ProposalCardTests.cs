@@ -11,6 +11,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Teammates;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -397,23 +398,18 @@ public sealed class ProposalCardTests
         public static async Task<Fixture> CreateAsync(CancellationToken ct, int maxPerTeam = 8, int maxLive = 16)
         {
             var dataDir = new TempDataDir();
-            IOptions<TeamOptions> options = Microsoft.Extensions.Options.Options.Create(new TeamOptions
-            {
-                DataDir = dataDir.Path,
-                Acp = new AcpOptions { MaxTeammatesPerTeam = maxPerTeam, MaxLiveProcesses = maxLive },
-            });
+            IOptions<TeamOptions> options = dataDir.Options(opts => opts.Acp = new AcpOptions { MaxTeammatesPerTeam = maxPerTeam, MaxLiveProcesses = maxLive });
 
-            var realDirectory = new SqliteTeamDirectory(options);
+            var realDirectory = options.CreateDirectory();
             await realDirectory.InitializeAsync("You", ct);
             var directory = new GatedTeamDirectory(realDirectory);
 
-            var personas = new PersonaStore(
-                new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
+            var personas = options.CreatePersonaStore();
             var gateway = new FakeAgentGateway();
             var checker = new CandidateChecker(personas, directory, gateway);
             var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
             var proposals = new ProposalStore(events);
-            var store = new FileChatStore(options, NullLogger<FileChatStore>.Instance);
+            var store = options.CreateChatStore();
             var chat = new ChatService(directory, store, events, personas, options, proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
             var limits = new HireLimitHarness(options);
             var service = new ProposalService(proposals, checker, personas, chat, directory, limits.Guard, NullLogger<ProposalService>.Instance);

@@ -5,9 +5,7 @@ using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Shared;
@@ -25,6 +23,7 @@ using Agency.Huddle.Tests.Acp.Tools;
 using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Ui.Teams;
 using Agency.Huddle.Tests.Css;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -312,14 +311,14 @@ public sealed class SidebarDensityTests
             TempDataDir dir = sp.GetRequiredService<TempDataDir>();
             RoomEvents events = sp.GetRequiredService<RoomEvents>();
             FileChatStore store = new(dir.Options(), NullLogger<FileChatStore>.Instance);
-            return new ChatService(rooms, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance) { TeamCatalog = catalog };
+            return new ChatService(rooms, store, events, new FakeMentionAliasSource(), TestOptions.Create(), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance) { TeamCatalog = catalog };
         });
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
         ctx.Services.AddSingleton(sp => new AvatarStore(sp.GetRequiredService<TempDataDir>().Options(), NullLogger<AvatarStore>.Instance));
         ctx.Services.AddSingleton<ITeamCatalog>(catalog);
         ctx.Services.AddSingleton<ITeamFolders>(new FakeTeamFolders());
-        ctx.Services.AddSingleton(Options.Create(new TeamOptions()));
+        ctx.Services.AddSingleton(TestOptions.Create());
         ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
         ctx.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetResult(null);
         ctx.JSInterop.SetupVoid("huddleStorage.set", _ => true).SetVoidResult();

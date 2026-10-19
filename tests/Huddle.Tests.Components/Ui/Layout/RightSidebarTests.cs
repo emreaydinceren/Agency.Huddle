@@ -2,11 +2,10 @@ using AngleSharp.Dom;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Components.Layout;
 using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tabs;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui.Layout;
 
@@ -21,7 +20,7 @@ public sealed class RightSidebarTests
     [Fact]
     public async Task Toggle_OpensAndClosesTheSidebar()
     {
-        await using MudBunitContext ctx = UiTestHost.Create(services => services.AddSingleton(new SidebarPanelCatalog([], Options.Create(new TeamOptions())))).WithTabs().WithRoutes("/sidebar");
+        await using MudBunitContext ctx = UiTestHost.Create(services => services.AddSingleton(new SidebarPanelCatalog([], TestOptions.Create()))).WithTabs().WithRoutes("/sidebar");
         _ = ctx.Render<TabHost>();
         IRenderedComponent<RightSidebar> sidebar = ctx.Render<RightSidebar>();
         IRenderedComponent<RightSidebarToggle> toggle = ctx.Render<RightSidebarToggle>();
@@ -47,7 +46,7 @@ public sealed class RightSidebarTests
     [Fact]
     public async Task OpenSidebar_OnAPageWithNoBlocks_ShowsTheEmptyState()
     {
-        await using MudBunitContext ctx = UiTestHost.Create(services => services.AddSingleton(new SidebarPanelCatalog([], Options.Create(new TeamOptions())))).WithTabs().WithRoutes("/sidebar");
+        await using MudBunitContext ctx = UiTestHost.Create(services => services.AddSingleton(new SidebarPanelCatalog([], TestOptions.Create()))).WithTabs().WithRoutes("/sidebar");
         TabService tabs = ctx.Services.GetRequiredService<TabService>();
         _ = ctx.Render<TabHost>();
         IRenderedComponent<RightSidebar> sidebar = ctx.Render<RightSidebar>();

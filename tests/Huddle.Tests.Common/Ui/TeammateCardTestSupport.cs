@@ -7,6 +7,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Skills;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -325,7 +326,7 @@ internal static class TeammateCardTestSupport
                 .ToList(),
         };
 
-        return new AdapterCatalog(Options.Create(new TeamOptions { Acp = acp }));
+        return new AdapterCatalog(TestOptions.Create(opts => opts.Acp = acp));
     }
 
     /// <summary>The <c>&lt;input&gt;</c> under a <c>MudSelect</c> labelled <paramref name="label"/> - its closed-state value is the currently selected item's own display text, which is how a "preselected" assertion can be made without opening the popover at all.</summary>

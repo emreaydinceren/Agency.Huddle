@@ -3,14 +3,13 @@ using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Components.Shared.Dialogs;
 using Agency.Huddle.App.Components.Teams;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Teams;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
 
@@ -119,7 +118,7 @@ public sealed class ProcessStepTests
         Register(ctx, dir, out _);
         File.WriteAllText(Path.Combine(dir.Path, "Process.md"), TwoGateText);
         ctx.Services.AddSingleton<ITeamCatalog>(new FakeTeamCatalog { Teams = [new TeamSummary(Team, [], ["Nova"], true)] });
-        ctx.Services.AddSingleton(Options.Create(new TeamOptions()));
+        ctx.Services.AddSingleton(TestOptions.Create());
         ctx.ComponentFactories.AddStub<TeamRoster>();
         ctx.ComponentFactories.AddStub<TeamFilesTab>();
         ctx.ComponentFactories.AddStub<TeamTasksTab>();

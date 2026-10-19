@@ -1,5 +1,4 @@
 using Agency.Huddle.Tests.Factories;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Shared;
@@ -14,7 +13,6 @@ using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Teams;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -49,13 +47,13 @@ internal sealed class ProfileFixture : IDisposable
         });
         this.Types = new TeamTypeCatalog(this.dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins, this.Pool);
         this.Avatars = new AvatarStore(this.dir.Options(), NullLogger<AvatarStore>.Instance);
-        this.Directory = new SqliteTeamDirectory(this.dir.Options());
+        this.Directory = this.dir.CreateDirectory();
         this.Gateway = new FakeAgentGateway();
         this.Health = new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance);
         this.Profiles = new TeammateProfiles(this.Personas, this.Types, this.Pool, this.Avatars, this.Catalog, this.Directory, this.Gateway, this.Health);
         FileChatStore store = new(this.dir.Options(), NullLogger<FileChatStore>.Instance);
         RoomEvents events = new(NullLogger<RoomEvents>.Instance);
-        this.Chat = new ChatService(this.Directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance)
+        this.Chat = new ChatService(this.Directory, store, events, new FakeMentionAliasSource(), TestOptions.Create(), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance)
         {
             TeamCatalog = this.Catalog,
         };

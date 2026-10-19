@@ -4,7 +4,6 @@ using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Library;
 using Agency.Huddle.App.Library;
@@ -249,10 +248,7 @@ public sealed class LibraryPageTests : IDisposable
             ctx.Services.AddSingleton(this.tasks);
             ctx.Services.AddSingleton(new TeamFolderProvisioner(
                 this.personas, this.LibraryFixture.RootStore, this.LibraryFixture.Resolver, NullLogger<TeamFolderProvisioner>.Instance, catalog: new FakeTeamCatalog()));
-            ctx.Services.AddSingleton(Microsoft.Extensions.Options.Options.Create(new TeamOptions
-            {
-                Library = new LibraryOptions { Enabled = libraryEnabled },
-            }));
+            ctx.Services.AddSingleton(TestOptions.Create(opts => opts.Library = new LibraryOptions { Enabled = libraryEnabled }));
 
             return ctx;
         }

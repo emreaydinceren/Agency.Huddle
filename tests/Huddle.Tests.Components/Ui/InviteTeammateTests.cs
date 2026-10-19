@@ -3,17 +3,14 @@ namespace Agency.Huddle.Tests.Ui;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using TestContext = Xunit.TestContext;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
-using Agency.Huddle.App.Questions;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Renders <see cref="InviteTeammate"/> on its own. The control lives behind a click on the Room
@@ -27,13 +24,12 @@ public sealed class InviteTeammateTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var inside = await directory.UpsertAgentUserAsync("inside", null, ct);
         var outside = await directory.UpsertAgentUserAsync("outside", null, ct);
         Assert.NotNull(inside);
         Assert.NotNull(outside);
-        var chat = CreateChatService(dir, directory);
+        var chat = ChatServiceFactory.Create(directory, dir.Options()).Chat;
         var room = await chat.EnsureRoomForAsync(inside, ct);
 
         var html = await RenderAsync(dir, directory, chat, room.Id);
@@ -48,11 +44,10 @@ public sealed class InviteTeammateTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var only = await directory.UpsertAgentUserAsync("only", null, ct);
         Assert.NotNull(only);
-        var chat = CreateChatService(dir, directory);
+        var chat = ChatServiceFactory.Create(directory, dir.Options()).Chat;
         var room = await chat.EnsureRoomForAsync(only, ct);
 
         var html = await RenderAsync(dir, directory, chat, room.Id);
@@ -65,11 +60,10 @@ public sealed class InviteTeammateTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("agent", null, ct);
         Assert.NotNull(agent);
-        var chat = CreateChatService(dir, directory);
+        var chat = ChatServiceFactory.Create(directory, dir.Options()).Chat;
         var room = await chat.EnsureRoomForAsync(agent, ct);
 
         var html = await RenderAsync(dir, directory, chat, room.Id);
@@ -88,13 +82,12 @@ public sealed class InviteTeammateTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var first = await directory.UpsertAgentUserAsync("first", null, ct);
         var second = await directory.UpsertAgentUserAsync("second", null, ct);
         Assert.NotNull(first);
         Assert.NotNull(second);
-        var chat = CreateChatService(dir, directory);
+        var chat = ChatServiceFactory.Create(directory, dir.Options()).Chat;
         var room = await chat.EnsureRoomForAsync(first, ct);
 
         await chat.InviteAsync(room.Id, "second", ct);
@@ -122,13 +115,12 @@ public sealed class InviteTeammateTests
             new TeammatePaths(dir.Options()),
             "coo",
             "---\nName: coo\nTitle: Chief of Staff\nAlias: coo\nTeams: Business\n---\nbody");
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var member = await directory.UpsertAgentUserAsync("member", null, ct);
         var raw = await directory.UpsertAgentUserAsync("rawagent", null, ct);
         Assert.NotNull(member);
         Assert.NotNull(raw);
-        var chat = CreateChatService(dir, directory);
+        var chat = ChatServiceFactory.Create(directory, dir.Options()).Chat;
 
         // The Room is with "member" only, so "rawagent" is not yet a Member and shows up as an
         // invite candidate - the whole point of this test.
@@ -147,13 +139,12 @@ public sealed class InviteTeammateTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var inside = await directory.UpsertAgentUserAsync("inside", null, ct);
         var outside = await directory.UpsertAgentUserAsync("outside", null, ct);
         Assert.NotNull(inside);
         Assert.NotNull(outside);
-        var chat = CreateChatService(dir, directory);
+        var chat = ChatServiceFactory.Create(directory, dir.Options()).Chat;
         var room = await chat.EnsureRoomForAsync(inside, ct);
 
         var html = await RenderAsync(dir, directory, chat, room.Id);
@@ -167,13 +158,12 @@ public sealed class InviteTeammateTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var inside = await directory.UpsertAgentUserAsync("inside", null, ct);
         var outside = await directory.UpsertAgentUserAsync("outside", null, ct);
         Assert.NotNull(inside);
         Assert.NotNull(outside);
-        var chat = CreateChatService(dir, directory);
+        var chat = ChatServiceFactory.Create(directory, dir.Options()).Chat;
         var room = await chat.EnsureRoomForAsync(inside, ct);
 
         var html = await RenderAsync(dir, directory, chat, room.Id, roomName: "Platform");
@@ -181,14 +171,6 @@ public sealed class InviteTeammateTests
 
         Assert.Equal("Invite to Platform", document.QuerySelector(".invite-title")?.TextContent);
         Assert.NotNull(document.QuerySelector(".invite-panel input[aria-label=\"Search teammates\"]"));
-    }
-
-    private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory)
-    {
-        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
-        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var proposals = new ProposalStore(events);
-        return new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
     }
 
     /// <summary>
@@ -217,8 +199,7 @@ public sealed class InviteTeammateTests
 
         // The panel's own team filter needs a PersonaStore; created and disposed within this one
         // render so its FileSystemWatcher never outlives the test.
-        using var personas = new PersonaStore(
-            new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        using var personas = dir.CreatePersonaStore();
         services.AddSingleton(personas);
 
         // The panel now renders a TeammateAvatar beside each candidate; created and disposed within

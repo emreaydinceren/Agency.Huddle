@@ -18,6 +18,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Teams;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
 
@@ -944,7 +945,7 @@ public sealed class TeamsNavTests
             TempDataDir dir = sp.GetRequiredService<TempDataDir>();
             RoomEvents events = sp.GetRequiredService<RoomEvents>();
             FileChatStore store = new(dir.Options(), NullLogger<FileChatStore>.Instance);
-            return new ChatService(rooms, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance) { TeamCatalog = catalog };
+            return new ChatService(rooms, store, events, new FakeMentionAliasSource(), TestOptions.Create(), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance) { TeamCatalog = catalog };
         });
         ctx.Services.AddSingleton<IAgentGateway>(new Ui.FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));

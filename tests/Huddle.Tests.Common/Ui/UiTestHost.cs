@@ -15,6 +15,7 @@ using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Tools;
 using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Ui.Layout;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -93,7 +94,7 @@ internal static class UiTestHost
         ctx.Services.AddSingleton(StubPages.Routes());
         if (panels.Length > 0)
         {
-            ctx.Services.AddSingleton(new SidebarPanelCatalog(panels, Options.Create(new TeamOptions())));
+            ctx.Services.AddSingleton(new SidebarPanelCatalog(panels, TestOptions.Create()));
         }
 
         if (url is not null)
@@ -128,7 +129,7 @@ internal static class UiTestHost
         ctx.Services.AddSingleton(events);
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
-        ctx.Services.AddSingleton(new AvatarStore(dir?.Options() ?? Options.Create(new TeamOptions()), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddSingleton(new AvatarStore(dir?.Options() ?? TestOptions.Create(), NullLogger<AvatarStore>.Instance));
         ctx.Services.AddSingleton<TabService>();
         return ctx;
     }

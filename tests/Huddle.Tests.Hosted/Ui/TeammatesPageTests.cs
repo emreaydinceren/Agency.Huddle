@@ -11,6 +11,7 @@ using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
 using TeammatesPage = Agency.Huddle.App.Components.Pages.Teammates;
 using Agency.Huddle.Tests.Css;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -32,7 +33,7 @@ public sealed class TeammatesPageTests
 
         await using var factory = new TeamWebApplicationFactory();
 
-        await factory.WriteDefinitionAsync("coo", PersonaText("coo", "You are the Chief of Staff."), ct);
+        await factory.WriteDefinitionAsync("coo", TestPersonas.FrontmatterText("coo", "You are the Chief of Staff."), ct);
 
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync("/teammates", ct);
@@ -179,7 +180,7 @@ public sealed class TeammatesPageTests
 
         await using var factory = new TeamWebApplicationFactory();
 
-        await factory.WriteDefinitionAsync("coo", PersonaText("coo", "You are the Chief of Staff."), ct);
+        await factory.WriteDefinitionAsync("coo", TestPersonas.FrontmatterText("coo", "You are the Chief of Staff."), ct);
 
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync("/teammates", ct);
@@ -200,7 +201,7 @@ public sealed class TeammatesPageTests
 
         await using var factory = new TeamWebApplicationFactory();
 
-        await factory.WriteDefinitionAsync("coo", PersonaText("coo", "You are the Chief of Staff."), ct);
+        await factory.WriteDefinitionAsync("coo", TestPersonas.FrontmatterText("coo", "You are the Chief of Staff."), ct);
 
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync("/teammates", ct);
@@ -300,7 +301,7 @@ public sealed class TeammatesPageTests
 
         await using var factory = new TeamWebApplicationFactory();
 
-        await factory.WriteDefinitionAsync("coo", PersonaText("coo", "You are the Chief of Staff."), ct);
+        await factory.WriteDefinitionAsync("coo", TestPersonas.FrontmatterText("coo", "You are the Chief of Staff."), ct);
 
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync("/teammates", ct);
@@ -380,10 +381,9 @@ public sealed class TeammatesPageTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
         using var dataDir = new TempDataDir();
-        Agency.Huddle.Tests.Acp.TestPersonaFiles.Write(new TeammatePaths(dataDir.Options()), "coo", PersonaText("coo", "You are the Chief of Staff."));
+        Agency.Huddle.Tests.Acp.TestPersonaFiles.Write(new TeammatePaths(dataDir.Options()), "coo", TestPersonas.FrontmatterText("coo", "You are the Chief of Staff."));
 
-        var directory = new SqliteTeamDirectory(dataDir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dataDir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
 
@@ -392,8 +392,7 @@ public sealed class TeammatesPageTests
 
         var health = new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance);
 
-        using var personas = new PersonaStore(
-            new TeammatePaths(dataDir.Options()), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), new PersonaWorkModeStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
+        using var personas = dataDir.CreatePersonaStore();
 
         // Never started - Teammates.razor only needs a PersonaSupervisor it can inject, for the
         // Restart button this test does not exercise.
@@ -474,7 +473,4 @@ public sealed class TeammatesPageTests
 
         Assert.Contains("href=\"/teammates\"", html, StringComparison.Ordinal);
     }
-
-    /// <summary>Minimal valid Persona frontmatter (Name, Title and Alias all <paramref name="name"/>) wrapped around <paramref name="body"/> - identity is front-matter driven from this phase on, so every seeded Persona needs one to be listed at all.</summary>
-    private static string PersonaText(string name, string body) => $"---\nName: {name}\nTitle: {name}\nAlias: {name}\n---\n{body}";
 }
