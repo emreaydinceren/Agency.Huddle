@@ -1,6 +1,6 @@
 # Testing Blazor components with bUnit
 
-How to test Razor components in `tests/Huddle.Tests/Ui` with bUnit 2.11.3 and MudBlazor 9.11, and
+How to test Razor components in `tests/Huddle.Tests.Components/Ui` with bUnit 2.11.3 and MudBlazor 9.11, and
 the Razor authoring traps those tests keep catching. Read it before writing a component or its
 tests. General test practice is in [Testing.md](Testing.md); per-component MudBlazor facts (which
 parameter exists, how a component renders) are in
@@ -8,6 +8,11 @@ parameter exists, how a component renders) are in
 there before guessing an API.
 
 Distilled from the Tasks delivery (September 2026), which added ~40 component test classes.
+
+Start from the shared bUnit helpers in `tests/Huddle.Tests.Common/Ui`: `UiTestHost.Create` and its `With*`
+extensions, `ServicePresets.CopyFrom`, `RenderWithPopovers<T>`, `RenderedComponentExtensions` and
+`DialogExtensions`. The catalogue, with the cases where a private copy stayed, is in
+[Testing.md](Testing.md) under *Shared helpers*.
 
 ## Setting up a test
 

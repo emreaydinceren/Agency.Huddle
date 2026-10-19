@@ -94,7 +94,7 @@ jobs:
             --filter-not-method "*.PromptAsync_ThoughtAndToolCallEvents_ArePublished"
 
       # Starts the Release build as a real child process, GETs /health over a real socket and
-      # prints PASS/FAIL. Deliberately not an xUnit test: every test in tests/Huddle.Tests hosts
+      # prints PASS/FAIL. Deliberately not an xUnit test: every test in tests/Huddle.Tests.Hosted hosts
       # the app in-process, so none of them can fail when the composed app does not boot as a
       # process. It builds nothing, so it must follow the build step.
       - name: 🩺 Health endpoint smoke test

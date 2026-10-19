@@ -107,7 +107,7 @@ If the browser shows the page but the console window you started shows no `Now l
 If DevTools shows CSS rows served `(from disk cache)` with no status code, you did not disable the cache. Re-tick **Disable cache** and hard-reload before judging. If the machine is offline or your browser blocks third-party requests, the Google Fonts row fails or is missing; that is not a result, so judge the four app stylesheets and ignore the font row.
 
 > [!NOTE]
-> This behaviour genuinely cannot be judged without a browser network panel — 'the page looks fine' is not evidence, because a partially-loaded shell still renders text. See SHELLNAV-01 for the same check driven from `curl.exe` instead of DevTools — the automated guard `tests/Huddle.Tests/Ui/AppStylesheetTests.cs` covers exactly this for stylesheets, so a failure here means that test also broke.
+> This behaviour genuinely cannot be judged without a browser network panel — 'the page looks fine' is not evidence, because a partially-loaded shell still renders text. See SHELLNAV-01 for the same check driven from `curl.exe` instead of DevTools — the automated guard `tests/Huddle.Tests.Hosted/Ui/AppStylesheetTests.cs` covers exactly this for stylesheets, so a failure here means that test also broke.
 
 ### STARTUPCONFIG-06 — Every navigation surface is reachable from a cold start
 
@@ -713,7 +713,7 @@ The `.jsonl` lines from step 1 still reading `"senderName":"You"` is CORRECT: th
 If the browser still shows a working app after the crash, you are looking at a DIFFERENT instance still bound to 5100. Stop every `dotnet` process and repeat. CLEAR THE VARIABLE (all three, if you ran all three) before running anything else — while one is set, every subsequent test will fail to launch and every result will be meaningless.
 
 > [!NOTE]
-> A test in `tests/Huddle.Tests/ServiceCollectionExtensionsTests.cs` pins this message; a wording change there should be matched here.
+> A test in `tests/Huddle.Tests.Hosted/ServiceCollectionExtensionsTests.cs` pins this message; a wording change there should be matched here.
 
 ### STARTUPCONFIG-23 — An external pipe client creates a Room live, with no page refresh
 

@@ -87,7 +87,7 @@ If `curl.exe` is not found, use the browser instead: View Source (Ctrl+U) on htt
 > defect class as the other three.
 
 > [!NOTE]
-> This is the single highest-value check in the area. Run it first and re-run it after any change to App.razor. The automated guard `tests/Huddle.Tests/Ui/AppStylesheetTests.cs` covers exactly this for stylesheets, so a failure here means that test also broke.
+> This is the single highest-value check in the area. Run it first and re-run it after any change to App.razor. The automated guard `tests/Huddle.Tests.Hosted/Ui/AppStylesheetTests.cs` covers exactly this for stylesheets, so a failure here means that test also broke.
 
 ### SHELLNAV-02 — Every shell script is fingerprinted (except MudBlazor's own) and serves - the gap the automated guard does not cover
 
