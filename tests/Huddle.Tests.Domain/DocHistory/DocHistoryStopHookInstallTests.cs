@@ -75,6 +75,41 @@ public sealed class DocHistoryStopHookInstallTests
         Assert.Equal("{ not json", File.ReadAllText(path));
     }
 
+    /// <summary>
+    /// Teammates whose sessions start at once all write the one shared script; none of them may lose its hook to the
+    /// others' writes (a replace over a file another thread holds open is refused on Windows).
+    /// </summary>
+    [Fact]
+    public async Task Install_ManyAtOnce_EveryWorkDirGetsItsHook()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        const int Teammates = 16;
+        string script = Path.Combine(dir.Path, "hooks", DocHistoryStopHook.ScriptName);
+
+        for (int round = 0; round < 10; round++)
+        {
+            if (File.Exists(script))
+            {
+                File.Delete(script);
+            }
+
+            using Barrier barrier = new(Teammates);
+            string[] workDirs = [.. Enumerable.Range(0, Teammates).Select(index => Path.Combine(dir.Path, $"r{round}", $"w{index}"))];
+            await Task.WhenAll(workDirs.Select(workDir => Task.Run(
+                () =>
+                {
+                    barrier.SignalAndWait(ct);
+                    DocHistoryStopHook.Install(workDir, dir.Path, Tool, NullLogger.Instance);
+                },
+                ct)));
+
+            Assert.All(workDirs, workDir => Assert.True(File.Exists(Path.Combine(workDir, ".claude", DocHistoryStopHook.SettingsFile))));
+        }
+
+        Assert.Equal(DocHistoryStopHook.Script, File.ReadAllText(script));
+    }
+
     private static JsonObject ReadSettings(string workDir) =>
         (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(workDir, ".claude", DocHistoryStopHook.SettingsFile)))!;
 }
