@@ -5,6 +5,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -63,20 +64,10 @@ internal static class PersonaSupervisorTestSupport
     /// <param name="condition">The state the test needs before it can go on.</param>
     /// <param name="ct">The test's own deadline.</param>
     /// <param name="conditionText">The source text of <paramref name="condition"/>, supplied by the compiler.</param>
-    internal static async Task WaitUntilAsync(
+    internal static Task WaitUntilAsync(
         Func<bool> condition, CancellationToken ct, [CallerArgumentExpression(nameof(condition))] string conditionText = "")
     {
-        while (!condition())
-        {
-            try
-            {
-                await Task.Delay(5, ct);
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                Assert.Fail($"Timed out waiting for: {conditionText}");
-            }
-        }
+        return Eventually.UntilAsync(condition, ct, interval: TimeSpan.FromMilliseconds(5), conditionText: conditionText);
     }
 
     /// <summary>A test double for <see cref="IAgentHostFactory"/> that throws a caller-supplied exception for one named Persona and otherwise delegates to <paramref name="inner"/>.</summary>
