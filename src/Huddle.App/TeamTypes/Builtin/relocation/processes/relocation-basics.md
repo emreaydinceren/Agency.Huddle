@@ -37,6 +37,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The move coordinator's Evidence line is the check, and the Human signs and pays.
 
+## Definition of Done
+
+- Requirements checked: evidence from verify
+- Plan reviewed: document reviewed by verify
+
 ## Cadence
 
 - Work back from the move date. Notice periods and bookings come first.

@@ -16,6 +16,7 @@ public sealed partial class ProcessTemplatesTests
         "Who does what",
         "If a role is not hired",
         "Gates",
+        "Definition of Done",
         "Cadence",
         "Escalation",
         "Onboarding",

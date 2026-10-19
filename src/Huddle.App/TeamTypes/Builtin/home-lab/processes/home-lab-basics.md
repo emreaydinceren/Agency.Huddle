@@ -35,6 +35,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The IT admin's Evidence line is the check, and the Human applies every change.
 
+## Definition of Done
+
+- Change verified: evidence from verify
+- Backup and rollback noted: document reviewed by verify
+
 ## Cadence
 
 - One change in progress at a time, and every change has an undo step.

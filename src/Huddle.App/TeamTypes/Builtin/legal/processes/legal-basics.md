@@ -37,6 +37,11 @@ retro: { every: 14, unit: 'days' }
 - `qa-evidence-before-done`: a Task cannot be Done until the Compliance Lead has posted an Evidence line.
 - No teammate says a document is safe to sign or compliant. The Human decides and signs, with a lawyer where it matters.
 
+## Definition of Done
+
+- QA evidence: evidence from verify
+- Second read: document reviewed by verify
+
 ## Cadence
 
 - Work the open Tasks in the order the Compliance Lead sets, nearest deadline first.

@@ -37,6 +37,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The developmental editor's Evidence line is the check, and the author decides every change.
 
+## Definition of Done
+
+- Editor review: document reviewed by verify
+- Consistency check: evidence from verify
+
 ## Cadence
 
 - Structure before sentences: copy edits wait until a chapter's structure is settled.

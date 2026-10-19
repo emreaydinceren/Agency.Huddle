@@ -35,6 +35,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The Sales Lead's Evidence line is the check, and the Human closes each Task.
 
+## Definition of Done
+
+- Facts checked: evidence from verify
+- Message reviewed: document reviewed by verify
+
 ## Cadence
 
 - Work the open Tasks by next-step date, nearest first.

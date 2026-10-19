@@ -32,6 +32,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The household manager's Evidence line is the check before a Task is ready, and the Human closes each Task.
 
+## Definition of Done
+
+- Plan checked: evidence from verify
+- Plan reviewed: document reviewed by verify
+
 ## Cadence
 
 - Work the open Tasks in the order the household manager sets, and keep the number in progress small.

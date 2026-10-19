@@ -35,6 +35,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The Career Coach's Evidence line is the check, and the Human closes each Task.
 
+## Definition of Done
+
+- Claims checked: evidence from verify
+- Application reviewed: document reviewed by verify
+
 ## Cadence
 
 - Work the open Tasks by closing date, nearest first.

@@ -37,6 +37,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The board secretary's Evidence line is the check, and the Human sends everything.
 
+## Definition of Done
+
+- Facts checked: evidence from verify
+- Draft reviewed: document reviewed by verify
+
 ## Cadence
 
 - Agenda a week before each meeting, minutes within three days after it.
