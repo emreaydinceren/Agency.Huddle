@@ -4,6 +4,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.NeedsYou;
 using Agency.Huddle.App.References;
@@ -365,5 +366,84 @@ public sealed class SeedRefreshTests
         }
 
         Assert.Equal([SoftwareCoRooms.LaunchCrew], waiting);
+    }
+
+    /// <summary>
+    /// A Task's attachments read back as the description the app's attach buttons write (<see cref="TaskAttachmentText"/>), every
+    /// uploaded file sits in the folder <see cref="Agency.Huddle.App.Uploads.TaskUploadFolders"/> resolves, a closed Task keeps its
+    /// uploads there, and every linked file is a real Library file.
+    /// </summary>
+    [Fact]
+    public async Task TaskAttachments_MatchTheAppsPathLines_AndUploadsSitInTheTasksFolder()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using SeededFolder seed = await SeededFolder.CreateAsync(ct);
+        SeedPlan plan = seed.Summary.Plan;
+        IOptions<TeamOptions> options = seed.Options();
+        using PersonaStore personas = Personas(options);
+        using TaskStore tasks = new(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
+        using LibraryFileServiceFixture library = LibraryFileServiceFixture.Attach(seed.DataDir);
+        Agency.Huddle.App.Uploads.TaskUploadFolders folders = new(library.Resolver);
+
+        List<SeedTask> attached = [.. plan.Tasks.Where(t => t.Attachments.Count > 0)];
+        Assert.Contains(attached, t => t.Closed);
+        Assert.Contains(attached, t => t.Attachments.Count > 1);
+        foreach (SeedTask seeded in attached)
+        {
+            string expected = seeded.Attachments.Aggregate(
+                seeded.Body.Trim(),
+                (description, attachment) => TaskAttachmentText.AppendPathLine(description, Path.Combine(seed.DataDir, attachment.Replace('/', Path.DirectorySeparatorChar))));
+            TaskItem loaded = Assert.Single(tasks.All, t => t.Id.ToString() == seeded.Id);
+            Assert.Equal(expected, loaded.Description.TrimEnd('\n'));
+        }
+
+        Assert.NotEmpty(plan.TaskUploads);
+        foreach (SeedTaskUpload upload in plan.TaskUploads)
+        {
+            Assert.Contains(upload.RelativePath, plan.Tasks.First(t => t.Id == upload.TaskId).Attachments);
+            LibraryPath folder = folders.For(upload.TaskId) ?? throw new InvalidOperationException(upload.TaskId);
+            string path = Path.Combine(folder.FullPath, upload.FileName);
+            Assert.Equal(upload.Content, await File.ReadAllBytesAsync(path, ct));
+        }
+
+        List<string> linked = [.. attached.SelectMany(t => t.Attachments).Where(a => !plan.TaskUploads.Any(u => u.RelativePath == a))];
+        Assert.NotEmpty(linked);
+        Assert.All(linked, a => Assert.True(library.Resolver.TryResolveAbsolute(Path.Combine(seed.DataDir, a.Replace('/', Path.DirectorySeparatorChar)), out LibraryPath? file) && File.Exists(file.FullPath), a));
+    }
+
+    /// <summary>
+    /// Every seeded History line is the line <see cref="DocHistoryStore"/> would write, in the file the store reads for that
+    /// document; the History covers every kind and both authors, has a document longer than Recent edits shows, and groups two
+    /// Human saves into one row.
+    /// </summary>
+    [Fact]
+    public async Task DocHistory_ReadsBackThroughTheAppsStore()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using SeededFolder seed = await SeededFolder.CreateAsync(ct);
+        SeedPlan plan = seed.Summary.Plan;
+        DocHistoryStore store = new(seed.Options(), NullLogger<DocHistoryStore>.Instance);
+        using LibraryFileServiceFixture library = LibraryFileServiceFixture.Attach(seed.DataDir);
+
+        Assert.Equal(Enum.GetValues<DocChangeKind>(), plan.DocHistory.Select(e => e.Kind).Distinct().Order());
+        Assert.Equal(Enum.GetValues<DocActorKind>(), plan.DocHistory.Select(e => e.ActorKind).Distinct().Order());
+        Assert.All(plan.DocHistory, e => Assert.True(e.DaysAgo >= 1, e.RelativePath));
+        foreach (IGrouping<string, SeedDocEdit> document in plan.DocHistory.GroupBy(e => e.RelativePath))
+        {
+            string full = Path.Combine(seed.DataDir, document.Key.Replace('/', Path.DirectorySeparatorChar));
+            Assert.True(library.Resolver.TryResolveAbsolute(full, out LibraryPath? path), document.Key);
+            Assert.True(File.Exists(path.FullPath), document.Key);
+            Assert.Equal(Path.Combine(seed.DataDir, DocHistoryWriter.HistoryPath(document.Key).Replace('/', Path.DirectorySeparatorChar)), store.FileFor(path), ignoreCase: true);
+
+            List<DocHistoryEntry> expected = [.. document.Select(e => DocHistoryWriter.Entry(e, plan.Today)).OrderBy(e => e.At)];
+            Assert.Equal(expected, store.Read(path));
+            Assert.All(expected, e => Assert.Equal(DocHistoryStore.Serialize(e), DocHistoryWriter.Serialize(e)));
+        }
+
+        Assert.Contains(plan.DocHistory.GroupBy(e => e.RelativePath), d =>
+        {
+            List<DocHistoryEntry> entries = [.. d.Select(e => DocHistoryWriter.Entry(e, plan.Today))];
+            return entries.Count > 5 && DocHistoryView.Recent(entries, entries.Count, store.HumanSaveGroupWindow).Count < entries.Count;
+        });
     }
 }

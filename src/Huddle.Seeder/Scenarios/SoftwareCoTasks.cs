@@ -222,7 +222,9 @@ internal static class SoftwareCoTasks
             Status = "In Progress", Priority = "High", Creator = "Owen", Assignee = "Sofia",
             Tags = ["design", "onboarding"], DueOffset = 4, StartOffset = -5, CreatedDaysAgo = 20, LastTouchedDaysAgo = 1,
             OriginRoom = SoftwareCoRooms.LaunchCrew,
+            ExtraLog = [new(Human, "description edited")],
             Body = "Five items, all completable in under ten minutes, with a visible progress bar.",
+            Attachments = ["Teams/Growth/Onboarding Revamp/Onboarding-Brief.md", SeedTaskUpload.PathFor("GROW-0002", "checklist-mockup.png")],
         },
         new()
         {
@@ -367,6 +369,7 @@ internal static class SoftwareCoTasks
             Status = "Done", Priority = "Medium", Creator = "Grace", Assignee = "Alan", Closed = true,
             Tags = ["incident", "process"], CreatedDaysAgo = 29, LastTouchedDaysAgo = 15,
             Body = "Template used by the incident-postmortem Skill. Alan works in Platform but owns this for Support.",
+            Attachments = [SeedTaskUpload.PathFor("SUPP-0006", "postmortem-template.txt")],
         },
         new()
         {
@@ -381,7 +384,9 @@ internal static class SoftwareCoTasks
             Status = "Review", Priority = "High", Creator = "Dana", Assignee = "Dana",
             Tags = ["incident", "postmortem"], DueOffset = 4, CreatedDaysAgo = 8, LastTouchedDaysAgo = 1,
             OriginRoom = SoftwareCoRooms.IncidentWarRoom,
-            Body = "Every action from the postmortem, with owners. Alan's draft is in the incident Room.",
+            ExtraLog = [new(Human, "description edited")],
+            Body = "Every action from the postmortem, with owners. Alan's draft and the action list are attached.",
+            Attachments = ["Teammates/Alan/work/Postmortem-Draft-0412.md", SeedTaskUpload.PathFor("SUPP-0008", "action-items.txt")],
         },
 
         // ---- Support team root ----

@@ -156,6 +156,8 @@ internal sealed class SoftwareCoScenario : IScenario
         Rooms = SoftwareCoRooms.All,
         BinaryFiles = SoftwareCoLibrary.BinaryFiles,
         Uploads = SoftwareCoLibrary.Uploads,
+        TaskUploads = SoftwareCoLibrary.TaskUploads,
+        DocHistory = SoftwareCoLibrary.DocHistory,
         Sprints = SoftwareCoTasks.Sprints,
         ViewsJson = ViewsJson,
         AvatarsJson = AvatarsJson,

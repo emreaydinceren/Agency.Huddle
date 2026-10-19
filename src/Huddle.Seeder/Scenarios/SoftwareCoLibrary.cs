@@ -1,3 +1,4 @@
+using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.Seeder.Model;
 using Agency.Huddle.Seeder.Writing;
 
@@ -10,6 +11,10 @@ namespace Agency.Huddle.Seeder.Scenarios;
 /// </summary>
 internal static class SoftwareCoLibrary
 {
+    private const string Handbook = "Teams/Platform/Engineering-Handbook.md";
+    private const string PricingBrief = "Teams/Growth/Pricing Page/Pricing-Brief.md";
+    private const string Incident = "Teams/Support/Incident Tooling/Incident-0412.md";
+
     /// <summary>The folders the scenario needs even where nothing is written into them yet; see <see cref="SeedTeam"/>.</summary>
     internal static IReadOnlyList<SeedTeam> Teams { get; } =
     [
@@ -37,6 +42,42 @@ internal static class SoftwareCoLibrary
         new(SoftwareCoRooms.DmOwen, "price-claims.txt", System.Text.Encoding.UTF8.GetBytes("Claims to check with legal:\n- \"Cheapest in class\"\n- \"No hidden fees\"\n")),
         new(SoftwareCoRooms.TeamPlatform, "gateway-latency.png", SeedImages.Gradient(48, (0x5b, 0x5f, 0x97), (0xc2, 0x45, 0x6b))),
         new(SoftwareCoRooms.TeamPlatform, "oncall-handover.txt", System.Text.Encoding.UTF8.GetBytes("Open alerts: none.\nPromised to a customer: a postmortem by Friday.\n")),
+    ];
+
+    /// <summary>
+    /// Files the Human uploaded to Tasks: a PNG and a text file on open Tasks, and one on a closed Task, whose folder is still
+    /// <c>Uploads/Tasks/&lt;ID&gt;</c> because closing never moves it. <see cref="SoftwareCoTasks"/> lists each in its Task's
+    /// <see cref="SeedTask.Attachments"/>.
+    /// </summary>
+    internal static IReadOnlyList<SeedTaskUpload> TaskUploads { get; } =
+    [
+        new("GROW-0002", "checklist-mockup.png", SeedImages.Gradient(48, (0x2e, 0x7d, 0x6b), (0xff, 0xff, 0xff))),
+        new("SUPP-0008", "action-items.txt", System.Text.Encoding.UTF8.GetBytes("Postmortem actions for incident 0412:\n- Status page (SUPP-0005)\n- Pager rotation (SUPP-0007)\n- Pool-size alert\n")),
+        new("SUPP-0006", "postmortem-template.txt", System.Text.Encoding.UTF8.GetBytes("Summary\nImpact\nTimeline (UTC)\nCause\nFollow-ups\n")),
+    ];
+
+    /// <summary>
+    /// Document History: a long History on the handbook (every kind, two Human saves inside the grouping window and more rows than
+    /// Recent edits shows), an objection on the pricing brief, a review on the incident, a Teammate's private draft and a note the
+    /// Human created. Every other note has no History, so "No edits logged." stays testable.
+    /// </summary>
+    internal static IReadOnlyList<SeedDocEdit> DocHistory { get; } =
+    [
+        new(Handbook, 21, "09:30", "Grace", DocActorKind.Agent, DocChangeKind.Created, "First draft: working agreements, operations and reference"),
+        new(Handbook, 18, "11:05", "Marcus", DocActorKind.Agent, DocChangeKind.Edited, "Added the review checklist and the pagination rule"),
+        new(Handbook, 12, "14:20", "Alan", DocActorKind.Agent, DocChangeKind.Edited, "Wrote the On call and Handover notes sections"),
+        new(Handbook, 6, "10:00", "You", DocActorKind.Human, DocChangeKind.Edited),
+        new(Handbook, 6, "10:03", "You", DocActorKind.Human, DocChangeKind.Edited),
+        new(Handbook, 4, "15:40", "Lena", DocActorKind.Agent, DocChangeKind.Reviewed, "Checked the release rules against the Friday deploy freeze"),
+        new(Handbook, 2, "09:15", "Marcus", DocActorKind.Agent, DocChangeKind.Objected, "Same-day review is not realistic for contract changes"),
+        new(Handbook, 1, "16:30", "Grace", DocActorKind.Agent, DocChangeKind.Edited, "Contract changes now get two working days for review"),
+        new(PricingBrief, 9, "09:00", "Maya", DocActorKind.Agent, DocChangeKind.Created, "Three tiers, built on the pricing research"),
+        new(PricingBrief, 5, "10:05", "You", DocActorKind.Human, DocChangeKind.Edited),
+        new(PricingBrief, 3, "13:45", "Sofia", DocActorKind.Agent, DocChangeKind.Objected, "Starter undercuts Team for groups of three or fewer"),
+        new(Incident, 9, "11:00", "Alan", DocActorKind.Agent, DocChangeKind.Created, "Impact, cause and follow-ups from the war room"),
+        new(Incident, 8, "09:30", "Dana", DocActorKind.Agent, DocChangeKind.Reviewed, "Customer impact matches the support tickets"),
+        new("Teammates/Alan/work/Postmortem-Draft-0412.md", 8, "17:10", "Alan", DocActorKind.Agent, DocChangeKind.Created, "Timeline drafted from the alert log"),
+        new("Teams/Growth/Lifecycle Emails/Email-Ideas.md", 7, "08:45", "You", DocActorKind.Human, DocChangeKind.Created),
     ];
 
     /// <summary>Every note, memory fact and working file.</summary>
