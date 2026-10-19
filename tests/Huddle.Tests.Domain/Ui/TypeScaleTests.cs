@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Themes;
 using MudBlazor;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -75,7 +76,7 @@ public sealed partial class TypeScaleTests
     [InlineData(".mud-chip.tag-chip {")]
     public void AppCss_ChipsHaveTheStatusShape(string selector)
     {
-        string css = TypeScaleTests.ReadAppCss().Replace("\r\n", "\n", StringComparison.Ordinal);
+        string css = CssText.AppCss(CssNewlines.AsIs).Replace("\r\n", "\n", StringComparison.Ordinal);
         int rule = css.IndexOf(selector, StringComparison.Ordinal);
         Assert.True(rule >= 0, "Expected the chip rule in app.css.");
 
@@ -92,7 +93,7 @@ public sealed partial class TypeScaleTests
     [Fact]
     public void AppCss_GroupLabel_IsCaptionAtSemibold()
     {
-        string css = TypeScaleTests.ReadAppCss().Replace("\r\n", "\n", StringComparison.Ordinal);
+        string css = CssText.AppCss(CssNewlines.AsIs).Replace("\r\n", "\n", StringComparison.Ordinal);
         int rule = css.IndexOf(".group-label {", StringComparison.Ordinal);
         Assert.True(rule >= 0, "Expected the .group-label rule in app.css.");
 
@@ -106,7 +107,7 @@ public sealed partial class TypeScaleTests
     [Fact]
     public void AppCss_SmallButtonAndComposerFocusMatchTheSpec()
     {
-        string css = TypeScaleTests.ReadAppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(@"\.mud-button-filled-size-small \{[^}]*height: 28px;[^}]*font-weight: 500;", css);
         Assert.Matches(@"\.composer-input:focus-visible \{[^}]*inset 0 0 0 0\.5px var\(--mud-palette-primary\)", css);
@@ -127,7 +128,7 @@ public sealed partial class TypeScaleTests
     [Fact]
     public void AppCss_UsesNoWeightAbove600()
     {
-        string css = TypeScaleTests.ReadAppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.DoesNotMatch(@"font-weight:\s*(700|800|900|bold)", css);
     }
@@ -139,7 +140,7 @@ public sealed partial class TypeScaleTests
     [Fact]
     public void AppCss_InputText_IsBodyWeight()
     {
-        string css = TypeScaleTests.ReadAppCss().ReplaceLineEndings("\n");
+        string css = CssText.AppCss(CssNewlines.AsIs).ReplaceLineEndings("\n");
 
         Assert.Matches(@"\.mud-input\.mud-typography-subtitle1\s*\{[^}]*font-weight:\s*var\(--mud-typography-body1-weight\)", css);
     }
@@ -148,7 +149,7 @@ public sealed partial class TypeScaleTests
     [Fact]
     public void AppCss_SetsNoLiteralFontSizeUnder11px()
     {
-        foreach (Match match in FontSizePx().Matches(TypeScaleTests.ReadAppCss()))
+        foreach (Match match in FontSizePx().Matches(CssText.AppCss(CssNewlines.AsIs)))
         {
             Assert.True(double.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) >= 11, match.Value);
         }
@@ -158,7 +159,7 @@ public sealed partial class TypeScaleTests
     [Fact]
     public void AppCss_CapsProseAt75ch()
     {
-        string css = TypeScaleTests.ReadAppCss().ReplaceLineEndings("\n");
+        string css = CssText.AppCss(CssNewlines.AsIs).ReplaceLineEndings("\n");
         int rule = css.IndexOf(".settings-intro,\n.settings-stored-at,", StringComparison.Ordinal);
         Assert.True(rule >= 0, "Expected the shared measure rule in app.css.");
 
@@ -173,7 +174,7 @@ public sealed partial class TypeScaleTests
     [Fact]
     public void AppCss_TranscriptIsOneColumnOf760px()
     {
-        string css = TypeScaleTests.ReadAppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(@"\.message-list > \*\s*\{\s*max-width:\s*760px;\s*margin-inline:\s*auto;", css);
         Assert.Matches(@"\.message-content > \.message-body\s*\{\s*max-width:\s*75ch;", css);
@@ -185,7 +186,7 @@ public sealed partial class TypeScaleTests
     [Fact]
     public void AppCss_ComposerSharesTheTranscriptColumn()
     {
-        string css = TypeScaleTests.ReadAppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(@"\.composer-box\s*\{[^}]*max-width:\s*760px;[^}]*margin-inline:\s*auto;", css);
     }
@@ -194,7 +195,7 @@ public sealed partial class TypeScaleTests
     [Fact]
     public void AppCss_TranscriptMetricsFollowTheRoomSpec()
     {
-        string css = TypeScaleTests.ReadAppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(@"\.message-row\s*\{[^}]*margin-bottom:\s*16px;", css);
         Assert.Matches(@"\.message-row\.grouped\s*\{\s*margin-top:\s*-12px;", css);
@@ -203,10 +204,6 @@ public sealed partial class TypeScaleTests
         Assert.Matches(@"\.message-bubble\s*\{[^}]*border-radius:\s*calc\(var\(--mud-default-borderradius\) \* 1\.5\);", css);
         Assert.Matches(@"\.day-separator\s*\{[^}]*margin-block:\s*24px 16px;", css);
     }
-
-    /// <summary>Reads <c>app.css</c> as the source fact the stylesheet tests in this class pin.</summary>
-    /// <returns>The full text of <c>app.css</c>.</returns>
-    private static string ReadAppCss() => File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
 
     /// <summary>Picks a typography role by its <c>Typo</c> name.</summary>
     /// <param name="typography">The Theme's typography.</param>

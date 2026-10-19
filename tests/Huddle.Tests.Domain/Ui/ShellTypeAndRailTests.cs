@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Css;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
@@ -43,7 +44,7 @@ public sealed class ShellTypeAndRailTests
     [Fact]
     public void TabRail_LabelAndIconMetrics()
     {
-        string css = ShellTypeAndRailTests.AppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(@"(?m)^\.mud-tab\s*\{[^}]*font-size:\s*var\(--mud-typography-body2-size\);[^}]*font-weight:\s*500;[^}]*color:\s*var\(--mud-palette-text-secondary\);", css);
         Assert.Matches(@"(?m)^\.mud-tab \.mud-icon-root\s*\{[^}]*font-size:\s*var\(--icon-size-row\);[^}]*color:\s*inherit;", css);
@@ -53,7 +54,7 @@ public sealed class ShellTypeAndRailTests
     [Fact]
     public void TabRail_ActiveLabelIsAccentText_IndicatorIs2px()
     {
-        string css = ShellTypeAndRailTests.AppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(@"\.mud-tab\.mud-tab-active,[^{]*\{[^}]*color: var\(--hu-accent-ink\)", css);
         Assert.Matches(@"(?m)^\.mud-tab-slider\s*\{[^}]*height:\s*2px;", css);
@@ -63,14 +64,14 @@ public sealed class ShellTypeAndRailTests
     [Fact]
     public void Breadcrumb_SeparatorHas8pxEitherSide()
     {
-        Assert.Matches(@"\.page-breadcrumbs \.mud-breadcrumb-separator\s*\{[^}]*padding-inline:\s*8px;", ShellTypeAndRailTests.AppCss());
+        Assert.Matches(@"\.page-breadcrumbs \.mud-breadcrumb-separator\s*\{[^}]*padding-inline:\s*8px;", CssText.AppCss(CssNewlines.AsIs));
     }
 
     /// <summary>A sidebar row is 32px tall with an 18px icon and an 8px gap; a section header is 12px, weight 600, 16px above and 4px below.</summary>
     [Fact]
     public void Sidebar_RowAndSectionHeaderMetrics()
     {
-        string css = ShellTypeAndRailTests.AppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(@"--nav-row-height:\s*32px;[^}]*--icon-size-row:\s*18px;", css);
         Assert.Matches(@"\.mud-nav-group \.mud-collapse-container \.mud-nav-link \.mud-nav-link-icon\s*\{[^}]*font-size:\s*var\(--icon-size-row\);[^}]*margin-inline-end:\s*8px;", css);
@@ -78,8 +79,6 @@ public sealed class ShellTypeAndRailTests
         Assert.Matches(@"\.mud-nav-group > \.mud-nav-link\s*\{[^}]*margin-top:\s*16px;[^}]*margin-bottom:\s*4px;", css);
         Assert.DoesNotContain("nav-section-link", css, StringComparison.Ordinal);
     }
-
-    private static string AppCss() => File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
 
     private static string TabStripCss() =>
         File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Layout", "TabStrip.razor.css"));

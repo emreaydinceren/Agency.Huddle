@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -115,7 +116,7 @@ public sealed partial class AuditBatchBCssTests
     [Fact]
     public void AppCss_DestinationRowIcon_IsNotInTheGroupSlot()
     {
-        Assert.DoesNotContain(".nav-row-link .mud-nav-link .mud-nav-link-icon", AuditBatchBCssTests.AppCss(), StringComparison.Ordinal);
+        Assert.DoesNotContain(".nav-row-link .mud-nav-link .mud-nav-link-icon", CssText.AppCss(CssNewlines.AsIs), StringComparison.Ordinal);
     }
 
     /// <summary>A destination row (Teammates, Library) is a 32px, 13px, body-colour row, not a section header.</summary>
@@ -135,7 +136,7 @@ public sealed partial class AuditBatchBCssTests
     [Fact]
     public void Sidebar_OnlyGroupsAreSectionHeaders()
     {
-        string css = AuditBatchBCssTests.AppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
         string layout = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Layout", "MainLayout.razor"));
         string library = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Library", "LibraryNavLink.razor"));
 
@@ -174,8 +175,6 @@ public sealed partial class AuditBatchBCssTests
         Assert.Matches(@"grid-template-columns:\s*minmax\(0, 1fr\) minmax\(0, 32rem\) minmax\(0, 1fr\)", AuditBatchBCssTests.DeclarationsFor(".top-bar-grid"));
     }
 
-    private static string AppCss() => File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
-
     /// <summary>
     /// The declarations of every rule in <c>app.css</c> whose selector list holds exactly <paramref name="selector"/> as one
     /// of its comma-separated selectors, joined; fails when no rule does.
@@ -183,7 +182,7 @@ public sealed partial class AuditBatchBCssTests
     private static string DeclarationsFor(string selector)
     {
         List<string> bodies = [];
-        foreach (Match match in RulePattern().Matches(AuditBatchBCssTests.AppCss()))
+        foreach (Match match in RulePattern().Matches(CssText.AppCss(CssNewlines.AsIs)))
         {
             string[] selectors = match.Groups["selectors"].Value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
             if (selectors.Contains(selector, StringComparer.Ordinal))

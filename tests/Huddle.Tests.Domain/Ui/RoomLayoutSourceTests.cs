@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Css;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
@@ -19,7 +20,7 @@ public sealed class RoomLayoutSourceTests
     [Fact]
     public void AppCss_RoomColumn_MayShrinkSoTheMessageListScrolls()
     {
-        string body = RuleBody(ReadAppCss(), ".room-column");
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".room-column");
 
         Assert.Contains("min-height: 0;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
@@ -43,7 +44,7 @@ public sealed class RoomLayoutSourceTests
     [Fact]
     public void AppCss_ElicitationCard_IsCappedAtHalfTheWindow()
     {
-        string body = RuleBody(ReadAppCss(), ".elicitation-card");
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".elicitation-card");
 
         Assert.Contains("max-height: 50vh;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("display: flex;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
@@ -57,9 +58,9 @@ public sealed class RoomLayoutSourceTests
     [Fact]
     public void AppCss_ElicitationCard_FieldsScrollAndActionsStayPut()
     {
-        string css = ReadAppCss();
-        string fields = RuleBody(css, ".elicitation-card-fields");
-        string actions = RuleBody(css, ".elicitation-card .agent-card-actions");
+        string css = CssText.AppCss(CssNewlines.AsIs);
+        string fields = CssText.RuleBody(css, ".elicitation-card-fields");
+        string actions = CssText.RuleBody(css, ".elicitation-card .agent-card-actions");
 
         Assert.Contains("overflow-y: auto;", fields, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("min-height: 0;", fields, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
@@ -88,7 +89,7 @@ public sealed class RoomLayoutSourceTests
     [Fact]
     public void AppCss_QuestionCardOption_IsTouchSizedAndKeepsItsCase()
     {
-        string body = RuleBody(ReadAppCss(), ".question-card-option");
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".question-card-option");
 
         Assert.Contains("min-height: 32px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("text-transform: none;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
@@ -101,9 +102,9 @@ public sealed class RoomLayoutSourceTests
     [Fact]
     public void AppCss_ElicitationCardOption_IsAOneLine32pxRow()
     {
-        string css = ReadAppCss();
-        string row = RuleBody(css, ".elicitation-card-option");
-        string text = RuleBody(css, ".elicitation-card-option-text");
+        string css = CssText.AppCss(CssNewlines.AsIs);
+        string row = CssText.RuleBody(css, ".elicitation-card-option");
+        string text = CssText.RuleBody(css, ".elicitation-card-option-text");
 
         Assert.Contains("height: 32px;", row, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.DoesNotContain("44px", row, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
@@ -115,7 +116,7 @@ public sealed class RoomLayoutSourceTests
     [Fact]
     public void AppCss_QuestionCardRankRow_IsTouchSized()
     {
-        string body = RuleBody(ReadAppCss(), ".question-card-rank-row");
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".question-card-rank-row");
 
         Assert.Contains("min-height: 44px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
@@ -128,7 +129,7 @@ public sealed class RoomLayoutSourceTests
     [Fact]
     public void AppCss_QuestionCardActions_SitBelowTheQuestions()
     {
-        string body = RuleBody(ReadAppCss(), ".agent-card-actions");
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".agent-card-actions");
 
         Assert.Contains("margin-top: 12px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
@@ -140,10 +141,10 @@ public sealed class RoomLayoutSourceTests
     [Fact]
     public void AppCss_QuestionCardPlainElements_KeepTheirSpacingAndFlex()
     {
-        string css = ReadAppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
-        Assert.Contains("margin-top: 12px;", RuleBody(css, ".question-card-question"), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
-        Assert.Contains("flex: 1 1 auto;", RuleBody(css, ".question-card-rank-label"), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("margin-top: 12px;", CssText.RuleBody(css, ".question-card-question"), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("flex: 1 1 auto;", CssText.RuleBody(css, ".question-card-rank-label"), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
     /// <summary>
@@ -159,23 +160,5 @@ public sealed class RoomLayoutSourceTests
         string scoped = CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "QuestionCard.razor.css");
 
         Assert.False(File.Exists(scoped), "QuestionCard.razor.css must not exist: ::deep cannot reach a MudPaper root or its Mud children, so its rules apply by accident or never. Put them in app.css.");
-    }
-
-    /// <summary>Reads <c>app.css</c> from the repository.</summary>
-    /// <returns>The stylesheet's text.</returns>
-    private static string ReadAppCss() => File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
-
-    /// <summary>The declarations inside the rule whose selector is exactly <paramref name="selector"/>, so <c>.a</c> never matches <c>.a-b</c>.</summary>
-    /// <param name="css">The stylesheet's text.</param>
-    /// <param name="selector">The selector, as written at the start of a line.</param>
-    /// <returns>The text between the rule's braces.</returns>
-    private static string RuleBody(string css, string selector)
-    {
-        string opening = "\n" + selector + " {";
-        int start = css.IndexOf(opening, StringComparison.Ordinal);
-        Assert.True(start >= 0, $"app.css has no rule with the selector '{selector}'.");
-
-        int end = css.IndexOf('}', start);
-        return css[(start + opening.Length)..end];
     }
 }

@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using MudBlazor;
 using MudBlazor.Utilities;
 using Agency.Huddle.App.Themes;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -9,9 +10,6 @@ namespace Agency.Huddle.Tests.Ui;
 public sealed partial class R3FixTests
 {
     private static readonly string[] StatusNames = ["Info", "Warning", "Error", "Success", "Secondary", "Tertiary", "Primary", "Neutral"];
-
-    private static string AppCss() =>
-        File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css")).ReplaceLineEndings("\n");
 
     private static string Rule(string css, string selector)
     {
@@ -61,14 +59,14 @@ public sealed partial class R3FixTests
         }
 
         Assert.Empty(labelled);
-        Assert.Contains("display: none;", Rule(AppCss(), ".mud-input-control.toolbar-compact .mud-input-label"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("display: none;", Rule(CssText.AppCss(), ".mud-input-control.toolbar-compact .mud-input-label"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
     }
 
     /// <summary>A Needs you row gives the Room's name the width the icons and the time leave: the link pads 8px, the text starts flush, the name flexes and ellipsises, and the time is trailing and does not shrink.</summary>
     [Fact]
     public void NeedsYouRow_NameTakesTheRemainingWidth()
     {
-        string css = AppCss();
+        string css = CssText.AppCss();
 
         Assert.Contains("padding-inline: 8px;", Rule(css, ".needs-you-row .mud-nav-link"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("margin-inline-start: 0;", Rule(css, ".needs-you-row .mud-nav-link-text"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
@@ -86,7 +84,7 @@ public sealed partial class R3FixTests
     [InlineData(".mud-drawer .mud-navmenu .mud-nav-link")]
     public void InsetRows_AreNarrowerByTheirInset(string selector)
     {
-        string rule = Rule(AppCss(), selector);
+        string rule = Rule(CssText.AppCss(), selector);
 
         Assert.Contains("width: calc(100% - 8px);", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("margin-inline: 4px;", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source

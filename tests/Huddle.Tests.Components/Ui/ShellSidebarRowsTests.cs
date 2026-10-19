@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -11,6 +10,7 @@ using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.Tests.NeedsYou;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -34,7 +34,7 @@ public sealed class ShellSidebarRowsTests
     [Fact]
     public void AppCss_RowLinkRule_MatchesTheOtherRows()
     {
-        string rule = ShellSidebarRowsTests.RuleBody(".nav-row-link .mud-nav-link .mud-nav-link-text");
+        string rule = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".nav-row-link .mud-nav-link .mud-nav-link-text");
 
         ShellSidebarRowsTests.SourceHas(rule, "font-size: var(--mud-typography-body2-size)");
         ShellSidebarRowsTests.SourceHas(rule, "font-weight: 400");
@@ -45,8 +45,8 @@ public sealed class ShellSidebarRowsTests
     [Fact]
     public void AppCss_FooterRows_UseTheRowHeightToken()
     {
-        string css = ShellSidebarRowsTests.AppCss();
-        string rule = ShellSidebarRowsTests.RuleBody(".nav-settings .mud-nav-link");
+        string css = CssText.AppCss(CssNewlines.AsIs);
+        string rule = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".nav-settings .mud-nav-link");
 
         Assert.Matches(@"--nav-row-height\s*:\s*32px\s*;", css);
         ShellSidebarRowsTests.SourceHas(rule, "min-height: var(--nav-row-height)");
@@ -70,7 +70,7 @@ public sealed class ShellSidebarRowsTests
     [Fact]
     public void AppCss_TeamChevron_UsesTheSecondaryTextColour()
     {
-        string rule = ShellSidebarRowsTests.RuleBody(".teams-nav-host .teams-nav-chevron");
+        string rule = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".teams-nav-host .teams-nav-chevron");
 
         ShellSidebarRowsTests.SourceHas(rule, "color: var(--mud-palette-text-secondary)");
         Assert.DoesNotContain("action-default", rule,StringComparison.Ordinal);
@@ -147,7 +147,7 @@ public sealed class ShellSidebarRowsTests
 
         Assert.DoesNotContain(".visually-hidden", scoped, StringComparison.Ordinal);
         ShellSidebarRowsTests.SourceHas(markup, "visually-hidden");
-        ShellSidebarRowsTests.SourceHas(ShellSidebarRowsTests.AppCss(), ".visually-hidden {");
+        ShellSidebarRowsTests.SourceHas(CssText.AppCss(CssNewlines.AsIs), ".visually-hidden {");
     }
 
     /// <summary>A Needs You row's Dismiss button sits in a tooltip, like its siblings' icon buttons (UX-V09).</summary>
@@ -177,17 +177,6 @@ public sealed class ShellSidebarRowsTests
     internal static void SourceHas(string source, string fragment)
     {
         Assert.Contains(fragment, source, StringComparison.Ordinal); // contains-ok: the haystack is a source file (CSS or Razor text), which has no rendered form to assert on.
-    }
-
-    private static string AppCss() =>
-        File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
-
-    /// <summary>The declarations of the first rule whose selector is exactly <paramref name="selector"/>.</summary>
-    private static string RuleBody(string selector)
-    {
-        Match match = Regex.Match(ShellSidebarRowsTests.AppCss(), @"(?m)^" + Regex.Escape(selector) + @"\s*\{([^}]*)\}");
-        Assert.True(match.Success, $"app.css has no rule '{selector}'.");
-        return match.Groups[1].Value;
     }
 
     private static async Task<(ChatService Chat, SqliteTeamDirectory Directory)> CreateChatAsync(TempDataDir dir, CancellationToken ct)

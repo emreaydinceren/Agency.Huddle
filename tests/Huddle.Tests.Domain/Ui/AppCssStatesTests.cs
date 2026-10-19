@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -20,7 +21,7 @@ public sealed partial class AppCssStatesTests
     [Fact]
     public void AppCss_ChromeLines_AreOneHairlineOfLinesDefault()
     {
-        string css = AppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(@"\.mud-drawer\s*\{[^}]*border-inline-end:\s*1px solid var\(--hu-line-region\)", css);
         Assert.Matches(@"\.page-header\.has-chrome\s*\{[^}]*border-bottom:\s*1px solid var\(--hu-line-region\)", css);
@@ -37,7 +38,7 @@ public sealed partial class AppCssStatesTests
     [Fact]
     public void AppCss_TableHoverToken_AppearsOnlyInsideATable()
     {
-        foreach (Match rule in CssRules().Matches(AppCss()))
+        foreach (Match rule in CssRules().Matches(CssText.AppCss(CssNewlines.AsIs)))
         {
             if (rule.Groups["body"].Value.Contains("--mud-palette-table-hover", StringComparison.Ordinal))
             {
@@ -54,7 +55,7 @@ public sealed partial class AppCssStatesTests
     [Fact]
     public void AppCss_FloatingPanel_IsOneElevatedBorderedLayer()
     {
-        string css = AppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(@"\.floating-panel\s*\{[^}]*box-shadow:\s*var\(--hu-shadow-panel\)", css);
         Assert.Matches(@"\.floating-panel\s*\{[^}]*border:\s*1px solid var\(--ink-edge\)", css);
@@ -68,7 +69,7 @@ public sealed partial class AppCssStatesTests
     [Fact]
     public void AppCss_DropTarget_IsOneDashedPrimaryLine()
     {
-        string css = AppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(@"\.drop-target\s*\{[^}]*border:\s*1px dashed var\(--mud-palette-primary\)", css);
         Assert.DoesNotMatch("2px dashed", css);
@@ -82,7 +83,7 @@ public sealed partial class AppCssStatesTests
     [Fact]
     public void AppCss_TruncateAndVisuallyHidden_ExistAsGlobalUtilities()
     {
-        string css = AppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(@"\.truncate\s*\{[^}]*overflow:\s*hidden", css);
         Assert.Matches(@"\.truncate\s*\{[^}]*text-overflow:\s*ellipsis", css);
@@ -98,7 +99,7 @@ public sealed partial class AppCssStatesTests
     [Fact]
     public void AppCss_RepeatedBlocks_AreSharedClasses()
     {
-        string css = AppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(@"\.ref-link\s*\{", css);
         Assert.Matches(@"\.room-strip\s*\{", css);
@@ -116,7 +117,7 @@ public sealed partial class AppCssStatesTests
     [Fact]
     public void AppCss_LongTextField_IsBody1()
     {
-        string css = AppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Match rule = Regex.Match(css, @"\.long-text-field[^{]*\{(?<body>[^}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
 
@@ -135,7 +136,7 @@ public sealed partial class AppCssStatesTests
     [Fact]
     public void AppCss_TaskRefDot_IsSixExplicitRulesWithoutACustomProperty()
     {
-        string css = AppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.DoesNotMatch("--task-ref-dot", css);
         Assert.DoesNotMatch(@"task-ref\[class\*=""task-ref-status-""\]", css);
@@ -155,7 +156,7 @@ public sealed partial class AppCssStatesTests
     [Fact]
     public void AppCss_Muting_UsesColourExceptArchivedOrGoneAtPointSixOpacity()
     {
-        string css = AppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.DoesNotMatch(@"opacity:\s*(0\.5|0\.7|0\.75|0\.92)\b", css);
         foreach (Match rule in CssRules().Matches(css))
@@ -177,7 +178,7 @@ public sealed partial class AppCssStatesTests
     [Fact]
     public void AppCss_SelectedTints_AreFourteenAndTwentyFourPercentOverSurface()
     {
-        string css = AppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.DoesNotMatch(@"color-mix\(in srgb, var\(--mud-palette-primary\) (16|30)%", css);
         Assert.DoesNotMatch(@"primary\) \d+%, transparent\)", css);
@@ -191,7 +192,7 @@ public sealed partial class AppCssStatesTests
     [Fact]
     public void AppCss_RoomListConfirm_SetsPaddingOnly()
     {
-        string css = AppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(@"\.room-list-confirm\s*\{", css);
         Assert.DoesNotMatch(@"\.room-list-confirm\s*\{[^}]*(gap:|display:)", css);
@@ -204,7 +205,7 @@ public sealed partial class AppCssStatesTests
     [Fact]
     public void AppCss_FullPaneEmptyStates_ShareOneRule()
     {
-        Assert.Matches(@"\.tab-empty,\s*\.library-empty-pane\s*\{[^}]*padding:\s*32px", AppCss());
+        Assert.Matches(@"\.tab-empty,\s*\.library-empty-pane\s*\{[^}]*padding:\s*32px", CssText.AppCss(CssNewlines.AsIs));
     }
 
     /// <summary>
@@ -214,14 +215,11 @@ public sealed partial class AppCssStatesTests
     [Fact]
     public void AppCss_HasNoDeadRuleAndNoBlankLineRuns()
     {
-        string css = AppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.DoesNotMatch(@"\.invite-filter\b", css);
         Assert.DoesNotMatch(@"\r?\n[ \t]*\r?\n[ \t]*\r?\n", css);
     }
-
-    private static string AppCss() =>
-        File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
 
     [GeneratedRegex(@"(?<selector>[^{}]+)\{(?<body>[^{}]*)\}")]
     private static partial Regex CssRules();

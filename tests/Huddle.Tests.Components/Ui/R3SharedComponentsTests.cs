@@ -1,6 +1,7 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Agency.Huddle.App.Components.Shared;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -10,8 +11,6 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 public sealed class R3SharedComponentsTests
 {
-    private static string AppCss() =>
-        File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css")).ReplaceLineEndings("\n");
 
     private static string Rule(string css, string selector)
     {
@@ -67,7 +66,7 @@ public sealed class R3SharedComponentsTests
     [Fact]
     public void AppCss_DrawerOpensBesideTheRightSidebar()
     {
-        string css = AppCss();
+        string css = CssText.AppCss();
 
         const string sidebarOpen = ":root:has(.mud-drawer.right-sidebar.mud-drawer--open) ";
         Assert.Contains("right: 280px;", Rule(css, sidebarOpen + ".mud-drawer.resizable-drawer.mud-drawer-temporary.mud-drawer-pos-right.mud-drawer--open"), StringComparison.Ordinal); // contains-ok: stylesheet source text
@@ -79,7 +78,7 @@ public sealed class R3SharedComponentsTests
     [Fact]
     public void AppCss_DrawerFooterIsStickyWithAChromeLine()
     {
-        string footer = Rule(AppCss(), ".resizable-drawer-footer");
+        string footer = Rule(CssText.AppCss(), ".resizable-drawer-footer");
 
         Assert.Contains("position: sticky;", footer, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("bottom: 0;", footer, StringComparison.Ordinal); // contains-ok: stylesheet source text
@@ -91,7 +90,7 @@ public sealed class R3SharedComponentsTests
     [Fact]
     public void AppCss_PageHeaderRowIs32px_AndTheIntroIsBody1()
     {
-        string css = AppCss();
+        string css = CssText.AppCss();
 
         Assert.Contains("min-height: 32px;", Rule(css, ".page-header-row"), StringComparison.Ordinal); // contains-ok: stylesheet source text
         string intro = Rule(css, ".page-lead {");
@@ -103,7 +102,7 @@ public sealed class R3SharedComponentsTests
     [Fact]
     public void AppCss_PickerRowIs32px_At13px_WithAnIconSlot()
     {
-        string css = AppCss();
+        string css = CssText.AppCss();
 
         string row = Rule(css, ".mud-list-item.picker-row");
         Assert.Contains("min-height: 32px;", row, StringComparison.Ordinal); // contains-ok: stylesheet source text
@@ -116,7 +115,7 @@ public sealed class R3SharedComponentsTests
     [Fact]
     public void AppCss_ChipCloudChipIsTheFilterChip()
     {
-        string css = AppCss();
+        string css = CssText.AppCss();
 
         string chip = Rule(css, ".chip-cloud-chip,\n.chip-cloud-all");
         Assert.Contains("height: 28px;", chip, StringComparison.Ordinal); // contains-ok: stylesheet source text

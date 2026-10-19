@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using TestContext = Xunit.TestContext;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui.Sidebar;
 
@@ -21,12 +22,10 @@ public sealed class R3RightSidebarTests
         "C:\\teams\\note.md",
         LibraryNodeRole.File);
 
-    private static string Css() => File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
-
     /// <summary>The declarations of the first rule whose selector is exactly <paramref name="selector"/>.</summary>
     private static string Rule(string selector)
     {
-        Match match = Regex.Match(Css(), @"(?m)^" + string.Join(@"\s+", selector.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Select(static token => Regex.Escape(token))) + @"\s*\{([^}]*)\}");
+        Match match = Regex.Match(CssText.AppCss(CssNewlines.AsIs), @"(?m)^" + string.Join(@"\s+", selector.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Select(static token => Regex.Escape(token))) + @"\s*\{([^}]*)\}");
         Assert.True(match.Success, $"app.css has no rule for {selector}.");
         return match.Groups[1].Value;
     }

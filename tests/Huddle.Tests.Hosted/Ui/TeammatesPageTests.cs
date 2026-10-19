@@ -10,6 +10,7 @@ using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
 using TeammatesPage = Agency.Huddle.App.Components.Pages.Teammates;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -287,7 +288,7 @@ public sealed class TeammatesPageTests
         // One tile per heading: Amy's name element has to appear exactly twice, once under each. Count
         // the element, never the bare name - the page's prerender markers carry random base64, which
         // contains "Amy" by chance in roughly one run in a hundred.
-        Assert.Equal(2, CountOccurrences(html, "class=\"teammates-item-name\">Amy<"));
+        Assert.Equal(2, CssText.CountOccurrences(html, "class=\"teammates-item-name\">Amy<"));
     }
 
     /// <summary>A Persona whose frontmatter has no Teams field at all falls under the synthetic "No team" heading.</summary>
@@ -335,7 +336,7 @@ public sealed class TeammatesPageTests
         // Exactly the one seeded Chief of Staff tile - the class attribute value itself, not the
         // bare substring "teammate-tile", which also prefixes "teammate-tile-text", "-role" and
         // "-status" on the very same tile and would over-count.
-        Assert.Equal(1, CountOccurrences(html, "class=\"teammate-tile\""));
+        Assert.Equal(1, CssText.CountOccurrences(html, "class=\"teammate-tile\""));
     }
 
     /// <summary>
@@ -479,20 +480,6 @@ public sealed class TeammatesPageTests
     /// <returns>A task that completes once the click has been dispatched.</returns>
     private static Task ClickNewTeammateAsync(IRenderedComponent<Bunit.Rendering.ContainerFragment> cut) =>
         cut.InvokeAsync(() => cut.Find(NewTeammateSelector).Click());
-
-    /// <summary>Counts non-overlapping occurrences of <paramref name="needle"/> in <paramref name="haystack"/>.</summary>
-    private static int CountOccurrences(string haystack, string needle)
-    {
-        var count = 0;
-        var index = 0;
-        while ((index = haystack.IndexOf(needle, index, StringComparison.Ordinal)) >= 0)
-        {
-            count++;
-            index += needle.Length;
-        }
-
-        return count;
-    }
 
     [Fact]
     public async Task Sidebar_LinksToTeammatesPage()

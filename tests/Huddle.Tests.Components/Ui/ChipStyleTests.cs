@@ -4,6 +4,7 @@ using MudBlazor;
 using MudBlazor.Utilities;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Themes;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -51,7 +52,7 @@ public sealed class ChipStyleTests
     [InlineData("tertiary")]
     public void AppCss_StatusChip_IsTintedNeverSolid(string colour)
     {
-        string rule = RuleBody($".mud-chip.status-chip-{colour}");
+        string rule = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), $".mud-chip.status-chip-{colour}");
 
         // Secondary is the one tone no Theme differs on, so it keeps the literal recipe; every other colour reads its tone tokens,
         // whose registered defaults are that same recipe (pinned once in SkinTokensTests).
@@ -70,17 +71,17 @@ public sealed class ChipStyleTests
     [Fact]
     public void AppCss_TagFilterAndMetaChips_AreDeclared()
     {
-        string tag = RuleBody(".mud-chip.tag-chip");
+        string tag = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".mud-chip.tag-chip");
         Assert.Contains("background-color: var(--ink-wash);", tag, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("border: 1px solid var(--ink-edge);", tag, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("color: var(--mud-palette-text-primary);", tag, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
 
-        Assert.Contains("1px dashed", RuleBody(".mud-chip.filter-chip"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        string set = RuleBody(".mud-chip.filter-chip.mud-chip-selected");
+        Assert.Contains("1px dashed", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".mud-chip.filter-chip"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        string set = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".mud-chip.filter-chip.mud-chip-selected");
         Assert.Contains("1px solid var(--mud-palette-primary)", set, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("background-color: var(--hu-selected-background);", set, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
 
-        Assert.Contains("var(--mud-typography-caption-size)", RuleBody(".chip-meta"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("var(--mud-typography-caption-size)", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".chip-meta"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
     }
 
     /// <summary>The tinted text (status colour 50% toward TextPrimary) on its fill (14% over Surface) reaches 4.5:1 for every status colour, and for the neutral chip, in Lumen Light and Lumen Dark.</summary>
@@ -121,15 +122,5 @@ public sealed class ChipStyleTests
 
         string classes = cut.Find(".mud-chip").GetAttribute("class") ?? string.Empty;
         Assert.Contains("status-chip status-chip-success task-card-awake-chip", classes, StringComparison.Ordinal); // contains-ok: one attribute of the rendered chip, asserting token order
-    }
-
-    /// <summary>The body of the first rule whose selector list ends with <paramref name="selector"/>, read from app.css.</summary>
-    private static string RuleBody(string selector)
-    {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
-        int at = css.IndexOf(selector + " {", StringComparison.Ordinal);
-        Assert.True(at >= 0, $"No rule for {selector}.");
-        int open = css.IndexOf('{', at);
-        return css[(open + 1)..css.IndexOf('}', open)];
     }
 }

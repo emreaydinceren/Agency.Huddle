@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -20,7 +21,7 @@ public sealed partial class FieldLabelAboveTests
     [Fact]
     public void AppCss_OutlinedLabel_SitsAboveTheField()
     {
-        string body = RuleBody(Css(), AboveSelector);
+        string body = CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), AboveSelector, false);
 
         Assert.Equal("static", Declaration(body, "position"));
         Assert.Equal("-1", Declaration(body, "order"));
@@ -33,7 +34,7 @@ public sealed partial class FieldLabelAboveTests
     [Fact]
     public void AppCss_OutlinedBorder_CutsNoNotch()
     {
-        string body = RuleBody(Css(), ".mud-input.mud-input-outlined > .mud-input-outlined-border legend");
+        string body = CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), ".mud-input.mud-input-outlined > .mud-input-outlined-border legend", false);
 
         Assert.Equal("none", Declaration(body, "display"));
     }
@@ -52,27 +53,14 @@ public sealed partial class FieldLabelAboveTests
     [InlineData(".mud-input-control.toolbar-compact .mud-input-label", "display", "none")]
     public void AppCss_HiddenLabelContexts_KeepHiding(string selector, string property, string value)
     {
-        Assert.Equal(value, Declaration(RuleBody(Css(), selector), property));
+        Assert.Equal(value, Declaration(CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), selector, false), property));
     }
 
     /// <summary>The Top bar's "Tasks need you" pill is markup a style pack shows; app.css hides it for every other Theme.</summary>
     [Fact]
     public void AppCss_TasksNeedYouPill_IsHiddenWithoutAPack()
     {
-        Assert.Equal("none", Declaration(RuleBody(Css(), ".tasks-need-you-pill"), "display"));
-    }
-
-    /// <summary>The source text of <c>app.css</c>.</summary>
-    private static string Css() => File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
-
-    /// <summary>The body of the first rule in <paramref name="css"/> whose selector list is exactly <paramref name="selector"/>.</summary>
-    /// <param name="css">The stylesheet source.</param>
-    /// <param name="selector">The rule's whole selector list.</param>
-    private static string RuleBody(string css, string selector)
-    {
-        Match match = Regex.Match(css, @"(?<![\w.-])" + Regex.Escape(selector) + @"\s*\{(?<body>[^}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
-        Assert.True(match.Success, $"app.css has no '{selector}' rule.");
-        return match.Groups["body"].Value;
+        Assert.Equal("none", Declaration(CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), ".tasks-need-you-pill", false), "display"));
     }
 
     /// <summary>The value of <paramref name="property"/> in a rule body, or an empty string when it is not declared.</summary>

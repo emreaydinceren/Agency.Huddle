@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Css;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
@@ -7,8 +8,6 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 public sealed class PageTitleLayoutTests
 {
-    private static string AppCss() =>
-        File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
 
     private static string Page(string name) =>
         File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Pages", name));
@@ -17,7 +16,7 @@ public sealed class PageTitleLayoutTests
     [Fact]
     public void PageReading_KeepsTheWidthCapAndDropsTheCentring()
     {
-        string css = AppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         int rule = css.IndexOf(".mud-container.page-reading {", StringComparison.Ordinal);
         Assert.True(rule >= 0, "app.css has no .mud-container.page-reading rule.");
@@ -45,7 +44,7 @@ public sealed class PageTitleLayoutTests
     [Fact]
     public void TitleInlineEdit_UsesTheH5Role()
     {
-        string css = AppCss();
+        string css = CssText.AppCss(CssNewlines.AsIs);
 
         int rule = css.IndexOf(".title-inline-edit .mud-input-slot", StringComparison.Ordinal);
         Assert.True(rule >= 0, "app.css has no .title-inline-edit rule.");

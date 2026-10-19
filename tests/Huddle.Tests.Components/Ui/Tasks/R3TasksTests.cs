@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Css;
 namespace Agency.Huddle.Tests.Ui.Tasks;
 
 using AngleSharp.Dom;
@@ -86,14 +87,14 @@ public sealed class R3TasksTests
         Assert.Equal("1", heading.QuerySelector(".task-group-count")?.TextContent.Trim());
         Assert.NotNull(heading.QuerySelector(".mud-avatar-small"));
 
-        string css = AppCss();
-        string wash = RuleBody(css, ".mud-data-grid.task-list-grid .mud-table-cell.mud-datagrid-group");
+        string css = CssText.AppCss();
+        string wash = CssText.RuleBody(css, ".mud-data-grid.task-list-grid .mud-table-cell.mud-datagrid-group");
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("background-color: var(--hu-ground-page);", wash, StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("font-weight: 600;", RuleBody(css, ".task-group-label"), StringComparison.Ordinal);
+        Assert.Contains("font-weight: 600;", CssText.RuleBody(css, ".task-group-label"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("font-size: var(--mud-typography-caption-size);", RuleBody(css, ".task-group-count"), StringComparison.Ordinal);
+        Assert.Contains("font-size: var(--mud-typography-caption-size);", CssText.RuleBody(css, ".task-group-count"), StringComparison.Ordinal);
 
         foreach (string rule in RulesWithSelector(css, "task-list-grid"))
         {
@@ -135,7 +136,7 @@ public sealed class R3TasksTests
         Assert.Equal("grid-template-columns: minmax(260px, 300px) minmax(260px, 300px) minmax(260px, 300px) minmax(260px, 300px) 40px 40px;", style);
         Assert.Equal(style, cut.Find(".task-board-lane-columns").GetAttribute("style"));
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("grid-auto-columns: minmax(260px, 300px)", RuleBody(AppCss(), ".task-board-lane-columns"), StringComparison.Ordinal);
+        Assert.Contains("grid-auto-columns: minmax(260px, 300px)", CssText.RuleBody(CssText.AppCss(), ".task-board-lane-columns"), StringComparison.Ordinal);
         Assert.Equal(["0", "0"], cut.FindAll("div.task-board-column-header-rail .task-board-column-count").Select(count => count.TextContent.Trim()));
     }
 
@@ -211,7 +212,7 @@ public sealed class R3TasksTests
         IElement heading = cut.Find("h2.group-heading.task-board-lane-heading");
         Assert.Equal("Nova", heading.QuerySelector(".task-board-lane-label")?.TextContent.Trim());
         Assert.Equal("2", heading.QuerySelector(".task-board-lane-count")?.TextContent.Trim());
-        string rule = RuleBody(AppCss(), ".task-board-lane-heading.group-heading");
+        string rule = CssText.RuleBody(CssText.AppCss(), ".task-board-lane-heading.group-heading");
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("border-bottom: 1px solid var(--hu-line-region);", rule, StringComparison.Ordinal);
     }
@@ -236,9 +237,9 @@ public sealed class R3TasksTests
         Assert.All(items, item => Assert.NotNull(item.QuerySelector(".mud-icon-root")));
         Assert.NotNull(cut.Find(".task-card .task-actions-menu.is-open")); // the activator stays visible while its menu is open
 
-        string css = AppCss();
+        string css = CssText.AppCss();
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("opacity: 0;", RuleBody(css, ".task-actions-reveal .task-actions-button"), StringComparison.Ordinal);
+        Assert.Contains("opacity: 0;", CssText.RuleBody(css, ".task-actions-reveal .task-actions-button"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains(".task-card:hover .task-actions-reveal .task-actions-button", css, StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
@@ -279,7 +280,7 @@ public sealed class R3TasksTests
 
         Assert.DoesNotContain("is-zero", some.Find(".tasks-count-need-you").ClassList);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains(".tasks-count-need-you:not(.is-zero)", AppCss(), StringComparison.Ordinal);
+        Assert.Contains(".tasks-count-need-you:not(.is-zero)", CssText.AppCss(), StringComparison.Ordinal);
     }
 
     // ---- B1, E2: the page header and document title ----
@@ -556,10 +557,10 @@ public sealed class R3TasksTests
         await cut.InvokeAsync(() => cut.Find("button[aria-label='Edit title']").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.True(HasClass(DetailDrawer(cut).Instance.Class, "is-title-editing")));
-        string css = AppCss();
+        string css = CssText.AppCss();
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("display: none;", RuleBody(css, ".tasks-detail-drawer.is-title-editing .resizable-drawer-title"), StringComparison.Ordinal);
-        string field = RuleBody(css, ".task-detail-title .mud-input-slot,\n.task-detail-title .mud-input > input.mud-input-root.mud-input-root-outlined");
+        Assert.Contains("display: none;", CssText.RuleBody(css, ".tasks-detail-drawer.is-title-editing .resizable-drawer-title"), StringComparison.Ordinal);
+        string field = CssText.RuleBody(css, ".task-detail-title .mud-input-slot,\n.task-detail-title .mud-input > input.mud-input-root.mud-input-root-outlined");
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("font-size: var(--mud-typography-h6-size);", field, StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
@@ -597,7 +598,7 @@ public sealed class R3TasksTests
         Assert.Contains("long-text-field", field.ClassList);
         Assert.Equal("Description", field.QuerySelector("label")?.TextContent.Trim());
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("clip-path: inset(50%);", RuleBody(AppCss(), ".task-detail-description-field .mud-input-label"), StringComparison.Ordinal);
+        Assert.Contains("clip-path: inset(50%);", CssText.RuleBody(CssText.AppCss(), ".task-detail-description-field .mud-input-label"), StringComparison.Ordinal);
     }
 
     /// <summary>The change log is a panel at elevation 0 with an Edge line, not a shadowed card (audit B4l).</summary>
@@ -611,7 +612,7 @@ public sealed class R3TasksTests
         IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
 
         Assert.Equal(0, cut.FindComponent<MudExpansionPanels>().Instance.Elevation);
-        string rule = RuleBody(AppCss(), ".task-detail-changelog.mud-expansion-panels .mud-expand-panel");
+        string rule = CssText.RuleBody(CssText.AppCss(), ".task-detail-changelog.mud-expansion-panels .mud-expand-panel");
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("box-shadow: none;", rule, StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
@@ -633,7 +634,7 @@ public sealed class R3TasksTests
         Assert.Equal("Add tag…", cut.FindComponents<MudTextField<string>>().Single(m => HasClass(m.Instance.Class, "task-detail-tags-add")).Instance.Placeholder);
         Assert.All(cut.FindComponents<MudDatePicker>(), picker => Assert.Equal("None", picker.Instance.Placeholder));
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("color: var(--mud-palette-text-secondary);", RuleBody(AppCss(), ".task-detail-prop-value input::placeholder,\n.task-detail-prop-value textarea::placeholder,\n.task-detail-description-field textarea::placeholder"), StringComparison.Ordinal);
+        Assert.Contains("color: var(--mud-palette-text-secondary);", CssText.RuleBody(CssText.AppCss(), ".task-detail-prop-value input::placeholder,\n.task-detail-prop-value textarea::placeholder,\n.task-detail-description-field textarea::placeholder"), StringComparison.Ordinal);
     }
 
     /// <summary>A date picker's input reads "MMM d, yyyy" and never an ISO date (audit B4q).</summary>
@@ -843,16 +844,16 @@ public sealed class R3TasksTests
         Assert.Contains("toolbar-compact", cut.Find(".task-toolbar-search").ClassList);
         Assert.Contains("filter-chip", cut.Find(".task-toolbar-requests").ClassList);
 
-        string css = AppCss();
-        string chip = RuleBody(css, ".task-filter-chip");
+        string css = CssText.AppCss();
+        string chip = CssText.RuleBody(css, ".task-filter-chip");
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("height: 28px;", chip, StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("background-color: transparent;", RuleBody(css, ".task-filter-chip-set"), StringComparison.Ordinal);
+        Assert.Contains("background-color: transparent;", CssText.RuleBody(css, ".task-filter-chip-set"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("height: 28px;", RuleBody(css, ".task-toolbar .mud-icon-button:not(.mud-switch-base),\n.task-toolbar-header .mud-icon-button:not(.mud-switch-base)"), StringComparison.Ordinal);
+        Assert.Contains("height: 28px;", CssText.RuleBody(css, ".task-toolbar .mud-icon-button:not(.mud-switch-base),\n.task-toolbar-header .mud-icon-button:not(.mud-switch-base)"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("color: var(--hu-selected-foreground);", RuleBody(css, ".task-filter-chip-set .task-filter-chip-button"), StringComparison.Ordinal);
+        Assert.Contains("color: var(--hu-selected-foreground);", CssText.RuleBody(css, ".task-filter-chip-set .task-filter-chip-button"), StringComparison.Ordinal);
     }
 
     /// <summary>The Dense switch is an Accent switch, like the Fields switches.</summary>
@@ -874,21 +875,6 @@ public sealed class R3TasksTests
     /// <param name="name">The class token.</param>
     private static bool HasClass(string? classes, string name) =>
         classes is not null && classes.Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains(name, StringComparer.Ordinal);
-
-    /// <summary>The text of <c>app.css</c> with LF line endings.</summary>
-    private static string AppCss() => File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css")).Replace("\r\n", "\n", StringComparison.Ordinal);
-
-    /// <summary>The declarations of the first rule in <paramref name="css"/> whose selector text is exactly <paramref name="selector"/>.</summary>
-    /// <param name="css">The stylesheet, with LF endings.</param>
-    /// <param name="selector">The selector, verbatim.</param>
-    private static string RuleBody(string css, string selector)
-    {
-        string anchor = "\n" + selector + " {";
-        int start = css.IndexOf(anchor, StringComparison.Ordinal);
-        Assert.True(start >= 0, $"No rule for {selector}.");
-        int open = start + anchor.Length;
-        return css[open..css.IndexOf('}', open)];
-    }
 
     /// <summary>The declarations of every rule whose selector mentions <paramref name="needle"/>.</summary>
     /// <param name="css">The stylesheet, with LF endings.</param>

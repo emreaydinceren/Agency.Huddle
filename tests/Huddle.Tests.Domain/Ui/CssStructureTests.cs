@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -22,7 +23,7 @@ public sealed class CssStructureTests
     [Fact]
     public void AppCss_HasGlobalMudBlazorOverridesSectionNearTheTop_HoldingTheFourRules()
     {
-        string text = AppCss();
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         int start = text.IndexOf(GlobalHeader, StringComparison.Ordinal);
         Assert.True(start >= 0, "app.css has no '/* ---- Global MudBlazor overrides' section header.");
@@ -42,7 +43,7 @@ public sealed class CssStructureTests
     [Fact]
     public void AppCss_GlobalMudBlazorRules_AreDeclaredOnlyInsideTheSection()
     {
-        string text = AppCss();
+        string text = CssText.AppCss(CssNewlines.AsIs);
         int start = text.IndexOf(GlobalHeader, StringComparison.Ordinal);
         Assert.True(start >= 0, "app.css has no Global MudBlazor overrides section.");
         string outside = text.Remove(start, Section(text, start).Length);
@@ -59,7 +60,7 @@ public sealed class CssStructureTests
     [Fact]
     public void AppCss_TabRule_SetsTextTransformNone()
     {
-        string text = AppCss();
+        string text = CssText.AppCss(CssNewlines.AsIs);
         int start = text.IndexOf(GlobalHeader, StringComparison.Ordinal);
         Assert.True(start >= 0, "app.css has no Global MudBlazor overrides section.");
 
@@ -76,7 +77,7 @@ public sealed class CssStructureTests
     [Fact]
     public void AppCss_DraftCaret_HasReducedMotionBranch()
     {
-        string blocks = string.Join("\n", ReducedMotionBlocks(AppCss()));
+        string blocks = string.Join("\n", ReducedMotionBlocks(CssText.AppCss(CssNewlines.AsIs)));
 
         Assert.Matches(@"\.draft-caret\s*\{[^}]*animation:\s*none", blocks);
     }
@@ -102,7 +103,7 @@ public sealed class CssStructureTests
     [Fact]
     public void AppCss_FocusVisibleRules_NeverDrawAnAccentRing()
     {
-        string text = AppCss();
+        string text = CssText.AppCss(CssNewlines.AsIs);
 
         foreach (Match rule in Regex.Matches(text, @"(?<sel>[^{}]*:focus-visible[^{}]*)\{(?<body>[^}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2)))
         {
@@ -119,7 +120,7 @@ public sealed class CssStructureTests
     [Fact]
     public void AppCss_AvatarLibraryThumbHover_DrawsNoOutline()
     {
-        Match rule = Regex.Match(AppCss(), @"\.avatar-library-thumb:hover\s*\{(?<body>[^}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
+        Match rule = Regex.Match(CssText.AppCss(CssNewlines.AsIs), @"\.avatar-library-thumb:hover\s*\{(?<body>[^}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
 
         Assert.True(rule.Success, "app.css has no '.avatar-library-thumb:hover' rule.");
         Assert.DoesNotContain("outline", rule.Groups["body"].Value, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
@@ -150,13 +151,10 @@ public sealed class CssStructureTests
     [InlineData(".tab-actions")]
     public void AppCss_HoverNoneBlock_RevealsEveryHoverRevealedControl(string selector)
     {
-        string blocks = string.Join("\n", MediaBlocks(AppCss(), "(hover: none)"));
+        string blocks = string.Join("\n", MediaBlocks(CssText.AppCss(CssNewlines.AsIs), "(hover: none)"));
 
         Assert.Matches(Regex.Escape(selector) + @"[^{]*\{[^}]*opacity:\s*1", blocks);
     }
-
-    private static string AppCss() =>
-        File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
 
     private static int LineOf(string text, int index) =>
         text.AsSpan(0, index).Count('\n') + 1;

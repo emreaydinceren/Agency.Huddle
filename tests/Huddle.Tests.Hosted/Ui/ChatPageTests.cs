@@ -20,6 +20,7 @@ using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Library;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -84,7 +85,7 @@ public sealed class ChatPageTests
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync($"/rooms/{room.Id}", ct);
 
-        Assert.Equal(1, ChatPageTests.CountOccurrences(html, replyText));
+        Assert.Equal(1, CssText.CountOccurrences(html, replyText));
     }
 
     /// <summary>A Stop button renders beside a live Draft, and nowhere on the page when there is no Draft.</summary>
@@ -412,7 +413,7 @@ public sealed class ChatPageTests
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync($"/rooms/{room.Id}", ct);
 
-        Assert.Equal(2, CountOccurrences(html, "class=\"turn-detail-row\""));
+        Assert.Equal(2, CssText.CountOccurrences(html, "class=\"turn-detail-row\""));
         Assert.Contains("Reading Persona.cs", html, StringComparison.Ordinal); // contains-ok: whole-page server HTML; the row markup is asserted exactly in MessageListTests
         Assert.Contains("Editing Persona.cs", html, StringComparison.Ordinal); // contains-ok: whole-page server HTML; the row markup is asserted exactly in MessageListTests
     }
@@ -955,7 +956,7 @@ public sealed class ChatPageTests
         // not there to click until it does.
         await ChatPageTests.WaitForMarkupAsync(cut, "budget-prompt", ct);
 
-        Assert.Equal(1, ChatPageTests.CountOccurrences(cut.Markup, replyText));
+        Assert.Equal(1, CssText.CountOccurrences(cut.Markup, replyText));
 
         await cut.InvokeAsync(() => ChatPageTests.FindButtonByText(cut, "Continue").ClickAsync());
 
@@ -964,7 +965,7 @@ public sealed class ChatPageTests
         // this method returns rather than inside it.
         await ChatPageTests.WaitForMarkupAsync(cut, "continue-note", ct);
 
-        Assert.Equal(1, ChatPageTests.CountOccurrences(cut.Markup, replyText));
+        Assert.Equal(1, CssText.CountOccurrences(cut.Markup, replyText));
     }
 
     /// <summary>
@@ -1200,19 +1201,6 @@ public sealed class ChatPageTests
             factory.Services.GetRequiredService<ITeamDirectory>(),
             factory.Services.GetRequiredService<ChatService>(),
             factory.Services.GetRequiredService<Drafts>());
-    }
-
-    private static int CountOccurrences(string haystack, string needle)
-    {
-        var count = 0;
-        var index = 0;
-        while ((index = haystack.IndexOf(needle, index, StringComparison.Ordinal)) >= 0)
-        {
-            count++;
-            index += needle.Length;
-        }
-
-        return count;
     }
 
     /// <summary>Registers this factory's real Room services into a fresh <see cref="MudBunitContext"/>, the same pattern <c>TeammatesPageTests</c> uses for <c>Teammates</c>.</summary>

@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Css;
 namespace Agency.Huddle.Tests.Ui.Library;
 
 /// <summary>
@@ -11,9 +12,9 @@ public sealed class R3LibraryTests
     [Fact]
     public void AppCss_TreeHeaderAndToolbar_ShareOneBandHeightAndChromeLine()
     {
-        string css = ReadAppCss();
-        string header = RuleBody(css, ".library-explorer-tree-header");
-        string toolbar = RuleBody(css, ".library-document-toolbar.mud-toolbar");
+        string css = CssText.AppCss();
+        string header = CssText.RuleBody(css, ".library-explorer-tree-header", RuleMatch.Last);
+        string toolbar = CssText.RuleBody(css, ".library-document-toolbar.mud-toolbar", RuleMatch.Last);
 
         Assert.Contains("min-height: 61px;", header, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("min-height: 61px;", toolbar, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
@@ -28,7 +29,7 @@ public sealed class R3LibraryTests
     public void Explorer_NewNote_IsInTheSameRowAsTheCompactSearch()
     {
         string markup = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Library", "LibraryExplorer.razor"));
-        string header = RuleBody(ReadAppCss(), ".library-explorer-tree-header");
+        string header = CssText.RuleBody(CssText.AppCss(), ".library-explorer-tree-header", RuleMatch.Last);
 
         Assert.Contains("Compact=\"true\"", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
         Assert.Contains("display: flex;", header, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
@@ -39,9 +40,9 @@ public sealed class R3LibraryTests
     [Fact]
     public void AppCss_TreeRow_TakesTheSelectedShapeAndKeepsItsBar()
     {
-        string css = ReadAppCss();
-        string row = RuleBody(css, ".library-tree .mud-treeview-item-content");
-        string selected = RuleBody(css, ".library-tree.mud-treeview .mud-treeview-item-content.mud-treeview-item-selected");
+        string css = CssText.AppCss();
+        string row = CssText.RuleBody(css, ".library-tree .mud-treeview-item-content", RuleMatch.Last);
+        string selected = CssText.RuleBody(css, ".library-tree.mud-treeview .mud-treeview-item-content.mud-treeview-item-selected", RuleMatch.Last);
 
         Assert.Contains("margin-inline: 4px;", row, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("border-radius: calc(var(--mud-default-borderradius) * 0.75);", row, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
@@ -55,23 +56,10 @@ public sealed class R3LibraryTests
     public void Tree_MenuItems_CloseTheMenuBeforeADialogOpens()
     {
         string markup = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Library", "LibraryTree.razor"));
-        string css = ReadAppCss();
+        string css = CssText.AppCss();
 
         Assert.Contains("MenuDialogs.AfterClosingAsync(menu,", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
         Assert.Contains("this.RaiseFromMenuAsync(action.Kind, value)", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
-        Assert.Contains("color: var(--mud-palette-text-secondary);", RuleBody(css, ".library-tree-menu-note"), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
-    }
-
-    private static string ReadAppCss() => File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
-
-    private static string RuleBody(string css, string selector)
-    {
-        string normalised = css.Replace("\r\n", "\n", StringComparison.Ordinal);
-        string opening = "\n" + selector + " {";
-        int start = normalised.LastIndexOf(opening, StringComparison.Ordinal);
-        Assert.True(start >= 0, $"app.css has no rule with the selector '{selector}'.");
-
-        int end = normalised.IndexOf('}', start);
-        return normalised[(start + opening.Length)..end];
+        Assert.Contains("color: var(--mud-palette-text-secondary);", CssText.RuleBody(css, ".library-tree-menu-note", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 }
