@@ -1,18 +1,6 @@
 namespace Agency.Huddle.App.Tasks;
 
 /// <summary>
-/// One successful change to a Task (Spec §9.5): what it looked like before (or <see langword="null"/>
-/// for a Create), what it looks like now, what changed, who changed it, and the Change log entry
-/// recorded for it.
-/// </summary>
-/// <param name="Before">The Task before the change, or <see langword="null"/> when it was just created.</param>
-/// <param name="After">The Task after the change.</param>
-/// <param name="Changes">What changed, from <see cref="TaskDiff.Compare(TaskItem, TaskItem)"/>.</param>
-/// <param name="Actor">Who made the change.</param>
-/// <param name="Entry">The Change log entry recorded for this change.</param>
-internal sealed record TaskChange(TaskItem? Before, TaskItem After, IReadOnlyList<FieldChange> Changes, TaskActor Actor, ChangeLogEntry Entry);
-
-/// <summary>
 /// A plain hub for Task-related notifications (Spec §9.5): nothing here reads or writes a Task
 /// itself. <see cref="TaskService"/> raises <see cref="TaskChanged"/> after every successful
 /// mutation, outside any lock, and re-raises <see cref="TaskStore.IndexChanged"/> as

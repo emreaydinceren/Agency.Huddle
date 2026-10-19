@@ -1,16 +1,10 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Watching;
+using Microsoft.Extensions.Options;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace Agency.Huddle.App.Tasks.Views;
-
-/// <summary>A parse failure in <c>views.json</c>, with a 1-based line and column.</summary>
-/// <param name="Message">A human-readable description of the failure.</param>
-/// <param name="Line">The 1-based line the failure was found on, or <see langword="null"/> when <see cref="JsonException"/> did not report one.</param>
-/// <param name="Column">The 1-based column the failure was found on, or <see langword="null"/> when <see cref="JsonException"/> did not report one.</param>
-public sealed record ViewLoadError(string Message, long? Line, long? Column);
 
 /// <summary>
 /// Joins the two built-in Views (<c>All Tasks</c>, <c>My Tasks</c>) with the Human-editable
@@ -503,7 +497,9 @@ internal sealed partial class ViewStore : IDisposable
             ex,
             "Could not read '{Path}' after {Attempts} attempts; keeping the previously resolved Views.",
             this.path,
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
             RetryingFileRead.Attempts);
+#pragma warning restore HAA0601
         return null;
     }
 

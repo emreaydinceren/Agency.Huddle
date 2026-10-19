@@ -143,7 +143,9 @@ internal static class ReferenceScanner
             string key = candidate.Kind is ReferenceKind.Team or ReferenceKind.LibraryFile
                 ? candidate.Key.ToUpperInvariant()
                 : candidate.Key;
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
             if (!seen.Add(string.Concat(candidate.Kind.ToString(), "\u001F", key)))
+#pragma warning restore HAA0102
             {
                 continue;
             }

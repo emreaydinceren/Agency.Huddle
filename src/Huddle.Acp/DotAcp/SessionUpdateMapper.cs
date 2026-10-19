@@ -50,7 +50,9 @@ internal static class SessionUpdateMapper
             case dotacp.protocol.ToolCall toolCall:
             return new ToolCallStarted(
                 sessionId,
+#pragma warning disable HAA0601 // The protocol id is a struct with an implicit conversion to string: a method call, not a boxing conversion.
                 (string)toolCall.ToolCallId,
+#pragma warning restore HAA0601
                 toolCall.Title,
                 SessionUpdateMapper.MapToolKind(toolCall.Kind),
                 SessionUpdateMapper.MapToolCallStatus(toolCall.Status),
@@ -61,7 +63,9 @@ internal static class SessionUpdateMapper
             case dotacp.protocol.SessionUpdateToolCallUpdate toolCallUpdate:
             return new ToolCallUpdated(
                 sessionId,
+#pragma warning disable HAA0601 // The protocol id is a struct with an implicit conversion to string: a method call, not a boxing conversion.
                 (string)toolCallUpdate.ToolCallId,
+#pragma warning restore HAA0601
                 toolCallUpdate.Title,
                 SessionUpdateMapper.MapToolKind(toolCallUpdate.Kind),
                 SessionUpdateMapper.MapToolCallStatus(toolCallUpdate.Status),
@@ -77,7 +81,9 @@ internal static class SessionUpdateMapper
             return new UsageUpdated(sessionId, (long)usageUpdate.Size, (long)usageUpdate.Used, SessionUpdateMapper.MapCost(usageUpdate.Cost));
 
             case dotacp.protocol.CurrentModeUpdate currentModeUpdate:
+#pragma warning disable HAA0601 // The protocol id is a struct with an implicit conversion to string: a method call, not a boxing conversion.
             return new ModeChanged(sessionId, (string)currentModeUpdate.CurrentModeId);
+#pragma warning restore HAA0601
 
             case dotacp.protocol.AvailableCommandsUpdate availableCommandsUpdate:
             return new AvailableCommandsUpdated(sessionId, SessionUpdateMapper.MapAvailableCommands(availableCommandsUpdate.AvailableCommands));
@@ -118,7 +124,9 @@ internal static class SessionUpdateMapper
             case dotacp.protocol.ToolKind.Other:
             return ToolKind.Other;
             default:
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
             throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unmapped dotacp.protocol.ToolKind value.");
+#pragma warning restore HAA0601
         }
     }
 
@@ -135,7 +143,9 @@ internal static class SessionUpdateMapper
             case dotacp.protocol.ToolCallStatus.Failed:
             return ToolCallStatus.Failed;
             default:
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
             throw new ArgumentOutOfRangeException(nameof(status), status, "Unmapped dotacp.protocol.ToolCallStatus value.");
+#pragma warning restore HAA0601
         }
     }
 
@@ -154,7 +164,9 @@ internal static class SessionUpdateMapper
             case dotacp.protocol.StopReason.Cancelled:
             return StopReason.Cancelled;
             default:
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
             throw new ArgumentOutOfRangeException(nameof(reason), reason, "Unmapped dotacp.protocol.StopReason value.");
+#pragma warning restore HAA0601
         }
     }
 
@@ -171,7 +183,9 @@ internal static class SessionUpdateMapper
             case dotacp.protocol.PermissionOptionKind.RejectAlways:
             return PermissionOptionKind.RejectAlways;
             default:
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
             throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unmapped dotacp.protocol.PermissionOptionKind value.");
+#pragma warning restore HAA0601
         }
     }
 
@@ -181,7 +195,9 @@ internal static class SessionUpdateMapper
 
         dotacp.protocol.ToolCallUpdate toolCall = request.ToolCall;
         ToolCallInfo toolCallInfo = new ToolCallInfo(
+#pragma warning disable HAA0601 // The protocol id is a struct with an implicit conversion to string: a method call, not a boxing conversion.
             (string)toolCall.ToolCallId,
+#pragma warning restore HAA0601
             toolCall.Title,
             SessionUpdateMapper.MapToolKind(toolCall.Kind),
             SessionUpdateMapper.MapToolCallStatus(toolCall.Status),
@@ -191,12 +207,16 @@ internal static class SessionUpdateMapper
         foreach (dotacp.protocol.PermissionOption option in request.Options)
         {
             options.Add(new PermissionOptionInfo(
+#pragma warning disable HAA0601 // The protocol id is a struct with an implicit conversion to string: a method call, not a boxing conversion.
                 (string)option.OptionId,
+#pragma warning restore HAA0601
                 option.Name,
                 SessionUpdateMapper.MapPermissionOptionKind(option.Kind)));
         }
 
+#pragma warning disable HAA0601 // The protocol id is a struct with an implicit conversion to string: a method call, not a boxing conversion.
         return new PermissionRequestContext((string)request.SessionId, toolCallInfo, options);
+#pragma warning restore HAA0601
     }
 
     /// <summary>
@@ -343,7 +363,9 @@ internal static class SessionUpdateMapper
             case dotacp.protocol.PlanEntryPriority.Low:
             return PlanEntryPriority.Low;
             default:
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
             throw new ArgumentOutOfRangeException(nameof(priority), priority, "Unmapped dotacp.protocol.PlanEntryPriority value.");
+#pragma warning restore HAA0601
         }
     }
 
@@ -358,7 +380,9 @@ internal static class SessionUpdateMapper
             case dotacp.protocol.PlanEntryStatus.Completed:
             return PlanEntryStatus.Completed;
             default:
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
             throw new ArgumentOutOfRangeException(nameof(status), status, "Unmapped dotacp.protocol.PlanEntryStatus value.");
+#pragma warning restore HAA0601
         }
     }
 }

@@ -249,29 +249,10 @@ internal static class SystemPromptComposer
 
         if (roleBlock is not null)
         {
-            parts.Add(BuildRoleBlock(prompts, roleBlock));
-            if (roleBlock.Process is { } process)
-            {
-                parts.Add(process.IsManager
-                    ? prompts.Render("systemPrompt.processBlockManager", new Dictionary<string, string> { ["{{process}}"] = process.Content })
-                    : prompts.Render("systemPrompt.processBlockMember", new Dictionary<string, string> { ["{{path}}"] = process.Content }));
-            }
+            AddRoleParts(parts, prompts, roleBlock);
         }
 
-        if (skills.Count > 0)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(readSkillToolName);
-
-            var skillsBlock = prompts.Render(
-                "systemPrompt.skills",
-                new Dictionary<string, string>
-                {
-                    ["{{skillIndex}}"] = BuildSkillIndex(skills),
-                    ["{{readSkillTool}}"] = readSkillToolName,
-                });
-
-            parts.Add(skillsBlock);
-        }
+        AddSkillsPart(parts, prompts, skills, readSkillToolName);
 
         if (memory is not null)
         {
@@ -283,10 +264,62 @@ internal static class SystemPromptComposer
             parts.Add(BuildTeamMemoryBlock(prompts, teamMemory));
         }
 
-        // D16 P0-1 / D28 (RS §6.9, §8.1): the truthful closing part is appended here, in this — the
-        // last — overload of the Compose chain, once, after everything else including a Skills or
-        // Memory block when either is present. Every other overload delegates into this one, so
-        // appending it anywhere else would double it.
+        AddClosingParts(parts, prompts, scope, memory);
+
+        return string.Join("\n\n", parts);
+    }
+
+    /// <summary>Adds the role block, followed by the Process block (manager or member wording) when the role carries one.</summary>
+    /// <param name="parts">The prompt parts so far.</param>
+    /// <param name="prompts">Resolves each prompt's current text.</param>
+    /// <param name="roleBlock">The member's role, Team, colleagues and skills.</param>
+    private static void AddRoleParts(List<string> parts, IPromptSource prompts, RoleBlockInput roleBlock)
+    {
+        parts.Add(BuildRoleBlock(prompts, roleBlock));
+        if (roleBlock.Process is { } process)
+        {
+            parts.Add(process.IsManager
+                ? prompts.Render("systemPrompt.processBlockManager", new Dictionary<string, string> { ["{{process}}"] = process.Content })
+                : prompts.Render("systemPrompt.processBlockMember", new Dictionary<string, string> { ["{{path}}"] = process.Content }));
+        }
+    }
+
+    /// <summary>Adds the Skills block when the Persona has Skills; an empty list adds nothing.</summary>
+    /// <param name="parts">The prompt parts so far.</param>
+    /// <param name="prompts">Resolves each prompt's current text.</param>
+    /// <param name="skills">The Persona's resolved Skills.</param>
+    /// <param name="readSkillToolName"><c>read_skill</c>'s own name; only read, and then required, when <paramref name="skills"/> is non-empty.</param>
+    private static void AddSkillsPart(List<string> parts, IPromptSource prompts, IReadOnlyList<Skill> skills, string readSkillToolName)
+    {
+        if (skills.Count == 0)
+        {
+            return;
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(readSkillToolName);
+
+        var skillsBlock = prompts.Render(
+            "systemPrompt.skills",
+            new Dictionary<string, string>
+            {
+                ["{{skillIndex}}"] = BuildSkillIndex(skills),
+                ["{{readSkillTool}}"] = readSkillToolName,
+            });
+
+        parts.Add(skillsBlock);
+    }
+
+    /// <summary>
+    /// Adds the truthful closing part(s). D16 P0-1 / D28 (RS §6.9, §8.1): the closing part is appended in the
+    /// last overload of the Compose chain, once, after everything else including a Skills or Memory block when
+    /// either is present. Every other overload delegates into that one, so appending it anywhere else would double it.
+    /// </summary>
+    /// <param name="parts">The prompt parts so far.</param>
+    /// <param name="prompts">Resolves each prompt's current text.</param>
+    /// <param name="scope">Which of RS §6.9's two truthful texts this session gets.</param>
+    /// <param name="memory">The Memory snapshot; its presence adds the carry line in <see cref="SessionScope.PerRoom"/>.</param>
+    private static void AddClosingParts(List<string> parts, IPromptSource prompts, SessionScope scope, MemorySnapshot? memory)
+    {
         if (scope == SessionScope.PerRoom)
         {
             parts.Add(prompts.Render("systemPrompt.roomSessions", new Dictionary<string, string>()));
@@ -299,8 +332,6 @@ internal static class SystemPromptComposer
         {
             parts.Add(prompts.Render("systemPrompt.sharedSession", new Dictionary<string, string>()));
         }
-
-        return string.Join("\n\n", parts);
     }
 
     /// <summary>
@@ -510,6 +541,6 @@ internal static class SystemPromptComposer
 
         lines.Add(current);
 
-        return string.Join("\n", lines);
+        return string.Join('\n', lines);
     }
 }

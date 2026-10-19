@@ -1,17 +1,10 @@
+using Agency.Huddle.App.Prompts;
+using Agency.Huddle.SkillPacks.Checking;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-using Agency.Huddle.App.Prompts;
-using Agency.Huddle.SkillPacks.Checking;
 
 namespace Agency.Huddle.App.SkillSources;
-
-/// <summary>Where <c>InstallSkillPack.md</c> is; lets <see cref="SkillPromptBuilder"/> avoid the sealed writer.</summary>
-internal interface IInstallFileLocation
-{
-    /// <summary>The full path of <c>{DataDir}/InstallSkillPack.md</c>.</summary>
-    string InstallFilePath { get; }
-}
 
 /// <summary>Builds every prompt the Human copies into their AI tool (§6.8), through <see cref="IPromptSource"/> so Settings ›
 /// Prompts can reword each one. Typed text becomes one capped line; findings become an indented block. It returns text and

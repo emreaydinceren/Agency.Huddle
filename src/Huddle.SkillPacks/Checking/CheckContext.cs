@@ -41,27 +41,3 @@ public sealed record CheckContext(
             installContext.Written);
     }
 }
-
-/// <summary>A role a Pack's <c>appliesTo</c> may name.</summary>
-/// <param name="Id">The role id.</param>
-/// <param name="Title">The role's title.</param>
-/// <param name="Description">One line on what the role does.</param>
-/// <param name="SuggestedPacks">The Pack ids the hiring pool suggests for it (check R008).</param>
-public sealed record RoleInfo(string Id, string Title, string Description, IReadOnlyList<string> SuggestedPacks);
-
-/// <summary>A Skill folder in <c>Skills/</c>.</summary>
-/// <param name="Name">The Skill name.</param>
-/// <param name="Origin">The pinned origin the copy came from; null for built-in Skills and Skills the Human wrote.</param>
-/// <param name="Sha256">The hash recorded in <c>.source.json</c>; null for built-in Skills and Skills the Human wrote.</param>
-/// <param name="BuiltIn">True for a Skill that ships with Huddle.</param>
-public sealed record InstalledSkill(string Name, string? Origin, string? Sha256, bool BuiltIn);
-
-/// <summary>Switches for one run of the checks.</summary>
-/// <param name="Strict">Raises S001 and R009 from warning to error. The AI tool sets it on what it just added.</param>
-/// <param name="OnlyPath">Check only the rows whose resolved file is this path or lies under it; <see langword="null"/>
-/// checks all. Registry-level findings are always reported; R008 is skipped when this is set.</param>
-/// <param name="ToolVersion">The version of the program calling Run, for X002. <see langword="null"/> skips X002.</param>
-public sealed record CheckOptions(
-    bool Strict = false,
-    string? OnlyPath = null,
-    string? ToolVersion = null);

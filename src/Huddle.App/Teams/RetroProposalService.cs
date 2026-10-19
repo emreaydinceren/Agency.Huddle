@@ -47,7 +47,7 @@ internal sealed class RetroProposalService(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
 
-        IReadOnlyList<User> members = await directory.GetRoomMembersAsync(roomId, ct);
+        IReadOnlyList<User> members = await directory.GetRoomMembersAsync(roomId, ct).ConfigureAwait(false);
         List<RetroProposalSet> pending = [];
         foreach (TeamSummary team in teams.Teams)
         {
@@ -89,7 +89,7 @@ internal sealed class RetroProposalService(
         ArgumentException.ThrowIfNullOrWhiteSpace(setId);
         ArgumentException.ThrowIfNullOrWhiteSpace(changeId);
 
-        if (!await this.IsPendingAsync(roomId, setId, changeId, ct))
+        if (!await this.IsPendingAsync(roomId, setId, changeId, ct).ConfigureAwait(false))
         {
             return Gone();
         }
@@ -110,8 +110,8 @@ internal sealed class RetroProposalService(
 
         if (outcome.Kind == RetroChangeOutcomeKind.Applied)
         {
-            string text = outcome.Text + await this.MentionAsync(set.Proposer, ct);
-            await this.PostAsync(roomId, text, ct);
+            string text = outcome.Text + await this.MentionAsync(set.Proposer, ct).ConfigureAwait(false);
+            await this.PostAsync(roomId, text, ct).ConfigureAwait(false);
             return outcome with { Text = text };
         }
 
@@ -132,7 +132,7 @@ internal sealed class RetroProposalService(
         ArgumentException.ThrowIfNullOrWhiteSpace(changeId);
         ArgumentNullException.ThrowIfNull(reason);
 
-        if (!await this.IsPendingAsync(roomId, setId, changeId, ct))
+        if (!await this.IsPendingAsync(roomId, setId, changeId, ct).ConfigureAwait(false))
         {
             return Gone();
         }
@@ -145,8 +145,8 @@ internal sealed class RetroProposalService(
         }
 
         string reasonText = string.IsNullOrWhiteSpace(reason) ? NoReason : reason.Trim();
-        string text = $"Rejected '{change.Title}': {reasonText}{await this.MentionAsync(set.Proposer, ct)}";
-        await this.PostAsync(roomId, text, ct);
+        string text = $"Rejected '{change.Title}': {reasonText}{await this.MentionAsync(set.Proposer, ct).ConfigureAwait(false)}";
+        await this.PostAsync(roomId, text, ct).ConfigureAwait(false);
         return new RetroChangeOutcome(RetroChangeOutcomeKind.Rejected, text);
     }
 
@@ -156,7 +156,7 @@ internal sealed class RetroProposalService(
 
     private async Task<bool> IsPendingAsync(string roomId, string setId, string changeId, CancellationToken ct)
     {
-        IReadOnlyList<RetroProposalSet> pending = await this.PendingAsync(roomId, ct);
+        IReadOnlyList<RetroProposalSet> pending = await this.PendingAsync(roomId, ct).ConfigureAwait(false);
         return pending.Any(set => string.Equals(set.Id, setId, StringComparison.Ordinal)
             && set.Changes.Any(change => string.Equals(change.Id, changeId, StringComparison.Ordinal)));
     }
@@ -331,16 +331,16 @@ internal sealed class RetroProposalService(
 
     private async Task<string> MentionAsync(string proposer, CancellationToken ct)
     {
-        User? user = await directory.FindUserByNameAsync(proposer, ct);
+        User? user = await directory.FindUserByNameAsync(proposer, ct).ConfigureAwait(false);
         return user is null ? string.Empty : " @" + user.Name;
     }
 
     private async Task PostAsync(string roomId, string text, CancellationToken ct)
     {
-        User human = await directory.GetHumanAsync(ct);
+        User human = await directory.GetHumanAsync(ct).ConfigureAwait(false);
         try
         {
-            _ = await chat.PostAsync(roomId, human.Id, text, ct: ct);
+            _ = await chat.PostAsync(roomId, human.Id, text, ct: ct).ConfigureAwait(false);
         }
         catch (ChatException ex)
         {

@@ -51,13 +51,13 @@ internal sealed partial class QuestionService(
 
         CheckAnswers(pending, answers);
 
-        User? asker = await directory.GetUserAsync(pending.AskerAgentId, ct);
+        User? asker = await directory.GetUserAsync(pending.AskerAgentId, ct).ConfigureAwait(false);
         string text = Compose(pending, answers, asker?.Name);
 
-        User human = await directory.GetHumanAsync(ct);
+        User human = await directory.GetHumanAsync(ct).ConfigureAwait(false);
         try
         {
-            _ = await chat.PostAsync(roomId, human.Id, text, ct: ct);
+            _ = await chat.PostAsync(roomId, human.Id, text, ct: ct).ConfigureAwait(false);
         }
         catch (ChatException ex)
         {

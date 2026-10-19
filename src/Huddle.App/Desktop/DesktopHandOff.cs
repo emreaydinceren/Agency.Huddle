@@ -2,11 +2,6 @@ using System.Diagnostics;
 
 namespace Agency.Huddle.App.Desktop;
 
-/// <summary>The outcome of <see cref="DesktopHandOff.AcquireOrHandOffAsync"/>.</summary>
-/// <param name="Lock">The instance lock when the caller became the owner; otherwise <see langword="null"/>.</param>
-/// <param name="Opened">Whether the running instance's URL was opened.</param>
-internal sealed record HandOffResult(InstanceLock? Lock, bool Opened);
-
 /// <summary>
 /// The second-launch path: when another instance already owns the data directory, wait for it to publish its
 /// <c>instance.json</c> and open its URL in the browser instead of starting a second server.
@@ -58,7 +53,7 @@ internal static class DesktopHandOff
                 return new HandOffResult(null, false);
             }
 
-            await Task.Delay(pollInterval, ct);
+            await Task.Delay(pollInterval, ct).ConfigureAwait(false);
         }
     }
 }

@@ -65,7 +65,7 @@ internal sealed class LibrarySearchProvider(
             LibraryRoot root = visible[index];
             if (this.beforeRootForTests is { } hook)
             {
-                await hook(root, token);
+                await hook(root, token).ConfigureAwait(false);
             }
 
             if (!this.resolver.TryResolve(root.Id, string.Empty, out LibraryPath? scope, out _))
@@ -73,8 +73,8 @@ internal sealed class LibrarySearchProvider(
                 return;
             }
 
-            perRoot[index] = await this.files.SearchTextAsync(scope, query.Text, query.MaxHits, this.options.Value.Search, isExcluded, !reference, token);
-        });
+            perRoot[index] = await this.files.SearchTextAsync(scope, query.Text, query.MaxHits, this.options.Value.Search, isExcluded, !reference, token).ConfigureAwait(false);
+        }).ConfigureAwait(false);
 
         // Merge in root order, never in completion order, so equal-ranked hits keep one order from run to run (§7.4).
         List<LibraryHit> hits = [];

@@ -1,24 +1,5 @@
 namespace Agency.Huddle.App.Teammates;
 
-/// <summary>Which hire limit refused a hire.</summary>
-internal enum HireLimitKind
-{
-    /// <summary>No limit refused the hire.</summary>
-    None,
-
-    /// <summary>The per-Team member limit refused the hire.</summary>
-    PerTeam,
-
-    /// <summary>The live-process limit refused the hire.</summary>
-    LiveProcesses,
-}
-
-/// <summary>The outcome of a <see cref="HireLimits.Check"/>.</summary>
-/// <param name="Allowed">True when the hire fits both limits.</param>
-/// <param name="Kind">The limit that refused, or <see cref="HireLimitKind.None"/>.</param>
-/// <param name="Limit">The value of the limit that refused; 0 when allowed.</param>
-internal sealed record HireLimitResult(bool Allowed, HireLimitKind Kind, int Limit);
-
 /// <summary>Decides whether a hire fits the per-Team and live-process limits.</summary>
 internal static class HireLimits
 {

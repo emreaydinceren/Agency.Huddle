@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Agency.Huddle.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="bunit" />
+    <PackageReference Include="Nerdbank.Streams" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Huddle.Tests.Common\Huddle.Tests.Common.csproj" />
+    <ProjectReference Include="..\..\src\Huddle.App\Huddle.App.csproj" />
+    <ProjectReference Include="..\..\src\Huddle.Contracts\Huddle.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Huddle.MockAdapter\Huddle.MockAdapter.csproj" />
+    <ProjectReference Include="..\..\src\Huddle.Seeder\Huddle.Seeder.csproj" />
+    <ProjectReference Include="..\..\src\Huddle.SkillPacks\Huddle.SkillPacks.csproj" />
+    <ProjectReference Include="..\..\src\Huddle.Packs\Huddle.Packs.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

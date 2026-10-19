@@ -314,7 +314,9 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
         }
         catch (OperationCanceledException ex)
         {
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
             this.logger.LogWarning(ex, "Model catalog probe timed out after {Timeout}.", ModelCatalogProbe.ProbeTimeout);
+#pragma warning restore HAA0601
             return (false, ProbeResult.Empty);
         }
         catch (IOException ex)

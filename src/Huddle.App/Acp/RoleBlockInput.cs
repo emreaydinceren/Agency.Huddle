@@ -17,19 +17,3 @@ internal sealed record RoleBlockInput(
     IReadOnlyList<ConsultLine> Consult,
     IReadOnlyList<SkillLine> Skills,
     ProcessBlockInput? Process = null);
-
-/// <summary>One colleague in a <see cref="RoleBlockInput"/>.</summary>
-/// <param name="Name">The colleague's Name.</param>
-/// <param name="Role">The colleague's role.</param>
-/// <param name="ConsultWhen">When to consult them, from their public job description; empty when they state none.</param>
-internal sealed record ConsultLine(string Name, string Role, string ConsultWhen);
-
-/// <summary>One skill in a <see cref="RoleBlockInput"/>.</summary>
-/// <param name="Name">The skill's name.</param>
-/// <param name="Description">The skill's description, which states its trigger.</param>
-internal sealed record SkillLine(string Name, string Description);
-
-/// <summary>The process priming of a hired member whose Team has a <c>Process.md</c> (Task 58, PR-4).</summary>
-/// <param name="IsManager">Whether the member is the Team's manager, who receives the whole text rather than its path.</param>
-/// <param name="Content">The whole <c>Process.md</c> text for the manager, or its Library path for every other member.</param>
-internal sealed record ProcessBlockInput(bool IsManager, string Content);

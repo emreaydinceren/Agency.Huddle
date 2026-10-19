@@ -67,6 +67,6 @@ internal static class RemovalText
 
         parts.Add(clone is null ? "Teammates keep their copies in Skills/." : $"Teammates keep their copies in Skills/. Your AI tool's clone at {clone} is not touched.");
         parts.Add("If you share this folder with another Huddle, it loses the notes too.");
-        return string.Join(" ", parts);
+        return string.Join(' ', parts);
     }
 }

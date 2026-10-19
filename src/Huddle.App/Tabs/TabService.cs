@@ -362,7 +362,7 @@ internal sealed class TabService
                 null,
                 [],
                 exported,
-                this.groups.FindIndex(group => string.Equals(group.Id, this.focusedId, StringComparison.Ordinal)));
+                this.FocusedIndex());
 
         return new TabSnapshot(TabSnapshot.CurrentVersion, root);
     }
@@ -460,7 +460,25 @@ internal sealed class TabService
             ? number
             : 0;
 
-    private GroupState Focused() => this.groups.Find(group => string.Equals(group.Id, this.focusedId, StringComparison.Ordinal)) ?? this.groups[0];
+    private GroupState Focused()
+    {
+        int index = this.FocusedIndex();
+        return this.groups[index < 0 ? 0 : index];
+    }
+
+    /// <summary>The index of the focused group, or -1 when none matches; a plain loop, so the render path allocates no closure.</summary>
+    private int FocusedIndex()
+    {
+        for (int index = 0; index < this.groups.Count; index++)
+        {
+            if (string.Equals(this.groups[index].Id, this.focusedId, StringComparison.Ordinal))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
 
     private (GroupState Group, int Index)? Find(Predicate<Tab> match)
     {
@@ -598,7 +616,23 @@ internal sealed class TabService
 
         public string? ActiveId { get; set; }
 
-        public Tab? ActiveTab() => this.ActiveId is null ? null : this.Tabs.Find(tab => string.Equals(tab.Id, this.ActiveId, StringComparison.Ordinal));
+        public Tab? ActiveTab()
+        {
+            if (this.ActiveId is null)
+            {
+                return null;
+            }
+
+            foreach (Tab tab in this.Tabs)
+            {
+                if (string.Equals(tab.Id, this.ActiveId, StringComparison.Ordinal))
+                {
+                    return tab;
+                }
+            }
+
+            return null;
+        }
 
         public int PinnedCount()
         {

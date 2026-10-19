@@ -5,13 +5,6 @@ using Agency.Huddle.SkillPacks.Resolving;
 
 namespace Agency.Huddle.App.SkillSources;
 
-/// <summary>The one-time move from the old format (§6.13). <see cref="RegistryWatcher"/> runs it before its first read.</summary>
-internal interface ISkillSourcesMove
-{
-    /// <summary>Runs the move when SKILLS.md does not exist; otherwise returns at once.</summary>
-    Task RunAsync(CancellationToken ct);
-}
-
 /// <summary>
 /// Keeps <see cref="SkillRegistry"/> current (§8.5, §6.5 "RegistryWatcher"). It owns when: file watchers on the watch roots,
 /// a 500 ms quiet period, and a 30-second poll for what a watcher cannot see. At start it runs the move, repairs the copier's
@@ -95,7 +88,7 @@ internal sealed class RegistryWatcher : IHostedService, IDisposable
 
         try
         {
-            await this.move.RunAsync(cancellationToken);
+            await this.move.RunAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -114,7 +107,7 @@ internal sealed class RegistryWatcher : IHostedService, IDisposable
 
         try
         {
-            await this.registry.ReloadAsync(cancellationToken);
+            await this.registry.ReloadAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (IOException exception)
         {
@@ -419,15 +412,5 @@ internal sealed class RegistryWatcher : IHostedService, IDisposable
         {
             return false;
         }
-    }
-}
-
-/// <summary>The move until task P16 writes it: it never runs.</summary>
-internal sealed class NoSkillSourcesMove : ISkillSourcesMove
-{
-    /// <inheritdoc/>
-    public Task RunAsync(CancellationToken ct)
-    {
-        return Task.CompletedTask;
     }
 }

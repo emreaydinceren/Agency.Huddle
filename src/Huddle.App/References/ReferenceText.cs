@@ -20,7 +20,7 @@ internal static class ReferenceText
     private const string TeamPrefix = "/teams/";
 
     /// <summary>The full-width commercial at that replaces every @ in a label (D-9 rule 2).</summary>
-    private const string FullwidthAt = "＠";
+    private const char FullwidthAt = '＠';
 
     /// <summary>The mark that shows a label was cut (D-9 rule 4).</summary>
     private const string Ellipsis = "…";
@@ -43,7 +43,7 @@ internal static class ReferenceText
     /// <returns>The plain label, never empty.</returns>
     public static string PlainLabelFor(string name, ReferenceKind kind)
     {
-        string collapsed = string.Join(' ', name.Replace("@", ReferenceText.FullwidthAt, StringComparison.Ordinal).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        string collapsed = string.Join(' ', name.Replace('@', ReferenceText.FullwidthAt).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
         if (collapsed.Length == 0)
         {
             return kind == ReferenceKind.Team ? "Team" : "Room";

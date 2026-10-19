@@ -47,7 +47,7 @@ internal sealed class UnfollowRoomTool(RoomFollows roomFollows, ITeamDirectory t
             return "'roomId' is a required argument.";
         }
 
-        var room = await teamDirectory.GetRoomAsync(roomId, cancellationToken);
+        var room = await teamDirectory.GetRoomAsync(roomId, cancellationToken).ConfigureAwait(false);
         if (room is null)
         {
             return $"Unknown room '{roomId}'.";

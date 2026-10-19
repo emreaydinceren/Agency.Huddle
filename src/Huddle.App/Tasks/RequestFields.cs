@@ -1,37 +1,5 @@
 namespace Agency.Huddle.App.Tasks;
 
-/// <summary>The kind of a Request: what the requesting Team asks of the receiving Team (frontmatter <c>request</c>).</summary>
-internal enum RequestKind
-{
-    /// <summary>A defect report (<c>request: bug</c>).</summary>
-    Bug,
-
-    /// <summary>A feature request (<c>request: feature</c>).</summary>
-    Feature,
-
-    /// <summary>General feedback (<c>request: feedback</c>).</summary>
-    Feedback,
-
-    /// <summary>A question for the receiving Team (<c>request: question</c>).</summary>
-    Question,
-}
-
-/// <summary>Where a Request stands in triage (frontmatter <c>triage</c>). <see cref="None"/> is the empty value.</summary>
-internal enum TriageState
-{
-    /// <summary>Not yet triaged (<c>triage: ''</c>).</summary>
-    None,
-
-    /// <summary>The receiving manager asked the requester for more information (<c>triage: needs-info</c>).</summary>
-    NeedsInfo,
-
-    /// <summary>The receiving manager accepted the Request (<c>triage: accepted</c>).</summary>
-    Accepted,
-
-    /// <summary>The receiving manager declined the Request (<c>triage: declined</c>).</summary>
-    Declined,
-}
-
 /// <summary>The Request fields an ordinary Task file carries (RQ-1, Spec §RequestFile). A Task is a Request when it has a <c>request</c> key.</summary>
 /// <param name="Kind">The kind of Request.</param>
 /// <param name="FromTeam">The Team that filed the Request.</param>

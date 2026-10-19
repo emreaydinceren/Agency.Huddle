@@ -28,7 +28,8 @@ subtree a page is in: **chat** is the chat surface, **acp** is the ACP effort
 | Find which file does a thing | [code-map.md](engineering/code-map.md) |
 | Understand how a Message travels | [architecture.md](engineering/architecture.md) |
 | Name something, or write prose or interface copy | [language.md](engineering/language.md), then [CONTEXT.md](engineering/CONTEXT.md) for the vocabulary in dialogue |
-| Write or change a test | [testing.md](engineering/testing.md), then [../agents/Testing.md](../agents/Testing.md); for a Razor component also [../agents/BlazorTesting.md](../agents/BlazorTesting.md) |
+| Write or change a test | [testing.md](engineering/testing.md), then [../agents/Testing.md](../agents/Testing.md); for a Razor component also [../agents/BlazorTesting.md](../agents/BlazorTesting.md). Which test project a test goes in: the *Where a test goes* section of [../agents/Testing.md](../agents/Testing.md) |
+| Split `tests/Huddle.Tests` into Common plus five projects by resource use, then fold duplicated test helpers into Common (planned, not started) | [test-split-plan.md](engineering/test-split-plan.md) |
 | Test the running app by hand | [manual-tests.md](engineering/manual-tests.md), [manual-tests/common.md](engineering/manual-tests/common.md), then the feature's page in §5 |
 | Choose which manual tests to run, or record a result | [manual-tests/planning.md](engineering/manual-tests/planning.md), [manual-tests/tracker.md](engineering/manual-tests/tracker.md) |
 | Build, run, or find a `Team:` configuration key | [Huddle.EngineeringGuide.md](Huddle.EngineeringGuide.md) (Configuration, Build test run) |

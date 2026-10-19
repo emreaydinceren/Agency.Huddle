@@ -22,7 +22,7 @@ internal sealed class PackUpdater(SkillRegistry registry, ISkillCopier copier, P
             .Distinct(StringComparer.Ordinal)
             .Select(resolved.FindSkill)
             .OfType<SkillEntry>()];
-        CopyResult copied = await copier.CopyAsync(toCopy, ct);
+        CopyResult copied = await copier.CopyAsync(toCopy, ct).ConfigureAwait(false);
         if (!copied.Ok)
         {
             CopyFailure first = copied.Failed[0];

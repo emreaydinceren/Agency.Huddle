@@ -276,7 +276,7 @@ internal sealed class SkillRegistry : ISkillAvailability, IDisposable
             this.pending = this.pending is null ? scope : this.pending.Union(scope);
         }
 
-        await this.rebuildGate.WaitAsync(ct);
+        await this.rebuildGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             RebuildScope? work;
@@ -291,7 +291,7 @@ internal sealed class SkillRegistry : ISkillAvailability, IDisposable
                 return;
             }
 
-            await Task.Run(() => this.Build(work, ct), ct);
+            await Task.Run(() => this.Build(work, ct), ct).ConfigureAwait(false);
         }
         finally
         {
@@ -621,7 +621,7 @@ internal sealed class SkillRegistry : ISkillAvailability, IDisposable
     {
         try
         {
-            await this.RebuildAsync(scope, CancellationToken.None);
+            await this.RebuildAsync(scope, CancellationToken.None).ConfigureAwait(false);
         }
         catch (ObjectDisposedException)
         {

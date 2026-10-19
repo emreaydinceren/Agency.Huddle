@@ -59,7 +59,7 @@ internal sealed class ValidateTeammateTool(CandidateChecker checker, IPromptSour
             return string.Join('\n', problems);
         }
 
-        var result = await checker.CheckAsync([candidate], cancellationToken);
+        var result = await checker.CheckAsync([candidate], cancellationToken).ConfigureAwait(false);
 
         return result.IsValid ? "Valid." : string.Join('\n', result.Problems);
     }

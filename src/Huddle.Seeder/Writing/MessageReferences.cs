@@ -1,16 +1,11 @@
-using System.Globalization;
-using System.Text;
-using System.Text.RegularExpressions;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Seeder.Model;
+using System.Globalization;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Agency.Huddle.Seeder.Writing;
-
-/// <summary>A Message's final text and the references the app would have stored for it.</summary>
-/// <param name="Text">The text with every token expanded.</param>
-/// <param name="References">The references in first-seen order, or <see langword="null"/> for none.</param>
-internal sealed record ExpandedMessage(string Text, IReadOnlyList<MessageReference>? References);
 
 /// <summary>
 /// Expands the seed tokens in a Message and builds the <see cref="MessageReference"/> list the way the app's send
@@ -27,7 +22,7 @@ internal static partial class MessageReferences
     internal const int MaxLabelChars = 60;
 
     private const string Ellipsis = "…";
-    private const string FullwidthAt = "＠";
+    private const char FullwidthAt = '＠';
     private const string MarkdownSpecials = "\\[]`*_<>&!~";
 
     [GeneratedRegex(@"\{\{(lib|upload|room|team):([^}]+)\}\}", RegexOptions.CultureInvariant)]
@@ -82,7 +77,9 @@ internal static partial class MessageReferences
         foreach ((int _, int _, MessageReference reference) in found.OrderBy(f => f.Position))
         {
             string key = reference.Kind is ReferenceKind.Team or ReferenceKind.LibraryFile ? reference.Key.ToUpperInvariant() : reference.Key;
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
             if (seen.Add(reference.Kind.ToString() + "\u001F" + key))
+#pragma warning restore HAA0102
             {
                 references.Add(reference);
             }
@@ -211,7 +208,7 @@ internal static partial class MessageReferences
 
     private static string PlainLabel(string name, string fallback)
     {
-        string collapsed = string.Join(' ', name.Replace("@", FullwidthAt, StringComparison.Ordinal).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        string collapsed = string.Join(' ', name.Replace('@', FullwidthAt).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
         if (collapsed.Length == 0)
         {
             return fallback;

@@ -1,42 +1,9 @@
+using Agency.Huddle.App.Library;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Agency.Huddle.App.Library;
 
 namespace Agency.Huddle.App.SkillSources;
-
-/// <summary>What <c>hidden.json</c> holds.</summary>
-/// <param name="Packs">Hidden Pack ids.</param>
-/// <param name="Skills">Hidden Skill names.</param>
-/// <param name="Malformed">True when the file exists but cannot be read; then nothing is hidden and nothing is written.</param>
-internal sealed record HiddenSet(IReadOnlySet<string> Packs, IReadOnlySet<string> Skills, bool Malformed)
-{
-    /// <summary>Nothing hidden.</summary>
-    public static HiddenSet None { get; } = new(new HashSet<string>(StringComparer.OrdinalIgnoreCase), new HashSet<string>(StringComparer.Ordinal), false);
-}
-
-/// <summary>Which list of <c>hidden.json</c> an entry is in.</summary>
-internal enum HiddenKind
-{
-    /// <summary>The <c>packs</c> list.</summary>
-    Pack,
-
-    /// <summary>The <c>skills</c> list.</summary>
-    Skill,
-}
-
-/// <summary>The outcome of a hide or unhide.</summary>
-internal enum HiddenWriteResult
-{
-    /// <summary>The file was written.</summary>
-    Written,
-
-    /// <summary>Nothing to change.</summary>
-    Unchanged,
-
-    /// <summary>The file could not be read, so it was left as it is (§6.12.4).</summary>
-    Refused,
-}
 
 /// <summary><c>SkillSources/hidden.json</c> (§6.12.4, §7.2): items hidden from lists, shared by every Huddle on the folder.
 /// The hide and unhide commands are its only writers; a malformed file is read as empty and never overwritten.</summary>

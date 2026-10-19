@@ -14,7 +14,9 @@ public sealed class SystemPromptOptions
 
         if (!Enum.IsDefined(mode))
         {
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
             throw new ArgumentOutOfRangeException(nameof(mode), mode, "Undefined SystemPromptMode value.");
+#pragma warning restore HAA0601
         }
 
         this.Text = text;

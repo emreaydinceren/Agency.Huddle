@@ -66,7 +66,9 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
 
     public Task SessionUpdateAsync(dotacp.protocol.SessionNotification notification, CancellationToken cancellationToken = default)
     {
+#pragma warning disable HAA0601 // The protocol id is a struct with an implicit conversion to string: a method call, not a boxing conversion.
         string sessionId = (string)notification.SessionId;
+#pragma warning restore HAA0601
         if (!this.sinks.TryGetValue(sessionId, out ISessionSink? sink))
         {
             DotAcpClientAdapter.LogUnknownSessionUpdate(logger, sessionId);
@@ -79,7 +81,9 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
 
     public async Task<dotacp.protocol.RequestPermissionResponse> RequestPermissionAsync(dotacp.protocol.RequestPermissionRequest request, CancellationToken cancellationToken = default)
     {
+#pragma warning disable HAA0601 // The protocol id is a struct with an implicit conversion to string: a method call, not a boxing conversion.
         string sessionId = (string)request.SessionId;
+#pragma warning restore HAA0601
         if (!this.sinks.TryGetValue(sessionId, out ISessionSink? sink))
         {
             DotAcpClientAdapter.LogUnknownPermissionSession(logger, sessionId);

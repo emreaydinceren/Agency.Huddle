@@ -3,22 +3,6 @@ using System.Globalization;
 
 namespace Agency.Huddle.SkillPacks.Folders;
 
-/// <summary>The limit a Skill folder broke: its size (S003) or a name or link Windows cannot keep (S004).</summary>
-public enum FolderLimit
-{
-    /// <summary>More than 200 files or 5 MB in total (S003).</summary>
-    Size,
-
-    /// <summary>A link, a name Windows cannot store, or two names that differ only in case (S004).</summary>
-    Name,
-}
-
-/// <summary>One broken folder rule.</summary>
-/// <param name="Limit">Which limit.</param>
-/// <param name="Path">The full path of the file or folder at fault, or the Skill folder for a size rule.</param>
-/// <param name="Message">One line naming the file and the rule.</param>
-public sealed record FolderViolation(FolderLimit Limit, string Path, string Message);
-
 /// <summary>
 /// The rules the deleted <c>SkillDownloader</c> held for a Skill folder (§6.3): at most 200 files and 5 MB, no symbolic
 /// link or junction, no name Windows cannot store, no two names that differ only in case.

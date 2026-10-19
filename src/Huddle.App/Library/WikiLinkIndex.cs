@@ -1,19 +1,7 @@
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App.FileChanges;
+using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.App.Library;
-
-/// <summary>A backlink into <see cref="LibraryBacklink.NotePath"/>, one row per line that holds a
-/// resolved link to the queried note (Spec §6.5 <i>Backlinks</i>).</summary>
-/// <param name="NotePath">The linking note's root-relative path.</param>
-/// <param name="Line">The 1-based line number the link (or links) appear on.</param>
-/// <param name="LineText">The full text of that line.</param>
-internal sealed record LibraryBacklink(string NotePath, int Line, string LineText);
-
-/// <summary>An outgoing wikilink of a note, for the Linked documents panel.</summary>
-/// <param name="Link">The parsed link as written in the note.</param>
-/// <param name="ResolvedPath">The linked note's root-relative path, or <see langword="null"/> when it does not exist.</param>
-internal sealed record LibraryOutgoingLink(WikiLink Link, string? ResolvedPath);
 
 /// <summary>
 /// The per-Library-Root wikilink index (Spec §6.5, §7 <c>MaxIndexedFiles</c>): built lazily on
@@ -438,38 +426,20 @@ internal sealed class WikiLinkIndex : IDisposable
         while (pending.Count > 0)
         {
             LibraryPath folder = pending.Pop();
-            List<FileSystemInfo> children;
-            try
-            {
-                children = [.. new DirectoryInfo(folder.FullPath).EnumerateFileSystemInfos()];
-            }
-            catch (DirectoryNotFoundException)
-            {
-                continue;
-            }
-            catch (IOException)
-            {
-                continue;
-            }
-            catch (UnauthorizedAccessException)
+            List<FileSystemInfo>? children = TryEnumerateChildren(folder.FullPath);
+            if (children is null)
             {
                 continue;
             }
 
             foreach (FileSystemInfo child in children)
             {
-                bool isFolder = child is DirectoryInfo;
-                if (isFolder && LibraryHiddenFolders.IsHidden(child.Name, ignoredFolders, hideUnderscoreFolders))
+                if (!this.TryResolveVisibleChild(folder, child, ignoredFolders, hideUnderscoreFolders, out LibraryPath? childPath))
                 {
                     continue;
                 }
 
-                if (!this.resolver.TryResolveChild(folder, child, out LibraryPath? childPath, out _))
-                {
-                    continue;
-                }
-
-                if (isFolder)
+                if (child is DirectoryInfo)
                 {
                     if (visitedFolders.Add(childPath.FullPath))
                     {
@@ -479,15 +449,9 @@ internal sealed class WikiLinkIndex : IDisposable
                     continue;
                 }
 
-                allFiles.Add(childPath.RelativePath);
-                if (allFiles.Count > max)
+                if (!this.TryAddFile(childPath, max, allFiles, rawNoteLinks))
                 {
                     return new RootIndex(false, allFiles, ToResolved(rawNoteLinks, allFiles), []);
-                }
-
-                if (LibraryFileKinds.IsMarkdown(childPath.RelativePath) && TryReadNote(childPath.FullPath, out string? text))
-                {
-                    rawNoteLinks[childPath.RelativePath] = ParseNoteLinks(text);
                 }
             }
         }
@@ -495,6 +459,78 @@ internal sealed class WikiLinkIndex : IDisposable
         List<string> sortedNotes = [.. rawNoteLinks.Keys];
         sortedNotes.Sort(StringComparer.Ordinal);
         return new RootIndex(true, allFiles, ToResolved(rawNoteLinks, allFiles), sortedNotes);
+    }
+
+    /// <summary>Lists the entries directly inside a folder, treating a folder that vanished or can't be read as empty.</summary>
+    /// <param name="folderPath">The folder's full path.</param>
+    /// <returns>The entries, or <see langword="null"/> when the folder can't be listed.</returns>
+    private static List<FileSystemInfo>? TryEnumerateChildren(string folderPath)
+    {
+        try
+        {
+            return [.. new DirectoryInfo(folderPath).EnumerateFileSystemInfos()];
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Resolves a folder entry to a Library path, refusing a hidden folder or an entry the resolver rejects.</summary>
+    /// <param name="folder">The folder that holds <paramref name="child"/>.</param>
+    /// <param name="child">The entry to resolve.</param>
+    /// <param name="ignoredFolders">The folder names the walk skips.</param>
+    /// <param name="hideUnderscoreFolders">True when folders starting with an underscore are hidden too.</param>
+    /// <param name="childPath">The resolved path when the method returns <see langword="true"/>.</param>
+    /// <returns><see langword="true"/> when the entry is visible and resolved.</returns>
+    private bool TryResolveVisibleChild(
+        LibraryPath folder,
+        FileSystemInfo child,
+        IReadOnlyList<string> ignoredFolders,
+        bool hideUnderscoreFolders,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out LibraryPath? childPath)
+    {
+        if (child is DirectoryInfo && LibraryHiddenFolders.IsHidden(child.Name, ignoredFolders, hideUnderscoreFolders))
+        {
+            childPath = null;
+            return false;
+        }
+
+        return this.resolver.TryResolveChild(folder, child, out childPath, out _);
+    }
+
+    /// <summary>Records a file in the walk and, for a Markdown file, parses its links.</summary>
+    /// <param name="childPath">The file's resolved path.</param>
+    /// <param name="max">The most files the walk may index.</param>
+    /// <param name="allFiles">Every file path collected so far; the file is appended.</param>
+    /// <param name="rawNoteLinks">The parsed links per Markdown note; updated in place.</param>
+    /// <returns><see langword="false"/> when the file count now exceeds <paramref name="max"/>, so the walk must stop.</returns>
+    private bool TryAddFile(
+        LibraryPath childPath,
+        int max,
+        List<string> allFiles,
+        Dictionary<string, List<(WikiLink Link, string LineText)>> rawNoteLinks)
+    {
+        allFiles.Add(childPath.RelativePath);
+        if (allFiles.Count > max)
+        {
+            return false;
+        }
+
+        if (LibraryFileKinds.IsMarkdown(childPath.RelativePath) && TryReadNote(childPath.FullPath, out string? text))
+        {
+            rawNoteLinks[childPath.RelativePath] = ParseNoteLinks(text);
+        }
+
+        return true;
     }
 
     /// <summary>Resolves every note's links exactly once, now that <paramref name="allFiles"/> (the complete

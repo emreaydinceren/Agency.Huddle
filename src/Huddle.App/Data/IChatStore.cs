@@ -35,7 +35,7 @@ public interface IChatStore
     /// <returns>At most <paramref name="count"/> Messages; empty for a Room with no Transcript.</returns>
     async Task<IReadOnlyList<ChatMessage>> ReadTailAsync(string roomId, int count, CancellationToken ct = default)
     {
-        IReadOnlyList<ChatMessage> all = await this.ReadAllAsync(roomId, ct);
+        IReadOnlyList<ChatMessage> all = await this.ReadAllAsync(roomId, ct).ConfigureAwait(false);
         return all.Count <= count ? all : [.. all.Skip(all.Count - count)];
     }
 }

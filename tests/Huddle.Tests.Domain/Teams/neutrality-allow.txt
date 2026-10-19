@@ -1,0 +1,16 @@
+# One repository-relative path per line; a # starts the reason. This list may shrink but never grow.
+# "Retro agent" is the retro feature's own term (RT-1 to RT-8), not a hard-coded role: the role is read from TeamTypeManifest.RetroRole.
+src/Huddle.App/Acp/AgentProcessOptionsFactory.cs # prose: "a developer who has not run install.ps1" means the person building Huddle
+src/Huddle.App/Acp/Tools/MarkRetroRowTool.cs # retro term in a doc comment and a refusal message
+src/Huddle.App/Acp/Tools/ProposeRetroChangesTool.cs # retro term in a refusal message
+src/Huddle.App/Acp/Tools/ReadRecordsTool.cs # retro term in doc comments and a refusal message
+src/Huddle.App/Acp/Tools/RetroCaller.cs # retro term in a doc comment
+src/Huddle.App/Components/Pages/Chat.razor # retro term in a Razor comment
+src/Huddle.App/Components/Shared/RetroProposalCard.razor # retro term in a Razor comment
+src/Huddle.App/Prompts/PromptCatalog.cs # retro term in the retro prompt description
+src/Huddle.App/TeamTypes/TeamTypeManifest.cs # retro term in the RetroRole parameter doc
+src/Huddle.App/TeamTypes/TeamTypeValidator.cs # doc example of a candidate path
+src/Huddle.App/Teams/CadenceService.cs # retro term in doc comments and the no-retro-agent note
+src/Huddle.App/Teams/ProcessGateService.cs # "for example QA Engineer" in the gate refusal message; the gate itself is by coverage, not by role
+src/Huddle.App/Teams/RetroProposalService.cs # retro term in a doc comment
+src/Huddle.App/Teams/RetroProposalSet.cs # retro term in a doc comment

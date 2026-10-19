@@ -106,16 +106,13 @@ internal sealed class WorkDirPermissionHandler(
 
         foreach (char c in command)
         {
-            if (quote != '\0')
+            if (quote != '\0' && c == quote)
             {
-                if (c == quote)
-                {
-                    quote = '\0';
-                }
-                else
-                {
-                    word.Append(c);
-                }
+                quote = '\0';
+            }
+            else if (quote != '\0')
+            {
+                word.Append(c);
             }
             else if (c is '"' or '\'')
             {

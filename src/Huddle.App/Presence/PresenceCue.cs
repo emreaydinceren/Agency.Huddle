@@ -3,22 +3,6 @@ using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.App.Presence;
 
-/// <summary>The four shapes a presence badge draws, so a state is never told by colour alone.</summary>
-public enum PresenceGlyph
-{
-    /// <summary>A check: online, or working.</summary>
-    Check,
-
-    /// <summary>A pulse line: starting, or a Turn running (thinking).</summary>
-    Pulse,
-
-    /// <summary>A dash: degraded, or waiting.</summary>
-    Dash,
-
-    /// <summary>A hollow ring: offline, or idle.</summary>
-    Ring,
-}
-
 /// <summary>
 /// What a presence badge or <c>StatusDot</c> shows: the <see cref="Glyph"/>, a CSS <see cref="Tone"/> class
 /// that carries the colour, and the state's <see cref="Label"/>. Both status systems map into this one shape, so the

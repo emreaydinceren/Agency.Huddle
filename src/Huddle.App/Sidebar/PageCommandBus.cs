@@ -43,7 +43,7 @@ internal sealed class PageCommandBus
 
         foreach (Func<PageCommand, Task> handler in snapshot)
         {
-            await handler(command);
+            await handler(command).ConfigureAwait(false);
         }
     }
 

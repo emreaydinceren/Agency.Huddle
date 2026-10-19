@@ -32,7 +32,7 @@ internal sealed class RoomSearchProvider(ITeamDirectory directory, IChatStore ch
     {
         if (query.Purpose == SearchPurpose.Reference)
         {
-            return await this.NamesOnlyAsync(query, ct);
+            return await this.NamesOnlyAsync(query, ct).ConfigureAwait(false);
         }
 
         if (string.IsNullOrWhiteSpace(query.Text))
@@ -40,8 +40,8 @@ internal sealed class RoomSearchProvider(ITeamDirectory directory, IChatStore ch
             return SearchResult.Empty;
         }
 
-        string? human = (await directory.GetUserAsync(KnownIds.Human, ct))?.Name;
-        IReadOnlyList<Room> rooms = await directory.GetRoomsAsync(ct);
+        string? human = (await directory.GetUserAsync(KnownIds.Human, ct).ConfigureAwait(false))?.Name;
+        IReadOnlyList<Room> rooms = await directory.GetRoomsAsync(ct).ConfigureAwait(false);
         List<Room> inPass = rooms.Where(room => room.Archived == (query.Scope == SearchScope.Archived)).ToList();
         List<SearchHit> hits = [];
         int failures = 0;
@@ -51,7 +51,7 @@ internal sealed class RoomSearchProvider(ITeamDirectory directory, IChatStore ch
             IReadOnlyList<ChatMessage> messages;
             try
             {
-                messages = await chats.ReadAllAsync(room.Id, ct);
+                messages = await chats.ReadAllAsync(room.Id, ct).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -84,7 +84,7 @@ internal sealed class RoomSearchProvider(ITeamDirectory directory, IChatStore ch
     /// <returns>One row per Room, in the provider's order.</returns>
     private async Task<SearchResult> NamesOnlyAsync(SearchQuery query, CancellationToken ct)
     {
-        IReadOnlyList<Room> rooms = await directory.GetRoomsAsync(ct);
+        IReadOnlyList<Room> rooms = await directory.GetRoomsAsync(ct).ConfigureAwait(false);
         bool archived = query.Scope == SearchScope.Archived;
         List<SearchHit> hits = [];
         foreach (Room room in rooms.Where(room => room.Archived == archived).OrderByDescending(room => room.Created))
