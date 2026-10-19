@@ -74,7 +74,7 @@ internal sealed class UpdateTaskTool(
             return resolveRefusal;
         }
 
-        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
+        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
         if (actor is null)
         {
             return actorRefusal;
@@ -133,220 +133,24 @@ internal sealed class UpdateTaskTool(
     /// <param name="refusal">The refusal text when this returns <see langword="false"/>; otherwise <see cref="string.Empty"/>.</param>
     private static bool TryBuildPatch(TaskActor actor, ISprintCatalog sprints, JsonObject arguments, [NotNullWhen(true)] out TaskPatch? patch, out string refusal)
     {
-        if (!TaskToolText.TryGetString(arguments, "title", out string? title, out refusal))
+        patch = null;
+        if (!TaskToolText.TryGetString(arguments, "title", out string? title, out refusal)
+            || !TaskToolText.TryGetString(arguments, "description", out string? description, out refusal)
+            || !TryReadStatus(arguments, out TaskState? status, out refusal)
+            || !TryReadPriority(arguments, out TaskPriority? priority, out refusal)
+            || !TryReadAssignee(arguments, actor, out Optional<string?> assignee, out refusal)
+            || !TaskToolText.TryGetString(arguments, "team", out string? team, out refusal)
+            || !TryReadProject(arguments, out Optional<string?> project, out refusal)
+            || !TryReadOptionalId(arguments, "parent", out Optional<TaskId?> parent, out refusal)
+            || !TryReadBlockedBy(arguments, out IReadOnlyList<TaskId>? blockedBy, out refusal)
+            || !TryReadOptionalId(arguments, "duplicate_of", out Optional<TaskId?> duplicateOf, out refusal)
+            || !TaskToolText.TryGetStringList(arguments, "tags", out IReadOnlyList<string>? tags, out refusal)
+            || !TryReadOptionalDate(arguments, "start_date", out Optional<DateOnly?> startDate, out refusal)
+            || !TryReadOptionalDate(arguments, "due_date", out Optional<DateOnly?> dueDate, out refusal)
+            || !TaskToolText.TryGetString(arguments, "reason", out string? reason, out refusal)
+            || !TryReadSprint(arguments, sprints, out Optional<SprintId?> sprint, out refusal))
         {
-            patch = null;
             return false;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "description", out string? description, out refusal))
-        {
-            patch = null;
-            return false;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "status", out string? statusText, out refusal))
-        {
-            patch = null;
-            return false;
-        }
-
-        TaskState? status = null;
-        if (statusText is not null)
-        {
-            if (!TaskStates.TryParse(statusText, out TaskState parsedStatus))
-            {
-                patch = null;
-                refusal = $"'status' has an unknown value '{statusText}'.";
-                return false;
-            }
-
-            status = parsedStatus;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "priority", out string? priorityText, out refusal))
-        {
-            patch = null;
-            return false;
-        }
-
-        TaskPriority? priority = null;
-        if (priorityText is not null)
-        {
-            if (!TaskPriorities.TryParse(priorityText, out TaskPriority parsedPriority))
-            {
-                patch = null;
-                refusal = $"'priority' has an unknown value '{priorityText}'.";
-                return false;
-            }
-
-            priority = parsedPriority;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "assignee", out string? assigneeText, out refusal))
-        {
-            patch = null;
-            return false;
-        }
-
-        Optional<string?> assignee = default;
-        if (assigneeText is not null)
-        {
-            string? resolvedAssignee = string.Equals(assigneeText, "me", StringComparison.Ordinal) ? actor.Name : assigneeText;
-            assignee = assigneeText.Length == 0
-                ? Optional<string?>.Set(null)
-                : Optional<string?>.Set(resolvedAssignee);
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "team", out string? team, out refusal))
-        {
-            patch = null;
-            return false;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "project", out string? projectText, out refusal))
-        {
-            patch = null;
-            return false;
-        }
-
-        Optional<string?> project = default;
-        if (projectText is not null)
-        {
-            project = Optional<string?>.Set(projectText.Length == 0 ? null : projectText);
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "parent", out string? parentText, out refusal))
-        {
-            patch = null;
-            return false;
-        }
-
-        Optional<TaskId?> parent = default;
-        if (parentText is not null)
-        {
-            if (!TryParseOptionalId(parentText, out TaskId? parsedParent, out refusal))
-            {
-                patch = null;
-                return false;
-            }
-
-            parent = Optional<TaskId?>.Set(parsedParent);
-        }
-
-        if (!TaskToolText.TryGetStringList(arguments, "blocked_by", out IReadOnlyList<string>? blockedByText, out refusal))
-        {
-            patch = null;
-            return false;
-        }
-
-        IReadOnlyList<TaskId>? blockedBy = null;
-        if (blockedByText is not null)
-        {
-            List<TaskId> ids = new(blockedByText.Count);
-            foreach (string item in blockedByText)
-            {
-                if (!TaskId.TryParse(item, out TaskId parsedId))
-                {
-                    patch = null;
-                    refusal = $"'{item}' is not a task id; ids look like PLAT-0042.";
-                    return false;
-                }
-
-                ids.Add(parsedId);
-            }
-
-            blockedBy = ids;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "duplicate_of", out string? duplicateOfText, out refusal))
-        {
-            patch = null;
-            return false;
-        }
-
-        Optional<TaskId?> duplicateOf = default;
-        if (duplicateOfText is not null)
-        {
-            if (!TryParseOptionalId(duplicateOfText, out TaskId? parsedDuplicateOf, out refusal))
-            {
-                patch = null;
-                return false;
-            }
-
-            duplicateOf = Optional<TaskId?>.Set(parsedDuplicateOf);
-        }
-
-        if (!TaskToolText.TryGetStringList(arguments, "tags", out IReadOnlyList<string>? tags, out refusal))
-        {
-            patch = null;
-            return false;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "start_date", out string? startDateText, out refusal))
-        {
-            patch = null;
-            return false;
-        }
-
-        Optional<DateOnly?> startDate = default;
-        if (startDateText is not null)
-        {
-            if (!TryParseOptionalDate("start_date", startDateText, out DateOnly? parsedStart, out refusal))
-            {
-                patch = null;
-                return false;
-            }
-
-            startDate = Optional<DateOnly?>.Set(parsedStart);
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "due_date", out string? dueDateText, out refusal))
-        {
-            patch = null;
-            return false;
-        }
-
-        Optional<DateOnly?> dueDate = default;
-        if (dueDateText is not null)
-        {
-            if (!TryParseOptionalDate("due_date", dueDateText, out DateOnly? parsedDue, out refusal))
-            {
-                patch = null;
-                return false;
-            }
-
-            dueDate = Optional<DateOnly?>.Set(parsedDue);
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "reason", out string? reason, out refusal))
-        {
-            patch = null;
-            return false;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "sprint", out string? sprintText, out refusal))
-        {
-            patch = null;
-            return false;
-        }
-
-        Optional<SprintId?> sprint = default;
-        if (sprintText is not null)
-        {
-            if (sprintText.Trim().Length == 0)
-            {
-                sprint = Optional<SprintId?>.Set(null);
-            }
-            else if (TaskToolText.TryResolveSprint(sprints, sprintText, out SprintId? resolved, out refusal))
-            {
-                sprint = Optional<SprintId?>.Set(resolved);
-            }
-            else
-            {
-                patch = null;
-                return false;
-            }
         }
 
         patch = new TaskPatch
@@ -368,6 +172,218 @@ internal sealed class UpdateTaskTool(
             Sprint = sprint,
         };
         refusal = string.Empty;
+        return true;
+    }
+
+    /// <summary>Reads the optional <c>status</c> argument; absent leaves it unset, an unknown wire name is refused.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="status">The parsed status, or <see langword="null"/> when absent.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryReadStatus(JsonObject arguments, out TaskState? status, out string refusal)
+    {
+        status = null;
+        if (!TaskToolText.TryGetString(arguments, "status", out string? statusText, out refusal))
+        {
+            return false;
+        }
+
+        if (statusText is not null)
+        {
+            if (!TaskStates.TryParse(statusText, out TaskState parsedStatus))
+            {
+                refusal = $"'status' has an unknown value '{statusText}'.";
+                return false;
+            }
+
+            status = parsedStatus;
+        }
+
+        return true;
+    }
+
+    /// <summary>Reads the optional <c>priority</c> argument; absent leaves it unset, an unknown wire name is refused.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="priority">The parsed priority, or <see langword="null"/> when absent.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryReadPriority(JsonObject arguments, out TaskPriority? priority, out string refusal)
+    {
+        priority = null;
+        if (!TaskToolText.TryGetString(arguments, "priority", out string? priorityText, out refusal))
+        {
+            return false;
+        }
+
+        if (priorityText is not null)
+        {
+            if (!TaskPriorities.TryParse(priorityText, out TaskPriority parsedPriority))
+            {
+                refusal = $"'priority' has an unknown value '{priorityText}'.";
+                return false;
+            }
+
+            priority = parsedPriority;
+        }
+
+        return true;
+    }
+
+    /// <summary>Reads the optional <c>assignee</c> argument: <c>"me"</c> becomes the caller's Name and an empty string clears the assignee.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="actor">The caller, whose Name resolves <c>"me"</c>.</param>
+    /// <param name="assignee">The assignee change, unset when the argument is absent.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryReadAssignee(JsonObject arguments, TaskActor actor, out Optional<string?> assignee, out string refusal)
+    {
+        assignee = default;
+        if (!TaskToolText.TryGetString(arguments, "assignee", out string? assigneeText, out refusal))
+        {
+            return false;
+        }
+
+        if (assigneeText is not null)
+        {
+            string? resolvedAssignee = string.Equals(assigneeText, "me", StringComparison.Ordinal) ? actor.Name : assigneeText;
+            assignee = assigneeText.Length == 0
+                ? Optional<string?>.Set(null)
+                : Optional<string?>.Set(resolvedAssignee);
+        }
+
+        return true;
+    }
+
+    /// <summary>Reads the optional <c>project</c> argument; an empty string clears the project.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="project">The project change, unset when the argument is absent.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryReadProject(JsonObject arguments, out Optional<string?> project, out string refusal)
+    {
+        project = default;
+        if (!TaskToolText.TryGetString(arguments, "project", out string? projectText, out refusal))
+        {
+            return false;
+        }
+
+        if (projectText is not null)
+        {
+            project = Optional<string?>.Set(projectText.Length == 0 ? null : projectText);
+        }
+
+        return true;
+    }
+
+    /// <summary>Reads an optional task-id argument (<c>parent</c> or <c>duplicate_of</c>); an empty string clears the field.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="argumentName">The argument's name.</param>
+    /// <param name="id">The id change, unset when the argument is absent.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryReadOptionalId(JsonObject arguments, string argumentName, out Optional<TaskId?> id, out string refusal)
+    {
+        id = default;
+        if (!TaskToolText.TryGetString(arguments, argumentName, out string? text, out refusal))
+        {
+            return false;
+        }
+
+        if (text is not null)
+        {
+            if (!TryParseOptionalId(text, out TaskId? parsedId, out refusal))
+            {
+                return false;
+            }
+
+            id = Optional<TaskId?>.Set(parsedId);
+        }
+
+        return true;
+    }
+
+    /// <summary>Reads the optional <c>blocked_by</c> list of task ids.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="blockedBy">The parsed ids, or <see langword="null"/> when the argument is absent.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryReadBlockedBy(JsonObject arguments, out IReadOnlyList<TaskId>? blockedBy, out string refusal)
+    {
+        blockedBy = null;
+        if (!TaskToolText.TryGetStringList(arguments, "blocked_by", out IReadOnlyList<string>? blockedByText, out refusal))
+        {
+            return false;
+        }
+
+        if (blockedByText is not null)
+        {
+            List<TaskId> ids = new(blockedByText.Count);
+            foreach (string item in blockedByText)
+            {
+                if (!TaskId.TryParse(item, out TaskId parsedId))
+                {
+                    refusal = $"'{item}' is not a task id; ids look like PLAT-0042.";
+                    return false;
+                }
+
+                ids.Add(parsedId);
+            }
+
+            blockedBy = ids;
+        }
+
+        return true;
+    }
+
+    /// <summary>Reads an optional date argument (<c>start_date</c> or <c>due_date</c>); an empty string clears the field.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="argumentName">The argument's name.</param>
+    /// <param name="date">The date change, unset when the argument is absent.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryReadOptionalDate(JsonObject arguments, string argumentName, out Optional<DateOnly?> date, out string refusal)
+    {
+        date = default;
+        if (!TaskToolText.TryGetString(arguments, argumentName, out string? text, out refusal))
+        {
+            return false;
+        }
+
+        if (text is not null)
+        {
+            if (!TryParseOptionalDate(argumentName, text, out DateOnly? parsedDate, out refusal))
+            {
+                return false;
+            }
+
+            date = Optional<DateOnly?>.Set(parsedDate);
+        }
+
+        return true;
+    }
+
+    /// <summary>Reads the optional <c>sprint</c> argument; a blank value clears the Sprint, anything else is resolved against the catalogue.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="sprints">The read-only catalogue the argument is resolved against.</param>
+    /// <param name="sprint">The Sprint change, unset when the argument is absent.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryReadSprint(JsonObject arguments, ISprintCatalog sprints, out Optional<SprintId?> sprint, out string refusal)
+    {
+        sprint = default;
+        if (!TaskToolText.TryGetString(arguments, "sprint", out string? sprintText, out refusal))
+        {
+            return false;
+        }
+
+        if (sprintText is not null)
+        {
+            if (sprintText.Trim().Length == 0)
+            {
+                sprint = Optional<SprintId?>.Set(null);
+            }
+            else if (TaskToolText.TryResolveSprint(sprints, sprintText, out SprintId? resolved, out refusal))
+            {
+                sprint = Optional<SprintId?>.Set(resolved);
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         return true;
     }
 

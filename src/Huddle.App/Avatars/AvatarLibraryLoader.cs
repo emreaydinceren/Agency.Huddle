@@ -35,8 +35,9 @@ internal sealed class AvatarLibraryLoader(AvatarLibraryLocator locator, ILogger<
                 return new AvatarLibraryLoadResult(null, 0, true);
             }
 
-            await using FileStream stream = new(masterPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, useAsync: true);
-            using JsonDocument document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            FileStream stream = new(masterPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, useAsync: true);
+            await using var streamScope = stream.ConfigureAwait(false);
+            using JsonDocument document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (document.RootElement.ValueKind != JsonValueKind.Object
                 || !document.RootElement.TryGetProperty("avatars", out JsonElement avatars)
@@ -78,7 +79,7 @@ internal sealed class AvatarLibraryLoader(AvatarLibraryLocator locator, ILogger<
                 return null;
             }
 
-            byte[] bytes = await File.ReadAllBytesAsync(path, cancellationToken);
+            byte[] bytes = await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
             string? extension = bytes.Length > AvatarImage.MaxBytes ? null : AvatarImage.SniffExtension(bytes);
             return extension is null ? null : new AvatarLibraryImage(bytes, extension);
         }

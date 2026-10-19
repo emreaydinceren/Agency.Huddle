@@ -1,80 +1,13 @@
-using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.SkillPacks;
 using Agency.Huddle.SkillPacks.Checking;
 using Agency.Huddle.SkillPacks.Folders;
 using Agency.Huddle.SkillPacks.Resolving;
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 
 namespace Agency.Huddle.App.SkillSources;
-
-/// <summary>What the rest of the app may ask of the copier (§6.6).</summary>
-internal interface ISkillCopier
-{
-    /// <summary>Copies each Skill into <c>Skills/&lt;name&gt;/</c>, one after another, and reports each outcome.</summary>
-    /// <param name="skills">Entries taken from the current snapshot. Entries that are not usable are reported as failures, not thrown.</param>
-    /// <param name="ct">Cancels the copy; any staging folder is removed and the exception propagates.</param>
-    Task<CopyResult> CopyAsync(IReadOnlyList<SkillEntry> skills, CancellationToken ct);
-
-    /// <summary>Makes sure every named Skill is in <c>Skills/</c>: a built-in name or a name already there is skipped, a
-    /// copyable one is copied, and an existing folder is never replaced.</summary>
-    /// <returns>One setup item per name that is not ready; empty when every Skill is present.</returns>
-    Task<IReadOnlyList<SkillSetupItem>> EnsureAvailableAsync(IReadOnlyList<string> skillNames, CancellationToken ct);
-}
-
-/// <summary>The outcome of a batch. The caller changes a Teammate file only when <see cref="Ok"/>.</summary>
-/// <param name="Copied">The Skills now in <c>Skills/</c>.</param>
-/// <param name="Failed">The Skills that are not.</param>
-internal sealed record CopyResult(IReadOnlyList<CopiedSkill> Copied, IReadOnlyList<CopyFailure> Failed)
-{
-    /// <summary>True when every Skill was copied or already current.</summary>
-    public bool Ok => this.Failed.Count == 0;
-}
-
-/// <summary>One Skill now in <c>Skills/</c>.</summary>
-/// <param name="Name">The Skill.</param>
-/// <param name="Sha256">The hash of the copy now in <c>Skills/</c>.</param>
-/// <param name="Outcome">Created, Replaced, or AlreadyCurrent (nothing written).</param>
-internal sealed record CopiedSkill(string Name, string Sha256, CopyOutcome Outcome);
-
-/// <summary>What a successful copy did.</summary>
-internal enum CopyOutcome
-{
-    /// <summary>A new folder.</summary>
-    Created,
-
-    /// <summary>New files swapped in for an older copy.</summary>
-    Replaced,
-
-    /// <summary>The copy already matched the pointer.</summary>
-    AlreadyCurrent,
-}
-
-/// <summary>Why a copy failed; the UI chooses its wording and fix from this.</summary>
-internal enum CopyFailureKind
-{
-    /// <summary>The Skill is not in a usable state.</summary>
-    NotUsable,
-
-    /// <summary>The files kept changing during three attempts.</summary>
-    Unstable,
-
-    /// <summary>The S checks failed on the copy.</summary>
-    CheckFailed,
-
-    /// <summary>A different Skill of that name is in <c>Skills/</c>.</summary>
-    NameTaken,
-
-    /// <summary>A file could not be written.</summary>
-    Io,
-}
-
-/// <summary>A Skill that was not copied.</summary>
-/// <param name="Name">The Skill.</param>
-/// <param name="Kind">Why.</param>
-/// <param name="Message">A sentence for the Human (§6.6, "Exact messages").</param>
-internal sealed record CopyFailure(string Name, CopyFailureKind Kind, string Message);
 
 /// <summary>
 /// Puts a chosen Skill's files into <c>Skills/&lt;name&gt;/</c> safely and records where they came from (§6.6, §8.6): wait for
@@ -119,10 +52,10 @@ internal sealed partial class SkillCopier : ISkillCopier
         foreach (SkillEntry skill in skills)
         {
             SemaphoreSlim gate = this.gates.GetOrAdd(skill.Name, static _ => new SemaphoreSlim(1, 1));
-            await gate.WaitAsync(ct);
+            await gate.WaitAsync(ct).ConfigureAwait(false);
             try
             {
-                (CopiedSkill? done, CopyFailure? failure) = await this.CopyOneAsync(skill, ct);
+                (CopiedSkill? done, CopyFailure? failure) = await this.CopyOneAsync(skill, ct).ConfigureAwait(false);
                 if (done is not null)
                 {
                     copied.Add(done);
@@ -166,7 +99,7 @@ internal sealed partial class SkillCopier : ISkillCopier
             problems.Add(new SkillSetupItem(SkillSetupKind.Skill, name, availability, this.DetailOf(entry)));
         }
 
-        CopyResult result = await this.CopyAsync(copyable, ct);
+        CopyResult result = await this.CopyAsync(copyable, ct).ConfigureAwait(false);
         problems.AddRange(result.Failed.Select(static failure => new SkillSetupItem(SkillSetupKind.Skill, failure.Name, SkillAvailability.Broken, failure.Message)));
         return problems;
     }
@@ -192,39 +125,19 @@ internal sealed partial class SkillCopier : ISkillCopier
             return (null, new CopyFailure(name, CopyFailureKind.NotUsable, $"{name} is not ready to use ({Words(state)}). Fix it on Settings › Skills first."));
         }
 
-        SkillProvenance? existing = null;
         if (exists)
         {
-            if (!SkillProvenance.TryRead(target, out existing) || existing is null || !OriginIdentity.Same(existing.EffectiveOrigin, skill.Origin))
+            (CopiedSkill? Done, CopyFailure? Failure) early = this.CheckExisting(name, skill, pointer, target);
+            if (early.Done is not null || early.Failure is not null)
             {
-                return (null, new CopyFailure(name, CopyFailureKind.NameTaken, $"A different Skill called {name} is already in Skills/, so Huddle did not replace it."));
-            }
-
-            string pointerHash = SkillFolderHash.ComputeFolder(this.source, pointer);
-            if (string.Equals(pointerHash, existing.Sha256, StringComparison.Ordinal)
-                && string.Equals(SkillFolderHash.ComputeFolder(target), existing.Sha256, StringComparison.Ordinal))
-            {
-                return (new CopiedSkill(name, existing.Sha256, CopyOutcome.AlreadyCurrent), null);
+                return early;
             }
         }
 
         string staging = Path.Combine(this.settings.SkillsDir, SkillCopyFolders.Staging, $"{name}-{Guid.NewGuid():N}");
         try
         {
-            string? hash = null;
-            for (int attempt = 0; attempt < Attempts && hash is null; attempt++)
-            {
-                await this.WaitForQuietAsync(pointer, ct);
-                string before = SkillFolderHash.ComputeFolder(this.source, pointer);
-                DeleteFolder(staging);
-                CopyFolder(pointer, staging);
-                string after = SkillFolderHash.ComputeFolder(this.source, pointer);
-                string copy = SkillFolderHash.ComputeFolder(staging);
-                if (string.Equals(before, after, StringComparison.Ordinal) && string.Equals(after, copy, StringComparison.Ordinal))
-                {
-                    hash = copy;
-                }
-            }
+            string? hash = await this.CopyUntilStableAsync(pointer, staging, ct).ConfigureAwait(false);
 
             if (hash is null)
             {
@@ -256,6 +169,54 @@ internal sealed partial class SkillCopier : ISkillCopier
         }
     }
 
+    /// <summary>Checks a Skill folder that already exists in Skills/ before it is replaced (§6.6 "Per Skill").</summary>
+    /// <param name="name">The requested Skill name.</param>
+    /// <param name="skill">The Skill being copied.</param>
+    /// <param name="pointer">The folder the Skill is copied from.</param>
+    /// <param name="target">The existing folder in Skills/.</param>
+    /// <returns>A failure when the folder belongs to a different Skill, an already-current result when nothing needs copying, else neither.</returns>
+    private (CopiedSkill? Done, CopyFailure? Failure) CheckExisting(string name, SkillEntry skill, string pointer, string target)
+    {
+        if (!SkillProvenance.TryRead(target, out SkillProvenance? existing) || existing is null || !OriginIdentity.Same(existing.EffectiveOrigin, skill.Origin))
+        {
+            return (null, new CopyFailure(name, CopyFailureKind.NameTaken, $"A different Skill called {name} is already in Skills/, so Huddle did not replace it."));
+        }
+
+        string pointerHash = SkillFolderHash.ComputeFolder(this.source, pointer);
+        if (string.Equals(pointerHash, existing.Sha256, StringComparison.Ordinal)
+            && string.Equals(SkillFolderHash.ComputeFolder(target), existing.Sha256, StringComparison.Ordinal))
+        {
+            return (new CopiedSkill(name, existing.Sha256, CopyOutcome.AlreadyCurrent), null);
+        }
+
+        return (null, null);
+    }
+
+    /// <summary>Copies the source folder into staging until the source, the source again and the copy agree (§8.6).</summary>
+    /// <param name="pointer">The folder the Skill is copied from.</param>
+    /// <param name="staging">The staging folder to copy into.</param>
+    /// <param name="ct">Cancels the wait for the source to go quiet.</param>
+    /// <returns>The folder hash, or <see langword="null"/> when the files kept changing.</returns>
+    private async Task<string?> CopyUntilStableAsync(string pointer, string staging, CancellationToken ct)
+    {
+        string? hash = null;
+        for (int attempt = 0; attempt < Attempts && hash is null; attempt++)
+        {
+            await this.WaitForQuietAsync(pointer, ct).ConfigureAwait(false);
+            string before = SkillFolderHash.ComputeFolder(this.source, pointer);
+            DeleteFolder(staging);
+            CopyFolder(pointer, staging);
+            string after = SkillFolderHash.ComputeFolder(this.source, pointer);
+            string copy = SkillFolderHash.ComputeFolder(staging);
+            if (string.Equals(before, after, StringComparison.Ordinal) && string.Equals(after, copy, StringComparison.Ordinal))
+            {
+                hash = copy;
+            }
+        }
+
+        return hash;
+    }
+
     /// <summary>Waits until no file in the source was written in the last two seconds, up to thirty seconds (§8.6 step 1).</summary>
     private async Task WaitForQuietAsync(string folder, CancellationToken ct)
     {
@@ -271,7 +232,7 @@ internal sealed partial class SkillCopier : ISkillCopier
             }
 
             TimeSpan wait = Quiet - age;
-            await Task.Delay(wait, this.clock, ct);
+            await Task.Delay(wait, this.clock, ct).ConfigureAwait(false);
             waited += wait;
         }
     }

@@ -1,17 +1,11 @@
-using System.Reflection;
-using System.Text.Json;
 using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.Teams;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using System.Reflection;
+using System.Text.Json;
 
 namespace Agency.Huddle.App.TeamTypes;
-
-/// <summary>A team type that could not be offered.</summary>
-/// <param name="TypeId">The type id, taken from its folder name.</param>
-/// <param name="Path">Where the manifest came from.</param>
-/// <param name="Message">Why it was rejected.</param>
-internal sealed record TeamTypeFileProblem(string TypeId, string Path, string Message);
 
 /// <summary>Loads, validates and serves team types from built-ins and the user's TeamTypes folder (TT-1 to TT-6).</summary>
 /// <remarks>
@@ -134,7 +128,7 @@ internal sealed class TeamTypeCatalog
         CandidateParseResult result = CandidateTemplateParser.Parse(text);
         if (result.Template is null)
         {
-            this.logger.LogWarning("Candidate {TypeId}/{RoleId} does not parse: {Problems}", typeId, roleId, string.Join(" ", result.Problems));
+            this.logger.LogWarning("Candidate {TypeId}/{RoleId} does not parse: {Problems}", typeId, roleId, string.Join(' ', result.Problems));
         }
 
         return result.Template;
@@ -341,7 +335,7 @@ internal sealed class TeamTypeCatalog
             manifest, relative => this.ReadFile(id, relative) is not null, jobId => this.pool.FindJob(jobId) is not null);
         if (found.Count > 0)
         {
-            problems.Add(new TeamTypeFileProblem(id, source, string.Join(" ", found.Select(static p => p.Message))));
+            problems.Add(new TeamTypeFileProblem(id, source, string.Join(' ', found.Select(static p => p.Message))));
             return null;
         }
 

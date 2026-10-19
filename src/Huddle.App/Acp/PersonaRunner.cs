@@ -330,8 +330,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
 
         try
         {
-            await ((IRoomSessionOwner)this).WriteAsync(new ReadTranscript(requestId, roomId, afterMessageId, beforeMessageId, max), cancellationToken);
-            return await pending.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
+            await ((IRoomSessionOwner)this).WriteAsync(new ReadTranscript(requestId, roomId, afterMessageId, beforeMessageId, max), cancellationToken).ConfigureAwait(false);
+            return await pending.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is TimeoutException or IOException or ObjectDisposedException)
         {
@@ -374,14 +374,54 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        var client = await this.ConnectAsync(cancellationToken);
+        var client = await this.ConnectAsync(cancellationToken).ConfigureAwait(false);
         var jsonLineStream = new JsonLineStream(client);
         this.stream = jsonLineStream;
 
-        var description = BuildDescription(this.persona.Text);
-        await jsonLineStream.WriteAsync(new Hello(this.persona.Name, description), cancellationToken);
+        var welcome = await this.RegisterAsync(jsonLineStream, cancellationToken).ConfigureAwait(false);
 
-        var welcomeMessage = await jsonLineStream.ReadAsync(cancellationToken);
+        this.agentId = welcome.AgentId;
+        this.ResetAgentStateAndSeedRoomNames(welcome);
+
+        // Only now, with Registration complete, does the Agent id exist, so only now can the host
+        // be started with the tools bound to it by construction (docs/engineering/acp-agent-guide.md §3.6).
+        // this.host is assigned BEFORE the session opens, so a failed first open is still disposed
+        // with the runner - StopAsync's this.host-is-not-null disposal covers it.
+        var startedHost = await this.factory.StartAsync(this.persona, welcome.AgentId, cancellationToken).ConfigureAwait(false);
+        this.host = startedHost;
+
+        this.SyncRoomSessionStore(startedHost, welcome);
+
+        var roomPool = this.CreatePool(startedHost);
+        this.pool = roomPool;
+
+        // Per-Room mode opens the Room with exactly two Members, one of them the Human - the same
+        // predicate as the Greeting's below, without IsEmpty: unlike the Greeting, this open must
+        // happen whether or not that Room already has Messages. Shared mode ignores this id and opens
+        // its one shared session instead. Opened here, exactly where this runner opened its one
+        // session before, so the start-up failure modes are unchanged; it goes through the same
+        // resume path as any later lazy open (D24 correction 18), and the Model-not-in-catalog
+        // warning this open may trigger now arrives through IRoomSessionOwner.ReportModels (D24
+        // correction 23) rather than a one-time check here.
+        var humanRoom = welcome.Rooms.FirstOrDefault(room =>
+            room.Team is null && room.Members.Count == 2 && room.Members.Any(member => member.Kind == UserKind.Human));
+        await roomPool.OpenAtStartAsync(humanRoom?.Id, cancellationToken).ConfigureAwait(false);
+
+        this.QueueGreetingIfDue(roomPool, welcome);
+
+        this.readLoopTask = this.RunReadLoopAsync(this.runCts.Token);
+    }
+
+    /// <summary>Sends the Hello and returns the server's Welcome, or throws when the handshake is refused.</summary>
+    /// <param name="jsonLineStream">The connected stream.</param>
+    /// <param name="cancellationToken">Cancels the handshake.</param>
+    /// <returns>The Welcome envelope.</returns>
+    private async Task<Welcome> RegisterAsync(JsonLineStream jsonLineStream, CancellationToken cancellationToken)
+    {
+        var description = BuildDescription(this.persona.Text);
+        await jsonLineStream.WriteAsync(new Hello(this.persona.Name, description), cancellationToken).ConfigureAwait(false);
+
+        var welcomeMessage = await jsonLineStream.ReadAsync(cancellationToken).ConfigureAwait(false);
         if (welcomeMessage is not Welcome welcome)
         {
             // A ProtocolError carries the one useful fact in this failure - which of invalidName or
@@ -398,17 +438,22 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                 $"Expected a Welcome envelope for Persona '{this.persona.Name}' but received {received}");
         }
 
-        this.agentId = welcome.AgentId;
+        return welcome;
+    }
 
+    /// <summary>Forgets any per-Agent state left from an earlier connection and seeds the known Room names from the Welcome.</summary>
+    /// <param name="welcome">The server's Welcome.</param>
+    private void ResetAgentStateAndSeedRoomNames(Welcome welcome)
+    {
         // Self-heal for roadmap item 8: ADR-0005 says a forgotten mcp__team__unfollow_room self-heals
         // on restart. With the follow set living in the RoomFollows singleton rather than a field on
         // this instance, that no longer comes free from object lifetime - a singleton outlives any one
         // runner - so it must be done explicitly, here, before the read loop below ever calls
         // IsFollowing for this Agent id. Doing it up front also covers an Agent that reconnects on the
         // same pipe without this PersonaRunner ever being recreated.
-        this.roomFollows.ClearAgent(this.agentId);
-        this.ownPosts?.ClearAgent(this.agentId);
-        this.turnActivity?.ClearAgent(this.agentId);
+        this.roomFollows.ClearAgent(welcome.AgentId);
+        this.ownPosts?.ClearAgent(welcome.AgentId);
+        this.turnActivity?.ClearAgent(welcome.AgentId);
 
         // D16 P0-3: seeded before the Greeting block below (which also labels its Room) and before
         // the read loop starts, so RoomLabels.Distinguish always has this runner's full set of known
@@ -417,18 +462,18 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         {
             this.knownRoomNames[room.Id] = room.Name;
         }
+    }
 
-        // Only now, with Registration complete, does the Agent id exist, so only now can the host
-        // be started with the tools bound to it by construction (docs/engineering/acp-agent-guide.md §3.6).
-        // this.host is assigned BEFORE the session opens, so a failed first open is still disposed
-        // with the runner - StopAsync's this.host-is-not-null disposal covers it.
-        this.host = await this.factory.StartAsync(this.persona, welcome.AgentId, cancellationToken);
-
+    /// <summary>Prunes the stored Room Session entries against the Welcome's Rooms (per-Room mode), or forgets them all (shared mode).</summary>
+    /// <param name="startedHost">The started host, whose profile decides per-Room versus shared mode.</param>
+    /// <param name="welcome">The server's Welcome.</param>
+    private void SyncRoomSessionStore(IPersonaHost startedHost, Welcome welcome)
+    {
         // RS §6.6: pruned at start against Welcome.Rooms - nothing else tells this runner a Room was
         // deleted while it was offline. Per-Room mode only (finding P-15: shared mode never touches
         // the store); a null roomSessions (P-13's "absent means off" for a caller that predates D24)
         // is likewise a no-op.
-        if (this.roomSessions is not null && this.host.Profile.SessionPerRoom)
+        if (this.roomSessions is not null && startedHost.Profile.SessionPerRoom)
         {
             this.roomSessions.Prune(this.persona.Name, welcome.Rooms.Select(room => room.Id).ToList());
         }
@@ -440,13 +485,19 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             // against a session, Model, Effort or Work Mode that no longer matches.
             this.roomSessions.ForgetAll(this.persona.Name);
         }
+    }
 
+    /// <summary>Creates the Room Session pool for the started host.</summary>
+    /// <param name="startedHost">The started host.</param>
+    /// <returns>The pool.</returns>
+    private RoomSessionPool CreatePool(IPersonaHost startedHost)
+    {
         // RS §6.2: the pool owns lazy per-Room opens, eviction and Stop routing; in shared mode (RS
         // principle 6: "SessionPerRoom: false is today plus Phase 0") it holds one RoomSession,
         // RoomId null, serving every Room this Agent is in. Persona and roomSessions (D24) let every
         // Room Session it creates resume by id when the Adapter, Model, Effort and Work Mode all still match.
-        this.pool = new RoomSessionPool(
-            this.host,
+        return new RoomSessionPool(
+            startedHost,
             this,
             this.persona,
             this.prompts,
@@ -464,19 +515,13 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             this.readsFiles,
             this.elicitationBridge,
             this.references);
+    }
 
-        // Per-Room mode opens the Room with exactly two Members, one of them the Human - the same
-        // predicate as the Greeting's below, without IsEmpty: unlike the Greeting, this open must
-        // happen whether or not that Room already has Messages. Shared mode ignores this id and opens
-        // its one shared session instead. Opened here, exactly where this runner opened its one
-        // session before, so the start-up failure modes are unchanged; it goes through the same
-        // resume path as any later lazy open (D24 correction 18), and the Model-not-in-catalog
-        // warning this open may trigger now arrives through IRoomSessionOwner.ReportModels (D24
-        // correction 23) rather than a one-time check here.
-        var humanRoom = welcome.Rooms.FirstOrDefault(room =>
-            room.Team is null && room.Members.Count == 2 && room.Members.Any(member => member.Kind == UserKind.Human));
-        await this.pool.OpenAtStartAsync(humanRoom?.Id, cancellationToken);
-
+    /// <summary>Queues the Greeting for a Chief of Staff with an empty Human Room, at most once per runner lifetime.</summary>
+    /// <param name="roomPool">The pool the Greeting is queued on.</param>
+    /// <param name="welcome">The server's Welcome.</param>
+    private void QueueGreetingIfDue(RoomSessionPool roomPool, Welcome welcome)
+    {
         // The Greeting (Spec §6.14): queued here, only now that the session opened successfully, so a
         // failed start never leaves a queued Turn with no session. At most once per runner lifetime
         // (greetingQueued), only for the built-in Chief of Staff (_builtin: chief-of-staff in the
@@ -494,13 +539,11 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                 this.greetingQueued = true;
                 var greetingSequence = Interlocked.Increment(ref this.sequenceCounter);
                 var greetingRoomName = RoomLabels.Distinguish(emptyHumanRoom.Id, emptyHumanRoom.Name, this.knownRoomNames);
-                this.pool.Enqueue(new QueuedWork(
+                roomPool.Enqueue(new QueuedWork(
                     greetingSequence,
                     new WorkItem(emptyHumanRoom.Id, greetingRoomName, string.Empty, string.Empty, [], WorkItemKind.Greeting, Team: emptyHumanRoom.Team)));
             }
         }
-
-        this.readLoopTask = this.RunReadLoopAsync(this.runCts.Token);
     }
 
     /// <summary>
@@ -517,9 +560,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             return;
         }
 
-        await this.runCts.CancelAsync();
+        await this.runCts.CancelAsync().ConfigureAwait(false);
 
-        await SafeAwaitAsync(this.readLoopTask);
+        await SafeAwaitAsync(this.readLoopTask).ConfigureAwait(false);
 
         // RoomSessionPool.DisposeAsync disposes every Room Session it holds, then the host (RS §6.2
         // "Disposal"). this.host is assigned BEFORE the pool is constructed, so a host that started
@@ -531,18 +574,18 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         {
             if (this.pool is not null)
             {
-                await this.pool.DisposeAsync();
+                await this.pool.DisposeAsync().ConfigureAwait(false);
             }
             else if (this.host is not null)
             {
-                await this.host.DisposeAsync();
+                await this.host.DisposeAsync().ConfigureAwait(false);
             }
         }
         finally
         {
             if (this.stream is not null)
             {
-                await this.stream.DisposeAsync();
+                await this.stream.DisposeAsync().ConfigureAwait(false);
             }
 
             // A stopped Teammate offers nothing; the next runner relearns the list from its Adapter.
@@ -558,7 +601,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         }
 
         this.disposed = true;
-        await this.StopAsync();
+        await this.StopAsync().ConfigureAwait(false);
         this.runCts.Dispose();
     }
 
@@ -569,7 +612,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         {
             while (true)
             {
-                var message = await this.stream!.ReadAsync(ct);
+                var message = await this.stream!.ReadAsync(ct).ConfigureAwait(false);
                 if (message is null)
                 {
                     return;
@@ -577,136 +620,15 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
 
                 if (message is MessagePosted posted)
                 {
-                    // D16 P0-3: kept current before anything below reads it, including the
-                    // catch-up-only branch, so a rename is picked up from the very next delivery in
-                    // that Room regardless of which ReplyDecision it gets (RS §9 E-7).
-                    this.knownRoomNames[posted.RoomId] = posted.RoomName;
-
-                    // A Human Message ends the unattended run, so the token Budget starts over with
-                    // it. The per-Room Budget resets server-side on the very same Message; this one
-                    // is per Persona, because one session spans every Room the Agent is in.
-                    if (SenderIsHuman(posted))
-                    {
-                        Interlocked.Exchange(ref this.tokensConsumed, 0);
-
-                        // Clears whatever Degraded state the spent token Budget reported - the only
-                        // thing this specific signal is documented to clear (T4.3).
-                        this.RaiseStatusChanged(PersonaState.Online, null);
-                    }
-
-                    var following = this.agentId is not null && this.roomFollows.IsFollowing(this.agentId, posted.RoomId);
-                    switch (ReplyGate.Decide(
-                        posted.Mentioned, posted.Members.Count, posted.AgentMessagesSinceHuman, posted.Budget, following))
-                    {
-                        case ReplyDecision.Reply:
-                            // Decided BEFORE anything is drained: building an ordinary item takes the
-                            // Catch-up buffer and own-post lines as a side effect, and a bare command
-                            // prompt has nowhere to put them, so a command item must leave both queued
-                            // for the next ordinary Turn (Commands spec, section 6.5).
-                            if (this.TryBuildCommandItem(posted, out var commandItem))
-                            {
-                                this.pool?.Enqueue(new QueuedWork(Interlocked.Increment(ref this.sequenceCounter), commandItem));
-                                break;
-                            }
-
-                            var missed = this.TakeCatchUp(posted.RoomId);
-
-                            // D27, RS §6.7, finding P-22: drained here, in the read loop, beside
-                            // TakeCatchUp - not by the pool at Turn start - so a post made into this
-                            // Room after this item was already queued is not missed (RS principle 4).
-                            IReadOnlyList<string> ownPostLines = this.agentId is { } takeAgentId && this.ownPosts is { } ownPostsTake
-                                ? ownPostsTake.Take(takeAgentId, posted.RoomId)
-                                : [];
-                            var labelledRoomName = RoomLabels.Distinguish(posted.RoomId, posted.RoomName, this.knownRoomNames);
-                            var item = new WorkItem(
-                                posted.RoomId, labelledRoomName, posted.Message.SenderName, posted.Message.Text, missed,
-                                TriggerMessageId: posted.Message.Id,
-                                OwnPostLines: ownPostLines.Count > 0 ? ownPostLines : null,
-                                Team: posted.Team);
-                            var sequence = Interlocked.Increment(ref this.sequenceCounter);
-
-                            // Never call the agent from the read loop: hand the item to the pool,
-                            // which routes it to the shared session or that Room's own one.
-                            this.pool?.Enqueue(new QueuedWork(sequence, item));
-                            break;
-
-                        case ReplyDecision.CatchUp:
-                            // Nothing is submitted to the agent until it is Mentioned (the repo owner's
-                            // absolute rule), but the Message is not thrown away: it rides along, as
-                            // context only, the next time this Agent is Mentioned in that Room.
-                            if (this.logger.IsEnabled(LogLevel.Information))
-                            {
-                                this.logger.LogInformation(
-                                    "Persona '{PersonaName}' read a message in room {RoomId} as context only: it was not mentioned and the room has {MemberCount} members.",
-                                    this.persona.Name,
-                                    posted.RoomId,
-                                    posted.Members.Count);
-                            }
-
-                            this.AppendCatchUp(posted.RoomId, posted.Message.SenderName, posted.Message.Text);
-                            break;
-
-                        case ReplyDecision.BudgetExhausted:
-                            // Deliberately NOT buffered as Catch-up. A Catch-up Message was missed; this
-                            // one is being held, and if the Human extends the Room's Budget this exact
-                            // Message is delivered again - at which point a buffered copy would reach the
-                            // model twice in one prompt.
-                            this.logger.LogWarning(
-                                "Persona '{PersonaName}' declined a turn in room {RoomId}: the room has spent its budget of {Budget} agent messages.",
-                                this.persona.Name,
-                                posted.RoomId,
-                                posted.Budget);
-                            break;
-                    }
+                    this.OnMessagePosted(posted);
                 }
                 else if (message is TranscriptTail tail)
                 {
-                    // Completes the matching ReadTranscriptAsync wait, if one is still pending; an
-                    // answer to a read this runner already gave up on (its own 10-second wait
-                    // elapsed) finds nothing to complete and is simply dropped.
-                    if (this.pendingTranscriptReads.TryRemove(tail.RequestId, out var pendingTranscript))
-                    {
-                        pendingTranscript.TrySetResult(tail);
-                    }
+                    this.OnTranscriptTail(tail);
                 }
                 else if (message is ProtocolError error)
                 {
-                    // D24 correction 21: a refused ReadTranscript answers with a ProtocolError whose
-                    // RelatedMessageId is the pending RequestId, and that match is checked BEFORE the
-                    // NotMember/UnknownRoom/BadMessage arm below - a Transcript refusal is a Warning
-                    // only (RS §9 E-3), never the Degraded "a post was refused" report that arm makes.
-                    if (error.RelatedMessageId is not null
-                        && this.pendingTranscriptReads.TryRemove(error.RelatedMessageId, out var pendingTranscript))
-                    {
-                        pendingTranscript.TrySetResult(null);
-                        this.logger.LogWarning(
-                            "Persona '{PersonaName}' had a Transcript read refused: {Code} - {Reason}",
-                            this.persona.Name,
-                            error.Code,
-                            error.Message);
-                    }
-                    else
-                    {
-                        // Dropped silently until now, which made a refused post - a spent Budget, a Room
-                        // this Agent is not a Member of - invisible outside the server's own log. The
-                        // Room can now be named: ProcessWorkItemAsync mints a messageId for every post,
-                        // so error.RelatedMessageId correlates back to the Turn that sent it. Wiring
-                        // that correlation into this log line is a later task.
-                        this.logger.LogWarning(
-                            "Persona '{PersonaName}' had a message refused: {Code} - {Reason}",
-                            this.persona.Name,
-                            error.Code,
-                            error.Message);
-
-                        // notMember/unknownRoom/badMessage are a real misconfiguration the Human should
-                        // see. budgetExhausted is deliberately excluded: ADR-0006 already owns that
-                        // surface (the Room view asks the Human, with Continue), and a Degraded badge
-                        // there would mark an Agent that is working exactly as designed.
-                        if (error.Code is ErrorCodes.NotMember or ErrorCodes.UnknownRoom or ErrorCodes.BadMessage)
-                        {
-                            this.RaiseStatusChanged(PersonaState.Degraded, $"A post was refused — {error.Message}");
-                        }
-                    }
+                    this.OnProtocolError(error);
                 }
                 else if (message is StopTurn stop)
                 {
@@ -716,7 +638,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                     var mark = Interlocked.Read(ref this.sequenceCounter);
                     if (this.pool is not null)
                     {
-                        await this.pool.StopAsync(stop.RoomId, mark, ct);
+                        await this.pool.StopAsync(stop.RoomId, mark, ct).ConfigureAwait(false);
                     }
                 }
             }
@@ -736,6 +658,155 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         }
     }
 
+    /// <summary>Routes one posted Message by the <see cref="ReplyGate"/>'s decision: reply, read as context only, or decline.</summary>
+    /// <param name="posted">The delivered Message.</param>
+    private void OnMessagePosted(MessagePosted posted)
+    {
+        // D16 P0-3: kept current before anything below reads it, including the
+        // catch-up-only branch, so a rename is picked up from the very next delivery in
+        // that Room regardless of which ReplyDecision it gets (RS §9 E-7).
+        this.knownRoomNames[posted.RoomId] = posted.RoomName;
+
+        // A Human Message ends the unattended run, so the token Budget starts over with
+        // it. The per-Room Budget resets server-side on the very same Message; this one
+        // is per Persona, because one session spans every Room the Agent is in.
+        if (SenderIsHuman(posted))
+        {
+            Interlocked.Exchange(ref this.tokensConsumed, 0);
+
+            // Clears whatever Degraded state the spent token Budget reported - the only
+            // thing this specific signal is documented to clear (T4.3).
+            this.RaiseStatusChanged(PersonaState.Online, null);
+        }
+
+        var following = this.agentId is not null && this.roomFollows.IsFollowing(this.agentId, posted.RoomId);
+        switch (ReplyGate.Decide(
+            posted.Mentioned, posted.Members.Count, posted.AgentMessagesSinceHuman, posted.Budget, following))
+        {
+            case ReplyDecision.Reply:
+                this.EnqueueReply(posted);
+                break;
+
+            case ReplyDecision.CatchUp:
+                // Nothing is submitted to the agent until it is Mentioned (the repo owner's
+                // absolute rule), but the Message is not thrown away: it rides along, as
+                // context only, the next time this Agent is Mentioned in that Room.
+                if (this.logger.IsEnabled(LogLevel.Information))
+                {
+                    this.logger.LogInformation(
+                        "Persona '{PersonaName}' read a message in room {RoomId} as context only: it was not mentioned and the room has {MemberCount} members.",
+                        this.persona.Name,
+                        posted.RoomId,
+                        posted.Members.Count);
+                }
+
+                this.AppendCatchUp(posted.RoomId, posted.Message.SenderName, posted.Message.Text);
+                break;
+
+            case ReplyDecision.BudgetExhausted:
+                // Deliberately NOT buffered as Catch-up. A Catch-up Message was missed; this
+                // one is being held, and if the Human extends the Room's Budget this exact
+                // Message is delivered again - at which point a buffered copy would reach the
+                // model twice in one prompt.
+                this.logger.LogWarning(
+                    "Persona '{PersonaName}' declined a turn in room {RoomId}: the room has spent its budget of {Budget} agent messages.",
+                    this.persona.Name,
+                    posted.RoomId,
+                    posted.Budget);
+                break;
+        }
+    }
+
+    /// <summary>Queues the Turn for a Message the Persona decided to reply to, or its command prompt.</summary>
+    /// <param name="posted">The delivered Message.</param>
+    private void EnqueueReply(MessagePosted posted)
+    {
+        // Decided BEFORE anything is drained: building an ordinary item takes the
+        // Catch-up buffer and own-post lines as a side effect, and a bare command
+        // prompt has nowhere to put them, so a command item must leave both queued
+        // for the next ordinary Turn (Commands spec, section 6.5).
+        if (this.TryBuildCommandItem(posted, out var commandItem))
+        {
+            this.pool?.Enqueue(new QueuedWork(Interlocked.Increment(ref this.sequenceCounter), commandItem));
+            return;
+        }
+
+        var missed = this.TakeCatchUp(posted.RoomId);
+
+        // D27, RS §6.7, finding P-22: drained here, in the read loop, beside
+        // TakeCatchUp - not by the pool at Turn start - so a post made into this
+        // Room after this item was already queued is not missed (RS principle 4).
+        IReadOnlyList<string> ownPostLines = this.agentId is { } takeAgentId && this.ownPosts is { } ownPostsTake
+            ? ownPostsTake.Take(takeAgentId, posted.RoomId)
+            : [];
+        var labelledRoomName = RoomLabels.Distinguish(posted.RoomId, posted.RoomName, this.knownRoomNames);
+        var item = new WorkItem(
+            posted.RoomId, labelledRoomName, posted.Message.SenderName, posted.Message.Text, missed,
+            TriggerMessageId: posted.Message.Id,
+            OwnPostLines: ownPostLines.Count > 0 ? ownPostLines : null,
+            Team: posted.Team);
+        var sequence = Interlocked.Increment(ref this.sequenceCounter);
+
+        // Never call the agent from the read loop: hand the item to the pool,
+        // which routes it to the shared session or that Room's own one.
+        this.pool?.Enqueue(new QueuedWork(sequence, item));
+    }
+
+    /// <summary>Completes the matching pending Transcript read with the answer.</summary>
+    /// <param name="tail">The Transcript answer.</param>
+    private void OnTranscriptTail(TranscriptTail tail)
+    {
+        // Completes the matching ReadTranscriptAsync wait, if one is still pending; an
+        // answer to a read this runner already gave up on (its own 10-second wait
+        // elapsed) finds nothing to complete and is simply dropped.
+        if (this.pendingTranscriptReads.TryRemove(tail.RequestId, out var pendingTranscript))
+        {
+            pendingTranscript.TrySetResult(tail);
+        }
+    }
+
+    /// <summary>Handles a ProtocolError: a refused Transcript read completes its wait; any other refusal is logged and may degrade the Persona.</summary>
+    /// <param name="error">The error the server sent.</param>
+    private void OnProtocolError(ProtocolError error)
+    {
+        // D24 correction 21: a refused ReadTranscript answers with a ProtocolError whose
+        // RelatedMessageId is the pending RequestId, and that match is checked BEFORE the
+        // NotMember/UnknownRoom/BadMessage arm below - a Transcript refusal is a Warning
+        // only (RS §9 E-3), never the Degraded "a post was refused" report that arm makes.
+        if (error.RelatedMessageId is not null
+            && this.pendingTranscriptReads.TryRemove(error.RelatedMessageId, out var pendingTranscript))
+        {
+            pendingTranscript.TrySetResult(null);
+            this.logger.LogWarning(
+                "Persona '{PersonaName}' had a Transcript read refused: {Code} - {Reason}",
+                this.persona.Name,
+                error.Code,
+                error.Message);
+        }
+        else
+        {
+            // Dropped silently until now, which made a refused post - a spent Budget, a Room
+            // this Agent is not a Member of - invisible outside the server's own log. The
+            // Room can now be named: ProcessWorkItemAsync mints a messageId for every post,
+            // so error.RelatedMessageId correlates back to the Turn that sent it. Wiring
+            // that correlation into this log line is a later task.
+            this.logger.LogWarning(
+                "Persona '{PersonaName}' had a message refused: {Code} - {Reason}",
+                this.persona.Name,
+                error.Code,
+                error.Message);
+
+            // notMember/unknownRoom/badMessage are a real misconfiguration the Human should
+            // see. budgetExhausted is deliberately excluded: ADR-0006 already owns that
+            // surface (the Room view asks the Human, with Continue), and a Degraded badge
+            // there would mark an Agent that is working exactly as designed.
+            if (error.Code is ErrorCodes.NotMember or ErrorCodes.UnknownRoom or ErrorCodes.BadMessage)
+            {
+                this.RaiseStatusChanged(PersonaState.Degraded, $"A post was refused — {error.Message}");
+            }
+        }
+    }
+
     private async Task<NamedPipeClientStream> ConnectAsync(CancellationToken ct)
     {
         for (var attempt = 1; attempt <= MaxConnectAttempts; attempt++)
@@ -743,21 +814,21 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             var client = new NamedPipeClientStream(".", this.options.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
             try
             {
-                await client.ConnectAsync(100, ct);
+                await client.ConnectAsync(100, ct).ConfigureAwait(false);
                 return client;
             }
             catch (TimeoutException)
             {
-                await client.DisposeAsync();
+                await client.DisposeAsync().ConfigureAwait(false);
             }
             catch (IOException)
             {
-                await client.DisposeAsync();
+                await client.DisposeAsync().ConfigureAwait(false);
             }
 
             if (attempt < MaxConnectAttempts)
             {
-                await Task.Delay(ConnectRetryDelay, ct);
+                await Task.Delay(ConnectRetryDelay, ct).ConfigureAwait(false);
             }
         }
 
@@ -967,7 +1038,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
 
         try
         {
-            await task;
+            await task.ConfigureAwait(false);
         }
         catch (Exception)
         {

@@ -1,17 +1,11 @@
-using System.Reflection;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.TeamTypes;
 using Microsoft.Extensions.Options;
+using System.Reflection;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Agency.Huddle.App.HiringPool;
-
-/// <summary>A pool entry that could not be offered.</summary>
-/// <param name="Id">The job or team type id, or the file name when the whole file was rejected.</param>
-/// <param name="Source">Where the entry came from.</param>
-/// <param name="Message">Why it was rejected.</param>
-internal sealed record HiringPoolProblem(string Id, string Source, string Message);
 
 /// <summary>
 /// Loads and serves the hiring pool: the global catalog of jobs a team type draws its roles from.
@@ -269,7 +263,7 @@ internal sealed partial class HiringPoolCatalog
             return $"The job has no persona file at '{job.Persona}'.";
         }
 
-        return result.Template is null ? "The persona does not parse: " + string.Join(" ", result.Problems) : null;
+        return result.Template is null ? "The persona does not parse: " + string.Join(' ', result.Problems) : null;
     }
 
     /// <summary>Parses a persona from the user folder, falling back to the shipped file when the user's does not parse.</summary>

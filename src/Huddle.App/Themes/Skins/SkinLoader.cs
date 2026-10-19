@@ -428,69 +428,75 @@ internal static partial class SkinLoader
             }
 
             Draft draft = new() { File = file, Id = string.Empty, Label = string.Empty, Mode = ThemeMode.Light };
-            bool hasId = false, hasLabel = false, hasMode = false, hasOrder = false;
+            HashSet<string> seen = new(StringComparer.Ordinal);
             foreach (JsonProperty property in root.EnumerateObject())
             {
-                switch (property.Name)
-                {
-                    case "$schema":
-                        break;
-                    case "id":
-                        draft.Id = ReadString(file, "id", property.Value);
-                        hasId = true;
-                        break;
-                    case "label":
-                        draft.Label = ReadString(file, "label", property.Value);
-                        hasLabel = true;
-                        break;
-                    case "mode":
-                        draft.Mode = ReadMode(file, property.Value);
-                        hasMode = true;
-                        break;
-                    case "order":
-                        if (property.Value.ValueKind != JsonValueKind.Number || !property.Value.TryGetInt32(out int order))
-                        {
-                            throw Fail(file, "'order' must be an integer.");
-                        }
-
-                        draft.Order = order;
-                        hasOrder = true;
-                        break;
-                    case "include":
-                        draft.Include = ReadString(file, "include", property.Value);
-                        break;
-                    case "radius":
-                        draft.Radius = ReadString(file, "radius", property.Value);
-                        break;
-                    case "faces":
-                        ParseFaces(file, property.Value, draft);
-                        break;
-                    case "typography":
-                        ParseTypography(file, property.Value, draft);
-                        break;
-                    case "shadows":
-                        ParseShadows(file, property.Value, draft);
-                        break;
-                    case "palette":
-                        ParsePalette(file, property.Value, draft);
-                        break;
-                    case "tokens":
-                        ParseTokens(file, property.Value, draft);
-                        break;
-                    case "traits":
-                        ParseTraits(file, property.Value, draft);
-                        break;
-                    default:
-                        throw Fail(file, $"unknown key '{property.Name}'.");
-                }
+                ApplyProperty(file, property, draft);
+                _ = seen.Add(property.Name);
             }
 
-            if (!(hasId && hasLabel && hasMode && hasOrder))
+            if (!(seen.Contains("id") && seen.Contains("label") && seen.Contains("mode") && seen.Contains("order")))
             {
                 throw Fail(file, "'id', 'label', 'mode' and 'order' are required.");
             }
 
             return draft;
+        }
+    }
+
+    /// <summary>Applies one top-level property of a skin file to the draft.</summary>
+    /// <param name="file">The file name, for error messages.</param>
+    /// <param name="property">The property to apply.</param>
+    /// <param name="draft">The draft being filled in.</param>
+    private static void ApplyProperty(string file, JsonProperty property, Draft draft)
+    {
+        switch (property.Name)
+        {
+            case "$schema":
+                break;
+            case "id":
+                draft.Id = ReadString(file, "id", property.Value);
+                break;
+            case "label":
+                draft.Label = ReadString(file, "label", property.Value);
+                break;
+            case "mode":
+                draft.Mode = ReadMode(file, property.Value);
+                break;
+            case "order":
+                if (property.Value.ValueKind != JsonValueKind.Number || !property.Value.TryGetInt32(out int order))
+                {
+                    throw Fail(file, "'order' must be an integer.");
+                }
+
+                draft.Order = order;
+                break;
+            case "include":
+                draft.Include = ReadString(file, "include", property.Value);
+                break;
+            case "radius":
+                draft.Radius = ReadString(file, "radius", property.Value);
+                break;
+            case "faces":
+                ParseFaces(file, property.Value, draft);
+                break;
+            case "typography":
+                ParseTypography(file, property.Value, draft);
+                break;
+            case "shadows":
+                ParseShadows(file, property.Value, draft);
+                break;
+            case "palette":
+                ParsePalette(file, property.Value, draft);
+                break;
+            case "tokens":
+                ParseTokens(file, property.Value, draft);
+                break;
+            case "traits":
+                ParseTraits(file, property.Value, draft);
+                break;
+            default:
+                throw Fail(file, $"unknown key '{property.Name}'.");
         }
     }
 

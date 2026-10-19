@@ -1,22 +1,6 @@
 namespace Agency.Huddle.App.Tasks;
 
 /// <summary>
-/// Distinguishes "leave this field alone" (<see langword="default"/>, <see cref="IsSet"/> false)
-/// from "set this field to a value, possibly null" (<see cref="Set(T)"/>) - Spec §9.1. A plain
-/// nullable can't carry that distinction for a field whose "clear" value is itself
-/// <see langword="null"/>, such as <see cref="TaskPatch.Assignee"/>.
-/// </summary>
-/// <typeparam name="T">The type of value carried when set.</typeparam>
-/// <param name="IsSet">Whether this field is being changed at all.</param>
-/// <param name="Value">The new value, meaningful only when <paramref name="IsSet"/> is <see langword="true"/>.</param>
-internal readonly record struct Optional<T>(bool IsSet, T Value)
-{
-    /// <summary>Creates a set <see cref="Optional{T}"/> carrying <paramref name="value"/>.</summary>
-    /// <param name="value">The value to set the field to.</param>
-    public static Optional<T> Set(T value) => new(true, value);
-}
-
-/// <summary>
 /// Only the fields being changed are non-null (or, for a field whose "clear" state is itself
 /// <see langword="null"/>, set through an <see cref="Optional{T}"/>) - Spec §9.1. Passed to
 /// <see cref="TaskService.Update(TaskId, TaskPatch, string?, TaskActor, bool)"/>.
@@ -98,7 +82,14 @@ internal sealed record TaskPatch
     internal IReadOnlyList<TaskField> Fields()
     {
         List<TaskField> fields = [];
+        this.AddCoreFields(fields);
+        this.AddRelationFields(fields);
+        return fields;
+    }
 
+    /// <summary>Adds the title, status, priority, assignee, parent and blocked-by fields this patch sets.</summary>
+    private void AddCoreFields(List<TaskField> fields)
+    {
         if (this.Title is not null)
         {
             fields.Add(TaskField.Title);
@@ -128,7 +119,11 @@ internal sealed record TaskPatch
         {
             fields.Add(TaskField.BlockedBy);
         }
+    }
 
+    /// <summary>Adds the duplicate-of, tags, dates, Sprint, description and location fields this patch sets.</summary>
+    private void AddRelationFields(List<TaskField> fields)
+    {
         if (this.DuplicateOf.IsSet)
         {
             fields.Add(TaskField.DuplicateOf);
@@ -163,8 +158,6 @@ internal sealed record TaskPatch
         {
             fields.Add(TaskField.Location);
         }
-
-        return fields;
     }
 
     /// <summary>

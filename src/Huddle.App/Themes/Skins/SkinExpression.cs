@@ -249,20 +249,30 @@ internal static partial class SkinExpression
                 }
 
                 first = false;
-                this.SkipWhitespace();
-                pending = " ";
-                if (!calc && !this.AtEnd && this.text[this.position] == ',')
-                {
-                    this.position++;
-                    this.SkipWhitespace();
-                    if (this.AtEnd || this.text[this.position] == ')')
-                    {
-                        throw this.Forbidden(",");
-                    }
-
-                    pending = ", ";
-                }
+                pending = this.ReadSeparator(calc);
             }
+        }
+
+        /// <summary>Skips whitespace after a term and consumes a comma separator outside <c>calc()</c>.</summary>
+        /// <param name="calc">Whether the sequence is inside <c>calc()</c>, where a comma is not a separator.</param>
+        /// <returns>The text to write before the next term: a space, or a comma and a space.</returns>
+        private string ReadSeparator(bool calc)
+        {
+            this.SkipWhitespace();
+            string pending = " ";
+            if (!calc && !this.AtEnd && this.text[this.position] == ',')
+            {
+                this.position++;
+                this.SkipWhitespace();
+                if (this.AtEnd || this.text[this.position] == ')')
+                {
+                    throw this.Forbidden(",");
+                }
+
+                pending = ", ";
+            }
+
+            return pending;
         }
 
         private bool IsCalcOperator()

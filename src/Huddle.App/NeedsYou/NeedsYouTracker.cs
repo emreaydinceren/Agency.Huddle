@@ -206,7 +206,7 @@ internal sealed class NeedsYouTracker
     {
         try
         {
-            IReadOnlyList<Room> current = await this.teamDirectory.GetRoomsAsync();
+            IReadOnlyList<Room> current = await this.teamDirectory.GetRoomsAsync().ConfigureAwait(false);
             HashSet<string> alive = [.. current.Select(room => room.Id)];
             bool changed;
             lock (this.gate)

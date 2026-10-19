@@ -42,26 +42,7 @@ public static class MentionParser
         ArgumentNullException.ThrowIfNull(members);
         ArgumentNullException.ThrowIfNull(aliases);
 
-        // Longest handle first, so "@Emily Lee" resolves to "Emily Lee" and not to "Emily" in a Room
-        // that holds both. The longer reading is the safer default: a writer who meant Emily had no
-        // reason to type her surname after her Name. Names and Aliases are sorted together in ONE
-        // list, not scanned in two separate passes: a two-pass approach (all Names first, Aliases only
-        // as a fallback) would let a short Name win here whenever it happens to sit at a real word
-        // boundary - exactly the "Emily"/"Emily Lee" trap, just triggered by an Alias instead of a
-        // second Name.
-        //
-        // Names are concatenated BEFORE Aliases, deliberately: LINQ's OrderByDescending is a stable
-        // sort, so when a Name and an Alias tie in length, whichever one appears first in the
-        // un-sorted sequence wins that tie. Swap the two Concat operands below and an equal-length
-        // Alias would start silently beating a Name, with no compiler or analyser signal -
-        // Parse_NameBeatsAnEqualLengthAlias in MentionParserTests pins this ordering so a future edit
-        // cannot make that swap unnoticed.
-        var candidates = members
-            .Where(member => member.Name.Length > 0)
-            .Select(member => new Candidate(member.Name, member))
-            .Concat(ResolveAliasCandidates(members, aliases))
-            .OrderByDescending(candidate => candidate.Handle.Length)
-            .ToList();
+        var candidates = BuildCandidates(members, aliases);
 
         var result = new List<User>();
         var seenIds = new HashSet<string>(StringComparer.Ordinal);
@@ -101,6 +82,37 @@ public static class MentionParser
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Builds every handle a Mention can resolve to, longest first, from the Members' Names and the
+    /// Aliases of those Members.
+    /// </summary>
+    /// <param name="members">The Room's Members.</param>
+    /// <param name="aliases">Every Alias currently known, library-wide.</param>
+    /// <returns>The candidates, ordered by descending handle length.</returns>
+    private static List<Candidate> BuildCandidates(IReadOnlyList<User> members, IReadOnlyList<MentionAlias> aliases)
+    {
+        // Longest handle first, so "@Emily Lee" resolves to "Emily Lee" and not to "Emily" in a Room
+        // that holds both. The longer reading is the safer default: a writer who meant Emily had no
+        // reason to type her surname after her Name. Names and Aliases are sorted together in ONE
+        // list, not scanned in two separate passes: a two-pass approach (all Names first, Aliases only
+        // as a fallback) would let a short Name win here whenever it happens to sit at a real word
+        // boundary - exactly the "Emily"/"Emily Lee" trap, just triggered by an Alias instead of a
+        // second Name.
+        //
+        // Names are concatenated BEFORE Aliases, deliberately: LINQ's OrderByDescending is a stable
+        // sort, so when a Name and an Alias tie in length, whichever one appears first in the
+        // un-sorted sequence wins that tie. Swap the two Concat operands below and an equal-length
+        // Alias would start silently beating a Name, with no compiler or analyser signal -
+        // Parse_NameBeatsAnEqualLengthAlias in MentionParserTests pins this ordering so a future edit
+        // cannot make that swap unnoticed.
+        return members
+            .Where(member => member.Name.Length > 0)
+            .Select(member => new Candidate(member.Name, member))
+            .Concat(ResolveAliasCandidates(members, aliases))
+            .OrderByDescending(candidate => candidate.Handle.Length)
+            .ToList();
     }
 
     /// <summary>

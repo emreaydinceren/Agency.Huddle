@@ -2,24 +2,6 @@ using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.FileChanges;
 
-/// <summary>What a scan of one folder found, per FC §6.4.</summary>
-internal enum ScanOutcome
-{
-    /// <summary>The folder exists and was walked within <see cref="FileChangesOptions.MaxFilesPerFolder"/>.</summary>
-    Scanned,
-
-    /// <summary>The folder does not exist. Not a failure: its files are reported as added once it appears.</summary>
-    Missing,
-
-    /// <summary>The folder holds more than <see cref="FileChangesOptions.MaxFilesPerFolder"/> files and was not fully walked.</summary>
-    TooLarge,
-}
-
-/// <summary>The result of one <see cref="FolderScanner.Scan(string, FileChangesOptions, bool, string)"/> call.</summary>
-/// <param name="Outcome">Whether the folder was scanned, is missing, or is too large.</param>
-/// <param name="Snapshot"><see cref="FolderSnapshot.Empty"/> for <see cref="ScanOutcome.Missing"/> and <see cref="ScanOutcome.TooLarge"/>.</param>
-internal sealed record ScanResult(ScanOutcome Outcome, FolderSnapshot Snapshot);
-
 /// <summary>
 /// Scans one folder into a <see cref="FolderSnapshot"/>, pruning ignored directories, skipping
 /// reparse points, and stopping once the file count exceeds a cap, per FC §6.4. Nothing is read

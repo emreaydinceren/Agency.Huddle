@@ -172,7 +172,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     {
         if (!this.sessionPerRoom)
         {
-            await this.sharedSession!.OpenAsync(cancellationToken);
+            await this.sharedSession!.OpenAsync(cancellationToken).ConfigureAwait(false);
             this.startupSession = this.sharedSession;
             return;
         }
@@ -189,7 +189,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         // D22 correction 6 / P-5 invariant 1's exception: this open runs before any ticket exists for
         // it and before the read loop's consumers can offer one, so it bypasses the gate entirely -
         // safe only because it completes before anything else could contend for a slot.
-        await session.OpenAsync(cancellationToken);
+        await session.OpenAsync(cancellationToken).ConfigureAwait(false);
         this.startupSession = session;
     }
 
@@ -291,7 +291,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             return;
         }
 
-        await victim.CloseAsync();
+        await victim.CloseAsync().ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -306,7 +306,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
 
         if (this.sweepTimer is not null)
         {
-            await this.sweepTimer.DisposeAsync();
+            await this.sweepTimer.DisposeAsync().ConfigureAwait(false);
         }
 
         // try/finally: the host owns the Adapter process, so it is disposed even when a session throws
@@ -323,17 +323,17 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
 
                 foreach (var session in sessions)
                 {
-                    await session.DisposeAsync();
+                    await session.DisposeAsync().ConfigureAwait(false);
                 }
             }
             else if (this.sharedSession is not null)
             {
-                await this.sharedSession.DisposeAsync();
+                await this.sharedSession.DisposeAsync().ConfigureAwait(false);
             }
         }
         finally
         {
-            await this.host.DisposeAsync();
+            await this.host.DisposeAsync().ConfigureAwait(false);
         }
     }
 
@@ -385,7 +385,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         {
             try
             {
-                await session.CloseAsync();
+                await session.CloseAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {

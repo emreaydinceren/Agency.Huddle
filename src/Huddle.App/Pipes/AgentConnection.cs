@@ -81,39 +81,18 @@ internal sealed class AgentConnection
 
     public async Task RunAsync(CancellationToken ct)
     {
-        await using var lineStream = new JsonLineStream(this.pipe);
+        var lineStream = new JsonLineStream(this.pipe);
+        await using var lineStreamScope = lineStream.ConfigureAwait(false);
         this.stream = lineStream;
 
         try
         {
-            var hello = await ReadHelloAsync(lineStream, ct);
-            if (hello is null)
+            if (!await this.HandshakeAsync(lineStream, ct).ConfigureAwait(false))
             {
                 return;
             }
 
-            if (!NameRules.IsValidAgentName(hello.Name))
-            {
-                await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.InvalidName, $"'{hello.Name}' is not a valid agent name."), ct);
-                return;
-            }
-
-            var user = await this.teamDirectory.UpsertAgentUserAsync(hello.Name, hello.Description, ct);
-            if (user is null)
-            {
-                await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.NameReserved, $"'{hello.Name}' is reserved."), ct);
-                return;
-            }
-
-            this.Agent = user;
-            await this.chat.EnsureRoomForAsync(user, ct);
-            this.gateway.Register(this);
-
-            var welcome = await this.BuildWelcomeAsync(user, ct);
-            await lineStream.WriteAsync(welcome, ct);
-            this.welcomeSent.TrySetResult();
-
-            await this.ReadLoopAsync(lineStream, ct);
+            await this.ReadLoopAsync(lineStream, ct).ConfigureAwait(false);
         }
         catch (IOException ex)
         {
@@ -151,8 +130,43 @@ internal sealed class AgentConnection
                 }
             }
 
-            await this.pipe.DisposeAsync();
+            await this.pipe.DisposeAsync().ConfigureAwait(false);
         }
+    }
+
+    /// <summary>Reads the Hello, registers the agent and writes the Welcome.</summary>
+    /// <param name="lineStream">The connection's line stream.</param>
+    /// <param name="ct">Cancels the handshake.</param>
+    /// <returns><see langword="true"/> when the agent is registered and welcomed; <see langword="false"/> when the connection must end.</returns>
+    private async Task<bool> HandshakeAsync(JsonLineStream lineStream, CancellationToken ct)
+    {
+        var hello = await ReadHelloAsync(lineStream, ct).ConfigureAwait(false);
+        if (hello is null)
+        {
+            return false;
+        }
+
+        if (!NameRules.IsValidAgentName(hello.Name))
+        {
+            await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.InvalidName, $"'{hello.Name}' is not a valid agent name."), ct).ConfigureAwait(false);
+            return false;
+        }
+
+        var user = await this.teamDirectory.UpsertAgentUserAsync(hello.Name, hello.Description, ct).ConfigureAwait(false);
+        if (user is null)
+        {
+            await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.NameReserved, $"'{hello.Name}' is reserved."), ct).ConfigureAwait(false);
+            return false;
+        }
+
+        this.Agent = user;
+        await this.chat.EnsureRoomForAsync(user, ct).ConfigureAwait(false);
+        this.gateway.Register(this);
+
+        var welcome = await this.BuildWelcomeAsync(user, ct).ConfigureAwait(false);
+        await lineStream.WriteAsync(welcome, ct).ConfigureAwait(false);
+        this.welcomeSent.TrySetResult();
+        return true;
     }
 
     public async Task SendAsync(ProtocolMessage message, CancellationToken ct)
@@ -165,8 +179,8 @@ internal sealed class AgentConnection
 
         try
         {
-            await this.welcomeSent.Task.WaitAsync(ct);
-            await current.WriteAsync(message, ct);
+            await this.welcomeSent.Task.WaitAsync(ct).ConfigureAwait(false);
+            await current.WriteAsync(message, ct).ConfigureAwait(false);
         }
         catch (IOException)
         {
@@ -194,22 +208,22 @@ internal sealed class AgentConnection
         ProtocolMessage? first;
         try
         {
-            first = await lineStream.ReadAsync(helloCts.Token);
+            first = await lineStream.ReadAsync(helloCts.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
-            await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.ExpectedHello, "Timed out waiting for 'hello'."), ct);
+            await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.ExpectedHello, "Timed out waiting for 'hello'."), ct).ConfigureAwait(false);
             return null;
         }
         catch (JsonException ex)
         {
-            await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.ExpectedHello, ex.Message), ct);
+            await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.ExpectedHello, ex.Message), ct).ConfigureAwait(false);
             return null;
         }
 
         if (first is not Hello hello)
         {
-            await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.ExpectedHello, "Expected 'hello' as the first message."), ct);
+            await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.ExpectedHello, "Expected 'hello' as the first message."), ct).ConfigureAwait(false);
             return null;
         }
 
@@ -218,12 +232,12 @@ internal sealed class AgentConnection
 
     private async Task<Welcome> BuildWelcomeAsync(User user, CancellationToken ct)
     {
-        var rooms = await this.teamDirectory.GetRoomsForUserAsync(user.Id, ct);
+        var rooms = await this.teamDirectory.GetRoomsForUserAsync(user.Id, ct).ConfigureAwait(false);
         var roomInfos = new List<RoomInfo>(rooms.Count);
         foreach (var room in rooms)
         {
-            var members = await this.teamDirectory.GetRoomMembersAsync(room.Id, ct);
-            var isEmpty = !await this.chatStore.HasMessagesAsync(room.Id, ct);
+            var members = await this.teamDirectory.GetRoomMembersAsync(room.Id, ct).ConfigureAwait(false);
+            var isEmpty = !await this.chatStore.HasMessagesAsync(room.Id, ct).ConfigureAwait(false);
             roomInfos.Add(new RoomInfo(room.Id, room.Name, members.Select(ToMemberInfo).ToList(), isEmpty, room.Team));
         }
 
@@ -237,11 +251,11 @@ internal sealed class AgentConnection
             ProtocolMessage? message;
             try
             {
-                message = await lineStream.ReadAsync(ct);
+                message = await lineStream.ReadAsync(ct).ConfigureAwait(false);
             }
             catch (JsonException ex)
             {
-                await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, ex.Message), ct);
+                await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, ex.Message), ct).ConfigureAwait(false);
                 continue;
             }
 
@@ -253,22 +267,22 @@ internal sealed class AgentConnection
             switch (message)
             {
                 case PostMessage post:
-                await this.HandlePostMessageAsync(lineStream, post, ct);
+                await this.HandlePostMessageAsync(lineStream, post, ct).ConfigureAwait(false);
                 break;
                 case MessageDelta delta:
-                await this.HandleMessageDeltaAsync(lineStream, delta, ct);
+                await this.HandleMessageDeltaAsync(lineStream, delta, ct).ConfigureAwait(false);
                 break;
                 case ToolActivity activity:
-                await this.HandleToolActivityAsync(lineStream, activity, ct);
+                await this.HandleToolActivityAsync(lineStream, activity, ct).ConfigureAwait(false);
                 break;
                 case Hello:
-                await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "already registered"), ct);
+                await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "already registered"), ct).ConfigureAwait(false);
                 break;
                 case ReadTranscript read:
-                await this.HandleReadTranscriptAsync(lineStream, read, ct);
+                await this.HandleReadTranscriptAsync(lineStream, read, ct).ConfigureAwait(false);
                 break;
                 default:
-                await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "Unexpected message type."), ct);
+                await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "Unexpected message type."), ct).ConfigureAwait(false);
                 break;
             }
         }
@@ -278,17 +292,17 @@ internal sealed class AgentConnection
     {
         if (post.MessageId is not null && !NameRules.IsValidId(post.MessageId))
         {
-            await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "Invalid message id.", post.MessageId), ct);
+            await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "Invalid message id.", post.MessageId), ct).ConfigureAwait(false);
             return;
         }
 
         try
         {
-            await this.chat.PostAsync(post.RoomId, this.Agent!.Id, post.Text, post.MessageId, ct);
+            await this.chat.PostAsync(post.RoomId, this.Agent!.Id, post.Text, post.MessageId, ct).ConfigureAwait(false);
         }
         catch (ChatException ex)
         {
-            await lineStream.WriteAsync(new ProtocolError(ex.Code, ex.Message, post.MessageId), ct);
+            await lineStream.WriteAsync(new ProtocolError(ex.Code, ex.Message, post.MessageId), ct).ConfigureAwait(false);
             return;
         }
 
@@ -305,14 +319,14 @@ internal sealed class AgentConnection
     {
         if (!NameRules.IsValidId(delta.MessageId))
         {
-            await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "Invalid message id.", delta.MessageId), ct);
+            await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "Invalid message id.", delta.MessageId), ct).ConfigureAwait(false);
             return;
         }
 
-        var membershipError = await this.CheckMembershipAsync(delta.RoomId, delta.MessageId, ct);
+        var membershipError = await this.CheckMembershipAsync(delta.RoomId, delta.MessageId, ct).ConfigureAwait(false);
         if (membershipError is not null)
         {
-            await lineStream.WriteAsync(membershipError, ct);
+            await lineStream.WriteAsync(membershipError, ct).ConfigureAwait(false);
             return;
         }
 
@@ -333,14 +347,14 @@ internal sealed class AgentConnection
     {
         if (!NameRules.IsValidId(activity.MessageId))
         {
-            await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "Invalid message id.", activity.MessageId), ct);
+            await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "Invalid message id.", activity.MessageId), ct).ConfigureAwait(false);
             return;
         }
 
-        var membershipError = await this.CheckMembershipAsync(activity.RoomId, activity.MessageId, ct);
+        var membershipError = await this.CheckMembershipAsync(activity.RoomId, activity.MessageId, ct).ConfigureAwait(false);
         if (membershipError is not null)
         {
-            await lineStream.WriteAsync(membershipError, ct);
+            await lineStream.WriteAsync(membershipError, ct).ConfigureAwait(false);
             return;
         }
 
@@ -403,21 +417,21 @@ internal sealed class AgentConnection
         if (read.Max < 1)
         {
             await lineStream.WriteAsync(
-                new ProtocolError(ErrorCodes.BadMessage, "max must be at least 1.", read.RequestId), ct);
+                new ProtocolError(ErrorCodes.BadMessage, "max must be at least 1.", read.RequestId), ct).ConfigureAwait(false);
             return;
         }
 
         // ResolveMembershipErrorAsync directly, never CheckMembershipAsync: that cache is keyed on a
         // Message id, and RequestId is not one - reusing it would risk handing this Room's verdict to
         // an unrelated cache entry, or vice versa.
-        var membershipError = await this.ResolveMembershipErrorAsync(read.RoomId, read.RequestId, ct);
+        var membershipError = await this.ResolveMembershipErrorAsync(read.RoomId, read.RequestId, ct).ConfigureAwait(false);
         if (membershipError is not null)
         {
-            await lineStream.WriteAsync(membershipError, ct);
+            await lineStream.WriteAsync(membershipError, ct).ConfigureAwait(false);
             return;
         }
 
-        var transcript = await this.chatStore.ReadAllAsync(read.RoomId, ct);
+        var transcript = await this.chatStore.ReadAllAsync(read.RoomId, ct).ConfigureAwait(false);
 
         var beforeIndex = IndexOf(transcript, read.BeforeMessageId);
         var end = beforeIndex >= 0 ? beforeIndex : transcript.Count;
@@ -445,7 +459,7 @@ internal sealed class AgentConnection
             omitted++;
         }
 
-        await lineStream.WriteAsync(new TranscriptTail(read.RequestId, read.RoomId, messages, omitted), ct);
+        await lineStream.WriteAsync(new TranscriptTail(read.RequestId, read.RoomId, messages, omitted), ct).ConfigureAwait(false);
 
         static int IndexOf(IReadOnlyList<ChatMessage> messages, string messageId)
         {
@@ -485,20 +499,20 @@ internal sealed class AgentConnection
             return cached.Error;
         }
 
-        var error = await this.ResolveMembershipErrorAsync(roomId, messageId, ct);
+        var error = await this.ResolveMembershipErrorAsync(roomId, messageId, ct).ConfigureAwait(false);
         this.membershipCache = (roomId, messageId, error);
         return error;
     }
 
     private async Task<ProtocolError?> ResolveMembershipErrorAsync(string roomId, string messageId, CancellationToken ct)
     {
-        var room = await this.teamDirectory.GetRoomAsync(roomId, ct);
+        var room = await this.teamDirectory.GetRoomAsync(roomId, ct).ConfigureAwait(false);
         if (room is null)
         {
             return new ProtocolError(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.", messageId);
         }
 
-        var members = await this.teamDirectory.GetRoomMembersAsync(roomId, ct);
+        var members = await this.teamDirectory.GetRoomMembersAsync(roomId, ct).ConfigureAwait(false);
         var isMember = members.Any(m => m.Id == this.Agent!.Id);
         if (!isMember)
         {
@@ -512,7 +526,7 @@ internal sealed class AgentConnection
     {
         try
         {
-            await lineStream.WriteAsync(error, ct);
+            await lineStream.WriteAsync(error, ct).ConfigureAwait(false);
         }
         catch (IOException)
         {

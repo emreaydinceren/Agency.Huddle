@@ -37,7 +37,7 @@ internal sealed class ChatUploadService(
         string name = UploadNames.Clean(browserName, this.clock);
         string couldNotSave = string.Create(CultureInfo.InvariantCulture, $"Couldn't save {name}.");
 
-        Room? room = await directory.GetRoomAsync(roomId, ct);
+        Room? room = await directory.GetRoomAsync(roomId, ct).ConfigureAwait(false);
         if (room is null)
         {
             return LibraryResult<LibraryUpload>.Fail(couldNotSave);
@@ -50,7 +50,7 @@ internal sealed class ChatUploadService(
             return LibraryResult<LibraryUpload>.Fail(couldNotSave);
         }
 
-        return await files.CreateFromStreamAsync(candidates[^1], name, content, options.Value.Library.MaxUploadBytes, ct);
+        return await files.CreateFromStreamAsync(candidates[^1], name, content, options.Value.Library.MaxUploadBytes, ct).ConfigureAwait(false);
     }
 
     /// <summary>Deletes a saved upload that was never sent.</summary>

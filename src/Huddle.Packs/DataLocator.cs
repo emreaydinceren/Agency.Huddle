@@ -3,17 +3,6 @@ using Agency.Huddle.SkillPacks.Checking;
 
 namespace Agency.Huddle.Packs;
 
-/// <summary>The data folder, the context and the Skill Sources folder one run uses.</summary>
-/// <param name="DataDir">Huddle's data folder.</param>
-/// <param name="Context">What the checks need, from the context file.</param>
-/// <param name="SkillSourcesDir">The Skill Sources folder.</param>
-internal sealed record DataLocation(string DataDir, CheckContext Context, string SkillSourcesDir);
-
-/// <summary>The outcome of finding the data: the location, or the exit-2 message.</summary>
-/// <param name="Location">The location, or null.</param>
-/// <param name="Error">The message for standard error, or null.</param>
-internal sealed record LocateResult(DataLocation? Location, string? Error);
-
 /// <summary>Finds the data folder, reads the context file and works out the Skill Sources folder (§6.4).</summary>
 internal static class DataLocator
 {

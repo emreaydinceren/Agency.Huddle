@@ -32,7 +32,7 @@ internal sealed class ListAgentsTool(ITeamDirectory teamDirectory, IAgentGateway
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        var users = await teamDirectory.GetUsersAsync(cancellationToken);
+        var users = await teamDirectory.GetUsersAsync(cancellationToken).ConfigureAwait(false);
         var agents = users.Where(u => u.Kind == UserKind.Agent).ToList();
         var personaNames = personaStore.ListNames();
 

@@ -35,7 +35,7 @@ internal sealed class ReferenceExpander(ReferenceResolver resolver, IPromptSourc
             return null;
         }
 
-        ResolvedSet resolved = await resolver.ResolveCurrentAsync(candidates, ct);
+        ResolvedSet resolved = await resolver.ResolveCurrentAsync(candidates, ct).ConfigureAwait(false);
         string prefix = usesToolNamePrefix ? ReferenceExpander.ToolPrefix : string.Empty;
         return ReferencedItemsFormatter.Format(
             resolved.Items,

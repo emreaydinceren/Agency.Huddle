@@ -2,79 +2,10 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.SkillSources;
-using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.TeamTypes;
 
 namespace Agency.Huddle.App.Teams;
-
-/// <summary>One hire: a resolved card for a role of a team type, to be written as a Teammate of a Team.</summary>
-/// <param name="Team">The Team the Teammate joins.</param>
-/// <param name="TypeId">The team type id.</param>
-/// <param name="RoleId">The role id within the type.</param>
-/// <param name="Card">The resolved card carrying the name, model pick, skills and packs.</param>
-internal sealed record HireRequest(string Team, string TypeId, string RoleId, CardState Card);
-
-/// <summary>The outcome of one hire.</summary>
-/// <param name="Ok">Whether the Teammate file was written.</param>
-/// <param name="Error">Why the hire was refused, or what failed after the Teammate was written; <see langword="null"/> when nothing went wrong.</param>
-/// <param name="PersonaName">The new Teammate's name when the file was written; otherwise <see langword="null"/>.</param>
-internal sealed record HireResult(bool Ok, string? Error, string? PersonaName);
-
-/// <summary>One Teammate Build a team has drafted: written as is, not resolved from a team type's candidate file.</summary>
-/// <param name="Name">The Teammate's name.</param>
-/// <param name="Title">The job title.</param>
-/// <param name="Text">The persona text, which becomes the Teammate's system prompt.</param>
-/// <param name="Role">The role of the team type this Teammate fills, or <see langword="null"/> for a Teammate outside the type's roles.</param>
-/// <param name="Avatar">The avatar to save (its colour and label); an <paramref name="Image"/> is saved with it.</param>
-/// <param name="Image">The bytes of the avatar image, or <see langword="null"/>.</param>
-/// <param name="ImageExtension">The extension, with its dot, of <paramref name="Image"/>.</param>
-/// <param name="Adapter">The adapter the Teammate runs on, or <see langword="null"/> for the default.</param>
-/// <param name="Model">The model, or <see langword="null"/> for the adapter's default.</param>
-/// <param name="Effort">The effort, or <see langword="null"/> for the default.</param>
-/// <param name="Skills">The names of the Skills the Teammate carries; they must be in <c>Skills/</c> (see <see cref="HireService.EnsureSkillsAsync"/>).</param>
-/// <param name="Packs">The skill packs the Teammate was drawn from.</param>
-internal sealed record DraftHire(
-    string Name,
-    string Title,
-    string Text,
-    RoleRef? Role,
-    Avatar Avatar,
-    byte[]? Image,
-    string? ImageExtension,
-    string? Adapter = null,
-    string? Model = null,
-    string? Effort = null,
-    IReadOnlyList<string>? Skills = null,
-    IReadOnlyList<VersionedRef>? Packs = null)
-{
-    /// <summary>The names of the Skills the Teammate carries; empty when omitted.</summary>
-    public IReadOnlyList<string> Skills { get; init; } = Skills ?? [];
-
-    /// <summary>The skill packs the Teammate was drawn from; empty when omitted.</summary>
-    public IReadOnlyList<VersionedRef> Packs { get; init; } = Packs ?? [];
-}
-
-/// <summary>The outcome of hiring a batch of drafts.</summary>
-/// <param name="Error">Why the batch stopped, or <see langword="null"/> when every draft was hired.</param>
-/// <param name="Hired">The names written before the batch stopped, in request order.</param>
-internal sealed record DraftHireResult(string? Error, IReadOnlyList<string> Hired);
-
-/// <summary>Tells when a freshly hired Teammate's host is running.</summary>
-internal interface IPersonaStartGate
-{
-    /// <summary>Waits until the Teammate has a running host or the timeout passes.</summary>
-    /// <param name="name">The Teammate name.</param>
-    /// <param name="timeout">The longest wait.</param>
-    /// <param name="ct">Cancels the wait.</param>
-    /// <returns><see langword="true"/> when the Teammate is running; <see langword="false"/> on timeout.</returns>
-    Task<bool> WaitUntilRunningAsync(string name, TimeSpan timeout, CancellationToken ct);
-}
-
-/// <summary>The outcome of starting a Team.</summary>
-/// <param name="Ok">Whether every member was hired and the manager is running.</param>
-/// <param name="Error">Why the start stopped; <see langword="null"/> when it did not.</param>
-/// <param name="Started">The Teammates hired before the start finished or stopped, in hire order.</param>
-internal sealed record StartTeamResult(bool Ok, string? Error, IReadOnlyList<string> Started);
 
 /// <summary>
 /// Turns a resolved card into an ordinary Teammate file, a model row and an avatar (HR-5, HR-6,
@@ -147,19 +78,10 @@ internal sealed class HireService(
             return HireService.Stop(failure, started);
         }
 
-        bool running;
-        try
+        StartTeamResult? notRunning = await this.WaitForManagerAsync(manager, started, ct).ConfigureAwait(false);
+        if (notRunning is not null)
         {
-            running = await startGate.WaitUntilRunningAsync(manager.Card.Name, HireService.ManagerStartTimeout, ct).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            return HireService.Stop("The start was cancelled.", started);
-        }
-
-        if (!running)
-        {
-            return HireService.Stop($"{manager.Card.Name} did not start in time.", started);
+            return notRunning;
         }
 
         if (onboarding is not null)
@@ -182,6 +104,26 @@ internal sealed class HireService(
         }
 
         return new StartTeamResult(true, null, started);
+    }
+
+    /// <summary>Waits until the hired manager runs.</summary>
+    /// <param name="manager">The manager's hire request.</param>
+    /// <param name="started">The Teammates hired so far.</param>
+    /// <param name="ct">Cancels the wait.</param>
+    /// <returns>The stopping result, or <see langword="null"/> when the manager runs.</returns>
+    private async Task<StartTeamResult?> WaitForManagerAsync(HireRequest manager, List<string> started, CancellationToken ct)
+    {
+        bool running;
+        try
+        {
+            running = await startGate.WaitUntilRunningAsync(manager.Card.Name, HireService.ManagerStartTimeout, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return HireService.Stop("The start was cancelled.", started);
+        }
+
+        return running ? null : HireService.Stop($"{manager.Card.Name} did not start in time.", started);
     }
 
     /// <summary>Checks the start before anything is written.</summary>

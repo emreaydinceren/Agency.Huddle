@@ -267,10 +267,9 @@ dotnet_diagnostic.IDE0005.severity = error
 # weren't audited for this pass.
 dotnet_diagnostic.CA1062.severity = warning
 
-# CA2007: Use ConfigureAwait(false) in library code awaiting Tasks. Deliberately off: this is a
-# library consumed primarily from ASP.NET Core / generic-host apps with no SynchronizationContext
-# to deadlock on, and blanket ConfigureAwait(false) noise wasn't judged worth the diff.
-dotnet_diagnostic.CA2007.severity = none
+# CA2007: Use ConfigureAwait(false) in library code awaiting Tasks. Re-enabled 2026-10-18 (was none).
+# At suggestion until the hits are fixed; promote to warning afterwards.
+dotnet_diagnostic.CA2007.severity = warning
 
 #### SonarAnalyzer.CSharp: narrow adoption — only these three rules; the rest of the default
 #### rule set is denylisted by ID in Directory.Build.props (see the comment there) ####
@@ -667,6 +666,83 @@ dotnet_diagnostic.S818.severity = warning  # Literal suffixes should be upper ca
 #### S108 (empty block): enabled solution-wide; the ACP effort's subtree is exempt until its owner fills the four empty blocks ####
 dotnet_diagnostic.S108.severity = warning  # Nested blocks of code should not be left empty
 
+#### Meziantou.Analyzer: first measured 2026-10-18 on product code (src); test code is out of scope ####
+# Warning (fails the build): the hits in the chat side's src were fixed when these were promoted. See docs/engineering/analyzer-decisions.md#meziantouanalyzer.
+dotnet_diagnostic.MA0004.severity = warning  # Use Task.ConfigureAwait(false): same rule as CA2007
+dotnet_diagnostic.MA0048.severity = warning  # File name must match type name
+dotnet_diagnostic.MA0051.severity = warning  # Method is too long
+# Suggestion: visible in the IDE, does not fail the build. Promote to warning once the hits are fixed.
+dotnet_diagnostic.MA0002.severity = suggestion  # Use an overload that has an IEqualityComparer<string> or IComparer<string> parameter
+dotnet_diagnostic.MA0006.severity = suggestion  # Use string.Equals instead of the equality operator
+dotnet_diagnostic.MA0008.severity = suggestion  # Add StructLayoutAttribute
+dotnet_diagnostic.MA0009.severity = suggestion  # Regular expressions should not be vulnerable to Denial of Service attacks (add a timeout)
+dotnet_diagnostic.MA0011.severity = suggestion  # Use an overload of ToString that has an IFormatProvider parameter
+dotnet_diagnostic.MA0015.severity = suggestion  # The expression does not match a parameter (ArgumentException paramName)
+dotnet_diagnostic.MA0016.severity = suggestion  # Prefer a collection abstraction instead of the implementation
+dotnet_diagnostic.MA0023.severity = suggestion  # Use RegexOptions.ExplicitCapture or named groups
+dotnet_diagnostic.MA0046.severity = suggestion  # The delegate must have 2 parameters (standard event-handler shape)
+dotnet_diagnostic.MA0084.severity = suggestion  # Local variable should not hide a field
+dotnet_diagnostic.MA0099.severity = suggestion  # Use an explicit enum value instead of 0
+dotnet_diagnostic.MA0132.severity = suggestion  # Do not convert implicitly to DateTimeOffset
+# Warning, with their hits fixed (19 MA0089 and 7 MA0042; the rest had none), so they guard new code.
+dotnet_diagnostic.MA0005.severity = warning  # Use Array.Empty<T>() instead of a new empty array
+dotnet_diagnostic.MA0012.severity = warning  # Do not raise a reserved exception type
+dotnet_diagnostic.MA0022.severity = warning  # Return Task.FromResult instead of returning null from a Task method
+dotnet_diagnostic.MA0029.severity = warning  # Combine LINQ methods
+dotnet_diagnostic.MA0042.severity = warning  # Do not use blocking calls in an async method (use the async variant)
+dotnet_diagnostic.MA0050.severity = warning  # Validate arguments of public methods in iterators and async methods eagerly
+dotnet_diagnostic.MA0052.severity = warning  # Replace a constant Enum.ToString() with nameof
+dotnet_diagnostic.MA0054.severity = warning  # Embed the caught exception as innerException
+dotnet_diagnostic.MA0073.severity = warning  # Avoid comparison with a bool constant
+dotnet_diagnostic.MA0089.severity = warning  # Use the char overload of a string method for a one-character string
+dotnet_diagnostic.MA0100.severity = warning  # Await the task before disposing of resources
+dotnet_diagnostic.MA0155.severity = warning  # Do not use async void methods
+dotnet_diagnostic.MA0169.severity = warning  # Use Equals instead of the operator on a type that overrides it
 [{src/Huddle.Acp/**.cs,src/Huddle.Console/**.cs,tests/Huddle.Acp.Tests/**.cs}]
 # AgentProcess.cs (2), ConsoleLineReader.cs (1), AgentProcessLauncherTests.cs (1): ACP-owned, not edited from the chat side.
 dotnet_diagnostic.S108.severity = none
+# CA2007, MA0004, MA0048, MA0051, MA0042 and MA0089: the ACP owner's hits (about 45 in src/Huddle.Acp and src/Huddle.Console) are not edited from the chat side.
+dotnet_diagnostic.MA0042.severity = none
+dotnet_diagnostic.MA0089.severity = none
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.MA0004.severity = none
+dotnet_diagnostic.MA0048.severity = none
+dotnet_diagnostic.MA0051.severity = none
+
+[src/Huddle.App/Components/**.cs]
+# The UI layer: code here awaits and then touches component state, dialogs or the renderer, so it must resume on the renderer's context. ConfigureAwait(false) here is a bug (it broke LibraryExplorerTests when tried). The services under it keep ConfigureAwait(false).
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.MA0004.severity = none
+
+[tests/**.cs]
+# Meziantou is scoped to product code (src); test code is out of scope.
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.MA0004.severity = none
+dotnet_diagnostic.MA0048.severity = none
+dotnet_diagnostic.MA0051.severity = none
+dotnet_diagnostic.MA0002.severity = none
+dotnet_diagnostic.MA0006.severity = none
+dotnet_diagnostic.MA0009.severity = none
+dotnet_diagnostic.MA0011.severity = none
+dotnet_diagnostic.MA0015.severity = none
+dotnet_diagnostic.MA0016.severity = none
+dotnet_diagnostic.MA0023.severity = none
+dotnet_diagnostic.MA0046.severity = none
+dotnet_diagnostic.MA0049.severity = none
+dotnet_diagnostic.MA0084.severity = none
+dotnet_diagnostic.MA0099.severity = none
+dotnet_diagnostic.MA0132.severity = none
+dotnet_diagnostic.MA0163.severity = none
+dotnet_diagnostic.MA0005.severity = none
+dotnet_diagnostic.MA0012.severity = none
+dotnet_diagnostic.MA0022.severity = none
+dotnet_diagnostic.MA0029.severity = none
+dotnet_diagnostic.MA0042.severity = none
+dotnet_diagnostic.MA0050.severity = none
+dotnet_diagnostic.MA0052.severity = none
+dotnet_diagnostic.MA0054.severity = none
+dotnet_diagnostic.MA0073.severity = none
+dotnet_diagnostic.MA0089.severity = none
+dotnet_diagnostic.MA0100.severity = none
+dotnet_diagnostic.MA0155.severity = none
+dotnet_diagnostic.MA0169.severity = none

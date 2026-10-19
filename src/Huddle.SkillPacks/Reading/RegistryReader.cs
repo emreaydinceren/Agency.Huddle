@@ -81,9 +81,6 @@ public static class RegistryReader
         List<RowFinding> rowFindings = [];
         List<RegistryRow> packs = [];
         List<RegistryRow> catalogs = [];
-        bool sawPacks = false;
-        bool sawCatalogs = false;
-        bool anyTable = false;
 
         MarkdownDocument document;
         try
@@ -95,6 +92,21 @@ public static class RegistryReader
             return Only(registryDir, Finding.Error("R001", file, $"{FileName} could not be read as Markdown."));
         }
 
+        bool anyTable = ReadTables(document, file, packs, catalogs, findings, rowFindings);
+        if (!anyTable)
+        {
+            findings.Insert(0, Finding.Error("R001", file, $"{FileName} has no Packs or Catalogs table under a level-2 heading."));
+        }
+
+        return new Registry(registryDir, packs, catalogs, findings, rowFindings);
+    }
+
+    /// <summary>Reads the first Packs table and the first Catalogs table under a level-2 heading; false when there was none.</summary>
+    private static bool ReadTables(MarkdownDocument document, string file, List<RegistryRow> packs, List<RegistryRow> catalogs, List<Finding> findings, List<RowFinding> rowFindings)
+    {
+        bool sawPacks = false;
+        bool sawCatalogs = false;
+        bool anyTable = false;
         for (int i = 0; i < document.Count; i++)
         {
             if (document[i] is not HeadingBlock { Level: 2 } heading)
@@ -136,12 +148,7 @@ public static class RegistryReader
             ReadTable(table, kind.Value, file, target, findings, rowFindings);
         }
 
-        if (!anyTable)
-        {
-            findings.Insert(0, Finding.Error("R001", file, $"{FileName} has no Packs or Catalogs table under a level-2 heading."));
-        }
-
-        return new Registry(registryDir, packs, catalogs, findings, rowFindings);
+        return anyTable;
     }
 
     /// <summary>The table a level-2 heading introduces, or null for any other heading.</summary>
@@ -189,6 +196,22 @@ public static class RegistryReader
             return;
         }
 
+        TableColumns columns = FindColumns(header);
+        if (columns.LocalPath < 0)
+        {
+            findings.Add(Finding.Error("R002", file, $"The {tableName} table has no Local path column."));
+            return;
+        }
+
+        foreach (TableRow row in table.OfType<TableRow>().Where(static row => !row.IsHeader))
+        {
+            ReadRow(row, kind, tableName, columns, file, rows, findings, rowFindings);
+        }
+    }
+
+    /// <summary>The index of each wanted column in <paramref name="header"/>, -1 when absent; the first of a repeated name wins.</summary>
+    private static TableColumns FindColumns(TableRow header)
+    {
         int localPath = -1;
         int origin = -1;
         int lastUpdated = -1;
@@ -214,60 +237,57 @@ public static class RegistryReader
             }
         }
 
-        if (localPath < 0)
+        return new TableColumns(localPath, origin, lastUpdated, notes);
+    }
+
+    /// <summary>Reads one data row into <paramref name="rows"/>, adding the findings it raises.</summary>
+    private static void ReadRow(TableRow row, RowKind kind, string tableName, TableColumns columns, string file, List<RegistryRow> rows, List<Finding> findings, List<RowFinding> rowFindings)
+    {
+        int index = rows.Count;
+        int line = row.Line + 1;
+        string pathCell = Cell(row, columns.LocalPath, keepUrl: false) ?? string.Empty;
+        PathEntries entries = PathEntries.Parse(pathCell);
+        string? originUrl = Blank(Cell(row, columns.Origin, keepUrl: true));
+        string? updatedText = Blank(Cell(row, columns.LastUpdated, keepUrl: false));
+        string? notesText = Blank(Cell(row, columns.Notes, keepUrl: false)?.Replace('\n', ' '));
+        DateOnly? updated = null;
+        string where = string.Create(CultureInfo.InvariantCulture, $"{tableName} row {index + 1}");
+        int before = findings.Count;
+
+        if (entries.IsEmpty)
         {
-            findings.Add(Finding.Error("R002", file, $"The {tableName} table has no Local path column."));
-            return;
+            findings.Add(Finding.Error("R003", file, $"{where}: the Local path is empty."));
         }
 
-        foreach (TableRow row in table.OfType<TableRow>().Where(static row => !row.IsHeader))
+        if (entries.HasDuplicateComputer)
         {
-            int index = rows.Count;
-            int line = row.Line + 1;
-            string pathCell = Cell(row, localPath, keepUrl: false) ?? string.Empty;
-            PathEntries entries = PathEntries.Parse(pathCell);
-            string? originUrl = Blank(Cell(row, origin, keepUrl: true));
-            string? updatedText = Blank(Cell(row, lastUpdated, keepUrl: false));
-            string? notesText = Blank(Cell(row, notes, keepUrl: false)?.Replace('\n', ' '));
-            DateOnly? updated = null;
-            string where = string.Create(CultureInfo.InvariantCulture, $"{tableName} row {index + 1}");
-            int before = findings.Count;
-
-            if (entries.IsEmpty)
-            {
-                findings.Add(Finding.Error("R003", file, $"{where}: the Local path is empty."));
-            }
-
-            if (entries.HasDuplicateComputer)
-            {
-                findings.Add(Finding.Error("R010", file, $"{where}: two entries name the same computer."));
-            }
-
-            if (entries.HasTwoPlainEntries)
-            {
-                findings.Add(Finding.Error("R013", file, $"{where}: two entries apply to every computer."));
-            }
-
-            if (updatedText is not null)
-            {
-                if (DateOnly.TryParseExact(updatedText, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly date))
-                {
-                    updated = date;
-                }
-                else
-                {
-                    findings.Add(Finding.Warning("R006", file, $"{where}: Last updated '{updatedText}' is not a yyyy-MM-dd date."));
-                }
-            }
-
-            if (originUrl is not null && !IsOriginUrl(originUrl))
-            {
-                findings.Add(Finding.Warning("R007", file, $"{where}: Origin URL '{originUrl}' is not an absolute https, ssh or git URL."));
-            }
-
-            rowFindings.AddRange(findings.Skip(before).Select(finding => new RowFinding(kind, index, finding)));
-            rows.Add(new RegistryRow(kind, index, entries, originUrl, updatedText, updated, notesText, new LineSpan(line, line)));
+            findings.Add(Finding.Error("R010", file, $"{where}: two entries name the same computer."));
         }
+
+        if (entries.HasTwoPlainEntries)
+        {
+            findings.Add(Finding.Error("R013", file, $"{where}: two entries apply to every computer."));
+        }
+
+        if (updatedText is not null)
+        {
+            if (DateOnly.TryParseExact(updatedText, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly date))
+            {
+                updated = date;
+            }
+            else
+            {
+                findings.Add(Finding.Warning("R006", file, $"{where}: Last updated '{updatedText}' is not a yyyy-MM-dd date."));
+            }
+        }
+
+        if (originUrl is not null && !IsOriginUrl(originUrl))
+        {
+            findings.Add(Finding.Warning("R007", file, $"{where}: Origin URL '{originUrl}' is not an absolute https, ssh or git URL."));
+        }
+
+        rowFindings.AddRange(findings.Skip(before).Select(finding => new RowFinding(kind, index, finding)));
+        rows.Add(new RegistryRow(kind, index, entries, originUrl, updatedText, updated, notesText, new LineSpan(line, line)));
     }
 
     /// <summary>Whether <paramref name="value"/> is an absolute https, ssh or git URL, or an scp-style git address.</summary>
@@ -374,4 +394,11 @@ public static class RegistryReader
         string compact = tag.Replace(" ", string.Empty, StringComparison.Ordinal);
         return compact.Equals("<br>", StringComparison.OrdinalIgnoreCase) || compact.Equals("<br/>", StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>Where each wanted column sits in a table's header row; -1 when the table has no such column.</summary>
+    /// <param name="LocalPath">The Local path column.</param>
+    /// <param name="Origin">The Origin URL column.</param>
+    /// <param name="LastUpdated">The Last updated column.</param>
+    /// <param name="Notes">The Notes column.</param>
+    private readonly record struct TableColumns(int LocalPath, int Origin, int LastUpdated, int Notes);
 }

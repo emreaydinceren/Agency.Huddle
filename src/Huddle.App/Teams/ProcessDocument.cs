@@ -3,42 +3,6 @@ using System.Globalization;
 
 namespace Agency.Huddle.App.Teams;
 
-/// <summary>The four hard gates a process document can declare (PR-7, Spec §Process).</summary>
-internal enum GateId
-{
-    /// <summary>A Task cannot move to Done until a verifying member has added an Evidence line.</summary>
-    QaEvidenceBeforeDone,
-
-    /// <summary>A release merge or push waits for an Evidence line with exit code 0 for the check command.</summary>
-    ChecksBeforeMerge,
-
-    /// <summary>A Task cannot move to In Progress until its parent spec Task is approved.</summary>
-    SpecApprovedBeforeBuild,
-
-    /// <summary>A bug Task cannot move to Review until an Evidence line shows a failing test before the fix.</summary>
-    FailingTestBeforeFix,
-}
-
-/// <summary>The unit a cadence counts in.</summary>
-internal enum CadenceUnit
-{
-    /// <summary>Tasks that reached Done, written <c>done-tasks</c>.</summary>
-    DoneTasks,
-
-    /// <summary>Calendar days, written <c>days</c>.</summary>
-    Days,
-}
-
-/// <summary>How often a retrospective runs.</summary>
-/// <param name="Every">The count of <paramref name="Unit"/> between retrospectives; always positive.</param>
-/// <param name="Unit">What <paramref name="Every"/> counts.</param>
-internal sealed record RetroCadence(int Every, CadenceUnit Unit);
-
-/// <summary>How often a digest is written.</summary>
-/// <param name="Every">The count of <paramref name="Unit"/> between digests; always positive.</param>
-/// <param name="Unit">What <paramref name="Every"/> counts.</param>
-internal sealed record DigestCadence(int Every, CadenceUnit Unit);
-
 /// <summary>
 /// The parsed <c>Process.md</c> (PR-6, PR-7, Spec §Process): the frontmatter keys Huddle acts on and the
 /// outline headings the body is expected to carry. Unreadable optional values read as absent rather than
@@ -103,31 +67,10 @@ internal sealed record ProcessDocument(
             return false;
         }
 
-        Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase);
-        for (int index = 1; index < closing; index++)
-        {
-            string line = lines[index].TrimEnd();
-            int colon = line.IndexOf(':', StringComparison.Ordinal);
-            if (colon > 0 && !char.IsWhiteSpace(line[0]))
-            {
-                values[line[..colon].Trim()] = line[(colon + 1)..].Trim();
-            }
-        }
+        Dictionary<string, string> values = ReadFrontmatter(lines, closing);
 
         string[] body = lines[(closing + 1)..];
-        List<GateId> gates = [];
-        List<string> unknownGates = [];
-        foreach (string id in values.TryGetValue("gates", out string? gateText) ? SplitList(gateText) : [])
-        {
-            if (!TryParseGate(id, out GateId gate))
-            {
-                unknownGates.Add(id);
-            }
-            else if (!gates.Contains(gate))
-            {
-                gates.Add(gate);
-            }
-        }
+        (List<GateId> gates, List<string> unknownGates) = ReadGates(values);
 
         VersionedRef? template = null;
         if (values.TryGetValue("template", out string? templateText))
@@ -141,11 +84,7 @@ internal sealed record ProcessDocument(
             title = body.FirstOrDefault(static line => line.StartsWith("# ", StringComparison.Ordinal))?[2..].Trim() ?? string.Empty;
         }
 
-        int? wip = null;
-        if (values.TryGetValue("wip", out string? wipText) && int.TryParse(Unquote(wipText), NumberStyles.None, CultureInfo.InvariantCulture, out int wipValue) && wipValue > 0)
-        {
-            wip = wipValue;
-        }
+        int? wip = ReadWip(values);
 
         string? checkCommand = values.TryGetValue("checkCommand", out string? commandText) ? Unquote(commandText) : null;
         HashSet<string> headings = body
@@ -165,6 +104,61 @@ internal sealed record ProcessDocument(
             OutlineHeadings.Where(heading => !headings.Contains(heading)).ToList(),
             text);
         return true;
+    }
+
+    /// <summary>Reads the <c>key: value</c> lines between the frontmatter delimiters.</summary>
+    /// <param name="lines">The document lines.</param>
+    /// <param name="closing">The index of the closing delimiter line.</param>
+    /// <returns>The values by key, compared without case.</returns>
+    private static Dictionary<string, string> ReadFrontmatter(string[] lines, int closing)
+    {
+        Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase);
+        for (int index = 1; index < closing; index++)
+        {
+            string line = lines[index].TrimEnd();
+            int colon = line.IndexOf(':', StringComparison.Ordinal);
+            if (colon > 0 && !char.IsWhiteSpace(line[0]))
+            {
+                values[line[..colon].Trim()] = line[(colon + 1)..].Trim();
+            }
+        }
+
+        return values;
+    }
+
+    /// <summary>Reads the <c>gates</c> value into the known gates, without duplicates, and the ids it could not read.</summary>
+    /// <param name="values">The frontmatter values.</param>
+    /// <returns>The known gates and the unknown ids, each in the order written.</returns>
+    private static (List<GateId> Gates, List<string> UnknownGates) ReadGates(Dictionary<string, string> values)
+    {
+        List<GateId> gates = [];
+        List<string> unknownGates = [];
+        foreach (string id in values.TryGetValue("gates", out string? gateText) ? SplitList(gateText) : [])
+        {
+            if (!TryParseGate(id, out GateId gate))
+            {
+                unknownGates.Add(id);
+            }
+            else if (!gates.Contains(gate))
+            {
+                gates.Add(gate);
+            }
+        }
+
+        return (gates, unknownGates);
+    }
+
+    /// <summary>Reads the <c>wip</c> value.</summary>
+    /// <param name="values">The frontmatter values.</param>
+    /// <returns>The limit when it is a positive whole number, else <see langword="null"/>.</returns>
+    private static int? ReadWip(Dictionary<string, string> values)
+    {
+        if (values.TryGetValue("wip", out string? wipText) && int.TryParse(Unquote(wipText), NumberStyles.None, CultureInfo.InvariantCulture, out int wipValue) && wipValue > 0)
+        {
+            return wipValue;
+        }
+
+        return null;
     }
 
     /// <summary>Rewrites the <c>gates</c> line of the frontmatter, keeping every other line as it is.</summary>

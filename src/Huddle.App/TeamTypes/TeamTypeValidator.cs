@@ -2,11 +2,6 @@ using System.Text.RegularExpressions;
 
 namespace Agency.Huddle.App.TeamTypes;
 
-/// <summary>One reason a team type manifest is invalid.</summary>
-/// <param name="Code">The stable rule code, such as <c>no-manager</c>.</param>
-/// <param name="Message">The reason, naming the role or file concerned.</param>
-internal sealed record TeamTypeProblem(string Code, string Message);
-
 /// <summary>Checks a parsed manifest against the Spec's rules and says why it is invalid (TT-4, TT-5).</summary>
 internal static partial class TeamTypeValidator
 {

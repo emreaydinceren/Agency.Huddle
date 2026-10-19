@@ -35,7 +35,7 @@ public sealed class JsonLineStream : IAsyncDisposable
     {
         while (true)
         {
-            var line = await this.reader.ReadLineAsync(ct);
+            var line = await this.reader.ReadLineAsync(ct).ConfigureAwait(false);
             if (line is null)
             {
                 return null;
@@ -64,11 +64,11 @@ public sealed class JsonLineStream : IAsyncDisposable
         Buffer.BlockCopy(body, 0, payload, 0, body.Length);
         payload[^1] = (byte)'\n';
 
-        await this.writeLock.WaitAsync(ct);
+        await this.writeLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            await this.stream.WriteAsync(payload, ct);
-            await this.stream.FlushAsync(ct);
+            await this.stream.WriteAsync(payload, ct).ConfigureAwait(false);
+            await this.stream.FlushAsync(ct).ConfigureAwait(false);
         }
         finally
         {
@@ -89,7 +89,7 @@ public sealed class JsonLineStream : IAsyncDisposable
 
         if (!this.leaveOpen)
         {
-            await this.stream.DisposeAsync();
+            await this.stream.DisposeAsync().ConfigureAwait(false);
         }
     }
 }

@@ -33,7 +33,7 @@ internal static class AtomicFile
 
         try
         {
-            await File.WriteAllBytesAsync(tempPath, bytes, ct);
+            await File.WriteAllBytesAsync(tempPath, bytes, ct).ConfigureAwait(false);
             File.Move(tempPath, targetPath, overwrite: true);
             return true;
         }

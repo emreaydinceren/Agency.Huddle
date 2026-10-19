@@ -27,7 +27,7 @@ public sealed class FileChatStore : IChatStore
     {
         var path = this.GetRoomPath(roomId);
         var semaphore = this.locks.GetOrAdd(roomId, static _ => new SemaphoreSlim(1, 1));
-        await semaphore.WaitAsync(ct);
+        await semaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             var directory = Path.GetDirectoryName(path);
@@ -37,10 +37,11 @@ public sealed class FileChatStore : IChatStore
             }
 
             var bytes = JsonSerializer.SerializeToUtf8Bytes(message, ProtocolJson.Options);
-            await using var stream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read, 4096, useAsync: true);
-            await stream.WriteAsync(bytes, ct);
-            await stream.WriteAsync(NewLine, ct);
-            await stream.FlushAsync(ct);
+            var stream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read, 4096, useAsync: true);
+            await using var streamScope = stream.ConfigureAwait(false);
+            await stream.WriteAsync(bytes, ct).ConfigureAwait(false);
+            await stream.WriteAsync(NewLine, ct).ConfigureAwait(false);
+            await stream.FlushAsync(ct).ConfigureAwait(false);
         }
         finally
         {
@@ -52,7 +53,7 @@ public sealed class FileChatStore : IChatStore
     {
         var path = this.GetRoomPath(roomId);
         var semaphore = this.locks.GetOrAdd(roomId, static _ => new SemaphoreSlim(1, 1));
-        await semaphore.WaitAsync(ct);
+        await semaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             if (!File.Exists(path))
@@ -61,13 +62,14 @@ public sealed class FileChatStore : IChatStore
             }
 
             var messages = new List<ChatMessage>();
-            await using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, useAsync: true))
+            var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, useAsync: true);
+            await using (stream.ConfigureAwait(false))
             {
                 using var reader = new StreamReader(stream, Encoding.UTF8);
                 var lineNumber = 0;
                 while (true)
                 {
-                    var line = await reader.ReadLineAsync(ct);
+                    var line = await reader.ReadLineAsync(ct).ConfigureAwait(false);
                     if (line is null)
                     {
                         break;
@@ -108,7 +110,7 @@ public sealed class FileChatStore : IChatStore
 
         var path = this.GetRoomPath(roomId);
         var semaphore = this.locks.GetOrAdd(roomId, static _ => new SemaphoreSlim(1, 1));
-        await semaphore.WaitAsync(ct);
+        await semaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             if (count == 0 || !File.Exists(path))
@@ -121,7 +123,8 @@ public sealed class FileChatStore : IChatStore
             // a block boundary may split a multi-byte character, but never a 0x0A.
             const int BlockSize = 8192;
             List<byte[]> blocks = [];
-            await using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, useAsync: true))
+            var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, useAsync: true);
+            await using (stream.ConfigureAwait(false))
             {
                 long position = stream.Length;
                 var breaks = 0;
@@ -131,38 +134,14 @@ public sealed class FileChatStore : IChatStore
                     position -= size;
                     stream.Seek(position, SeekOrigin.Begin);
                     var block = new byte[size];
-                    await stream.ReadExactlyAsync(block, ct);
+                    await stream.ReadExactlyAsync(block, ct).ConfigureAwait(false);
                     blocks.Add(block);
                     breaks += block.Count(static b => b == (byte)'\n');
                 }
 
                 blocks.Reverse();
                 var tail = Encoding.UTF8.GetString([.. blocks.SelectMany(static b => b)]);
-                var lines = tail.Split('\n');
-                var firstWhole = position > 0 ? 1 : 0;
-                List<ChatMessage> messages = [];
-                for (var index = firstWhole; index < lines.Length; index++)
-                {
-                    if (string.IsNullOrWhiteSpace(lines[index]))
-                    {
-                        continue;
-                    }
-
-                    try
-                    {
-                        var message = JsonSerializer.Deserialize<ChatMessage>(lines[index], ProtocolJson.Options);
-                        if (message is not null)
-                        {
-                            messages.Add(message);
-                        }
-                    }
-                    catch (JsonException ex)
-                    {
-                        this.logger.LogWarning(ex, "Skipping unparsable line in the tail of room {RoomId}.", roomId);
-                    }
-                }
-
-                return messages.Count <= count ? messages : [.. messages.Skip(messages.Count - count)];
+                return this.ParseTailMessages(tail, position > 0, count, roomId);
             }
         }
         finally
@@ -171,11 +150,45 @@ public sealed class FileChatStore : IChatStore
         }
     }
 
+    /// <summary>Parses the decoded tail of a room file into messages, skipping a possibly partial first line and unparsable lines.</summary>
+    /// <param name="tail">The decoded tail text.</param>
+    /// <param name="dropFirstLine">True when the tail starts mid-file, so its first line may be partial.</param>
+    /// <param name="count">The maximum number of trailing messages to return.</param>
+    /// <param name="roomId">The room, for the log message.</param>
+    /// <returns>The last <paramref name="count"/> messages of the tail.</returns>
+    private List<ChatMessage> ParseTailMessages(string tail, bool dropFirstLine, int count, string roomId)
+    {
+        string[] lines = tail.Split('\n');
+        int firstWhole = dropFirstLine ? 1 : 0;
+        List<ChatMessage> messages = [];
+        for (int index = firstWhole; index < lines.Length; index++)
+        {
+            if (string.IsNullOrWhiteSpace(lines[index]))
+            {
+                continue;
+            }
+
+            try
+            {
+                ChatMessage? message = JsonSerializer.Deserialize<ChatMessage>(lines[index], ProtocolJson.Options);
+                if (message is not null)
+                {
+                    messages.Add(message);
+                }
+            }
+            catch (JsonException ex)
+            {
+                this.logger.LogWarning(ex, "Skipping unparsable line in the tail of room {RoomId}.", roomId);
+            }
+        }
+
+        return messages.Count <= count ? messages : [.. messages.Skip(messages.Count - count)];
+    }
     public async Task DeleteAsync(string roomId, CancellationToken ct = default)
     {
         var path = this.GetRoomPath(roomId);
         var semaphore = this.locks.GetOrAdd(roomId, static _ => new SemaphoreSlim(1, 1));
-        await semaphore.WaitAsync(ct);
+        await semaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             if (File.Exists(path))

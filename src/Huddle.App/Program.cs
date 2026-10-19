@@ -17,7 +17,7 @@ if (args is ["stop"])
     string stopDataDir = Path.GetFullPath(
         Environment.GetEnvironmentVariable("Team__DataDir") is { Length: > 0 } stopDir ? stopDir : "App_Data");
     return await DesktopStopClient.RunAsync(
-        stopDataDir, null, Console.Out, TimeSpan.FromSeconds(45), CancellationToken.None);
+        stopDataDir, null, Console.Out, TimeSpan.FromSeconds(45), CancellationToken.None).ConfigureAwait(false);
 }
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,7 +30,7 @@ string desktopDataDir = Path.GetFullPath(builder.Configuration["Team:DataDir"] ?
 IBrowserOpener handOffOpener = desktop.OpenBrowser ? new SystemBrowserOpener() : new NoopBrowserOpener();
 HandOffResult handOff = desktop.Enabled
     ? await DesktopHandOff.AcquireOrHandOffAsync(
-        desktopDataDir, handOffOpener, TimeSpan.FromSeconds(15), TimeSpan.FromMilliseconds(200), CancellationToken.None)
+        desktopDataDir, handOffOpener, TimeSpan.FromSeconds(15), TimeSpan.FromMilliseconds(200), CancellationToken.None).ConfigureAwait(false)
     : new HandOffResult(null, false);
 using InstanceLock? instanceLock = handOff.Lock;
 if (desktop.Enabled)
@@ -156,7 +156,7 @@ app.MapDesktopEndpoints();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-await app.RunAsync();
+await app.RunAsync().ConfigureAwait(false);
 
 return 0;
 

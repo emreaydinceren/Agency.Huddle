@@ -63,26 +63,47 @@ internal sealed partial class ProposalService(
             return new ProposalOutcome(ProposalOutcomeKind.Gone, [], [], string.Empty);
         }
 
-        var mention = await this.ResolveMentionAsync(proposal.ProposerAgentId, ct);
+        var mention = await this.ResolveMentionAsync(proposal.ProposerAgentId, ct).ConfigureAwait(false);
         var refusal = hireLimits.Check(proposal.Candidates);
 
         if (refusal is not null)
         {
             var overLimitText = ProposalService.ComposeOverLimitText(refusal, proposal.Candidates.Count, mention);
-            await this.PostOutcomeAsync(roomId, overLimitText, ct);
+            await this.PostOutcomeAsync(roomId, overLimitText, ct).ConfigureAwait(false);
             ProposalService.LogOverLimit(logger, roomId, proposal.Id, refusal.Kind, refusal.Used, refusal.Limit, proposal.Candidates.Count);
             return new ProposalOutcome(ProposalOutcomeKind.OverLimit, [], [], overLimitText);
         }
 
+        var (created, failed) = await this.CreateCandidatesAsync(proposal.Candidates, ct).ConfigureAwait(false);
+
+        var (kind, text) = failed.Count switch
+        {
+            0 => (ProposalOutcomeKind.Created, ProposalService.ComposeCreatedText(created, mention)),
+            _ when created.Count == 0 => (ProposalOutcomeKind.NoneCreated, ProposalService.ComposeNoneCreatedText(failed, mention)),
+            _ => (ProposalOutcomeKind.PartlyCreated, ProposalService.ComposePartlyCreatedText(created, failed, mention)),
+        };
+
+        await this.PostOutcomeAsync(roomId, text, ct).ConfigureAwait(false);
+        ProposalService.LogApproved(logger, roomId, proposal.Id, created.Count, failed.Count);
+        return new ProposalOutcome(kind, created, failed, text);
+    }
+
+    /// <summary>Creates every valid Candidate as a Teammate, one at a time under the creation gate.</summary>
+    /// <param name="candidates">The Proposal's Candidates.</param>
+    /// <param name="ct">Cancels the gate wait and the Candidate checks.</param>
+    /// <returns>The names created and the Candidates that failed, each with its reason.</returns>
+    private async Task<(List<string> Created, List<CandidateFailure> Failed)> CreateCandidatesAsync(
+        IReadOnlyList<Candidate> candidates, CancellationToken ct)
+    {
         var created = new List<string>();
         var failed = new List<CandidateFailure>();
 
-        await CreationGate.WaitAsync(ct);
+        await CreationGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            foreach (var candidate in proposal.Candidates)
+            foreach (var candidate in candidates)
             {
-                var check = await checker.CheckAsync([candidate], ct);
+                var check = await checker.CheckAsync([candidate], ct).ConfigureAwait(false);
                 if (!check.IsValid)
                 {
                     failed.Add(new CandidateFailure(candidate.Name, check.Problems[0]));
@@ -121,16 +142,7 @@ internal sealed partial class ProposalService(
             CreationGate.Release();
         }
 
-        var (kind, text) = failed.Count switch
-        {
-            0 => (ProposalOutcomeKind.Created, ProposalService.ComposeCreatedText(created, mention)),
-            _ when created.Count == 0 => (ProposalOutcomeKind.NoneCreated, ProposalService.ComposeNoneCreatedText(failed, mention)),
-            _ => (ProposalOutcomeKind.PartlyCreated, ProposalService.ComposePartlyCreatedText(created, failed, mention)),
-        };
-
-        await this.PostOutcomeAsync(roomId, text, ct);
-        ProposalService.LogApproved(logger, roomId, proposal.Id, created.Count, failed.Count);
-        return new ProposalOutcome(kind, created, failed, text);
+        return (created, failed);
     }
 
     /// <summary>Declines a Proposal: creates nothing and posts the outcome naming every declined Candidate (Spec §6.10).</summary>
@@ -152,10 +164,10 @@ internal sealed partial class ProposalService(
 
         // No CreationGate: unlike Approve, Decline never touches PersonaStore, so there is nothing
         // for that semaphore to serialise here.
-        var mention = await this.ResolveMentionAsync(proposal.ProposerAgentId, ct);
+        var mention = await this.ResolveMentionAsync(proposal.ProposerAgentId, ct).ConfigureAwait(false);
         var text = ProposalService.ComposeDeclinedText(proposal.Candidates, mention);
 
-        await this.PostOutcomeAsync(roomId, text, ct);
+        await this.PostOutcomeAsync(roomId, text, ct).ConfigureAwait(false);
         ProposalService.LogDeclined(logger, roomId, proposal.Id, proposal.Candidates.Count);
         return new ProposalOutcome(ProposalOutcomeKind.Declined, [], [], text);
     }
@@ -174,10 +186,10 @@ internal sealed partial class ProposalService(
     /// <param name="ct">Cancels the Human lookup and the post.</param>
     private async Task PostOutcomeAsync(string roomId, string text, CancellationToken ct)
     {
-        var human = await directory.GetHumanAsync(ct);
+        var human = await directory.GetHumanAsync(ct).ConfigureAwait(false);
         try
         {
-            _ = await chat.PostAsync(roomId, human.Id, text, ct: ct);
+            _ = await chat.PostAsync(roomId, human.Id, text, ct: ct).ConfigureAwait(false);
         }
         catch (ChatException ex)
         {
@@ -196,7 +208,7 @@ internal sealed partial class ProposalService(
     /// <returns>The Mention token, e.g. <c>"@Chief of Staff"</c>, or <see langword="null"/> when the proposer no longer exists.</returns>
     private async Task<string?> ResolveMentionAsync(string proposerAgentId, CancellationToken ct)
     {
-        var proposer = await directory.GetUserAsync(proposerAgentId, ct);
+        var proposer = await directory.GetUserAsync(proposerAgentId, ct).ConfigureAwait(false);
         return proposer is null ? null : $"@{proposer.Name}";
     }
 

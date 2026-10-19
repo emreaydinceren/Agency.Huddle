@@ -72,22 +72,12 @@ internal sealed class ListTasksTool(
             return scopeRefusal;
         }
 
-        if (!TaskToolText.TryGetString(arguments, "team", out string? team, out string teamRefusal))
+        if (!TryReadTeamAndProject(arguments, out string? team, out string? project, out string teamProjectRefusal))
         {
-            return teamRefusal;
+            return teamProjectRefusal;
         }
 
-        if (!TaskToolText.TryGetString(arguments, "project", out string? project, out string projectRefusal))
-        {
-            return projectRefusal;
-        }
-
-        if (!string.IsNullOrEmpty(project) && string.IsNullOrEmpty(team))
-        {
-            return "project needs team";
-        }
-
-        (IReadOnlyList<string> assignees, string assigneeRefusal) = await this.ResolveAssigneeAsync(arguments, cancellationToken);
+        (IReadOnlyList<string> assignees, string assigneeRefusal) = await this.ResolveAssigneeAsync(arguments, cancellationToken).ConfigureAwait(false);
         if (assigneeRefusal.Length > 0)
         {
             return assigneeRefusal;
@@ -108,14 +98,9 @@ internal sealed class ListTasksTool(
             return textRefusal;
         }
 
-        if (!TaskToolText.TryGetInt(arguments, "limit", DefaultLimit, out int limit, out string limitRefusal))
+        if (!TryReadLimit(arguments, out int limit, out string limitRefusal))
         {
             return limitRefusal;
-        }
-
-        if (limit is < MinLimit or > MaxLimit)
-        {
-            return "'limit' must be between 1 and 200.";
         }
 
         if (!TryResolveSprintFilter(arguments, sprints, out IReadOnlyList<string> sprintValues, out string sprintRefusal))
@@ -133,11 +118,53 @@ internal sealed class ListTasksTool(
             Sprints = sprintValues,
         };
 
-        string humanName = await ResolveHumanNameAsync(directory, cancellationToken);
+        string humanName = await ResolveHumanNameAsync(directory, cancellationToken).ConfigureAwait(false);
         IReadOnlyList<TaskItem> filtered = TaskQuery.Filter(store.All, scope, filter, text, humanName, sprints.Current?.Id);
         IReadOnlyList<TaskItem> sorted = TaskQuery.Sort(filtered, []);
 
         return Render(sorted, limit);
+    }
+
+    /// <summary>Reads the <c>team</c> and <c>project</c> arguments; a project is only meaningful with a team.</summary>
+    private static bool TryReadTeamAndProject(JsonObject arguments, out string? team, out string? project, out string refusal)
+    {
+        project = null;
+        if (!TaskToolText.TryGetString(arguments, "team", out team, out refusal))
+        {
+            return false;
+        }
+
+        if (!TaskToolText.TryGetString(arguments, "project", out project, out refusal))
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrEmpty(project) && string.IsNullOrEmpty(team))
+        {
+            refusal = "project needs team";
+            return false;
+        }
+
+        refusal = string.Empty;
+        return true;
+    }
+
+    /// <summary>Reads the <c>limit</c> argument (Spec §11.4): defaulted when absent, and refused outside the accepted range.</summary>
+    private static bool TryReadLimit(JsonObject arguments, out int limit, out string refusal)
+    {
+        if (!TaskToolText.TryGetInt(arguments, "limit", DefaultLimit, out limit, out refusal))
+        {
+            return false;
+        }
+
+        if (limit is < MinLimit or > MaxLimit)
+        {
+            refusal = "'limit' must be between 1 and 200.";
+            return false;
+        }
+
+        refusal = string.Empty;
+        return true;
     }
 
     /// <summary>
@@ -223,7 +250,7 @@ internal sealed class ListTasksTool(
 
         if (string.Equals(assignee, "me", StringComparison.OrdinalIgnoreCase))
         {
-            (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
+            (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
             return actor is null ? ([], actorRefusal) : ([actor.Name], string.Empty);
         }
 
@@ -314,7 +341,7 @@ internal sealed class ListTasksTool(
     /// </summary>
     private static async Task<string> ResolveHumanNameAsync(ITeamDirectory teamDirectory, CancellationToken cancellationToken)
     {
-        User? human = await teamDirectory.GetUserAsync(KnownIds.Human, cancellationToken);
+        User? human = await teamDirectory.GetUserAsync(KnownIds.Human, cancellationToken).ConfigureAwait(false);
         return human?.Name ?? "the Human";
     }
 
@@ -332,6 +359,6 @@ internal sealed class ListTasksTool(
             lines.Add($"Showing {limit} of {sorted.Count}; narrow the filters or raise limit.");
         }
 
-        return string.Join("\n", lines);
+        return string.Join('\n', lines);
     }
 }

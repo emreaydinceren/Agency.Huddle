@@ -4,18 +4,6 @@ using Agency.Huddle.App.TeamTypes;
 
 namespace Agency.Huddle.App.Teams;
 
-/// <summary>A source member that was not copied, with the plain reason.</summary>
-/// <param name="Name">The source member's name.</param>
-/// <param name="Reason">Why the member was left out.</param>
-internal sealed record SkippedMember(string Name, string Reason);
-
-/// <summary>The outcome of <see cref="TeamDuplicator.Duplicate"/>.</summary>
-/// <param name="Ok">Whether the new Team was created.</param>
-/// <param name="Error">The plain refusal when <paramref name="Ok"/> is false; otherwise <see langword="null"/>.</param>
-/// <param name="Hired">The names of the new Teammates, in hire order.</param>
-/// <param name="Skipped">The source members that were not copied.</param>
-internal sealed record DuplicateResult(bool Ok, string? Error, IReadOnlyList<string> Hired, IReadOnlyList<SkippedMember> Skipped);
-
 /// <summary>
 /// Copies a Team's roster to a new Team with new names, a new workspace and fresh memory (HR-12). Only the
 /// team type and the roles are carried over: no Library file, memory or Task content is copied, and

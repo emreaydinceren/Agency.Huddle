@@ -100,11 +100,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         this.mergeGate = mergeGate;
         ArgumentNullException.ThrowIfNull(roleBlock);
         this.roleBlock = roleBlock;
-        ArgumentNullException.ThrowIfNull(inner);
-        ArgumentNullException.ThrowIfNull(toolServer);
-        ArgumentNullException.ThrowIfNull(profile);
-        ArgumentNullException.ThrowIfNull(persona);
-        ArgumentNullException.ThrowIfNull(prompts);
+        ValidateCollaborators(inner, toolServer, profile, persona, prompts);
         ArgumentException.ThrowIfNullOrWhiteSpace(helpToolName);
         ArgumentNullException.ThrowIfNull(toolNames);
         ArgumentNullException.ThrowIfNull(skills);
@@ -140,6 +136,21 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         this.meta = meta;
         this.loggerFactory = loggerFactory;
         this.workModePolicy = workModePolicy;
+    }
+
+    /// <summary>Guards the constructor's collaborator arguments, in declaration order.</summary>
+    /// <param name="inner">The started ACP host.</param>
+    /// <param name="toolServer">The Persona's App Tool server.</param>
+    /// <param name="profile">The resolved Adapter Profile.</param>
+    /// <param name="persona">The Persona.</param>
+    /// <param name="prompts">The prompt source.</param>
+    private static void ValidateCollaborators(DotAcpAgentHost inner, AppToolServer toolServer, AdapterProfile profile, Persona persona, IPromptSource prompts)
+    {
+        ArgumentNullException.ThrowIfNull(inner);
+        ArgumentNullException.ThrowIfNull(toolServer);
+        ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(persona);
+        ArgumentNullException.ThrowIfNull(prompts);
     }
 
     public AdapterProfile Profile { get; }

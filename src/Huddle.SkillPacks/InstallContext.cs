@@ -1,9 +1,9 @@
+using Agency.Huddle.SkillPacks.Checking;
+using Agency.Huddle.SkillPacks.Files;
 using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Agency.Huddle.SkillPacks.Checking;
-using Agency.Huddle.SkillPacks.Files;
 
 namespace Agency.Huddle.SkillPacks;
 
@@ -63,12 +63,9 @@ public sealed record InstallContext(
         }
 
         JsonElement root = document.RootElement;
-        foreach (string field in RequiredFields)
+        if (RequiredFields.FirstOrDefault(field => JsonFields.Get(root, field) is not { ValueKind: not JsonValueKind.Null }) is { } missingField)
         {
-            if (JsonFields.Get(root, field) is not { ValueKind: not JsonValueKind.Null })
-            {
-                return InstallContextReadResult.Invalid($"missing {field}");
-            }
+            return InstallContextReadResult.Invalid($"missing {missingField}");
         }
 
         int? schema = JsonFields.Int(root, "schemaVersion");
@@ -88,28 +85,15 @@ public sealed record InstallContext(
         }
 
         List<RoleInfo> roles = [];
-        foreach (JsonElement role in Array(root, "roles"))
+        if (ReadRoles(root, roles) is { } rolesProblem)
         {
-            string? id = JsonFields.String(role, "id");
-            if (string.IsNullOrWhiteSpace(id))
-            {
-                return InstallContextReadResult.Invalid("missing roles[].id");
-            }
-
-            roles.Add(new RoleInfo(id, JsonFields.String(role, "title") ?? id, JsonFields.String(role, "description") ?? string.Empty, JsonFields.Strings(role, "suggestedPacks")));
+            return InstallContextReadResult.Invalid(rolesProblem);
         }
 
         List<InstalledSkill> installed = [];
-        foreach (JsonElement skill in Array(root, "installed"))
+        if (ReadInstalled(root, installed) is { } installedProblem)
         {
-            string? name = JsonFields.String(skill, "name");
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                return InstallContextReadResult.Invalid("missing installed[].name");
-            }
-
-            bool builtIn = JsonFields.Get(skill, "builtIn") is { ValueKind: JsonValueKind.True };
-            installed.Add(new InstalledSkill(name, JsonFields.String(skill, "origin"), JsonFields.String(skill, "sha256"), builtIn));
+            return InstallContextReadResult.Invalid(installedProblem);
         }
 
         string? Text(string field)
@@ -157,34 +141,44 @@ public sealed record InstallContext(
         return root.ToJsonString(WriteOptions) + "\n";
     }
 
+    /// <summary>Reads <c>roles</c> into <paramref name="roles"/>; returns the problem, or null when every role has an id.</summary>
+    private static string? ReadRoles(JsonElement root, List<RoleInfo> roles)
+    {
+        foreach (JsonElement role in Array(root, "roles"))
+        {
+            string? id = JsonFields.String(role, "id");
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return "missing roles[].id";
+            }
+
+            roles.Add(new RoleInfo(id, JsonFields.String(role, "title") ?? id, JsonFields.String(role, "description") ?? string.Empty, JsonFields.Strings(role, "suggestedPacks")));
+        }
+
+        return null;
+    }
+
+    /// <summary>Reads <c>installed</c> into <paramref name="installed"/>; returns the problem, or null when every Skill has a name.</summary>
+    private static string? ReadInstalled(JsonElement root, List<InstalledSkill> installed)
+    {
+        foreach (JsonElement skill in Array(root, "installed"))
+        {
+            string? name = JsonFields.String(skill, "name");
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return "missing installed[].name";
+            }
+
+            bool builtIn = JsonFields.Get(skill, "builtIn") is { ValueKind: JsonValueKind.True };
+            installed.Add(new InstalledSkill(name, JsonFields.String(skill, "origin"), JsonFields.String(skill, "sha256"), builtIn));
+        }
+
+        return null;
+    }
+
     /// <summary>The elements of an array property; empty when it is not an array.</summary>
     private static IEnumerable<JsonElement> Array(JsonElement root, string name)
     {
         return JsonFields.Get(root, name) is { ValueKind: JsonValueKind.Array } array ? [.. array.EnumerateArray()] : [];
-    }
-}
-
-/// <summary>What <see cref="InstallContext.Parse"/> found.</summary>
-/// <param name="Value">The context, or null.</param>
-/// <param name="Reason">Why it cannot be used, for the exit-2 message; null when read.</param>
-/// <param name="NewerSchemaVersion">The schema version when the file is newer than this program; otherwise null.</param>
-public sealed record InstallContextReadResult(InstallContext? Value, string? Reason, int? NewerSchemaVersion)
-{
-    /// <summary>A file that was read.</summary>
-    public static InstallContextReadResult Read(InstallContext value)
-    {
-        return new InstallContextReadResult(value, null, null);
-    }
-
-    /// <summary>A file that cannot be read, with the reason.</summary>
-    public static InstallContextReadResult Invalid(string reason)
-    {
-        return new InstallContextReadResult(null, reason, null);
-    }
-
-    /// <summary>A file written for a newer schema.</summary>
-    public static InstallContextReadResult Newer(int schemaVersion)
-    {
-        return new InstallContextReadResult(null, $"schemaVersion {schemaVersion}", schemaVersion);
     }
 }

@@ -66,25 +66,13 @@ internal sealed class InviteAgentTool(ChatService chat, ITeamDirectory teamDirec
         // complete JSON string argument the model filled in, never carved out of free text by a
         // pattern, so resolving it is a plain lookup, not the truncation-prone parsing
         // docs/engineering/traps.md warns about.
-        var user = await teamDirectory.FindUserByNameAsync(agentName, cancellationToken);
+        var user = await this.FindAgentAsync(agentName, cancellationToken).ConfigureAwait(false);
         if (user is null || user.Kind != UserKind.Agent)
         {
-            var alias = aliasSource.Aliases.FirstOrDefault(a => string.Equals(a.Alias, agentName, StringComparison.OrdinalIgnoreCase));
-            if (alias is not null)
-            {
-                user = await teamDirectory.FindUserByNameAsync(alias.Name, cancellationToken);
-            }
+            return await this.DescribeUnknownAgentAsync(agentName, cancellationToken).ConfigureAwait(false);
         }
 
-        if (user is null || user.Kind != UserKind.Agent)
-        {
-            var users = await teamDirectory.GetUsersAsync(cancellationToken);
-            var existingNames = users.Where(u => u.Kind == UserKind.Agent).Select(u => u.Name).ToList();
-            var existingText = existingNames.Count == 0 ? "none" : string.Join(", ", existingNames);
-            return $"Unknown agent '{agentName}'. Agents that do exist: {existingText}.";
-        }
-
-        var members = await teamDirectory.GetRoomMembersAsync(roomId, cancellationToken);
+        var members = await teamDirectory.GetRoomMembersAsync(roomId, cancellationToken).ConfigureAwait(false);
         if (members.Any(m => m.Id == user.Id))
         {
             return $"{user.Name} is already a member of room '{roomId}'. Nothing to do.";
@@ -92,7 +80,7 @@ internal sealed class InviteAgentTool(ChatService chat, ITeamDirectory teamDirec
 
         try
         {
-            var room = await chat.InviteAsync(roomId, agentName, cancellationToken);
+            var room = await chat.InviteAsync(roomId, agentName, cancellationToken).ConfigureAwait(false);
             var count = members.Count + 1;
             return $"Invited {user.Name} into room '{room.Name}' (id {room.Id}). It now has {count} members.";
         }
@@ -100,5 +88,34 @@ internal sealed class InviteAgentTool(ChatService chat, ITeamDirectory teamDirec
         {
             return $"Could not invite {user.Name}: {ex.Message}";
         }
+    }
+
+    /// <summary>Looks the name up as a user name first, then as a Persona Alias; the result may still not be an Agent.</summary>
+    /// <param name="agentName">The name or Alias the model sent.</param>
+    /// <param name="cancellationToken">Cancels the directory lookups.</param>
+    private async Task<User?> FindAgentAsync(string agentName, CancellationToken cancellationToken)
+    {
+        var user = await teamDirectory.FindUserByNameAsync(agentName, cancellationToken).ConfigureAwait(false);
+        if (user is null || user.Kind != UserKind.Agent)
+        {
+            var alias = aliasSource.Aliases.FirstOrDefault(a => string.Equals(a.Alias, agentName, StringComparison.OrdinalIgnoreCase));
+            if (alias is not null)
+            {
+                user = await teamDirectory.FindUserByNameAsync(alias.Name, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        return user;
+    }
+
+    /// <summary>Words the refusal for a name that matches no Agent, listing the Agents that do exist.</summary>
+    /// <param name="agentName">The name or Alias the model sent.</param>
+    /// <param name="cancellationToken">Cancels the directory lookup.</param>
+    private async Task<string> DescribeUnknownAgentAsync(string agentName, CancellationToken cancellationToken)
+    {
+        var users = await teamDirectory.GetUsersAsync(cancellationToken).ConfigureAwait(false);
+        var existingNames = users.Where(u => u.Kind == UserKind.Agent).Select(u => u.Name).ToList();
+        var existingText = existingNames.Count == 0 ? "none" : string.Join(", ", existingNames);
+        return $"Unknown agent '{agentName}'. Agents that do exist: {existingText}.";
     }
 }

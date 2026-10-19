@@ -1,31 +1,8 @@
-using System.Globalization;
 using Agency.Huddle.App.Library;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace Agency.Huddle.App.Uploads;
-
-/// <summary>Where one attachment chip is in its life (ChatUploads spec 6.4).</summary>
-internal enum UploadState
-{
-    /// <summary>The bytes are still being saved.</summary>
-    Uploading,
-
-    /// <summary>The file is saved and will travel with the next Message.</summary>
-    Done,
-
-    /// <summary>The file was refused or could not be saved; <see cref="PendingUpload.Error"/> says why.</summary>
-    Failed,
-}
-
-/// <summary>One attachment chip above the composer.</summary>
-/// <param name="Id">Names the chip when removing it.</param>
-/// <param name="DisplayName">The browser's file name until the save finishes, then the saved name.</param>
-/// <param name="File">The saved file; <see langword="null"/> until <see cref="UploadState.Done"/>.</param>
-/// <param name="Size">The bytes saved; 0 until <see cref="UploadState.Done"/>.</param>
-/// <param name="Kind">What the first bytes say the file is; <see langword="null"/> until <see cref="UploadState.Done"/>.</param>
-/// <param name="State">Where the chip is in its life.</param>
-/// <param name="Error">The refusal text of a <see cref="UploadState.Failed"/> chip, otherwise <see langword="null"/>.</param>
-internal sealed record PendingUpload(Guid Id, string DisplayName, LibraryPath? File, long Size, UploadKind? Kind, UploadState State, string? Error);
 
 /// <summary>
 /// The attachment chips of each Room for one circuit (ChatUploads spec 6.4). Scoped rather than component
@@ -90,9 +67,10 @@ internal sealed class PendingUploads(ChatUploadService uploads, IOptions<TeamOpt
         this.Changed?.Invoke();
         try
         {
-            using Stream stream = openStream(entry.Cancellation.Token);
-            LibraryResult<LibraryUpload> result = await uploads.SaveAsync(roomId, browserName, stream, entry.Cancellation.Token);
-            return await this.Settle(roomId, entry, result);
+            Stream stream = openStream(entry.Cancellation.Token);
+            await using var streamScope = stream.ConfigureAwait(false);
+            LibraryResult<LibraryUpload> result = await uploads.SaveAsync(roomId, browserName, stream, entry.Cancellation.Token).ConfigureAwait(false);
+            return await this.Settle(roomId, entry, result).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -102,7 +80,7 @@ internal sealed class PendingUploads(ChatUploadService uploads, IOptions<TeamOpt
         {
             // Opening the browser stream can throw (the file passed the browser's own size cap check) and the save can
             // fail on disk; either way the chip must end Failed rather than stay Uploading and block Send forever.
-            return await this.Settle(roomId, entry, LibraryResult<LibraryUpload>.Fail(string.Create(CultureInfo.InvariantCulture, $"Couldn't save {browserName}.")));
+            return await this.Settle(roomId, entry, LibraryResult<LibraryUpload>.Fail(string.Create(CultureInfo.InvariantCulture, $"Couldn't save {browserName}."))).ConfigureAwait(false);
         }
         finally
         {
@@ -142,7 +120,7 @@ internal sealed class PendingUploads(ChatUploadService uploads, IOptions<TeamOpt
         removed.Cancel();
         if (removed.Chip.File is { } file)
         {
-            await uploads.DeleteUnsentAsync(file, ct);
+            await uploads.DeleteUnsentAsync(file, ct).ConfigureAwait(false);
         }
 
         this.Changed?.Invoke();
@@ -213,7 +191,7 @@ internal sealed class PendingUploads(ChatUploadService uploads, IOptions<TeamOpt
         }
         else if (settled.File is { } orphan)
         {
-            await uploads.DeleteUnsentAsync(orphan, CancellationToken.None);
+            await uploads.DeleteUnsentAsync(orphan, CancellationToken.None).ConfigureAwait(false);
         }
 
         return settled;

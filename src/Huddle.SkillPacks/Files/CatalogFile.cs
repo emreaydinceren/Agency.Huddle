@@ -1,29 +1,8 @@
-using System.Text.Json;
 using Agency.Huddle.SkillPacks.Checking;
 using Agency.Huddle.SkillPacks.Reading;
+using System.Text.Json;
 
 namespace Agency.Huddle.SkillPacks.Files;
-
-/// <summary>One Skill a catalog lists. <c>Path</c> is empty until the Skill is fetched.</summary>
-/// <param name="Name">The Skill name.</param>
-/// <param name="Description">One line on what the Skill does.</param>
-/// <param name="Origin">The pinned URL.</param>
-/// <param name="Publisher">Who publishes it.</param>
-/// <param name="License">The licence the catalog declares.</param>
-/// <param name="Category">The category, for grouping.</param>
-/// <param name="SubCategory">The sub-category, for grouping.</param>
-/// <param name="Requires">Skill names this one depends on.</param>
-/// <param name="Path">Where the Skill's folder is on each computer; empty until fetched.</param>
-public sealed record CatalogEntry(
-    string Name,
-    string Description,
-    string Origin,
-    string? Publisher,
-    string? License,
-    string? Category,
-    string? SubCategory,
-    IReadOnlyList<string> Requires,
-    PathEntries Path);
 
 /// <summary>A <c>*.skillcatalog.json</c> file (§7.2).</summary>
 /// <param name="SchemaVersion">Always 1 once parsed.</param>
@@ -116,7 +95,6 @@ public sealed record CatalogFile(
             findings.Add(Finding.Error("D002", filePath, $"{label}: description and origin are required."));
             return null;
         }
-
 
         PathEntries? path = JsonFields.Get(item, "path") is { } pathValue ? PathEntries.FromJson(pathValue) : PathEntries.Empty;
         if (path is null)

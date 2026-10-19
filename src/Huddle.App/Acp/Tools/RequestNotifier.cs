@@ -37,7 +37,7 @@ internal sealed partial class RequestNotifier(TaskTriggerService trigger, ITeamC
 
             if (woken.Add(name))
             {
-                _ = await trigger.WakeForRequestAsync(request, name, wakeActor, summary, cancellationToken);
+                _ = await trigger.WakeForRequestAsync(request, name, wakeActor, summary, cancellationToken).ConfigureAwait(false);
             }
         }
     }

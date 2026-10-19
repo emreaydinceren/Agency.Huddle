@@ -315,45 +315,52 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
 
         foreach (var name in currentNames)
         {
-            bool isBusy;
-            bool isRunning;
-            Persona? started;
-            lock (this.gate)
-            {
-                isBusy = this.starting.Contains(name) || this.restarting.Contains(name);
-                isRunning = this.hosts.ContainsKey(name);
-                this.startedByName.TryGetValue(name, out started);
-                if (isBusy)
-                {
-                    this.pendingChange.Add(name);
-                }
-            }
+            this.ReconcilePersona(name);
+        }
+    }
 
+    /// <summary>Starts, restarts or defers the runner for one Persona that still exists, according to what is running now.</summary>
+    /// <param name="name">The Persona's Name.</param>
+    private void ReconcilePersona(string name)
+    {
+        bool isBusy;
+        bool isRunning;
+        Persona? started;
+        lock (this.gate)
+        {
+            isBusy = this.starting.Contains(name) || this.restarting.Contains(name);
+            isRunning = this.hosts.ContainsKey(name);
+            this.startedByName.TryGetValue(name, out started);
             if (isBusy)
             {
-                // A start or restart for this Persona is in flight. Acting now would race it: a
-                // Persona claimed via `starting` has no `startedByName` entry yet, so NeedsRestart's
-                // `started is null` short-circuit would restart a host that never finished starting
-                // (a second factory.StartAsync under the same agent id), and RestartHostAsync would
-                // refuse anyway while `restarting` holds the name. Doing nothing at all is wrong too:
-                // the start read the Persona BEFORE awaiting the Adapter, so this edit is not in the
-                // host it is starting. It used to be dropped here - the flaky *_RestartsItsHost
-                // tests were this, losing the edit whenever it landed during the start's await. The
-                // mark above is settled by SettlePendingChange when the in-flight work ends.
-                continue;
+                this.pendingChange.Add(name);
             }
+        }
 
-            if (!isRunning)
-            {
-                _ = this.StartHostIfMissingAsync(name, this.runningToken);
-                continue;
-            }
+        if (isBusy)
+        {
+            // A start or restart for this Persona is in flight. Acting now would race it: a
+            // Persona claimed via `starting` has no `startedByName` entry yet, so NeedsRestart's
+            // `started is null` short-circuit would restart a host that never finished starting
+            // (a second factory.StartAsync under the same agent id), and RestartHostAsync would
+            // refuse anyway while `restarting` holds the name. Doing nothing at all is wrong too:
+            // the start read the Persona BEFORE awaiting the Adapter, so this edit is not in the
+            // host it is starting. It used to be dropped here - the flaky *_RestartsItsHost
+            // tests were this, losing the edit whenever it landed during the start's await. The
+            // mark above is settled by SettlePendingChange when the in-flight work ends.
+            return;
+        }
 
-            var persona = this.personaStore.Get(name);
-            if (persona is not null && NeedsRestart(persona, started))
-            {
-                _ = this.RestartHostAsync(name, this.runningToken);
-            }
+        if (!isRunning)
+        {
+            _ = this.StartHostIfMissingAsync(name, this.runningToken);
+            return;
+        }
+
+        var persona = this.personaStore.Get(name);
+        if (persona is not null && NeedsRestart(persona, started))
+        {
+            _ = this.RestartHostAsync(name, this.runningToken);
         }
     }
 
@@ -461,31 +468,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
 
         try
         {
-            PersonaRunner? oldHost;
-            Action<PersonaStatus>? oldHandler;
-            lock (this.gate)
-            {
-                this.hosts.Remove(name, out oldHost);
-                this.startedByName.Remove(name);
-                this.statusHandlers.Remove(name, out oldHandler);
-            }
-
-            if (oldHost is not null)
-            {
-                if (oldHandler is not null)
-                {
-                    oldHost.StatusChanged -= oldHandler;
-                }
-
-                try
-                {
-                    await oldHost.DisposeAsync().ConfigureAwait(false);
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    this.logger.LogWarning(ex, "Persona '{PersonaName}' old host failed to stop cleanly during restart.", name);
-                }
-            }
+            await this.DisposeOldHostAsync(name).ConfigureAwait(false);
 
             // RS §6.13: a Restart - the button, or the automatic one a Persona edit / Model / Effort /
             // Work Mode / Adapter change triggers - forgets every stored Room Session for this Persona,
@@ -507,6 +490,37 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
             }
 
             this.SettlePendingChange(name, cancellationToken);
+        }
+    }
+
+    /// <summary>Detaches and disposes the Persona's current runner, if it has one, logging rather than throwing when it fails to stop.</summary>
+    /// <param name="name">The Persona being restarted.</param>
+    private async Task DisposeOldHostAsync(string name)
+    {
+        PersonaRunner? oldHost;
+        Action<PersonaStatus>? oldHandler;
+        lock (this.gate)
+        {
+            this.hosts.Remove(name, out oldHost);
+            this.startedByName.Remove(name);
+            this.statusHandlers.Remove(name, out oldHandler);
+        }
+
+        if (oldHost is not null)
+        {
+            if (oldHandler is not null)
+            {
+                oldHost.StatusChanged -= oldHandler;
+            }
+
+            try
+            {
+                await oldHost.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                this.logger.LogWarning(ex, "Persona '{PersonaName}' old host failed to stop cleanly during restart.", name);
+            }
         }
     }
 
@@ -554,32 +568,9 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
 
     private async Task StartHostIfMissingAsync(string name, CancellationToken cancellationToken)
     {
-        // The cost guard lives here, not only in ExecuteAsync, because this is the one place a host
-        // is ever created - every route in (startup, a Persona file changing, the Restart button)
-        // arrives through it. ExecuteAsync's own early return covers startup and stops the
-        // PersonasChanged subscription ever being made; Restart is a direct call and reached this
-        // method with the guard off, bringing a Persona fully Online and leaving every later Message
-        // to it billable, with nothing on screen having said so.
-        //
-        // Reported rather than returned silently: a button that does nothing at all is the failure
-        // this area keeps producing, and an Offline badge with a reason is the surface that already
-        // exists for "it is not running, and here is why".
-        if (!this.options.Acp.Enabled)
+        if (this.TryRefuseWhenAcpDisabled(name) || !this.TryClaimStart(name))
         {
-            this.health.Report(name, PersonaState.Offline, "Teammates are switched off in this configuration, so nothing was started.");
             return;
-        }
-
-        lock (this.gate)
-        {
-            // `stopping` closes the exact window that produced the duplicate-start flake: an
-            // OnPersonasChanged invocation that read `stopping == false` just before StopAsync set
-            // it, then reached this check after `hosts` was already cleared, would otherwise see no
-            // "nova" host and start a second one under the same agent id.
-            if (this.stopping || this.hosts.ContainsKey(name) || !this.starting.Add(name))
-            {
-                return;
-            }
         }
 
         try
@@ -590,56 +581,8 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
                 return;
             }
 
-            // Spec §8.2: DotAcpAgentHostFactory resolves the same Persona's Adapter again when it
-            // starts the host, so this looks like duplicated work - it is not. Widening
-            // IAgentHostFactory.StartAsync's return type to also carry this diagnostic would touch
-            // FakeAgentHostFactory and every supervisor test call site for one string. The resolver
-            // is pure and touches no state, so calling it twice costs nothing and keeps that
-            // signature stable here - two calls, one truth. (RS §6.3 changed IAgentHostFactory's
-            // signature once, deliberately, splitting CreateAsync into StartAsync/OpenAsync; the
-            // "frozen" reasoning below still holds for the resolver call, just not for the factory
-            // interface itself.) The Degraded report itself is issued after
-            // "Starting" below rather than here, so the "whatever was said during the start wins"
-            // rule a few lines down does not immediately overwrite it back to Starting/Online. The
-            // resolved profile itself is kept (not discarded) because FC §6.11's ReadsFiles decides
-            // both the tracker below and the warning wording.
-            var (profile, adapterWarning) = this.resolver.Resolve(persona.Adapter);
-
-            // Same argument as the Adapter warning immediately above, for Skills (Spec §6.4, §12
-            // F-1): DotAcpAgentHostFactory resolves the same names again itself, for the tool
-            // grants and the Skill Index, and a Persona with no frontmatter - or malformed
-            // frontmatter - simply holds no Skills rather than failing the start.
-            IReadOnlyList<string> skillNames = PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _)
-                ? identity.Skills ?? []
-                : [];
-            SkillResolution skillResolution = this.skills.Resolve(skillNames);
-
-            // FC §6.10, §6.11: File Changes is off for this Persona when the tracker itself is
-            // absent (finding P-13), Team:FileChanges:Enabled is false, or the resolved Adapter
-            // Profile cannot read files - any of the three, the runner gets no tracker.
-            FileChangeTracker? tracker = this.options.FileChanges.Enabled && profile.ReadsFiles ? this.fileChanges : null;
-            IReadOnlyList<string> declaredWatches = identity?.Watches ?? [];
-
-            // The "ignored" warning fires whenever File Changes is on but this Adapter cannot read
-            // files and the Persona declared a watch anyway - independent of whether a tracker was
-            // ever injected into this supervisor, because the fact it reports is about the Adapter,
-            // not about this process' wiring. CheckDeclared's own warnings need all three: a
-            // tracker, FileChanges.Enabled and ReadsFiles - so the two warnings are mutually
-            // exclusive by construction.
-            IReadOnlyList<string> watchWarnings = this.options.FileChanges.Enabled switch
-            {
-                false => [],
-                true when !profile.ReadsFiles && declaredWatches.Count > 0 =>
-                    [$"Watched folders are ignored: the Adapter '{profile.Id}' cannot read files."],
-                true => tracker is not null ? tracker.CheckDeclared(declaredWatches) : [],
-            };
-
-            // Spec §6.14, corrections-B6 item 8: the Library.Enabled gate lives in exactly this one
-            // place - the collector itself carries no IOptions gate of its own - so a disabled
-            // Library reaches every runner as a null collector, the same "absent means off" shape
-            // File Changes and every other optional collaborator here already use.
-            var host = new PersonaRunner(
-                persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), tracker, roomSessions: this.roomSessions, ownPosts: this.ownPosts, turnActivity: this.turnActivity, libraryDocs: this.options.Library.Enabled ? this.libraryDocs : null, readsFiles: profile.ReadsFiles, spend: this.spend, commands: this.commands, elicitationBridge: this.elicitationBridge, references: this.references);
+            StartPlan plan = this.PlanStart(persona);
+            var host = this.CreateRunner(persona, plan);
 
             // Forwards every health signal the runner itself observes (T4.3) - a session/Turn
             // fact, arriving over the wire - into the one table every UI surface reads.
@@ -647,50 +590,12 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
             void OnStatusChanged(PersonaStatus status) => this.health.Report(name, status.State, status.Reason);
             host.StatusChanged += OnStatusChanged;
 
-            try
+            if (!await this.TryStartRunnerAsync(name, host, plan.Warnings, cancellationToken).ConfigureAwait(false))
             {
-                this.health.Report(name, PersonaState.Starting, null);
-
-                // The Adapter warning and every unresolved Skill name are independent sources of the
-                // same Degraded state, so a Persona hit by both is reported once, not one overwriting
-                // the other - the Adapter warning first, then each Skill warning, joined with a
-                // single space.
-                IReadOnlyList<string> warnings = adapterWarning is null
-                    ? [.. skillResolution.Warnings, .. watchWarnings]
-                    : [adapterWarning, .. skillResolution.Warnings, .. watchWarnings];
-                if (warnings.Count > 0)
-                {
-                    this.health.Report(name, PersonaState.Degraded, string.Join(' ', warnings));
-                }
-
-                await host.StartAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                // One Persona failing to start (bad config, adapter missing, agent process dies)
-                // must not stop any other Persona from coming online. Classified most-derived
-                // exception type first: AgentAuthenticationRequiredException and
-                // AgentProcessStartException are both sealed AgentException subtypes, so a bare
-                // AgentException arm ahead of them would swallow both.
-                this.health.Report(name, PersonaState.Offline, DescribeStartFailure(ex));
-                this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to start.", name);
-                await host.DisposeAsync().ConfigureAwait(false);
                 return;
             }
 
-            // Online here means "the start returned and said nothing about itself", never "this
-            // Agent is healthy" - a fact this method does not have. PersonaRunner.StartAsync can
-            // report during the await above (a stored Model the Adapter does not advertise is the
-            // case today), and PersonaHealth.Report is last-write-wins with no notion of a state
-            // that outranks another - so reporting Online unconditionally destroyed that report
-            // microseconds after it was made, before any surface could read it. Reading the table
-            // back rather than tracking a flag keeps the rule in one expression: whatever was said
-            // during the start wins, because it knows something this line does not.
-            var afterStart = this.health.Get(name);
-            if (afterStart is null || afterStart.State == PersonaState.Starting)
-            {
-                this.health.Report(name, PersonaState.Online, null);
-            }
+            this.ReportOnlineUnlessReportedDuringStart(name);
 
             lock (this.gate)
             {
@@ -707,6 +612,182 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
             }
 
             this.SettlePendingChange(name, cancellationToken);
+        }
+    }
+
+    /// <summary>What <see cref="PlanStart"/> decided for one start: the file-reading flag, the tracker and the Degraded warnings.</summary>
+    /// <param name="ReadsFiles">Whether the resolved Adapter Profile can read files.</param>
+    /// <param name="Warnings">The Adapter, Skill and watch warnings to report as one Degraded reason; empty when there are none.</param>
+    /// <param name="Tracker">The File Changes tracker the runner gets, or <see langword="null"/> when File Changes is off for it.</param>
+    private readonly record struct StartPlan(bool ReadsFiles, IReadOnlyList<string> Warnings, FileChangeTracker? Tracker);
+
+    /// <summary>
+    /// The cost guard lives here, not only in ExecuteAsync, because this is the one place a host
+    /// is ever created - every route in (startup, a Persona file changing, the Restart button)
+    /// arrives through it. ExecuteAsync's own early return covers startup and stops the
+    /// PersonasChanged subscription ever being made; Restart is a direct call and reached this
+    /// method with the guard off, bringing a Persona fully Online and leaving every later Message
+    /// to it billable, with nothing on screen having said so.
+    /// </summary>
+    /// <remarks>
+    /// Reported rather than returned silently: a button that does nothing at all is the failure
+    /// this area keeps producing, and an Offline badge with a reason is the surface that already
+    /// exists for "it is not running, and here is why".
+    /// </remarks>
+    /// <param name="name">The Persona being started.</param>
+    /// <returns><see langword="true"/> when Teammates are switched off and the start must not go ahead.</returns>
+    private bool TryRefuseWhenAcpDisabled(string name)
+    {
+        if (!this.options.Acp.Enabled)
+        {
+            this.health.Report(name, PersonaState.Offline, "Teammates are switched off in this configuration, so nothing was started.");
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>Claims <paramref name="name"/> as starting, unless shutdown has begun, it already runs or a start is in flight.</summary>
+    /// <param name="name">The Persona being started.</param>
+    /// <returns><see langword="true"/> when this caller now owns the start.</returns>
+    private bool TryClaimStart(string name)
+    {
+        lock (this.gate)
+        {
+            // `stopping` closes the exact window that produced the duplicate-start flake: an
+            // OnPersonasChanged invocation that read `stopping == false` just before StopAsync set
+            // it, then reached this check after `hosts` was already cleared, would otherwise see no
+            // "nova" host and start a second one under the same agent id.
+            return !(this.stopping || this.hosts.ContainsKey(name) || !this.starting.Add(name));
+        }
+    }
+
+    /// <summary>Resolves the Adapter, Skills and File Changes wiring for one start and combines their warnings.</summary>
+    /// <param name="persona">The Persona being started.</param>
+    /// <returns>The plan the runner is created and reported from.</returns>
+    private StartPlan PlanStart(Persona persona)
+    {
+        // Spec §8.2: DotAcpAgentHostFactory resolves the same Persona's Adapter again when it
+        // starts the host, so this looks like duplicated work - it is not. Widening
+        // IAgentHostFactory.StartAsync's return type to also carry this diagnostic would touch
+        // FakeAgentHostFactory and every supervisor test call site for one string. The resolver
+        // is pure and touches no state, so calling it twice costs nothing and keeps that
+        // signature stable here - two calls, one truth. (RS §6.3 changed IAgentHostFactory's
+        // signature once, deliberately, splitting CreateAsync into StartAsync/OpenAsync; the
+        // "frozen" reasoning below still holds for the resolver call, just not for the factory
+        // interface itself.) The Degraded report itself is issued after
+        // "Starting" below rather than here, so the "whatever was said during the start wins"
+        // rule a few lines down does not immediately overwrite it back to Starting/Online. The
+        // resolved profile itself is kept (not discarded) because FC §6.11's ReadsFiles decides
+        // both the tracker below and the warning wording.
+        var (profile, adapterWarning) = this.resolver.Resolve(persona.Adapter);
+
+        // Same argument as the Adapter warning immediately above, for Skills (Spec §6.4, §12
+        // F-1): DotAcpAgentHostFactory resolves the same names again itself, for the tool
+        // grants and the Skill Index, and a Persona with no frontmatter - or malformed
+        // frontmatter - simply holds no Skills rather than failing the start.
+        IReadOnlyList<string> skillNames = PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _)
+            ? identity.Skills ?? []
+            : [];
+        SkillResolution skillResolution = this.skills.Resolve(skillNames);
+
+        // FC §6.10, §6.11: File Changes is off for this Persona when the tracker itself is
+        // absent (finding P-13), Team:FileChanges:Enabled is false, or the resolved Adapter
+        // Profile cannot read files - any of the three, the runner gets no tracker.
+        FileChangeTracker? tracker = this.options.FileChanges.Enabled && profile.ReadsFiles ? this.fileChanges : null;
+        IReadOnlyList<string> declaredWatches = identity?.Watches ?? [];
+
+        // The "ignored" warning fires whenever File Changes is on but this Adapter cannot read
+        // files and the Persona declared a watch anyway - independent of whether a tracker was
+        // ever injected into this supervisor, because the fact it reports is about the Adapter,
+        // not about this process' wiring. CheckDeclared's own warnings need all three: a
+        // tracker, FileChanges.Enabled and ReadsFiles - so the two warnings are mutually
+        // exclusive by construction.
+        IReadOnlyList<string> watchWarnings = this.options.FileChanges.Enabled switch
+        {
+            false => [],
+            true when !profile.ReadsFiles && declaredWatches.Count > 0 =>
+                [$"Watched folders are ignored: the Adapter '{profile.Id}' cannot read files."],
+            true => tracker is not null ? tracker.CheckDeclared(declaredWatches) : [],
+        };
+
+        // The Adapter warning and every unresolved Skill name are independent sources of the
+        // same Degraded state, so a Persona hit by both is reported once, not one overwriting
+        // the other - the Adapter warning first, then each Skill warning, joined with a
+        // single space.
+        IReadOnlyList<string> warnings = adapterWarning is null
+            ? [.. skillResolution.Warnings, .. watchWarnings]
+            : [adapterWarning, .. skillResolution.Warnings, .. watchWarnings];
+
+        return new StartPlan(profile.ReadsFiles, warnings, tracker);
+    }
+
+    /// <summary>Creates the runner for a Persona from its start plan.</summary>
+    /// <param name="persona">The Persona being started.</param>
+    /// <param name="plan">The plan <see cref="PlanStart"/> produced.</param>
+    /// <returns>The not yet started runner.</returns>
+    private PersonaRunner CreateRunner(Persona persona, StartPlan plan)
+    {
+        // Spec §6.14, corrections-B6 item 8: the Library.Enabled gate lives in exactly this one
+        // place - the collector itself carries no IOptions gate of its own - so a disabled
+        // Library reaches every runner as a null collector, the same "absent means off" shape
+        // File Changes and every other optional collaborator here already use.
+        return new PersonaRunner(
+            persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), plan.Tracker, roomSessions: this.roomSessions, ownPosts: this.ownPosts, turnActivity: this.turnActivity, libraryDocs: this.options.Library.Enabled ? this.libraryDocs : null, readsFiles: plan.ReadsFiles, spend: this.spend, commands: this.commands, elicitationBridge: this.elicitationBridge, references: this.references);
+    }
+
+    /// <summary>Reports Starting, then any Degraded warnings, then starts the runner; a start failure is reported Offline and the runner disposed.</summary>
+    /// <param name="name">The Persona being started.</param>
+    /// <param name="host">The runner to start.</param>
+    /// <param name="warnings">The combined start warnings; empty when there are none.</param>
+    /// <param name="cancellationToken">Cancels the start.</param>
+    /// <returns><see langword="true"/> when the start returned; <see langword="false"/> when it failed.</returns>
+    private async Task<bool> TryStartRunnerAsync(string name, PersonaRunner host, IReadOnlyList<string> warnings, CancellationToken cancellationToken)
+    {
+        try
+        {
+            this.health.Report(name, PersonaState.Starting, null);
+
+            if (warnings.Count > 0)
+            {
+                this.health.Report(name, PersonaState.Degraded, string.Join(' ', warnings));
+            }
+
+            await host.StartAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // One Persona failing to start (bad config, adapter missing, agent process dies)
+            // must not stop any other Persona from coming online. Classified most-derived
+            // exception type first: AgentAuthenticationRequiredException and
+            // AgentProcessStartException are both sealed AgentException subtypes, so a bare
+            // AgentException arm ahead of them would swallow both.
+            this.health.Report(name, PersonaState.Offline, DescribeStartFailure(ex));
+            this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to start.", name);
+            await host.DisposeAsync().ConfigureAwait(false);
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Online here means "the start returned and said nothing about itself", never "this
+    /// Agent is healthy" - a fact this method does not have. PersonaRunner.StartAsync can
+    /// report during the await above (a stored Model the Adapter does not advertise is the
+    /// case today), and PersonaHealth.Report is last-write-wins with no notion of a state
+    /// that outranks another - so reporting Online unconditionally destroyed that report
+    /// microseconds after it was made, before any surface could read it. Reading the table
+    /// back rather than tracking a flag keeps the rule in one expression: whatever was said
+    /// during the start wins, because it knows something this line does not.
+    /// </summary>
+    /// <param name="name">The Persona whose start just returned.</param>
+    private void ReportOnlineUnlessReportedDuringStart(string name)
+    {
+        var afterStart = this.health.Get(name);
+        if (afterStart is null || afterStart.State == PersonaState.Starting)
+        {
+            this.health.Report(name, PersonaState.Online, null);
         }
     }
 }

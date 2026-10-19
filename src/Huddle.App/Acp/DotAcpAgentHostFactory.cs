@@ -113,6 +113,124 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
 
+        AdapterProfile profile = this.ResolveProfile(persona);
+
+        await this.WaitForFolderMoveAsync(persona.Name, cancellationToken).ConfigureAwait(false);
+
+        var (workDir, memoryDir) = this.CreateWorkDirs(persona.Name);
+        AgentProcessOptions processOptions = CreateProcessOptions(persona, profile, workDir);
+
+        var authToken = MintAuthToken();
+
+        PersonaIdentity? parsed = ParseIdentity(persona);
+        IReadOnlyList<string> skillNames = parsed?.Skills ?? [];
+
+        IReadOnlyList<string> teamLabels = parsed?.Teams ?? [];
+        SkillResolution skillResolution = this.skills.Resolve(skillNames);
+
+        ToolSet toolSet = this.BuildToolSet(persona, agentId, profile, skillResolution);
+
+        bool readsMemory = this.ReadsMemory(profile);
+
+        var toolServer = new AppToolServer(ToolServerName, toolSet.Tools, this.loggerFactory, 0, authToken);
+        await toolServer.StartAsync(cancellationToken).ConfigureAwait(false);
+
+        IReadOnlyList<string> toolNames = [.. toolSet.Tools.Select(tool => $"{toolSet.ToolNamePrefix}{tool.Name}")];
+
+        DotAcpAgentHost innerHost = await this.StartInnerHostAsync(processOptions, toolServer, cancellationToken).ConfigureAwait(false);
+
+        IReadOnlyDictionary<string, object>? meta = BuildIsolationMeta(profile);
+        Func<RoleBlockInput?> roleBlock = this.CreateRoleBlock(parsed, skillResolution);
+
+        return new DotAcpPersonaHost(
+            innerHost,
+            toolServer,
+            profile,
+            persona,
+            toolSet.Prompts,
+            toolSet.HelpToolName,
+            toolNames,
+            skillResolution.Skills,
+            toolSet.ReadSkillToolName,
+            toolSet.AskHumanToolName,
+            memoryDir,
+            readsMemory,
+            this.options.FileChanges.MaxMemoryEntries,
+            teamLabels,
+            this.teamCatalog,
+            this.TeamsRoot(),
+            this.options.Teams.MaxMemoryEntries,
+            workDir,
+            toolServer.Endpoint,
+            meta,
+            this.loggerFactory,
+            this.workModePolicy,
+            roleBlock,
+            this.serviceProvider.GetService<IMergeGate>());
+    }
+
+    /// <summary>What <see cref="BuildToolSet"/> built: the offered tools and the model-facing names the system prompt cites.</summary>
+    /// <param name="Tools">The tools the session is offered, <c>get_help</c> first.</param>
+    /// <param name="Prompts">The prompt source resolved from the application's container.</param>
+    /// <param name="ToolNamePrefix">The <c>mcp__{server}__</c> prefix, or empty when the profile does not use one.</param>
+    /// <param name="HelpToolName"><c>get_help</c>'s name with the prefix applied.</param>
+    /// <param name="ReadSkillToolName"><c>read_skill</c>'s name with the prefix applied.</param>
+    /// <param name="AskHumanToolName"><c>ask_human</c>'s name with the prefix applied.</param>
+    private readonly record struct ToolSet(
+        IReadOnlyList<IAppTool> Tools,
+        IPromptSource Prompts,
+        string ToolNamePrefix,
+        string HelpToolName,
+        string ReadSkillToolName,
+        string AskHumanToolName);
+
+    /// <summary>Builds, Skill-gates and prefixes the Persona's tools, ending with <c>get_help</c> over the offered list.</summary>
+    /// <param name="persona">The Persona being started.</param>
+    /// <param name="agentId">The Agent id the tools are bound to.</param>
+    /// <param name="profile">The resolved Adapter Profile.</param>
+    /// <param name="skillResolution">The Persona's resolved Skills.</param>
+    /// <returns>The tool set.</returns>
+    private ToolSet BuildToolSet(Persona persona, string agentId, AdapterProfile profile, SkillResolution skillResolution)
+    {
+        // Built by our own service provider, bound to this Agent id, so each tool call runs the same
+        // domain code the UI calls. AppToolServer's WebApplication.CreateBuilder() is a second,
+        // genuinely separate DI container - the tool instances must never be resolved from it.
+        // Captured in its own local, the same reason getHelpTool is below, so this method never
+        // retypes "read_skill" - the Compose call reads it off readSkillTool.Name.
+        var readSkillTool = ActivatorUtilities.CreateInstance<ReadSkillTool>(this.serviceProvider, persona.Name);
+        var askHumanTool = ActivatorUtilities.CreateInstance<AskHumanTool>(this.serviceProvider, agentId);
+        IReadOnlyList<IAppTool> chatTools = this.CreateChatTools(agentId, readSkillTool, askHumanTool);
+        chatTools = this.OfferChatTools(chatTools, persona, profile, skillResolution);
+
+        var prompts = this.serviceProvider.GetRequiredService<IPromptSource>();
+
+        // The mcp__{server}__ prefix is derived from the same server name above, never typed into a
+        // prompt's template - see the ToolServerName remarks and SystemPromptComposer's. GetHelpTool
+        // takes it explicitly rather than hard-coding its own copy, for the same reason. Whether it
+        // is applied at all now follows the resolved profile (Spec §6.4): the server name itself
+        // never changes, only whether model-facing names carry it.
+        var toolNamePrefix = profile.UsesToolNamePrefix ? $"mcp__{ToolServerName}__" : string.Empty;
+
+        // get_help is offered first and knows every other tool, so the system prompt can name one
+        // tool instead of all of them. It is built last for the obvious reason: it takes the rest.
+        // Captured in its own local, rather than only in the tools array below, so the system prompt
+        // can name it from its own Name - never retyping "get_help" either.
+        var getHelpTool = new GetHelpTool(chatTools, prompts, toolNamePrefix);
+        IReadOnlyList<IAppTool> tools = [getHelpTool, .. chatTools];
+
+        return new ToolSet(
+            tools,
+            prompts,
+            toolNamePrefix,
+            toolNamePrefix + getHelpTool.Name,
+            toolNamePrefix + readSkillTool.Name,
+            toolNamePrefix + askHumanTool.Name);
+    }
+    /// <summary>Resolves the Persona's Adapter to the profile to launch, logging the resolver's warning when it has one.</summary>
+    /// <param name="persona">The Persona being started.</param>
+    /// <returns>The resolved Adapter Profile.</returns>
+    private AdapterProfile ResolveProfile(Persona persona)
+    {
         var (profile, warning) = this.resolver.Resolve(persona.Adapter);
         if (warning is not null)
         {
@@ -120,52 +238,107 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
                 "Persona '{PersonaName}' Adapter resolution warning: {Warning}", persona.Name, warning);
         }
 
-        // corrections-B2 item 20: a rename's Teammate-folder move can still be in flight (retrying
-        // against a not-yet-exited old process) when the runner it raced against restarts under the
-        // new Name and this factory starts it - wait for that move to settle first, or this would
-        // create a fresh, empty folder at the new Name while the move still holds the real one under
-        // the old Name, then have the move either collide with it or silently strand it.
-        await this.folderMoves.WhenSettledAsync(persona.Name, cancellationToken).ConfigureAwait(false);
+        return profile;
+    }
 
-        var workDir = this.teammatePaths.WorkDir(persona.Name);
+    /// <summary>Creates the Persona's Work Dir and the memory folder next to it.</summary>
+    /// <param name="personaName">The Persona's Name.</param>
+    /// <returns>The Work Dir and the memory folder paths.</returns>
+    private (string WorkDir, string MemoryDir) CreateWorkDirs(string personaName)
+    {
+        var workDir = this.teammatePaths.WorkDir(personaName);
         Directory.CreateDirectory(workDir);
 
         // FC §6.15: the folder is always created next to the Work Dir, even when the memory block
         // below is left out - so it is ready the moment File Changes and ReadsFiles both turn on.
         var memoryDir = Path.Combine(workDir, "memory");
         Directory.CreateDirectory(memoryDir);
+        return (workDir, memoryDir);
+    }
 
-        var processOptions = AgentProcessOptionsFactory.TryCreate(profile, workDir, AppContext.BaseDirectory)
+    /// <summary>Builds the process options for the Persona's Adapter, or throws when no adapter is installed.</summary>
+    /// <param name="persona">The Persona being started.</param>
+    /// <param name="profile">The resolved Adapter Profile.</param>
+    /// <param name="workDir">The Persona's Work Dir.</param>
+    /// <returns>The process options.</returns>
+    private static AgentProcessOptions CreateProcessOptions(Persona persona, AdapterProfile profile, string workDir)
+    {
+        return AgentProcessOptionsFactory.TryCreate(profile, workDir, AppContext.BaseDirectory)
             ?? throw new InvalidOperationException(
                 $"No ACP adapter is installed for Persona '{persona.Name}' on Adapter '{profile.Id}'. Run "
                 + "tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.");
+    }
 
-        // Minted fresh per session and never logged: wire traces already leak it
-        // (acp-agent-guide.md §7.5), so this is the only place its value is held outside the tool server.
-        var authToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+    /// <summary>
+    /// Waits for a rename's Teammate-folder move to settle (corrections-B2 item 20). The move can
+    /// still be in flight (retrying against a not-yet-exited old process) when the runner it raced
+    /// against restarts under the new Name and this factory starts it - wait for that move to settle
+    /// first, or this would create a fresh, empty folder at the new Name while the move still holds
+    /// the real one under the old Name, then have the move either collide with it or silently strand it.
+    /// </summary>
+    /// <param name="personaName">The Persona's Name.</param>
+    /// <param name="cancellationToken">Cancels the wait.</param>
+    private async Task WaitForFolderMoveAsync(string personaName, CancellationToken cancellationToken)
+    {
+        await this.folderMoves.WhenSettledAsync(personaName, cancellationToken).ConfigureAwait(false);
+    }
 
-        // Parsed from the Persona's own text rather than threaded through this method's signature
-        // (Spec §6.4 Implementation notes keeps IAgentHostFactory.StartAsync narrow). A Persona with
-        // no frontmatter at all - or malformed frontmatter - is not an error here: it simply holds no
-        // Skills. PersonaSupervisor resolves the same names a second time, purely to report a Degraded
-        // warning for one that does not exist (Task 5.2); this factory never surfaces that warning,
-        // only the resulting tool grants and Skill Index.
+    /// <summary>
+    /// Minted fresh per session and never logged: wire traces already leak it
+    /// (acp-agent-guide.md §7.5), so this is the only place its value is held outside the tool server.
+    /// </summary>
+    /// <returns>A random bearer token.</returns>
+    private static string MintAuthToken()
+    {
+        return Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+    }
+
+    /// <summary>
+    /// Whether the memory block is read at all. FC §6.15: the memory index used to be a snapshot
+    /// taken once, at session start. RS §6.3 moves that into DotAcpPersonaHost.OpenAsync/ResumeAsync,
+    /// rebuilt on every call, so a Room Session opened later sees what was remembered since - the
+    /// gate itself (File Changes off, or an Adapter that cannot read files, means no memory block)
+    /// is unchanged.
+    /// </summary>
+    /// <param name="profile">The resolved Adapter Profile.</param>
+    /// <returns><see langword="true"/> when File Changes is on and the Adapter can read files.</returns>
+    private bool ReadsMemory(AdapterProfile profile)
+    {
+        return this.options.FileChanges.Enabled && profile.ReadsFiles;
+    }
+
+    /// <summary>
+    /// Parses the Persona's own text rather than threading the result through
+    /// <see cref="IAgentHostFactory.StartAsync"/> (Spec §6.4 Implementation notes keeps it narrow). A
+    /// Persona with no frontmatter at all - or malformed frontmatter - is not an error here: it simply
+    /// holds no Skills. PersonaSupervisor resolves the same names a second time, purely to report a
+    /// Degraded warning for one that does not exist (Task 5.2); this factory never surfaces that
+    /// warning, only the resulting tool grants and Skill Index. The same parse gives the Teams line,
+    /// whose Team Memory DotAcpPersonaHost lists at every session start (Spec §6.4); a Persona with
+    /// no identity is in no Team.
+    /// </summary>
+    /// <param name="persona">The Persona being started.</param>
+    /// <returns>The Persona's identity, or <see langword="null"/> when it has none.</returns>
+    private static PersonaIdentity? ParseIdentity(Persona persona)
+    {
         bool hasIdentity = PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _);
-        PersonaIdentity? parsed = hasIdentity ? identity : null;
-        IReadOnlyList<string> skillNames = parsed?.Skills ?? [];
+        return hasIdentity ? identity : null;
+    }
 
-        // The same parse gives the Teams line, whose Team Memory DotAcpPersonaHost lists at every
-        // session start (Spec §6.4); a Persona with no identity is in no Team.
-        IReadOnlyList<string> teamLabels = parsed?.Teams ?? [];
-        SkillResolution skillResolution = this.skills.Resolve(skillNames);
+    /// <summary>The full path of the Teams root folder.</summary>
+    /// <returns>The absolute Teams root path.</returns>
+    private string TeamsRoot()
+    {
+        return Path.GetFullPath(Path.Combine(this.options.DataDir, this.options.Teams.Dir));
+    }
 
-        // Built by our own service provider, bound to this Agent id, so each tool call runs the same
-        // domain code the UI calls. AppToolServer's WebApplication.CreateBuilder() is a second,
-        // genuinely separate DI container - the tool instances must never be resolved from it.
-        // Captured in its own local, the same reason getHelpTool is below, so this method never
-        // retypes "read_skill" - the Compose call further down reads it off readSkillTool.Name.
-        var readSkillTool = ActivatorUtilities.CreateInstance<ReadSkillTool>(this.serviceProvider, persona.Name);
-        var askHumanTool = ActivatorUtilities.CreateInstance<AskHumanTool>(this.serviceProvider, agentId);
+    /// <summary>Creates the chat tools every Persona is offered before Skill gating.</summary>
+    /// <param name="agentId">The Agent id the tools are bound to.</param>
+    /// <param name="readSkillTool">The already-created <c>read_skill</c> tool.</param>
+    /// <param name="askHumanTool">The already-created <c>ask_human</c> tool.</param>
+    /// <returns>The chat tools, including the Task tools when Tasks is on.</returns>
+    private IReadOnlyList<IAppTool> CreateChatTools(string agentId, ReadSkillTool readSkillTool, AskHumanTool askHumanTool)
+    {
         IReadOnlyList<IAppTool> chatTools =
         [
             ActivatorUtilities.CreateInstance<ListAgentsTool>(this.serviceProvider),
@@ -207,6 +380,21 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             ];
         }
 
+        return chatTools;
+    }
+
+    /// <summary>Applies Skill gating to the chat tools, then appends the File Changes folder-watch tools when they apply.</summary>
+    /// <param name="chatTools">The ungated chat tools.</param>
+    /// <param name="persona">The Persona being started.</param>
+    /// <param name="profile">The resolved Adapter Profile.</param>
+    /// <param name="skillResolution">The Persona's resolved Skills.</param>
+    /// <returns>The tools this session is actually offered.</returns>
+    private IReadOnlyList<IAppTool> OfferChatTools(
+        IReadOnlyList<IAppTool> chatTools,
+        Persona persona,
+        AdapterProfile profile,
+        SkillResolution skillResolution)
+    {
         // Skill gating happens before GetHelpTool is built, so get_help's own listing and the system
         // prompt's tool list both reflect only the tools this session was actually offered (Spec §6.5:
         // "GetHelpTool is constructed from the offered list, so get_help and tools/list agree").
@@ -224,56 +412,49 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             chatTools = [.. chatTools, watchFolderTool, unwatchFolderTool];
         }
 
-        var prompts = this.serviceProvider.GetRequiredService<IPromptSource>();
+        return chatTools;
+    }
 
-        // The mcp__{server}__ prefix is derived from the same server name above, never typed into a
-        // prompt's template - see the ToolServerName remarks and SystemPromptComposer's. GetHelpTool
-        // takes it explicitly rather than hard-coding its own copy, for the same reason. Whether it
-        // is applied at all now follows the resolved profile (Spec §6.4): the server name itself
-        // never changes, only whether model-facing names carry it.
-        var toolNamePrefix = profile.UsesToolNamePrefix ? $"mcp__{ToolServerName}__" : string.Empty;
-
-        // FC §6.15: the memory index used to be a snapshot taken once here, at session start. RS
-        // §6.3 moves that into DotAcpPersonaHost.OpenAsync/ResumeAsync, rebuilt on every call, so a
-        // Room Session opened later sees what was remembered since - the gate itself (File Changes
-        // off, or an Adapter that cannot read files, means no memory block) is unchanged.
-        bool readsMemory = this.options.FileChanges.Enabled && profile.ReadsFiles;
-
-        // get_help is offered first and knows every other tool, so the system prompt can name one
-        // tool instead of all of them. It is built last for the obvious reason: it takes the rest.
-        // Captured in its own local, rather than only in the tools array below, so the system prompt
-        // can name it from its own Name below - never retyping "get_help" either.
-        var getHelpTool = new GetHelpTool(chatTools, prompts, toolNamePrefix);
-        IReadOnlyList<IAppTool> tools = [getHelpTool, .. chatTools];
-
-        var toolServer = new AppToolServer(ToolServerName, tools, this.loggerFactory, 0, authToken);
-        await toolServer.StartAsync(cancellationToken).ConfigureAwait(false);
-
-        IReadOnlyList<string> toolNames = [.. tools.Select(tool => $"{toolNamePrefix}{tool.Name}")];
-
-        DotAcpAgentHost innerHost;
+    /// <summary>Starts the ACP host, disposing the already-started tool server when the host fails to start.</summary>
+    /// <param name="processOptions">How to launch the agent process.</param>
+    /// <param name="toolServer">The Persona's started tool server.</param>
+    /// <param name="cancellationToken">Cancels the start.</param>
+    /// <returns>The started ACP host.</returns>
+    private async Task<DotAcpAgentHost> StartInnerHostAsync(
+        AgentProcessOptions processOptions,
+        AppToolServer toolServer,
+        CancellationToken cancellationToken)
+    {
         try
         {
             var hostOptions = new DotAcpHostOptions(
                 ClientName: "Team.App",
                 TraceWire: this.options.Acp.TraceWire,
                 AdvertiseElicitationForm: this.options.Acp.AdvertiseElicitation);
-            innerHost = new DotAcpAgentHost(processOptions, this.launcher, hostOptions, this.loggerFactory);
+            var innerHost = new DotAcpAgentHost(processOptions, this.launcher, hostOptions, this.loggerFactory);
             await innerHost.StartAsync(cancellationToken).ConfigureAwait(false);
+            return innerHost;
         }
         catch
         {
             await toolServer.DisposeAsync().ConfigureAwait(false);
             throw;
         }
+    }
 
-        // RS §6.10 "Recommended" (P0-4), gated by finding P-11's flag: keeps a Persona's session off
-        // the Human's own Claude Code settings and CLAUDE.md, and off its auto-memory, so FC §6.15's
-        // memory folder is the only memory that session sees. Unverified until Task 14.3.m passes -
-        // see AdapterProfile.IsolateUserSettings's remarks for the known settings-replacement risk.
-        // Minted once per host (RS §6.3): every session this Persona's host opens or resumes carries
-        // the same Meta, exactly as it always carried the same token below.
-        IReadOnlyDictionary<string, object>? meta = profile.IsolateUserSettings
+    /// <summary>
+    /// RS §6.10 "Recommended" (P0-4), gated by finding P-11's flag: keeps a Persona's session off
+    /// the Human's own Claude Code settings and CLAUDE.md, and off its auto-memory, so FC §6.15's
+    /// memory folder is the only memory that session sees. Unverified until Task 14.3.m passes -
+    /// see <see cref="AdapterProfile.IsolateUserSettings"/>'s remarks for the known settings-replacement risk.
+    /// Minted once per host (RS §6.3): every session this Persona's host opens or resumes carries
+    /// the same Meta, exactly as it always carried the same token.
+    /// </summary>
+    /// <param name="profile">The resolved Adapter Profile.</param>
+    /// <returns>The isolation <c>_meta</c>, or <see langword="null"/> when the profile does not ask for it.</returns>
+    private static Dictionary<string, object>? BuildIsolationMeta(AdapterProfile profile)
+    {
+        return profile.IsolateUserSettings
             ? new Dictionary<string, object>(StringComparer.Ordinal)
             {
                 ["claudeCode"] = new Dictionary<string, object>(StringComparer.Ordinal)
@@ -289,40 +470,23 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
                 },
             }
             : null;
+    }
 
+    /// <summary>Builds the factory that produces the Persona's role block at each session start.</summary>
+    /// <param name="parsed">The Persona's parsed identity, or <see langword="null"/> when it has none.</param>
+    /// <param name="skillResolution">The Persona's resolved Skills.</param>
+    /// <returns>A function returning the role block, or <see langword="null"/> for a Persona with no identity.</returns>
+    private Func<RoleBlockInput?> CreateRoleBlock(PersonaIdentity? parsed, SkillResolution skillResolution)
+    {
         PersonaStore personaStore = this.serviceProvider.GetRequiredService<PersonaStore>();
 
-        return new DotAcpPersonaHost(
-            innerHost,
-            toolServer,
-            profile,
-            persona,
-            prompts,
-            toolNamePrefix + getHelpTool.Name,
-            toolNames,
-            skillResolution.Skills,
-            toolNamePrefix + readSkillTool.Name,
-            toolNamePrefix + askHumanTool.Name,
-            memoryDir,
-            readsMemory,
-            this.options.FileChanges.MaxMemoryEntries,
-            teamLabels,
-            this.teamCatalog,
-            Path.GetFullPath(Path.Combine(this.options.DataDir, this.options.Teams.Dir)),
-            this.options.Teams.MaxMemoryEntries,
-            workDir,
-            toolServer.Endpoint,
-            meta,
-            this.loggerFactory,
-            this.workModePolicy,
-            () => parsed is null
-                ? null
-                : RoleBlockBuilder.Build(
-                    parsed,
-                    skillResolution.Skills,
-                    this.teamCatalog,
-                    personaStore.Get,
-                    Path.GetFullPath(Path.Combine(this.options.DataDir, this.options.Teams.Dir))),
-            this.serviceProvider.GetService<IMergeGate>());
+        return () => parsed is null
+            ? null
+            : RoleBlockBuilder.Build(
+                parsed,
+                skillResolution.Skills,
+                this.teamCatalog,
+                personaStore.Get,
+                this.TeamsRoot());
     }
 }

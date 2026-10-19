@@ -5,22 +5,6 @@ using Agency.Huddle.Contracts;
 namespace Agency.Huddle.App.Acp;
 
 /// <summary>
-/// The old and the new front-matter Name of a Persona file whose <c>name:</c> changed in place -
-/// see <see cref="PersonaStore"/>'s <c>PersonaRenamed</c> event, which carries one of these per
-/// detected rename.
-/// </summary>
-/// <param name="OldName">The Name the Persona resolved to before this change.</param>
-/// <param name="NewName">The Name the same physical file resolves to now.</param>
-public sealed record PersonaRenamed(string OldName, string NewName);
-
-/// <summary>
-/// The front-matter Name of a Persona file that no longer exists - see <see cref="PersonaStore"/>'s
-/// <c>PersonaRemoved</c> event, which carries one of these per detected removal.
-/// </summary>
-/// <param name="Name">The Name the removed Persona resolved to.</param>
-public sealed record PersonaRemoved(string Name);
-
-/// <summary>
 /// A Persona is a markdown file whose body becomes a Claude agent's system prompt. Files live under
 /// <see cref="TeammatePaths.DefinitionsRoot"/>, optionally nested under Team sub-folders that are purely
 /// organisational - <c>Teams/Business/coo.md</c> is exactly as much a Persona as <c>Teams/coo.md</c>,
@@ -721,57 +705,9 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
 
         foreach (var folder in Directory.GetDirectories(this.Paths.DefinitionsRoot))
         {
-            var folderName = Path.GetFileName(folder);
-
-            if (string.Equals(folderName, "_unsorted", StringComparison.OrdinalIgnoreCase))
+            if (!this.TryScanTeammateFolder(folder, isInitialScan, candidates, preRejected))
             {
-                foreach (var strayFile in Directory.GetFiles(folder, "*", SearchOption.AllDirectories))
-                {
-                    preRejected.Add(new RejectedPersonaFile(strayFile, "Moved here by the layout migration."));
-                }
-
-                continue;
-            }
-
-            if (folderName.StartsWith('_') || folderName.StartsWith('.'))
-            {
-                continue;
-            }
-
-            var markdownFiles = Directory.GetFiles(folder, "*.md", SearchOption.TopDirectoryOnly);
-            var ownDefinition = markdownFiles.FirstOrDefault(file =>
-                string.Equals(Path.GetFileNameWithoutExtension(file), folderName, StringComparison.OrdinalIgnoreCase));
-
-            foreach (var file in markdownFiles)
-            {
-                if (string.Equals(file, ownDefinition, StringComparison.Ordinal))
-                {
-                    string text;
-                    try
-                    {
-                        text = File.ReadAllText(file);
-                    }
-                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                    {
-                        if (isInitialScan)
-                        {
-                            preRejected.Add(new RejectedPersonaFile(file, "Couldn't read this file; it's in use."));
-                            continue;
-                        }
-
-                        this.logger.LogWarning(
-                            ex,
-                            "PersonaStore couldn't read '{Path}' while rebuilding the index; it's in use, so the current index is kept and the rebuild will retry.",
-                            file);
-                        return null;
-                    }
-
-                    candidates.Add((file, text));
-                }
-                else
-                {
-                    preRejected.Add(new RejectedPersonaFile(file, "A teammate folder holds only its definition; use work/."));
-                }
+                return null;
             }
         }
 
@@ -782,6 +718,77 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
             .ToList();
 
         return (new PersonaIndex(built.Entries, rejected, built.Teams), FolderWarningsFor(built.Entries));
+    }
+
+    /// <summary>
+    /// Scans one teammate folder under the definitions root, adding its own definition to
+    /// <paramref name="candidates"/> and every other file it must reject to <paramref name="preRejected"/>.
+    /// </summary>
+    /// <param name="folder">The teammate folder's full path.</param>
+    /// <param name="isInitialScan">See <see cref="RebuildIndexFromDisk"/>.</param>
+    /// <param name="candidates">Receives the folder's definition file and its text.</param>
+    /// <param name="preRejected">Receives the files rejected without being parsed.</param>
+    /// <returns><see langword="false"/> when a locked definition file aborts a rescan; otherwise <see langword="true"/>.</returns>
+    private bool TryScanTeammateFolder(
+        string folder,
+        bool isInitialScan,
+        List<(string Path, string Text)> candidates,
+        List<RejectedPersonaFile> preRejected)
+    {
+        var folderName = Path.GetFileName(folder);
+
+        if (string.Equals(folderName, "_unsorted", StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var strayFile in Directory.GetFiles(folder, "*", SearchOption.AllDirectories))
+            {
+                preRejected.Add(new RejectedPersonaFile(strayFile, "Moved here by the layout migration."));
+            }
+
+            return true;
+        }
+
+        if (folderName.StartsWith('_') || folderName.StartsWith('.'))
+        {
+            return true;
+        }
+
+        var markdownFiles = Directory.GetFiles(folder, "*.md", SearchOption.TopDirectoryOnly);
+        var ownDefinition = markdownFiles.FirstOrDefault(file =>
+            string.Equals(Path.GetFileNameWithoutExtension(file), folderName, StringComparison.OrdinalIgnoreCase));
+
+        foreach (var file in markdownFiles)
+        {
+            if (string.Equals(file, ownDefinition, StringComparison.Ordinal))
+            {
+                string text;
+                try
+                {
+                    text = File.ReadAllText(file);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    if (isInitialScan)
+                    {
+                        preRejected.Add(new RejectedPersonaFile(file, "Couldn't read this file; it's in use."));
+                        continue;
+                    }
+
+                    this.logger.LogWarning(
+                        ex,
+                        "PersonaStore couldn't read '{Path}' while rebuilding the index; it's in use, so the current index is kept and the rebuild will retry.",
+                        file);
+                    return false;
+                }
+
+                candidates.Add((file, text));
+            }
+            else
+            {
+                preRejected.Add(new RejectedPersonaFile(file, "A teammate folder holds only its definition; use work/."));
+            }
+        }
+
+        return true;
     }
 
     /// <summary>
@@ -1225,10 +1232,39 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <param name="state">Unused; required by the <see cref="TimerCallback"/> shape.</param>
     internal void OnDebounceElapsed(object? state)
     {
-        Action? changed;
-        PersonaIndex previous;
-        PersonaIndex updated;
+        if (this.TryRebuildAndSwap() is not { } swap)
+        {
+            return;
+        }
 
+        // This is the door a hand-edited file (bypassing Update entirely) reaches - the ONLY place
+        // a rename made outside the app is ever detected, which is why RaiseRenames has to run here
+        // too, not only from RefreshIndexAndNotify. Still strictly before PersonasChanged.
+        this.RaiseRenames(swap.Previous, swap.Updated);
+
+        // And for exactly the same reason, in the same order as RefreshIndexAndNotify: a .md file
+        // DELETED in an editor is detected here and nowhere else. Raising renames here but not
+        // removals would leave a hand-deleted Persona's per-Persona state behind with nothing to
+        // ever collect it - the silent resurrection rules.md's removal row exists to prevent, since
+        // a later Persona reusing that Name would inherit it. Idempotent for the same reason
+        // RaiseRenames is: the ~500 ms debounce that follows an in-app Remove compares two indexes
+        // that already agree the path is gone, so nothing fires a second time.
+        this.RaiseRemovals(swap.Previous, swap.Updated);
+        swap.Changed?.Invoke();
+    }
+
+    /// <summary>What <see cref="TryRebuildAndSwap"/> captured under the locks, to raise the events outside them.</summary>
+    /// <param name="Previous">The index before the swap.</param>
+    /// <param name="Updated">The index after the swap.</param>
+    /// <param name="Changed">The captured <see cref="PersonasChanged"/> delegate.</param>
+    private readonly record struct DebounceSwap(PersonaIndex Previous, PersonaIndex Updated, Action? Changed);
+
+    /// <summary>
+    /// Rescans disk and swaps the index under both gates, capturing what the caller raises afterwards.
+    /// </summary>
+    /// <returns>The captured swap, or <see langword="null"/> when disposed, aborted by a locked file, or nothing changed.</returns>
+    private DebounceSwap? TryRebuildAndSwap()
+    {
         // writeGate FIRST, then watchGate - the same order PublishFreshIndex's callers use. Without
         // it this rescan could run in the middle of an Add or Update: after that call has written
         // its file but before it publishes its own index. The debounce would then publish the new
@@ -1245,13 +1281,13 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
                 // Checked and captured under the same lock Dispose() takes, so a Dispose() racing
                 // this callback either finishes first (this returns without capturing anything) or
                 // this captures the delegate before Dispose() can flip the flag — never both. The
-                // delegate is invoked OUTSIDE both locks, below: no current subscriber takes either gate,
+                // delegate is invoked OUTSIDE both locks, by the caller: no current subscriber takes either gate,
                 // but invoking arbitrary subscriber code while holding a lock this class also takes
                 // from Dispose() and every watcher-event handler is exactly the shape that deadlocks
                 // the moment a future subscriber does take a lock of its own.
                 if (this.disposed)
                 {
-                    return;
+                    return null;
                 }
 
                 // Rebuilt under the same lock, and BEFORE the delegate capture below: an observer
@@ -1261,23 +1297,8 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
                 var rebuilt = this.RebuildIndexFromDisk(isInitialScan: false);
                 if (rebuilt is not { } fresh)
                 {
-                    // Aborted by a locked file: keep the current index, raise nothing (skipping the
-                    // file would raise a spurious PersonaRemoved and cascade-delete its state - see
-                    // RebuildIndexFromDisk's remarks), and re-arm the debounce to retry, capped so a
-                    // permanently-locked file does not retry forever.
-                    this.consecutiveLockRetries++;
-                    if (this.consecutiveLockRetries <= MaxConsecutiveLockRetries)
-                    {
-                        this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
-                    }
-                    else
-                    {
-                        this.logger.LogError(
-                            "PersonaStore gave up retrying a locked Persona file after {Retries} consecutive attempts; it will try again on the next change.",
-                            this.consecutiveLockRetries);
-                    }
-
-                    return;
+                    this.RetryAfterLockedFile();
+                    return null;
                 }
 
                 this.consecutiveLockRetries = 0;
@@ -1288,29 +1309,36 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
                 // subscriber (Teammates page reload, PersonaSupervisor) redo its work for nothing.
                 if (IsSameSnapshot(this.index, this.folderWarnings, fresh.Index, fresh.FolderWarnings))
                 {
-                    return;
+                    return null;
                 }
 
-                previous = this.index;
+                var previous = this.index;
+                PersonaIndex updated;
                 (updated, this.folderWarnings) = fresh;
                 this.index = updated;
-                changed = this.PersonasChanged;
+                return new DebounceSwap(previous, updated, this.PersonasChanged);
             }
         }
+    }
 
-        // This is the door a hand-edited file (bypassing Update entirely) reaches - the ONLY place
-        // a rename made outside the app is ever detected, which is why RaiseRenames has to run here
-        // too, not only from RefreshIndexAndNotify. Still strictly before PersonasChanged.
-        this.RaiseRenames(previous, updated);
-
-        // And for exactly the same reason, in the same order as RefreshIndexAndNotify: a .md file
-        // DELETED in an editor is detected here and nowhere else. Raising renames here but not
-        // removals would leave a hand-deleted Persona's per-Persona state behind with nothing to
-        // ever collect it - the silent resurrection rules.md's removal row exists to prevent, since
-        // a later Persona reusing that Name would inherit it. Idempotent for the same reason
-        // RaiseRenames is: the ~500 ms debounce that follows an in-app Remove compares two indexes
-        // that already agree the path is gone, so nothing fires a second time.
-        this.RaiseRemovals(previous, updated);
-        changed?.Invoke();
+    /// <summary>
+    /// Aborted by a locked file: keep the current index, raise nothing (skipping the
+    /// file would raise a spurious PersonaRemoved and cascade-delete its state - see
+    /// RebuildIndexFromDisk's remarks), and re-arm the debounce to retry, capped so a
+    /// permanently-locked file does not retry forever. Called with both gates held.
+    /// </summary>
+    private void RetryAfterLockedFile()
+    {
+        this.consecutiveLockRetries++;
+        if (this.consecutiveLockRetries <= MaxConsecutiveLockRetries)
+        {
+            this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
+        }
+        else
+        {
+            this.logger.LogError(
+                "PersonaStore gave up retrying a locked Persona file after {Retries} consecutive attempts; it will try again on the next change.",
+                this.consecutiveLockRetries);
+        }
     }
 }

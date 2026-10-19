@@ -85,22 +85,23 @@ internal sealed class PipeServer : BackgroundService
                 inBufferSize: PipeBufferBytes,
                 outBufferSize: PipeBufferBytes);
 
-            using var registration = stoppingToken.Register(server.Dispose);
+            CancellationTokenRegistration registration = stoppingToken.Register(server.Dispose);
+            await using var registrationScope = registration.ConfigureAwait(false);
 
             try
             {
-                await server.WaitForConnectionAsync(stoppingToken);
+                await server.WaitForConnectionAsync(stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
-                await server.DisposeAsync();
+                await server.DisposeAsync().ConfigureAwait(false);
                 break;
             }
             catch (IOException ex)
             {
                 this.logger.LogWarning(ex, "Failed to accept a connection on pipe {PipeName}.", this.options.PipeName);
-                await server.DisposeAsync();
-                await Task.Delay(TimeSpan.FromMilliseconds(250), stoppingToken);
+                await server.DisposeAsync().ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromMilliseconds(250), stoppingToken).ConfigureAwait(false);
                 continue;
             }
 
@@ -123,7 +124,7 @@ internal sealed class PipeServer : BackgroundService
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        await base.StopAsync(cancellationToken);
-        await this.gateway.CloseAllAsync();
+        await base.StopAsync(cancellationToken).ConfigureAwait(false);
+        await this.gateway.CloseAllAsync().ConfigureAwait(false);
     }
 }

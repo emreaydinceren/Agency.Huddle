@@ -13,4 +13,4 @@ src/Huddle.App/TeamTypes/TeamTypeValidator.cs # doc example of a candidate path
 src/Huddle.App/Teams/CadenceService.cs # retro term in doc comments and the no-retro-agent note
 src/Huddle.App/Teams/ProcessGateService.cs # "for example QA Engineer" in the gate refusal message; the gate itself is by coverage, not by role
 src/Huddle.App/Teams/RetroProposalService.cs # retro term in a doc comment
-src/Huddle.App/Teams/RetroProposals.cs # retro term in a doc comment
+src/Huddle.App/Teams/RetroProposalSet.cs # retro term in a doc comment

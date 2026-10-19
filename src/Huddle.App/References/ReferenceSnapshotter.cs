@@ -21,7 +21,7 @@ internal sealed class ReferenceSnapshotter(ReferenceResolver resolver, ILogger<R
                 return null;
             }
 
-            ResolvedSet resolved = await resolver.ResolveCurrentAsync(candidates, ct);
+            ResolvedSet resolved = await resolver.ResolveCurrentAsync(candidates, ct).ConfigureAwait(false);
             List<MessageReference> references = [];
             foreach (ResolvedReference reference in resolved.Items)
             {

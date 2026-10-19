@@ -122,7 +122,7 @@ internal sealed class SearchOrchestrator(
                 pass.Add(this.RunProviderAsync(provider, query, id, scope == SearchScope.Active && provider.IsExpensive, ct));
             }
 
-            await Task.WhenAll(pass);
+            await Task.WhenAll(pass).ConfigureAwait(false);
             if (ct.IsCancellationRequested)
             {
                 return;
@@ -137,11 +137,11 @@ internal sealed class SearchOrchestrator(
         {
             if (debounce)
             {
-                await Task.Delay(SearchLimits.Debounce, this.clock, ct);
+                await Task.Delay(SearchLimits.Debounce, this.clock, ct).ConfigureAwait(false);
             }
 
             // WaitAsync so a provider that ignores its token cannot keep a cancelled search alive.
-            SearchResult result = await provider.SearchAsync(query, ct).WaitAsync(ct);
+            SearchResult result = await provider.SearchAsync(query, ct).WaitAsync(ct).ConfigureAwait(false);
             state = new SearchGroupDone(SearchResultRanker.Rank(result, query));
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

@@ -47,7 +47,7 @@ internal sealed class DesktopLifetimeService(
     /// <returns>A completed task.</returns>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        await this.startedRegistration.DisposeAsync();
+        await this.startedRegistration.DisposeAsync().ConfigureAwait(false);
         InstanceFile.Delete(team.Value.DataDir);
     }
 

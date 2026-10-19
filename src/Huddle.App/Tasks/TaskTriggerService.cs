@@ -1,5 +1,3 @@
-using System.Globalization;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
@@ -9,42 +7,10 @@ using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
+using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace Agency.Huddle.App.Tasks;
-
-/// <summary>
-/// What saving a Task change would do to its assignee (Spec §10.1): the Name it would notify, that
-/// Name's presence if the wake would actually happen, and which guard - if any - stops it. Every UI
-/// label about who will be woken (a Save button, a drag hint, a banner) reads this record rather than
-/// re-deriving the guards in Spec §10.2 itself, so the interface can never disagree with
-/// <see cref="TaskTriggerService.Preview"/>.
-/// </summary>
-/// <param name="AssigneeName">The Task's assignee Name (<c>After.Assignee</c>), or <see langword="null"/> when the Task has none.</param>
-/// <param name="Presence">The assignee's presence badge, resolved only when <paramref name="Block"/> is <see cref="WakeBlock.None"/>; otherwise <see langword="null"/>.</param>
-/// <param name="Block">Which guard (Spec §10.2) stops the wake, or <see cref="WakeBlock.None"/> when none does.</param>
-public sealed record WakePreview(string? AssigneeName, PresenceState? Presence, WakeBlock Block);
-
-/// <summary>Which Spec §10.2 guard, if any, stops a Task change from waking its assignee.</summary>
-public enum WakeBlock
-{
-    /// <summary>No guard applies: the change would wake the assignee.</summary>
-    None,
-
-    /// <summary>The Task has no assignee, or its assignee isn't a known Persona (guards 2 and 5).</summary>
-    NoAssignee,
-
-    /// <summary>The assignee is the Human (guard 3).</summary>
-    AssigneeIsHuman,
-
-    /// <summary>The assignee made the change themselves (guard 4, the self-edit guard).</summary>
-    AssigneeIsActor,
-
-    /// <summary>The change was made by an Agent, and the Task's wake budget (Spec §10.6) is spent (guard 6).</summary>
-    BudgetPaused,
-
-    /// <summary>Tasks, or wake-ups specifically, are turned off (guard 1).</summary>
-    Disabled,
-}
 
 /// <summary>
 /// Wakes a Task's assignee when the Task changes (Spec §10, ADR-0026): subscribes to
@@ -253,7 +219,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         this.Halt();
-        await this.WhenIdleAsync().WaitAsync(cancellationToken);
+        await this.WhenIdleAsync().WaitAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Unsubscribes, drops every pending batch and its timer, and releases the gate and lifetime. A fire still in flight ends on its cancelled token.</summary>
@@ -292,7 +258,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
                 return;
             }
 
-            await Task.WhenAll(pending);
+            await Task.WhenAll(pending).ConfigureAwait(false);
         }
     }
 
@@ -362,13 +328,41 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         BatchKey key = new(change.After.Id, change.Actor.Name);
         int seconds = this.teamOptions.Tasks.WakeCoalesceSeconds;
         bool fireNow = seconds <= 0;
-        bool flooded = false;
 
+        if (!this.TryAddToBatch(change, key, seconds, fireNow, out bool flooded))
+        {
+            return;
+        }
+
+        if (flooded)
+        {
+            LogOutsideEditFlood(this.logger, MaxOutsideEditsPerWindow);
+        }
+
+        if (fireNow)
+        {
+            this.StartFire(key);
+        }
+    }
+
+    /// <summary>
+    /// Under the gate, adds <paramref name="change"/> to its batch, creating the batch and its timer on the first change,
+    /// and counts an outside edit against the current window.
+    /// </summary>
+    /// <param name="change">The change to add.</param>
+    /// <param name="key">The batch's key.</param>
+    /// <param name="seconds">The coalescing window in seconds.</param>
+    /// <param name="fireNow">Whether the batch fires at once, so needs no timer.</param>
+    /// <param name="flooded">Whether this change is the one that tipped the outside-edit window over its limit.</param>
+    /// <returns><see langword="false"/> when the service has stopped and the change was dropped.</returns>
+    private bool TryAddToBatch(TaskChange change, BatchKey key, int seconds, bool fireNow, out bool flooded)
+    {
+        flooded = false;
         lock (this.gate)
         {
             if (this.stopped)
             {
-                return;
+                return false;
             }
 
             if (!this.batches.TryGetValue(key, out Batch? batch))
@@ -403,15 +397,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             }
         }
 
-        if (flooded)
-        {
-            LogOutsideEditFlood(this.logger, MaxOutsideEditsPerWindow);
-        }
-
-        if (fireNow)
-        {
-            this.StartFire(key);
-        }
+        return true;
     }
 
     /// <summary>A batch's coalescing timer elapsed.</summary>
@@ -475,10 +461,10 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
                 ct = this.lifetime.Token;
             }
 
-            await this.fireGate.WaitAsync(ct);
+            await this.fireGate.WaitAsync(ct).ConfigureAwait(false);
             try
             {
-                await this.WakeUnblockedAsync(change, ct);
+                await this.WakeUnblockedAsync(change, ct).ConfigureAwait(false);
             }
             finally
             {
@@ -533,7 +519,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             string marker = string.Create(CultureInfo.InvariantCulture, $"Unblocked: {blocked.Id} by {blockers} at {latestDone:O}");
             if (!blocked.ChangeLog.Any(entry => string.Equals(entry.Summary, marker, StringComparison.Ordinal)))
             {
-                await this.WakeUnblockedTaskAsync(blocked, change.Actor, marker, ct);
+                await this.WakeUnblockedTaskAsync(blocked, change.Actor, marker, ct).ConfigureAwait(false);
             }
         }
     }
@@ -589,7 +575,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         ChangeLogEntry unblocked = new(this.clock.GetUtcNow(), actor.Name, marker);
         Batch batch = new(new BatchKey(blocked.Id, actor.Name)) { Actor = actor };
         batch.Entries.Add(unblocked);
-        if (!await this.DeliverAsync(batch, blocked, recipient, ct))
+        if (!await this.DeliverAsync(batch, blocked, recipient, ct).ConfigureAwait(false))
         {
             return;
         }
@@ -633,10 +619,10 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
                 return;
             }
 
-            await this.fireGate.WaitAsync(ct);
+            await this.fireGate.WaitAsync(ct).ConfigureAwait(false);
             try
             {
-                await this.WakeAsync(batch, ct);
+                await this.WakeAsync(batch, ct).ConfigureAwait(false);
             }
             finally
             {
@@ -677,9 +663,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             return;
         }
 
-        await this.WakeAssigneeAsync(batch, latest, ct);
-        await this.WakeManagerAsync(batch, latest, ct);
-        await this.WakeRequestingManagerAsync(batch, latest, ct);
+        await this.WakeAssigneeAsync(batch, latest, ct).ConfigureAwait(false);
+        await this.WakeManagerAsync(batch, latest, ct).ConfigureAwait(false);
+        await this.WakeRequestingManagerAsync(batch, latest, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -726,7 +712,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             return;
         }
 
-        await this.DeliverAsync(batch, latest, manager, ct);
+        await this.DeliverAsync(batch, latest, manager, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -758,10 +744,10 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
 
         Batch batch = new(new BatchKey(request.Id, actor.Name)) { Actor = actor };
         batch.Entries.Add(new ChangeLogEntry(this.clock.GetUtcNow(), actor.Name, summary));
-        await this.fireGate.WaitAsync(ct);
+        await this.fireGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            bool posted = await this.DeliverAsync(batch, request, recipient, ct, viaRequest: true);
+            bool posted = await this.DeliverAsync(batch, request, recipient, ct, viaRequest: true).ConfigureAwait(false);
             if (posted)
             {
                 lock (this.gate)
@@ -826,7 +812,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             return;
         }
 
-        await this.DeliverAsync(batch, latest, assigneeName, ct);
+        await this.DeliverAsync(batch, latest, assigneeName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -857,7 +843,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             return;
         }
 
-        await this.DeliverAsync(batch, latest, manager, ct);
+        await this.DeliverAsync(batch, latest, manager, ct).ConfigureAwait(false);
     }
 
     /// <summary>Resolves the recipient, the sender and the Room, consumes the Agent wake budget, posts the wake and records its outcome.</summary>
@@ -876,14 +862,14 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         }
 
         TaskActor actor = batch.Actor;
-        User? assignee = await this.directory.FindUserByNameAsync(assigneeName, ct);
+        User? assignee = await this.directory.FindUserByNameAsync(assigneeName, ct).ConfigureAwait(false);
         if (assignee is null)
         {
             LogAssigneeNeverRegistered(this.logger, id, assigneeName);
             return false;
         }
 
-        string? senderId = await this.ResolveSenderIdAsync(actor, ct);
+        string? senderId = await this.ResolveSenderIdAsync(actor, ct).ConfigureAwait(false);
         if (senderId is null)
         {
             LogNoSender(this.logger, id, actor.Name);
@@ -894,7 +880,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         Room room;
         try
         {
-            room = await this.ChooseRoomAsync(latest, senderId, assignee, ct);
+            room = await this.ChooseRoomAsync(latest, senderId, assignee, ct).ConfigureAwait(false);
         }
         catch (ChatException ex)
         {
@@ -911,12 +897,30 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             return false;
         }
 
+        WakeOutcome outcome = await this.PostWakeAsync(batch, latest, assigneeName, senderId, room, ct).ConfigureAwait(false);
+        this.RecordOutcome(id, assigneeName, room, outcome);
+        return outcome is WakeOutcome.Woken or WakeOutcome.Offline;
+    }
+
+    /// <summary>Posts the wake text in <paramref name="room"/>; an Agent's wake budget is refunded unless the post went through.</summary>
+    /// <param name="batch">The batch being delivered.</param>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="assigneeName">The Name being woken.</param>
+    /// <param name="senderId">The sender's user id.</param>
+    /// <param name="room">The Room to post in.</param>
+    /// <param name="ct">The service lifetime.</param>
+    /// <returns>What the wake did.</returns>
+    private async Task<WakeOutcome> PostWakeAsync(Batch batch, TaskItem latest, string assigneeName, string senderId, Room room, CancellationToken ct)
+    {
+        TaskId id = latest.Id;
+        TaskActor actor = batch.Actor;
+        bool isAgent = actor.Kind == TaskActorKind.Agent;
         WakeOutcome outcome;
         bool counted = false;
         try
         {
             string text = this.Render(latest, actor, assigneeName, batch.Entries);
-            await this.chat.PostAsync(room.Id, senderId, text, ct: ct);
+            await this.chat.PostAsync(room.Id, senderId, text, ct: ct).ConfigureAwait(false);
             if (isAgent)
             {
                 this.ownPosts.Record(senderId, room.Id, text);
@@ -944,8 +948,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             }
         }
 
-        this.RecordOutcome(id, assigneeName, room, outcome);
-        return outcome is WakeOutcome.Woken or WakeOutcome.Offline;
+        return outcome;
     }
 
     /// <summary>Records one wake outcome in <see cref="TaskActivity"/> (Spec §10.5, §10.7), stamped with the clock at fire time.</summary>
@@ -972,7 +975,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             return userId;
         }
 
-        User? user = await this.directory.FindUserByNameAsync(actor.Name, ct);
+        User? user = await this.directory.FindUserByNameAsync(actor.Name, ct).ConfigureAwait(false);
         return user?.Id;
     }
 
@@ -995,13 +998,13 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     /// <returns>The Room to post in.</returns>
     private async Task<Room> ChooseRoomAsync(TaskItem task, string senderId, User assignee, CancellationToken ct)
     {
-        if (await this.FindUsableOriginAsync(task, senderId, assignee, ct) is { } origin)
+        if (await this.FindUsableOriginAsync(task, senderId, assignee, ct).ConfigureAwait(false) is { } origin)
         {
             return origin;
         }
 
         List<string> memberSet = [KnownIds.Human];
-        User? creator = await this.directory.FindUserByNameAsync(task.Creator, ct);
+        User? creator = await this.directory.FindUserByNameAsync(task.Creator, ct).ConfigureAwait(false);
         if (creator is { Kind: UserKind.Agent })
         {
             memberSet.Add(creator.Id);
@@ -1016,14 +1019,14 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
 
         // The fallback Room lives in the Task's Team Scope (Team chats D-15); a Team the catalog does not know stays at the root.
         string? scope = this.teams?.Find(task.Location.Team)?.Name;
-        Room? existing = await this.directory.FindRoomWithExactMemberSetAsync(memberSet, scope, ct);
+        Room? existing = await this.directory.FindRoomWithExactMemberSetAsync(memberSet, scope, ct).ConfigureAwait(false);
         if (existing is not null)
         {
             return existing;
         }
 
         List<string> agentIds = [.. memberSet.Where(static id => !string.Equals(id, KnownIds.Human, StringComparison.Ordinal))];
-        return await this.chat.CreateRoomForAsync(agentIds, scope, ct);
+        return await this.chat.CreateRoomForAsync(agentIds, scope, ct).ConfigureAwait(false);
     }
 
     /// <summary>Adds <paramref name="id"/> to <paramref name="ids"/> unless it is already there (ordinal).</summary>
@@ -1050,13 +1053,13 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             return null;
         }
 
-        Room? origin = await this.directory.GetRoomAsync(originId, ct);
+        Room? origin = await this.directory.GetRoomAsync(originId, ct).ConfigureAwait(false);
         if (origin is null)
         {
             return null;
         }
 
-        IReadOnlyList<User> members = await this.directory.GetRoomMembersAsync(originId, ct);
+        IReadOnlyList<User> members = await this.directory.GetRoomMembersAsync(originId, ct).ConfigureAwait(false);
         bool senderIsMember = members.Any(m => string.Equals(m.Id, senderId, StringComparison.Ordinal));
         bool assigneeIsMember = members.Any(m => string.Equals(m.Id, assignee.Id, StringComparison.Ordinal));
         return senderIsMember && assigneeIsMember ? origin : null;

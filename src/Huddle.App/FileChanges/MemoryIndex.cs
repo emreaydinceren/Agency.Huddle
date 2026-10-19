@@ -1,19 +1,5 @@
 namespace Agency.Huddle.App.FileChanges;
 
-/// <summary>One Memory file's indexed summary, per FC §6.15.</summary>
-/// <param name="Summary">The file's first non-blank line, with a leading <c>#</c> and spaces removed and cut at 200 characters, or the file name when there is no non-blank line (E-15).</param>
-/// <param name="FullPath">The file's full path.</param>
-internal sealed record MemoryEntry(string Summary, string FullPath);
-
-/// <summary>
-/// The Memory index built at session start for <c>SystemPromptComposer.Compose</c>'s memory
-/// overload, per FC §6.15.
-/// </summary>
-/// <param name="MemoryPath">The Agent's Memory folder's full path, <c>{{memoryPath}}</c> in <c>systemPrompt.memory</c>.</param>
-/// <param name="Entries">The listed entries, already capped at <c>MaxMemoryEntries</c>.</param>
-/// <param name="NotListed">How many more Memory files exist beyond what <see cref="Entries"/> lists.</param>
-internal sealed record MemorySnapshot(string MemoryPath, IReadOnlyList<MemoryEntry> Entries, int NotListed);
-
 /// <summary>
 /// Builds the Memory index shown in the system prompt, per FC §6.15: one entry per <c>*.md</c>
 /// file directly inside <c>{WorkDir}/memory/</c>, ordered by file name.

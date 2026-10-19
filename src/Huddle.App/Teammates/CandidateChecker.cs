@@ -1,12 +1,12 @@
-using System.Text.RegularExpressions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Services;
-using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.Contracts;
+using System.Text.RegularExpressions;
 
 namespace Agency.Huddle.App.Teammates;
 
@@ -77,10 +77,10 @@ internal sealed partial class CandidateChecker(
         }
 
         // Spec §8.3 order 6 (Reserved Names) and the Internal flow's own "files" step, per Candidate.
-        var human = await directory.GetHumanAsync(ct);
+        var human = await directory.GetHumanAsync(ct).ConfigureAwait(false);
         foreach (var candidate in candidates)
         {
-            await this.AddReservedNameProblemsAsync(candidate, human, problems, ct);
+            await this.AddReservedNameProblemsAsync(candidate, human, problems, ct).ConfigureAwait(false);
             this.AddFileExistsProblem(candidate, problems);
             this.AddRoleProblems(candidate, problems);
         }
@@ -171,7 +171,7 @@ internal sealed partial class CandidateChecker(
             }
         }
 
-        var user = await directory.FindUserByNameAsync(candidate.Name, ct);
+        var user = await directory.FindUserByNameAsync(candidate.Name, ct).ConfigureAwait(false);
         if (user is { Kind: UserKind.Agent } && gateway.IsOnline(user.Id) && personas.ResolveByNameOrAlias(candidate.Name) is null)
         {
             problems.Add($"'{candidate.Name}' is a connected Agent that is not a Teammate.");
@@ -306,8 +306,3 @@ internal sealed partial class CandidateChecker(
     [GeneratedRegex(@"'([^']*\.md)'", RegexOptions.CultureInvariant)]
     private static partial Regex QuotedMarkdownPathRegex();
 }
-
-/// <summary>The result of <see cref="CandidateChecker.CheckAsync"/>: every problem found across every Candidate checked, and whether there were none.</summary>
-/// <param name="IsValid"><see langword="true"/> when <paramref name="Problems"/> is empty.</param>
-/// <param name="Problems">Every problem found, in the order <see cref="CandidateChecker.CheckAsync"/> found them, with exact duplicates removed.</param>
-public sealed record CandidateCheck(bool IsValid, IReadOnlyList<string> Problems);
