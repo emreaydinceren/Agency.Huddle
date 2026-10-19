@@ -5122,6 +5122,31 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     color: var(--mud-palette-text-secondary);
 }
 
+/* ---- Decision card of a gated Task (TaskDecisionCard) ---- */
+.task-decision-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.task-decision-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-decision-locked,
+.task-decision-review,
+.task-decision-trail {
+    color: var(--mud-palette-text-secondary);
+}
+
+.task-decision-stale,
+.task-decision-message {
+    color: var(--mud-palette-warning-text);
+}
+
 /* ---- Team page toolbar -----------------------------------------------------------------------
    The Team page toolbar (action button and search box) sits in a column that the persistent 240px
    drawer leaves very narrow on a phone: let the two wrap onto their own lines and let the search box

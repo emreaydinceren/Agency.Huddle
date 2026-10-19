@@ -39,6 +39,90 @@ internal static class HumanGateCopy
     public static string Helper(string assignee) =>
         $"{assignee} can move it to Needs you once every line has Proof. Teammates can't mark it Done.";
 
+    /// <summary>The decision card chip (row 14).</summary>
+    public const string DecisionChip = "Your decision";
+
+    /// <summary>The card's first line when every Proof item is met (row 15).</summary>
+    public const string AllProofIn = "All Proof is in.";
+
+    /// <summary>The Request changes button (row 19).</summary>
+    public const string RequestChangesButton = "Request changes";
+
+    /// <summary>The Accept button (row 19).</summary>
+    public const string AcceptButton = "Accept";
+
+    /// <summary>The Decline menu item (row 19).</summary>
+    public const string DeclineButton = "Decline";
+
+    /// <summary>The overflow menu's aria-label (row 20).</summary>
+    public const string MoreDecisions = "More decisions";
+
+    /// <summary>The notice that blocks a decision while the panel holds unsaved edits (row 24).</summary>
+    public const string UnsavedEdits = "Save your changes before deciding.";
+
+    /// <summary>The notice for an acceptance the Task has changed since (row 21).</summary>
+    public const string StaleNotice = "Changed since you accepted it.";
+
+    /// <summary>The message for a version conflict on a decision (row 22).</summary>
+    public const string VersionConflict = "This Task changed while you were reading it.";
+
+    /// <summary>The reason dialog's field label (row 26).</summary>
+    public const string ReasonLabel = "Reason";
+
+    /// <summary>The card's first line when Proof is incomplete (row 15).</summary>
+    /// <param name="met">How many items are met.</param>
+    /// <param name="total">How many items there are.</param>
+    public static string ProofProgress(int met, int total) => $"{met} of {total} Proof items are in.";
+
+    /// <summary>The Accept sentence (row 16): the second sentence of the explanation.</summary>
+    /// <param name="assignee">The assignee's name.</param>
+    /// <param name="action">The Action, or <see langword="null"/>.</param>
+    public static string AcceptSentence(string assignee, string? action) => string.IsNullOrWhiteSpace(action)
+        ? "Accepting marks it Done; nothing is sent or published."
+        : $"Accepting lets {assignee} {action.Trim()}.";
+
+    /// <summary>The locked notice (row 17); a missing owner or detail drops its comma, and with both missing the parentheses go.</summary>
+    /// <param name="met">How many items are met.</param>
+    /// <param name="total">How many items there are.</param>
+    /// <param name="label">The open item's label.</param>
+    /// <param name="owner">The open item's owner, or <see langword="null"/>.</param>
+    /// <param name="detail">The open item's detail, or <see langword="null"/>.</param>
+    public static string LockedNotice(int met, int total, string label, string? owner, string? detail)
+    {
+        string who = string.Join(", ", new[] { owner, detail }.Where(static part => !string.IsNullOrWhiteSpace(part)));
+        string open = who.Length == 0 ? string.Empty : $" ({who})";
+        return $"Proof {met}/{total} — {label} still open{open}. Accept unlocks when it's in.";
+    }
+
+    /// <summary>The line for a Task still in Review (row 18).</summary>
+    /// <param name="assignee">The assignee's name.</param>
+    public static string StillInReview(string assignee) => $"Accept unlocks when {assignee} moves it to Needs you.";
+
+    /// <summary>The line for a valid acceptance whose Action is pending (row 23).</summary>
+    /// <param name="human">Who accepted.</param>
+    /// <param name="assignee">The assignee's name.</param>
+    /// <param name="action">The Action.</param>
+    public static string AcceptedWithAction(string human, string assignee, string action) => $"Accepted by {human}. {assignee} can now {action}.";
+
+    /// <summary>The trail (row 25).</summary>
+    /// <param name="assignee">The assignee's name.</param>
+    /// <param name="checkers">The Evidence authors other than the assignee.</param>
+    /// <param name="id">The Task id.</param>
+    public static string Trail(string assignee, IReadOnlyList<string> checkers, string id)
+    {
+        ArgumentNullException.ThrowIfNull(checkers);
+        string checkedBy = checkers.Count == 0 ? string.Empty : $" · Checked by {string.Join(", ", checkers)}";
+        return $"Drafted by {assignee}{checkedBy} · Tracked as {id}";
+    }
+
+    /// <summary>The Request changes dialog title (row 26).</summary>
+    /// <param name="id">The Task id.</param>
+    public static string RequestChangesTitle(string id) => $"Request changes on {id}";
+
+    /// <summary>The Decline dialog title (row 26).</summary>
+    /// <param name="id">The Task id.</param>
+    public static string DeclineTitle(string id) => $"Decline {id}";
+
     /// <summary>The text of the Done rule chip.</summary>
     /// <param name="human">The Human's display name.</param>
     public static string DoneRuleChip(string human) => $"{human} only";

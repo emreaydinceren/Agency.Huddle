@@ -499,6 +499,15 @@ public sealed class TaskDetailTests
     /// </summary>
     private sealed class DisabledWakeStack : IAsyncDisposable
     {
+        /// <summary>An <see cref="Agency.Huddle.App.Tasks.HumanGate.IProofSource"/> that answers every Task with an empty Proof.</summary>
+        private sealed class NoProofSource : Agency.Huddle.App.Tasks.HumanGate.IProofSource
+        {
+            /// <summary>Returns the empty Proof.</summary>
+            /// <param name="task">The Task, ignored.</param>
+            /// <returns>The empty Proof.</returns>
+            public Agency.Huddle.App.Tasks.HumanGate.Proof For(TaskItem task) => Agency.Huddle.App.Tasks.HumanGate.Proof.Empty;
+        }
+
         private readonly TempDataDir dir = new();
         private readonly PersonaStore personas;
         private readonly TaskStore store;
@@ -595,6 +604,7 @@ public sealed class TaskDetailTests
             ctx.Services.AddSingleton<ITeamDirectory>(this.directory);
             ctx.Services.AddSingleton(this.avatars);
             ctx.Services.AddSingleton<Agency.Huddle.App.Library.ILibraryReferenceResolver>(new Agency.Huddle.Tests.Library.FakeLibraryNoteResolver());
+            ctx.Services.AddSingleton<Agency.Huddle.App.Tasks.HumanGate.IProofSource>(new NoProofSource());
             Agency.Huddle.Tests.Library.LibraryFileServiceFixture library = Agency.Huddle.Tests.Library.LibraryFileServiceFixture.Attach(this.dir.Path);
             ctx.Services.AddSingleton(new Agency.Huddle.App.Uploads.TaskUploadService(
                 this.store, new Agency.Huddle.App.Uploads.TaskUploadFolders(library.Resolver), library.CreateService(), this.options));

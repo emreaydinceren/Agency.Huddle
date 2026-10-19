@@ -1,0 +1,189 @@
+@using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.Profile
+@using Agency.Huddle.App.Tasks.HumanGate
+@inject TaskService Service
+@inject IHumanIdentity Human
+@inject IDialogService Dialogs
+
+@*
+    Spec §6.8: the decision card of a gated Task in Review or Needs You. It computes the acceptance
+    itself, calls TaskService.Decide with its own Task's version (never the panel's baseVersion), and
+    reports a version conflict through its own message and OnReload (corrections P10).
+*@
+
+<div class="task-decision-card">
+    <div class="task-decision-header">
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Text="@HumanGateCopy.DecisionChip" />
+    </div>
+    <div class="task-decision-first-line">@this.FirstLine</div>
+    <div class="task-decision-accept-sentence">@HumanGateCopy.AcceptSentence(this.AssigneeName, this.Task.Action)</div>
+    @if (!this.Proof.IsComplete)
+    {
+        <div id="task-decision-locked" class="task-decision-locked">@this.LockedText</div>
+    }
+    @if (this.Task.Status == TaskState.Review)
+    {
+        <div id="task-decision-review" class="task-decision-review">@HumanGateCopy.StillInReview(this.AssigneeName)</div>
+    }
+    @if (this.Blocked)
+    {
+        <div id="task-decision-unsaved" class="task-decision-unsaved">@HumanGateCopy.UnsavedEdits</div>
+    }
+    @if (this.acceptance.State == AcceptanceState.Stale)
+    {
+        <div class="task-decision-stale">@HumanGateCopy.StaleNotice</div>
+    }
+    @if (this.acceptance.State == AcceptanceState.Valid && !string.IsNullOrWhiteSpace(this.Task.Action))
+    {
+        <div class="task-decision-accepted">@HumanGateCopy.AcceptedWithAction(this.acceptance.By ?? string.Empty, this.AssigneeName, this.Task.Action.Trim())</div>
+    }
+    @if (this.message is not null)
+    {
+        <div class="task-decision-message" role="alert">@this.message</div>
+    }
+    <div class="task-decision-buttons">
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@this.Blocked" OnClick="@(() => this.AskAsync(TaskDecision.RequestChanges))">@HumanGateCopy.RequestChangesButton</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Disabled="@(!this.CanAccept)"
+                   StartIcon="@(this.CanAccept ? null : Icons.Material.Filled.Lock)" UserAttributes="@this.AcceptAttributes"
+                   OnClick="@(() => this.DecideAsync(TaskDecision.Accept, null))">@HumanGateCopy.AcceptButton</MudButton>
+        <MudMenu Dense="true">
+            <ActivatorContent Context="menuContext">
+                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" aria-label="@HumanGateCopy.MoreDecisions" OnClick="menuContext.ToggleAsync" />
+            </ActivatorContent>
+            <ChildContent>
+                <MudMenuItem Disabled="@this.Blocked" OnClick="@(() => this.AskAsync(TaskDecision.Decline))">@HumanGateCopy.DeclineButton</MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+    </div>
+    <div class="task-decision-trail">@HumanGateCopy.Trail(this.AssigneeName, this.Checkers, this.Task.Id.ToString())</div>
+</div>
+
+@code {
+    private AcceptanceInfo acceptance = AcceptanceInfo.NoAcceptance;
+    private string? message;
+
+    /// <summary>The gated Task being decided.</summary>
+    [Parameter, EditorRequired]
+    public required TaskItem Task { get; set; }
+
+    /// <summary>The Task's Proof.</summary>
+    [Parameter, EditorRequired]
+    public Proof Proof { get; set; } = Proof.Empty;
+
+    /// <summary>True when the panel has unsaved edits, which block a decision.</summary>
+    [Parameter]
+    public bool Blocked { get; set; }
+
+    /// <summary>Raised with the decision once <see cref="TaskService.Decide"/> saved it.</summary>
+    [Parameter]
+    public EventCallback<TaskDecision> OnDecided { get; set; }
+
+    /// <summary>Raised when the Task changed under the card and the panel should reload it.</summary>
+    [Parameter]
+    public EventCallback OnReload { get; set; }
+
+    /// <summary>The assignee as the copy names them.</summary>
+    private string AssigneeName => string.IsNullOrWhiteSpace(this.Task.Assignee) ? HumanGateCopy.UnassignedAssignee : this.Task.Assignee;
+
+    /// <summary>The first line of the card.</summary>
+    private string FirstLine => this.Proof.IsComplete ? HumanGateCopy.AllProofIn : HumanGateCopy.ProofProgress(this.Proof.MetCount, this.Proof.Total);
+
+    /// <summary>The locked notice, naming the first open item.</summary>
+    private string LockedText
+    {
+        get
+        {
+            ProofItem open = this.Proof.Items.First(static item => !item.Met);
+            return HumanGateCopy.LockedNotice(this.Proof.MetCount, this.Proof.Total, open.Label, open.Owner, open.Detail);
+        }
+    }
+
+    /// <summary>Whether Spec §6.6 and the panel allow Accept now.</summary>
+    private bool CanAccept =>
+        this.Task.Status == TaskState.NeedsYou && this.Proof.IsComplete && this.acceptance.State != AcceptanceState.Valid && !this.Blocked;
+
+    /// <summary>Ties the Accept button to the notice that explains why it is locked.</summary>
+    private Dictionary<string, object> AcceptAttributes
+    {
+        get
+        {
+            Dictionary<string, object> attributes = new(StringComparer.Ordinal);
+            if (this.Blocked)
+            {
+                attributes["aria-describedby"] = "task-decision-unsaved";
+            }
+            else if (!this.Proof.IsComplete)
+            {
+                attributes["aria-describedby"] = "task-decision-locked";
+            }
+            else if (this.Task.Status == TaskState.Review)
+            {
+                attributes["aria-describedby"] = "task-decision-review";
+            }
+
+            return attributes;
+        }
+    }
+
+    /// <summary>The Evidence authors other than the assignee, in order of first appearance.</summary>
+    private IReadOnlyList<string> Checkers => EvidenceLine.ParseSection(this.Task.Description)
+        .Select(static line => line.Author)
+        .Where(author => author.Length > 0 && !string.Equals(author, this.Task.Assignee, StringComparison.Ordinal))
+        .Distinct(StringComparer.Ordinal)
+        .ToList();
+
+    /// <inheritdoc />
+    protected override void OnParametersSet() => this.acceptance = Acceptance.Of(this.Task);
+
+    /// <summary>Opens the required reason dialog for Request changes or Decline, then decides with the note.</summary>
+    /// <param name="decision">Request changes or Decline.</param>
+    private async Task AskAsync(TaskDecision decision)
+    {
+        bool decline = decision == TaskDecision.Decline;
+        string id = this.Task.Id.ToString();
+        DialogParameters<ReasonDialog> parameters = new()
+        {
+            { x => x.Required, true },
+            { x => x.ConfirmText, decline ? HumanGateCopy.DeclineButton : HumanGateCopy.RequestChangesButton },
+        };
+        IDialogReference prompt = await this.Dialogs.ShowAsync<ReasonDialog>(
+            decline ? HumanGateCopy.DeclineTitle(id) : HumanGateCopy.RequestChangesTitle(id), parameters, HuddleDialogOptions.SmallForm);
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () => this.AwaitReasonAsync(prompt, decision));
+    }
+
+    /// <summary>Waits for the dialog off the click handler, so the click returns once the dialog is open, then decides with the note.</summary>
+    /// <param name="prompt">The open dialog.</param>
+    /// <param name="decision">Request changes or Decline.</param>
+    private async Task AwaitReasonAsync(IDialogReference prompt, TaskDecision decision)
+    {
+        if (await prompt.Result is { Canceled: false, Data: string note })
+        {
+            await this.DecideAsync(decision, note);
+        }
+    }
+
+    /// <summary>Calls <see cref="TaskService.Decide"/> with this Task's version and reports the outcome.</summary>
+    /// <param name="decision">The decision.</param>
+    /// <param name="note">The note, or <see langword="null"/>.</param>
+    private async Task DecideAsync(TaskDecision decision, string? note)
+    {
+        TaskResult result = this.Service.Decide(this.Task.Id, decision, note, this.Task.Version, TaskActors.Human(this.Human));
+        switch (result)
+        {
+            case TaskResult.Saved:
+                this.message = null;
+                await this.OnDecided.InvokeAsync(decision);
+                break;
+            case TaskResult.GateRefused refused:
+                this.message = refused.Message;
+                break;
+            case TaskResult.Refused refused:
+                this.message = string.Join(" ", refused.Problems);
+                break;
+            default: // Conflict, and NotFound: either way the Task is not what the Human was shown.
+                this.message = HumanGateCopy.VersionConflict;
+                await this.OnReload.InvokeAsync();
+                break;
+        }
+    }
+}

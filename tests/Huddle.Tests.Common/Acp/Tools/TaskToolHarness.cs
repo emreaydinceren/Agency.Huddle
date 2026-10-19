@@ -312,6 +312,9 @@ internal sealed class TaskToolHarness : IDisposable
         }
 
         services.AddSingleton(this.Service);
+
+        // The Task panel resolves the Proof; a harness built without a source gets one that answers with no Proof items.
+        services.TryAddSingleton<Agency.Huddle.App.Tasks.HumanGate.IProofSource>(new EmptyProofSource());
         if (this.gates is not null)
         {
             services.AddSingleton(this.gates);
@@ -351,5 +354,14 @@ internal sealed class TaskToolHarness : IDisposable
         this.Personas.Dispose();
         this.Avatars.Dispose();
         this.dir.Dispose();
+    }
+
+    /// <summary>An <see cref="Agency.Huddle.App.Tasks.HumanGate.IProofSource"/> that answers every Task with an empty Proof.</summary>
+    private sealed class EmptyProofSource : Agency.Huddle.App.Tasks.HumanGate.IProofSource
+    {
+        /// <summary>Returns the empty Proof.</summary>
+        /// <param name="task">The Task, ignored.</param>
+        /// <returns>The empty Proof.</returns>
+        public Agency.Huddle.App.Tasks.HumanGate.Proof For(TaskItem task) => Agency.Huddle.App.Tasks.HumanGate.Proof.Empty;
     }
 }
