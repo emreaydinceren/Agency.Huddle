@@ -64,7 +64,8 @@ internal sealed class TaskToolHarness : IDisposable
     /// see no extra subscriber.
     /// </param>
     /// <param name="gates">The process gates the Task service enforces on a status change; <see langword="null"/> (the default) enforces none.</param>
-    public TaskToolHarness(TimeProvider? clock = null, string? sprintsText = null, Agency.Huddle.App.Teams.ProcessGateService? gates = null)
+    /// <param name="proof">Supplies a Task's Proof to the Human gate rules; <see langword="null"/> (the default) means an empty, complete Proof.</param>
+    public TaskToolHarness(TimeProvider? clock = null, string? sprintsText = null, Agency.Huddle.App.Teams.ProcessGateService? gates = null, Agency.Huddle.App.Tasks.HumanGate.IProofSource? proof = null)
     {
         this.Options = this.dir.Options();
         this.gates = gates;
@@ -97,7 +98,8 @@ internal sealed class TaskToolHarness : IDisposable
             this.Options,
             this.Clock,
             NullLogger<TaskService>.Instance,
-            gates);
+            gates,
+            proof: proof);
         this.Views = new ViewStore(this.Options, NullLogger<ViewStore>.Instance);
         this.TurnActivity = new TurnActivity();
         this.TaskActivity = new TaskActivity(this.Options);
@@ -141,10 +143,11 @@ internal sealed class TaskToolHarness : IDisposable
     /// <param name="clock">Forwarded to the constructor; see its own parameter doc.</param>
     /// <param name="sprintsText">Forwarded to the constructor; see its own parameter doc.</param>
     /// <param name="gates">Forwarded to the constructor; see its own parameter doc.</param>
+    /// <param name="proof">Forwarded to the constructor; see its own parameter doc.</param>
     /// <returns>A harness whose <see cref="Directory"/> already knows the Human, Nova and Kai.</returns>
-    public static async Task<TaskToolHarness> CreateAsync(CancellationToken ct, TimeProvider? clock = null, string? sprintsText = null, Agency.Huddle.App.Teams.ProcessGateService? gates = null)
+    public static async Task<TaskToolHarness> CreateAsync(CancellationToken ct, TimeProvider? clock = null, string? sprintsText = null, Agency.Huddle.App.Teams.ProcessGateService? gates = null, Agency.Huddle.App.Tasks.HumanGate.IProofSource? proof = null)
     {
-        TaskToolHarness harness = new(clock, sprintsText, gates);
+        TaskToolHarness harness = new(clock, sprintsText, gates, proof);
 
         await harness.Directory.InitializeAsync("You", ct);
         User nova = await harness.Directory.UpsertAgentUserAsync("Nova", null, ct)
