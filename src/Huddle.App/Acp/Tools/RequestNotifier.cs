@@ -23,7 +23,9 @@ internal sealed partial class RequestNotifier(TaskTriggerService trigger, ITeamC
         ArgumentException.ThrowIfNullOrWhiteSpace(actor);
 
         TaskActor wakeActor = new(TaskActorKind.Agent, actor, null);
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
         string summary = string.Concat("Request event: ", requestEvent.ToString());
+#pragma warning restore HAA0102
         TaskId requestId = request.Id;
         HashSet<string> woken = new(StringComparer.OrdinalIgnoreCase);
         foreach (WakeTarget target in targets)

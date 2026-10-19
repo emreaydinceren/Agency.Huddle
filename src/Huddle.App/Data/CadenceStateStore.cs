@@ -93,7 +93,9 @@ public sealed class CadenceStateStore
         _ = command.Parameters.AddWithValue("$team", state.Team);
         _ = command.Parameters.AddWithValue("$digest", FormatTime(state.LastDigestUtc));
         _ = command.Parameters.AddWithValue("$retro", FormatTime(state.LastRetroUtc));
+#pragma warning disable HAA0601 // AddWithValue takes object, so the box cannot be avoided.
         _ = command.Parameters.AddWithValue("$done", state.DoneAtLastRetro is { } done ? done : DBNull.Value);
+#pragma warning restore HAA0601
         _ = command.ExecuteNonQuery();
     }
 

@@ -113,7 +113,9 @@ internal static class RetroRegister
             "|",
             Escape(row.Owner),
             "|",
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
             row.Status.ToString(),
+#pragma warning restore HAA0102
             "|",
             Escape(row.EvidenceNextCheck),
             "|");
@@ -151,7 +153,9 @@ internal static class RetroRegister
     {
         foreach (RetroStatus candidate in Enum.GetValues<RetroStatus>())
         {
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
             if (string.Equals(candidate.ToString(), word, StringComparison.OrdinalIgnoreCase))
+#pragma warning restore HAA0102
             {
                 status = candidate;
                 return true;

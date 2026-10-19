@@ -130,9 +130,11 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         {
             this.logger.LogWarning(
                 "MaxLiveSessions {Configured} is below MaxConcurrentTurns {Concurrent}; raised to {Effective}.",
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                 configuredLiveCap,
                 configuredConcurrency,
                 this.effectiveMaxLiveSessions);
+#pragma warning restore HAA0601
         }
 
         if (!this.sessionPerRoom)
@@ -287,7 +289,9 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         if (victim is null)
         {
             this.logger.LogWarning(
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                 "No Idle Room Session was evictable at the live cap of {Cap}; opening anyway.", this.effectiveMaxLiveSessions);
+#pragma warning restore HAA0601
             return;
         }
 

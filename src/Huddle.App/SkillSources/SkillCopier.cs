@@ -391,7 +391,9 @@ internal sealed partial class SkillCopier : ISkillCopier
             ItemState.Withdrawn => "withdrawn",
             ItemState.UpdateAvailable => "update available",
             ItemState.InUse => "in use",
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
             _ => state.ToString().ToUpperInvariant() is { } upper ? new string([.. upper.Select(char.ToLowerInvariant)]) : string.Empty,
+#pragma warning restore HAA0102
         };
     }
 

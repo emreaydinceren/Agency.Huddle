@@ -152,7 +152,9 @@ internal sealed class SearchOrchestrator(
         catch (Exception ex)
         {
             // The supervisor that must not die: one provider failing empties only its own group (D-20).
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
             logger.LogWarning(ex, "Search provider {Group} failed.", provider.Group);
+#pragma warning restore HAA0601
             state = new SearchGroupFailed();
         }
 
@@ -171,7 +173,9 @@ internal sealed class SearchOrchestrator(
         catch (Exception ex)
         {
             // A subscriber's failure must not end the search or hide the other groups.
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
             logger.LogWarning(ex, "A search update subscriber failed for {Group}.", update.Group);
+#pragma warning restore HAA0601
         }
     }
 }

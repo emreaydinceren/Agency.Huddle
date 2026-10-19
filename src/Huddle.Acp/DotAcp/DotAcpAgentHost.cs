@@ -149,7 +149,9 @@ public sealed partial class DotAcpAgentHost(
             throw new AgentException($"session/new failed: {ex.Message}", ex);
         }
 
+#pragma warning disable HAA0601 // The protocol id is a struct with an implicit conversion to string: a method call, not a boxing conversion.
         string sessionId = (string)response.SessionId;
+#pragma warning restore HAA0601
         return await this.RegisterAndConfigureAsync(
             sessionId, activeConnection, activeAdapter, options, response.ConfigOptions, cancellationToken).ConfigureAwait(false);
     }
@@ -576,7 +578,9 @@ public sealed partial class DotAcpAgentHost(
         {
             if (method is dotacp.protocol.AuthMethodAgent agentMethod)
             {
+#pragma warning disable HAA0601 // The protocol id is a struct with an implicit conversion to string: a method call, not a boxing conversion.
                 mapped.Add(new AuthMethodInfo((string)agentMethod.Id, agentMethod.Name, agentMethod.Description));
+#pragma warning restore HAA0601
             }
         }
 

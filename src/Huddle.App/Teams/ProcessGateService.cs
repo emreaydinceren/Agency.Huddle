@@ -47,7 +47,9 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         GateId.ChecksBeforeMerge => "Code can then be merged or pushed without a passing check run on record.",
         GateId.SpecApprovedBeforeBuild => "Work can then start on a Task before its spec is approved.",
         GateId.FailingTestBeforeFix => "A bug can then move to Review without a test that failed first.",
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(gate), gate, null),
+#pragma warning restore HAA0601
     };
 
     /// <summary>Checks a proposed status change against the Team's enabled Task gates.</summary>

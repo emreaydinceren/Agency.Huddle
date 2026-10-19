@@ -350,7 +350,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
                     "Persona '{PersonaName}' dropped a question in room {RoomId}: no answer after {TimeoutSeconds} seconds.",
                     this.owner.PersonaName,
                     lease.RoomId,
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                     bound.TotalSeconds);
+#pragma warning restore HAA0601
             }
 
             return new ElicitationCancelled();
@@ -1123,7 +1125,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
                 "Persona '{PersonaName}' turn in room {RoomId} was abandoned after {IdleBoundSeconds} seconds of silence.",
                 this.owner.PersonaName,
                 item.RoomId,
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                 idleBound.TotalSeconds);
+#pragma warning restore HAA0601
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -1331,7 +1335,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
                 "Persona '{PersonaName}' turn in room {RoomId} sent nothing for {IdleBoundSeconds} seconds; cancelling it.",
                 this.owner.PersonaName,
                 item.RoomId,
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                 idleBound.TotalSeconds);
+#pragma warning restore HAA0601
 
             try
             {

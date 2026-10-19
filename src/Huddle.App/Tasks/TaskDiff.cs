@@ -44,7 +44,9 @@ internal static class TaskDiff
     public static string FieldLabel(TaskField field) => field switch
     {
         TaskField.Location => "team/project",
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
         _ => WireKeys.TryGetValue(field, out string? key) ? key : field.ToString().ToLowerInvariant(),
+#pragma warning restore HAA0102
     };
 
     /// <summary>What changed, field by field, ignoring Path, Version and ChangeLog.</summary>

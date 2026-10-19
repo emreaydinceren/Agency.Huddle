@@ -98,12 +98,14 @@ internal sealed partial class SkillSourcesMove : ISkillSourcesMove
             {
                 this.logger.LogInformation(
                     "Moved {Catalogs} catalogs ({Skills} Skills, {Omitted} omitted), {Packs} Pack rows, {Pointed} Skills pointed at, {Left} left in place",
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                     report.Catalogs,
                     report.CatalogSkills,
                     report.OmittedDuplicates,
                     report.ShippedPackRows + report.UserPacksMoved,
                     report.SkillsPointedAt,
                     report.SkillsLeftInPlace);
+#pragma warning restore HAA0601
             }
             return report;
         }

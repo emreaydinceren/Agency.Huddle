@@ -10,10 +10,12 @@ namespace Agency.Huddle.App.Components.Tasks;
 internal static class TaskFieldView
 {
     /// <summary><see cref="Variant.Text"/> boxed once: <c>AddAttribute</c> takes an <see cref="object"/>, so passing the enum would box it again for every chip on every render.</summary>
+#pragma warning disable HAA0601 // Boxed once into a static field on purpose: that is the fix for boxing on every render.
     private static readonly object TextVariant = Variant.Text;
 
     /// <summary><see cref="Size.Small"/> boxed once, for the same reason as <see cref="TextVariant"/>.</summary>
     private static readonly object SmallSize = Size.Small;
+#pragma warning restore HAA0601
 
     /// <summary>The words for an empty value of <paramref name="field"/>, or <see langword="null"/> when it stays blank.</summary>
     /// <param name="field">A field key.</param>

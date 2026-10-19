@@ -551,7 +551,9 @@ internal sealed class SkillStore : IDisposable
                     ex,
                     "Failed to rebuild Skills from '{SkillsDir}' after {Attempts} attempts; keeping the previously resolved Skills.",
                     this.skillsDir,
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                     RebuildRetryAttempts);
+#pragma warning restore HAA0601
                 return null;
             }
         }

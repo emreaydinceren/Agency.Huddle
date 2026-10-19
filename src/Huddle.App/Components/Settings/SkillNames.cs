@@ -14,6 +14,6 @@ internal static class SkillNames
         }
 
         string spaced = slug.Trim().Replace('-', ' ').Replace('_', ' ');
-        return string.Concat(char.ToUpperInvariant(spaced[0]), spaced[1..]);
+        return string.Concat(char.ToUpperInvariant(spaced[0]).ToString(), spaced.AsSpan(1));
     }
 }

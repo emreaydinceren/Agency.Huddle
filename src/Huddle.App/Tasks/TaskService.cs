@@ -444,7 +444,9 @@ internal sealed class TaskService : IDisposable
                     "Could not rename Teammate '{OldName}' to '{NewName}' in Task '{TaskId}': the file changed on disk since it was read.",
                     oldName,
                     newName,
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                     writes[i].Task.Id);
+#pragma warning restore HAA0601
             }
         }
     }
@@ -520,7 +522,9 @@ internal sealed class TaskService : IDisposable
             // an invariant break, not an expected failure, so it's logged and thrown rather than a
             // TaskResult (house principle: expected failures are TaskResults, invariant breaks are
             // exceptions).
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
             this.logger.LogError("Task '{TaskId}' could not be created: a file already exists at '{Path}'.", id, toWrite.Path);
+#pragma warning restore HAA0601
             throw new InvalidOperationException(string.Create(CultureInfo.InvariantCulture, $"Task '{id}' already exists."));
         }
 

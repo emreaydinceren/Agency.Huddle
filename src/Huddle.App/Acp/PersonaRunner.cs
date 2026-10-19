@@ -265,7 +265,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.logger.LogWarning(
             "Persona '{PersonaName}' has spent its token budget of {TokenBudget} and is taking no more turns until a human speaks to it.",
             this.persona.Name,
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
             tokenBudget);
+#pragma warning restore HAA0601
         this.RaiseStatusChanged(
             PersonaState.Degraded,
             string.Create(
@@ -640,7 +642,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                                     "Persona '{PersonaName}' read a message in room {RoomId} as context only: it was not mentioned and the room has {MemberCount} members.",
                                     this.persona.Name,
                                     posted.RoomId,
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                                     posted.Members.Count);
+#pragma warning restore HAA0601
                             }
 
                             this.AppendCatchUp(posted.RoomId, posted.Message.SenderName, posted.Message.Text);
@@ -655,7 +659,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                                 "Persona '{PersonaName}' declined a turn in room {RoomId}: the room has spent its budget of {Budget} agent messages.",
                                 this.persona.Name,
                                 posted.RoomId,
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                                 posted.Budget);
+#pragma warning restore HAA0601
                             break;
                     }
                 }
@@ -841,7 +847,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         StopReason.MaxTokens => "it ran out of tokens",
         StopReason.MaxTurnRequests => "it made too many requests",
         StopReason.Refusal => "the Model refused to answer",
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, "Not an incomplete-stop reason."),
+#pragma warning restore HAA0601
     };
 
     /// <summary>

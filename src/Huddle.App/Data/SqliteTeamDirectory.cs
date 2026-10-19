@@ -435,7 +435,9 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
             insertTeam.CommandText = "INSERT INTO room_teams(room_id, team, team_room) VALUES($r, $team, $teamRoom);";
             insertTeam.Parameters.AddWithValue("$r", id);
             insertTeam.Parameters.AddWithValue("$team", team);
+#pragma warning disable HAA0601 // AddWithValue takes object, so the box cannot be avoided.
             insertTeam.Parameters.AddWithValue("$teamRoom", teamRoom ? 1 : 0);
+#pragma warning restore HAA0601
             await insertTeam.ExecuteNonQueryAsync(ct);
         }
 
@@ -582,7 +584,9 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
             ORDER BY r.created, r.id
             LIMIT 1;
             """);
+#pragma warning disable HAA0601 // AddWithValue takes object, so the box cannot be avoided.
         command.Parameters.AddWithValue("$count", distinctIds.Count);
+#pragma warning restore HAA0601
         command.Parameters.AddWithValue("$team", (object?)team ?? DBNull.Value);
 
         await using var reader = await command.ExecuteReaderAsync(ct);

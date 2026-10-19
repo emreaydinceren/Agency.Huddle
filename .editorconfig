@@ -695,8 +695,7 @@ dotnet_diagnostic.HAA0604.severity = suggestion
 # Product code only. Neither rule is in latest-recommended, so a blocking call or an array property returning to src fails the build.
 dotnet_diagnostic.CA1849.severity = warning
 dotnet_diagnostic.CA1819.severity = warning
-# Shown as warnings in product code; Directory.Build.props lists them in WarningsNotAsErrors, so they do not fail the build.
-dotnet_diagnostic.HAA0101.severity = warning
+# Product code only: these fail the build (TreatWarningsAsErrors). HAA0101 (params arrays) is deliberately left a suggestion: params is an accepted ergonomic cost.
 dotnet_diagnostic.HAA0102.severity = warning
 dotnet_diagnostic.HAA0202.severity = warning
 dotnet_diagnostic.HAA0402.severity = warning

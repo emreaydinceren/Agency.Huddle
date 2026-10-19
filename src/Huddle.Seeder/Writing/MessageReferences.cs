@@ -82,7 +82,9 @@ internal static partial class MessageReferences
         foreach ((int _, int _, MessageReference reference) in found.OrderBy(f => f.Position))
         {
             string key = reference.Kind is ReferenceKind.Team or ReferenceKind.LibraryFile ? reference.Key.ToUpperInvariant() : reference.Key;
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
             if (seen.Add(reference.Kind.ToString() + "\u001F" + key))
+#pragma warning restore HAA0102
             {
                 references.Add(reference);
             }

@@ -255,7 +255,9 @@ internal static class TaskQuery
         TaskGroupField.Assignee => task.Assignee ?? "Unassigned",
         TaskGroupField.State => task.Status.ToWire(),
         TaskGroupField.Sprint => SprintLabel(task, sprintName),
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(field), field, "Unknown grouping field."),
+#pragma warning restore HAA0601
     };
 
     /// <summary>The Sprint group label: "No sprint" when unset, the name when resolved, "S5 (missing)" when the resolver does not know it, else the bare id.</summary>
@@ -304,7 +306,9 @@ internal static class TaskQuery
         TaskGroupField.Assignee => task.Assignee ?? NullGroupSentinel,
         TaskGroupField.State => task.Status.ToWire(),
         TaskGroupField.Sprint => task.Sprint?.ToString() ?? NullGroupSentinel,
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(field), field, "Unknown grouping field."),
+#pragma warning restore HAA0601
     };
 
     /// <summary>The Project raw grouping key: <see cref="NullGroupSentinel"/> when unset, else the same text as <see cref="ProjectLabel"/>.</summary>

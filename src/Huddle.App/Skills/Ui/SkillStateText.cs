@@ -49,7 +49,9 @@ internal static class SkillStateText
                 "Its Source pulled it: {reason}. New hires cannot take it. Teammates who have it keep working and are flagged."),
             ItemState.Broken => new("Broken", Color.Error, Icons.Material.Filled.Error,
                 "A check failed or a pointer leads nowhere. The card names the check and the file. The rest of SKILLS.md still works."),
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
             _ => throw new ArgumentOutOfRangeException(nameof(state), state, "Unknown state."),
+#pragma warning restore HAA0601
         };
     }
 

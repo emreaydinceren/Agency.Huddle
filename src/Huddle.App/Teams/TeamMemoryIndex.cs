@@ -115,7 +115,7 @@ internal static class TeamMemoryIndex
     {
         try
         {
-            return File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint);
+            return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
         }
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {

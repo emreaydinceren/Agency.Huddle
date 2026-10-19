@@ -50,8 +50,10 @@ internal sealed class ConsoleRenderer(IConsoleOutput output)
 
                     case ToolCallStarted toolCallStarted:
                         ConsoleRenderer.WriteNewlineIfNeeded(previous, output);
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
                         string startedKind = toolCallStarted.Kind.ToString().ToLowerInvariant();
                         string startedStatus = toolCallStarted.Status.ToString().ToLowerInvariant();
+#pragma warning restore HAA0102
                         string startedTitle = toolCallStarted.Title ?? toolCallStarted.ToolCallId;
                         output.WriteLine($"[tool:{startedKind}] {startedTitle} ({startedStatus})", ConsoleStyle.Tool);
                         toolCallStatuses[toolCallStarted.ToolCallId] = toolCallStarted.Status;
@@ -62,8 +64,10 @@ internal sealed class ConsoleRenderer(IConsoleOutput output)
                         if (!toolCallStatuses.TryGetValue(toolCallUpdated.ToolCallId, out ToolCallStatus lastStatus)
                             || lastStatus != toolCallUpdated.Status)
                         {
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
                             string updatedKind = toolCallUpdated.Kind.ToString().ToLowerInvariant();
                             string updatedStatus = toolCallUpdated.Status.ToString().ToLowerInvariant();
+#pragma warning restore HAA0102
                             string updatedTitle = toolCallUpdated.Title ?? toolCallUpdated.ToolCallId;
                             output.WriteLine($"[tool:{updatedKind}] {updatedTitle} -> {updatedStatus}", ConsoleStyle.Tool);
                             toolCallStatuses[toolCallUpdated.ToolCallId] = toolCallUpdated.Status;
@@ -126,7 +130,9 @@ internal sealed class ConsoleRenderer(IConsoleOutput output)
             case PlanEntryStatus.Completed:
                 return "[x]";
             default:
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
                 throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown plan entry status.");
+#pragma warning restore HAA0601
         }
     }
 

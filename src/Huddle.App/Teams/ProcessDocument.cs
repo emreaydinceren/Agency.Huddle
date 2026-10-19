@@ -246,7 +246,9 @@ internal sealed record ProcessDocument(
         GateId.ChecksBeforeMerge => "checks-before-merge",
         GateId.SpecApprovedBeforeBuild => "spec-approved-before-build",
         GateId.FailingTestBeforeFix => "failing-test-before-fix",
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(gate), gate, null),
+#pragma warning restore HAA0601
     };
 
     /// <summary>Returns the name a person reads for a gate, in the Process tab and the override prompt.</summary>
@@ -258,7 +260,9 @@ internal sealed record ProcessDocument(
         GateId.ChecksBeforeMerge => "Checks before merge",
         GateId.SpecApprovedBeforeBuild => "Spec approved before build",
         GateId.FailingTestBeforeFix => "Failing test before fix",
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(gate), gate, null),
+#pragma warning restore HAA0601
     };
     /// <summary>Parses a frontmatter gate id.</summary>
     /// <param name="id">The id, compared ordinally.</param>
