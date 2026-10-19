@@ -242,11 +242,7 @@ public sealed class PersonaSupervisorFileChangesTests
         // Waits for the Turn to actually be in flight (PromptAsync reached), rather than a fixed
         // delay: only then is shared mode's BeginTurn(agent, null) guaranteed to have marked every
         // Room Busy for this Agent.
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(10);
-        while (factory.Session.Prompts.Count == 0 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
+        await Eventually.UntilAsync(() => factory.Session.Prompts.Count != 0, ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(20));
 
         Assert.NotEmpty(factory.Session.Prompts);
         ownPosts.Record(agentId, roomId, "should be refused while the Turn is in flight");

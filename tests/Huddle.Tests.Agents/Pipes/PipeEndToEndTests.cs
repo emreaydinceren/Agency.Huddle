@@ -6,6 +6,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Pipes;
 
@@ -289,11 +290,7 @@ public sealed class PipeEndToEndTests
 
         // An accepted delta draws no reply, so there is nothing to await: poll until the server has
         // processed it, bounded so a regression fails rather than hangs.
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (drafts.ForRoom(alphaRoomId).Count == 0 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(25, ct);
-        }
+        await Eventually.UntilAsync(() => drafts.ForRoom(alphaRoomId).Count != 0, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(25));
 
         Assert.Single(drafts.ForRoom(alphaRoomId));
 
@@ -463,11 +460,7 @@ public sealed class PipeEndToEndTests
 
         await client.DisposeAsync();
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(2);
-        while (gateway.IsOnline(welcome.AgentId) && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(50, ct);
-        }
+        await Eventually.UntilAsync(() => !gateway.IsOnline(welcome.AgentId), ct, timeout: TestBudgets.Short, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.False(gateway.IsOnline(welcome.AgentId));
     }
@@ -500,11 +493,7 @@ public sealed class PipeEndToEndTests
 
         await client.DisposeAsync();
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(2);
-        while (gateway.IsOnline(welcome.AgentId) && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(50, ct);
-        }
+        await Eventually.UntilAsync(() => !gateway.IsOnline(welcome.AgentId), ct, timeout: TestBudgets.Short, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.False(gateway.IsOnline(welcome.AgentId));
         Assert.Empty(drafts.ForRoom(roomId));
@@ -659,11 +648,7 @@ public sealed class PipeEndToEndTests
 
         await client.WriteAsync(new PostMessage(roomId, "reply-9", "full reply"), ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(2);
-        while (drafts.ForRoom(roomId).Count > 0 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(50, ct);
-        }
+        await Eventually.UntilAsync(() => drafts.ForRoom(roomId).Count == 0, ct, timeout: TestBudgets.Short, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.Empty(drafts.ForRoom(roomId));
     }
@@ -936,28 +921,18 @@ public sealed class PipeEndToEndTests
 
         await client.DisposeAsync();
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (gateway.IsOnline(welcome.AgentId) && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(50, ct);
-        }
+        await Eventually.UntilAsync(() => !gateway.IsOnline(welcome.AgentId), ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.False(gateway.IsOnline(welcome.AgentId));
 
         // AgentConnection.RunAsync unregisters from the gateway BEFORE it writes the disconnect line, so
         // "offline" does not yet mean "logged": wait for the line itself rather than reading the log once.
-        List<CapturedLogEntry> connectionEntries = [];
-        while (!connectionEntries.Exists(e => e.Level == LogLevel.Information) && DateTimeOffset.UtcNow < deadline)
-        {
-            connectionEntries = fixture.LogEntries
-                .Where(e => string.Equals(e.Category, typeof(AgentConnection).FullName, StringComparison.Ordinal))
-                .ToList();
+        List<CapturedLogEntry> ConnectionEntries() => fixture.LogEntries
+            .Where(e => string.Equals(e.Category, typeof(AgentConnection).FullName, StringComparison.Ordinal))
+            .ToList();
 
-            if (!connectionEntries.Exists(e => e.Level == LogLevel.Information))
-            {
-                await Task.Delay(20, ct);
-            }
-        }
+        await Eventually.UntilAsync(() => ConnectionEntries().Exists(e => e.Level == LogLevel.Information), ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
+        List<CapturedLogEntry> connectionEntries = ConnectionEntries();
 
         var informationEntry = Assert.Single(connectionEntries, e => e.Level == LogLevel.Information);
         Assert.Contains("echo", informationEntry.Message, StringComparison.Ordinal);
@@ -989,19 +964,12 @@ public sealed class PipeEndToEndTests
 
         pipe.Dispose();
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        List<CapturedLogEntry> warnings = [];
-        while (warnings.Count == 0 && DateTimeOffset.UtcNow < deadline)
-        {
-            warnings = fixture.LogEntries
-                .Where(e => string.Equals(e.Category, typeof(AgentConnection).FullName, StringComparison.Ordinal) && e.Level == LogLevel.Warning)
-                .ToList();
+        List<CapturedLogEntry> Warnings() => fixture.LogEntries
+            .Where(e => string.Equals(e.Category, typeof(AgentConnection).FullName, StringComparison.Ordinal) && e.Level == LogLevel.Warning)
+            .ToList();
 
-            if (warnings.Count == 0)
-            {
-                await Task.Delay(50, ct);
-            }
-        }
+        await Eventually.UntilAsync(() => Warnings().Count != 0, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(50));
+        List<CapturedLogEntry> warnings = Warnings();
 
         var warning = Assert.Single(warnings);
         Assert.Contains("ended", warning.Message, StringComparison.Ordinal);

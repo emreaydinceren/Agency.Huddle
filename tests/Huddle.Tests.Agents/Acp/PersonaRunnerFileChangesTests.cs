@@ -371,22 +371,20 @@ public sealed class PersonaRunnerFileChangesTests
         await Eventually.UntilAsync(() => drafts.ForRoom(roomId).Any(draft => draft.ToolStatus == ToolActivityStatus.Completed), ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(20));
         await gateway.StopTurnAsync(novaId, roomId, ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(10);
         FileState? state = null;
-        while (DateTimeOffset.UtcNow < deadline)
-        {
-            state = store.Load("nova");
-            if (state is not null
-                && state.Rooms.TryGetValue(roomId, out var baseline)
-                && baseline.Folders.TryGetValue("nova", out var snapshot)
-                && snapshot.Files.TryGetValue("a.txt", out var entry)
-                && entry.Size == new FileInfo(filePath).Length)
+        await Eventually.UntilAsync(
+            () =>
             {
-                break;
-            }
-
-            await Task.Delay(50, ct);
-        }
+                state = store.Load("nova");
+                return state is not null
+                    && state.Rooms.TryGetValue(roomId, out var baseline)
+                    && baseline.Folders.TryGetValue("nova", out var snapshot)
+                    && snapshot.Files.TryGetValue("a.txt", out var entry)
+                    && entry.Size == new FileInfo(filePath).Length;
+            },
+            ct,
+            timeout: TestBudgets.Slow,
+            interval: TimeSpan.FromMilliseconds(50));
 
         Assert.NotNull(state);
         Assert.True(state.Rooms.TryGetValue(roomId, out var roomBaseline));
@@ -433,14 +431,13 @@ public sealed class PersonaRunnerFileChangesTests
         var history = await Eventually.HistoryCountAsync(store, roomId, 6, ct);
         Assert.Equal(6, history.Count);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(10);
-        while (!fixture.LogEntries.Any(entry =>
+        await Eventually.UntilAsync(
+            () => fixture.LogEntries.Any(entry =>
                 entry.Level == LogLevel.Warning
-                && entry.Message.Contains("failed to commit File Changes", StringComparison.Ordinal))
-            && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(50, ct);
-        }
+                && entry.Message.Contains("failed to commit File Changes", StringComparison.Ordinal)),
+            ct,
+            timeout: TestBudgets.Slow,
+            interval: TimeSpan.FromMilliseconds(50));
 
         Assert.Contains(
             fixture.LogEntries,

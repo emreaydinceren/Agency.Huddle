@@ -1,6 +1,7 @@
 using System.Reflection;
 using Agency.Huddle.App.Components.Settings;
 using Agency.Huddle.App.Skills.Ui;
+using Agency.Huddle.Tests.Waiting;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -121,11 +122,11 @@ public sealed class SkillsPanelTests : IDisposable
         string invalid = Path.Combine(this.fixture.Host.Settings.SkillsDir, "not-a-skill");
         Directory.CreateDirectory(invalid);
         File.WriteAllText(Path.Combine(invalid, "SKILL.md"), "No frontmatter here.");
-        DateTime limit = DateTime.UtcNow.AddSeconds(10);
-        while (this.fixture.Host.Skills.Issues.Count == 0 && DateTime.UtcNow < limit)
-        {
-            await Task.Delay(50, Xunit.TestContext.Current.CancellationToken);
-        }
+        await Eventually.UntilAsync(
+            () => this.fixture.Host.Skills.Issues.Count != 0,
+            Xunit.TestContext.Current.CancellationToken,
+            timeout: TestBudgets.Slow,
+            interval: TimeSpan.FromMilliseconds(50));
 
         Assert.Equal(broke + this.fixture.Host.Skills.Issues.Count, SkillProblemCount.Of(this.fixture.Host.Registry, this.fixture.Host.Skills));
         Assert.NotEmpty(this.fixture.Host.Skills.Issues);

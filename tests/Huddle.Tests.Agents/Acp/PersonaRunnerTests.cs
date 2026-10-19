@@ -794,11 +794,7 @@ public sealed class PersonaRunnerTests
         // Bounded: if the finally were removed, the consumer would stay parked on the first turn's
         // completion source forever, this count would never reach 2, and the test fails on timeout
         // instead of hanging the suite.
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (factory.Session.Prompts.Count < 2 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(50, ct);
-        }
+        await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= 2, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.Equal(2, factory.Session.Prompts.Count);
     }
@@ -831,11 +827,7 @@ public sealed class PersonaRunnerTests
         await Task.Delay(TimeSpan.FromMilliseconds(50), ct);
         factory.Session.FaultEvents(new IOException("adapter process died"));
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (!logger.Entries.Any(entry => entry.Level == LogLevel.Warning) && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(50, ct);
-        }
+        await Eventually.UntilAsync(() => logger.Entries.Any(entry => entry.Level == LogLevel.Warning), ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.Contains(
             logger.Entries,
@@ -963,11 +955,7 @@ public sealed class PersonaRunnerTests
         if (scenario == TurnScenario.Stop)
         {
             // Give PromptAsync a moment to start its delay before the Stop lands.
-            var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-            while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
-            {
-                await Task.Delay(20, ct);
-            }
+            await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= 1, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
 
             await server.SendAsync(new StopTurn("room-1"), ct);
         }
@@ -1480,11 +1468,7 @@ public sealed class PersonaRunnerTests
         }
 
         // Give the first (live) turn a moment to reach PromptAsync before the Stop lands.
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
+        await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= 1, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
 
         Assert.Single(factory.Session.Prompts);
 
@@ -1528,11 +1512,7 @@ public sealed class PersonaRunnerTests
 
         await server.SendAsync(NewMessagePosted("room-1", "first"), ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
+        await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= 1, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
 
         await server.SendAsync(new StopTurn("room-1"), ct);
 
@@ -1567,11 +1547,7 @@ public sealed class PersonaRunnerTests
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
+        await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= 1, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
 
         await server.SendAsync(new StopTurn("room-1"), ct);
 
@@ -1609,22 +1585,14 @@ public sealed class PersonaRunnerTests
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
+        await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= 1, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
 
         await server.SendAsync(new StopTurn("room-1"), ct);
         await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
 
         // Bounded grace period for the Information entry, written from the consumer's catch clause,
         // to actually land before asserting against it.
-        var logDeadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (!logger.Entries.Any(entry => entry.Level == LogLevel.Information) && DateTimeOffset.UtcNow < logDeadline)
-        {
-            await Task.Delay(20, ct);
-        }
+        await Eventually.UntilAsync(() => logger.Entries.Any(entry => entry.Level == LogLevel.Information), ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
 
         Assert.Contains(logger.Entries, entry => entry.Level == LogLevel.Information);
         Assert.DoesNotContain(logger.Entries, entry => entry.Level == LogLevel.Warning);
@@ -1656,11 +1624,7 @@ public sealed class PersonaRunnerTests
 
         await server.SendAsync(NewMessagePosted("room-a", "a1"), ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
+        await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= 1, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
 
         Assert.Single(factory.Session.Prompts);
 
@@ -1710,11 +1674,7 @@ public sealed class PersonaRunnerTests
 
         await server.SendAsync(NewMessagePosted("room-a", "a1"), ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
+        await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= 1, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
 
         await server.SendAsync(new StopTurn("room-b"), ct);
 
@@ -1747,11 +1707,7 @@ public sealed class PersonaRunnerTests
 
         await server.SendAsync(NewMessagePosted("room-b", "b1"), ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
+        await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= 1, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
 
         await server.SendAsync(NewMessagePosted("room-a", "a1"), ct);
         await server.SendAsync(new StopTurn("room-a"), ct);
@@ -1800,11 +1756,7 @@ public sealed class PersonaRunnerTests
 
         await server.SendAsync(NewMessagePosted("room-a", "a1"), ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
+        await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= 1, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
 
         await server.SendAsync(NewMessagePosted("room-b", "b1"), ct);
         await server.SendAsync(new StopTurn("room-a"), ct);
@@ -1843,11 +1795,7 @@ public sealed class PersonaRunnerTests
 
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(50, ct);
-        }
+        await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= 1, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.Single(factory.Session.Prompts);
 
@@ -1883,11 +1831,7 @@ public sealed class PersonaRunnerTests
 
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(50, ct);
-        }
+        await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= 1, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.Single(factory.Session.Prompts);
 
@@ -2083,11 +2027,7 @@ public sealed class PersonaRunnerTests
         await chat.PostAsync(room.Id, KnownIds.Human, "newest missed", ct: ct);
         await chat.PostAsync(room.Id, KnownIds.Human, "@nova tag", ct: ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(50, ct);
-        }
+        await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= 1, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(50));
 
         var prompt = Assert.Single(factory.Session.Prompts);
         Assert.DoesNotContain("oldest missed", prompt, StringComparison.Ordinal);
@@ -2546,11 +2486,7 @@ public sealed class PersonaRunnerTests
         await chat.PostAsync(roomId, KnownIds.Human, "two", ct: ct);
         await chat.PostAsync(roomId, KnownIds.Human, "three", ct: ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (factory.Session.Prompts.Count < 3 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
+        await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= 3, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
 
         await statuses.AssertContainsEventuallyAsync(
             s => s.State == PersonaState.Degraded &&
@@ -2675,11 +2611,7 @@ public sealed class PersonaRunnerTests
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
+        await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= 1, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
 
         await server.SendAsync(new StopTurn("room-1"), ct);
         await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
@@ -2721,11 +2653,7 @@ public sealed class PersonaRunnerTests
 
         // Turn 2: stopped.
         await server.SendAsync(NewMessagePosted("room-1", "two"), ct);
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (factory.Session.Prompts.Count < 2 && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
+        await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= 2, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
 
         await server.SendAsync(new StopTurn("room-1"), ct);
         await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
@@ -2861,12 +2789,11 @@ public sealed class PersonaRunnerTests
         await server.SendAsync(new StopTurn("room-1"), ct);
         await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
 
-        var logDeadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (!logger.Entries.Any(entry => entry.Message.Contains("was stopped", StringComparison.Ordinal))
-            && DateTimeOffset.UtcNow < logDeadline)
-        {
-            await Task.Delay(20, ct);
-        }
+        await Eventually.UntilAsync(
+            () => logger.Entries.Any(entry => entry.Message.Contains("was stopped", StringComparison.Ordinal)),
+            ct,
+            timeout: TestBudgets.Standard,
+            interval: TimeSpan.FromMilliseconds(20));
 
         Assert.Contains(
             logger.Entries,
@@ -2944,11 +2871,7 @@ public sealed class PersonaRunnerTests
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
         await clock.AdvanceWhenArmedAsync(2, TimeSpan.FromSeconds(1), ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(8);
-        while (!factory.Session.CancelObservedPromptInFlight && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(50, ct);
-        }
+        await Eventually.UntilAsync(() => factory.Session.CancelObservedPromptInFlight, ct, timeout: TimeSpan.FromSeconds(8), interval: TimeSpan.FromMilliseconds(50));
 
         Assert.True(factory.Session.CancelObservedPromptInFlight);
     }
