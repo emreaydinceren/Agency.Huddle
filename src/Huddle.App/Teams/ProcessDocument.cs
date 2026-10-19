@@ -305,6 +305,15 @@ internal sealed record ProcessDocument(
         return joined.Length == 0 ? null : joined;
     }
 
+    /// <summary>The four gates a Process.md may declare; <see cref="GateId.HumanGate"/> and <see cref="GateId.ProofIncomplete"/> are refusal ids only.</summary>
+    private static readonly GateId[] ProcessGates =
+    [
+        GateId.QaEvidenceBeforeDone,
+        GateId.ChecksBeforeMerge,
+        GateId.SpecApprovedBeforeBuild,
+        GateId.FailingTestBeforeFix,
+    ];
+
     private static string QuotedId(GateId gate) => string.Concat("'", ToId(gate), "'");
 
     /// <summary>Returns the frontmatter id of a gate.</summary>
@@ -316,6 +325,8 @@ internal sealed record ProcessDocument(
         GateId.ChecksBeforeMerge => "checks-before-merge",
         GateId.SpecApprovedBeforeBuild => "spec-approved-before-build",
         GateId.FailingTestBeforeFix => "failing-test-before-fix",
+        GateId.HumanGate => "human-gate",
+        GateId.ProofIncomplete => "proof-incomplete",
 #pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(gate), gate, null),
 #pragma warning restore HAA0601
@@ -330,6 +341,8 @@ internal sealed record ProcessDocument(
         GateId.ChecksBeforeMerge => "Checks before merge",
         GateId.SpecApprovedBeforeBuild => "Spec approved before build",
         GateId.FailingTestBeforeFix => "Failing test before fix",
+        GateId.HumanGate => "Human gate",
+        GateId.ProofIncomplete => "Proof incomplete",
 #pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(gate), gate, null),
 #pragma warning restore HAA0601
@@ -340,7 +353,7 @@ internal sealed record ProcessDocument(
     /// <returns><see langword="true"/> when <paramref name="id"/> names one of the four gates.</returns>
     public static bool TryParseGate(string id, out GateId gate)
     {
-        foreach (GateId candidate in Enum.GetValues<GateId>())
+        foreach (GateId candidate in ProcessGates)
         {
             if (string.Equals(ToId(candidate), id, StringComparison.Ordinal))
             {
