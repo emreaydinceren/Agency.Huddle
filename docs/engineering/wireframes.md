@@ -26,6 +26,7 @@ see [design-system.md](design-system.md).
 - [Figure 7: The Teammates page](#figure-7-the-teammates-page)
 - [Figure 8: Overlays](#figure-8-overlays)
 - [Figure 9: The Build a team page](#figure-9-the-build-a-team-page)
+- [Figure 10: The Needs you page](#figure-10-the-needs-you-page)
 - [Using the codes](#using-the-codes)
 - [Sources and upkeep](#sources-and-upkeep)
 - [See also](#see-also)
@@ -52,6 +53,7 @@ A code is **a letter, a number and sometimes a lowercase letter**.
 | `P` | The Teammates page | [7](#figure-7-the-teammates-page) |
 | `O` | Overlays: dialogs, drawers, menus, toasts | [8](#figure-8-overlays) |
 | `B` | The Build a team page | [9](#figure-9-the-build-a-team-page) |
+| `N` | The Needs you page | [10](#figure-10-the-needs-you-page) |
 
 **Rules for keeping them stable**
 
@@ -111,7 +113,7 @@ this.
 | `S1b` | Search bar | `SearchBar` | Global search; its results open in a dropdown below it |
 | `S1c` | Top bar actions | `TasksNeedYouPill` (`a.tasks-need-you-pill`), `RightSidebarToggle`, `ThemeModeToggle` | The pill reads "N Tasks need you" (open Tasks assigned to the Human, `TaskQuery.NeedsYou`) and opens My Tasks; it renders only when N is above 0 and is shown only by a style pack (Nordic, ADR-0057), hidden for every other Theme. Of the two buttons, the first opens and closes the Right sidebar (`S4`): the Material Symbol `dock_to_left`, Primary and `aria-pressed` while open. The second switches between the chosen light and dark Theme. The top bar's icon buttons are 32px |
 | `S2` | Sidebar | `div#sidebar-views` in the left `MudDrawer` (`.shell-nav`), 240px | Drawn dashed: it shows the one view the Activity bar (`S5a`) selects, and is hidden while no view is selected. It opens on Chats in each circuit. The views are Chats (`S2a`, `S2b`), Teams (`S2c`), Teammates (`S2d`), Tasks (`S2e`) and Library (`S2f`); the figure draws Chats. Every view stays mounted while hidden, so it keeps its open groups. The drawer holds `S5` and `S2` side by side and is 49px collapsed, 289px open; not resizable. Rows are 32px (`--nav-row-height`) with 13px body-colour text, a 24px leading slot (an avatar, or an 18px icon centred in it) and an 8px gap. A row inside a group is indented 1rem (`--nav-indent-1`), which puts its icon a short step right of the group header's icon; a Team's Rooms and Projects take the same indent (`--nav-indent-2`), so their icon sits under the Team's name; Teammates and Library are rows, not headers. Section headers are 12px/600 in TextSecondary, sentence case, 16px above and 4px below. A group header is a 32px row, and opens by default when it is the only group in the view. Settings has no Sidebar view: opening it collapses the Sidebar. Every section header is visible at a 900px window |
-| `S2a` | Needs You card | `NeedsYouCard` | Rooms waiting on the Human, in a card outlined in Edge; the count is plain text, not a badge or a coloured chip. Each row is 32px: the reason icon, the Room's name and a trailing time, with no second line |
+| `S2a` | Needs You card | `NeedsYouCard` | Rooms waiting on the Human, then gated Tasks waiting for a decision, in a card outlined in Edge; the count is plain text, not a badge or a coloured chip, and covers both. Each row is 32px: the reason icon, the Room's name and a trailing time, with no second line. A Task row reads "<id> <title>" with "Waiting on you · Proof <m>/<n>" and links to `/needs-you#<id>` (`N2`) |
 | `S2b` | Rooms group | `RoomList` (`MudNavGroup` titled "Rooms"), `RoomNavRow`, `NewChat` | Rooms that belong to no Team. Groups are collapsed behind a chevron except the one holding the active page. A list over 8 rows ends in "Show all (N)" (`ShowAllRow`; "Show fewer" once open). The active row is accent text on Primary 14% over Surface (20% hovered), weight 500. A 1:1 Room's row leads with the Teammate's 24px avatar and its presence badge, a group Room's with the Chat icon; shared actions in `RoomActions`. The Room row's menu has an icon on every item and a divider before Delete (Error ink) |
 | `S2h` | New chat panel | `NewChat` (`.new-chat-panel`, `.floating-panel`) | A floating panel anchored under the "New chat" link or the Team row: an Edge outline and 32px/13px Teammate rows. It floats over the rows below and moves nothing. It ends in **Cancel** then **Start chat** |
 | `S2i` | Archived chats dialog | `ArchivedChatsDialog`, opened with `HuddleDialogOptions.ShortPicker` (600px, close button) | The archived Rooms. Each row is an icon, the Room's name, "Created Oct 3" (a Room has no archive timestamp), an **Unarchive** text button and a `MoreVert` menu holding **Delete** (Error ink, asked first). Opened from the Activity bar's Archived chats button (`S5b`) |
@@ -222,6 +224,31 @@ error alert, the budget caption and the "continue" notes, which sit in the `C9` 
 | `T6` | Task card | `TaskCard`, `MudBadge` | Draggable between columns; 12px padding, a 1px Divider border, 8px between cards. A header row (`.task-card-header`) holds the id (12px TextSecondary) and the priority as a tinted status chip with an icon; then the title (14px/600, up to 3 lines), tag chips, and the assignee (24px avatar, name 12px) with the presence badge on the avatar's rim. No left edge in the column colour. Overdue: a 14px warning icon before the date, the date in the error colour 70% + body text 30% at weight 600 (5.79:1 Dark, 9.70:1 Light); an overdue card shows its date even when the View hides Due date. On the List, the State and Priority cells are the same tinted chips |
 | `T7` | Task detail | `ResizableEndDrawer`, temporary, `Anchor.End` | Top to bottom: the eyebrow (12px TextSecondary, "PLAT-0013 · Platform": the id, then the Project or, with none, the Team), the title (the Task's name only, 16px/600, up to 3 lines) and the close button; then a right-aligned icons row (edit title, copy id, menu) just under the header; then `TaskDetail` in `pa-4`: five Group labels (12px/600 Quiet ink): Status and priority, People, Planning, Dates, Description. The actions are a sticky footer (Cancel and Save, a Chrome line on top), shown while there are changes and always for a draft. A draft opens with the title field focused and no ID. Edit title replaces the heading with a field at the heading's size. The menu is Copy id, Copy link, Make a copy…, a divider, then Close task… (Reopen when closed) in Error ink; Close task… asks first ("Close PLAT-0003?"), because it wakes the assignee. A draft reads "New task" with no eyebrow or "-0000" ID. From 400px of drawer width each field is a label \| value row (label column 120px, 13px TextSecondary); narrower, the label sits above the value. Team and Project are separate rows. Dates holds Start and Due only; Created, Updated and Closed are the footer meta (`.task-detail-footer-meta`, 12px TextSecondary) at the bottom, after the change log. The Description has a label, and on its line two icon buttons (Link a Library file, Attach a file) before the Edit \| Preview toggle, shown while the Library is on; Attach is off for a draft. Tag, blocker and triage chips are quiet; Closed and Request chips are tinted |
 | `T7a` | Resize handle | `.resizable-drawer-handle`, `role="separator"`, `tabindex="0"` | Drag, or press Left and Right (Shift for larger steps, Home and End for the limits), to change the drawer's width |
+
+The Human gate adds these containers (specification: [Huddle.HumanGate-Specifications.md](../Huddle.HumanGate-Specifications.md) §6.7 to §6.9). They are not drawn in the figure yet; the rows are the vocabulary.
+
+| Code | Name | Component | Notes |
+| --- | --- | --- | --- |
+| `T6a` | Gate chip | `TaskCard`, a chip in `T6` | Only on a gated Task. "Needs you" on a gated card in the Needs You column that is not accepted, "Accepted" once the acceptance is valid; on a gated card in any other status, a lock icon with `aria-label` "Human gate" |
+| `T10` | Human gate section | `TaskHumanGate`, `div.task-human-gate`, inside `T7`'s `TaskDetail` under the fields | The Human's rule for this Task. Rows top to bottom: `T10a`, `T10b`, `T10c`, `T10d`, `T10e`, `T10f` |
+| `T10a` | Gate header | `div.task-human-gate-header` | The chip "Human gate" and the sub-heading "You decide whether this is done" |
+| `T10b` | Acceptance switch | `div.task-human-gate-switch`, `MudSwitch` "Requires your acceptance" | Locked on, with a lock icon (tooltip and `aria-label` "This Task names an Action that leaves the team."), while the Task has an Action |
+| `T10c` | Action field | `MudTextField` in `T10b`'s row, label "What will happen" | One line; placeholder "Nothing leaves the team" |
+| `T10d` | Helper line | `div.task-human-gate-helper` | "<assignee> can move it to Needs you once every line has Proof. Teammates can't mark it Done." |
+| `T10e` | Done rule | `div.task-human-gate-done-rule` | "Can move to Done" with a lock and the chip "<Human> only" |
+| `T10f` | Explanation | `div.task-human-gate-explanation` | What Accept will do: nothing is sent when there is no Action; "Accepting lets <assignee> <action>." when there is one |
+| `T11` | Proof list | `TaskProofList`, `div.task-proof-list`, in `T7` under `T10` | On every Task with a Definition of Done. Heading `T11a`; one `T11b` per item |
+| `T11a` | Proof heading | `div.task-proof-heading` | "Proof" on a gated Task; "Definition of Done (for information)" on an ordinary one |
+| `T11b` | Proof row | `div.task-proof-row` (`data-met`) | A tick or open circle, then label, owner and detail (`.task-proof-label`, `.task-proof-owner`, `.task-proof-detail`), and on an open item with an owner `T11c` |
+| `T11c` | Ask button | A text button in `T11b` | "Ask <owner>" (accessible name adds "for <label>"). Posts "@<owner>, <id> needs <label> before it can come to me." into the Task's Room and shows a Snackbar |
+| `T12` | Decision card | `TaskDecisionCard`, `div.task-decision-card`, in `T7` for a gated Task in Review or Needs You, on `N2` and in `T14` | The Human's decision. Rows: `T12a` to `T12f` |
+| `T12a` | Decision header | `div.task-decision-header` | The chip "Your decision" |
+| `T12b` | Proof line | `div.task-decision-first-line`, then `div.task-decision-accept-sentence` | "<n> of <total> Proof items are in." or "All Proof is in.", then the sentence saying what Accept does |
+| `T12c` | Notice | One of `#task-decision-locked`, `#task-decision-review`, `#task-decision-unsaved`, `.task-decision-stale`, `.task-decision-accepted`, `.task-decision-message` | At most the ones that apply: the locked-Proof notice, "Accept unlocks when <assignee> moves it to Needs you.", "Save your changes before deciding.", "Changed since you accepted it.", "Accepted by <Human>. <assignee> can now <action>.", a `role="alert"` error |
+| `T12d` | Decision buttons | `div.task-decision-buttons` | **Request changes**, **Accept** (locked until allowed) and a "More decisions" menu holding **Decline**. Request changes and Decline open `ReasonDialog` ("Request changes on <id>" or "Decline <id>", field "Reason", required) |
+| `T12e` | Trail | `div.task-decision-trail` | "Drafted by <assignee> · Checked by <names> · Tracked as <id>" |
+| `T13` | Needs You column | `T5` for the Needs You status, between Review and Done | Header, count and empty note as `T5`. A gated card in it carries `T6a` |
+| `T14` | Decision dialog | `O1` holding `T12`, titled "Your decision on <id>" | Opens when the Human drops a gated card with complete Proof from Needs You onto Done. Shows the Proof and the Task text; **Cancel** (or Escape) leaves the card where it was |
 
 Not drawn: `TaskDetailDialog`, the dialog form of the detail (see Figure 8). A View has no editor panel: every change to it is saved as it is made.
 
@@ -392,6 +419,17 @@ popover (`O9`), which leaves the page as it is.
 ## Empty states
 
 `EmptyState` is the one component for "nothing here": a 32px TextSecondary icon, a required `Title` (14px/600, `role="status"`), a `Text` sentence (13px TextSecondary, 75ch) and an optional `Action`. Inline it sits centred in its block; a full-pane state adds `empty-state-centered`, which centres it horizontally and rests it a third of the way down the pane (two flex spacers split the free height 1:2). Every caller supplies both a title and a sentence. A column's one-line empty note (`T5`) is the exception: it is plain caption text.
+
+## Figure 10: The Needs you page
+
+`NeedsYouPage.razor`, route `/needs-you` (Tab title "Needs you"). Not drawn yet: the rows are the vocabulary. The sidebar's card (`S2a`) links here.
+
+| Code | Name | Component | Notes |
+| --- | --- | --- | --- |
+| `N1` | Page container | `MudContainer` (`page-reading`, `pa-4`) with `PageHeader` "Needs you" | Everything waiting on the Human, in one reading column |
+| `N2` | Task entry | `div.needs-you-page-task`, `id` = the Task id, around a `T12` | One per gated Task in Needs You that is not accepted, oldest first. `/needs-you#<id>` scrolls to it. It has no check: a decision or a status change removes it |
+| `N3` | Room entries | `NeedsYouList` | The Rooms waiting on the Human, below the Task entries |
+| `N4` | Empty state | `EmptyState` "Nothing needs you" | Shown when there are no Task and no Room entries: "Tasks waiting for your decision and Rooms waiting on you appear here." |
 
 ## Using the codes
 

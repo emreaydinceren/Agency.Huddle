@@ -178,6 +178,12 @@ before you create a component, a helper or a CSS class.
 | `MessageReferences` | `Components/References/MessageReferences.razor` | Under `C5c` | `Message` | The reference chips a Message carries |
 | `TeamSpend` | `Components/Teams/TeamSpend.razor` | `M3` | `Members` | Spend per currency for a set of Teammates |
 | `AiReactingChip` | `Components/Tasks/AiReactingChip.razor` | `T2c` | `Watched` | Tasks an Agent is acting on |
+| `TaskHumanGate` | `Components/Tasks/TaskHumanGate.razor` | `T10` | `Task`, `AssigneeName` | The Human gate section of the Task panel: the acceptance switch, the Action field and the Done rule. Lives in `TaskDetail` |
+| `TaskProofList` | `Components/Tasks/TaskProofList.razor` | `T11` | the Task, its `Proof` | The Definition of Done as a tick list with an Ask button on each open line. Lives in `TaskDetail` and on the decision card |
+| `TaskDecisionCard` | `Components/Tasks/TaskDecisionCard.razor` | `T12` | `Task`, `Proof`, `OnReload` | The Human's decision on a gated Task: Accept, Request changes, Decline. Lives in `TaskDetail`, on `NeedsYouPage` and in `TaskDecisionDialog` |
+| `TaskDecisionDialog` | `Components/Tasks/TaskDecisionDialog.razor` | `T14` | the Task | `TaskDecisionCard` in a dialog over the board, opened by a drop into Done from Needs You. Lives on the Tasks page |
+| `NeedsYouPage` | `Components/NeedsYou/NeedsYouPage.razor` | `N1` to `N4` | none (route `/needs-you`) | The page listing gated Tasks as decision cards, then the Rooms waiting on the Human |
+| `HumanGateCopy` | `Components/Tasks/HumanGateCopy.cs` | none | static strings and builders | Every word of the Human gate interface in one place. Add or change gate copy here, never inline |
 | `SearchCard` and the five `*SearchCard`s | `Components/Search/` | `S1b` dropdown | the hit, `Phrase` | A result row in Global search |
 
 ### Actions and input
