@@ -3,6 +3,7 @@ using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Tasks;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp.Tools;
 
@@ -14,15 +15,6 @@ namespace Agency.Huddle.Tests.Acp.Tools;
 /// </summary>
 public sealed class ReopenTaskToolTests
 {
-    /// <summary>Creates a Task through the harness's real <see cref="TaskService"/>, as the Human actor, for a test to reopen.</summary>
-    private static TaskItem CreateTask(TaskToolHarness harness, string? assignee = null)
-    {
-        TaskActor actor = TaskActors.Human(harness.Options.Value);
-        TaskDraft draft = new("Support SAML login", "Platform", null, Assignee: assignee);
-        TaskResult result = harness.Service.Create(draft, actor);
-        return Assert.IsType<TaskResult.Saved>(result).Task;
-    }
-
     /// <summary>Closes <paramref name="task"/> directly through the harness's real <see cref="TaskService"/>, so a test starts from a Closed Task without going through <see cref="ReopenTaskTool"/> itself.</summary>
     private static TaskItem CloseTask(TaskToolHarness harness, TaskItem task)
     {
@@ -34,22 +26,14 @@ public sealed class ReopenTaskToolTests
     private static ReopenTaskTool CreateTool(TaskToolHarness harness, string callerAgentId) =>
         new(harness.Service, harness.Store, harness.Triggers, harness.Directory, new FakePromptSource(), callerAgentId);
 
-    /// <summary>Narrows <see cref="TaskToolHarness.NovaId"/>, seeded by <see cref="TaskToolHarness.CreateAsync"/>, to a non-null caller id.</summary>
-    private static string RequireNovaId(TaskToolHarness harness)
-    {
-        string? novaId = harness.NovaId;
-        Assert.NotNull(novaId);
-        return novaId;
-    }
-
     /// <summary>Reopening a Closed Task moves it back out of "_closed" and reports success with the notify clause (Spec §11.6, §10.2).</summary>
     [Fact]
     public async Task InvokeAsync_ClosedTask_ReopensAndReturnsSuccessTextWithNotifyClause()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CloseTask(harness, CreateTask(harness, assignee: "Kai"));
-        ReopenTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = CloseTask(harness, harness.CreateTask("Support SAML login", assignee: "Kai"));
+        ReopenTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString() };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -66,8 +50,8 @@ public sealed class ReopenTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        ReopenTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        ReopenTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString() };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -81,7 +65,7 @@ public sealed class ReopenTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        ReopenTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        ReopenTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = "not-an-id" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -95,7 +79,7 @@ public sealed class ReopenTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        ReopenTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        ReopenTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = "PLAT-9999" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -109,7 +93,7 @@ public sealed class ReopenTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CloseTask(harness, CreateTask(harness));
+        TaskItem task = CloseTask(harness, harness.CreateTask("Support SAML login"));
         ReopenTaskTool tool = CreateTool(harness, "ghost-id");
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString() };
 
@@ -131,13 +115,13 @@ public sealed class ReopenTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CloseTask(harness, CreateTask(harness));
+        TaskItem task = CloseTask(harness, harness.CreateTask("Support SAML login"));
         string activePath = Path.Combine(harness.TasksDirPath, TestTaskStore.RelativePath("Platform", null, closed: false, $"{task.Id}.md"));
         string activeDir = Path.GetDirectoryName(activePath) ?? throw new InvalidOperationException("Expected a parent directory.");
         Directory.CreateDirectory(activeDir);
         File.WriteAllText(activePath, "racing file");
         harness.Store.RebuildFromWatcher();
-        ReopenTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        ReopenTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString() };
 
         string result = await tool.InvokeAsync(arguments, ct);

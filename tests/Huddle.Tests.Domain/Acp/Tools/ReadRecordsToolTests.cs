@@ -13,6 +13,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Ui.Teams;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp.Tools;
 
@@ -124,7 +125,7 @@ public sealed class ReadRecordsToolTests
         harness.Personas.Add(new PersonaIdentity("Sam", "Dev", "sam", [Team], Skills: skill), "You are Sam.");
         harness.Personas.Add(new PersonaIdentity("Zed", "Dev", "zed", [Team], Role: new RoleRef("web", "retro", "1.2.0")), "You are Zed.");
         harness.Personas.Add(new PersonaIdentity("Ola", "Retro", "ola", ["Design"], Skills: skill, Role: new RoleRef("web", "retro", "1.2.0")), "You are Ola.");
-        Scene scene = new() { Harness = harness, Chat = new FileChatStore(harness.Options, NullLogger<FileChatStore>.Instance) };
+        Scene scene = new() { Harness = harness, Chat = harness.Options.CreateChatStore() };
         foreach (string name in new[] { "Mia", "Rae", "Sam", "Zed", "Ola" })
         {
             User? user = await harness.Directory.UpsertAgentUserAsync(name, null, ct);

@@ -1,16 +1,10 @@
 namespace Agency.Huddle.Tests.Acp.Tools;
 
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using System.Text.Json.Nodes;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
-using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Services;
-using Agency.Huddle.App.Questions;
-using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>Covers roadmap item 8's <c>unfollow_room</c> tool: clearing a follow started by <c>follow_room</c>.</summary>
 public sealed class UnfollowRoomToolTests
@@ -21,12 +15,11 @@ public sealed class UnfollowRoomToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var caller = await directory.UpsertAgentUserAsync("caller", null, ct);
         Assert.NotNull(caller);
         var aliasSource = new FakeMentionAliasSource();
-        var chat = CreateChatService(dir, directory, aliasSource);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), aliases: aliasSource).Chat;
         var room = await chat.EnsureRoomForAsync(caller, ct);
         var follows = new RoomFollows();
         follows.Follow(caller.Id, room.Id);
@@ -45,12 +38,11 @@ public sealed class UnfollowRoomToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var caller = await directory.UpsertAgentUserAsync("caller", null, ct);
         Assert.NotNull(caller);
         var aliasSource = new FakeMentionAliasSource();
-        var chat = CreateChatService(dir, directory, aliasSource);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), aliases: aliasSource).Chat;
         var room = await chat.EnsureRoomForAsync(caller, ct);
         var follows = new RoomFollows();
         var tool = new UnfollowRoomTool(follows, directory, caller.Id, new FakePromptSource());
@@ -68,8 +60,7 @@ public sealed class UnfollowRoomToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var caller = await directory.UpsertAgentUserAsync("caller", null, ct);
         Assert.NotNull(caller);
         var follows = new RoomFollows();
@@ -87,8 +78,7 @@ public sealed class UnfollowRoomToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var follows = new RoomFollows();
         var tool = new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource());
 
@@ -97,22 +87,13 @@ public sealed class UnfollowRoomToolTests
         Assert.Contains("required", result, StringComparison.Ordinal);
     }
 
-    private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory, IMentionAliasSource aliasSource)
-    {
-        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
-        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var proposals = new ProposalStore(events);
-        return new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
-    }
-
     /// <summary>A <c>roomId</c> that is not JSON text is refused with the <c>'roomId' must be text.</c> refusal rather than throwing an <see cref="InvalidCastException"/>.</summary>
     [Fact]
     public async Task UnfollowRoom_NonStringRoomId_RefusesAsText()
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var tool = new UnfollowRoomTool(new RoomFollows(), directory, "caller-id", new FakePromptSource());
 
         var result = await tool.InvokeAsync(new JsonObject { ["roomId"] = 42 }, ct);

@@ -4,9 +4,9 @@ using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
-using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Pins <c>read_skill</c> against Spec §6.6 and Spec §5.3 Contract B, using a real
@@ -173,7 +173,7 @@ public sealed class ReadSkillToolTests
     /// <param name="dir">Supplies the store's <c>DataDir</c>.</param>
     private static PersonaStore CreatePersonaStore(TempDataDir dir)
     {
-        return new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        return dir.CreatePersonaStore();
     }
 
     /// <summary>A real <see cref="SkillStore"/> over a fresh <see cref="TempDataDir"/>, resolving the real shipped <c>team-building</c> Skill.</summary>

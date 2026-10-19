@@ -8,12 +8,9 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Tools;
-using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
-using Agency.Huddle.App.Services;
-using Agency.Huddle.App.Questions;
-using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Covers the progressive-discovery entry point: the system prompt names one tool, and this tool has
@@ -26,14 +23,10 @@ public sealed class GetHelpToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
-        using var personaStore = new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
-        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
-        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        using var personaStore = dir.CreatePersonaStore();
         var aliasSource = new FakeMentionAliasSource();
-        var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), aliases: aliasSource).Chat;
 
         var follows = new RoomFollows();
         IAppTool[] others =
@@ -70,12 +63,11 @@ public sealed class GetHelpToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new Agency.Huddle.Tests.TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var store = new Agency.Huddle.App.FileChanges.FileStateStore(dir.Options(), NullLogger<Agency.Huddle.App.FileChanges.FileStateStore>.Instance);
         var teammatePaths = new Agency.Huddle.App.Acp.TeammatePaths(dir.Options());
         var resolver = new Agency.Huddle.App.FileChanges.WatchedFolderResolver(dir.Options(), teammatePaths);
-        using var personaStore = new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        using var personaStore = dir.CreatePersonaStore();
         var tracker = new Agency.Huddle.App.FileChanges.FileChangeTracker(store, personaStore, directory, resolver, dir.Options(), teammatePaths, NullLogger<Agency.Huddle.App.FileChanges.FileChangeTracker>.Instance);
 
         IAppTool[] watchTools =
@@ -199,8 +191,8 @@ public sealed class GetHelpToolTests
         // The caller's list is copied on the way in, so a later mutation cannot change what an
         // Agent is told exists: the tool server was handed a fixed set at the same moment.
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        using var personaStore = new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        var directory = dir.CreateDirectory();
+        using var personaStore = dir.CreatePersonaStore();
         others.Add(new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakePromptSource()));
 
         var help = await tool.InvokeAsync(new JsonObject(), ct);
@@ -219,9 +211,8 @@ public sealed class GetHelpToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
-        using var personaStore = new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        using var personaStore = dir.CreatePersonaStore();
         IAppTool[] others = [new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakePromptSource())];
         var tool = new GetHelpTool(others, new FakePromptSource(), string.Empty);
 

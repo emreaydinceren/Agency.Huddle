@@ -1,7 +1,6 @@
 namespace Agency.Huddle.Tests.Acp.Tools;
 
 using System.Text.Json.Nodes;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp.Tools;
@@ -9,6 +8,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Pins <see cref="AskHumanTool"/> against Questions spec §6.2: the checks in their order, every
@@ -574,17 +574,22 @@ public sealed class AskHumanToolTests
         public static async Task<Fixture> CreateAsync(CancellationToken ct, int agentMessageBudget = 40)
         {
             TempDataDir dataDir = new();
-            IOptions<TeamOptions> options = Microsoft.Extensions.Options.Options.Create(
-                new TeamOptions { DataDir = dataDir.Path, AgentMessageBudget = agentMessageBudget });
-            SqliteTeamDirectory directory = new(options);
-            await directory.InitializeAsync("You", ct);
-            FileChatStore store = new(options, NullLogger<FileChatStore>.Instance);
-            RoomEvents events = new(NullLogger<RoomEvents>.Instance);
-            QuestionStore questions = new(events);
-            ChatService chat = new(
-                directory, store, events, new FakeMentionAliasSource(), options, new Agency.Huddle.App.Teammates.ProposalStore(events), questions, NullLogger<ChatService>.Instance);
+            IOptions<TeamOptions> options = dataDir.Options(o => o.AgentMessageBudget = agentMessageBudget);
+            SqliteTeamDirectory directory = options.CreateDirectory();
+            ChatStack stack = ChatServiceFactory.Create(directory, options);
+            Fixture fixture = new(dataDir, directory, stack.Questions, stack.Chat);
+            try
+            {
+                await directory.InitializeAsync("You", ct);
+            }
+            catch
+            {
+                // The fixture already owns the temp directory: release it, then let the original failure surface.
+                fixture.Dispose();
+                throw;
+            }
 
-            return new Fixture(dataDir, directory, questions, chat);
+            return fixture;
         }
 
         /// <summary>Registers an Agent User under <paramref name="name"/>.</summary>

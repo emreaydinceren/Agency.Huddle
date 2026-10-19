@@ -3,6 +3,7 @@ using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Tasks;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp.Tools;
 
@@ -14,26 +15,9 @@ namespace Agency.Huddle.Tests.Acp.Tools;
 /// </summary>
 public sealed class CloseTaskToolTests
 {
-    /// <summary>Creates a Task through the harness's real <see cref="TaskService"/>, as the Human actor, for a test to close.</summary>
-    private static TaskItem CreateTask(TaskToolHarness harness, string? assignee = null)
-    {
-        TaskActor actor = TaskActors.Human(harness.Options.Value);
-        TaskDraft draft = new("Support SAML login", "Platform", null, Assignee: assignee);
-        TaskResult result = harness.Service.Create(draft, actor);
-        return Assert.IsType<TaskResult.Saved>(result).Task;
-    }
-
     /// <summary>Builds a <see cref="CloseTaskTool"/> over <paramref name="harness"/>'s real collaborators, calling as <paramref name="callerAgentId"/>.</summary>
     private static CloseTaskTool CreateTool(TaskToolHarness harness, string callerAgentId) =>
         new(harness.Service, harness.Store, harness.Triggers, harness.Directory, new FakePromptSource(), callerAgentId);
-
-    /// <summary>Narrows <see cref="TaskToolHarness.NovaId"/>, seeded by <see cref="TaskToolHarness.CreateAsync"/>, to a non-null caller id.</summary>
-    private static string RequireNovaId(TaskToolHarness harness)
-    {
-        string? novaId = harness.NovaId;
-        Assert.NotNull(novaId);
-        return novaId;
-    }
 
     /// <summary>Closing an Active Task moves it into "_closed" and reports success with the notify clause (Spec §11.6, §10.2).</summary>
     [Fact]
@@ -41,8 +25,8 @@ public sealed class CloseTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness, assignee: "Kai");
-        CloseTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login", assignee: "Kai");
+        CloseTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString() };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -59,8 +43,8 @@ public sealed class CloseTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        CloseTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        CloseTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString() };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -74,10 +58,10 @@ public sealed class CloseTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
+        TaskItem task = harness.CreateTask("Support SAML login");
         TaskResult closeResult = harness.Service.Close(task.Id, TaskActors.Human(harness.Options.Value));
         Assert.IsType<TaskResult.Saved>(closeResult);
-        CloseTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        CloseTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString() };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -91,7 +75,7 @@ public sealed class CloseTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CloseTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        CloseTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = "not-an-id" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -105,7 +89,7 @@ public sealed class CloseTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CloseTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        CloseTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = "PLAT-9999" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -119,7 +103,7 @@ public sealed class CloseTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
+        TaskItem task = harness.CreateTask("Support SAML login");
         CloseTaskTool tool = CreateTool(harness, "ghost-id");
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString() };
 
@@ -141,13 +125,13 @@ public sealed class CloseTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
+        TaskItem task = harness.CreateTask("Support SAML login");
         string closedPath = Path.Combine(harness.TasksDirPath, TestTaskStore.RelativePath("Platform", null, closed: true, $"{task.Id}.md"));
         string closedDir = Path.GetDirectoryName(closedPath) ?? throw new InvalidOperationException("Expected a parent directory.");
         Directory.CreateDirectory(closedDir);
         File.WriteAllText(closedPath, "racing file");
         harness.Store.RebuildFromWatcher();
-        CloseTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        CloseTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString() };
 
         string result = await tool.InvokeAsync(arguments, ct);

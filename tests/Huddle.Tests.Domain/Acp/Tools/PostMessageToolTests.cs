@@ -1,6 +1,5 @@
 namespace Agency.Huddle.Tests.Acp.Tools;
 
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using System.Text.Json.Nodes;
 using Agency.Huddle.App;
@@ -8,9 +7,8 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
-using Agency.Huddle.App.Questions;
-using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Factories;
 
 public sealed class PostMessageToolTests
 {
@@ -19,15 +17,11 @@ public sealed class PostMessageToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
-        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
-        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
+        var (chat, store, _, _, _) = ChatServiceFactory.Create(directory, dir.Options());
         var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), new OwnPosts(Options.Create(new TeamOptions())));
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello there" };
 
@@ -45,15 +39,11 @@ public sealed class PostMessageToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
-        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
-        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
+        var (chat, store, _, _, _) = ChatServiceFactory.Create(directory, dir.Options());
         var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), new OwnPosts(Options.Create(new TeamOptions())));
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello" };
 
@@ -70,15 +60,11 @@ public sealed class PostMessageToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
-        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
-        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
+        var (chat, _, _, _, _) = ChatServiceFactory.Create(directory, dir.Options());
         var ownPosts = new OwnPosts(Options.Create(new TeamOptions()));
         var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), ownPosts);
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello there" };
@@ -94,15 +80,11 @@ public sealed class PostMessageToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
-        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
-        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
+        var (chat, _, _, _, _) = ChatServiceFactory.Create(directory, dir.Options());
         var ownPosts = new OwnPosts(Options.Create(new TeamOptions()));
         var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), ownPosts);
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello" };
@@ -117,15 +99,11 @@ public sealed class PostMessageToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
-        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
-        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
+        var (chat, _, events, _, _) = ChatServiceFactory.Create(directory, dir.Options());
         var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), new OwnPosts(Options.Create(new TeamOptions())));
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "from a threadpool thread" };
         var tcs = new TaskCompletionSource<MessagePostedEvent>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -157,12 +135,8 @@ public sealed class PostMessageToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
-        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
-        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var (chat, _, _, _, _) = ChatServiceFactory.Create(directory, dir.Options());
         var tool = new PostMessageTool(chat, "echo-id", new FakePromptSource(), new OwnPosts(Options.Create(new TeamOptions())));
         var arguments = new JsonObject { ["roomId"] = "some-room", ["text"] = "hello" };
         arguments[wrongArgument] = 42;

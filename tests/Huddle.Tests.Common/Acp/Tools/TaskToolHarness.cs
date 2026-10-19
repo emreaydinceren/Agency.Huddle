@@ -12,9 +12,8 @@ using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
-using Agency.Huddle.App.Questions;
-using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Factories;
 using UiFakeAgentGateway = Agency.Huddle.Tests.Ui.FakeAgentGateway;
 
 namespace Agency.Huddle.Tests.Acp.Tools;
@@ -76,11 +75,7 @@ internal sealed class TaskToolHarness : IDisposable
 
         this.Clock = clock ?? TimeProvider.System;
 
-        this.Personas = new PersonaStore(
-            new TeammatePaths(this.Options),
-            new PersonaModelStore(this.Options),
-            new PersonaEffortStore(this.Options), new PersonaWorkModeStore(this.Options),
-            NullLogger<PersonaStore>.Instance);
+        this.Personas = this.Options.CreatePersonaStore();
         // "Platform" is the same default Team TestTasks.Make and TaskStoreTests fixtures already
         // assume, so a test creating a Task through TaskService (which refuses an unknown Team,
         // TaskService.cs:461) needs no team of its own just to pick a Location.
@@ -110,19 +105,10 @@ internal sealed class TaskToolHarness : IDisposable
         this.Avatars = new AvatarStore(this.Options, NullLogger<AvatarStore>.Instance);
         this.Gateway = new UiFakeAgentGateway();
 
-        this.Directory = new SqliteTeamDirectory(this.Options);
-        FileChatStore chatStore = new(this.Options, NullLogger<FileChatStore>.Instance);
-        this.RoomEvents = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        ProposalStore proposals = new(this.RoomEvents);
-        this.Chat = new ChatService(
-            this.Directory,
-            chatStore,
-            this.RoomEvents,
-            new FakeMentionAliasSource(),
-            this.Options,
-            proposals,
-            new QuestionStore(this.RoomEvents),
-            NullLogger<ChatService>.Instance);
+        this.Directory = this.Options.CreateDirectory();
+        ChatStack stack = ChatServiceFactory.Create(this.Directory, this.Options);
+        this.RoomEvents = stack.Events;
+        this.Chat = stack.Chat;
         this.OwnPosts = new OwnPosts(this.Options);
         this.Triggers = new TaskTriggerService(
             this.Events,

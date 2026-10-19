@@ -1,12 +1,11 @@
 namespace Agency.Huddle.Tests.Acp.Tools;
 
 using System.Text.Json.Nodes;
-using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
-using Agency.Huddle.App.Data;
 using Agency.Huddle.Tests.Acp;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Factories;
 
 public sealed class ListAgentsToolTests
 {
@@ -15,13 +14,12 @@ public sealed class ListAgentsToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var gateway = new FakeAgentGateway();
         gateway.SetOnline(echo.Id);
-        using var personaStore = new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        using var personaStore = dir.CreatePersonaStore();
         personaStore.Add(new PersonaIdentity("coo", "coo", "coo", []), "You are the Chief of Staff.");
         var tool = new ListAgentsTool(directory, gateway, personaStore, new FakePromptSource());
 
@@ -37,8 +35,7 @@ public sealed class ListAgentsToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var coo = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(coo);
         var gateway = new FakeAgentGateway();
@@ -54,7 +51,7 @@ public sealed class ListAgentsToolTests
             "coo",
             "---\nName: coo\nTitle: coo\nAlias: coo\nrole: 'Router, triage, and cross-workstation continuity'\n---\nYou are the Chief of Staff.");
 
-        using var personaStore = new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        using var personaStore = dir.CreatePersonaStore();
         var tool = new ListAgentsTool(directory, gateway, personaStore, new FakePromptSource());
 
         var result = await tool.InvokeAsync(new JsonObject(), ct);
@@ -68,13 +65,12 @@ public sealed class ListAgentsToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
-        await directory.InitializeAsync("You", ct);
+        var directory = await dir.CreateDirectoryAsync(ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
         var gateway = new FakeAgentGateway();
         gateway.SetOnline(echo.Id);
-        using var personaStore = new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        using var personaStore = dir.CreatePersonaStore();
         var tool = new ListAgentsTool(directory, gateway, personaStore, new FakePromptSource());
 
         var result = await tool.InvokeAsync(new JsonObject(), ct);

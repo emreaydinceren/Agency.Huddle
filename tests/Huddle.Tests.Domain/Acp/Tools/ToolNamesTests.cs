@@ -1,17 +1,15 @@
 namespace Agency.Huddle.Tests.Acp.Tools;
 
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Tools;
-using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Factories;
 
 public sealed class ToolNamesTests
 {
@@ -19,14 +17,11 @@ public sealed class ToolNamesTests
     public void Tools_HaveTheExpectedMcpNames()
     {
         using var dir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dir.Options());
+        var directory = dir.CreateDirectory();
         var gateway = new FakeAgentGateway();
-        using var personaStore = new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
-        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
-        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        using var personaStore = dir.CreatePersonaStore();
         var aliasSource = new FakeMentionAliasSource();
-        var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
+        var (chat, _, events, proposals, _) = ChatServiceFactory.Create(directory, dir.Options(), aliases: aliasSource);
 
         var follows = new RoomFollows();
         var checker = new CandidateChecker(personaStore, directory, gateway);

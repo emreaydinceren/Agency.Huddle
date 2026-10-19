@@ -10,6 +10,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Factories;
 using Agency.Huddle.Tests.Teammates;
 
 /// <summary>
@@ -383,27 +384,28 @@ public sealed class ProposeTeammatesToolTests
         {
             var dataDir = new TempDataDir();
 
-            // Fully qualified, not a bare "Options.Create(...)": this type's own Options property
-            // (below) would otherwise bind first and fail with CS0120, since a static method cannot
-            // reach an instance member through a simple name - TempDataDir.Options() sidesteps the
-            // same hazard by never calling the factory from inside its own body.
-            IOptions<TeamOptions> options = Microsoft.Extensions.Options.Options.Create(new TeamOptions
-            {
-                DataDir = dataDir.Path,
-                Acp = new AcpOptions { MaxTeammatesPerTeam = maxPerTeam, MaxLiveProcesses = maxLive },
-            });
+            IOptions<TeamOptions> options = dataDir.Options(o => o.Acp = new AcpOptions { MaxTeammatesPerTeam = maxPerTeam, MaxLiveProcesses = maxLive });
 
-            var directory = new SqliteTeamDirectory(options);
-            await directory.InitializeAsync("You", ct);
-
-            var personas = new PersonaStore(
-                new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
+            var directory = options.CreateDirectory();
+            var personas = options.CreatePersonaStore();
             var gateway = new FakeAgentGateway();
             var checker = new CandidateChecker(personas, directory, gateway);
             var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
             var proposals = new ProposalStore(events);
 
-            return new Fixture(dataDir, directory, personas, checker, proposals, options, new HireLimitHarness(options));
+            var fixture = new Fixture(dataDir, directory, personas, checker, proposals, options, new HireLimitHarness(options));
+            try
+            {
+                await directory.InitializeAsync("You", ct);
+            }
+            catch
+            {
+                // The fixture already owns the temp directory and the persona store: release them, then let the original failure surface.
+                fixture.Dispose();
+                throw;
+            }
+
+            return fixture;
         }
 
         /// <summary>Builds a <see cref="ProposeTeammatesTool"/> calling as <paramref name="callerAgentId"/>, wired to this fixture's collaborators.</summary>

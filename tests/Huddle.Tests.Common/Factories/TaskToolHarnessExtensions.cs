@@ -18,6 +18,7 @@ internal static class TaskToolHarnessExtensions
     /// <param name="tags">The tags, or <see langword="null"/> for none.</param>
     /// <param name="description">The description; <see langword="null"/> gives an empty one.</param>
     /// <param name="sprint">The Sprint, or <see langword="null"/>.</param>
+    /// <param name="dueDate">The due date, or <see langword="null"/> for none.</param>
     public static TaskItem CreateTask(
         this TaskToolHarness harness,
         string title = "T",
@@ -29,7 +30,8 @@ internal static class TaskToolHarnessExtensions
         TaskId? parent = null,
         IReadOnlyList<string>? tags = null,
         string? description = null,
-        SprintId? sprint = null)
+        SprintId? sprint = null,
+        DateOnly? dueDate = null)
     {
         TaskDraft draft = new(
             title,
@@ -41,7 +43,8 @@ internal static class TaskToolHarnessExtensions
             Parent: parent,
             Tags: tags,
             Description: description ?? string.Empty,
-            Sprint: sprint);
+            Sprint: sprint,
+            DueDate: dueDate);
         TaskResult result = harness.Service.Create(draft, harness.HumanActor());
         return Assert.IsType<TaskResult.Saved>(result).Task;
     }

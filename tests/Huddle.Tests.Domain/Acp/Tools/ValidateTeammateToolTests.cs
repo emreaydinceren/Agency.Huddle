@@ -1,10 +1,10 @@
 using System.Text.Json.Nodes;
-using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp.Tools;
 
@@ -107,15 +107,24 @@ public sealed class ValidateTeammateToolTests
     private static async Task<Fixture> CreateFixtureAsync(CancellationToken ct)
     {
         var dataDir = new TempDataDir();
-        var directory = new SqliteTeamDirectory(dataDir.Options());
-        await directory.InitializeAsync("You", ct);
-
-        var personas = new PersonaStore(
-            new TeammatePaths(dataDir.Options()), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), new PersonaWorkModeStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
+        var directory = dataDir.CreateDirectory();
+        var personas = dataDir.CreatePersonaStore();
         var gateway = new FakeAgentGateway();
         var checker = new CandidateChecker(personas, directory, gateway);
 
-        return new Fixture(dataDir, personas, checker);
+        var fixture = new Fixture(dataDir, personas, checker);
+        try
+        {
+            await directory.InitializeAsync("You", ct);
+        }
+        catch
+        {
+            // The fixture already owns the temp directory and the persona store: release them, then let the original failure surface.
+            fixture.Dispose();
+            throw;
+        }
+
+        return fixture;
     }
 
     /// <summary>Bundles the real collaborators one <see cref="ValidateTeammateTool"/> under test needs, torn down together.</summary>

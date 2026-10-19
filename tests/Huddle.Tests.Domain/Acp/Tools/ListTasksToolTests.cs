@@ -4,6 +4,7 @@ using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Tasks;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp.Tools;
 
@@ -37,14 +38,6 @@ public sealed class ListTasksToolTests
         harness.Store.RebuildFromWatcher();
     }
 
-    /// <summary>Resolves and asserts Nova's seeded user id, narrowing it to non-null for the rest of the test.</summary>
-    private static string NovaId(TaskToolHarness harness)
-    {
-        string? novaId = harness.NovaId;
-        Assert.NotNull(novaId);
-        return novaId;
-    }
-
     private static ListTasksTool CreateTool(TaskToolHarness harness, string callerAgentId) =>
         new(harness.Store, harness.Directory, harness.Personas, harness.Sprints, new FakePromptSource(), callerAgentId);
 
@@ -57,7 +50,7 @@ public sealed class ListTasksToolTests
         TaskItem platform = TestTasks.Make(id: "PLAT-0001", title: "In Platform");
         TaskItem other = TestTasks.Make(id: "OPS-0001", title: "In Ops", location: new TaskLocation("Ops", null, false));
         Seed(harness, platform, other);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["team"] = "Platform" }, ct);
 
@@ -73,7 +66,7 @@ public sealed class ListTasksToolTests
         TaskItem withProject = TestTasks.Make(id: "PLAT-0001", title: "In Auth v2", location: new TaskLocation("Platform", "Auth v2", false));
         TaskItem noProject = TestTasks.Make(id: "PLAT-0002", title: "No project", location: new TaskLocation("Platform", null, false));
         Seed(harness, withProject, noProject);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["team"] = "Platform", ["project"] = "Auth v2" }, ct);
 
@@ -86,7 +79,7 @@ public sealed class ListTasksToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["project"] = "Auth v2" }, ct);
 
@@ -102,7 +95,7 @@ public sealed class ListTasksToolTests
         TaskItem novaTask = TestTasks.Make(id: "PLAT-0001", title: "Nova's", assignee: "Nova");
         TaskItem kaiTask = TestTasks.Make(id: "PLAT-0002", title: "Kai's", assignee: "Kai");
         Seed(harness, novaTask, kaiTask);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["assignee"] = "me" }, ct);
 
@@ -131,7 +124,7 @@ public sealed class ListTasksToolTests
         TaskItem unassigned = TestTasks.Make(id: "PLAT-0001", title: "Nobody", assignee: null);
         TaskItem assigned = TestTasks.Make(id: "PLAT-0002", title: "Someone", assignee: "Nova");
         Seed(harness, unassigned, assigned);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["assignee"] = "unassigned" }, ct);
 
@@ -148,7 +141,7 @@ public sealed class ListTasksToolTests
         TaskItem rhoTask = TestTasks.Make(id: "PLAT-0001", title: "Rho's", assignee: "Rho");
         TaskItem novaTask = TestTasks.Make(id: "PLAT-0002", title: "Nova's", assignee: "Nova");
         Seed(harness, rhoTask, novaTask);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["assignee"] = "R" }, ct);
 
@@ -164,7 +157,7 @@ public sealed class ListTasksToolTests
         TaskItem kaiTask = TestTasks.Make(id: "PLAT-0001", title: "Kai's", assignee: "Kai");
         TaskItem novaTask = TestTasks.Make(id: "PLAT-0002", title: "Nova's", assignee: "Nova");
         Seed(harness, kaiTask, novaTask);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["assignee"] = "Kai" }, ct);
 
@@ -180,7 +173,7 @@ public sealed class ListTasksToolTests
         TaskItem inProgress = TestTasks.Make(id: "PLAT-0001", title: "Doing", status: TaskState.InProgress);
         TaskItem done = TestTasks.Make(id: "PLAT-0002", title: "Finished", status: TaskState.Done);
         Seed(harness, inProgress, done);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["status"] = new JsonArray { "In Progress" } }, ct);
 
@@ -197,7 +190,7 @@ public sealed class ListTasksToolTests
         TaskItem inProgress = TestTasks.Make(id: "PLAT-0002", title: "Doing", status: TaskState.InProgress);
         TaskItem done = TestTasks.Make(id: "PLAT-0003", title: "Finished", status: TaskState.Done);
         Seed(harness, toDo, inProgress, done);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["status"] = new JsonArray { "To Do", "In Progress" } }, ct);
 
@@ -214,7 +207,7 @@ public sealed class ListTasksToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["status"] = new JsonArray { "Blah" } }, ct);
 
@@ -230,7 +223,7 @@ public sealed class ListTasksToolTests
         TaskItem urgent = TestTasks.Make(id: "PLAT-0001", title: "Fire", priority: TaskPriority.Urgent);
         TaskItem low = TestTasks.Make(id: "PLAT-0002", title: "Someday", priority: TaskPriority.Low);
         Seed(harness, urgent, low);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["priority"] = new JsonArray { "Urgent" } }, ct);
 
@@ -243,7 +236,7 @@ public sealed class ListTasksToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["priority"] = new JsonArray { "Extreme" } }, ct);
 
@@ -259,7 +252,7 @@ public sealed class ListTasksToolTests
         TaskItem active = TestTasks.Make(id: "PLAT-0001", title: "Open", location: new TaskLocation("Platform", null, false));
         TaskItem closed = TestTasks.Make(id: "PLAT-0002", title: "Shut", location: new TaskLocation("Platform", null, true));
         Seed(harness, active, closed);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync([], ct);
 
@@ -275,7 +268,7 @@ public sealed class ListTasksToolTests
         TaskItem active = TestTasks.Make(id: "PLAT-0001", title: "Open", location: new TaskLocation("Platform", null, false));
         TaskItem closed = TestTasks.Make(id: "PLAT-0002", title: "Shut", location: new TaskLocation("Platform", null, true));
         Seed(harness, active, closed);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["scope"] = "closed" }, ct);
 
@@ -288,7 +281,7 @@ public sealed class ListTasksToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["scope"] = "sideways" }, ct);
 
@@ -304,7 +297,7 @@ public sealed class ListTasksToolTests
         TaskItem saml = TestTasks.Make(id: "PLAT-0001", title: "Support SAML login");
         TaskItem other = TestTasks.Make(id: "PLAT-0002", title: "Fix the footer");
         Seed(harness, saml, other);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["text"] = "saml" }, ct);
 
@@ -321,7 +314,7 @@ public sealed class ListTasksToolTests
         TaskItem second = TestTasks.Make(id: "PLAT-0002", title: "Two");
         TaskItem third = TestTasks.Make(id: "PLAT-0003", title: "Three");
         Seed(harness, first, second, third);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["limit"] = 2 }, ct);
 
@@ -341,7 +334,7 @@ public sealed class ListTasksToolTests
         }
 
         Seed(harness, tasks);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync([], ct);
 
@@ -354,7 +347,7 @@ public sealed class ListTasksToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["limit"] = 0 }, ct);
 
@@ -367,7 +360,7 @@ public sealed class ListTasksToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["limit"] = 201 }, ct);
 
@@ -380,7 +373,7 @@ public sealed class ListTasksToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["team"] = "Nowhere" }, ct);
 
@@ -397,7 +390,7 @@ public sealed class ListTasksToolTests
         TaskItem urgentLaterDue = TestTasks.Make(id: "PLAT-0002", title: "Urgent later", priority: TaskPriority.Urgent, dueDate: new DateOnly(2026, 12, 1));
         TaskItem urgentSoonerDue = TestTasks.Make(id: "PLAT-0001", title: "Urgent sooner", priority: TaskPriority.Urgent, dueDate: new DateOnly(2026, 10, 1));
         Seed(harness, low, urgentLaterDue, urgentSoonerDue);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync([], ct);
 
@@ -413,7 +406,7 @@ public sealed class ListTasksToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["team"] = 7 }, ct);
 
@@ -426,7 +419,7 @@ public sealed class ListTasksToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["project"] = 7 }, ct);
 
@@ -439,7 +432,7 @@ public sealed class ListTasksToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["assignee"] = 7 }, ct);
 
@@ -452,7 +445,7 @@ public sealed class ListTasksToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["status"] = "In Progress" }, ct);
 
@@ -465,7 +458,7 @@ public sealed class ListTasksToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["priority"] = "Urgent" }, ct);
 
@@ -478,7 +471,7 @@ public sealed class ListTasksToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["text"] = 7 }, ct);
 
@@ -491,7 +484,7 @@ public sealed class ListTasksToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["limit"] = "many" }, ct);
 
@@ -504,7 +497,7 @@ public sealed class ListTasksToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        ListTasksTool tool = CreateTool(harness, NovaId(harness));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
 
         string result = await tool.InvokeAsync(new JsonObject { ["scope"] = 7 }, ct);
 

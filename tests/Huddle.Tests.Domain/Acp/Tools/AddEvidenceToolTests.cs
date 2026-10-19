@@ -3,6 +3,7 @@ using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp.Tools;
 
@@ -13,13 +14,6 @@ namespace Agency.Huddle.Tests.Acp.Tools;
 public sealed class AddEvidenceToolTests
 {
     private static readonly DateTimeOffset Noon = new(2026, 10, 8, 12, 0, 0, TimeSpan.Zero);
-
-    /// <summary>Creates a Task through the harness's real service.</summary>
-    private static TaskItem CreateTask(TaskToolHarness harness)
-    {
-        TaskResult result = harness.Service.Create(new TaskDraft("Fix login", "Platform", null), TaskActors.Human(harness.Options.Value));
-        return Assert.IsType<TaskResult.Saved>(result).Task;
-    }
 
     /// <summary>Builds the tool over the harness, calling as Nova.</summary>
     private static AddEvidenceTool CreateTool(TaskToolHarness harness, ToolCallLogWriter log)
@@ -47,7 +41,7 @@ public sealed class AddEvidenceToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon));
-        TaskItem task = CreateTask(harness);
+        TaskItem task = harness.CreateTask("Fix login");
         ToolCallLogWriter log = new(harness.Options);
         _ = Log(log, Noon.AddMinutes(-5), "Bash", "dotnet test Huddle.slnx");
         ToolCallLogRef second = Log(log, Noon.AddMinutes(-2), "Bash", "dotnet test Huddle.slnx --");
@@ -73,7 +67,7 @@ public sealed class AddEvidenceToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon));
-        TaskItem task = CreateTask(harness);
+        TaskItem task = harness.CreateTask("Fix login");
         ToolCallLogWriter log = new(harness.Options);
         _ = Log(log, Noon.AddMinutes(-1), "Bash", "git status");
         AddEvidenceTool tool = CreateTool(harness, log);
@@ -93,7 +87,7 @@ public sealed class AddEvidenceToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon));
-        TaskItem task = CreateTask(harness);
+        TaskItem task = harness.CreateTask("Fix login");
         ToolCallLogWriter log = new(harness.Options);
         _ = Log(log, Noon.AddMinutes(-1), "Bash", "dotnet test");
         AddEvidenceTool tool = CreateTool(harness, log);
@@ -112,7 +106,7 @@ public sealed class AddEvidenceToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon));
-        TaskItem task = CreateTask(harness);
+        TaskItem task = harness.CreateTask("Fix login");
         AddEvidenceTool tool = CreateTool(harness, new ToolCallLogWriter(harness.Options));
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["note"] = "Checked on staging." };
 
@@ -130,7 +124,7 @@ public sealed class AddEvidenceToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon));
-        TaskItem task = CreateTask(harness);
+        TaskItem task = harness.CreateTask("Fix login");
         AddEvidenceTool tool = CreateTool(harness, new ToolCallLogWriter(harness.Options));
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["command"] = "dotnet test", ["note"] = "green | on CI" };
 
@@ -160,7 +154,7 @@ public sealed class AddEvidenceToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon));
-        TaskItem task = CreateTask(harness);
+        TaskItem task = harness.CreateTask("Fix login");
         AddEvidenceTool tool = CreateTool(harness, new ToolCallLogWriter(harness.Options));
         await File.AppendAllTextAsync(task.Path, "\n- 2026-10-08T11:00:00Z | You | edited by hand\n", ct);
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["command"] = "dotnet test" };
@@ -176,7 +170,7 @@ public sealed class AddEvidenceToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon));
-        TaskItem task = CreateTask(harness);
+        TaskItem task = harness.CreateTask("Fix login");
         AddEvidenceTool tool = CreateTool(harness, new ToolCallLogWriter(harness.Options));
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString() };
 
@@ -192,7 +186,7 @@ public sealed class AddEvidenceToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon));
-        TaskItem task = CreateTask(harness);
+        TaskItem task = harness.CreateTask("Fix login");
         AddEvidenceTool tool = CreateTool(harness, new ToolCallLogWriter(harness.Options));
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["command"] = "dotnet test", ["logRef"] = "somewhere" };
 

@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Acp.Tools;
 
@@ -16,34 +17,9 @@ namespace Agency.Huddle.Tests.Acp.Tools;
 /// </summary>
 public sealed class UpdateTaskToolTests
 {
-    /// <summary>Creates a Task through the harness's real <see cref="TaskService"/>, as the Human actor, for a test to update.</summary>
-    private static TaskItem CreateTask(
-        TaskToolHarness harness,
-        string title = "Support SAML login",
-        string team = "Platform",
-        string? project = null,
-        TaskState status = TaskState.ToDo,
-        TaskPriority priority = TaskPriority.Medium,
-        string? assignee = null,
-        DateOnly? dueDate = null)
-    {
-        TaskActor actor = TaskActors.Human(harness.Options.Value);
-        TaskDraft draft = new(title, team, project, status, priority, assignee, DueDate: dueDate);
-        TaskResult result = harness.Service.Create(draft, actor);
-        return Assert.IsType<TaskResult.Saved>(result).Task;
-    }
-
     /// <summary>Builds an <see cref="UpdateTaskTool"/> over <paramref name="harness"/>'s real collaborators, calling as <paramref name="callerAgentId"/>.</summary>
     private static UpdateTaskTool CreateTool(TaskToolHarness harness, string callerAgentId) =>
         new(harness.Service, harness.Store, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), callerAgentId);
-
-    /// <summary>Narrows <see cref="TaskToolHarness.NovaId"/>, seeded by <see cref="TaskToolHarness.CreateAsync"/>, to a non-null caller id.</summary>
-    private static string RequireNovaId(TaskToolHarness harness)
-    {
-        string? novaId = harness.NovaId;
-        Assert.NotNull(novaId);
-        return novaId;
-    }
 
     /// <summary>A patch with only <c>taskId</c> is refused before touching the store (Spec §11.5).</summary>
     [Fact]
@@ -51,8 +27,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString() };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -66,8 +42,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness, title: "Support SAML login");
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask(title: "Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["title"] = "Support SAML login" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -81,8 +57,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness, status: TaskState.ToDo, priority: TaskPriority.Medium, assignee: "Kai");
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login", status: TaskState.ToDo, priority: TaskPriority.Medium, assignee: "Kai");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new()
         {
             ["taskId"] = task.Id.ToString(),
@@ -103,9 +79,9 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        TaskItem other = CreateTask(harness, title: "Other");
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        TaskItem other = harness.CreateTask(title: "Other");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new()
         {
             ["taskId"] = task.Id.ToString(),
@@ -126,8 +102,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["title"] = "Renamed title" };
 
         await tool.InvokeAsync(arguments, ct);
@@ -143,8 +119,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["description"] = "New details." };
 
         await tool.InvokeAsync(arguments, ct);
@@ -160,8 +136,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness, status: TaskState.ToDo);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login", status: TaskState.ToDo);
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["status"] = "Review" };
 
         await tool.InvokeAsync(arguments, ct);
@@ -177,8 +153,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness, priority: TaskPriority.Low);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login", priority: TaskPriority.Low);
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["priority"] = "Urgent" };
 
         await tool.InvokeAsync(arguments, ct);
@@ -194,8 +170,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["assignee"] = "Kai" };
 
         await tool.InvokeAsync(arguments, ct);
@@ -211,8 +187,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness, assignee: "Kai");
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login", assignee: "Kai");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["assignee"] = "" };
 
         await tool.InvokeAsync(arguments, ct);
@@ -228,8 +204,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness, assignee: "Kai");
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login", assignee: "Kai");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["title"] = "Renamed, assignee untouched" };
 
         await tool.InvokeAsync(arguments, ct);
@@ -245,8 +221,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["assignee"] = "me" };
 
         await tool.InvokeAsync(arguments, ct);
@@ -262,10 +238,10 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
+        TaskItem task = harness.CreateTask("Support SAML login");
         Directory.CreateDirectory(Path.Combine(harness.TasksDirPath, "Growth"));
         harness.Store.RebuildFromWatcher();
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["team"] = "Growth" };
 
         await tool.InvokeAsync(arguments, ct);
@@ -281,8 +257,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["project"] = "Auth v2" };
 
         await tool.InvokeAsync(arguments, ct);
@@ -298,8 +274,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness, project: "Auth v2");
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login", project: "Auth v2");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["project"] = "" };
 
         await tool.InvokeAsync(arguments, ct);
@@ -315,9 +291,9 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        TaskItem parent = CreateTask(harness, title: "Parent");
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        TaskItem parent = harness.CreateTask(title: "Parent");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["parent"] = parent.Id.ToString() };
 
         await tool.InvokeAsync(arguments, ct);
@@ -333,9 +309,9 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem parent = CreateTask(harness, title: "Parent");
-        TaskItem task = CreateTask(harness, title: "Child");
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem parent = harness.CreateTask(title: "Parent");
+        TaskItem task = harness.CreateTask(title: "Child");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject setParent = new() { ["taskId"] = task.Id.ToString(), ["parent"] = parent.Id.ToString() };
         await tool.InvokeAsync(setParent, ct);
         JsonObject clearParent = new() { ["taskId"] = task.Id.ToString(), ["parent"] = "" };
@@ -353,10 +329,10 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        TaskItem first = CreateTask(harness, title: "Blocker one");
-        TaskItem second = CreateTask(harness, title: "Blocker two");
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        TaskItem first = harness.CreateTask(title: "Blocker one");
+        TaskItem second = harness.CreateTask(title: "Blocker two");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject firstArguments = new()
         {
             ["taskId"] = task.Id.ToString(),
@@ -382,8 +358,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject firstArguments = new()
         {
             ["taskId"] = task.Id.ToString(),
@@ -409,8 +385,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["start_date"] = "2026-01-15" };
 
         await tool.InvokeAsync(arguments, ct);
@@ -426,8 +402,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["due_date"] = "2026-02-01" };
 
         await tool.InvokeAsync(arguments, ct);
@@ -443,8 +419,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness, dueDate: new DateOnly(2026, 2, 1));
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login", dueDate: new DateOnly(2026, 2, 1));
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["due_date"] = "" };
 
         await tool.InvokeAsync(arguments, ct);
@@ -463,9 +439,9 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        TaskItem original = CreateTask(harness, title: "Original");
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        TaskItem original = harness.CreateTask(title: "Original");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new()
         {
             ["taskId"] = task.Id.ToString(),
@@ -486,8 +462,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new()
         {
             ["taskId"] = task.Id.ToString(),
@@ -508,7 +484,7 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = "not-an-id", ["title"] = "X" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -522,7 +498,7 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = "PLAT-9999", ["title"] = "X" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -536,7 +512,7 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
+        TaskItem task = harness.CreateTask("Support SAML login");
         UpdateTaskTool tool = CreateTool(harness, "ghost-id");
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["title"] = "Should not apply" };
 
@@ -566,8 +542,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), [argumentName] = 42 };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -583,8 +559,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), [argumentName] = "not-a-list" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -601,12 +577,12 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
+        TaskItem task = harness.CreateTask("Support SAML login");
         string growthTasksDir = Path.Combine(harness.TasksDirPath, "Growth", "_tasks");
         Directory.CreateDirectory(growthTasksDir);
         File.WriteAllText(Path.Combine(growthTasksDir, $"{task.Id}.md"), "racing file");
         harness.Store.RebuildFromWatcher();
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["team"] = "Growth" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -622,8 +598,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["status"] = "Sideways" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -640,8 +616,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["priority"] = "Sideways" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -658,8 +634,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["due_date"] = "02/01/2026" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -676,8 +652,8 @@ public sealed class UpdateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
-        UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["start_date"] = "02/01/2026" };
 
         string result = await tool.InvokeAsync(arguments, ct);

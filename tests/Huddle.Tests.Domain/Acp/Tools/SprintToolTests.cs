@@ -6,6 +6,7 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Covers how an Agent sets and reads a Sprint through the task tools (Sprints spec §10, SP-T9, E-S16):
@@ -22,41 +23,20 @@ public sealed class SprintToolTests
 
     private static readonly SprintId S2 = new(2);
 
-    /// <summary>Narrows <see cref="TaskToolHarness.NovaId"/>, seeded by <see cref="TaskToolHarness.CreateAsync"/>, to a non-null caller id.</summary>
-    /// <param name="harness">The harness built by <see cref="TaskToolHarness.CreateAsync"/>.</param>
-    private static string NovaId(TaskToolHarness harness)
-    {
-        string? novaId = harness.NovaId;
-        Assert.NotNull(novaId);
-        return novaId;
-    }
-
-    /// <summary>Creates a Task through the harness's real <see cref="TaskService"/>, as the Human actor.</summary>
-    /// <param name="harness">The harness whose service creates the Task.</param>
-    /// <param name="title">The Task's title.</param>
-    /// <param name="sprint">The Sprint to hold, or <see langword="null"/> for none.</param>
-    /// <param name="assignee">The assignee, or <see langword="null"/>.</param>
-    private static TaskItem CreateTask(TaskToolHarness harness, string title = "Support SAML login", SprintId? sprint = null, string? assignee = null)
-    {
-        TaskActor actor = TaskActors.Human(harness.Options.Value);
-        TaskResult result = harness.Service.Create(new TaskDraft(title, "Platform", null, Assignee: assignee, Sprint: sprint), actor);
-        return Assert.IsType<TaskResult.Saved>(result).Task;
-    }
-
     /// <summary>Builds a <see cref="CreateTaskTool"/> over the harness, calling as Nova.</summary>
     /// <param name="harness">The harness to build over.</param>
     private static CreateTaskTool CreateTool(TaskToolHarness harness) =>
-        new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), NovaId(harness));
+        new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), harness.NovaIdOrThrow());
 
     /// <summary>Builds an <see cref="UpdateTaskTool"/> over the harness, calling as Nova.</summary>
     /// <param name="harness">The harness to build over.</param>
     private static UpdateTaskTool UpdateTool(TaskToolHarness harness) =>
-        new(harness.Service, harness.Store, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), NovaId(harness));
+        new(harness.Service, harness.Store, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), harness.NovaIdOrThrow());
 
     /// <summary>Builds a <see cref="ListTasksTool"/> over the harness, calling as Nova.</summary>
     /// <param name="harness">The harness to build over.</param>
     private static ListTasksTool ListTool(TaskToolHarness harness) =>
-        new(harness.Store, harness.Directory, harness.Personas, harness.Sprints, new FakePromptSource(), NovaId(harness));
+        new(harness.Store, harness.Directory, harness.Personas, harness.Sprints, new FakePromptSource(), harness.NovaIdOrThrow());
 
     /// <summary>The arguments of a <c>create_task</c> call for a Platform Task, with a Sprint argument when one is given.</summary>
     /// <param name="sprint">The <c>sprint</c> argument, or <see langword="null"/> to leave it out.</param>
@@ -166,7 +146,7 @@ public sealed class SprintToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, sprintsText: TwoSprints);
-        TaskItem task = CreateTask(harness, sprint: expected == "S1" ? S2 : null);
+        TaskItem task = harness.CreateTask("Support SAML login", sprint: expected == "S1" ? S2 : null);
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["sprint"] = argument };
 
         string result = await UpdateTool(harness).InvokeAsync(arguments, ct);
@@ -182,7 +162,7 @@ public sealed class SprintToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, sprintsText: TwoSprints);
-        TaskItem task = CreateTask(harness, sprint: S1);
+        TaskItem task = harness.CreateTask("Support SAML login", sprint: S1);
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["sprint"] = "" };
 
         string result = await UpdateTool(harness).InvokeAsync(arguments, ct);
@@ -200,7 +180,7 @@ public sealed class SprintToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, sprintsText: TwoSprints);
-        TaskItem task = CreateTask(harness, sprint: S1);
+        TaskItem task = harness.CreateTask("Support SAML login", sprint: S1);
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["sprint"] = "Nope" };
 
         string result = await UpdateTool(harness).InvokeAsync(arguments, ct);
@@ -219,7 +199,7 @@ public sealed class SprintToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
+        TaskItem task = harness.CreateTask("Support SAML login");
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["sprint"] = argument };
 
         string result = await UpdateTool(harness).InvokeAsync(arguments, ct);
@@ -236,7 +216,7 @@ public sealed class SprintToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, sprintsText: TwoSprints);
-        TaskItem task = CreateTask(harness, sprint: S1, assignee: "Kai");
+        TaskItem task = harness.CreateTask("Support SAML login", sprint: S1, assignee: "Kai");
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["sprint"] = "Auth hardening" };
 
         string result = await UpdateTool(harness).InvokeAsync(arguments, ct);
@@ -252,10 +232,10 @@ public sealed class SprintToolTests
     /// <param name="harness">The harness to seed.</param>
     private static void SeedListTasks(TaskToolHarness harness)
     {
-        _ = CreateTask(harness, "In one", S1);
-        _ = CreateTask(harness, "In two A", S2);
-        _ = CreateTask(harness, "In two B", S2);
-        _ = CreateTask(harness, "In none");
+        _ = harness.CreateTask("In one", sprint: S1);
+        _ = harness.CreateTask("In two A", sprint: S2);
+        _ = harness.CreateTask("In two B", sprint: S2);
+        _ = harness.CreateTask("In none");
     }
 
     /// <summary>Runs <c>list_tasks</c> with a <c>sprint</c> argument and returns the titles it lists, in line order.</summary>
@@ -323,7 +303,7 @@ public sealed class SprintToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        _ = CreateTask(harness);
+        _ = harness.CreateTask("Support SAML login");
 
         string result = await ListTool(harness).InvokeAsync(new JsonObject { ["sprint"] = argument }, ct);
 
@@ -336,7 +316,7 @@ public sealed class SprintToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        _ = CreateTask(harness, "Only task");
+        _ = harness.CreateTask("Only task");
 
         IReadOnlyList<string> titles = await ListTitlesAsync(harness, "none", ct);
 
@@ -349,7 +329,7 @@ public sealed class SprintToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, sprintsText: TwoSprints);
-        TaskItem task = CreateTask(harness, sprint: S2);
+        TaskItem task = harness.CreateTask("Support SAML login", sprint: S2);
         GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
 
         string result = await tool.InvokeAsync(new JsonObject { ["taskId"] = task.Id.ToString() }, ct);
@@ -379,7 +359,7 @@ public sealed class SprintToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CreateTask(harness);
+        TaskItem task = harness.CreateTask("Support SAML login");
         GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
 
         string result = await tool.InvokeAsync(new JsonObject { ["taskId"] = task.Id.ToString() }, ct);
