@@ -856,72 +856,89 @@ the retrospective in §9.
 Ids are `<deliverable>.<task>`, the form `Set-Tracker.ps1` updates. Every task is Sonnet; the
 **Agent** column is the deliverable's one implementer.
 
-**Status:** 0 of 42 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-19.
+**Status:** 40 of 42 tasks Done · 2 of 2 retrospectives done · last updated 2026-10-19.
 
 | **Deliverable / Task** | **Agent** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
 | **P1 The status and the file keys** | Sonnet P1 | none | | | |
-| 1.1 Red: the status, the keys and the View rule | Sonnet P1 | none | | | |
-| 1.2 `TaskState.NeedsYou` | Sonnet P1 | 1.1 | | | |
-| 1.3 `human_gate` and `action` | Sonnet P1 | 1.2 | | | |
-| 1.4 Views gain Needs You | Sonnet P1 | 1.3 | | | |
+| 1.1 Red: the status, the keys and the View rule | Sonnet P1 | none | | | ✔ |
+| 1.2 `TaskState.NeedsYou` | Sonnet P1 | 1.1 | | | ✔ |
+| 1.3 `human_gate` and `action` | Sonnet P1 | 1.2 | | | ✔ |
+| 1.4 Views gain Needs You | Sonnet P1 | 1.3 | | | ✔ |
 | **P2 The Definition of Done parser** | Sonnet P2 | none | | | |
-| 2.1 Red: parsing the section | Sonnet P2 | none | | | |
-| 2.2 `DoneItem`, `DoneRule` and the parser | Sonnet P2 | 2.1 | | | |
+| 2.1 Red: parsing the section | Sonnet P2 | none | | | ✔ |
+| 2.2 `DoneItem`, `DoneRule` and the parser | Sonnet P2 | 2.1 | | | ✔ |
 | **P3 Proof** | Sonnet P3 | P1, P2 | | | |
-| 3.1 Red: evaluating Proof | Sonnet P3 | 1.4, 2.2 | | | |
-| 3.2 `ProofEvaluator` | Sonnet P3 | 3.1 | | | |
-| 3.3 `ProofContextBuilder` | Sonnet P3 | 3.2 | | | |
+| 3.1 Red: evaluating Proof | Sonnet P3 | 1.4, 2.2 | | | ✔ |
+| 3.2 `ProofEvaluator` | Sonnet P3 | 3.1 | | | ✔ |
+| 3.3 `ProofContextBuilder` | Sonnet P3 | 3.2 | | | ✔ |
 | **P4 Acceptance and the gate rules** | Sonnet P4 | P1, P2 | | | |
-| 4.1 Red: acceptance and H-1 to H-5 | Sonnet P4 | 1.4, 2.2 | | | |
-| 4.2 `Acceptance` and `ContentFingerprint` | Sonnet P4 | 4.1 | | | |
-| 4.3 `HumanGateRules` and the two refusal ids | Sonnet P4 | 4.2 | | | |
+| 4.1 Red: acceptance and H-1 to H-5 | Sonnet P4 | 1.4, 2.2 | | | ✔ |
+| 4.2 `Acceptance` and `ContentFingerprint` | Sonnet P4 | 4.1 | | | ✔ |
+| 4.3 `HumanGateRules` and the two refusal ids | Sonnet P4 | 4.2 | | | ✔ |
 | **P13 Definitions of Done in the templates** | Sonnet P13 | P2 | | | |
-| 13.1 Red: every template has one | Sonnet P13 | 2.2 | | | |
-| 13.2 The sections | Sonnet P13 | 13.1 | | | |
+| 13.1 Red: every template has one | Sonnet P13 | 2.2 | | | ✔ |
+| 13.2 The sections | Sonnet P13 | 13.1 | | | ✔ |
 | **P5 `TaskService`** | Sonnet P5 | P3, P4 | | | |
-| 5.1 Red: the rules in the service | Sonnet P5 | 3.3, 4.3 | | | |
-| 5.2 Wire the rules | Sonnet P5 | 5.1 | | | |
-| 🔁 R1 Retrospective after 15 tasks Done | Opus | 15 Done | | | |
-| 5.3 Red: `Decide` | Sonnet P5 | 5.2 | | | |
-| 5.4 `TaskService.Decide` | Sonnet P5 | 5.3 | | | |
+| 5.1 Red: the rules in the service | Sonnet P5 | 3.3, 4.3 | | | ✔ |
+| 5.2 Wire the rules | Sonnet P5 | 5.1 | | | ✔ |
+| 🔁 R1 Retrospective after 15 tasks Done | Opus | 15 Done | | | ✔ |
+| 5.3 Red: `Decide` | Sonnet P5 | 5.2 | | | ✔ |
+| 5.4 `TaskService.Decide` | Sonnet P5 | 5.3 | | | ✔ |
 | **P8 Needs You Task entries** | Sonnet P8 | P3, P4 | | | |
-| 8.1 Red | Sonnet P8 | 3.3, 4.3 | | | |
-| 8.2 `NeedsYouTaskSource` | Sonnet P8 | 8.1 | | | |
+| 8.1 Red | Sonnet P8 | 3.3, 4.3 | | | ✔ |
+| 8.2 `NeedsYouTaskSource` | Sonnet P8 | 8.1 | | | ✔ |
 | **P6 Wake Message and the Retro** | Sonnet P6 | P5 | | | |
-| 6.1 Red | Sonnet P6 | 5.4 | | | |
-| 6.2 The wake Message | Sonnet P6 | 6.1 | | | |
-| 6.3 The Retro records | Sonnet P6 | 6.2 | | | |
+| 6.1 Red | Sonnet P6 | 5.4 | | | ✔ |
+| 6.2 The wake Message | Sonnet P6 | 6.1 | | | ✔ |
+| 6.3 The Retro records | Sonnet P6 | 6.2 | | | ✔ |
 | **P7 Agent tools** | Sonnet P7 | P5 | | | |
-| 7.1 Red | Sonnet P7 | 5.4 | | | |
-| 7.2 The tools | Sonnet P7 | 7.1 | | | |
+| 7.1 Red | Sonnet P7 | 5.4 | | | ✔ |
+| 7.2 The tools | Sonnet P7 | 7.1 | | | ✔ |
 | **P9 Proof list and the Human gate section** | Sonnet P9 | P5 | | | |
-| 9.1 Red: `TaskProofList` and Ask | Sonnet P9 | 5.4 | | | |
-| 9.2 `TaskProofList` | Sonnet P9 | 9.1 | | | |
-| 9.3 Red: `TaskHumanGate` | Sonnet P9 | 9.2 | | | |
-| 9.4 `TaskHumanGate` | Sonnet P9 | 9.3 | | | |
+| 9.1 Red: `TaskProofList` and Ask | Sonnet P9 | 5.4 | | | ✔ |
+| 9.2 `TaskProofList` | Sonnet P9 | 9.1 | | | ✔ |
+| 9.3 Red: `TaskHumanGate` | Sonnet P9 | 9.2 | | | ✔ |
+| 9.4 `TaskHumanGate` | Sonnet P9 | 9.3 | | | ✔ |
 | **P10 The decision card and the Task panel** | Sonnet P10 | P9 | | | |
-| 10.1 Red | Sonnet P10 | 9.4 | | | |
-| 🔁 R2 Retrospective after 30 tasks Done | Opus | 30 Done | | | |
-| 10.2 `TaskDecisionCard` | Sonnet P10 | 10.1 | | | |
-| 10.3 `TaskDetail` wiring | Sonnet P10 | 10.2 | | | |
+| 10.1 Red | Sonnet P10 | 9.4 | | | ✔ |
+| 🔁 R2 Retrospective after 30 tasks Done | Opus | 30 Done | | | ✔ |
+| 10.2 `TaskDecisionCard` | Sonnet P10 | 10.1 | | | ✔ |
+| 10.3 `TaskDetail` wiring | Sonnet P10 | 10.2 | | | ✔ |
 | **P11 The board** | Sonnet P11 | P10 | | | |
-| 11.1 Red | Sonnet P11 | 10.3 | | | |
-| 11.2 The board | Sonnet P11 | 11.1 | | | |
+| 11.1 Red | Sonnet P11 | 10.3 | | | ✔ |
+| 11.2 The board | Sonnet P11 | 11.1 | | | ✔ |
 | **P12 Needs You on screen** | Sonnet P12 | P8, P10 | | | |
-| 12.1 Red | Sonnet P12 | 8.2, 10.3 | | | |
-| 12.2 The card rows and the page | Sonnet P12 | 12.1 | | | |
+| 12.1 Red | Sonnet P12 | 8.2, 10.3 | | | ✔ |
+| 12.2 The card rows and the page | Sonnet P12 | 12.1 | | | ✔ |
 | **P14 Docs** | Sonnet P14 | P1-P13 | | | |
-| 14.1 User Guide | Sonnet P14 | 12.2, 11.2 | | | |
-| 14.2 Wireframes and the UX catalogue | Sonnet P14 | 14.1 | | | |
-| 14.3 Code map and manual tests | Sonnet P14 | 14.2 | | | |
-| 14.4 Status | Sonnet P14 | 14.3 | | | |
+| 14.1 User Guide | Sonnet P14 | 12.2, 11.2 | | | ✔ |
+| 14.2 Wireframes and the UX catalogue | Sonnet P14 | 14.1 | | | ✔ |
+| 14.3 Code map and manual tests | Sonnet P14 | 14.2 | | | ✔ |
+| 14.4 Status | Sonnet P14 | 14.3 | | | ✔ |
 | **P15 Integration and QA** | Sonnet P15 | P14 | | | |
 | 15.1 Full suite twice | Sonnet P15 | 14.4 | | | |
 | 15.2 Browser smoke | Sonnet P15 | 15.1 | | | |
 
 The retrospective rows sit where 15 and 30 tasks are expected to be Done; they run when the count
 is reached, wherever that falls.
+
+**R1 (2026-10-19, at 15 Done).** Sonnet agents start at about 75K context (inherited tool
+definitions), so the 75- and 90-call budgets carried P1 (four tasks) and P3 (three tasks) to about
+200K, past the 150K cap; P2, P4 and P13 stayed at 125-153K. Applied: every agent from here has a
+60-call budget with a hand-off at 50; **P5, P9 and P14 each run as two agents** (P5: T5.1-5.2 then
+T5.3-5.4; P9: T9.1-9.2 then T9.3-9.4; P14: T14.1-14.2 then T14.3-14.4). The architect review of
+P3-P5 before they started found seven blockers (settled in `Conversation/hg/corrections-P3..P5.md`,
+among them `TaskDiff` arms for the new keys and the fingerprint excluding the Evidence section).
+
+**R2 (2026-10-19, at 30 Done).** The manager's context (98K to 425K, 61M tokens re-read) cost more
+than every implementer together; from here the manager reads reports and diff stats only. The Opus
+review of P5 found a BLOCKER the manager's checks missed (an outside edit could forge
+`accepted <hash>`), plus three Spec clauses with no test; the fix also covers a forged acceptance
+and a move to Done in one write. The P11 review stays. Compile-level reds hid errors in the test
+file itself five times (a missing `using`, MUD0012, bUnit's `TestContext`), each costing a release
+round; the brief now says to check imports before recording such a red. P11 and P12 reuse the
+decision-card bUnit setup (`TaskToolHarness` with a fixed `IProofSource`, `MudBunitContext`).
 
 ---
 
