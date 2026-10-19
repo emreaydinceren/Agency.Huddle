@@ -163,4 +163,20 @@ internal static class HumanGateCopy
     /// <param name="action">The Action text.</param>
     public static string Explanation(string assignee, string action) =>
         $"Teammates draft, check and track: you decide. Accepting lets {assignee} {action}. Done also needs the team's Proof to be complete.";
+
+    // --- Needs You on screen (P12, UI copy rows 35-38) ---
+
+    /// <summary>The Needs You page and Tab title (row 37).</summary>
+    public const string NeedsYouTitle = "Needs you";
+
+    /// <summary>The title of the Needs You page's empty state (row 38).</summary>
+    public const string NeedsYouEmptyTitle = "Nothing needs you";
+
+    /// <summary>The sentence of the Needs You page's empty state (row 38).</summary>
+    public const string NeedsYouEmptyText = "Tasks waiting for your decision and Rooms waiting on you appear here.";
+
+    /// <summary>The second line of a Task row in the Needs You card (row 35).</summary>
+    /// <param name="met">Proof items met.</param>
+    /// <param name="total">Proof items in all.</param>
+    public static string NeedsYouTaskDetail(int met, int total) => $"Waiting on you · Proof {met}/{total}";
 }

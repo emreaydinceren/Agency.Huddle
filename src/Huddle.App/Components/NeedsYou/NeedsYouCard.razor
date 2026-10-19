@@ -3,21 +3,68 @@
     count. It is not drawn while the list is empty, but the list stays mounted inside it, because the list
     is what reports the count and a hidden list must still hear the tracker. A right-hand sidebar would use
     NeedsYouList directly with chrome of its own.
-*@
 
-<MudPaper Outlined="true" Class="needs-you-card" hidden="@(this.count == 0)" role="region" aria-label="Needs you">
+    After the Room rows come the Task rows of the Human gate (Spec 6.7): one per Task waiting on the Human, with no
+    dismiss button, linking to /needs-you#<id>. The count is Room rows plus Task rows. The Task entries are a snapshot
+    taken when NeedsYouTaskSource.Changed fires, never read in markup, because reading them evaluates every Proof.
+*@
+@implements IDisposable
+@using Agency.Huddle.App.Components.Tasks
+@using Agency.Huddle.App.NeedsYou
+@inject NeedsYouTaskSource TaskSource
+
+<MudPaper Outlined="true" Class="needs-you-card" hidden="@(this.Total == 0)" role="region" aria-label="Needs you">
     <div class="needs-you-title">
-        <MudText Typo="Typo.caption" Class="needs-you-heading">Needs you</MudText>
-        <span class="needs-you-count chip-meta">@this.count</span>
+        <NavTabLink Href="/needs-you" TabTitle="@HumanGateCopy.NeedsYouTitle">
+            <MudText Typo="Typo.caption" Class="needs-you-heading">@HumanGateCopy.NeedsYouTitle</MudText>
+        </NavTabLink>
+        <span class="needs-you-count chip-meta">@this.Total</span>
     </div>
     <NeedsYouList CountChanged="this.OnCountChanged" />
+    @foreach (var entry in this.taskEntries)
+    {
+        <div class="needs-you-row needs-you-task-row" @key="entry.TaskId">
+            <NavTabLink Href="@($"/needs-you#{entry.TaskId}")" TabTitle="@HumanGateCopy.NeedsYouTitle">
+                <span class="needs-you-text">
+                    <span class="needs-you-name" title="@($"{entry.TaskId} {entry.Title}")">@entry.TaskId @entry.Title</span>
+                    <span class="needs-you-detail">@HumanGateCopy.NeedsYouTaskDetail(entry.Proof.MetCount, entry.Proof.Total)</span>
+                </span>
+            </NavTabLink>
+        </div>
+    }
 </MudPaper>
 
 @code {
-    private int count;
+    private int roomCount;
+    private IReadOnlyList<NeedsYouTaskEntry> taskEntries = [];
+
+    private int Total => this.roomCount + this.taskEntries.Count;
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.taskEntries = this.TaskSource.Entries;
+        this.TaskSource.Changed += this.OnTasksChanged;
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        this.TaskSource.Changed -= this.OnTasksChanged;
+    }
 
     private void OnCountChanged(int value)
     {
-        this.count = value;
+        this.roomCount = value;
+    }
+
+    private void OnTasksChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.taskEntries = this.TaskSource.Entries;
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
     }
 }

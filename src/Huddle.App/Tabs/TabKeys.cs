@@ -59,6 +59,7 @@ internal static class TabKeys
             ["teammates", ..] => new("teammates", "Teammates", "teammates"),
             ["settings", ..] => new("settings", "Settings", "settings"),
             ["library", ..] => new("library", "Library", "library"),
+            ["needs-you"] => new("needs-you", "Needs you", "needs-you"),
             _ => new(path, segments[^1], "page"),
         };
     }

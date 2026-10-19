@@ -8315,3 +8315,21 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 :root:has([data-hu-surface]) .task-filter-chip .task-filter-chip-button.mud-button-outlined:not(:hover) {
     background: transparent;
 }
+
+/* Needs You on screen (Human gate P12). The card heading is a link to the page and keeps the plain caption look; a Task row stacks
+   its id and title over the waiting line; the page leaves the cards a gap. */
+.needs-you-title .mud-nav-link {
+    padding: 0;
+    min-height: 0;
+    background: transparent;
+}
+
+.needs-you-task-row .mud-nav-link-text {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+}
+
+.needs-you-page-task {
+    margin-bottom: 16px;
+}

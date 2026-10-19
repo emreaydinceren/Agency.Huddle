@@ -22,6 +22,7 @@ internal static class TabIcons
         "teammates" => Icons.Material.Filled.Group,
         "settings" => Icons.Material.Filled.Settings,
         "library" => Icons.Material.Filled.MenuBook,
+        "needs-you" => Icons.Material.Filled.NotificationsActive,
         _ => Icons.Material.Filled.Description,
     };
 }
