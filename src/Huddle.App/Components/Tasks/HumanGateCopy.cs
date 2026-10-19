@@ -179,4 +179,31 @@ internal static class HumanGateCopy
     /// <param name="met">Proof items met.</param>
     /// <param name="total">Proof items in all.</param>
     public static string NeedsYouTaskDetail(int met, int total) => $"Waiting on you · Proof {met}/{total}";
+
+    /// <summary>The Board chip of a gated card in Needs You that is not accepted (row 29).</summary>
+    public const string BoardChipNeedsYou = "Needs you";
+
+    /// <summary>The Board chip of a gated card whose acceptance is valid (row 29).</summary>
+    public const string BoardChipAccepted = "Accepted";
+
+    /// <summary>The accessible name of the lock icon on a gated card in any other status (row 29).</summary>
+    public const string LockAriaLabel = "Human gate";
+
+    /// <summary>The cancel button of the decision dialog (row 33).</summary>
+    public const string CancelButton = "Cancel";
+
+    /// <summary>The refusal for a drop into Done from Review or earlier (row 30).</summary>
+    /// <param name="id">The Task's id.</param>
+    /// <param name="met">The Proof items met.</param>
+    /// <param name="total">The Proof items in all.</param>
+    public static string GoesToNeedsYouFirst(string id, int met, int total) => $"{id} goes to Needs you first (Proof {met}/{total}).";
+
+    /// <summary>The title of the decision dialog (row 32).</summary>
+    /// <param name="id">The Task's id.</param>
+    public static string DecisionDialogTitle(string id) => $"Your decision on {id}";
+
+    /// <summary>The refusal for a drop into Done when the acceptance is already valid (row 34).</summary>
+    /// <param name="id">The Task's id.</param>
+    /// <param name="assignee">The assignee's name.</param>
+    public static string AlreadyAccepted(string id, string assignee) => $"{id} is accepted: {assignee} moves it to Done after the Action.";
 }
