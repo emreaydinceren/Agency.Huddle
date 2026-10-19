@@ -1080,7 +1080,7 @@ Ids are `<deliverable>.<task>`:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "2.3" -State Done -TrackerPath docs/engineering/test-split-plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 49 of 77 tasks Done · 2 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
+**Status:** 51 of 77 tasks Done · 2 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1151,8 +1151,8 @@ Ids are `<deliverable>.<task>`:
 | 12.3 Migrate the logger fakes (H) | Haiku | 12.2 | | | ✔ |
 | 12.4 Private clock copies and `FiringTimeProvider` (H) | Haiku | D10 | | | ✔ |
 | **D13 Repo files and CSS** | Sonnet | D10 | | | |
-| 13.1 Red: `CssTextTests` (S) | Sonnet | D10 | | | |
-| 13.2 `CssText` (S) | Sonnet | 13.1 | | | |
+| 13.1 Red: `CssTextTests` (S) | Sonnet | D10 | | | ✔ |
+| 13.2 `CssText` (S) | Sonnet | 13.1 | | | ✔ |
 | 13.3 Migrate the Ui root, `Traits` and `R3*` (H) | Haiku | 13.2 | | | |
 | 13.4 Migrate the rest of the CSS readers (H) | Haiku | 13.2 | | | |
 | 13.5 Tests whose result changed (S) | Sonnet | 13.3, 13.4 | | | |

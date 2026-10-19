@@ -24,6 +24,16 @@ internal static class RepoPaths
         return path;
     }
 
+    /// <summary><see cref="Root"/>/<c>src</c> joined with <paramref name="segments"/>.</summary>
+    /// <param name="segments">Path segments relative to the <c>src</c> folder.</param>
+    /// <returns>The combined path.</returns>
+    internal static string Src(params string[] segments) => Combine(["src", .. segments]);
+
+    /// <summary><see cref="Root"/>/<c>src</c>/<c>Huddle.App</c> joined with <paramref name="segments"/>.</summary>
+    /// <param name="segments">Path segments relative to the <c>src/Huddle.App</c> folder.</param>
+    /// <returns>The combined path.</returns>
+    internal static string App(params string[] segments) => Src(["Huddle.App", .. segments]);
+
     /// <summary>A file or folder relative to the folder of the calling source file.</summary>
     /// <param name="relativePath">The path relative to the calling source file's folder.</param>
     /// <param name="callerFilePath">Filled in by the compiler with the calling source file.</param>
