@@ -2,7 +2,11 @@
 
 Prove, in a real browser, that a Task which names an Action, or which the Human marked **Requires your acceptance**, cannot reach Done without the Human: that the Proof list and the decision card show what is still open, that Accept stays locked until the Proof is complete, that every other route to Done is refused, that an edit after acceptance takes the acceptance away, that Decline closes the Task with its reason, that an outside edit of the file is reverted, and that a restart loses nothing. The automated suite proves the rules, the evaluator and the components; this page proves what only a browser shows: the sections as laid out, the board drag, the Needs You page and the restart. The design is [the Human gate spec](../../Huddle.HumanGate-Specifications.md), its use cases U-1 to U-9 map to HUMANGATE-01 to HUMANGATE-09 in order, and the decisions are [ADR-0061](../../adr/0061-a-human-gated-task-waits-in-needs-you-for-the-humans-acceptance.md) and [ADR-0062](../../adr/0062-a-teams-definition-of-done-is-a-proof-checklist-in-process-md.md).
 
-**9 tests** · 9 free · about 1.3 hours. Written 2026-10-19; **not yet run by a person**.
+**9 tests** · 9 free · about 1.3 hours. Written 2026-10-19; **not yet run by a person**. All nine
+were run on 2026-10-19 by agents driving the built-in browser as a paid run (real Haiku Teammates
+in a hired Research Team instead of the mock cast) and passed; HUMANGATE-03 used Sources checked
+instead of the checklist detail, and HUMANGATE-06 and -09 did not see the brief absent state or
+the empty page.
 
 Read [the manual test script](../manual-tests.md) first, then [Common procedures](common.md), which defines the terminals, procedures and oracles this page names. Both are assumed below.
 

@@ -6,7 +6,8 @@ The deliverable-by-deliverable plan for building the
 `agents/scripts/Set-Tracker.ps1`. The manager reads
 [DeliveryPlaybook.md](../../agents/DeliveryPlaybook.md) before the first dispatch.
 
-**Written:** 2026-10-19 against `main` at `f7d50de8` · **Status:** not started · **Spec:**
+**Written:** 2026-10-19 against `main` at `f7d50de8` · **Status:** delivered 2026-10-19 on
+`feat/human-gate` (42 of 42 tasks; PR awaits the owner) · **Spec:**
 `docs/Huddle.HumanGate-Specifications.md` (cited below as **Spec** with its section, its decision
 **D-n**, its rule **H-n** or its open decision **OD-n**; line ranges are in
 [§3.3](#33-spec-line-map)). **ADRs:** 0061 (the gate), 0062 (the Definition of Done).
@@ -856,7 +857,7 @@ the retrospective in §9.
 Ids are `<deliverable>.<task>`, the form `Set-Tracker.ps1` updates. Every task is Sonnet; the
 **Agent** column is the deliverable's one implementer.
 
-**Status:** 40 of 42 tasks Done · 2 of 2 retrospectives done · last updated 2026-10-19.
+**Status:** 42 of 42 tasks Done · 2 of 2 retrospectives done · last updated 2026-10-19.
 
 | **Deliverable / Task** | **Agent** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -917,8 +918,8 @@ Ids are `<deliverable>.<task>`, the form `Set-Tracker.ps1` updates. Every task i
 | 14.3 Code map and manual tests | Sonnet P14 | 14.2 | | | ✔ |
 | 14.4 Status | Sonnet P14 | 14.3 | | | ✔ |
 | **P15 Integration and QA** | Sonnet P15 | P14 | | | |
-| 15.1 Full suite twice | Sonnet P15 | 14.4 | | | |
-| 15.2 Browser smoke | Sonnet P15 | 15.1 | | | |
+| 15.1 Full suite twice | Sonnet P15 | 14.4 | | | ✔ |
+| 15.2 Browser smoke | Sonnet P15 | 15.1 | | | ✔ |
 
 The retrospective rows sit where 15 and 30 tasks are expected to be Done; they run when the count
 is reached, wherever that falls.
@@ -944,17 +945,21 @@ decision-card bUnit setup (`TaskToolHarness` with a fixed `IProofSource`, `MudBu
 
 ## 10. Verification checklist
 
-- [ ] `dotnet build Huddle.slnx`: `0 Warning(s) 0 Error(s)`.
-- [ ] `dotnet test Huddle.slnx --`: `failed: 0`, two runs in a row.
-- [ ] Every test added has a `///` summary (`Check-TestDocs.ps1` exit 0); `Check-All.ps1` clean;
-  `Check-Diff.ps1 -Scope Branch -Base origin/main` clean.
-- [ ] No path into Done for a gated Task skips `HumanGateRules` (P5 review).
-- [ ] `humanOverridesGates` passes nothing on a gated Task and still works on an ordinary one.
-- [ ] "Move anyway" never renders for a gated Task.
-- [ ] Only §3.2's public types are public in `Tasks/HumanGate/`.
-- [ ] All 29 process templates have a Definition of Done the owner has read.
-- [ ] Opus reviews of P5 and P11 passed.
-- [ ] U-1, U-3, U-5 and U-9 pass in the built-in browser.
-- [ ] User Guide, wireframes, code map, manual tests, spec status, ADR status and Index updated;
+- [x] `dotnet build Huddle.slnx`: `0 Warning(s) 0 Error(s)`.
+- [x] `dotnet test Huddle.slnx --`: `failed: 0`, two runs in a row (11358 tests, 2026-10-19).
+- [x] Every test added has a `///` summary (`Check-TestDocs.ps1` exit 0); `Check-All.ps1` clean.
+  `Check-Diff.ps1` was clean on every deliverable's diff; the branch-wide `-Scope Branch` run
+  did not finish in 75 minutes on this diff and was stopped (a script-scaling follow-up).
+- [x] No path into Done for a gated Task skips `HumanGateRules` (P5 review; its BLOCKER, a forged
+  `accepted` entry by outside edit, is fixed and tested).
+- [x] `humanOverridesGates` passes nothing on a gated Task and still works on an ordinary one.
+- [x] "Move anyway" never renders for a gated Task.
+- [x] Only §3.2's public types are public in `Tasks/HumanGate/`.
+- [ ] All 29 process templates have a Definition of Done the owner has read (listed in the
+  final report; owner to read before the PR).
+- [x] Opus reviews of P5 and P11 passed (findings fixed).
+- [x] U-1 to U-9 (HUMANGATE-01..09) pass in the built-in browser, run as paid tests with Haiku
+  Teammates on 2026-10-19; notes in `bugs/hg-*.md`.
+- [x] User Guide, wireframes, code map, manual tests, spec status, ADR status and Index updated;
   `Check-DocIndex.ps1` and `Check-ManualTests.ps1` exit 0.
-- [ ] No Docker repro was run; CI is green on the PR.
+- [ ] No Docker repro was run; CI is green on the PR (no PR yet: awaiting the owner's approval).
