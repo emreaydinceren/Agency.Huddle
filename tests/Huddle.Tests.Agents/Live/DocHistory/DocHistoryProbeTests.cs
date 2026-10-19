@@ -20,6 +20,12 @@ public sealed class DocHistoryProbeTests
         new ProbeScenario("LIVE-DH-0", "Call the log_change tool once, for the file findings.md in your working folder, with kind created and any one-line summary. Do nothing else.", ProbeScenario.SeedCommon, CheckCalledOnce, MinPasses: 4, GuardsOtherLogging: false),
         TestContext.Current.CancellationToken);
 
+    /// <summary>LIVE-DH-8, a control: asked to create a document and to log it, the Agent does both. If this passes while LIVE-DH-1 fails, the Agent can create and log and only fails to see that it should.</summary>
+    [Fact(Timeout = 600_000, SkipUnless = nameof(LiveDocHistory.Enabled), SkipType = typeof(LiveDocHistory), Skip = Skip)]
+    public Task Live8_AskedToCreateAndLog_DoesBoth() => RunAsync(
+        new ProbeScenario("LIVE-DH-8", "Write findings.md with three short findings about report.md, then log it with log_change.", ProbeScenario.SeedCommon, CheckCreated, MinPasses: 4, GuardsOtherLogging: false),
+        TestContext.Current.CancellationToken);
+
     /// <summary>LIVE-DH-1: asked to create a document, the Agent logs exactly one <c>created</c> for it.</summary>
     [Fact(Timeout = 1_500_000, SkipUnless = nameof(LiveDocHistory.Enabled), SkipType = typeof(LiveDocHistory), Skip = Skip)]
     public Task Live1_CreateADocument_LogsCreated() => RunAsync(
@@ -241,6 +247,11 @@ public sealed class DocHistoryProbeTests
         report.AppendLine(CultureInfo.InvariantCulture, $"- run {run}: {(failure is null ? "pass" : "FAIL: " + failure)}; {observed.Calls.Count} call(s); context {turn.ContextUsed}/{turn.ContextSize} tokens; cost {(turn.Cost.Length == 0 ? "not reported" : turn.Cost)}; {turn.Elapsed.TotalSeconds:0}s");
         string reply = observed.Reply.ReplaceLineEndings(" ");
         report.AppendLine(CultureInfo.InvariantCulture, $"  - reply: {(reply.Length > 400 ? reply[..400] + "…" : reply)}");
+        foreach (string entry in turn.Trace)
+        {
+            report.AppendLine(CultureInfo.InvariantCulture, $"  - {entry}");
+        }
+
         foreach (LoggedCall call in observed.Calls)
         {
             report.AppendLine(CultureInfo.InvariantCulture, $"  - {call.Arguments.ToJsonString()} -> {call.Result}");

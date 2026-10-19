@@ -260,6 +260,15 @@ internal static class SystemPromptComposer
         return string.Join("\n\n", parts);
     }
 
+    /// <summary>The offered <c>log_change</c> tool's prefixed name, or <see langword="null"/> when the session does not offer it.</summary>
+    /// <param name="toolNames">The offered tools' names, already prefixed.</param>
+    /// <returns>The name as offered.</returns>
+    internal static string? FindLogChangeTool(IReadOnlyList<string> toolNames)
+    {
+        ArgumentNullException.ThrowIfNull(toolNames);
+        return toolNames.FirstOrDefault(static name => name.EndsWith("log_change", StringComparison.Ordinal));
+    }
+
     /// <summary>
     /// Adds the paragraphs for the tools whose own description an Adapter may never show the model. Each is sent only
     /// when its tool is offered, so a session without the tool reads what it read before.
@@ -284,7 +293,7 @@ internal static class SystemPromptComposer
         // Same reason as ask_human above: the tool's description may never reach the model, and without this
         // paragraph real models finished the task without logging it (DocHistory spec section 10). The name
         // comes from the offered list, already prefixed, so the paragraph exists only when the tool does.
-        string? logChangeToolName = toolNames.FirstOrDefault(static name => name.EndsWith("log_change", StringComparison.Ordinal));
+        string? logChangeToolName = FindLogChangeTool(toolNames);
         if (logChangeToolName is not null)
         {
             parts.Add(prompts.Render(

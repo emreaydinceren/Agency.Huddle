@@ -209,6 +209,23 @@ defer a tool's own description and schema, so a model sees only the tool's name,
 when it does call it guesses the argument names. The paragraph therefore names the tool, its three arguments and the three
 cases (changed, reviewed, objected), and says logging a document is not editing it. Its text is the catalog default.
 
+**The Stop hook.** The paragraph alone still left creates and reviews unlogged (1 of 5 and 0 of 5). A reminder on every
+Message fixed them but added about 55 tokens to every Turn of every conversation, document-related or not, and stayed in
+the session's history. So the nudge is a Claude Code `Stop` hook instead, which costs nothing on a Turn that touched no
+Markdown file:
+
+- When a session offers `log_change`, `DotAcpAgentHostFactory` calls `DocHistoryStopHook.Install` before the Adapter
+  starts. It writes `{DataDir}/hooks/doc-history-stop.js` and adds one `Stop` entry to the Work Dir's
+  `.claude/settings.local.json`, keeping every other setting and hook. A settings file that is not JSON is left alone, and a
+  write failure is logged and never stops the session. The Adapter reads that file (rules.md, *The Work Dir is not a jail*).
+- When the Agent is about to stop, the script reads the Turn's transcript (everything after the last prompt). If the Turn
+  wrote or edited a `.md` file and made no `log_change` call, it sends the Agent back once, naming the files. If it only
+  opened a `.md` file, it asks whether the Agent reviewed it or disagrees with it, and says that reading to answer needs no
+  entry. A Turn that touched no Markdown, one that already logged, and a second stop in a row (`stop_hook_active`) all pass
+  without a word, so it cannot loop.
+- It needs `node`, which the Adapter needs anyway. It is compatible with ADR-0060: the hook decides nothing about the entry
+  and writes none. The Agent still reports, in its own words, under its own Name.
+
 The paid probe's results and what changed between rounds are in [known-limits.md](engineering/known-limits.md).
 Whether Agents call the tool reliably is the main risk of this design (ADR-0060, *Consequences*); the manual tests
 measure it (§10).

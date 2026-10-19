@@ -27,8 +27,9 @@ public sealed class DocHistoryEndToEndTests
         (RecordingLogChangeTool tool, DocHistoryStore store) = Build(fixture);
         await using LiveAgentLane lane = await LiveAgentLane.StartAsync(tool, ct);
 
-        _ = await lane.RunAsync(vault, "Create brief.md with one paragraph.", ct);
+        LiveTurn turn = await lane.RunAsync(vault, "Create brief.md with one paragraph about planning a team lunch.", ct);
 
+        Assert.True(store.Read(fixture.Resolve(vault, "brief.md")).Count == 1, Describe(tool, turn));
         DocHistoryEntry entry = Assert.Single(store.Read(fixture.Resolve(vault, "brief.md")));
         Assert.Equal((BoundName, DocActorKind.Agent, DocChangeKind.Created), (entry.Actor, entry.ActorKind, entry.Kind));
     }
@@ -61,12 +62,20 @@ public sealed class DocHistoryEndToEndTests
         (RecordingLogChangeTool tool, DocHistoryStore store) = Build(fixture);
         await using LiveAgentLane lane = await LiveAgentLane.StartAsync(tool, ct);
 
-        _ = await lane.RunAsync(vault, "Log a review of missing.md.", ct);
+        LiveTurn turn = await lane.RunAsync(vault, "Call log_change to log a review of missing.md in your working folder. The file does not exist, but log it anyway.", ct);
 
+        Assert.True(tool.Calls.Count == 1, Describe(tool, turn));
         LoggedCall call = Assert.Single(tool.Calls);
         Assert.Contains("does not exist", call.Result, StringComparison.Ordinal);
         Assert.False(File.Exists(store.FileFor(fixture.Resolve(vault, "missing.md"))));
     }
+
+    /// <summary>What the Agent said, did and was told, for a failure message: a passing count alone does not say why a call was missing.</summary>
+    /// <param name="tool">The recording wrapper.</param>
+    /// <param name="turn">The Turn.</param>
+    /// <returns>The reply, the trace and each call with the tool's answer.</returns>
+    private static string Describe(RecordingLogChangeTool tool, LiveTurn turn) =>
+        $"Reply: {turn.Reply}{Environment.NewLine}{string.Join(Environment.NewLine, turn.Trace)}{Environment.NewLine}{string.Join(Environment.NewLine, tool.Calls.Select(call => call.Arguments.ToJsonString() + " -> " + call.Result))}";
 
     /// <summary>Builds the real tool, bound to <see cref="BoundName"/>, behind a recorder.</summary>
     /// <param name="fixture">The Library the tool resolves paths in.</param>

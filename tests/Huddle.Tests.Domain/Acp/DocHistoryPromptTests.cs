@@ -12,7 +12,7 @@ public sealed class DocHistoryPromptTests
     {
         string prompt = Compose(["mcp__team__get_help", "mcp__team__log_change"]);
 
-        Assert.Contains("call mcp__team__log_change once for it as your last step", prompt, StringComparison.Ordinal);
+        Assert.Contains("call mcp__team__log_change once for it", prompt, StringComparison.Ordinal);
     }
 
     /// <summary>When the tool is not offered there is no paragraph, so a session without it reads exactly what it read before.</summary>

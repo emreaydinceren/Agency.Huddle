@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Tests.Elicitation;
 using Agency.Huddle.Acp.Abstractions;
@@ -16,7 +17,8 @@ namespace Agency.Huddle.Tests.Live.DocHistory;
 /// <param name="ContextSize">The context window size from that event.</param>
 /// <param name="Cost">The cost the Adapter reported, or an empty string when it reported none.</param>
 /// <param name="Elapsed">Wall-clock time of the Turn.</param>
-internal sealed record LiveTurn(string Reply, long ContextUsed, long ContextSize, string Cost, TimeSpan Elapsed);
+/// <param name="Trace">Every event of the Turn in order: the Agent's thoughts, each tool call with its input, and the end of the Turn.</param>
+internal sealed record LiveTurn(string Reply, long ContextUsed, long ContextSize, string Cost, TimeSpan Elapsed, IReadOnlyList<string> Trace);
 
 /// <summary>
 /// One real Adapter and one <see cref="AppToolServer"/> serving a single tool as <c>mcp__team__*</c>, with a fresh
@@ -109,6 +111,12 @@ internal sealed class LiveAgentLane : IAsyncDisposable
         SystemPromptOptions system = new(
             $"The Team application exposes these tools, which run inside the application process: {names}.{guidance}",
             SystemPromptMode.Append);
+        // What the app does when it starts a Persona that is offered the tool: put the Stop hook in the Work Dir first.
+        if (this.toolServer.ToolNames.Contains("log_change", StringComparer.Ordinal))
+        {
+            DocHistoryStopHook.Install(workDirectory, Path.Combine(Path.GetTempPath(), "dochistory-live-hooks"), "mcp__team__log_change", NullLogger.Instance);
+        }
+
         Stopwatch clock = Stopwatch.StartNew();
         await using IAgentSession session = await this.host.StartSessionAsync(
             new AgentSessionOptions(workDirectory, new AutoApprovePermissionHandler(), system, this.toolServer.Endpoint, this.model, this.effort),
@@ -123,10 +131,20 @@ internal sealed class LiveAgentLane : IAsyncDisposable
         long used = 0;
         long size = 0;
         string cost = string.Empty;
+        List<string> trace = [];
         while (session.Events.TryRead(out AgentEvent? agentEvent))
         {
             switch (agentEvent)
             {
+                case ThoughtChunk thought:
+                    trace.Add("thought: " + Clip(thought.Text));
+                    break;
+                case ToolCallStarted call:
+                    trace.Add($"tool {call.Kind} '{call.Title}' {Clip(call.RawInputJson ?? string.Empty)}");
+                    break;
+                case TurnCompleted done:
+                    trace.Add($"turn completed: {done.StopReason}");
+                    break;
                 case MessageChunk chunk:
                     reply.Append(chunk.Text);
                     break;
@@ -138,7 +156,16 @@ internal sealed class LiveAgentLane : IAsyncDisposable
             }
         }
 
-        return new LiveTurn(reply.ToString(), used, size, cost, clock.Elapsed);
+        return new LiveTurn(reply.ToString(), used, size, cost, clock.Elapsed, trace);
+    }
+
+    /// <summary>Shortens a trace entry to one readable line.</summary>
+    /// <param name="text">The entry's text.</param>
+    /// <returns>At most 240 characters on one line.</returns>
+    private static string Clip(string text)
+    {
+        string line = text.ReplaceLineEndings(" ");
+        return line.Length > 240 ? line[..240] + "…" : line;
     }
 
     /// <summary>Fails when the host warned, which is how it reports falling back from the model or Effort the lane asked for.</summary>
