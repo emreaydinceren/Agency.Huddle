@@ -670,3 +670,35 @@ dotnet_diagnostic.S108.severity = warning  # Nested blocks of code should not be
 [{src/Huddle.Acp/**.cs,src/Huddle.Console/**.cs,tests/Huddle.Acp.Tests/**.cs}]
 # AgentProcess.cs (2), ConsoleLineReader.cs (1), AgentProcessLauncherTests.cs (1): ACP-owned, not edited from the chat side.
 dotnet_diagnostic.S108.severity = none
+
+[*.cs]
+# ClrHeapAllocationAnalyzer is advisory: report in the IDE, never fail the build.
+dotnet_diagnostic.HAA0101.severity = suggestion
+dotnet_diagnostic.HAA0102.severity = suggestion
+dotnet_diagnostic.HAA0201.severity = suggestion
+dotnet_diagnostic.HAA0202.severity = suggestion
+dotnet_diagnostic.HAA0301.severity = suggestion
+dotnet_diagnostic.HAA0302.severity = suggestion
+dotnet_diagnostic.HAA0303.severity = suggestion
+dotnet_diagnostic.HAA0401.severity = suggestion
+dotnet_diagnostic.HAA0501.severity = suggestion
+dotnet_diagnostic.HAA0502.severity = suggestion
+dotnet_diagnostic.HAA0503.severity = suggestion
+dotnet_diagnostic.HAA0504.severity = suggestion
+dotnet_diagnostic.HAA0505.severity = suggestion
+dotnet_diagnostic.HAA0601.severity = suggestion
+dotnet_diagnostic.HAA0602.severity = suggestion
+dotnet_diagnostic.HAA0603.severity = suggestion
+dotnet_diagnostic.HAA0604.severity = suggestion
+
+[src/**.cs]
+# Product code only. Neither rule is in latest-recommended, so a blocking call or an array property returning to src fails the build.
+dotnet_diagnostic.CA1849.severity = warning
+dotnet_diagnostic.CA1819.severity = warning
+# Shown as warnings in product code; Directory.Build.props lists them in WarningsNotAsErrors, so they do not fail the build.
+dotnet_diagnostic.HAA0101.severity = warning
+dotnet_diagnostic.HAA0102.severity = warning
+dotnet_diagnostic.HAA0202.severity = warning
+dotnet_diagnostic.HAA0402.severity = warning
+dotnet_diagnostic.HAA0601.severity = warning
+dotnet_diagnostic.HAA0602.severity = warning

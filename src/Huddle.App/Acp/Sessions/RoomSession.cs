@@ -420,7 +420,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         // Unblocks ProcessWorkItemAsync's await on this Turn immediately, without waiting on the
         // agent process to acknowledge the cancel notification below. A plain Cancel(), not
         // CancelAsync(), so this call - and the read loop awaiting it - returns at once.
+#pragma warning disable CA1849 // Deliberately synchronous: CancelAsync would let the callbacks finish after this returns, and the consumer's await on this Turn must be released before the cancel notification below is sent.
         turn.Cancellation.Cancel();
+#pragma warning restore CA1849
 
         // Safe from any thread: locks internally and no-ops when no prompt is in flight. NOT awaited
         // here - a queued Turn in a different Room must not reach PromptAsync on the shared session

@@ -9,6 +9,12 @@ namespace Agency.Huddle.App.Components.Tasks;
 /// </summary>
 internal static class TaskFieldView
 {
+    /// <summary><see cref="Variant.Text"/> boxed once: <c>AddAttribute</c> takes an <see cref="object"/>, so passing the enum would box it again for every chip on every render.</summary>
+    private static readonly object TextVariant = Variant.Text;
+
+    /// <summary><see cref="Size.Small"/> boxed once, for the same reason as <see cref="TextVariant"/>.</summary>
+    private static readonly object SmallSize = Size.Small;
+
     /// <summary>The words for an empty value of <paramref name="field"/>, or <see langword="null"/> when it stays blank.</summary>
     /// <param name="field">A field key.</param>
     public static string? EmptyText(string field) => field switch
@@ -41,8 +47,8 @@ internal static class TaskFieldView
         foreach (string tag in tags)
         {
             builder.OpenComponent<MudChip<string>>(0);
-            builder.AddAttribute(1, nameof(MudChip<string>.Variant), Variant.Text);
-            builder.AddAttribute(2, nameof(MudChip<string>.Size), Size.Small);
+            builder.AddAttribute(1, nameof(MudChip<string>.Variant), TextVariant);
+            builder.AddAttribute(2, nameof(MudChip<string>.Size), SmallSize);
             builder.AddAttribute(3, nameof(MudChip<string>.Class), "task-tag tag-chip");
             builder.AddAttribute(4, nameof(MudChip<string>.ChildContent), (RenderFragment)(content => content.AddContent(0, tag)));
             builder.CloseComponent();
