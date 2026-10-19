@@ -532,6 +532,7 @@
 
     /// <summary>Cancelled when the page goes, so leaving it stops a copy (§6.10.6).</summary>
     private readonly CancellationTokenSource pageCancellation = new();
+    private Agency.Huddle.App.SkillSources.SkillRegistry? subscribedRegistry;
     private bool approving;
     private string? continueTeam;
     private bool nameEdited;
@@ -688,9 +689,10 @@
         this.Pool.Changed += this.OnCatalogChanged;
         this.CustomRoles.Changed += this.OnCatalogChanged;
         this.Personas.PersonasChanged += this.OnPersonasChanged;
-        if (this.Services.GetService<Agency.Huddle.App.SkillSources.SkillRegistry>() is { } registry)
+        this.subscribedRegistry = this.Services.GetService<Agency.Huddle.App.SkillSources.SkillRegistry>();
+        if (this.subscribedRegistry is not null)
         {
-            registry.Changed += this.OnRegistryChanged;
+            this.subscribedRegistry.Changed += this.OnRegistryChanged;
         }
     }
 
@@ -1483,9 +1485,12 @@
         this.Pool.Changed -= this.OnCatalogChanged;
         this.CustomRoles.Changed -= this.OnCatalogChanged;
         this.Personas.PersonasChanged -= this.OnPersonasChanged;
-        if (this.Services.GetService<Agency.Huddle.App.SkillSources.SkillRegistry>() is { } registry)
+
+        // The registry subscribed to is remembered, not looked up again: during a prerender the request scope is already being
+        // disposed when this runs, so Services.GetService throws ObjectDisposedException and the handler would stay on the singleton.
+        if (this.subscribedRegistry is not null)
         {
-            registry.Changed -= this.OnRegistryChanged;
+            this.subscribedRegistry.Changed -= this.OnRegistryChanged;
         }
 
         this.pageCancellation.Cancel();

@@ -53,6 +53,37 @@ public sealed class TeamPageRouteTests
         Assert.Equal("Business", TitleOf(page));
     }
 
+    /// <summary>
+    /// Reading the body after the response has completed must still work. The page's components are disposed when the response
+    /// completes; if one throws there, TestHost aborts the body stream and a late read sees a cancellation. Delaying the read makes
+    /// that deterministic instead of a race against a loaded runner. It found <c>BuildTeam.Dispose</c> throwing
+    /// <see cref="ObjectDisposedException"/> by resolving a service from the request scope that was already being disposed.
+    /// </summary>
+    [Fact]
+    public async Task TeamPage_BodyReadAfterTheResponseCompleted_StillSucceeds()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using TeamWebApplicationFactory factory = new();
+        using HttpClient client = await StartAsync(factory, ct);
+
+        using HttpResponseMessage response = await client.GetAsync("/teams/Business", HttpCompletionOption.ResponseHeadersRead, ct);
+        await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+        string html;
+        try
+        {
+            html = await response.Content.ReadAsStringAsync(ct);
+        }
+        catch (OperationCanceledException ex) when (!ct.IsCancellationRequested)
+        {
+            throw NamedFailure("/teams/Business", ex);
+        }
+
+        Assert.Equal("Business", TitleOf(new HtmlParser().ParseDocument(html)));
+        // The log is process wide and other hosted tests run in parallel, so only a throw while the renderer disposes the page counts.
+        List<string> disposeFailures = [.. HostingExceptionLog.Snapshot().Where(static entry => entry.Contains("Renderer.Dispose", StringComparison.Ordinal))];
+        Assert.True(disposeFailures.Count == 0, string.Join(Environment.NewLine + "----" + Environment.NewLine, disposeFailures));
+    }
+
     /// <summary>E-11: <c>/teams/Sales%20%26%20Ops</c> resolves the Team <c>Sales &amp; Ops</c> (title and default tab) and its own links are escaped.</summary>
     [Fact]
     public async Task EscapedTeamRoute_ResolvesTheTeamWithAmpersand()
@@ -118,6 +149,7 @@ public sealed class TeamPageRouteTests
         Directory.CreateDirectory(Path.Combine(factory.TasksDirPath, "Business", "Marketing Project"));
         Directory.CreateDirectory(Path.Combine(factory.TasksDirPath, "Sales & Ops", "Launch"));
 
+        HostingExceptionLog.Start();
         HttpClient client = factory.CreateClient();
         ITeamCatalog catalog = factory.Services.GetRequiredService<ITeamCatalog>();
         await Eventually.UntilAsync(() => catalog.Find("Business")?.Projects.Contains("Marketing Project") == true
@@ -128,11 +160,30 @@ public sealed class TeamPageRouteTests
     /// <summary>GETs <paramref name="path"/>, asserts a 200, and parses the body.</summary>
     private static async Task<IHtmlDocument> GetPageAsync(HttpClient client, string path, CancellationToken cancellationToken)
     {
-        using HttpResponseMessage response = await client.GetAsync(path, cancellationToken);
-        string html = await response.Content.ReadAsStringAsync(cancellationToken);
+        try
+        {
+            using HttpResponseMessage response = await client.GetAsync(path, cancellationToken);
+            string html = await response.Content.ReadAsStringAsync(cancellationToken);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        return new HtmlParser().ParseDocument(html);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            return new HtmlParser().ParseDocument(html);
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw NamedFailure(path, ex);
+        }
+    }
+
+    /// <summary>
+    /// TestHost reports a server-side exception after the response was written as a bare cancellation and drops the exception.
+    /// This turns it into a failure that names what Hosting recorded, so a flaky run says which component threw.
+    /// </summary>
+    private static InvalidOperationException NamedFailure(string path, OperationCanceledException cancellation)
+    {
+        IReadOnlyList<string> recorded = HostingExceptionLog.Snapshot();
+        return new InvalidOperationException(
+            $"GET {path} was cancelled by the server, not the test. Hosting recorded {recorded.Count} unhandled exception(s):{Environment.NewLine}{string.Join(Environment.NewLine + "----" + Environment.NewLine, recorded)}",
+            cancellation);
     }
 
     /// <summary>The prerendered document title, trimmed.</summary>
