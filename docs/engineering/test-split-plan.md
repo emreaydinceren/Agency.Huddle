@@ -6,7 +6,7 @@ can run with less parallelism than the thousands of in-memory tests around them.
 `/Execute-Project-Plan` and track it in [§9](#9-tracker) with `agents/scripts/Set-Tracker.ps1`. The
 manager reads [DeliveryPlaybook.md](../../agents/DeliveryPlaybook.md) before the first dispatch.
 
-**Written:** 2026-10-18 against `main` at `573bf44e` · **Status:** Phase 1 (D0 to D10) delivered 2026-10-18 on `chore/test-split`; the load runs (0.6, 10.2) were skipped by the user; Phase 2 not started · **Spec:** Part 1 of
+**Written:** 2026-10-18 against `main` at `573bf44e` · **Status:** Phase 1 (D0 to D10) delivered 2026-10-18 on `chore/test-split`; the load runs (0.6, 10.2) were skipped by the user; Phase 2 (D11 to D17) delivered 2026-10-18 on `chore/test-reuse`, stacked on `chore/test-split`; no pull request opened yet · **Spec:** Part 1 of
 this page, cited below as **§S1** to **§S12**.
 
 > [!IMPORTANT]
@@ -1080,7 +1080,7 @@ Ids are `<deliverable>.<task>`:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "2.3" -State Done -TrackerPath docs/engineering/test-split-plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 75 of 77 tasks Done · 4 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
+**Status:** 75 of 77 tasks Done (the other two are 0.6 and 10.2, the load runs, skipped by the user) · 5 of 5 retrospectives done · last updated 2026-10-18.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1180,10 +1180,10 @@ Ids are `<deliverable>.<task>`:
 | 16.6 Pass-through decorators (S) | Sonnet | D10 | | | ✔ |
 | **D17 Close Phase 2** | Haiku | D11 to D16 | | | |
 | 17.1 The shared-helper catalogue in `Testing.md` (H) | Haiku | D11 to D16 | | | ✔ |
-| 17.2 Full verification and load run (H) | Haiku | 17.1 | | | ✔ |
+| 17.2 Full verification (the load run was skipped by the user) (H) | Haiku | 17.1 | | | ✔ |
 | R3 Retrospective at 45 Done | Opus | 45 Done | | | ✔ |
 | R4 Retrospective at 60 Done | Opus | 60 Done | | | ✔ |
-| R5 Retrospective at 75 Done | Opus | 75 Done | | | |
+| R5 Retrospective at 75 Done | Opus | 75 Done | | | ✔ |
 
 ---
 
@@ -1224,6 +1224,13 @@ below is `tests/Huddle.Tests.<Project>/Acp/Sessions/RoomSessionTests.cs`; find t
    64K tokens per site against about 81K by hand, but 14.6b's first pass dropped the CR in five files).
 9. Wait for a build or test run with one blocking call, never repeated Monitor polls (14.5 polled 16 times),
    and put a long call-site list in `sites-<task>.txt`, not in the brief.
+10. R5 (2026-10-18, whole delivery 236.7M tokens: 51 agents 150.6M, manager 86.1M = 36%): about 59% of agent
+    tokens were the fixed 74K first call of every implementer. So (a) the 35-call / 150K budget applies to
+    every task, not only migrations, and a *behaviour* task is split into a. list and run the affected tests,
+    b. fix (15.1/15.2, 13.5 and 14.5 had no budget and cost 8M to 9M each); (b) dispatch implementers as a
+    lean agent type with only Read, Edit, Grep, Glob and PowerShell, no MCP servers and no skills; (c) the
+    manager starts a fresh session per deliverable, seeded only by the tracker and `delivery-state.md`, and
+    never runs past 200K (this run's manager reached 500K over 280 calls and was never compacted).
 
 ## §R1 Waiting and budgets
 
