@@ -3,7 +3,7 @@
     Checks the structure of the manual-test set under docs/engineering/manual-tests/.
 
 .DESCRIPTION
-    Area files are docs/engineering/manual-tests/*.md except common.md, tracker.md and planning.md.
+    Area files are docs/engineering/manual-tests/*.md except common.md, tracker.md, planning.md and run-log.md.
     A test heading is `### <ID> - <title>` (em dash). Per-test minutes come from the first
     `about <n> min` within 4 lines below the heading. The area header is the first
     `**<n> tests**` and `about <h> hours` within the first 15 lines.
@@ -15,6 +15,8 @@
       PLANNING-MISSING  no link to the area file from planning.md
       TRACKER-MISSING   a heading with no tracker row
       TRACKER-ORPHAN    a tracker row with no heading
+      LOG-MISSING       a heading with no `### <ID> — ` section in run-log.md
+      LOG-ORPHAN        a run-log.md section with no heading
       DUPLICATE-ID      the same id as a heading in two files (reported on the later file)
 
     -Area limits the run to one file's own rules (header and ids); registry rules are skipped.
@@ -51,7 +53,8 @@ $setDir = Join-Path $Root 'docs/engineering/manual-tests'
 $hubPath = Join-Path $Root 'docs/engineering/manual-tests.md'
 $planningPath = Join-Path $setDir 'planning.md'
 $trackerPath = Join-Path $setDir 'tracker.md'
-$nonArea = @('common.md', 'tracker.md', 'planning.md')
+$runLogPath = Join-Path $setDir 'run-log.md'
+$nonArea = @('common.md', 'tracker.md', 'planning.md', 'run-log.md')
 
 $headingPattern = '^### (?<id>[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*) — '
 $errors = [System.Collections.Generic.List[string]]::new()
@@ -230,6 +233,26 @@ if ([string]::IsNullOrWhiteSpace($Area)) {
             $errors.Add("TRACKER-ORPHAN tracker.md $id has no heading")
         }
     }
+
+    $logIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+    $logOrder = [System.Collections.Generic.List[string]]::new()
+    foreach ($line in (Get-Lines -Path $runLogPath)) {
+        if ($line -match $headingPattern -and $logIds.Add($Matches['id'])) {
+            $logOrder.Add($Matches['id'])
+        }
+    }
+    foreach ($a in $areas) {
+        foreach ($t in $a.Tests) {
+            if (-not $logIds.Contains($t.Id)) {
+                $errors.Add("LOG-MISSING $($a.Name) $($t.Id) has no run-log entry")
+            }
+        }
+    }
+    foreach ($id in $logOrder) {
+        if (-not $headingIds.Contains($id)) {
+            $errors.Add("LOG-ORPHAN run-log.md $id has no heading")
+        }
+    }
 }
 
 $firstFile = @{}
@@ -280,7 +303,7 @@ foreach ($line in (Get-Lines -Path (Join-Path $setDir 'common.md'))) {
 
 $linkFiles = [System.Collections.Generic.List[string]]::new()
 if ([string]::IsNullOrWhiteSpace($Area)) {
-    foreach ($p in @($hubPath, (Join-Path $setDir 'common.md'), $trackerPath, $planningPath)) {
+    foreach ($p in @($hubPath, (Join-Path $setDir 'common.md'), $trackerPath, $planningPath, $runLogPath)) {
         $linkFiles.Add($p)
     }
 }
@@ -346,7 +369,7 @@ foreach ($file in $linkFiles) {
     }
 }
 
-$order = @('HEADER-COUNT', 'HEADER-HOURS', 'HUB-MISSING', 'PLANNING-MISSING', 'TRACKER-MISSING', 'TRACKER-ORPHAN', 'DUPLICATE-ID', 'LINK-BROKEN', 'ANCHOR-BROKEN', 'PROC-UNDEFINED')
+$order = @('HEADER-COUNT', 'HEADER-HOURS', 'HUB-MISSING', 'PLANNING-MISSING', 'TRACKER-MISSING', 'TRACKER-ORPHAN', 'LOG-MISSING', 'LOG-ORPHAN', 'DUPLICATE-ID', 'LINK-BROKEN', 'ANCHOR-BROKEN', 'PROC-UNDEFINED')
 $sorted = $errors | Sort-Object -Stable -Property @{ Expression = { $order.IndexOf(($_ -split ' ', 2)[0]) } }
 foreach ($e in $sorted) {
     Write-Host $e

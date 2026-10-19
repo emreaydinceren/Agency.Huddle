@@ -1,6 +1,7 @@
 # Manual test tracker
 
-Where every test stands. One row per test, updated as you run it.
+Where every test stands. One row per test, updated as you run it. What happened on every run,
+including the ones before the current status, is in the [Run log](run-log.md).
 
 > [!NOTE]
 > **The demo-agent cases were removed on 2026-10-06**, when `Team:DemoAgent:Enabled` became `false`
