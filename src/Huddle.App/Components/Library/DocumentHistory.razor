@@ -38,7 +38,7 @@
                             <div class="doc-history-head">
                                 <DocHistoryActor Name="@entry.Actor" Kind="entry.ActorKind" />
                                 <span class="doc-history-chip">@(entry.ActorKind == DocActorKind.Human ? "you" : "Teammate")</span>
-                                <span class="doc-history-kind doc-history-kind-@entry.Kind.ToString().ToLowerInvariant()">@DocHistoryView.KindLabel(entry)</span>
+                                <span class="doc-history-kind">@DocHistoryView.KindLabel(entry)</span>
                             </div>
                             @if (entry.Summary.Length > 0)
                             {
