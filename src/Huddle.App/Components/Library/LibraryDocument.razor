@@ -8,6 +8,7 @@
 @implements IAsyncDisposable
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.DocHistory
 @using Agency.Huddle.App.FileChanges
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Sidebar
@@ -20,6 +21,7 @@
 @inject IDialogService Dialogs
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
+@inject DocHistoryStore HistoryStore
 
 <div class="library-document" @ref="this.rootElement">
     <PageSubjectSource Value="@this.Subject" />
@@ -58,6 +60,10 @@
     }
     else if (this.content is not null)
     {
+        @if (this.ShowsHistory())
+        {
+            <DocumentByline Path="@this.Path" OnOpenHistory="@this.ScrollToHistoryAsync" />
+        }
         @if (this.freshnessNoticeVisible)
         {
             @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
@@ -109,6 +115,10 @@
             @if (this.backlinksRows is not null)
             {
                 <BacklinksPanel Backlinks="@this.backlinksRows" IsAvailable="@this.backlinkIndexAvailable" OnNavigate="@this.OnNavigate" />
+            }
+            @if (this.ShowsHistory())
+            {
+                <DocumentHistory Path="@this.Path" />
             }
         }
         else if (this.content.Kind == LibraryFileKind.Image)
@@ -215,6 +225,12 @@
     /// <param name="command">The command sent to this page's Tab.</param>
     private async Task OnPageCommandAsync(PageCommand command)
     {
+        if (command is ScrollToHistory)
+        {
+            await this.ScrollToHistoryAsync();
+            return;
+        }
+
         if (command is not ScrollToHeading scroll)
         {
             return;
@@ -227,6 +243,19 @@
         }
 
         await this.JS.InvokeAsync<bool>("huddleLibrary.scrollToHeading", this.rootElement, scroll.HeadingId);
+    }
+
+    /// <summary>Whether the byline and the History apply: History is on and this is a Markdown document.</summary>
+    private bool ShowsHistory() =>
+        this.HistoryStore.Enabled && this.content?.Kind == LibraryFileKind.Markdown;
+
+    /// <summary>Scrolls the History at the bottom into view. Only Read mode shows it, so any other mode ignores the request (DocHistory spec §6.8).</summary>
+    private async Task ScrollToHistoryAsync()
+    {
+        if (this.mode == LibraryMode.Read && this.ShowsHistory())
+        {
+            await this.JS.InvokeAsync<bool>("huddleLibrary.scrollToHeading", this.rootElement, DocumentHistory.ElementId);
+        }
     }
 
     /// <inheritdoc />

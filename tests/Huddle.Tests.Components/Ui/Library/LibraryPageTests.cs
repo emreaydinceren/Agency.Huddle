@@ -244,6 +244,7 @@ public sealed class LibraryPageTests : IDisposable
             ctx.Services.AddSingleton(this.LibraryFixture.CreateService());
             ctx.Services.AddSingleton(this.LibraryFixture.Index);
             ctx.Services.AddSingleton<ILibraryNoteResolver>(new FakeLibraryNoteResolver());
+            ctx.Services.AddDocHistoryServices();
             ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
             ctx.Services.AddSingleton(this.tasks);
             ctx.Services.AddSingleton(new TeamFolderProvisioner(

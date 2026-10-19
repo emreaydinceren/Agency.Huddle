@@ -412,6 +412,14 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             chatTools = [.. chatTools, watchFolderTool, unwatchFolderTool];
         }
 
+        // DocHistory spec §6.3: log_change is offered on the same terms, so an Agent that cannot write files is
+        // not asked to report writing one. Appended before GetHelpTool is built, so get_help lists it.
+        if (this.options.DocHistory.Enabled && profile.ReadsFiles)
+        {
+            IAppTool logChangeTool = ActivatorUtilities.CreateInstance<LogChangeTool>(this.serviceProvider, persona.Name);
+            chatTools = [.. chatTools, logChangeTool];
+        }
+
         return chatTools;
     }
 

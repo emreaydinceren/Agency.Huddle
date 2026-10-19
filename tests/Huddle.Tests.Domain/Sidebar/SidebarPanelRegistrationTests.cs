@@ -23,9 +23,9 @@ public sealed class SidebarPanelRegistrationTests
         Assert.Equal(expected, ids);
     }
 
-    /// <summary>A Markdown document gets the Outline and Linked documents panels.</summary>
+    /// <summary>A Markdown document gets the Outline, Linked documents and Recent edits panels.</summary>
     [Fact]
-    public void MarkdownDocument_GetsOutlineAndLinked()
+    public void MarkdownDocument_GetsOutlineLinkedAndRecentEdits()
     {
         using TempDataDir dataDir = new();
         using ServiceProvider provider = BuildProvider(dataDir, new Dictionary<string, string?>());
@@ -33,7 +33,7 @@ public sealed class SidebarPanelRegistrationTests
 
         List<string> ids = catalog.For(MarkdownSubject()).Select(static panel => panel.Id).ToList();
 
-        string[] expected = ["outline", "linked-documents"];
+        string[] expected = ["outline", "linked-documents", "recent-edits"];
         Assert.Equal(expected, ids);
     }
 

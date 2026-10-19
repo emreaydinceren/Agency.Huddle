@@ -1,0 +1,88 @@
+@*
+    The line under a Markdown document's toolbar (DocHistory spec §6.7): who wrote, edited, reviewed and objected to
+    the document, and when it last changed. Absent for a document with no history. Clicking it asks the host to
+    scroll to the History at the bottom.
+*@
+@using Agency.Huddle.App.DocHistory
+@using Agency.Huddle.App.Library
+@inherits DocHistoryComponentBase
+@inject DocHistoryStore Store
+@inject TimeProvider Clock
+
+@if (this.byline is { } line)
+{
+    @* A div, not a button: an Agent's avatar is itself a button, and a button cannot hold one. The time is the keyboard way in. *@
+    <div class="doc-byline" @onclick="this.OnOpenHistory">
+        <span class="doc-byline-part">
+            <span class="doc-byline-label">Written by</span>
+            <DocHistoryActor Name="@line.Writer" Kind="this.KindOf(line.Writer)" />
+        </span>
+        @this.Part("Edited by", line.EditedBy)
+        @this.Part("Reviewed by", line.ReviewedBy)
+        @this.Part("Objected by", line.ObjectedBy)
+        <button type="button" class="doc-byline-time" @onclick="this.OnOpenHistory" @onclick:stopPropagation title="@($"{this.FullTime(line.When)}. Show the history of this document")">@DocHistoryView.RelativeTime(line.When, this.Clock.GetUtcNow(), this.Clock.LocalTimeZone)</button>
+    </div>
+}
+
+@code {
+    private DocByline? byline;
+
+    /// <summary>The document.</summary>
+    [Parameter, EditorRequired]
+    public required LibraryPath Path { get; set; }
+
+    /// <summary>Raised when the byline is clicked.</summary>
+    [Parameter]
+    public EventCallback OnOpenHistory { get; set; }
+
+    /// <inheritdoc />
+    private protected override DocHistoryStore HistoryStore => this.Store;
+
+    /// <inheritdoc />
+    protected override LibraryPath? HistoryPath => this.Path;
+
+    /// <inheritdoc />
+    protected override void OnEntriesLoaded() => this.byline = DocHistoryView.Byline(this.Entries);
+
+    /// <summary>One "Edited by" part with each shown Name's avatar and "+N" for the rest, or nothing for an empty list; the tooltip is the first actor's latest summary.</summary>
+    /// <param name="label">The part's label.</param>
+    /// <param name="names">The Names, most recent first.</param>
+    private RenderFragment Part(string label, IReadOnlyList<string> names) => builder =>
+    {
+        if (names.Count == 0)
+        {
+            return;
+        }
+
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", "doc-byline-part");
+        builder.AddAttribute(2, "title", this.LatestSummary(names[0]));
+        builder.OpenElement(3, "span");
+        builder.AddAttribute(4, "class", "doc-byline-label");
+        builder.AddContent(5, label);
+        builder.CloseElement();
+        foreach (string name in names.Take(DocHistoryView.MaxNames))
+        {
+            builder.OpenComponent<DocHistoryActor>(6);
+            builder.AddComponentParameter(7, nameof(DocHistoryActor.Name), name);
+            builder.AddComponentParameter(8, nameof(DocHistoryActor.Kind), this.KindOf(name));
+            builder.CloseComponent();
+        }
+
+        if (names.Count > DocHistoryView.MaxNames)
+        {
+            builder.AddContent(9, $"+{names.Count - DocHistoryView.MaxNames}");
+        }
+
+        builder.CloseElement();
+    };
+
+    private DocActorKind KindOf(string name) =>
+        this.Entries.LastOrDefault(entry => string.Equals(entry.Actor, name, StringComparison.OrdinalIgnoreCase))?.ActorKind ?? DocActorKind.Agent;
+
+    private string LatestSummary(string name) =>
+        this.Entries.LastOrDefault(entry => string.Equals(entry.Actor, name, StringComparison.OrdinalIgnoreCase) && entry.Summary.Length > 0)?.Summary ?? string.Empty;
+
+    private string FullTime(DateTimeOffset at) =>
+        TimeZoneInfo.ConvertTime(at, this.Clock.LocalTimeZone).ToString("d MMMM yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+}

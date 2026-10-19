@@ -1277,6 +1277,20 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
+            Key: "tool.logChange.description",
+            Label: "log_change description",
+            HelperText:
+                "The job description a model reads for the log_change tool, which writes a line in a document's " +
+                "history. It is the only prompt that asks an Agent to call the tool. Takes no placeholders.",
+            Default:
+                """
+                Records one line in a Library document's history, which the Human sees under the document's title. Call it once for each Markdown document you create or change, after the file is written, with created or edited and a summary of what you did in your own words. Call it with reviewed when you checked a document, and objected when you disagree with it, even if you changed nothing. Write the summary for the Human: what changed and why, not how.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
             Key: "turn.fileByYouSuffix",
             Label: "File Changes: by-you suffix",
             HelperText:

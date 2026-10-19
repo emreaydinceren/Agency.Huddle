@@ -1,0 +1,95 @@
+@*
+    The History at the bottom of a Markdown document's Read mode (DocHistory spec §6.10): every entry grouped by day,
+    each summary in full. Read-only; the entries are what the editors reported, not a record Huddle verified.
+*@
+@using System.Globalization
+@using Agency.Huddle.App.DocHistory
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Services
+@inherits DocHistoryComponentBase
+@inject ITaskReferenceResolver Tasks
+@inject ILibraryNoteResolver NoteResolver
+@inject DocHistoryStore Store
+@inject TimeProvider Clock
+
+<section id="@ElementId" class="doc-history" aria-label="History">
+    <div class="doc-history-title" role="heading" aria-level="2">History</div>
+    @if (this.Entries.Count == 0)
+    {
+        <p class="doc-history-empty mud-text-secondary">No changes logged yet.</p>
+    }
+    else
+    {
+        int remaining = this.shown;
+        @foreach (DocHistoryDay day in this.days)
+        {
+            if (remaining <= 0)
+            {
+                break;
+            }
+
+            <div class="doc-history-day">
+                <div class="doc-history-day-label" role="heading" aria-level="3">@day.Label</div>
+                @foreach (DocHistoryEntry entry in day.Entries.Take(remaining))
+                {
+                    <div class="doc-history-entry">
+                        <span class="doc-history-time" title="@this.FullTime(entry.At)">@this.ClockTime(entry.At)</span>
+                        <div class="doc-history-body">
+                            <div class="doc-history-head">
+                                <DocHistoryActor Name="@entry.Actor" Kind="entry.ActorKind" />
+                                <span class="doc-history-chip">@(entry.ActorKind == DocActorKind.Human ? "you" : "Teammate")</span>
+                                <span class="doc-history-kind doc-history-kind-@entry.Kind.ToString().ToLowerInvariant()">@DocHistoryView.KindLabel(entry)</span>
+                            </div>
+                            @if (entry.Summary.Length > 0)
+                            {
+                                <div class="doc-history-summary">@((MarkupString)MarkdownRenderer.ToHtml(entry.Summary, this.Tasks, this.NoteResolver, this.Path))</div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+            remaining -= day.Entries.Count;
+        }
+
+        @if (this.total > this.shown)
+        {
+            <MudButton Size="Size.Small" Class="doc-history-older" OnClick="this.ShowOlder">Show older</MudButton>
+        }
+    }
+</section>
+
+@code {
+    /// <summary>The element id the byline and the panel's "See all" scroll to.</summary>
+    public const string ElementId = "doc-history";
+
+    private const int PageSize = 50;
+
+    private IReadOnlyList<DocHistoryDay> days = [];
+    private int total;
+    private int shown = PageSize;
+
+    /// <summary>The document.</summary>
+    [Parameter, EditorRequired]
+    public required LibraryPath Path { get; set; }
+
+    /// <inheritdoc />
+    private protected override DocHistoryStore HistoryStore => this.Store;
+
+    /// <inheritdoc />
+    protected override LibraryPath? HistoryPath => this.Path;
+
+    /// <inheritdoc />
+    protected override void OnEntriesLoaded()
+    {
+        this.days = DocHistoryView.ByDay(this.Entries, this.Clock.GetUtcNow(), this.Clock.LocalTimeZone, this.Store.HumanSaveGroupWindow);
+        this.total = this.days.Sum(static day => day.Entries.Count);
+    }
+
+    private void ShowOlder() => this.shown += PageSize;
+
+    private string ClockTime(DateTimeOffset at) =>
+        TimeZoneInfo.ConvertTime(at, this.Clock.LocalTimeZone).ToString("HH:mm", CultureInfo.InvariantCulture);
+
+    private string FullTime(DateTimeOffset at) =>
+        TimeZoneInfo.ConvertTime(at, this.Clock.LocalTimeZone).ToString("d MMMM yyyy HH:mm", CultureInfo.InvariantCulture);
+}

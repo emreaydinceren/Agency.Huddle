@@ -363,6 +363,7 @@ public sealed class TeamFilesTabTests : IDisposable
             ctx.Services.AddSingleton(this.libraryFixture.CreateService());
             ctx.Services.AddSingleton(this.libraryFixture.Index);
             ctx.Services.AddSingleton<ILibraryNoteResolver>(new FakeLibraryNoteResolver());
+            ctx.Services.AddDocHistoryServices();
             ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
             ctx.Services.AddSingleton(this.tasks);
             ctx.Services.AddSingleton(new TeamFolderProvisioner(

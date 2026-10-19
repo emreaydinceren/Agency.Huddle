@@ -37,12 +37,12 @@ public sealed partial class PromptCatalogTests
     /// blocks design §6.5 (count now 71), plus <c>tool.fileRequest.description</c>, <c>tool.confirmRequest.description</c> and
     /// <c>tool.triageRequest.description</c> added for the tool descriptions batch 2 (count now 84), plus
     /// <c>tool.proposeSprint.description</c>, <c>tool.markRetroRow.description</c> and <c>tool.proposeRetroChanges.description</c>
-    /// added for the tool descriptions batch 3 (count now 87), plus the eight Referenced items prompts (count now 95), plus the seven Skill Packs prompts (count now 102).
+    /// added for the tool descriptions batch 3 (count now 87), plus the eight Referenced items prompts (count now 95), plus the seven Skill Packs prompts (count now 102), plus <c>tool.logChange.description</c> added for DocHistory spec §6.3 (count now 103).
     /// </summary>
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(102, PromptCatalog.All.Count);
+        Assert.Equal(103, PromptCatalog.All.Count);
     }
 
     /// <summary>Task 58 (PR-4, PR-5): the process blocks and the onboarding turn take and require their one placeholder and carry no tool prefix.</summary>
