@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
@@ -320,7 +321,7 @@ public sealed class TasksPageTests
         // Kind "list" with an empty name fails only ValidateName ("Name must be 1-60 characters."),
         // so the raw entry parses but ViewValidator refuses it - exactly the InvalidView case, not LoadError.
         await File.WriteAllTextAsync(Path.Combine(dir.Path, "views.json"), "{\"version\":1,\"views\":[{\"id\":\"bad-view\",\"name\":\"\",\"kind\":\"list\"}]}", ct);
-        PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        PersonaStore personas = dir.CreatePersonaStore();
         TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         TaskEvents events = new();
         using ViewStore views = new(dir.Options(), NullLogger<ViewStore>.Instance);

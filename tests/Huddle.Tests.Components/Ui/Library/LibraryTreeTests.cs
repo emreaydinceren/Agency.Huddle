@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
@@ -641,7 +642,7 @@ public sealed class LibraryTreeTests : IDisposable
         {
             TempDataDir dir = new();
             LibraryFileServiceFixture libraryFixture = LibraryFileServiceFixture.Attach(dir.Path);
-            PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+            PersonaStore personas = dir.CreatePersonaStore();
             return new TreeFixture(dir, libraryFixture, personas);
         }
 

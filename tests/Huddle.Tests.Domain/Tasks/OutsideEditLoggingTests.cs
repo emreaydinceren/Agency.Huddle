@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using System.Reflection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
@@ -26,7 +27,7 @@ public sealed class OutsideEditLoggingTests
             root,
             Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", creator: "You", priority: TaskPriority.High, location: new("Platform", null, false)));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         using TaskService service = CreateTaskService(dir, store, personas);
 
@@ -53,7 +54,7 @@ public sealed class OutsideEditLoggingTests
             root,
             Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", title: "T", creator: "You", priority: TaskPriority.Medium, location: new("Platform", null, false)));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         using TaskService service = CreateTaskService(dir, store, personas);
 
@@ -95,7 +96,7 @@ public sealed class OutsideEditLoggingTests
             root,
             Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", priority: TaskPriority.High, location: new("Platform", null, false)));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         TaskEvents events = new();
         _ = CreateTaskService(dir, store, personas, events);
@@ -125,7 +126,7 @@ public sealed class OutsideEditLoggingTests
             root,
             Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         TaskEvents events = new();
         _ = CreateTaskService(dir, store, personas, events);
@@ -161,7 +162,7 @@ public sealed class OutsideEditLoggingTests
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
         Directory.CreateDirectory(Path.Combine(root, "Platform"));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         using TaskService service = CreateTaskService(dir, store, personas);
 
@@ -194,7 +195,7 @@ public sealed class OutsideEditLoggingTests
                 priority: TaskPriority.Medium,
                 location: new("Platform", null, false),
                 changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "created")]));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
 
@@ -234,7 +235,7 @@ public sealed class OutsideEditLoggingTests
             Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", creator: "You", location: new("Platform", null, false)));
         Directory.CreateDirectory(Path.Combine(root, "Support", "_tasks"));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         using TaskService service = CreateTaskService(dir, store, personas);
 
@@ -263,7 +264,7 @@ public sealed class OutsideEditLoggingTests
             root,
             Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", priority: TaskPriority.Medium, location: new("Platform", null, false)));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         TaskEvents events = new();
         _ = CreateTaskService(dir, store, personas, events);
@@ -294,7 +295,7 @@ public sealed class OutsideEditLoggingTests
     public void Dispose_UnsubscribesFromStoreEvents()
     {
         using TempDataDir dir = new();
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         TaskService service = CreateTaskService(dir, store, personas);
 

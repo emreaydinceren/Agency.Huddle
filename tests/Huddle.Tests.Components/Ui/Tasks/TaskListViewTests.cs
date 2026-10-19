@@ -1,5 +1,6 @@
 namespace Agency.Huddle.Tests.Ui.Tasks;
 
+using Agency.Huddle.Tests.Factories;
 using AngleSharp.Dom;
 using Bunit;
 using Bunit.Rendering;
@@ -30,7 +31,7 @@ public sealed class TaskListViewTests : IDisposable
     /// <summary>Builds an empty <see cref="TaskStore"/>: <see cref="TaskListView"/> reads its Team folders for the orphan-Team chip (corrections-B7 12.4 item 3).</summary>
     public TaskListViewTests()
     {
-        this.personas = TestTaskStore.CreatePersonaStore(this.dataDir);
+        this.personas = this.dataDir.CreatePersonaStore();
         this.store = TestTaskStore.CreateTaskStore(this.dataDir, this.personas);
     }
 

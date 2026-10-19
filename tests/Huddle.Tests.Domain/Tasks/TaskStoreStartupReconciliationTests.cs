@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Tasks;
@@ -26,7 +27,7 @@ public sealed class TaskStoreStartupReconciliationTests
             changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "Human", "created")]);
         string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), task);
         File.SetLastWriteTimeUtc(path, DateTime.UtcNow);
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         ManualTimeProvider clock = new() { UtcNow = new DateTimeOffset(2026, 1, 15, 9, 0, 0, TimeSpan.Zero) };
 
         using TaskStore store = new(dir.Options(), personas, clock, NullLogger<TaskStore>.Instance);
@@ -59,7 +60,7 @@ public sealed class TaskStoreStartupReconciliationTests
         string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), task);
         File.SetLastWriteTimeUtc(path, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         string originalText = File.ReadAllText(path);
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
 
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
@@ -80,7 +81,7 @@ public sealed class TaskStoreStartupReconciliationTests
             root,
             Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         ManualTimeProvider clock = new() { UtcNow = new DateTimeOffset(2025, 6, 15, 8, 30, 0, TimeSpan.Zero) };
 
         using TaskStore store = new(dir.Options(), personas, clock, NullLogger<TaskStore>.Instance);
@@ -108,7 +109,7 @@ public sealed class TaskStoreStartupReconciliationTests
             Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         File.SetLastWriteTimeUtc(path, DateTime.UtcNow);
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
 
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         bool raised = false;

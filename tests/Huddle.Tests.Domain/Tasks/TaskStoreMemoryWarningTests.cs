@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
@@ -27,7 +28,7 @@ public sealed class TaskStoreMemoryWarningTests
         byte[] openBefore = File.ReadAllBytes(open);
         byte[] closedBefore = File.ReadAllBytes(closed);
         RecordingLogger<TaskStore> logger = new();
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
 
         using TaskStore store = new(dir.Options(), personas, TimeProvider.System, logger);
 
@@ -48,7 +49,7 @@ public sealed class TaskStoreMemoryWarningTests
         string root = TestTaskStore.Root(dir);
         _ = WriteRawFile(root, Path.Combine("Business", "memory", "_tasks", "X.md"), "stranded");
         RecordingLogger<TaskStore> logger = new();
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
 
         using TaskStore store = new(dir.Options(), personas, TimeProvider.System, logger);
 
@@ -69,7 +70,7 @@ public sealed class TaskStoreMemoryWarningTests
         _ = WriteRawFile(root, Path.Combine("Business", "memory", "_tasks", "a.md"), "a");
         _ = WriteRawFile(root, Path.Combine("Business", "memory", "_tasks", "_closed", "B.md"), "b");
         RecordingLogger<TaskStore> logger = new();
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
 
         using TaskStore store = new(dir.Options(), personas, TimeProvider.System, logger);
 
@@ -88,7 +89,7 @@ public sealed class TaskStoreMemoryWarningTests
         string root = TestTaskStore.Root(dir);
         _ = WriteRawFile(root, Path.Combine("Business", "Memory", "_tasks", "X.md"), "stranded");
         RecordingLogger<TaskStore> logger = new();
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
 
         using TaskStore store = new(dir.Options(), personas, TimeProvider.System, logger);
 
@@ -109,7 +110,7 @@ public sealed class TaskStoreMemoryWarningTests
         _ = WriteRawFile(root, Path.Combine("Sales", "memory", "_tasks", "_closed", "SAL-0002.md"), "s");
         Directory.CreateDirectory(Path.Combine(root, "Ops", "Launch"));
         RecordingLogger<TaskStore> logger = new();
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
 
         using TaskStore store = new(dir.Options(), personas, TimeProvider.System, logger);
 
@@ -131,7 +132,7 @@ public sealed class TaskStoreMemoryWarningTests
         string root = TestTaskStore.Root(dir);
         _ = WriteRawFile(root, Path.Combine("Business", "memory", "_tasks", "X.md"), "stranded");
         RecordingLogger<TaskStore> logger = new();
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = new(dir.Options(), personas, TimeProvider.System, logger);
         TaskService service = new(store, new TaskIdAllocator(dir.Options()), new TaskEvents(), personas, new EmptySprintCatalog(), dir.Options(), TimeProvider.System, NullLogger<TaskService>.Instance);
         Assert.Single(Warnings(logger));
@@ -155,7 +156,7 @@ public sealed class TaskStoreMemoryWarningTests
         Directory.CreateDirectory(Path.Combine(root, "Business", "memory", "_tasks"));
         Directory.CreateDirectory(Path.Combine(root, "Sales", "memory", "_tasks", "_closed"));
         RecordingLogger<TaskStore> logger = new();
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
 
         using TaskStore store = new(dir.Options(), personas, TimeProvider.System, logger);
 
@@ -171,7 +172,7 @@ public sealed class TaskStoreMemoryWarningTests
         TestTaskStore.WriteTask(root, Path.Combine("Business", "_tasks", "BUS-0001.md"), TestTasks.Make(id: "BUS-0001", location: new("Business", null, false)));
         TestTaskStore.WriteTask(root, Path.Combine("Business", "Auth", "_tasks", "BUS-0002.md"), TestTasks.Make(id: "BUS-0002", location: new("Business", "Auth", false)));
         RecordingLogger<TaskStore> logger = new();
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
 
         using TaskStore store = new(dir.Options(), personas, TimeProvider.System, logger);
 
@@ -187,7 +188,7 @@ public sealed class TaskStoreMemoryWarningTests
         string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(root, Path.Combine("Business", "Memory-notes", "_tasks", "X.md"), TestTasks.Make(id: "BUS-0001", location: new("Business", "Memory-notes", false)));
         RecordingLogger<TaskStore> logger = new();
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
 
         using TaskStore store = new(dir.Options(), personas, TimeProvider.System, logger);
 
@@ -204,7 +205,7 @@ public sealed class TaskStoreMemoryWarningTests
         string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(root, Path.Combine("memory", "_tasks", "MEM-0001.md"), TestTasks.Make(id: "MEM-0001", location: new("memory", null, false)));
         RecordingLogger<TaskStore> logger = new();
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
 
         using TaskStore store = new(dir.Options(), personas, TimeProvider.System, logger);
 

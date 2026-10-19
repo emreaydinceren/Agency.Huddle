@@ -21,9 +21,13 @@ public sealed class TempDataDir : IDisposable
 
     public string Path { get; }
 
-    public IOptions<TeamOptions> Options()
+    /// <summary>Builds <see cref="TeamOptions"/> whose <see cref="TeamOptions.DataDir"/> is this directory.</summary>
+    /// <param name="configure">Applied after <see cref="TeamOptions.DataDir"/> is set, to change any other option; <see langword="null"/> changes nothing.</param>
+    public IOptions<TeamOptions> Options(Action<TeamOptions>? configure = null)
     {
-        return Microsoft.Extensions.Options.Options.Create(new TeamOptions { DataDir = this.Path });
+        TeamOptions options = new() { DataDir = this.Path };
+        configure?.Invoke(options);
+        return Microsoft.Extensions.Options.Options.Create(options);
     }
 
     /// <summary>

@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
@@ -493,7 +494,7 @@ public sealed class SprintStoreTests
             }
 
             ManualTimeProvider clock = new(new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero));
-            this.personas = TestTaskStore.CreatePersonaStore(this.Dir);
+            this.personas = this.Dir.CreatePersonaStore();
             _ = this.personas.Add(new PersonaIdentity("Nova", "Nova", "nova", ["Platform"]), "You are Nova.");
             this.Store = new TaskStore(this.Dir.Options(), this.personas, clock, NullLogger<TaskStore>.Instance);
             this.Events = new TaskEvents();

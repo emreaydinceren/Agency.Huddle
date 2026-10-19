@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
@@ -378,7 +379,7 @@ public sealed class CadenceServiceTests
 
         public Harness()
         {
-            this.personas = TestTaskStore.CreatePersonaStore(this.dir);
+            this.personas = this.dir.CreatePersonaStore();
             this.State = new CadenceStateStore(this.dir.Options());
             VersionedRef type = new("web", "1.2.0");
             LibraryRoot root = new("teams", "Teams", this.dir.Path, LibraryRootKind.Teams);

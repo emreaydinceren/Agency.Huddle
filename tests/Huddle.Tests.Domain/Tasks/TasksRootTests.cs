@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -23,7 +24,7 @@ public sealed class TasksRootTests
     {
         using TempDataDir dir = new();
         IOptions<TeamOptions> options = dir.Options();
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         string expectedRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Teams.Dir));
 
         using TaskStore store = new(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
@@ -38,7 +39,7 @@ public sealed class TasksRootTests
         using TempDataDir dir = new();
         IOptions<TeamOptions> options = dir.Options();
         options.Value.Teams.Dir = "T2";
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         string expectedRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, "T2"));
 
         using TaskStore store = new(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
@@ -79,7 +80,7 @@ public sealed class TasksRootTests
         using TempDataDir dir = new();
         IOptions<TeamOptions> options = dir.Options();
         options.Value.Acp.TeammatesDir = Path.Combine(options.Value.Teams.Dir, "Sub");
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
 
         string expectedTeamsRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Teams.Dir));
         string expectedTeammatesRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Acp.TeammatesDir));

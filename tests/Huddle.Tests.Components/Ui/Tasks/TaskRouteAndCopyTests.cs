@@ -1,5 +1,6 @@
 namespace Agency.Huddle.Tests.Ui.Tasks;
 
+using Agency.Huddle.Tests.Factories;
 using Bunit;
 using Bunit.Rendering;
 using Bunit.TestDoubles;
@@ -227,7 +228,7 @@ public sealed class TaskRouteAndCopyTests
     public async Task TaskListView_RowMenuCopyId_RaisesOnCopyIdWithTheTaskId()
     {
         using TempDataDir dataDir = new();
-        Agency.Huddle.App.Acp.PersonaStore personas = TestTaskStore.CreatePersonaStore(dataDir);
+        Agency.Huddle.App.Acp.PersonaStore personas = dataDir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dataDir, personas);
         TaskItem task = TestTasks.Make(id: "PLAT-0001", title: "Ship the thing");
         TaskId? copied = null;

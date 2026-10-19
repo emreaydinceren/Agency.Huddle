@@ -1,9 +1,9 @@
+using Agency.Huddle.Tests.Factories;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
-using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Teammates;
 
 namespace Agency.Huddle.Tests.Teams;
@@ -20,7 +20,7 @@ public sealed class HireServiceDraftTests : IDisposable
     /// <summary>Builds a hire service over real stores in a temporary data folder.</summary>
     public HireServiceDraftTests()
     {
-        this.personas = TestTaskStore.CreatePersonaStore(this.dir);
+        this.personas = this.dir.CreatePersonaStore();
         TeamTypeCatalog types = new(this.dir.Options(), NullLogger<TeamTypeCatalog>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
         FakeSkillAvailability packs = new();
         this.avatars = new AvatarStore(this.dir.Options(), NullLogger<AvatarStore>.Instance);

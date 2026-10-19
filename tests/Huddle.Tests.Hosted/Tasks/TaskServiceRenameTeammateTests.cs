@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -43,7 +44,7 @@ public sealed class TaskServiceRenameTeammateTests
                 creator: "Nova",
                 location: new("Platform", null, true),
                 changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "Nova", "created")]));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         using TaskService service = CreateTaskService(dir, store, personas);
 
@@ -72,7 +73,7 @@ public sealed class TaskServiceRenameTeammateTests
                 assignee: "Nova",
                 location: new("Platform", null, false),
                 changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "created")]));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         TaskEvents events = new();
         using TaskService service = CreateTaskService(dir, store, personas, events);
@@ -105,7 +106,7 @@ public sealed class TaskServiceRenameTeammateTests
             root,
             Path.Combine("Platform", "_tasks", "PLAT-0002.md"),
             TestTasks.Make(id: "PLAT-0002", assignee: "Nova", location: new("Platform", null, false), changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "created")]));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         TaskEvents events = new();
         using TaskService service = CreateTaskService(dir, store, personas, events);
@@ -132,7 +133,7 @@ public sealed class TaskServiceRenameTeammateTests
                 assignee: "Nova",
                 location: new("Platform", null, false),
                 changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "Nova", "created")]));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         using TaskService service = CreateTaskService(dir, store, personas);
 
@@ -159,7 +160,7 @@ public sealed class TaskServiceRenameTeammateTests
                 creator: "Nova",
                 location: new("Platform", null, false),
                 changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "created")]));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         using TaskService service = CreateTaskService(dir, store, personas);
 
@@ -189,7 +190,7 @@ public sealed class TaskServiceRenameTeammateTests
             root,
             Path.Combine("Platform", "_tasks", "PLAT-0002.md"),
             TestTasks.Make(id: "PLAT-0002", assignee: "Nova", location: new("Platform", null, false), changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "created")]));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         using TaskService service = CreateTaskService(dir, store, personas);
 
@@ -222,7 +223,7 @@ public sealed class TaskServiceRenameTeammateTests
             root,
             Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", assignee: "Nova", location: new("Platform", null, false), changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "created")]));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         using TaskService service = CreateTaskService(dir, store, personas);
 
@@ -246,7 +247,7 @@ public sealed class TaskServiceRenameTeammateTests
     public async Task PersonasChangedHandler_CallsBackIntoTaskServiceFromAnotherThread_FinishesWithin10Seconds()
     {
         using TempDataDir dir = new();
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         using TaskService service = CreateTaskService(dir, store, personas);
 

@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Library;
@@ -99,7 +100,7 @@ public sealed class TasksLibraryHandOffTests
         Directory.CreateDirectory(Path.Combine(root, "Platform", "_tasks"));
         File.WriteAllText(Path.Combine(root, "Platform", "notes.md"), "hello");
         TestTaskStore.WriteTask(root, TestTaskStore.RelativePath("Platform", null, false, "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new TaskLocation("Platform", null, false)));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         Assert.DoesNotContain(store.RejectedFiles, rejected => rejected.Path.Contains("notes.md", StringComparison.Ordinal));
@@ -116,7 +117,7 @@ public sealed class TasksLibraryHandOffTests
         Directory.CreateDirectory(Path.Combine(root, "Platform", "Auth v2", "_tasks"));
         File.WriteAllText(Path.Combine(root, "Platform", "Auth v2", "notes.md"), "hello");
         TestTaskStore.WriteTask(root, TestTaskStore.RelativePath("Platform", "Auth v2", false, "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new TaskLocation("Platform", "Auth v2", false)));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         Assert.DoesNotContain(store.RejectedFiles, rejected => rejected.Path.Contains("notes.md", StringComparison.Ordinal));

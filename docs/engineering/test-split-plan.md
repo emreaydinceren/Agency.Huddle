@@ -1080,7 +1080,7 @@ Ids are `<deliverable>.<task>`:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "2.3" -State Done -TrackerPath docs/engineering/test-split-plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 60 of 77 tasks Done · 3 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
+**Status:** 63 of 77 tasks Done · 4 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1164,9 +1164,9 @@ Ids are `<deliverable>.<task>`:
 | 14.5 Disposal and re-registration defects (S) | Sonnet | 14.3 | | | ✔ |
 | 14.6 Synchronous clicks (H) | Haiku | 14.4 | | | ✔ |
 | **D15 Building the domain** | Sonnet | D10 | | | |
-| 15.1 Red: `TestFactoriesTests` (H) | Haiku | D10 | | | |
-| 15.2 `TestOptions`, `TestStores`, `ChatServiceFactory`, `TestPersonas` (S) | Sonnet | 15.1 | | | |
-| 15.3 `TeamTypeJson` with its tests (S) | Sonnet | 15.2 | | | |
+| 15.1 Red: `TestFactoriesTests` (H) | Haiku | D10 | | | ✔ |
+| 15.2 `TestOptions`, `TestStores`, `ChatServiceFactory`, `TestPersonas` (S) | Sonnet | 15.1 | | | ✔ |
+| 15.3 `TeamTypeJson` with its tests (S) | Sonnet | 15.2 | | | ✔ |
 | 15.4 Migrate `Acp/Tools` (H) | Haiku | 15.2 | | | |
 | 15.5 Migrate store and options construction, `Acp` and `Tasks` (H) | Haiku | 15.2 | | | |
 | 15.6 Migrate store and options construction, the rest (H) | Haiku | 15.5 | | | |
@@ -1182,7 +1182,7 @@ Ids are `<deliverable>.<task>`:
 | 17.1 The shared-helper catalogue in `Testing.md` (H) | Haiku | D11 to D16 | | | |
 | 17.2 Full verification and load run (H) | Haiku | 17.1 | | | |
 | R3 Retrospective at 45 Done | Opus | 45 Done | | | ✔ |
-| R4 Retrospective at 60 Done | Opus | 60 Done | | | |
+| R4 Retrospective at 60 Done | Opus | 60 Done | | | ✔ |
 | R5 Retrospective at 75 Done | Opus | 75 Done | | | |
 
 ---
@@ -1218,6 +1218,12 @@ below is `tests/Huddle.Tests.<Project>/Acp/Sessions/RoomSessionTests.cs`; find t
    Haiku leftovers.
 7. Before dispatch, the manager greps the "remove X" precondition (no callers left) and puts the result in
    the brief (12.4: `FiringTimeProvider` still had three callers).
+8. Above 30 call sites, edit with a script `Conversation/test-split/Migrate-<task>.ps1` that reads and writes
+   whole files keeping each file's line ending and BOM, not per-site Edit calls; before building, check that
+   `git diff --numstat` shows added equal to removed, and run `Check-Eol.ps1` (R4: scripts cost about 23K to
+   64K tokens per site against about 81K by hand, but 14.6b's first pass dropped the CR in five files).
+9. Wait for a build or test run with one blocking call, never repeated Monitor polls (14.5 polled 16 times),
+   and put a long call-site list in `sites-<task>.txt`, not in the brief.
 
 ## §R1 Waiting and budgets
 

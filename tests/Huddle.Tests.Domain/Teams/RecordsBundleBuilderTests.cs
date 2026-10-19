@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using System.Globalization;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Tasks;
@@ -242,7 +243,7 @@ public sealed class RecordsBundleBuilderTests
             {
                 if (this.builder is null)
                 {
-                    this.tasks = TestTaskStore.CreateTaskStore(this.dir, TestTaskStore.CreatePersonaStore(this.dir));
+                    this.tasks = TestTaskStore.CreateTaskStore(this.dir, this.dir.CreatePersonaStore());
                     this.builder = new RecordsBundleBuilder(this.tasks, this.Catalog, this.Spend, this.dir.Options());
                 }
 

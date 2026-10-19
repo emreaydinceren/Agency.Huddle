@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using System.Globalization;
 using Bunit;
 using Bunit.Rendering;
@@ -1353,7 +1354,7 @@ public sealed class LibraryExplorerTests : IDisposable
         {
             TempDataDir dir = new();
             LibraryFileServiceFixture libraryFixture = LibraryFileServiceFixture.Attach(dir.Path);
-            PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+            PersonaStore personas = dir.CreatePersonaStore();
             TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
             return new ExplorerFixture(dir, libraryFixture, personas, tasks);
         }

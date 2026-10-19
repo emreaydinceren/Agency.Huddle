@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using AngleSharp.Dom;
 using Bunit;
 using Bunit.Rendering;
@@ -15,7 +16,6 @@ using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
-using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Teammates;
 using Agency.Huddle.Tests.Teams;
 
@@ -1118,7 +1118,7 @@ public sealed class BuildTeamTests
 
         public Fixture(int typeCount, bool filterTypes = false)
         {
-            this.Personas = TestTaskStore.CreatePersonaStore(this.dir);
+            this.Personas = this.dir.CreatePersonaStore();
             this.Catalog = new FakeTeamCatalog();
             Dictionary<string, string> builtins = new(StringComparer.Ordinal);
             for (int i = 1; i <= typeCount; i++)

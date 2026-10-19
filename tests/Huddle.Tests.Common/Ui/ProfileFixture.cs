@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
@@ -10,7 +11,6 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
-using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Teams;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -30,7 +30,7 @@ internal sealed class ProfileFixture : IDisposable
     /// <summary>Builds the stores over a fresh data directory, with one team type (<c>t01</c>) and one pool job (<c>tutor</c>).</summary>
     public ProfileFixture()
     {
-        this.Personas = TestTaskStore.CreatePersonaStore(this.dir);
+        this.Personas = this.dir.CreatePersonaStore();
         Dictionary<string, string> builtins = new(StringComparer.Ordinal)
         {
             ["t01/team-type.json"] = """

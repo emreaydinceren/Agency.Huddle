@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui.Tasks;
@@ -35,7 +36,7 @@ public sealed class TaskFieldAdoptionTests : IDisposable
     /// <summary>Builds the empty stores the List and the card read.</summary>
     public TaskFieldAdoptionTests()
     {
-        this.personas = TestTaskStore.CreatePersonaStore(this.dataDir);
+        this.personas = this.dataDir.CreatePersonaStore();
         this.store = TestTaskStore.CreateTaskStore(this.dataDir, this.personas);
     }
 

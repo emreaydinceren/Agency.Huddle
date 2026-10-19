@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
@@ -10,7 +11,6 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Library;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.Tests.Library;
-using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Teams;
 
 namespace Agency.Huddle.Tests.Ui.Library;
@@ -1087,7 +1087,7 @@ public sealed class LibraryFileOpsTests : IDisposable
         {
             TempDataDir dir = new();
             LibraryFileServiceFixture libraryFixture = LibraryFileServiceFixture.Attach(dir.Path, configure);
-            PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+            PersonaStore personas = dir.CreatePersonaStore();
             return new OpsFixture(dir, libraryFixture, personas);
         }
 

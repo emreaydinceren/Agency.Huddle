@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
@@ -209,7 +210,7 @@ public sealed class TeamFolderCatalogTests
             Directory.CreateDirectory(Path.Combine(dir.Path, "Teammates"));
 
             IOptions<TeamOptions> options = dir.Options();
-            PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+            PersonaStore personas = dir.CreatePersonaStore();
 
             TeammatePaths teammatePaths = new(options);
             LibraryRootStore rootStore = new(options, teammatePaths, NullLogger<LibraryRootStore>.Instance);

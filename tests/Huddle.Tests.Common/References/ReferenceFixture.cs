@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
@@ -85,7 +86,7 @@ internal sealed class ReferenceFixture : IDisposable
             TestTaskStore.WriteTask(TestTaskStore.Root(dir), TestTaskStore.RelativePath(task.Location.Team, task.Location.Project, false, task.Id + ".md"), task);
         }
 
-        TaskStore tasks = TestTaskStore.CreateTaskStore(dir, TestTaskStore.CreatePersonaStore(dir));
+        TaskStore tasks = TestTaskStore.CreateTaskStore(dir, dir.CreatePersonaStore());
         SqliteTeamDirectory directory = new(options);
         await directory.InitializeAsync("You", ct);
         User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);

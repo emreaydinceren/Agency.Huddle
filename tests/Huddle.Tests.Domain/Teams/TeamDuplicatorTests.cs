@@ -1,10 +1,10 @@
+using Agency.Huddle.Tests.Factories;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Library;
-using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Teammates;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -230,7 +230,7 @@ public sealed class TeamDuplicatorTests
             this.hireContext = hireContext ?? new RoleFixtures.Context();
             this.Dir = new TempDataDir();
             this.library = LibraryFileServiceFixture.Attach(this.Dir.Path);
-            this.Personas = TestTaskStore.CreatePersonaStore(this.Dir);
+            this.Personas = this.Dir.CreatePersonaStore();
             this.Catalog = new FakeTeamCatalog();
             Dictionary<string, string> builtins = new(StringComparer.Ordinal);
             foreach (string id in new[] { "web", "strict" })

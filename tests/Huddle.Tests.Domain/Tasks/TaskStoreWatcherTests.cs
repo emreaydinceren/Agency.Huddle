@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Tasks;
 
@@ -25,7 +26,7 @@ public sealed class TaskStoreWatcherTests
             root,
             Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", title: "original", location: new("Platform", null, false)));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
@@ -58,7 +59,7 @@ public sealed class TaskStoreWatcherTests
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
@@ -91,7 +92,7 @@ public sealed class TaskStoreWatcherTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         int indexChangedCount = 0;
@@ -121,7 +122,7 @@ public sealed class TaskStoreWatcherTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         int indexChangedCount = 0;
@@ -150,7 +151,7 @@ public sealed class TaskStoreWatcherTests
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
@@ -178,7 +179,7 @@ public sealed class TaskStoreWatcherTests
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
         Directory.CreateDirectory(Path.Combine(root, "Platform", "_tasks"));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         List<OutsideEdit> raised = [];
@@ -214,7 +215,7 @@ public sealed class TaskStoreWatcherTests
         string root = TestTaskStore.Root(dir);
         string sourcePath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         Directory.CreateDirectory(Path.Combine(root, "Ops", "_tasks"));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
@@ -249,7 +250,7 @@ public sealed class TaskStoreWatcherTests
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         Assert.NotNull(store.Get(id));
@@ -277,7 +278,7 @@ public sealed class TaskStoreWatcherTests
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
         Directory.CreateDirectory(Path.Combine(root, "Platform"));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         bool outsideEditRaised = false;
@@ -334,7 +335,7 @@ public sealed class TaskStoreWatcherTests
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
 
@@ -367,7 +368,7 @@ public sealed class TaskStoreWatcherTests
             root,
             Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", title: "original", location: new("Platform", null, false)));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
@@ -398,7 +399,7 @@ public sealed class TaskStoreWatcherTests
         string root = TestTaskStore.Root(dir);
         Directory.CreateDirectory(Path.Combine(root, "Platform", "_tasks"));
         Directory.CreateDirectory(Path.Combine(root, "Platform", "P", "research"));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         int baseline = store.RebuildCount;
 
@@ -427,7 +428,7 @@ public sealed class TaskStoreWatcherTests
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         Assert.DoesNotContain(store.Teams, team => string.Equals(team.Name, "Platform", StringComparison.Ordinal) && team.Projects.Contains("New"));
 
@@ -452,7 +453,7 @@ public sealed class TaskStoreWatcherTests
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
         Directory.CreateDirectory(Path.Combine(root, "Platform", "_tasks"));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         int baseline = store.RebuildCount;
 

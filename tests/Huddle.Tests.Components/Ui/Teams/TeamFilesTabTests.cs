@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
@@ -348,7 +349,7 @@ public sealed class TeamFilesTabTests : IDisposable
         {
             TempDataDir dir = new();
             LibraryFileServiceFixture libraryFixture = LibraryFileServiceFixture.Attach(dir.Path);
-            PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+            PersonaStore personas = dir.CreatePersonaStore();
             TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
             return new TabFixture(dir, libraryFixture, personas, tasks);
         }

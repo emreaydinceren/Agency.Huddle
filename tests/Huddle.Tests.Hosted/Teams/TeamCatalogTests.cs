@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Factories;
 using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Tasks;
@@ -23,7 +24,7 @@ public sealed class TeamCatalogTests
     public void Teams_WithNoPersonasAndNoFolders_IsEmpty()
     {
         using TempDataDir dir = new();
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
         using TeamCatalog catalog = new(personas, tasks);
 
@@ -40,7 +41,7 @@ public sealed class TeamCatalogTests
         CreateFolder(dir, "Ops", "Beta");
         CreateFolder(dir, "Ops", "Alpha");
         CreateFolder(dir, "Research");
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
         using TeamCatalog catalog = new(personas, tasks);
 
@@ -59,7 +60,7 @@ public sealed class TeamCatalogTests
     {
         using TempDataDir dir = new();
         WritePersona(dir, "Nova", teams: null);
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
         using TeamCatalog catalog = new(personas, tasks);
         Assert.Empty(catalog.Teams);
@@ -85,7 +86,7 @@ public sealed class TeamCatalogTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         WritePersona(dir, "Nova", "Research");
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
         using TeamCatalog catalog = new(personas, tasks);
         Assert.Equal(["Research|projects=|members=Nova|folder=False"], Describe(catalog.Teams));
@@ -110,7 +111,7 @@ public sealed class TeamCatalogTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         WritePersona(dir, "Nova", teams: null);
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
         TeamCatalog catalog = new(personas, tasks);
         int raised = 0;
@@ -140,7 +141,7 @@ public sealed class TeamCatalogTests
         CreateFolder(dir, "Ops");
         CreateFolder(dir, "Research");
         WriteTeamFile(dir, "Ops", new TeamFile(new VersionedRef("development", "1"), "Ada", "work/ops", "Deploys", "Process.md", string.Empty));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
         using TeamCatalog catalog = new(personas, tasks);
 
@@ -165,7 +166,7 @@ public sealed class TeamCatalogTests
         using TempDataDir dir = new();
         CreateFolder(dir, "Ops");
         WriteTeamFile(dir, "Ops", new TeamFile(new VersionedRef("development", "1"), "Ada", null, "Deploys", "Process.md", string.Empty));
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
         using TeamCatalog catalog = new(personas, tasks);
         int raised = 0;
@@ -197,7 +198,7 @@ public sealed class TeamCatalogTests
         using TempDataDir dir = new();
         WritePersona(dir, "Nova", "Ops");
         CreateFolder(dir, "Ops", "Alpha");
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
         using TeamCatalog catalog = new(personas, tasks);
 
@@ -219,7 +220,7 @@ public sealed class TeamCatalogTests
         using TempDataDir dir = new();
         WritePersona(dir, "Nova", "Ops");
         CreateFolder(dir, "Ops", "Alpha");
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
         using TeamCatalog catalog = new(personas, tasks);
 
@@ -243,7 +244,7 @@ public sealed class TeamCatalogTests
         WritePersona(dir, "Nova", "Ops");
         CreateFolder(dir, "Ops", "Uploads");
         CreateFolder(dir, "Ops", "Alpha");
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
         using TeamCatalog catalog = new(personas, tasks);
 
@@ -266,7 +267,7 @@ public sealed class TeamCatalogTests
         WritePersona(dir, "Nova", "Ops");
         CreateFolder(dir, "Ops", "memory");
         CreateFolder(dir, "Ops", "Alpha");
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
         using TeamCatalog catalog = new(personas, tasks);
 
