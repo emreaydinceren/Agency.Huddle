@@ -186,14 +186,10 @@ internal sealed partial class ProposalService(
     /// <param name="ct">Cancels the Human lookup and the post.</param>
     private async Task PostOutcomeAsync(string roomId, string text, CancellationToken ct)
     {
-        var human = await directory.GetHumanAsync(ct).ConfigureAwait(false);
-        try
+        string? problem = await HumanPost.TryPostAsync(chat, directory, roomId, text, ct).ConfigureAwait(false);
+        if (problem is not null)
         {
-            _ = await chat.PostAsync(roomId, human.Id, text, ct: ct).ConfigureAwait(false);
-        }
-        catch (ChatException ex)
-        {
-            ProposalService.LogPostFailed(logger, roomId, ex.Message);
+            ProposalService.LogPostFailed(logger, roomId, problem);
         }
     }
 

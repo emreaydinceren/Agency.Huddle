@@ -10,11 +10,9 @@ using Agency.Huddle.Contracts;
 /// <summary>Creates a Room containing the calling Agent, the Human, and the named agents.</summary>
 internal sealed class CreateRoomTool(ChatService chat, ITeamDirectory teamDirectory, string callerAgentId, IMentionAliasSource aliasSource, IPromptSource prompts) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     public string Name => "create_room";
 
-    public string Description => prompts.Render("tool.createRoom.description", NoValues);
+    public string Description => prompts.Render("tool.createRoom.description");
 
     public JsonObject InputSchema => new JsonObject
     {

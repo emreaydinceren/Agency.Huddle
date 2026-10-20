@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Nodes;
 using Agency.Huddle.App.Data;
@@ -149,6 +150,118 @@ internal static class TaskToolText
         }
 
         return (new TaskActor(TaskActorKind.Agent, user.Name, callerAgentId), string.Empty);
+    }
+
+    /// <summary>
+    /// The opening every tool that acts on one existing Task runs, in order: read the required
+    /// <c>taskId</c> argument, resolve it against <paramref name="store"/> (<see cref="TryResolve"/>),
+    /// then resolve the caller (<see cref="ResolveActorAsync"/>). The first step that fails decides
+    /// the refusal.
+    /// </summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="store">The Task store the id is looked up in.</param>
+    /// <param name="directory">Resolves the caller's <see cref="User"/> row.</param>
+    /// <param name="callerAgentId">The calling Agent's user id.</param>
+    /// <param name="cancellationToken">Propagated to <see cref="ITeamDirectory.GetUserAsync"/>.</param>
+    /// <returns>The target with an empty <c>Refusal</c>, or a <see langword="null"/> target with the refusal text.</returns>
+    public static async Task<(TaskToolTarget? Target, string Refusal)> StartAsync(
+        JsonObject arguments, TaskStore store, ITeamDirectory directory, string callerAgentId, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+
+        if (!TryGetString(arguments, "taskId", out string? taskIdText, out string taskIdRefusal))
+        {
+            return (null, taskIdRefusal);
+        }
+
+        if (!TryResolve(store, taskIdText, out TaskItem? task, out string resolveRefusal))
+        {
+            return (null, resolveRefusal);
+        }
+
+        (TaskActor? actor, string actorRefusal) = await ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
+        return actor is null ? (null, actorRefusal) : (new TaskToolTarget(task, actor), string.Empty);
+    }
+
+    /// <summary>The input schema of a tool whose only argument is the required <c>taskId</c>.</summary>
+    public static JsonObject TaskIdSchema() => SingleStringSchema("taskId");
+
+    /// <summary>The input schema of a tool whose only argument is one required string; a fresh object on every call, because a JSON node has one parent.</summary>
+    /// <param name="name">The argument's name.</param>
+    public static JsonObject SingleStringSchema(string name) => new()
+    {
+        ["type"] = "object",
+        ["properties"] = new JsonObject
+        {
+            [name] = new JsonObject { ["type"] = "string" },
+        },
+        ["required"] = new JsonArray { name },
+    };
+
+    /// <summary>
+    /// Reads a string argument that must be present and not blank, never throwing: a wrongly-typed
+    /// value is refused as <see cref="TryGetString"/> refuses it, and an absent or blank one with
+    /// <c>'name' is a required argument.</c>
+    /// </summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="name">The argument's name.</param>
+    /// <param name="value">The value, untrimmed, or <see langword="null"/> when this returns <see langword="false"/>.</param>
+    /// <param name="refusal">The refusal text, or <see cref="string.Empty"/> when this returns <see langword="true"/>.</param>
+    public static bool TryGetRequiredString(JsonObject arguments, string name, [NotNullWhen(true)] out string? value, out string refusal)
+    {
+        if (!TryGetString(arguments, name, out value, out refusal))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            value = null;
+            refusal = $"'{name}' is a required argument.";
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Words a <see cref="TaskService"/> write that was not saved: the problems of a
+    /// <see cref="TaskResult.Refused"/>, the message of a <see cref="TaskResult.GateRefused"/>, and the
+    /// §11.1 texts for <see cref="TaskResult.Conflict"/> and <see cref="TaskResult.NotFound"/>.
+    /// </summary>
+    /// <param name="result">The write's result.</param>
+    /// <param name="refusal">The refusal text, or <see cref="string.Empty"/> when the result is <see cref="TaskResult.Saved"/> or <see cref="TaskResult.Unchanged"/>.</param>
+    /// <returns><see langword="true"/> when <paramref name="result"/> is a refusal.</returns>
+    public static bool TryDescribeRefusal(TaskResult result, out string refusal)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        refusal = result switch
+        {
+            TaskResult.Refused refused => string.Join('\n', refused.Problems),
+            TaskResult.GateRefused gateRefused => gateRefused.Message,
+            TaskResult.Conflict conflict => $"{conflict.Current.Id} was changed by someone else; please try again.",
+            TaskResult.NotFound notFound => $"Unknown task '{notFound.Id}'.",
+            _ => string.Empty,
+        };
+        return refusal.Length > 0;
+    }
+
+    /// <summary>
+    /// <see cref="TryDescribeRefusal"/> for a tool that has already handled every result it can
+    /// succeed with: a <see cref="TaskResult.Saved"/> or <see cref="TaskResult.Unchanged"/> reaching
+    /// here is a bug in the caller, not a refusal.
+    /// </summary>
+    /// <param name="result">The write's result.</param>
+    /// <param name="toolName">The tool's name, for the exception message.</param>
+    public static string Refusal(TaskResult result, string toolName)
+    {
+        if (!TryDescribeRefusal(result, out string refusal))
+        {
+            throw new UnreachableException($"{toolName} handles every {result.GetType().Name} result before it asks for a refusal.");
+        }
+
+        return refusal;
     }
 
     /// <summary>
@@ -362,7 +475,7 @@ internal static class TaskToolText
     /// <param name="operation">The <see cref="TaskService"/> call to run.</param>
     /// <param name="result">The operation's result, or <see langword="null"/> when this returns <see langword="false"/>.</param>
     /// <param name="refusal">The refusal text, or <see cref="string.Empty"/> when this returns <see langword="true"/>.</param>
-    public static bool TryRun(Func<TaskResult> operation, out TaskResult? result, out string refusal)
+    public static bool TryRun(Func<TaskResult> operation, [NotNullWhen(true)] out TaskResult? result, out string refusal)
     {
         ArgumentNullException.ThrowIfNull(operation);
 

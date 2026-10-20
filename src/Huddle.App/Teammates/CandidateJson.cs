@@ -21,6 +21,31 @@ internal static class CandidateJson
     private static readonly HashSet<string> ForbiddenFields = new(StringComparer.Ordinal) { "model", "effort", "adapter", "skills", "_builtin" };
 
     /// <summary>
+    /// The JSON schema of one Candidate object, as <c>propose_teammates</c> (each item of
+    /// <c>candidates</c>) and <c>validate_teammate</c> (<c>candidate</c>) advertise it. One
+    /// definition, beside the parser that reads the same shape, so the two tools cannot drift. A
+    /// fresh object on every call, because a JSON node has one parent.
+    /// </summary>
+    internal static JsonObject Schema() => new()
+    {
+        ["type"] = "object",
+        ["properties"] = new JsonObject
+        {
+            ["name"] = new JsonObject { ["type"] = "string" },
+            ["alias"] = new JsonObject { ["type"] = "string" },
+            ["title"] = new JsonObject { ["type"] = "string" },
+            ["body"] = new JsonObject { ["type"] = "string" },
+            ["teams"] = new JsonObject
+            {
+                ["type"] = "array",
+                ["items"] = new JsonObject { ["type"] = "string" },
+            },
+            ["consult_when"] = new JsonObject { ["type"] = "string" },
+        },
+        ["required"] = new JsonArray { "name", "alias", "title", "body" },
+    };
+
+    /// <summary>
     /// Parses one Candidate out of <paramref name="node"/>. Every problem found is appended to
     /// <paramref name="problems"/> - a missing required field, a forbidden field, an unknown
     /// field, or a field of the wrong JSON shape - rather than stopping at the first, so a

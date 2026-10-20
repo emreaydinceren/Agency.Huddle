@@ -17,13 +17,11 @@ using Agency.Huddle.App.Tasks.HumanGate;
 /// </summary>
 internal sealed class GetTaskTool(TaskStore store, ISprintCatalog sprints, IPromptSource prompts, IProofSource? proofs = null) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
     public string Name => "get_task";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.getTask.description", NoValues);
+    public string Description => prompts.Render("tool.getTask.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject
@@ -49,14 +47,9 @@ internal sealed class GetTaskTool(TaskStore store, ISprintCatalog sprints, IProm
         ArgumentNullException.ThrowIfNull(arguments);
         _ = cancellationToken;
 
-        if (!TaskToolText.TryGetString(arguments, "taskId", out string? taskIdText, out string taskIdTypeRefusal))
+        if (!TaskToolText.TryGetRequiredString(arguments, "taskId", out string? taskIdText, out string taskIdRefusal))
         {
-            return Task.FromResult(taskIdTypeRefusal);
-        }
-
-        if (string.IsNullOrWhiteSpace(taskIdText))
-        {
-            return Task.FromResult("'taskId' is a required argument.");
+            return Task.FromResult(taskIdRefusal);
         }
 
         if (!TaskToolText.TryResolve(store, taskIdText, out TaskItem? task, out string idRefusal))

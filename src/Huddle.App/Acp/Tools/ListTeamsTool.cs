@@ -18,11 +18,8 @@ internal sealed class ListTeamsTool(ITeamCatalog teams, TaskStore store, Persona
     /// <inheritdoc />
     public string Name => "list_teams";
 
-    /// <summary>The placeholder values a prompt renders with; the tool descriptions take none.</summary>
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.listTeams.description", NoValues);
+    public string Description => prompts.Render("tool.listTeams.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new()

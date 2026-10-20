@@ -1,6 +1,5 @@
 namespace Agency.Huddle.App.Acp.Tools;
 
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json.Nodes;
@@ -25,13 +24,11 @@ internal sealed class UpdateTaskTool(
     IPromptSource prompts,
     string callerAgentId) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
     public string Name => "update_task";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.updateTask.description", NoValues);
+    public string Description => prompts.Render("tool.updateTask.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject
@@ -64,24 +61,13 @@ internal sealed class UpdateTaskTool(
     /// <inheritdoc />
     public async Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(arguments);
-
-        if (!TaskToolText.TryGetString(arguments, "taskId", out string? taskIdText, out string taskIdRefusal))
+        (TaskToolTarget? target, string refusal) = await TaskToolText.StartAsync(arguments, store, directory, callerAgentId, cancellationToken).ConfigureAwait(false);
+        if (target is null)
         {
-            return taskIdRefusal;
+            return refusal;
         }
 
-        if (!TaskToolText.TryResolve(store, taskIdText, out TaskItem? current, out string resolveRefusal))
-        {
-            return resolveRefusal;
-        }
-
-        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
-        if (actor is null)
-        {
-            return actorRefusal;
-        }
-
+        TaskActor actor = target.Actor;
         if (!TryBuildPatch(actor, sprints, arguments, out TaskPatch? patch, out string patchRefusal))
         {
             return patchRefusal;
@@ -92,7 +78,10 @@ internal sealed class UpdateTaskTool(
             return "Nothing to change: pass at least one field besides taskId.";
         }
 
-        if (!TaskToolText.TryRun(() => tasks.Update(current.Id, patch, null, actor), out TaskResult? result, out string runRefusal))
+        // Spec §11.1: "A Conflict can't happen here, because tools pass baseVersion: null" - this tool
+        // always does, so TaskService.Update's only Conflict route (a stale baseVersion) never
+        // triggers from here; Refusal words one anyway rather than throwing.
+        if (!TaskToolText.TryRun(() => tasks.Update(target.Task.Id, patch, null, actor), out TaskResult? result, out string runRefusal))
         {
             return runRefusal;
         }
@@ -101,14 +90,7 @@ internal sealed class UpdateTaskTool(
         {
             TaskResult.Saved saved => this.FormatSaved(saved, actor),
             TaskResult.Unchanged unchanged => $"{unchanged.Task.Id} already has those values; nothing changed.",
-            TaskResult.Refused refused => string.Join('\n', refused.Problems),
-            TaskResult.NotFound notFound => $"Unknown task '{notFound.Id}'.",
-            TaskResult.GateRefused gateRefused => gateRefused.Message,
-
-            // Spec §11.1: "A Conflict can't happen here, because tools pass baseVersion: null" - this
-            // tool always does (above), so TaskService.Update's only remaining Conflict route (a
-            // stale baseVersion) never triggers from here.
-            _ => throw new UnreachableException("update_task always passes baseVersion: null, so TaskService.Update never returns Conflict for it (Spec §11.1)."),
+            _ => TaskToolText.Refusal(result, this.Name),
         };
     }
 

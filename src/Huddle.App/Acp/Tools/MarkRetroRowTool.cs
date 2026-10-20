@@ -23,13 +23,11 @@ internal sealed class MarkRetroRowTool(
     string callerAgentId,
     IPromptSource prompts) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
     public string Name => "mark_retro_row";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.markRetroRow.description", NoValues);
+    public string Description => prompts.Render("tool.markRetroRow.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new()

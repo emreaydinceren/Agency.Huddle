@@ -24,8 +24,6 @@ internal sealed class CreateTaskTool(
     IPromptSource prompts,
     string callerAgentId) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <summary>The optional string arguments read straight after <c>team</c>, in check order.</summary>
     private static readonly string[] LeadingNames = ["project", "description", "status", "priority", "assignee", "originRoomId", "parent"];
 
@@ -36,7 +34,7 @@ internal sealed class CreateTaskTool(
     public string Name => "create_task";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.createTask.description", NoValues);
+    public string Description => prompts.Render("tool.createTask.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject

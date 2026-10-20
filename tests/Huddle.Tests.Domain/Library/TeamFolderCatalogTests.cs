@@ -26,9 +26,9 @@ public sealed class TeamFolderCatalogTests
         Directory.CreateDirectory(Path.Combine(fixture.TeamsPath, "marketing"));
         fixture.WritePersonaWithTeam("coo", "Marketing");
 
-        IReadOnlyList<LibraryTeamFolder> folders = fixture.List();
+        IReadOnlyList<TeamFolder> folders = fixture.List();
 
-        LibraryTeamFolder folder = Assert.Single(folders);
+        TeamFolder folder = Assert.Single(folders);
         Assert.Equal("marketing", folder.Name, StringComparer.Ordinal);
         Assert.False(folder.IsOrphan);
     }
@@ -40,9 +40,9 @@ public sealed class TeamFolderCatalogTests
         using Fixture fixture = Fixture.Build();
         Directory.CreateDirectory(Path.Combine(fixture.TeamsPath, "Ops"));
 
-        IReadOnlyList<LibraryTeamFolder> folders = fixture.List();
+        IReadOnlyList<TeamFolder> folders = fixture.List();
 
-        LibraryTeamFolder folder = Assert.Single(folders);
+        TeamFolder folder = Assert.Single(folders);
         Assert.Equal("Ops", folder.Name, StringComparer.Ordinal);
         Assert.True(folder.IsOrphan);
     }
@@ -57,9 +57,9 @@ public sealed class TeamFolderCatalogTests
         Directory.CreateDirectory(Path.Combine(team, "Launch Q4"));
         Directory.CreateDirectory(Path.Combine(team, "_tasks"));
 
-        IReadOnlyList<LibraryTeamFolder> folders = fixture.List();
+        IReadOnlyList<TeamFolder> folders = fixture.List();
 
-        LibraryTeamFolder folder = Assert.Single(folders);
+        TeamFolder folder = Assert.Single(folders);
         Assert.Equal(["Launch Q4"], folder.Projects);
     }
 
@@ -73,9 +73,9 @@ public sealed class TeamFolderCatalogTests
         Directory.CreateDirectory(Path.Combine(fixture.TeamsPath, ".hidden"));
         Directory.CreateDirectory(Path.Combine(fixture.TeamsPath, "x_y"));
 
-        IReadOnlyList<LibraryTeamFolder> folders = fixture.List();
+        IReadOnlyList<TeamFolder> folders = fixture.List();
 
-        LibraryTeamFolder folder = Assert.Single(folders);
+        TeamFolder folder = Assert.Single(folders);
         Assert.Equal("x_y", folder.Name, StringComparer.Ordinal);
     }
 
@@ -88,7 +88,7 @@ public sealed class TeamFolderCatalogTests
         Directory.CreateDirectory(Path.Combine(fixture.TeamsPath, "Alpha"));
         Directory.CreateDirectory(Path.Combine(fixture.TeamsPath, "charlie"));
 
-        IReadOnlyList<LibraryTeamFolder> folders = fixture.List();
+        IReadOnlyList<TeamFolder> folders = fixture.List();
 
         Assert.Equal(["Alpha", "bravo", "charlie"], [.. folders.Select(f => f.Name)]);
     }
@@ -100,7 +100,7 @@ public sealed class TeamFolderCatalogTests
         using Fixture fixture = Fixture.Build();
         Directory.Delete(fixture.TeamsPath);
 
-        IReadOnlyList<LibraryTeamFolder> folders = fixture.List();
+        IReadOnlyList<TeamFolder> folders = fixture.List();
 
         Assert.Empty(folders);
     }
@@ -113,7 +113,7 @@ public sealed class TeamFolderCatalogTests
         using Fixture fixture = Fixture.Build();
         fixture.WritePersonaWithTeam("coo", "Marketing");
 
-        IReadOnlyList<LibraryTeamFolder> folders = fixture.List();
+        IReadOnlyList<TeamFolder> folders = fixture.List();
 
         Assert.Empty(folders);
     }
@@ -136,7 +136,7 @@ public sealed class TeamFolderCatalogTests
                 return;
             }
 
-            IReadOnlyList<LibraryTeamFolder> folders = fixture.List();
+            IReadOnlyList<TeamFolder> folders = fixture.List();
 
             Assert.Empty(folders);
         }
@@ -157,13 +157,13 @@ public sealed class TeamFolderCatalogTests
         Directory.CreateDirectory(Path.Combine(fixture.TeamsPath, "Ops"));
         fixture.WritePersonaWithTeam("coo", "Marketing");
 
-        IReadOnlyList<LibraryTeamFolder> folders = fixture.List();
+        IReadOnlyList<TeamFolder> folders = fixture.List();
         IReadOnlyList<TeamFolder> boardTeams = fixture.TaskStore.Teams;
 
         Assert.Equal(boardTeams.Count, folders.Count);
         foreach (TeamFolder team in boardTeams)
         {
-            LibraryTeamFolder match = Assert.Single(folders, f => string.Equals(f.Name, team.Name, StringComparison.Ordinal));
+            TeamFolder match = Assert.Single(folders, f => string.Equals(f.Name, team.Name, StringComparison.Ordinal));
             Assert.Equal(team.IsOrphan, match.IsOrphan);
             Assert.Equal(team.Projects, match.Projects);
         }
@@ -234,7 +234,7 @@ public sealed class TeamFolderCatalogTests
         /// <summary>Rescans <see cref="TaskStore"/> (so it reflects any folders arranged on disk since
         /// this fixture was built), then calls <see cref="TeamFolderCatalog.List"/> with it and this
         /// fixture's resolver.</summary>
-        public IReadOnlyList<LibraryTeamFolder> List()
+        public IReadOnlyList<TeamFolder> List()
         {
             this.TaskStore = TestTaskStore.CreateTaskStore(this.dir, this.personas);
             return TeamFolderCatalog.List(this.Resolver, this.TeamsRoot, this.TaskStore.Teams);

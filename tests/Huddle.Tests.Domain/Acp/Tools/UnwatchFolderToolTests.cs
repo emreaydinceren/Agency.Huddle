@@ -1,12 +1,7 @@
 namespace Agency.Huddle.Tests.Acp.Tools;
 
 using System.Text.Json.Nodes;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App;
-using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
-using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.Tests.Acp.Fakes;
 
@@ -22,7 +17,7 @@ public sealed class UnwatchFolderToolTests
     public async Task Invoke_MissingArgument_ReturnsRequiredArgumentText()
     {
         var ct = TestContext.Current.CancellationToken;
-        using var fixture = await Fixture.CreateAsync(ct);
+        using var fixture = await FolderWatchToolFixture.CreateAsync(ct);
         var tool = new UnwatchFolderTool(fixture.Tracker, "Nova", new FakePromptSource());
 
         var result = await tool.InvokeAsync(new JsonObject(), ct);
@@ -35,7 +30,7 @@ public sealed class UnwatchFolderToolTests
     public async Task Name_IsUnwatchFolder()
     {
         var ct = TestContext.Current.CancellationToken;
-        using var fixture = await Fixture.CreateAsync(ct);
+        using var fixture = await FolderWatchToolFixture.CreateAsync(ct);
         var tool = new UnwatchFolderTool(fixture.Tracker, "Nova", new FakePromptSource());
 
         Assert.Equal("unwatch_folder", tool.Name);
@@ -46,7 +41,7 @@ public sealed class UnwatchFolderToolTests
     public async Task InputSchema_RequiresFolder()
     {
         var ct = TestContext.Current.CancellationToken;
-        using var fixture = await Fixture.CreateAsync(ct);
+        using var fixture = await FolderWatchToolFixture.CreateAsync(ct);
         var tool = new UnwatchFolderTool(fixture.Tracker, "Nova", new FakePromptSource());
 
         var schema = tool.InputSchema;
@@ -62,7 +57,7 @@ public sealed class UnwatchFolderToolTests
     public async Task Invoke_OwnWorkDir_ReturnsAlwaysWatchedText()
     {
         var ct = TestContext.Current.CancellationToken;
-        using var fixture = await Fixture.CreateAsync(ct);
+        using var fixture = await FolderWatchToolFixture.CreateAsync(ct);
         var tool = new UnwatchFolderTool(fixture.Tracker, "Nova", new FakePromptSource());
 
         var result = await tool.InvokeAsync(new JsonObject { ["folder"] = "Nova" }, ct);
@@ -75,7 +70,7 @@ public sealed class UnwatchFolderToolTests
     public async Task Invoke_NotWatched_ReturnsNotWatchingTextVerbatim()
     {
         var ct = TestContext.Current.CancellationToken;
-        using var fixture = await Fixture.CreateAsync(ct);
+        using var fixture = await FolderWatchToolFixture.CreateAsync(ct);
         var tool = new UnwatchFolderTool(fixture.Tracker, "Nova", new FakePromptSource());
 
         var result = await tool.InvokeAsync(new JsonObject { ["folder"] = "Shared" }, ct);
@@ -88,7 +83,7 @@ public sealed class UnwatchFolderToolTests
     public async Task Invoke_Subscribed_StopsWatchingVerbatim()
     {
         var ct = TestContext.Current.CancellationToken;
-        using var fixture = await Fixture.CreateAsync(ct);
+        using var fixture = await FolderWatchToolFixture.CreateAsync(ct);
         fixture.Tracker.Subscribe("Nova", "Shared");
         var tool = new UnwatchFolderTool(fixture.Tracker, "Nova", new FakePromptSource());
 
@@ -97,55 +92,12 @@ public sealed class UnwatchFolderToolTests
         Assert.Equal("Stopped watching 'Shared'.", result);
     }
 
-    /// <summary>Bundles a real <see cref="FileChangeTracker"/> and its collaborators over an isolated <see cref="TempDataDir"/>, matching <c>WatchFolderToolTests.Fixture</c>'s shape.</summary>
-    private sealed class Fixture(TempDataDir dataDir, PersonaStore personas, FileChangeTracker tracker, IOptions<TeamOptions> options) : IDisposable
-    {
-        /// <summary>The <see cref="FileChangeTracker"/> under test.</summary>
-        public FileChangeTracker Tracker { get; } = tracker;
-
-        /// <summary>The bound options this fixture's tracker resolves paths against.</summary>
-        public IOptions<TeamOptions> Options { get; } = options;
-
-        /// <summary>Builds a fixture with a real <see cref="SqliteTeamDirectory"/>, <see cref="PersonaStore"/>, <see cref="FileStateStore"/> and <see cref="WatchedFolderResolver"/>.</summary>
-        /// <param name="ct">Cancels the Team Directory's initialisation.</param>
-        public static async Task<Fixture> CreateAsync(CancellationToken ct)
-        {
-            TempDataDir dataDir = new();
-            IOptions<TeamOptions> options = dataDir.Options();
-            SqliteTeamDirectory directory = new(options);
-            await directory.InitializeAsync("You", ct);
-
-            TeammatePaths teammatePaths = new(options);
-            PersonaStore personas = new(
-                teammatePaths,
-                new PersonaModelStore(options),
-                new PersonaEffortStore(options), new PersonaWorkModeStore(options),
-                NullLogger<PersonaStore>.Instance);
-            FileStateStore store = new(options, NullLogger<FileStateStore>.Instance);
-            WatchedFolderResolver resolver = new(options, teammatePaths);
-            FileChangeTracker tracker = new(store, personas, directory, resolver, options, teammatePaths, NullLogger<FileChangeTracker>.Instance);
-
-            // Registered so "Nova" resolves via the Teammate-Name rule (FC §6.3) to its own Work Dir,
-            // matching the caller Name every tool test below binds at construction.
-            personas.Add(new PersonaIdentity("Nova", "Nova", "Nova", []), "You are Nova.");
-
-            return new Fixture(dataDir, personas, tracker, options);
-        }
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            personas.Dispose();
-            dataDir.Dispose();
-        }
-    }
-
     /// <summary>A <c>folder</c> that is not JSON text is refused with the <c>'folder' must be text.</c> refusal rather than throwing an <see cref="InvalidCastException"/>.</summary>
     [Fact]
     public async Task Invoke_NonStringFolder_RefusesAsText()
     {
         var ct = TestContext.Current.CancellationToken;
-        using var fixture = await Fixture.CreateAsync(ct);
+        using var fixture = await FolderWatchToolFixture.CreateAsync(ct);
         var tool = new UnwatchFolderTool(fixture.Tracker, "Nova", new FakePromptSource());
 
         var result = await tool.InvokeAsync(new JsonObject { ["folder"] = 42 }, ct);

@@ -691,40 +691,8 @@ internal sealed partial class AppearanceStore : IDisposable
     /// The freshly parsed document; an empty object if <see cref="path"/> no longer exists (a
     /// legitimate delete); or <see langword="null"/> if every attempt failed.
     /// </returns>
-    private JsonObject? ReadDocumentForWatcherRebuild()
-    {
-        if (!File.Exists(this.path))
-        {
-            return new JsonObject();
-        }
-
-        return RetryingFileRead.Run(() => ParseDocumentFile(this.path), this.OnReadGaveUp);
-    }
-
-    /// <summary>Logs why <see cref="ReadDocumentForWatcherRebuild"/> gave up and keeps the previous snapshot.</summary>
-    /// <param name="ex">The last failure.</param>
-    private JsonObject? OnReadGaveUp(Exception ex)
-    {
-        if (ex is JsonException)
-        {
-            this.logger.LogWarning(
-                ex,
-                "Could not parse appearance file '{Path}' after a filesystem change, even after retrying; keeping the previously resolved appearance rather than reverting to the default over what may be a mid-write race.",
-                this.path);
-        }
-        else
-        {
-            this.logger.LogWarning(
-                ex,
-                "Could not read appearance file '{Path}' after {Attempts} attempts; keeping the previously resolved appearance.",
-                this.path,
-#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
-                RetryingFileRead.Attempts);
-#pragma warning restore HAA0601
-        }
-
-        return null;
-    }
+    private JsonObject? ReadDocumentForWatcherRebuild() =>
+        RetryingFileRead.RereadKeepingPrevious(this.path, static () => new JsonObject(), () => ParseDocumentFile(this.path), this.logger, "appearance file", "appearance");
 
     /// <summary>
     /// Runs once the <see cref="DebouncedFileWatcher"/> settles on an external edit: rebuilds the

@@ -4,24 +4,17 @@ using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using MudBlazor;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.Pipes;
-using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Teams;
-using Agency.Huddle.App.Tasks;
-using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Library;
-using Agency.Huddle.Tests.Library;
 using Agency.Huddle.App.Components.Teams;
 using Agency.Huddle.Tests.Ui.Teams;
 using Agency.Huddle.Tests.Factories;
@@ -57,7 +50,7 @@ public sealed class RoomCopyLinkTests
         await using TeamWebApplicationFactory factory = new();
         Room room = await RoomCopyLinkTests.CreateRoomAsync(factory, name, team, teamRoom, ct);
         string expected = $"[{label}](/rooms/{room.Id})";
-        await using MudBunitContext ctx = RoomCopyLinkTests.NewChatContext(factory);
+        await using MudBunitContext ctx = ChatPageContext.Create(factory);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         ctx.JSInterop.Setup<bool>(RoomCopyLinkTests.CopyHelper, expected).SetResult(true);
 
@@ -75,7 +68,7 @@ public sealed class RoomCopyLinkTests
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         await using TeamWebApplicationFactory factory = new();
         Room room = await RoomCopyLinkTests.CreateRoomAsync(factory, "Marketing", "Marketing", teamRoom: true, ct);
-        await using MudBunitContext ctx = RoomCopyLinkTests.NewChatContext(factory);
+        await using MudBunitContext ctx = ChatPageContext.Create(factory);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 
         var cut = RoomCopyLinkTests.RenderChat(ctx, room.Id);
@@ -90,7 +83,7 @@ public sealed class RoomCopyLinkTests
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         await using TeamWebApplicationFactory factory = new();
         Room room = await RoomCopyLinkTests.CreateRoomAsync(factory, "Nova", null, false, ct);
-        await using MudBunitContext ctx = RoomCopyLinkTests.NewChatContext(factory);
+        await using MudBunitContext ctx = ChatPageContext.Create(factory);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         ctx.JSInterop.Setup<bool>(RoomCopyLinkTests.CopyHelper, $"[Nova](/rooms/{room.Id})").SetResult(true);
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
@@ -111,7 +104,7 @@ public sealed class RoomCopyLinkTests
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         await using TeamWebApplicationFactory factory = new();
         Room room = await RoomCopyLinkTests.CreateRoomAsync(factory, "Nova", null, false, ct);
-        await using MudBunitContext ctx = RoomCopyLinkTests.NewChatContext(factory);
+        await using MudBunitContext ctx = ChatPageContext.Create(factory);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         ctx.JSInterop.Setup<bool>(RoomCopyLinkTests.CopyHelper, $"[Nova](/rooms/{room.Id})").SetResult(false);
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
@@ -132,7 +125,7 @@ public sealed class RoomCopyLinkTests
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         await using TeamWebApplicationFactory factory = new();
         Room room = await RoomCopyLinkTests.CreateRoomAsync(factory, "Nova", null, false, ct);
-        await using MudBunitContext ctx = RoomCopyLinkTests.NewChatContext(factory);
+        await using MudBunitContext ctx = ChatPageContext.Create(factory);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 
         var cut = RoomCopyLinkTests.RenderChat(ctx, room.Id);
@@ -258,45 +251,6 @@ public sealed class RoomCopyLinkTests
         User? agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
         return await directory.CreateRoomAsync(name, [KnownIds.Human, agent.Id], team, teamRoom: teamRoom, ct);
-    }
-
-    /// <summary>Registers the services the Room page injects, taken from the composed factory.</summary>
-    /// <param name="factory">The factory whose composed singletons to reuse.</param>
-    /// <returns>The context.</returns>
-    private static MudBunitContext NewChatContext(TeamWebApplicationFactory factory)
-    {
-        MudBunitContext ctx = new();
-        IServiceProvider source = factory.Services;
-        ctx.Services.AddSingleton(source.GetRequiredService<ITeamDirectory>());
-        ctx.Services.AddSingleton(source.GetRequiredService<IChatStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<RoomEvents>());
-        ctx.Services.AddSingleton(source.GetRequiredService<ChatService>());
-        ctx.Services.AddSingleton(source.GetRequiredService<Drafts>());
-        ctx.Services.AddSingleton(source.GetRequiredService<IAgentGateway>());
-        ctx.Services.AddSingleton(source.GetRequiredService<PersonaHealth>());
-        ctx.Services.AddSingleton(source.GetRequiredService<RoomFollows>());
-        ctx.Services.AddSingleton(source.GetRequiredService<PersonaStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<AvatarStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<Agency.Huddle.App.Profile.IHumanIdentity>());
-        ctx.Services.AddSingleton(source.GetRequiredService<IMentionAliasSource>());
-        ctx.Services.AddSingleton(source.GetRequiredService<ProposalStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<ProposalService>());
-        ctx.Services.AddSingleton(source.GetRequiredService<HireLimitGuard>());
-        ctx.Services.AddSingleton(source.GetRequiredService<SprintProposalStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<SprintProposalService>());
-        ctx.Services.AddSingleton(source.GetRequiredService<TaskStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<Agency.Huddle.App.Teams.RetroProposalStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<Agency.Huddle.App.Teams.RetroProposalService>());
-        ctx.Services.AddSingleton(source.GetRequiredService<QuestionStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<QuestionService>());
-        ctx.Services.AddSingleton(source.GetRequiredService<IOptions<TeamOptions>>());
-        ctx.Services.AddSingleton(source.GetRequiredService<ElicitationStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<ElicitationService>());
-        ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
-        ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver());
-        ctx.Services.AddSingleton(new TabService());
-        ctx.Services.AddFakeCircuitConnection();
-        return ctx;
     }
 
     /// <summary>Renders the Room page for <paramref name="roomId"/> beside the popover provider its menus need.</summary>

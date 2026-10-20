@@ -1,6 +1,5 @@
 namespace Agency.Huddle.App.Acp.Tools;
 
-using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
@@ -28,11 +27,8 @@ internal sealed class AddEvidenceTool(
     /// <inheritdoc />
     public string Name => "add_evidence";
 
-    /// <summary>The placeholder values a prompt renders with; the tool descriptions take none.</summary>
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.addEvidence.description", NoValues);
+    public string Description => prompts.Render("tool.addEvidence.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject
@@ -52,16 +48,10 @@ internal sealed class AddEvidenceTool(
     /// <inheritdoc />
     public async Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(arguments);
-
-        if (!TaskToolText.TryGetString(arguments, "taskId", out string? taskIdText, out string taskIdRefusal))
+        (TaskToolTarget? target, string refusal) = await TaskToolText.StartAsync(arguments, store, directory, callerAgentId, cancellationToken).ConfigureAwait(false);
+        if (target is null)
         {
-            return taskIdRefusal;
-        }
-
-        if (!TaskToolText.TryResolve(store, taskIdText, out TaskItem? current, out string resolveRefusal))
-        {
-            return resolveRefusal;
+            return refusal;
         }
 
         if (!TaskToolText.TryGetString(arguments, "command", out string? command, out string commandRefusal))
@@ -96,20 +86,16 @@ internal sealed class AddEvidenceTool(
             return "'logRef' must look like path#L12.";
         }
 
-        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
-        if (actor is null)
-        {
-            return actorRefusal;
-        }
+        EvidenceLine line = this.BuildLine(target.Actor.Name, cleanCommand, cleanNote, exitCode, logPath, logLine);
 
-        EvidenceLine line = this.BuildLine(actor.Name, cleanCommand, cleanNote, exitCode, logPath, logLine);
-
-        if (!TaskToolText.TryRun(() => tasks.AddEvidence(current.Id, line, actor), out TaskResult? result, out string runRefusal))
+        if (!TaskToolText.TryRun(() => tasks.AddEvidence(target.Task.Id, line, target.Actor), out TaskResult? result, out string runRefusal))
         {
             return runRefusal;
         }
 
-        return DescribeResult(result);
+        return result is TaskResult.Saved saved
+            ? $"Added evidence to {saved.Task.Id}."
+            : TaskToolText.Refusal(result, this.Name);
     }
 
     /// <summary>Reads the optional <c>exitCode</c> argument; <paramref name="exitCode"/> stays null when it is absent.</summary>
@@ -180,20 +166,6 @@ internal sealed class AddEvidenceTool(
 
         string text = cleanNote.Length == 0 ? cleanCommand : string.Create(CultureInfo.InvariantCulture, $"{cleanCommand} ({cleanNote})");
         return new EvidenceLine(clock.GetUtcNow(), actorName, text, exitCode, logPath, logLine, string.Empty);
-    }
-
-    /// <summary>Words the outcome of <c>TaskService.AddEvidence</c> for the model.</summary>
-    /// <param name="result">The service result.</param>
-    private static string DescribeResult(TaskResult? result)
-    {
-        return result switch
-        {
-            TaskResult.Saved saved => $"Added evidence to {saved.Task.Id}.",
-            TaskResult.NotFound notFound => $"Unknown task '{notFound.Id}'.",
-            TaskResult.Conflict conflict => $"{conflict.Current.Id} was changed by someone else; please try again.",
-            TaskResult.Refused refused => string.Join('\n', refused.Problems),
-            _ => throw new UnreachableException("add_evidence's TaskService.AddEvidence never returns Unchanged."),
-        };
     }
 
     /// <summary>Collapses line breaks and replaces the Evidence field separator so the text stays one field of one line.</summary>

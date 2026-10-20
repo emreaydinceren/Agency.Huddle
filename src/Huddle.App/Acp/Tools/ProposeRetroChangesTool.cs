@@ -26,13 +26,11 @@ internal sealed class ProposeRetroChangesTool(
     /// <summary>The most changes one proposal carries.</summary>
     private const int MaxChanges = 3;
 
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
     public string Name => "propose_retro_changes";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.proposeRetroChanges.description", NoValues);
+    public string Description => prompts.Render("tool.proposeRetroChanges.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new()

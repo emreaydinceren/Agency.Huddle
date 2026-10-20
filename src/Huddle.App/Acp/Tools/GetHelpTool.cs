@@ -43,8 +43,6 @@ using Agency.Huddle.App.Prompts;
 /// </remarks>
 internal sealed class GetHelpTool : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     private readonly IReadOnlyList<CatalogEntry> catalog;
     private readonly IPromptSource prompts;
     private readonly string toolNamePrefix;
@@ -90,7 +88,7 @@ internal sealed class GetHelpTool : IAppTool
     public string Name => "get_help";
 
     /// <inheritdoc />
-    public string Description => this.prompts.Render("tool.getHelp.description", NoValues);
+    public string Description => this.prompts.Render("tool.getHelp.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject
@@ -114,19 +112,19 @@ internal sealed class GetHelpTool : IAppTool
     {
         List<string> sections =
         [
-            this.prompts.Render("getHelp.intro", NoValues),
-            this.prompts.Render("getHelp.rooms", NoValues),
-            this.prompts.Render("getHelp.messages", NoValues),
-            this.prompts.Render("getHelp.mentions", NoValues),
-            this.prompts.Render("getHelp.replying", NoValues),
-            this.prompts.Render("getHelp.budget", NoValues),
+            this.prompts.Render("getHelp.intro"),
+            this.prompts.Render("getHelp.rooms"),
+            this.prompts.Render("getHelp.messages"),
+            this.prompts.Render("getHelp.mentions"),
+            this.prompts.Render("getHelp.replying"),
+            this.prompts.Render("getHelp.budget"),
         ];
 
         // Corrections-B4 D10 item 6: no constructor parameter for this - the tool catalog this type
         // was already handed is itself the signal that Tasks tools are offered (Spec §11.9).
         if (this.catalog.Any(static entry => string.Equals(entry.Name, "create_task", StringComparison.Ordinal)))
         {
-            sections.Add(this.prompts.Render("getHelp.tasks", NoValues));
+            sections.Add(this.prompts.Render("getHelp.tasks"));
         }
 
         sections.Add(this.BuildToolsSection());
@@ -143,7 +141,7 @@ internal sealed class GetHelpTool : IAppTool
     {
         var builder = new StringBuilder();
 
-        builder.Append(this.prompts.Render("getHelp.toolsHeader", NoValues)).Append('\n');
+        builder.Append(this.prompts.Render("getHelp.toolsHeader")).Append('\n');
 
         foreach (var entry in this.catalog)
         {
@@ -156,7 +154,7 @@ internal sealed class GetHelpTool : IAppTool
             builder.Append(this.prompts.Render("getHelp.toolEntry", values));
         }
 
-        builder.Append(this.prompts.Render("getHelp.footer", NoValues));
+        builder.Append(this.prompts.Render("getHelp.footer"));
 
         return builder.ToString();
     }

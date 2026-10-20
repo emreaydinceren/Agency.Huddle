@@ -23,13 +23,11 @@ internal sealed class TriageRequestTool(
     string callerAgentId,
     IPromptSource prompts) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
     public string Name => "triage_request";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.triageRequest.description", NoValues);
+    public string Description => prompts.Render("tool.triageRequest.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new()

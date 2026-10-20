@@ -26,13 +26,11 @@ internal sealed class FileRequestTool(
 {
     private static readonly string[] Kinds = ["bug", "feature", "feedback", "question"];
 
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
     public string Name => "file_request";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.fileRequest.description", NoValues);
+    public string Description => prompts.Render("tool.fileRequest.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new()
