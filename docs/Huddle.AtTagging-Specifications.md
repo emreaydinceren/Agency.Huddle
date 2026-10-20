@@ -798,7 +798,7 @@ Existing files that change. New code goes under `src/Huddle.App/References/`,
 
 ## 17. Delivery plan
 
-The plan lives in [at-tagging-plan.md](engineering/at-tagging-plan.md). It cuts the work into
+The plan that built this design has been retired; it cut the work into
 deliverables `L0` to `L14` (no hyphen; spec decisions are `D-1` to `D-38`, with a hyphen, and a bare
 `D-32` or `D-33` always means the Tasks spec's; tests are `AT-T…` and `AT-M…`), each one concern
 ending on a green build.

@@ -966,9 +966,7 @@ as they need to be (PR #162) and do not change.
 
 ## 17. Delivery plan
 
-The plan that builds this design lives in its own page,
-[global-search-plan.md](engineering/global-search-plan.md), so this spec stays the design and the
-plan can be tracked with `Set-Tracker.ps1`. It cuts the work into deliverables `D0` to `D15` (no
+The plan that built this design has been retired, so this spec stays the design. It cut the work into deliverables `D0` to `D15` (no
 hyphen, unlike the decisions `D-1` to `D-25` above), each one concern that ends on a green build,
 and cites the section, decision and test ids of this spec in every task. D10, the Top Bar, is
 already delivered (PR #162).

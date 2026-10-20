@@ -5133,7 +5133,6 @@ reviewer sees one rename, not a deletion and an addition.
 | `docs/engineering/manual-tests.md` | Lists the new script |
 | `docs/engineering/wireframes.md` | Adds `G4`, `G4a`–`G4f`, `G5`, `G5a`, `G5b`, `G6`, `G6a`, `G7` and `G8` once the design is accepted; `G3`'s Skills line is reworded |
 | `docs/engineering/code-map.md` | Rows for the two new projects and the new folders; removes the rows for `SkillPackStore`, `SkillsCatalogIndex`, `SkillImporter`, `SkillDownloader`, `ImportingSkillInstaller`, `SkillImportDialog` (lines 300, 320 to 326, 344) |
-| `docs/engineering/teams-spec.md` | Skill-import section points at this specification |
 | `docs/engineering/known-limits.md` | Records the shared-folder limit: the move runs on the first Huddle only |
 
 ### Deleted

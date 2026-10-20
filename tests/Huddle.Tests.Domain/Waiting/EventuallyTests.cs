@@ -3,7 +3,7 @@ using Xunit.Sdk;
 
 namespace Agency.Huddle.Tests.Waiting;
 
-/// <summary>Pins <see cref="Eventually"/> and <see cref="TestBudgets"/> (test-split plan R1).</summary>
+/// <summary>Pins <see cref="Eventually"/> and <see cref="TestBudgets"/>.</summary>
 public sealed class EventuallyTests
 {
     private static readonly TimeSpan shortTimeout = TimeSpan.FromMilliseconds(100);

@@ -8,7 +8,8 @@ date: 2026-10-08
 After a retrospective, the Team's manager or Retro agent may propose up to three edits to the
 Team's own files. An Agent can propose, but never edit: the proposal is held as data, the Human
 sees it as a card with a diff, and Huddle makes the edit when the Human clicks **Accept**. The
-full design is in the [Teams specification](../engineering/teams-spec.md), under *Retrospectives*.
+Human's view is in the [User Guide](../Huddle.UserGuide.md) (*Retrospectives*); the original Teams
+specification has been retired.
 
 ## The problem
 
