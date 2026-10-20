@@ -1,6 +1,7 @@
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Prompts;
@@ -1039,7 +1040,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         }
 
         List<string> agentIds = [.. memberSet.Where(static id => !string.Equals(id, KnownIds.Human, StringComparison.Ordinal))];
-        return await this.chat.CreateRoomForAsync(agentIds, scope, ct).ConfigureAwait(false);
+        return await this.chat.CreateRoomForAsync(agentIds, scope, FeedActor.Huddle, ct).ConfigureAwait(false);
     }
 
     /// <summary>Adds <paramref name="id"/> to <paramref name="ids"/> unless it is already there (ordinal).</summary>

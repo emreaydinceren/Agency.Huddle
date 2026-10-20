@@ -810,13 +810,21 @@ public sealed partial class ChatService
             return;
         }
 
-        string humanName = await this.HumanNameAsync(ct).ConfigureAwait(false);
-        await this.PostFeedAsync(
-            FeedSourceType.RoomCreated,
-            room,
-            actor,
-            new RoomCreatedPayload(room.Id, room.Name, room.Team, [humanName, .. agentNames]),
-            ct).ConfigureAwait(false);
+        try
+        {
+            string humanName = await this.HumanNameAsync(ct).ConfigureAwait(false);
+            await this.PostFeedAsync(
+                FeedSourceType.RoomCreated,
+                room,
+                actor,
+                new RoomCreatedPayload(room.Id, room.Name, room.Team, [humanName, .. agentNames]),
+                ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Same rule as PostFeedAsync: the Room is already created, and the Feed can never fail the work that caused it.
+            ChatService.LogFeedFailed(this.logger, ex, room.Id);
+        }
     }
 
     /// <summary>Hands one Room item to the Feed. The Feed can never hurt the work, so a failure is logged and dropped.</summary>

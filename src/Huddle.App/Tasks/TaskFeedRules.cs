@@ -140,7 +140,7 @@ internal static class TaskFeedRules
     /// <summary>The rule <c>NeedsYouTaskSource</c> lists by: gated, in Needs You, acceptance not valid.</summary>
     /// <param name="task">The Task.</param>
     private static bool Waits(TaskItem task) =>
-        task.IsGated && task.Status == TaskState.NeedsYou && Acceptance.Of(task).State != AcceptanceState.Valid;
+        task.IsGated && !task.Location.Closed && task.Status == TaskState.NeedsYou && Acceptance.Of(task).State != AcceptanceState.Valid;
 
     /// <summary>A Request in Done that is neither declined nor confirmed and that no Agent of the requesting Team can confirm.</summary>
     /// <param name="task">The Task.</param>

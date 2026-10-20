@@ -101,6 +101,18 @@ public sealed class TaskFeedRulesTests
         Assert.Contains(new FeedResolution("PLAT-0001", FeedSourceType.TaskNeedsYou), effects.Resolutions);
     }
 
+    /// <summary>Closing a gated Task that is still in Needs You resolves its Notification even though the status did not change.</summary>
+    [Fact]
+    public void For_GatedTaskClosedInNeedsYou_ResolvesIt()
+    {
+        TaskItem before = Task(TaskState.NeedsYou, gated: true);
+        TaskItem after = before with { Location = before.Location with { Closed = true } };
+
+        FeedEffects effects = Run(before, after, Human);
+
+        Assert.Contains(new FeedResolution("PLAT-0001", FeedSourceType.TaskNeedsYou), effects.Resolutions);
+    }
+
     /// <summary>An ungated Task entering Needs You is not waiting on an acceptance, so nothing is posted.</summary>
     [Fact]
     public void For_UngatedTaskMovesToNeedsYou_PostsNothing()

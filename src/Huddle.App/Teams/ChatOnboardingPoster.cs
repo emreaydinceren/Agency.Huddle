@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Services;
 
 namespace Agency.Huddle.App.Teams;
@@ -22,7 +23,7 @@ internal sealed class ChatOnboardingPoster(ChatService chat, ITeamDirectory dire
 
         try
         {
-            Room room = await chat.EnsureRoomForAsync(manager, ct).ConfigureAwait(false);
+            Room room = await chat.EnsureRoomForAsync(manager, FeedActor.Huddle, ct).ConfigureAwait(false);
             _ = await chat.PostAsync(room.Id, KnownIds.Human, text, ct: ct).ConfigureAwait(false);
             return true;
         }

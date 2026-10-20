@@ -126,6 +126,29 @@ public sealed class NeedsYouTrackerFeedTests
         Assert.Contains(new FeedResolution(room.Id, FeedSourceType.RoomBudget), feed.Resolutions);
     }
 
+    /// <summary>Deleting a Room drops its tracker entry, which resolves all four Room reasons for it.</summary>
+    [Fact]
+    public async Task DeletedRoom_ResolvesAllFourReasons()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        RecordingFeedPublisher feed = new();
+        using NeedsYouFixture fixture = await NeedsYouFixture.CreateAsync(ct, feed);
+        User nova = await fixture.AddAgentAsync("Nova", ct);
+        Room room = await fixture.CreateRoomAsync("Pricing", [nova], ct);
+        _ = await fixture.Service.PostAsync(room.Id, nova.Id, "@You?", ct: ct);
+
+        await fixture.Service.DeleteRoomAsync(room.Id, ct);
+        DateTime deadline = DateTime.UtcNow.AddSeconds(10);
+        while (feed.Resolutions.Count(resolution => resolution.TargetKey == room.Id && resolution.Type != FeedSourceType.RoomMention) < 3 && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(10, ct);
+        }
+
+        Assert.Equal(
+            [FeedSourceType.RoomMention, FeedSourceType.RoomQuestion, FeedSourceType.RoomForm, FeedSourceType.RoomBudget],
+            feed.Resolutions.Where(resolution => resolution.TargetKey == room.Id).Select(resolution => resolution.Type).Distinct());
+    }
+
     /// <summary>The startup seed of an old Mention posts nothing: it was posted when it happened.</summary>
     [Fact]
     public async Task Seed_PostsNothing()

@@ -45,6 +45,24 @@ public sealed class TaskServiceFeedTests
         Assert.NotNull(harness.Store.Get(saved.Task.Id));
     }
 
+    /// <summary>A throwing publisher changes neither a refused Agent move (the refusal still comes back) nor an Update nor a Close.</summary>
+    [Fact]
+    public void UpdateAndClose_ThrowingPublisher_ReturnTheSameResults()
+    {
+        using TempDataDir gateDir = new();
+        RecordingFeedPublisher feed = new() { Throws = true };
+        using TaskToolHarness harness = new(gates: BuildGates(gateDir, Process(QaGate)), feed: feed);
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Fix login", "Platform", null), HumanOf(harness))).Task;
+
+        TaskResult refused = harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.Done }, null, Nova);
+        TaskResult moved = harness.Service.Update(task.Id, new TaskPatch { Title = "Fix login again" }, null, HumanOf(harness));
+        TaskResult closed = harness.Service.Close(task.Id, HumanOf(harness));
+
+        Assert.IsType<TaskResult.GateRefused>(refused);
+        Assert.IsType<TaskResult.Saved>(moved);
+        Assert.IsType<TaskResult.Saved>(closed);
+    }
+
     /// <summary>An Agent's move that a process gate refuses posts a gate-decision Notification carrying the gate and the refusal.</summary>
     [Fact]
     public void Update_AgentRefusedByProcessGate_PostsGateDecisionDue()
