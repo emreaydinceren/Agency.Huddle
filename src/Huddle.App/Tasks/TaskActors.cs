@@ -21,4 +21,12 @@ internal static class TaskActors
         ArgumentNullException.ThrowIfNull(human);
         return new TaskActor(TaskActorKind.Human, human.Name, KnownIds.Human);
     }
+
+    /// <summary>The actor for a Helper's change, named <c>&lt;Name&gt; (Helper)</c>; the parentheses cannot occur in a Teammate's Name, so it never collides with one.</summary>
+    /// <param name="displayName">The Helper's display name, such as <c>Needs Human</c>.</param>
+    public static TaskActor Helper(string displayName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+        return new TaskActor(TaskActorKind.Helper, $"{displayName} (Helper)", null);
+    }
 }

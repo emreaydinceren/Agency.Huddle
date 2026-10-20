@@ -477,7 +477,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// </summary>
     /// <param name="profile">The resolved Adapter Profile.</param>
     /// <returns>The isolation <c>_meta</c>, or <see langword="null"/> when the profile does not ask for it.</returns>
-    private static Dictionary<string, object>? BuildIsolationMeta(AdapterProfile profile)
+    internal static Dictionary<string, object>? BuildIsolationMeta(AdapterProfile profile)
     {
         return profile.IsolateUserSettings
             ? new Dictionary<string, object>(StringComparer.Ordinal)

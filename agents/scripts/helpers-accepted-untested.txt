@@ -1,0 +1,3 @@
+# "Accepted untested texts" for the Helpers delivery, for Check-Diff.ps1 -AcceptedUntestedPath (path|text|reason).
+# Each line was read against the flagged code by the delivery manager. Do not add another feature's entries here.
+src/Huddle.App/Helpers/NeedsHuman/NeedsHumanHelper.cs|{input.Id} changed twice while the Verdict was being applied|Helpers Spec B-8: needs a save to land between the Helper's read and its write, twice; TaskService is a sealed class with no seam for that, and the retry path is the same one the first conflict takes

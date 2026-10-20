@@ -4,6 +4,8 @@
     With ReadOnly (the Task read view, T15f) the switch and the Action field are text and nothing is raised.
 *@
 
+@inject IServiceProvider Services
+
 <div class="task-human-gate">
     <div class="task-human-gate-header">
         <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="task-human-gate-chip" Text="@HumanGateCopy.Heading" />
@@ -41,6 +43,10 @@
                  Text="@HumanGateCopy.DoneRuleChip(this.HumanName)" />
     </div>
     <div class="task-human-gate-explanation">@this.ExplanationText</div>
+    @if (this.HelperNote is { } note)
+    {
+        <div class="task-human-gate-helper-note">@note</div>
+    }
 </div>
 
 @code {
@@ -71,6 +77,16 @@
     /// <summary>The Human's display name, shown in the Done rule chip.</summary>
     [Parameter]
     public string HumanName { get; set; } = string.Empty;
+
+    /// <summary>The Task's Change log, read to tell whether a Helper turned the gate on; null (the default) shows no Helper line.</summary>
+    [Parameter]
+    public IReadOnlyList<ChangeLogEntry>? ChangeLog { get; set; }
+
+    /// <summary>The line telling the Human a Helper turned the gate on and that turning it off is final, or null.</summary>
+    private string? HelperNote =>
+        this.Services.GetService(typeof(Agency.Huddle.App.Helpers.HelperRegistry)) is Agency.Huddle.App.Helpers.HelperRegistry registry
+            ? HelperGateNote.For(this.ChangeLog, this.HumanGate, registry.All)
+            : null;
 
     /// <summary>Whether an Action is set, which locks the gate on.</summary>
     private bool HasAction => !string.IsNullOrWhiteSpace(this.Action);

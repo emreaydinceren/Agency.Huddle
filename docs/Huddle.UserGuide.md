@@ -38,6 +38,7 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | Teach Teammates a procedure | [Giving Teammates Skills](#giving-teammates-skills) |
 | See what Teammates remember and which files they changed | [Memory and file changes](#memory-and-file-changes) |
 | Change prompts, Themes, Personas, Skills or Library roots | [Settings](#settings) |
+| Turn a Helper on or off, or change what it may spend | [Helpers](#helpers) |
 | Fix something that went wrong | [Troubleshooting](#troubleshooting) |
 
 ## Install
@@ -2001,11 +2002,38 @@ The tab shows the install file and this computer's name, the Skill Sources folde
 | --- | --- | --- |
 | **Profile** | You: Name, Alias (a second name that @mentions you), Title and a short description, shown as the same card a Teammate gets. Click the avatar to change it. A Name or Alias a Teammate already uses is refused. Renaming yourself moves your avatar and your Tasks with you, and every message you ever sent shows the new Name; the transcript files are not rewritten. | `profile.json` (avatar in `avatars.json`) |
 | **Prompts** | The text Huddle sends to Teammates, such as the wake-up message. **Reset all to defaults** (beside the sticky **Save**) asks "Reset every prompt to its default?" and **Reset all** confirms. | `prompts.json` |
+| **Helpers** | The small background agents that make one judgement for you, such as whether a Task a Teammate wrote needs your acceptance. Each has a card: on or off, the Adapter, Model and Effort it runs on, a daily cap, what it spent today, its last run and its last error. See [Helpers](#helpers). | `team.db` |
 | **Appearance** | You pick one light Theme and one dark Theme; the picker lists the Light Themes and the Dark Themes separately. The button in the top bar switches between your two. An accent colour is set here too; your own avatar moved to **Profile**. | `appearance.json` |
 | **Personas** | The Teammate definitions. | `Teammates/…` |
 | **Skills** | Three tabs: **Skills** (every Skill, its state and who uses it), **Packs** (Packs from SKILLS.md, **Add with your AI tool**) and **Sources** (where Skills come from, the Skill Sources folder). See [Adding Skills with your AI tool](#adding-skills-with-your-ai-tool). | `Skills/…`, `SkillSources/` |
 | **Team types** | Read-only list of team types, built-in or yours, with **Reload** and a **Problems** list. | `TeamTypes/…` |
 | **Library** | Pinned folders; hide the built-in roots. | `library-roots.json` |
+
+### Helpers
+
+A **Helper** is a small background agent that makes one judgement about something that just happened, and lets Huddle act on its answer. It is not a Teammate: it has no Room, keeps no memory, uses no tools and posts no Messages. Huddle shows it what it needs to see, it answers in a few words, and Huddle makes the change itself.
+
+The first Helper is **Needs Human**. When a Teammate creates a Task, or rewrites its title or description, Needs Human reads it. If doing the work would leave the team or could not easily be undone (a message to a customer, money, signing, publishing, merging to main, deleting data), it turns on **Requires your acceptance** for that Task. The Change log reads `human gate on (reason: …)` by `Needs Human (Helper)`, and the Task's assignee is woken, as for any other change. The Task panel says "Turned on by the Needs Human Helper: …".
+
+What a Helper will and will not do:
+
+- **It only adds caution.** Needs Human can turn the gate on. Only you can turn it off.
+- **Your word is final.** Once you turn the gate off on a Task, Needs Human never looks at that Task again, whatever is written in it later.
+- **It never judges you.** A Task you create or edit is not judged, nor is one that already has an Action, one that is Done or Cancelled, or one where only the status or an Evidence line changed.
+- **It never blocks work.** If it fails, times out or answers nonsense, the Task stays as the Teammate saved it, and the Helper's card says what went wrong (**Last error**).
+- **It never spends without asking.** Each Helper has a **Daily cap** of calls (50 for Needs Human). At the cap it pauses and its card says **Paused — daily cap reached**. **Continue (+10 today)** allows ten more calls for today only; saves made while it is paused are skipped and counted on the card.
+
+On **Settings › Helpers** each Helper has a card:
+
+| Control | What it does |
+| --- | --- |
+| **On** | Turns the Helper on or off. |
+| **Adapter, Model, Effort** | What it runs on. Needs Human starts on Claude, Haiku, low effort. Changing the Adapter clears Model and Effort, as on a Teammate's card. |
+| **Daily cap** | Calls a day before it pauses and asks you. At least 1. |
+| **Edit the prompt** | Opens the Helper's prompt on **Settings › Prompts**, under **Helpers**. An edit applies from the Helper's next call. |
+| **Save**, **Reset to defaults** | **Save** keeps your choices. **Reset to defaults** goes back to `Team:Helpers:<Id>` in the configuration, then to the built-in defaults. |
+
+Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false; the tab says so and the cards are read only. A call costs a fraction of a cent on Haiku: at the cap of 50 a day, about 12 cents. Needs Human's wake-up of the assignee, when it turns the gate on, is a full Turn on that Teammate's own model and is usually the larger cost; it happens at most once per Task.
 
 ## What happens when… (reference)
 

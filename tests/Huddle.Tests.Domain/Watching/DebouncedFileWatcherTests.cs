@@ -27,6 +27,14 @@ public sealed class DebouncedFileWatcherTests
         Probe probe = new();
         using DebouncedFileWatcher watcher = new(dir.Path, "watched.json", probe.OnSettled, new RecordingLogger<DebouncedFileWatcherTests>(), "Test");
 
+        // A second, raw watcher sees when the operating system actually delivered each event. The writer's own gaps cannot show a
+        // delivery stall on a loaded machine (events arriving late and bunched), and that stall is what splits a burst in two.
+        ArrivalLog arrivals = new();
+        using FileSystemWatcher observer = new(dir.Path, "watched.json") { NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName };
+        observer.Changed += arrivals.OnEvent;
+        observer.Created += arrivals.OnEvent;
+        observer.EnableRaisingEvents = true;
+
         Stopwatch sinceLastWrite = new();
         TimeSpan longestGap = TimeSpan.Zero;
         for (int i = 0; i < 10; i++)
@@ -46,8 +54,9 @@ public sealed class DebouncedFileWatcherTests
         // A machine stalled long enough to open a gap of a whole debounce window between two writes makes
         // a second callback correct, not a bug; the result proves nothing either way, so skip, don't fail.
         Assert.SkipWhen(
-            longestGap >= TimeSpan.FromMilliseconds(DebouncedFileWatcher.DebounceMilliseconds),
-            "The machine stalled between writes for a whole debounce window, so the burst was not one burst.");
+            longestGap >= TimeSpan.FromMilliseconds(DebouncedFileWatcher.DebounceMilliseconds)
+            || arrivals.LongestGap >= TimeSpan.FromMilliseconds(DebouncedFileWatcher.DebounceMilliseconds),
+            "The machine stalled between writes, or between the operating system's events, for a whole debounce window, so the burst was not one burst.");
         await probe.FirstCall.WaitAsync(WaitTimeout, ct);
         await Task.Delay(QuietPeriod, ct);
 
@@ -124,6 +133,47 @@ public sealed class DebouncedFileWatcherTests
 
         Assert.Equal(0, probe.Calls);
         Assert.Empty(logger.Snapshot());
+    }
+
+    /// <summary>Records when each raw watcher event arrived, to find the longest silence between two of them.</summary>
+    private sealed class ArrivalLog
+    {
+        private readonly Lock gate = new();
+        private long lastTimestamp;
+        private TimeSpan longestGap = TimeSpan.Zero;
+
+        /// <summary>The longest time between two consecutive events.</summary>
+        public TimeSpan LongestGap
+        {
+            get
+            {
+                lock (this.gate)
+                {
+                    return this.longestGap;
+                }
+            }
+        }
+
+        /// <summary>The raw watcher's handler.</summary>
+        /// <param name="sender">Unused.</param>
+        /// <param name="e">Unused.</param>
+        public void OnEvent(object sender, FileSystemEventArgs e)
+        {
+            long now = Stopwatch.GetTimestamp();
+            lock (this.gate)
+            {
+                if (this.lastTimestamp != 0)
+                {
+                    TimeSpan gap = Stopwatch.GetElapsedTime(this.lastTimestamp, now);
+                    if (gap > this.longestGap)
+                    {
+                        this.longestGap = gap;
+                    }
+                }
+
+                this.lastTimestamp = now;
+            }
+        }
     }
 
     /// <summary>The callback a test hands the watcher: counts calls and records whether any came before the burst ended.</summary>

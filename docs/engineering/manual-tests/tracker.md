@@ -148,6 +148,7 @@ the per-area tables below.
 | [References in a Message: the @ picker, Copy link and the Referenced items header](at-tagging.md) | [below](#at-tagging) |
 | [Document history: the byline, the History and the Recent edits panel](doc-history.md) | [below](#doc-history) |
 | [Human gate: the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page](human-gate.md) | [below](#human-gate) |
+| [Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the override, the daily cap and a failing Adapter](helpers.md) | [below](#helpers) |
 | [Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart](feed.md) | [below](#feed) |
 ---
 
@@ -1122,6 +1123,21 @@ Human gate: the Proof list, the decision card, Accept and Decline, the board dra
 | [HUMANGATE-07](human-gate.md#humangate-07--decline-closes-the-task-with-its-reason-u-7) |  | Pass |  | 2026-10-19 paid run (Haiku) |
 | [HUMANGATE-08](human-gate.md#humangate-08--an-outside-edit-that-removes-the-action-is-put-back-u-8) |  | Pass |  | 2026-10-19 paid run (Haiku) |
 | [HUMANGATE-09](human-gate.md#humangate-09--restart-keeps-every-waiting-task-on-the-needs-you-page-u-9) |  | Pass |  | 2026-10-19 paid run (Haiku) |
+
+## helpers
+
+Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the override, the daily cap and a failing Adapter — [area file](helpers.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [HELPERS-01](helpers.md#helpers-01--the-helpers-tab-shows-the-needs-human-card-u-1-setup) |  | Active |  |  |
+| [HELPERS-02](helpers.md#helpers-02--save-and-reset-to-defaults-and-a-restart-keeps-both-u-7-setup) |  | Active |  |  |
+| [HELPERS-03](helpers.md#helpers-03--a-teammates-task-that-leaves-the-team-gets-the-gate-u-1-u-5) | 💰 | Active |  |  |
+| [HELPERS-04](helpers.md#helpers-04--a-harmless-task-is-left-alone-u-2-u-4-u-11) | 💰 | Active |  |  |
+| [HELPERS-05](helpers.md#helpers-05--the-humans-override-is-final-u-5) | 💰 | Active |  |  |
+| [HELPERS-06](helpers.md#helpers-06--the-daily-cap-pauses-the-helper-and-continue-allows-a-few-more-u-7) | 💰 | Active |  |  |
+| [HELPERS-07](helpers.md#helpers-07--a-failure-leaves-the-task-as-saved-and-says-why-u-8-u-10) |  | Active |  |  |
+
 
 ## feed
 

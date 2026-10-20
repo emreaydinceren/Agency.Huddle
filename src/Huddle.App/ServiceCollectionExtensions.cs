@@ -10,6 +10,8 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Demo;
 using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Helpers;
+using Agency.Huddle.App.Helpers.NeedsHuman;
 using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.NeedsYou;
@@ -52,7 +54,41 @@ public static class ServiceCollectionExtensions
             .AddCircuitTabSidebarSearchAndReferenceServices()
             .AddProbeAndRenameServices()
             .AddStartupHostedServices()
-            .AddBackgroundHostedServices();
+            .AddBackgroundHostedServices()
+            .AddHelperServices();
+    }
+
+    /// <summary>
+    /// Registers the Helpers (Helpers Spec §5): the stores, the budget, the runner and dispatcher, and the Needs Human Helper
+    /// with its trigger. Unconditional like the probe: nothing here spends until a Teammate saves a Task and
+    /// <c>Team:Acp:Enabled</c> is on; the dispatcher checks that at each fire.
+    /// </summary>
+    /// <param name="services">The collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddHelperServices(this IServiceCollection services)
+    {
+        services.AddSingleton<HelperUsageStore>();
+        services.AddSingleton<HelperStatusStore>();
+        services.AddSingleton<HelperSettingsStore>();
+        services.AddSingleton<NeedsHumanOverrideStore>();
+        services.AddSingleton<HelperBudget>();
+        services.AddSingleton<HelperSettingsResolver>();
+        services.AddSingleton<IHelperProcessRunner, AdapterProcessHelperRunner>();
+        services.AddSingleton<HelperRunner>();
+
+        services.AddSingleton<NeedsHumanHelper>();
+        services.AddSingleton<IHelperAgent>(static sp => sp.GetRequiredService<NeedsHumanHelper>());
+        services.AddSingleton<IHelperInvoker>(static sp => new HelperInvoker<NeedsHumanInput, NeedsHumanVerdict>(
+            sp.GetRequiredService<NeedsHumanHelper>(),
+            sp.GetRequiredService<HelperRunner>(),
+            sp.GetRequiredService<ILoggerFactory>().CreateLogger<HelperInvoker<NeedsHumanInput, NeedsHumanVerdict>>()));
+        services.AddSingleton<HelperRegistry>();
+
+        services.AddSingleton<HelperDispatcher>();
+        services.AddHostedService(static sp => sp.GetRequiredService<HelperDispatcher>());
+        services.AddSingleton<NeedsHumanTrigger>();
+        services.AddHostedService(static sp => sp.GetRequiredService<NeedsHumanTrigger>());
+        return services;
     }
 
     /// <summary>

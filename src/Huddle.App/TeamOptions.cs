@@ -3,6 +3,7 @@ using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Feed;
+using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.References;
 using Agency.Huddle.App.Search;
@@ -63,6 +64,12 @@ public sealed class TeamOptions
 
     /// <summary>Configuration for the Referenced items header of an Agent's Turn, bound from <c>Team:References</c> per spec §10.</summary>
     public ReferencesOptions References { get; set; } = new();
+
+    /// <summary>Per-Helper defaults, keyed by Helper id (<c>Team:Helpers:NeedsHuman</c>); see Helpers Spec §6.6.</summary>
+    public Dictionary<string, HelperOptions> Helpers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>How many Helper runs may happen at once, across all Helpers. Defaults to 2. It sits outside <c>Team:Helpers</c> because the configuration binder cannot mix a dictionary's entries with ordinary properties on one section.</summary>
+    public int HelperConcurrency { get; set; } = 2;
 
     /// <summary>The Skill Sources folder (Skill Packs spec §8.7); empty means <c>{DataDir}/SkillSources</c>. A folder set on
     /// Settings › Skills › Sources (<c>skill-sources.json</c>) wins over this key.</summary>
