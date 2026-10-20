@@ -164,7 +164,15 @@ CREATE TABLE IF NOT EXISTS feed_events (
 );
 CREATE INDEX IF NOT EXISTS ix_feed_events_created_at ON feed_events(created_at);
 CREATE INDEX IF NOT EXISTS ix_feed_events_target     ON feed_events(target_key, source_type);
+
+CREATE TABLE IF NOT EXISTS feed_state (
+    key    TEXT PRIMARY KEY,                 -- "tab_seen_up_to"
+    value  TEXT NOT NULL                     -- the highest Feed item id the Feed Tab has shown
+);
 ```
+
+`feed_state` holds the Feed Tab's own "seen" mark (D-26): one id for every item, Notification or
+Activity. It is separate from `seen_at`, which stays the bell's per-Notification state.
 
 - `AUTOINCREMENT`, not a plain rowid: clean-up can delete the newest rows, and a reused id would
   break keyset paging and "seen up to id" (§6.7).
@@ -442,6 +450,12 @@ public int UnseenCount();
 /// <summary>Unresolved Notifications of one type, for the startup reconcilers (§6.10).</summary>
 public IReadOnlyList<FeedItem> Unresolved(FeedSourceType type);
 
+/// <summary>Up to <paramref name="limit"/> items about the item's target or the extra targets, newest first (§6.13).</summary>
+public IReadOnlyList<FeedItem> Related(FeedItem item, IReadOnlyList<string> extraTargets, int limit);
+
+/// <summary>The Feed Tab's seen mark (§6.1 <c>feed_state</c>), or 0 before the first view.</summary>
+public long TabSeenUpTo();
+
 /// <summary>The number on each Category segment (§6.9) under the Teammate and Team filters, in one query.</summary>
 public FeedCounts Counts(string? teammate, string? team);
 
@@ -566,8 +580,8 @@ Documents carry no Team (§10 OD-4), so with a Team chosen the Documents count i
 **Teammate chip.** Clicking an avatar sets `?teammate=<Name>`, shown as a `TaskFilterChip`
 "Teammate: Nova ×" in the filter bar; × removes only that parameter.
 
-Then the items, newest first, as `FeedItemRow`s (§6.12), the same rows the panel draws. In the
-Tab, clicking an avatar navigates to `?teammate=<actor>` (not for the Huddle actor or the Human).
+Then the items, newest first, as `FeedCard`s (§6.13) under the day headings of §6.12. The panel
+keeps the compact `FeedItemRow`. In the Tab, clicking an avatar navigates to `?teammate=<actor>` (not for the Huddle actor or the Human).
 No Dismiss, no Accept, no Reply (§3).
 
 **Paging and live insertion.** The page loads `Page(new(null, PageSize, …))`, and loads the next
@@ -618,13 +632,13 @@ of [Huddle.EngineeringGuide.md](Huddle.EngineeringGuide.md) with the build.
 
 ### 6.12 The Feed item row
 
-`FeedItemRow.razor` draws one item, or one group of items, in both the Right sidebar panel (§6.8)
-and the Feed Tab (§6.9). It follows the owner's row wireframe of 2026-10-20 (codes `F7`–`F10` in
+`FeedItemRow.razor` draws one item, or one group of items, in the Right sidebar panel (§6.8). The
+Feed Tab draws `FeedCard` instead (§6.13) and shares only the day headings, grouping and the pill. It follows the owner's row wireframe of 2026-10-20 (codes `F7`–`F10` in
 [wireframes.md Figure 13](engineering/wireframes.md#figure-13-the-feed-page)).
 
 ![The Feed's rows: day headings Today, Yesterday and Friday; each row an avatar, a summary with Task, Room and document chips, a status line such as Asked 14:31 · waiting for you, and a right-aligned age; a ↑ 3 new items pill at the top](images/wireframes/13b-feed-rows.svg)
 
-*Figure 13b, drawn from the owner's row wireframe of 2026-10-20 with slice 1's sources: the Feed's rows, in the Right sidebar panel and the Feed Tab.*
+*Figure 13b, drawn from the owner's row wireframe of 2026-10-20 with slice 1's sources: the Feed's rows in the Right sidebar panel, and under "In the Feed" in an expanded card.*
 
 **Day groups.** Rows sit under a day heading with an Edge hairline to its right: the day word in
 600, then the date in Quiet ink: "Today Mon, Oct 13", "Yesterday Sun, Oct 12", the weekday for the
@@ -672,6 +686,78 @@ a list scrolled to its top inserts them at once. Otherwise they wait, and a floa
 top. The pill's count is the number of waiting items, not groups.
 
 ---
+
+### 6.13 The Feed Tab card
+
+The Feed Tab's body is a list of cards (owner wireframe, 2026-10-20; codes `F10`–`F12` in
+[wireframes.md Figure 13](engineering/wireframes.md#figure-13-the-feed-page)). `FeedCard.razor`
+draws one item, or one group drawn as one (§6.12), as an outlined card with an 8px radius and 8px
+between cards.
+
+![Figure 13c: Feed Tab cards. Collapsed cards with an unseen bar, a 40px avatar with a kind badge, a summary, a meta line with Room and Team chips, a status pill and a chevron; one expanded card with a Task preview, its Proof list, related items under In the Feed, and Open Task, Review in Needs you and Open Room buttons](images/wireframes/13c-feed-cards.svg)
+
+*Figure 13c, drawn from the owner's body wireframe of 2026-10-20.*
+
+**Collapsed card**, top to bottom, beside a 40px avatar:
+
+- **Unseen bar.** A 3px Accent bar down the card's left edge while the item's id is above the Feed
+  Tab's `tab_seen_up_to` (D-26). The age is then Accent too. When the Tab has been shown for
+  2 seconds, `FeedQueue.MarkTabSeen(highestShownId)` moves the mark; bars already drawn stay for
+  that view and are gone on the next one, so the Human sees what is new before it clears.
+- **Avatar with a kind badge.** The actor's 40px `TeammateAvatar` (Huddle's own mark for Huddle,
+  the Human's for "You"), with a 16px round badge at its bottom right naming the kind: a check
+  (stopped for you), a document (changed), a person (assigned to you), a gauge (Budget), a lock
+  (gate), an @ (mention), a question mark (Question), a form (Form), a plus (created); a bolt
+  (woke up) arrives with slice 1b. The badge colour follows the Category.
+- **Summary**, 14px: the actor's Name in 600, the verb, the reference chip(s) of §6.12, and a
+  trailing purpose in 600 when the item has one ("for you to publish", "and assigned it to you").
+  It wraps to at most 3 lines (D-24).
+- **Meta line**, 12px Quiet ink, items separated by " • ": the context word or relation ("assigned
+  by you", "Library", "Tasks"), the Room chip when the target is in a Room, and the **Team chip**:
+  a 14px square Team monogram (two letters, Accent tile) and the Team Name. Never Message text.
+- **Status pill**, Notifications only, one line, with optional extra pills beside it:
+  - "Waiting for you · 20 min" in the Warning outline while the Notification is unresolved; the
+    minutes are its age, redrawn each minute. A Budget pause shows a pause glyph before it.
+  - "Assigned to you · due Tue 13 Oct" in the Info outline for `task-assigned-to-you`.
+  - A deadline pill with a clock, "Post by 11:30" (the verb is the Action's), when the Task is due
+    today at a set time.
+  - Once resolved: "Done · 13:25" with a ✓, in Quiet ink.
+- **Age and chevron**, right-aligned: "16 min", "2 h", "1 d" (`HumanDate.Full` in the tooltip), and
+  under it a chevron button with `aria-expanded` and the `aria-label` "Show details".
+
+Clicking the card body (not a chip, not the chevron) opens the target in a Tab, as before.
+
+**Expanded card.** The chevron expands the card in place; one card is expanded at a time, and
+`Escape` collapses it. Under the collapsed part, after an Edge line:
+
+1. **The target's kind and Team**, a caption: "Task · Support Desk", "Room · Support Desk",
+   "Document · Library".
+2. **A read-only preview of the target**, in an inset outlined box (D-27):
+   - **Task:** an icon tile, the id in Accent, the title in 18px/600, then a property grid:
+     Status (`TaskStatusChip`), Assignee (avatar, Name, title), Assigned by (from the Change log),
+     Due (`TaskCard`'s overdue treatment), Proof (a chip "Proof 2/3" with a three-segment bar),
+     Room (the origin Room chip), File (the Task file's path in monospace). Then "Proof" and its
+     items drawn as `TaskProofList` draws them, read-only: a ✓ or an empty circle, the label, and
+     under it who, the evidence and the time, or "pending". A footer line with an eye icon gives
+     the gate's sentence from `HumanGateCopy`, such as "Send unlocks at proof 3/3 · only you can
+     send".
+   - **Room:** its Scope (Team), its Members as avatars with Names, why it waits (the Needs You
+     reason, when it does) and the time of its last Message. Never Message text.
+   - **Document:** its Library root and path, and its last three History entries (who, kind,
+     summary, time), as Document History shows them (ADR-0060).
+
+   The preview is read when the card expands, from `TaskStore`, `ChatService` and
+   `DocHistoryStore`. A target that is gone shows "This Task was deleted" (or Room, or document)
+   and keeps only the Feed part below.
+3. **"In the Feed"**, a caption, then up to 5 compact `FeedItemRow`s, newest first, from
+   `FeedStore.Related`: items about the same target, and for a Task also items about its origin
+   Room and the Library files it links (attachments, ADR-0053). The card's own item is tagged
+   "This item".
+4. **Buttons**, left-aligned, navigation only (v1 stays read-only, §3): **Open Task** (filled, the
+   one primary), or **Open Room** or **Open document** for those targets; **Review in Needs you**
+   (outlined, with a warning icon) when the item is an unresolved Notification about a gated Task
+   in Needs You, opening `/needs-you#<id>`; **Open Room** (text, chat icon) for a Task's origin
+   Room. None of them changes anything.
 
 ## 7. Interface copy
 
@@ -787,6 +873,8 @@ Settled with the owner: D-1 to D-9. Made in this specification and open to revie
 | D-23 | Neighbouring items of one actor, kind and Team within 10 minutes are drawn as one grouped line that expands on click (owner, 2026-10-20) | Merging in the writer; no grouping |
 | D-24 | A row's summary wraps to at most 3 lines; the status line is a 4th, single line of its own (owner, 2026-10-20) | The whole row capped at 3 lines |
 | D-25 | The wireframe's extra sources come in slice 1b, after slice 1 (owner, 2026-10-20) | All of them in slice 1 |
+| D-26 | The Feed Tab's unseen bar marks every item newer than one stored mark, Notifications and Activity alike, cleared by viewing the Tab (owner, 2026-10-20) | The bar for unresolved Notifications only; per-item seen for Activity |
+| D-27 | The Feed Tab draws expandable cards (§6.13); Task, Room and document cards expand to a read-only preview, related items and navigation buttons (owner, 2026-10-20) | Compact rows in the Tab too; only Task cards expand |
 
 ---
 
@@ -872,5 +960,6 @@ Each task is one commit: a failing test, the code, a green `dotnet build Huddle.
 | FD-15 | `RightSidebarService` Notifications mode and `RightSidebar.razor` | Toggle table of §6.8; the Subject toggle unchanged |
 | FD-16 | `NotificationsButton` and `NotificationsPanel` | §8 Components row: count, seen, dismiss, resolved, See all activity |
 | FD-17 | `FeedSummary` copy and `FeedItemRow` (§6.12): day groups, reference chips, 3-line clamp, status line, age, grouping when drawn, the new items pill | One summary and status line per row of §7; the unreadable item; grouping joins only same actor, type and Team within 10 minutes and never mixes Notifications with Activity; the pill appears only when scrolled |
+| FD-17b | `FeedCard` (§6.13): unseen bar and `feed_state`, kind badge, meta line with Room and Team chips, status pills, expand with the Task, Room and document previews, "In the Feed" from `Related`, the navigation buttons | The bar follows `tab_seen_up_to` and clears on the next view; one card expanded at a time; a deleted target; Review in Needs you only for an unresolved gated Task; no button writes anything |
 | FD-18 | `FeedPage` at `/feed`, `TabKeys`, the `S5b` link; the header of §6.9 (Live chip, read-only note, Category control with counts, Team select, Teammate chip) | Paging, new items through the pill, `category`/`teammate`/`team` combine in the address and survive a Tab restore, counts re-read on a new item and on a resolve, target links |
 | FD-19 | User Guide, wireframes, code-map, Engineering Guide keys, manual tests page `feed.md` | `Check-All.ps1` |
