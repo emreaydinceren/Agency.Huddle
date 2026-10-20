@@ -68,7 +68,7 @@ internal sealed class HelperRunner(
             settings.Effort,
             prompts.Render(helper.PromptKeys[0], new Dictionary<string, string>(StringComparer.Ordinal)),
             prompts.Render(helper.PromptKeys[1], helper.PromptValues(input)),
-            DotAcpAgentHostFactory.BuildIsolationMeta(profile));
+            HelperSessionMeta.For(profile));
 
         if (!budget.TryReserve(helper.Id, settings.DailyCap))
         {
