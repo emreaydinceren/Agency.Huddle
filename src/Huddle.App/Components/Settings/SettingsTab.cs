@@ -13,6 +13,9 @@ public enum SettingsTab
     /// <summary>The read-only view of every model-facing prompt, grouped by area.</summary>
     Prompts,
 
+    /// <summary>Helpers: the background agents that make one judgement each, and what they may spend.</summary>
+    Helpers,
+
     /// <summary>Choosing a theme, the accent colour and the Library pane side.</summary>
     Appearance,
 

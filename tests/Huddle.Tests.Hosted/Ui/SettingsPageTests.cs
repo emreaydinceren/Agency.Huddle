@@ -62,7 +62,7 @@ public sealed class SettingsPageTests
 
         List<string?> hrefs = [.. cut.FindAll(".settings-nav a.mud-nav-link").Select(static link => link.GetAttribute("href"))];
         Assert.Equal(
-            ["/settings/profile", "/settings/prompts", "/settings/appearance", "/settings/personas", "/settings/skills", "/settings/teamtypes", "/settings/library"],
+            ["/settings/profile", "/settings/prompts", "/settings/helpers", "/settings/appearance", "/settings/personas", "/settings/skills", "/settings/teamtypes", "/settings/library"],
             hrefs);
     }
 
@@ -87,7 +87,7 @@ public sealed class SettingsPageTests
         Assert.Single(cut.FindComponents<ProfilePanel>());
     }
 
-    /// <summary>The <c>/settings/library</c> route highlights the seventh menu row and renders the Library panel (D3: the tab was unreachable).</summary>
+    /// <summary>The <c>/settings/library</c> route highlights the eighth menu row and renders the Library panel (D3: the tab was unreachable).</summary>
     [Fact]
     public async Task SettingsPage_LibraryRoute_RendersLibraryPanel()
     {
@@ -97,7 +97,7 @@ public sealed class SettingsPageTests
         var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "library"));
 
         Assert.Single(cut.FindComponents<LibraryPanel>());
-        Assert.Equal(6, cut.FindAll(".settings-nav .mud-nav-item").ToList().FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
+        Assert.Equal(7, cut.FindAll(".settings-nav .mud-nav-item").ToList().FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
     }
 
     /// <summary>The Prompts panel renders the Prompts panel's MudPaper-wrapped groups.</summary>
