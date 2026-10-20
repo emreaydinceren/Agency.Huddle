@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 734" width="900" height="734" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 13b: Feed item rows">
+<title>Figure 13b: Feed item rows</title>
+<rect width="900" height="734" fill="#ffffff"/>
+<text x="24" y="30" font-size="18" font-weight="700" fill="#1f2430" text-anchor="start">Figure 13b: Feed item rows (proposed)</text>
+<text x="24" y="48" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">Owner wireframe, 2026-10-20, drawn with slice 1 sources: avatar, summary with chips (at most 3 lines), status line on Notifications, age, day headings, new items pill.</text>
+<rect x="24" y="62" width="852" height="658" rx="6" fill="#fff" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="384" y="72" width="132" height="26" rx="13" fill="#6d5bd0"/><text x="450" y="90" font-size="13" font-weight="600" fill="#fff" text-anchor="middle">↑ 3 new items</text>
+<rect x="522" y="76" width="22" height="17" rx="8.5" fill="#b45309"/><text x="533.0" y="88.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">F7</text><text x="549" y="89" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">New items pill (dashed: only while scrolled)</text>
+<text x="44" y="130" font-size="13" font-weight="700" fill="#1f2430" text-anchor="start">Today</text><text x="83" y="130" font-size="13" font-weight="400" fill="#6b7280" text-anchor="start">Mon, Oct 13</text>
+<line x1="163" y1="126" x2="856" y2="126" stroke="#e5e7eb"/>
+<rect x="30" y="100" width="22" height="17" rx="8.5" fill="#b45309"/><text x="41.0" y="112.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">F8</text><text x="57" y="113" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Day heading</text>
+<circle cx="56" cy="160" r="10" fill="#ede9fe"/><text x="56" y="164" font-size="9" font-weight="700" fill="#6d5bd0" text-anchor="middle">J</text>
+<text x="76" y="164" font-size="13" font-weight="600" fill="#1f2430" text-anchor="start">Joe</text>
+<text x="102" y="164" font-size="13" font-weight="400" fill="#1f2430" text-anchor="start">asked you a Question in your 1:1 Room </text>
+<rect x="342" y="150" width="85" height="20" rx="4" fill="#f6f7f9" stroke="#c9ced6"/><text x="348" y="164" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">○</text><text x="360" y="164" font-size="12" font-weight="500" fill="#1f2430" text-anchor="start">Emre ↔ Joe</text>
+<circle cx="840" cy="160" r="3" fill="#6d5bd0"/>
+<text x="866" y="164" font-size="12" font-weight="600" fill="#6d5bd0" text-anchor="end">19m</text>
+<rect x="30" y="132" width="22" height="17" rx="8.5" fill="#b45309"/><text x="41.0" y="144.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">F9</text><text x="57" y="145" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Feed item row</text>
+<rect x="150" y="132" width="29" height="17" rx="8.5" fill="#b45309"/><text x="164.5" y="144.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">F9a</text>
+<rect x="200" y="132" width="29" height="17" rx="8.5" fill="#b45309"/><text x="214.5" y="144.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">F9b</text><text x="234" y="145" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Summary</text>
+<rect x="800" y="132" width="29" height="17" rx="8.5" fill="#b45309"/><text x="814.5" y="144.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">F9d</text>
+<circle cx="81" cy="179" r="3" fill="#6d5bd0"/><text x="92" y="183" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">Asked 14:31 · waiting for you</text>
+<rect x="340" y="170" width="29" height="17" rx="8.5" fill="#b45309"/><text x="354.5" y="182.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">F9c</text><text x="374" y="183" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Status line (Notifications only)</text>
+<line x1="44" y1="193" x2="856" y2="193" stroke="#f1f2f4"/>
+<circle cx="56" cy="215" r="10" fill="#ede9fe"/><text x="56" y="219" font-size="9" font-weight="700" fill="#6d5bd0" text-anchor="middle">E</text>
+<text x="76" y="219" font-size="13" font-weight="600" fill="#1f2430" text-anchor="start">Eli</text>
+<text x="102" y="219" font-size="13" font-weight="400" fill="#1f2430" text-anchor="start">stopped to wait for your approval on </text>
+<rect x="336" y="205" width="254" height="20" rx="4" fill="#f6f7f9" stroke="#c9ced6"/><text x="342" y="219" font-size="11" font-weight="400" fill="#6d5bd0" text-anchor="start">●</text><text x="354" y="219" font-size="12" font-weight="400" fill="#6d5bd0" text-anchor="start" font-family="Consolas, Menlo, monospace">#TASK-139</text><text x="425" y="219" font-size="12" font-weight="500" fill="#1f2430" text-anchor="start">Release v2.8.0 to production</text>
+<text x="595" y="219" font-size="13" font-weight="400" fill="#6b7280" text-anchor="start">· in releases</text>
+<circle cx="840" cy="215" r="3" fill="#6d5bd0"/>
+<text x="866" y="219" font-size="12" font-weight="600" fill="#6d5bd0" text-anchor="end">28m</text>
+<circle cx="81" cy="234" r="3" fill="#6d5bd0"/><text x="92" y="238" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">Asked 14:22 · proof 3/3 · waiting for you</text>
+<line x1="44" y1="248" x2="856" y2="248" stroke="#f1f2f4"/>
+<circle cx="56" cy="270" r="10" fill="#eef0f3"/><text x="56" y="274" font-size="10" font-weight="700" fill="#6b7280" text-anchor="middle">◐</text>
+<rect x="78" y="260" width="114" height="20" rx="4" fill="#f6f7f9" stroke="#c9ced6"/><text x="84" y="274" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">○</text><text x="96" y="274" font-size="12" font-weight="500" fill="#1f2430" text-anchor="start">security-review</text>
+<text x="196" y="274" font-size="13" font-weight="400" fill="#1f2430" text-anchor="start">reached its Budget</text>
+<circle cx="840" cy="270" r="3" fill="#6d5bd0"/>
+<text x="866" y="274" font-size="12" font-weight="600" fill="#6d5bd0" text-anchor="end">38m</text>
+<circle cx="81" cy="289" r="3" fill="#6d5bd0"/><text x="92" y="293" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">Paused 14:12 · waiting for you to continue or wrap up</text>
+<line x1="44" y1="303" x2="856" y2="303" stroke="#f1f2f4"/>
+<circle cx="56" cy="325" r="10" fill="#ede9fe"/><text x="56" y="329" font-size="9" font-weight="700" fill="#6d5bd0" text-anchor="middle">P</text>
+<text x="76" y="329" font-size="13" font-weight="600" fill="#1f2430" text-anchor="start">Priya</text>
+<text x="116" y="329" font-size="13" font-weight="400" fill="#1f2430" text-anchor="start">assigned you </text>
+<rect x="203" y="315" width="266" height="20" rx="4" fill="#f6f7f9" stroke="#c9ced6"/><text x="209" y="329" font-size="11" font-weight="400" fill="#6d5bd0" text-anchor="start">●</text><text x="221" y="329" font-size="12" font-weight="400" fill="#6d5bd0" text-anchor="start" font-family="Consolas, Menlo, monospace">#TASK-141</text><text x="291" y="329" font-size="12" font-weight="500" fill="#1f2430" text-anchor="start">Fix flaky websocket reconnect…</text>
+<circle cx="846" cy="325" r="3" fill="#6d5bd0"/>
+<text x="866" y="329" font-size="12" font-weight="600" fill="#6d5bd0" text-anchor="end">1h</text>
+<circle cx="81" cy="344" r="3" fill="#6d5bd0"/><text x="92" y="348" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">Asked 13:47 · waiting for you</text>
+<line x1="44" y1="358" x2="856" y2="358" stroke="#f1f2f4"/>
+<circle cx="56" cy="380" r="10" fill="#ede9fe"/><text x="56" y="384" font-size="9" font-weight="700" fill="#6d5bd0" text-anchor="middle">V</text>
+<text x="76" y="384" font-size="13" font-weight="600" fill="#1f2430" text-anchor="start">Vera</text>
+<text x="109" y="384" font-size="13" font-weight="400" fill="#1f2430" text-anchor="start">opened </text>
+<rect x="158" y="370" width="96" height="20" rx="4" fill="#f6f7f9" stroke="#c9ced6"/><text x="164" y="384" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">○</text><text x="176" y="384" font-size="12" font-weight="500" fill="#1f2430" text-anchor="start">Nadia ↔ Vera</text>
+<text x="259" y="384" font-size="13" font-weight="400" fill="#6b7280" text-anchor="start">· 2 Teammates</text>
+<text x="866" y="384" font-size="12" font-weight="400" fill="#6b7280" text-anchor="end">1h</text>
+<line x1="44" y1="394" x2="856" y2="394" stroke="#f1f2f4"/>
+<circle cx="56" cy="416" r="10" fill="#ede9fe"/><text x="56" y="420" font-size="9" font-weight="700" fill="#6d5bd0" text-anchor="middle">J</text>
+<text x="76" y="420" font-size="13" font-weight="600" fill="#1f2430" text-anchor="start">Joe</text>
+<text x="102" y="420" font-size="13" font-weight="400" fill="#1f2430" text-anchor="start">mentioned you in </text>
+<rect x="213" y="406" width="96" height="20" rx="4" fill="#f6f7f9" stroke="#c9ced6"/><text x="219" y="420" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">○</text><text x="231" y="420" font-size="12" font-weight="500" fill="#1f2430" text-anchor="start">api-platform</text>
+<text x="866" y="420" font-size="12" font-weight="400" fill="#6b7280" text-anchor="end">1h</text>
+<text x="77" y="439" font-size="12" font-weight="700" fill="#16a34a" text-anchor="start">✓</text><text x="92" y="439" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">Asked 13:10 · done 13:25</text>
+<text x="856" y="402" font-size="10" font-weight="600" fill="#b45309" text-anchor="end" font-style="italic">resolved: ✓ and Quiet age</text>
+<line x1="44" y1="449" x2="856" y2="449" stroke="#f1f2f4"/>
+<circle cx="56" cy="471" r="10" fill="#ede9fe"/><text x="56" y="475" font-size="9" font-weight="700" fill="#6d5bd0" text-anchor="middle">Z</text>
+<text x="76" y="475" font-size="13" font-weight="600" fill="#1f2430" text-anchor="start">Zoe</text>
+<text x="102" y="475" font-size="13" font-weight="400" fill="#1f2430" text-anchor="start">edited </text>
+<rect x="151" y="461" width="309" height="20" rx="4" fill="#f6f7f9" stroke="#c9ced6"/><text x="157" y="475" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">▤</text><text x="169" y="475" font-size="12" font-weight="500" fill="#1f2430" text-anchor="start" font-family="Consolas, Menlo, monospace">tasks/TASK-142-rate-limit-api-agents.md</text>
+<text x="464" y="475" font-size="13" font-weight="400" fill="#6b7280" text-anchor="start">· added three evidence items</text>
+<text x="866" y="475" font-size="12" font-weight="400" fill="#6b7280" text-anchor="end">2h</text>
+<line x1="44" y1="485" x2="856" y2="485" stroke="#f1f2f4"/>
+<circle cx="56" cy="507" r="10" fill="#eef0f3"/><text x="56" y="511" font-size="10" font-weight="700" fill="#6b7280" text-anchor="middle">◐</text>
+<text x="76" y="511" font-size="13" font-weight="400" fill="#1f2430" text-anchor="start">A gate stopped </text>
+<text x="173" y="511" font-size="13" font-weight="600" fill="#1f2430" text-anchor="start">Priya</text>
+<text x="213" y="511" font-size="13" font-weight="400" fill="#1f2430" text-anchor="start">moving </text>
+<rect x="262" y="497" width="192" height="20" rx="4" fill="#f6f7f9" stroke="#c9ced6"/><text x="268" y="511" font-size="11" font-weight="400" fill="#6d5bd0" text-anchor="start">●</text><text x="280" y="511" font-size="12" font-weight="400" fill="#6d5bd0" text-anchor="start" font-family="Consolas, Menlo, monospace">#TASK-142</text><text x="351" y="511" font-size="12" font-weight="500" fill="#1f2430" text-anchor="start">Add rate limiting</text>
+<text x="458" y="511" font-size="13" font-weight="400" fill="#1f2430" text-anchor="start">to Done</text>
+<text x="505" y="511" font-size="13" font-weight="400" fill="#6b7280" text-anchor="start">· CI must re-run green after the last rebase,</text>
+<text x="76" y="531" font-size="13" font-weight="400" fill="#6b7280" text-anchor="start">and this reason is long enough to wrap onto a second and a third line, where it is cut with an ellipsis so that the</text>
+<text x="76" y="551" font-size="13" font-weight="400" fill="#6b7280" text-anchor="start">summary never reaches a fourth line of text at all, however much more the gate has to say about the run, the …</text>
+<circle cx="846" cy="507" r="3" fill="#6d5bd0"/>
+<text x="866" y="511" font-size="12" font-weight="600" fill="#6d5bd0" text-anchor="end">2h</text>
+<circle cx="81" cy="566" r="3" fill="#6d5bd0"/><text x="92" y="570" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">Asked 12:40 · only you can move it anyway</text>
+<text x="856" y="493" font-size="10" font-weight="600" fill="#b45309" text-anchor="end" font-style="italic">summary wraps to 3 lines at most, never a 4th</text>
+<line x1="44" y1="580" x2="856" y2="580" stroke="#f1f2f4"/>
+<text x="44" y="606" font-size="13" font-weight="700" fill="#1f2430" text-anchor="start">Yesterday</text><text x="108" y="606" font-size="13" font-weight="400" fill="#6b7280" text-anchor="start">Sun, Oct 12</text>
+<line x1="188" y1="602" x2="856" y2="602" stroke="#e5e7eb"/>
+<circle cx="56" cy="636" r="10" fill="#ede9fe"/><text x="56" y="640" font-size="9" font-weight="700" fill="#6d5bd0" text-anchor="middle">K</text>
+<text x="76" y="640" font-size="13" font-weight="600" fill="#1f2430" text-anchor="start">Kai</text>
+<text x="102" y="640" font-size="13" font-weight="400" fill="#1f2430" text-anchor="start">created </text>
+<rect x="157" y="626" width="192" height="20" rx="4" fill="#f6f7f9" stroke="#c9ced6"/><text x="163" y="640" font-size="11" font-weight="400" fill="#6d5bd0" text-anchor="start">●</text><text x="175" y="640" font-size="12" font-weight="400" fill="#6d5bd0" text-anchor="start" font-family="Consolas, Menlo, monospace">#TASK-142</text><text x="246" y="640" font-size="12" font-weight="500" fill="#1f2430" text-anchor="start">Add rate limiting</text>
+<text x="353" y="640" font-size="13" font-weight="500" fill="#6d5bd0" text-anchor="start">and 2 more Tasks</text>
+<text x="473" y="640" font-size="13" font-weight="400" fill="#6b7280" text-anchor="start">· in Development</text>
+<text x="866" y="640" font-size="12" font-weight="400" fill="#6b7280" text-anchor="end">1d</text>
+<text x="856" y="622" font-size="10" font-weight="600" fill="#b45309" text-anchor="end" font-style="italic">grouped when drawn: “and 2 more” expands</text>
+<line x1="44" y1="650" x2="856" y2="650" stroke="#f1f2f4"/>
+<circle cx="56" cy="672" r="10" fill="#111827"/><text x="56" y="676" font-size="9" font-weight="700" fill="#fff" text-anchor="middle">Y</text>
+<text x="76" y="676" font-size="13" font-weight="600" fill="#1f2430" text-anchor="start">You</text>
+<text x="102" y="676" font-size="13" font-weight="400" fill="#1f2430" text-anchor="start">archived </text>
+<rect x="163" y="662" width="91" height="20" rx="4" fill="#f6f7f9" stroke="#c9ced6"/><text x="169" y="676" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">○</text><text x="181" y="676" font-size="12" font-weight="500" fill="#1f2430" text-anchor="start">standup-old</text>
+<text x="866" y="676" font-size="12" font-weight="400" fill="#6b7280" text-anchor="end">1d</text>
+<line x1="44" y1="686" x2="856" y2="686" stroke="#f1f2f4"/>
+<rect x="30" y="698" width="22" height="17" rx="8.5" fill="#b45309"/><text x="41.0" y="710.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">F4</text><text x="57" y="711" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Item list: the same rows in the Right sidebar panel and the Feed Tab</text>
+</svg>

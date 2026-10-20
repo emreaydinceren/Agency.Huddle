@@ -29,6 +29,7 @@ see [design-system.md](design-system.md).
 - [Figure 10: The Needs you page](#figure-10-the-needs-you-page)
 - [Figure 11: The Task read view](#figure-11-the-task-read-view)
 - [Figure 12: The Task edit page](#figure-12-the-task-edit-page)
+- [Figure 13: The Feed page](#figure-13-the-feed-page)
 - [Using the codes](#using-the-codes)
 - [Sources and upkeep](#sources-and-upkeep)
 - [See also](#see-also)
@@ -57,6 +58,7 @@ A code is **a letter, a number and sometimes a lowercase letter**.
 | `B` | The Build a team page | [9](#figure-9-the-build-a-team-page) |
 | `N` | The Needs you page | [10](#figure-10-the-needs-you-page) |
 | `K` | The Task edit page (`/tasks/item/{id}/edit`), in a Tab of its own | [12](#figure-12-the-task-edit-page) |
+| `F` | The Feed page (`/feed`), in a Tab of its own | [13](#figure-13-the-feed-page) |
 
 **Rules for keeping them stable**
 
@@ -492,6 +494,39 @@ Figure 12's narrow inset as `S4`.
 | `task-blockers` | Blocked by, `Block`, 20 | One row per Task in Blocked by: the id (12px Quiet ink), the title and the live state dot, the Right sidebar's Task row. A click opens it at `/tasks/item/{id}`. The count is the open blockers | `TaskStore.Get` for each id in the saved Blocked by | Hidden when Blocked by is empty (the panel's `AppliesTo` also checks this) |
 | `task-blocks` | Blocks, `Block`, 25 | One row per open Task whose Blocked by names this one, in the same row format. A click opens it. The count is the rows | The query `TaskTriggerService` runs to wake dependants (`TaskStore.All` where Blocked by contains the id), moved to one `TaskStore` method both use | Hidden when no Task names this one |
 | `task-documents` | Linked documents, `Link`, 30 | One row per Library file the saved Description links to, as the Description preview resolves them: the file's icon and name, the folder as a tooltip. A click opens the file. A link that does not resolve is a row in Quiet ink with "Not found" | `ILibraryReferenceResolver`, as `MarkdownRenderer.ToHtml` uses it for the Description | "The description links to no files." Not registered while the Library is off (`IsEnabled`) |
+
+## Figure 13: The Feed page
+
+`FeedPage.razor`, route `/feed` (Tab title "Feed"); designed in the
+[Feed spec §6.9](../Huddle.Feed-Specifications.md#69-the-feed-tab), not built yet. Drawn from the owner's header and row wireframes (2026-10-20).
+
+![Figure 13a: the Feed Tab header, with the Live chip, the read-only note, the Category control with counts and the Team select](../images/wireframes/13a-feed-header.svg)
+
+![Figure 13b: Feed item rows under day headings, each with an avatar, a summary with reference chips, a status line on Notifications and an age, and the new items pill](../images/wireframes/13b-feed-rows.svg)
+
+Opened
+from the Activity bar's "Feed" link (`S5b`) and the Notifications panel's "See all activity".
+
+| Code | Name | Component | Notes |
+| --- | --- | --- | --- |
+| `F1` | Page container | `MudContainer` (`page-reading`) | The header, the filter bar, then the items in one reading column |
+| `F2` | Header | `PageHeader` "Feed", with Subtitle | "What Teammates and Huddle did, newest first. Each line links to the Task, Room or document it's about." |
+| `F2a` | Live chip | A small Success-tinted chip in `TitleTrailing` | A filled dot and "Live": new items arrive on their own. One state in v1 |
+| `F2b` | Read-only note | Caption line, Quiet ink, leading `Visibility` icon | "Read-only — the Feed never changes the work and never shows message text." |
+| `F3` | Filter bar | `div`, one row | `F3a` at the left; `F3c` then `F3b` at the right |
+| `F3a` | Category | `HuddleSegmentedControl<FeedCategory>`, six segments | All, Needs you, Tasks, Documents, Rooms, Gates, each with its count. Needs you overlaps the others, so the counts don't add up. Sets `?category=` |
+| `F3b` | Team select | `MudSelect`, Dense, Outlined, the `Groups` icon | "All teams", then each Team. Sets `?team=` |
+| `F3c` | Teammate chip | `TaskFilterChip` | Drawn dashed: only when an avatar was clicked. "Teammate: Nova ×" |
+| `F4` | Item list | `F8` day groups of `F9` rows, newest first | The same list the Right sidebar's Feed panel draws (spec §6.8), there with a wrapping Category chip set that opens on Needs you |
+| `F5` | Show more | `MudButton`, Text variant | Loads the next page by id |
+| `F6` | Empty state | `EmptyState` | Drawn dashed: the copy depends on the filter (spec §6.9). `F2` and `F3` stay drawn |
+| `F7` | New items pill | Floating Accent pill, top centre of `F4` | Drawn dashed: only while new items wait because the list is scrolled. "↑ 3 new items"; a click inserts them and scrolls to the top |
+| `F8` | Day heading | `div`, 600 day word, Quiet date, Edge hairline to the right | "Today Mon, Oct 13", "Yesterday Sun, Oct 12", "Friday Oct 10", then "Oct 3" |
+| `F9` | Feed item row | `FeedItemRow`, a three-column grid | One item, or one group drawn as a row ("and 2 more Tasks"; a click on "2 more" expands it). The row opens its target |
+| `F9a` | Avatar | 20px `TeammateAvatar`; "You" for the Human; Huddle's icon for Huddle | Top-aligned with the first line |
+| `F9b` | Summary | 13px, wraps to at most 3 lines, then "…" | Actor Name in 600, the summary with reference chips (Task: state icon, `#id`, truncated title; Room: chat icon and Name, "A ↔ B" for two Members; Document: monospace path), trailing context in Quiet ink after " · ". Never a 4th line |
+| `F9c` | Status line | 12px Quiet ink, one line | Drawn dashed: Notifications only. An Accent dot while waiting ("Asked 14:31 · waiting for you"), a Success ✓ once resolved ("… · done 12:52") |
+| `F9d` | Age | Right-aligned on the first line | "19m", "1h", "3d"; Accent with a dot while the Notification waits, else Quiet. Tooltip: the full date |
 
 ## Using the codes
 
