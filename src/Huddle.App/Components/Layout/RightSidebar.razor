@@ -6,6 +6,7 @@
     it. With no Subject, or no panel that applies, it draws the EmptyState with the one sentence the User Guide uses. Closed, it mounts
     nothing, so panels are disposed.
 *@
+@using Agency.Huddle.App.Components.Feed
 @using Agency.Huddle.App.Components.Sidebar
 @using Agency.Huddle.App.Sidebar
 @using Agency.Huddle.App.Tabs
@@ -23,7 +24,13 @@
            Class="right-sidebar"
            id="@ElementId"
            aria-label="Right sidebar">
-    @if (this.Sidebar.IsOpen)
+    @if (this.Sidebar.IsOpen && this.Sidebar.Mode == RightSidebarMode.Notifications)
+    {
+        <SidebarPanelFrame PanelId="notifications" Title="Notifications" Icon="@Icons.Material.Outlined.Notifications">
+            <NotificationsPanel />
+        </SidebarPanelFrame>
+    }
+    else if (this.Sidebar.IsOpen)
     {
         Tab? tab = this.Tabs.Active;
         PageSubject? subject = this.Sidebar.SubjectFor(tab?.Id);

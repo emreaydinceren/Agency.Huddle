@@ -4,7 +4,6 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
-using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Acp.Tools;
 
@@ -14,19 +13,14 @@ namespace Agency.Huddle.App.Acp.Tools;
 /// Task through <see cref="TaskService.Close"/>. Offered only to a Persona holding a Skill that lists it.
 /// </summary>
 internal sealed class ConfirmRequestTool(
-    ITeamCatalog teams,
     TaskService tasks,
     TaskStore store,
-    PersonaStore personas,
-    ProcessGateService gates,
+    IRequestConfirmers confirmers,
     IRequestNotifier notifier,
     ITeamDirectory directory,
     string callerAgentId,
     IPromptSource prompts) : IAppTool
 {
-    /// <summary>The role coverage step a confirming member must have.</summary>
-    private const string VerifyCoverage = "verify";
-
     /// <inheritdoc />
     public string Name => "confirm_request";
 
@@ -71,7 +65,7 @@ internal sealed class ConfirmRequestTool(
             return lookupRefusal;
         }
 
-        bool isRequesterQa = this.IsVerifierOf(fields.FromTeam, actor.Name);
+        bool isRequesterQa = confirmers.IsVerifierOf(fields.FromTeam, actor.Name);
         RequestTransition transition = RequestLifecycle.Apply(new RequestState(request.Status.ToWire(), fields.Triage), RequestEvent.Confirm, isRequesterQa);
         if (!transition.Allowed)
         {
@@ -130,24 +124,5 @@ internal sealed class ConfirmRequestTool(
     {
         TaskPatch patch = new() { Description = original.Description, ExtraFields = [.. fields.ToFrontmatter()] };
         _ = TaskToolText.TryRun(() => tasks.Update(original.Id, patch, null, actor), out _, out _);
-    }
-
-    /// <summary>Whether <paramref name="member"/> belongs to <paramref name="team"/> in a role whose coverage includes <c>verify</c>.</summary>
-    /// <param name="team">The requesting Team's name.</param>
-    /// <param name="member">The caller's name.</param>
-    /// <returns><see langword="true"/> for a QA member of that Team.</returns>
-    private bool IsVerifierOf(string team, string member)
-    {
-        TeamSummary? summary = teams.Find(team);
-        if (summary is null || !summary.Members.Contains(member, StringComparer.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return personas.Get(member) is { } persona
-            && PersonaFrontmatter.TryReadIdentity(persona.Text, out PersonaIdentity? identity, out _)
-            && identity.Role is { } role
-            && gates.CoverageOf(role) is { } coverage
-            && coverage.Split(',', StringSplitOptions.TrimEntries).Contains(VerifyCoverage, StringComparer.OrdinalIgnoreCase);
     }
 }

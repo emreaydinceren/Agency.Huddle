@@ -1,0 +1,45 @@
+/* The Feed list: day headings with an Edge hairline, and the floating "New items" pill (Feed spec 6.12). */
+.feed-list {
+    position: relative;
+}
+
+.feed-day-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 12px 8px 4px;
+    font-size: var(--mud-typography-caption-size);
+}
+
+.feed-day-word {
+    font-weight: 600;
+}
+
+.feed-day-date {
+    color: var(--mud-palette-text-secondary);
+}
+
+.feed-day-rule {
+    flex: 1 1 auto;
+    align-self: center;
+    height: 1px;
+    background-color: var(--ink-edge);
+}
+
+/* Sticks to the top centre of the scroller, so it stays in view while the Human reads further down. */
+.feed-new-pill {
+    position: sticky;
+    top: 8px;
+    z-index: 2;
+    display: block;
+    margin: 0 auto;
+    padding: 4px 12px;
+    border: 0;
+    border-radius: 999px;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--mud-palette-primary-text);
+    background-color: var(--mud-palette-primary);
+    box-shadow: var(--mud-elevation-2);
+}

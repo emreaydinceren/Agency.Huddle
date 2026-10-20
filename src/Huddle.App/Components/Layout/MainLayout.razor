@@ -1,11 +1,13 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 @using Agency.Huddle.App.Appearance
+@using Agency.Huddle.App.Components.Feed
 @using Agency.Huddle.App.Components.Search
 @using Agency.Huddle.App.Tabs
 @using Agency.Huddle.App.Themes
 @inject AppearanceStore AppearanceStore
 @inject IHumanIdentity Human
+@inject Microsoft.Extensions.Options.IOptions<TeamOptions> FeedOptions
 @inject NavigationManager Navigation
 @inject TabService Tabs
 
@@ -38,6 +40,7 @@
         </Search>
         <Actions>
             <TasksNeedYouPill />
+            <NotificationsButton />
             <RightSidebarToggle />
             <ThemeModeToggle />
         </Actions>
@@ -50,6 +53,12 @@
         <ActivityBar Selected="this.sidebarView" SelectedChanged="this.OnSidebarViewChanged">
             <Bottom>
                 <MudNavMenu Class="nav-settings">
+                    @if (this.FeedOptions.Value.Feed.Enabled)
+                    {
+                        <MudTooltip Text="Feed" Placement="Placement.Right">
+                            <NavTabLink Href="/feed" TabTitle="Feed" Icon="@Icons.Material.Outlined.DynamicFeed" aria-label="Feed" />
+                        </MudTooltip>
+                    }
                     <ArchivedChats />
                     <MudTooltip Text="Settings" Placement="Placement.Right">
                         <NavTabLink Href="/settings" TabTitle="Settings" Icon="@Icons.Material.Filled.Settings" aria-label="Settings" />

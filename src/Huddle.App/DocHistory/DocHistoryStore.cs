@@ -5,6 +5,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Library;
 
 namespace Agency.Huddle.App.DocHistory;
@@ -15,7 +16,7 @@ namespace Agency.Huddle.App.DocHistory;
 /// directory move (DocHistory spec §6.2). Only the App writes here, so the store's one lock is all the
 /// concurrency control there is. The files are for the App, not the Human.
 /// </summary>
-internal sealed class DocHistoryStore(IOptions<TeamOptions> options, ILogger<DocHistoryStore> logger)
+internal sealed class DocHistoryStore(IOptions<TeamOptions> options, ILogger<DocHistoryStore> logger, IFeedPublisher? feed = null)
 {
     /// <summary>The <c>v</c> every line is written with. A line with any other value is skipped on read.</summary>
     internal const int FormatVersion = 1;
@@ -116,6 +117,32 @@ internal sealed class DocHistoryStore(IOptions<TeamOptions> options, ILogger<Doc
         }
 
         this.Changed?.Invoke(file);
+        PostToFeed(file, entry);
+    }
+
+    /// <summary>Tells the Feed an Agent changed a document. The Human's own saves are not posted (Feed spec D-10): one editing session would be dozens of items.</summary>
+    /// <param name="file">The document.</param>
+    /// <param name="entry">The entry just appended.</param>
+    private void PostToFeed(LibraryPath file, DocHistoryEntry entry)
+    {
+        if (feed is null || entry.ActorKind != DocActorKind.Agent)
+        {
+            return;
+        }
+
+        string kind = entry.Kind switch
+        {
+            DocChangeKind.Created => "created",
+            DocChangeKind.Edited => "edited",
+            DocChangeKind.Reviewed => "reviewed",
+            _ => "objected",
+        };
+        feed.Post(new FeedMessage(
+            FeedSourceType.DocumentChanged,
+            file.FullPath,
+            new FeedActor(FeedActorKind.Agent, entry.Actor),
+            false,
+            new DocumentChangedPayload(file.FullPath, file.Root.DisplayName, file.RelativePath, kind, entry.Summary)));
     }
 
     /// <summary>

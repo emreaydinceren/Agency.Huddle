@@ -57,6 +57,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 32 | [Document history: the byline, the History, the Recent edits panel and the Stop hook](doc-history.md) | 8 | 4 | 1.6h |
 | 33 | [Human gate: the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page](human-gate.md) | 9 | — | 1.3h |
 | 34 | [Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the override, the daily cap and a failing Adapter](helpers.md) | 7 | 4 | 1.2h |
+| 35 | [Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart](feed.md) | 14 | 2 | 2.4h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.

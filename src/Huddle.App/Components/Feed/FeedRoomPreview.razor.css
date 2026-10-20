@@ -1,0 +1,36 @@
+.feed-room-members {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin-bottom: 8px;
+}
+
+.feed-room-member {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.feed-room-member ::deep .mud-avatar {
+    width: 20px;
+    height: 20px;
+    font-size: var(--mud-typography-caption-size);
+}
+
+.feed-room-reason,
+.feed-room-last {
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.feed-room-reason {
+    color: var(--mud-palette-warning);
+}
+
+.feed-preview-deleted {
+    padding: 12px;
+    border: 1px dashed var(--ink-edge);
+    border-radius: var(--mud-default-borderradius);
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+}

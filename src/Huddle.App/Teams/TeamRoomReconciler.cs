@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 
@@ -17,7 +18,8 @@ internal sealed partial class TeamRoomReconciler(
     ChatService chat,
     ITeamCatalog catalog,
     RoomEvents events,
-    ILogger<TeamRoomReconciler> logger) : IHostedService, IDisposable
+    ILogger<TeamRoomReconciler> logger,
+    IFeedPublisher? feed = null) : IHostedService, IDisposable
 {
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly CancellationTokenSource stopping = new();
@@ -191,7 +193,7 @@ internal sealed partial class TeamRoomReconciler(
         {
             if (!present.Any(p => string.Equals(p.Id, member.Id, StringComparison.Ordinal)))
             {
-                await chat.InviteAsync(room.Id, member.Name, ct).ConfigureAwait(false);
+                await chat.InviteAsync(room.Id, member.Name, FeedActor.Huddle, ct).ConfigureAwait(false);
             }
         }
     }
@@ -207,11 +209,35 @@ internal sealed partial class TeamRoomReconciler(
         {
             Room created = await directory.CreateRoomAsync(team.Name, ids, team.Name, true, ct).ConfigureAwait(false);
             events.PublishRoomsChanged();
+            await this.PostCreatedAsync(created, members, ct).ConfigureAwait(false);
             return created;
         }
         catch (SqliteException)
         {
             return await directory.FindTeamRoomAsync(team.Name, ct).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Tells the Feed Huddle opened a Team Room. The Feed never decides, and a failed lookup is dropped.</summary>
+    /// <param name="room">The Team Room that was just created.</param>
+    /// <param name="members">The Agents it holds besides the Human.</param>
+    /// <param name="ct">Cancels the Human lookup.</param>
+    private async Task PostCreatedAsync(Room room, List<User> members, CancellationToken ct)
+    {
+        if (feed is null)
+        {
+            return;
+        }
+
+        try
+        {
+            User? human = await directory.GetUserAsync(KnownIds.Human, ct).ConfigureAwait(false);
+            List<string> names = [human?.Name ?? "You", .. members.Select(static m => m.Name)];
+            feed.Post(new FeedMessage(FeedSourceType.RoomCreated, room.Id, FeedActor.Huddle, false, new RoomCreatedPayload(room.Id, room.Name, room.Team, names)));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "The Feed could not record the Team Room {RoomId}.", room.Id);
         }
     }
 
@@ -233,7 +259,7 @@ internal sealed partial class TeamRoomReconciler(
         {
             if (room.Team is not null && !room.Archived && vanished.Contains(room.Team))
             {
-                await chat.SetRoomArchivedAsync(room.Id, true, ct).ConfigureAwait(false);
+                await chat.SetRoomArchivedAsync(room.Id, true, FeedActor.Huddle, ct).ConfigureAwait(false);
                 this.archivedByReconciler[room.Id] = room.Team;
             }
         }
@@ -255,7 +281,7 @@ internal sealed partial class TeamRoomReconciler(
             Room? room = await directory.GetRoomAsync(roomId, ct).ConfigureAwait(false);
             if (room is { Archived: true })
             {
-                await chat.SetRoomArchivedAsync(roomId, false, ct).ConfigureAwait(false);
+                await chat.SetRoomArchivedAsync(roomId, false, FeedActor.Huddle, ct).ConfigureAwait(false);
             }
 
             _ = this.archivedByReconciler.Remove(roomId);

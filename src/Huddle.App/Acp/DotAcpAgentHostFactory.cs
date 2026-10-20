@@ -360,7 +360,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         [
             ActivatorUtilities.CreateInstance<ListAgentsTool>(this.serviceProvider),
             ActivatorUtilities.CreateInstance<CreateRoomTool>(this.serviceProvider, agentId),
-            ActivatorUtilities.CreateInstance<InviteAgentTool>(this.serviceProvider),
+            ActivatorUtilities.CreateInstance<InviteAgentTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<PostMessageTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<FollowRoomTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<UnfollowRoomTool>(this.serviceProvider, agentId),

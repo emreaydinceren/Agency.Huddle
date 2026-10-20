@@ -19,7 +19,7 @@ internal sealed class NeedsYouFixture : IDisposable
 {
     private readonly TempDataDir dir;
 
-    private NeedsYouFixture(TempDataDir dir)
+    private NeedsYouFixture(TempDataDir dir, Agency.Huddle.App.Feed.IFeedPublisher? feed)
     {
         this.dir = dir;
         this.Events = new RoomEvents(NullLogger<RoomEvents>.Instance);
@@ -39,7 +39,7 @@ internal sealed class NeedsYouFixture : IDisposable
             NullLogger<ChatService>.Instance,
             this.Forms,
             timeProvider: this.Clock);
-        this.Tracker = new NeedsYouTracker(this.Events, this.Questions, this.Forms, this.Team, NullLogger<NeedsYouTracker>.Instance, this.Clock);
+        this.Tracker = new NeedsYouTracker(this.Events, this.Questions, this.Forms, this.Team, NullLogger<NeedsYouTracker>.Instance, this.Clock, feed);
     }
 
     /// <summary>The hub everything publishes on.</summary>
@@ -68,10 +68,11 @@ internal sealed class NeedsYouFixture : IDisposable
 
     /// <summary>Builds and initialises a fixture.</summary>
     /// <param name="ct">Cancels the directory's initialisation.</param>
+    /// <param name="feed">Receives the tracker's Feed items; <see langword="null"/> posts nothing.</param>
     /// <returns>A fixture the caller disposes.</returns>
-    public static async Task<NeedsYouFixture> CreateAsync(CancellationToken ct)
+    public static async Task<NeedsYouFixture> CreateAsync(CancellationToken ct, Agency.Huddle.App.Feed.IFeedPublisher? feed = null)
     {
-        NeedsYouFixture fixture = new(new TempDataDir());
+        NeedsYouFixture fixture = new(new TempDataDir(), feed);
         await fixture.Team.InitializeAsync("You", ct);
         return fixture;
     }

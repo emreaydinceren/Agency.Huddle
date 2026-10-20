@@ -41,6 +41,7 @@ public static class ServiceCollectionExtensions
 
         return services
             .AddOptionsAndChatCore(configuration)
+            .AddFeedServices(configuration)
             .AddFileAndStoreSingletons()
             .AddIdentityAndAgentHostServices()
             .AddTaskPromptAndSkillStores()
@@ -87,6 +88,30 @@ public static class ServiceCollectionExtensions
         services.AddHostedService(static sp => sp.GetRequiredService<HelperDispatcher>());
         services.AddSingleton<NeedsHumanTrigger>();
         services.AddHostedService(static sp => sp.GetRequiredService<NeedsHumanTrigger>());
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the Feed (ADR-0063): the store and the hub always, so the UI can resolve them, and the queue, the writer and the
+    /// startup reconciler only while <c>Team:Feed:Enabled</c> is true. When it is off, <see cref="Feed.NullFeedPublisher"/> takes
+    /// every producer's calls and nothing is written.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">The application configuration, read for the one switch that decides the shape of the graph.</param>
+    private static IServiceCollection AddFeedServices(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddSingleton<Feed.FeedStore>();
+        services.AddSingleton<Feed.FeedEvents>();
+        if (!(configuration.GetSection("Team:Feed").GetValue<bool?>("Enabled") ?? true))
+        {
+            services.AddSingleton<Feed.IFeedPublisher, Feed.NullFeedPublisher>();
+            return services;
+        }
+
+        services.AddSingleton<Feed.FeedQueue>();
+        services.AddSingleton<Feed.IFeedPublisher>(static sp => sp.GetRequiredService<Feed.FeedQueue>());
+        services.AddHostedService<Feed.FeedWriter>();
+        services.AddHostedService<TaskFeedStartup>();
         return services;
     }
 
@@ -160,6 +185,7 @@ public static class ServiceCollectionExtensions
             ChatService service = ActivatorUtilities.CreateInstance<ChatService>(sp);
             service.TeamCatalog = sp.GetRequiredService<ITeamCatalog>();
             service.UploadFolders = sp.GetRequiredService<Uploads.IRoomUploadFolders>();
+            service.FeedPublisher = sp.GetService<Feed.IFeedPublisher>();
             return service;
         });
         services.TryAddSingleton<ToolCallLogWriter>();
@@ -430,6 +456,7 @@ public static class ServiceCollectionExtensions
 
         // The Team's process gates; TaskService asks it before every Task status change (PR-7).
         services.AddSingleton<Agency.Huddle.App.Teams.ProcessGateService>();
+        services.AddSingleton<Agency.Huddle.App.Tasks.IRequestConfirmers, Agency.Huddle.App.Tasks.RequestConfirmers>();
 
         // The Proof of a Task: its Definition of Done evaluated against the live stores (HG, ADR-0062).
         services.AddSingleton<Agency.Huddle.App.Tasks.HumanGate.ProofContextBuilder>();

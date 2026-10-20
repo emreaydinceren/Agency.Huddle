@@ -1,0 +1,245 @@
+@*
+    One row of the Feed (Feed spec 6.12): a single item, or a group of neighbouring items drawn as one line. A three-column grid: the
+    actor's avatar, the body (the summary line with its reference chips, then a Notification's status line), and the right-aligned age.
+    The Right sidebar panel draws these rows, and so does the Feed Tab's list. Every word comes from FeedSummary, so the copy of spec 7
+    is not repeated here. The row never shows Message text.
+*@
+@using Agency.Huddle.App.Feed
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Tabs
+@inject TimeProvider Clock
+@inject TabService Tabs
+@inject NavigationManager Navigation
+@inject LibraryPathResolver LibraryResolver
+
+@if (this.expanded)
+{
+    <div class="feed-row-members">
+        @foreach (FeedItem member in this.Group.Items)
+        {
+            <FeedItemRow @key="member.Id" Group="new FeedGroup([member])" OnDismiss="this.OnDismiss" OnDismissMany="this.OnDismissMany" OnTeammate="this.OnTeammate" />
+        }
+    </div>
+}
+else
+{
+    <div class="@this.RowClass" role="@(this.TargetAddress() is null ? null : "link")" tabindex="@(this.TargetAddress() is null ? null : "0")" @onclick="this.OpenTarget" @onkeydown="this.OnBodyKeyDown">
+        <div class="feed-row-avatar">
+            @this.AvatarContent
+        </div>
+        <div class="feed-row-body">
+            <div class="feed-row-summary feed-clamp-3">
+                @if (this.RoomWaitSentence is { } sentence)
+                {
+                    <button type="button" class="feed-row-more" @onclick="this.Expand" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">@sentence</button>
+                }
+                else
+                {
+                    @if (!this.Line.OmitActor)
+                    {
+                        <span class="feed-row-actor">@this.ActorName</span>
+                        @(" ")
+                    }
+
+                    <FeedSegments Item="this.Group.Lead" />
+
+                    @if (this.Line.Context is { Length: > 0 } context)
+                    {
+                        <span class="feed-row-context">@(" · " + context)</span>
+                    }
+
+                    @if (this.Group.More > 0)
+                    {
+                        @(" ")
+                        <button type="button" class="feed-row-more" @onclick="this.Expand" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">@($"and {this.Group.More} more {FeedSummary.NounOf(this.Group.Lead.SourceType)}")</button>
+                    }
+                }
+            </div>
+            @if (this.Status is { } status)
+            {
+                <div class="feed-row-status">
+                    @if (this.Group.AnyUnresolved)
+                    {
+                        <span class="feed-dot" aria-hidden="true"></span>
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="feed-check" aria-hidden="true" />
+                    }
+                    <span class="feed-row-status-text">@status.Text</span>
+                </div>
+            }
+        </div>
+        <span class="@this.TimeClass" title="@this.FullTime">
+            @if (this.Group.AnyUnresolved)
+            {
+                <span class="feed-time-dot" aria-hidden="true"></span>
+            }
+            @FeedTime.Age(this.Clock.GetUtcNow(), this.Group.Lead.At)
+        </span>
+        @if (this.CanDismiss)
+        {
+            <span @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+                <MudTooltip Text="Dismiss" Class="hover-reveal-menu">
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Dismiss"
+                                   Class="hover-reveal-menu-button feed-row-dismiss"
+                                   OnClick="this.DismissAsync" />
+                </MudTooltip>
+            </span>
+        }
+    </div>
+}
+
+@code {
+    private bool expanded;
+
+    /// <summary>The item, or the neighbouring items, this row draws. The first item leads the line.</summary>
+    [Parameter, EditorRequired]
+    public required FeedGroup Group { get; set; }
+
+    /// <summary>
+    /// Called with each Notification of the row when its hover x is pressed. When it is not set there is no x, which is how the Feed
+    /// Tab (a read-only history) draws these rows.
+    /// </summary>
+    [Parameter]
+    public EventCallback<FeedItem> OnDismiss { get; set; }
+
+    /// <summary>
+    /// Called once with every Notification of a grouped row when its hover x is pressed, so the parent can dismiss them together and read
+    /// once. A row of a single Notification uses <see cref="OnDismiss"/>. When it is not set a group falls back to <see cref="OnDismiss"/> per member.
+    /// </summary>
+    [Parameter]
+    public EventCallback<IReadOnlyList<FeedItem>> OnDismissMany { get; set; }
+
+    /// <summary>Called with a Teammate's Name when the avatar is clicked. Huddle and the Human have no such click.</summary>
+    [Parameter]
+    public EventCallback<string> OnTeammate { get; set; }
+
+
+    private FeedSummaryLine Line => FeedSummary.Of(this.Group.Lead);
+
+    private FeedStatusLine? Status => FeedSummary.StatusOf(this.Group.Lead, this.Clock.LocalTimeZone);
+
+    private bool IsNotification => this.Group.Lead.Notify;
+
+    private bool CanDismiss => this.IsNotification && (this.OnDismiss.HasDelegate || this.OnDismissMany.HasDelegate);
+
+    private string ActorName => this.Group.Lead.Actor.Kind == FeedActorKind.Human ? "You" : this.Group.Lead.Actor.Name;
+
+    private string RowClass =>
+        "feed-row hover-reveal-row"
+        + (this.IsNotification && !this.Group.AnyUnresolved ? " feed-row-resolved" : string.Empty)
+        + (this.CanDismiss ? " feed-row-dismissable" : string.Empty);
+
+    private string TimeClass => this.Group.AnyUnresolved ? "feed-row-time feed-row-unresolved" : "feed-row-time";
+
+    private string FullTime
+    {
+        get
+        {
+            DateTimeOffset local = TimeZoneInfo.ConvertTime(this.Group.Lead.At, this.Clock.LocalTimeZone);
+            return HumanDate.Full(DateOnly.FromDateTime(local.DateTime)) + " " + local.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+        }
+    }
+
+    /// <summary>"In Growth, 3 Rooms stopped to wait for you" for a group of Room waits in one Team, or <see langword="null"/> for any other row.</summary>
+    private string? RoomWaitSentence =>
+        this.Group.More > 0 && this.Group.Lead.Payload is RoomWaitPayload { Team: { Length: > 0 } team }
+            ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"In {team}, {this.Group.Items.Count} Rooms stopped to wait for you")
+            : null;
+
+    private RenderFragment AvatarContent => builder =>
+    {
+        FeedActor actor = this.Group.Lead.Actor;
+        switch (actor.Kind)
+        {
+            case FeedActorKind.Agent when this.OnTeammate.HasDelegate:
+                builder.OpenElement(0, "button");
+                builder.AddAttribute(1, "type", "button");
+                builder.AddAttribute(2, "class", "feed-row-avatar-button");
+                builder.AddAttribute(3, "aria-label", actor.Name);
+                builder.AddAttribute(4, "onclick", EventCallback.Factory.Create<MouseEventArgs>(this, this.TeammateClickedAsync));
+                builder.AddEventStopPropagationAttribute(5, "onclick", true);
+                builder.OpenComponent<TeammateAvatar>(6);
+                builder.AddComponentParameter(7, nameof(TeammateAvatar.Name), actor.Name);
+                builder.AddComponentParameter(8, nameof(TeammateAvatar.Size), Size.Small);
+                builder.CloseComponent();
+                builder.CloseElement();
+                break;
+            case FeedActorKind.Agent:
+            case FeedActorKind.Human:
+                builder.OpenComponent<TeammateAvatar>(0);
+                builder.AddComponentParameter(1, nameof(TeammateAvatar.Name), this.ActorName);
+                builder.AddComponentParameter(2, nameof(TeammateAvatar.Size), Size.Small);
+                builder.CloseComponent();
+                break;
+            default:
+                builder.OpenElement(0, "span");
+                builder.AddAttribute(1, "class", "feed-row-mark");
+                builder.AddAttribute(2, "aria-hidden", "true");
+                builder.OpenComponent<MudIcon>(3);
+                builder.AddComponentParameter(4, nameof(MudIcon.Icon), actor.Kind == FeedActorKind.Huddle ? Icons.Material.Filled.ToggleOn : Icons.Material.Filled.EditNote);
+                builder.AddComponentParameter(5, nameof(MudIcon.Size), Size.Small);
+                builder.CloseComponent();
+                builder.CloseElement();
+                break;
+        }
+    };
+
+    /// <summary>The address the row opens: the first reference chip of the lead's line, or <see langword="null"/> when it has none.</summary>
+    private string? TargetAddress()
+    {
+        FeedSegment? reference = this.Line.Segments.FirstOrDefault(static segment => segment.Kind is FeedSegmentKind.Task or FeedSegmentKind.Room or FeedSegmentKind.Document);
+        return reference?.Kind switch
+        {
+            FeedSegmentKind.Task => "/tasks/item/" + reference.TargetId,
+            FeedSegmentKind.Room => "/rooms/" + reference.TargetId,
+            FeedSegmentKind.Document => FeedTarget.DocumentAddress(this.LibraryResolver, reference.TargetId),
+            _ => null,
+        };
+    }
+
+    private void OpenTarget()
+    {
+        if (this.TargetAddress() is { } address)
+        {
+            this.Tabs.Open(address);
+            this.Navigation.NavigateTo(address);
+        }
+    }
+
+    private void Expand() => this.expanded = true;
+
+    private Task TeammateClickedAsync() => this.OnTeammate.InvokeAsync(this.Group.Lead.Actor.Name);
+
+    /// <summary>Enter on the focused row does what a click does; a link is activated by Enter alone.</summary>
+    private void OnBodyKeyDown(KeyboardEventArgs args)
+    {
+        if (string.Equals(args.Key, "Enter", StringComparison.Ordinal))
+        {
+            this.OpenTarget();
+        }
+    }
+
+    private async Task DismissAsync()
+    {
+        List<FeedItem> notifications = [.. this.Group.Items.Where(static item => item.Notify)];
+        if (notifications.Count > 1 && this.OnDismissMany.HasDelegate)
+        {
+            await this.OnDismissMany.InvokeAsync(notifications);
+            return;
+        }
+
+        foreach (FeedItem item in notifications)
+        {
+            if (this.OnDismiss.HasDelegate)
+            {
+                await this.OnDismiss.InvokeAsync(item);
+            }
+            else
+            {
+                await this.OnDismissMany.InvokeAsync([item]);
+            }
+        }
+    }
+}

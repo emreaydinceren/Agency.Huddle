@@ -5626,6 +5626,106 @@ File: [`docs/engineering/manual-tests/helpers.md`](helpers.md#helpers-07--a-fail
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+## Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart
+
+### FEED-01 — The bell counts unseen Notifications and opening the panel marks them seen
+
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-01--the-bell-counts-unseen-notifications-and-opening-the-panel-marks-them-seen)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### FEED-02 — The panel opens on Needs you and its Categories switch
+
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-02--the-panel-opens-on-needs-you-and-its-categories-switch)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### FEED-03 — The dismiss cross appears on hover and hides a Notification from the bell only
+
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-03--the-dismiss-cross-appears-on-hover-and-hides-a-notification-from-the-bell-only)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### FEED-04 — A Task assigned to the Human appears and resolves when it is reassigned
+
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-04--a-task-assigned-to-the-human-appears-and-resolves-when-it-is-reassigned)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### FEED-05 — A gated Task moved to Needs You appears with its Proof count and resolves when accepted
+
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-05--a-gated-task-moved-to-needs-you-appears-with-its-proof-count-and-resolves-when-accepted)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### FEED-06 — A Mention appears and resolves when the Human posts in the Room
+
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-06--a-mention-appears-and-resolves-when-the-human-posts-in-the-room)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### FEED-07 — The Feed Tab header shows the Live chip, the read-only note, six counted segments and the Team select
+
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-07--the-feed-tab-header-shows-the-live-chip-the-read-only-note-six-counted-segments-and-the-team-select)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### FEED-08 — A card expands to a Task preview with buttons that change nothing
+
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-08--a-card-expands-to-a-task-preview-with-buttons-that-change-nothing)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### FEED-09 — Clicking an avatar filters the Feed to that Teammate
+
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-09--clicking-an-avatar-filters-the-feed-to-that-teammate)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### FEED-10 — New items wait behind a pill when the list is scrolled
+
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-10--new-items-wait-behind-a-pill-when-the-list-is-scrolled)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### FEED-11 — The unseen bar clears on the next visit
+
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-11--the-unseen-bar-clears-on-the-next-visit)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### FEED-12 — A restart resolves a Form Notification
+
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-12--a-restart-resolves-a-form-notification)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### FEED-13 — Turning the Feed off hides the bell and the link
+
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-13--turning-the-feed-off-hides-the-bell-and-the-link)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### FEED-14 — No Message text appears anywhere in the Feed
+
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-14--no-message-text-appears-anywhere-in-the-feed)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ---
 
 Back to [the manual test script](../manual-tests.md).

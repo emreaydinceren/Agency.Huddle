@@ -149,6 +149,7 @@ the per-area tables below.
 | [Document history: the byline, the History and the Recent edits panel](doc-history.md) | [below](#doc-history) |
 | [Human gate: the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page](human-gate.md) | [below](#human-gate) |
 | [Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the override, the daily cap and a failing Adapter](helpers.md) | [below](#helpers) |
+| [Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart](feed.md) | [below](#feed) |
 ---
 
 ## at-tagging
@@ -1136,6 +1137,28 @@ Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the overrid
 | [HELPERS-05](helpers.md#helpers-05--the-humans-override-is-final-u-5) | 💰 | Active |  |  |
 | [HELPERS-06](helpers.md#helpers-06--the-daily-cap-pauses-the-helper-and-continue-allows-a-few-more-u-7) | 💰 | Active |  |  |
 | [HELPERS-07](helpers.md#helpers-07--a-failure-leaves-the-task-as-saved-and-says-why-u-8-u-10) |  | Active |  |  |
+
+
+## feed
+
+Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart — [area file](feed.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [FEED-01](feed.md#feed-01--the-bell-counts-unseen-notifications-and-opening-the-panel-marks-them-seen) |  | Active |  | not yet run by a person |
+| [FEED-02](feed.md#feed-02--the-panel-opens-on-needs-you-and-its-categories-switch) |  | Active |  | not yet run by a person |
+| [FEED-03](feed.md#feed-03--the-dismiss-cross-appears-on-hover-and-hides-a-notification-from-the-bell-only) |  | Active |  | not yet run by a person |
+| [FEED-04](feed.md#feed-04--a-task-assigned-to-the-human-appears-and-resolves-when-it-is-reassigned) |  | Active |  | not yet run by a person |
+| [FEED-05](feed.md#feed-05--a-gated-task-moved-to-needs-you-appears-with-its-proof-count-and-resolves-when-accepted) | 💰 | Active |  | not yet run by a person |
+| [FEED-06](feed.md#feed-06--a-mention-appears-and-resolves-when-the-human-posts-in-the-room) | 💰 | Active |  | not yet run by a person |
+| [FEED-07](feed.md#feed-07--the-feed-tab-header-shows-the-live-chip-the-read-only-note-six-counted-segments-and-the-team-select) |  | Active |  | not yet run by a person |
+| [FEED-08](feed.md#feed-08--a-card-expands-to-a-task-preview-with-buttons-that-change-nothing) |  | Active |  | not yet run by a person |
+| [FEED-09](feed.md#feed-09--clicking-an-avatar-filters-the-feed-to-that-teammate) |  | Active |  | not yet run by a person |
+| [FEED-10](feed.md#feed-10--new-items-wait-behind-a-pill-when-the-list-is-scrolled) |  | Active |  | not yet run by a person |
+| [FEED-11](feed.md#feed-11--the-unseen-bar-clears-on-the-next-visit) |  | Active |  | not yet run by a person |
+| [FEED-12](feed.md#feed-12--a-restart-resolves-a-form-notification) |  | Active |  | not yet run by a person |
+| [FEED-13](feed.md#feed-13--turning-the-feed-off-hides-the-bell-and-the-link) |  | Active |  | not yet run by a person |
+| [FEED-14](feed.md#feed-14--no-message-text-appears-anywhere-in-the-feed) |  | Active |  | not yet run by a person |
 
 ---
 

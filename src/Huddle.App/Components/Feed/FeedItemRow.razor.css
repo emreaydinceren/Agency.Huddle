@@ -1,0 +1,152 @@
+/* One Feed row: avatar | body | age (Feed spec 6.12). Colours come from the theme: Quiet ink is the secondary text, Accent is the primary. */
+.feed-row:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: -2px;
+}
+
+.feed-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) auto;
+    align-items: start;
+    column-gap: 8px;
+    padding: 8px;
+    cursor: pointer;
+    font-size: var(--mud-typography-body2-size);
+    line-height: 1.35;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+}
+
+.feed-row:hover {
+    background-color: color-mix(in srgb, var(--mud-palette-text-primary) 5%, transparent);
+}
+
+.feed-row-resolved .feed-row-avatar,
+.feed-row-resolved .feed-row-summary,
+.feed-row-resolved .feed-row-time {
+    opacity: 0.6;
+}
+
+.feed-row-avatar {
+    width: 20px;
+    height: 20px;
+}
+
+.feed-row-avatar ::deep .mud-avatar,
+.feed-row-mark {
+    width: 20px;
+    height: 20px;
+    font-size: var(--mud-typography-caption-size);
+}
+
+.feed-row-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid var(--ink-edge);
+    color: var(--mud-palette-text-secondary);
+}
+
+.feed-row-avatar-button {
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+.feed-row-body {
+    min-width: 0;
+}
+
+.feed-clamp-3 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+}
+
+.feed-row-actor {
+    font-weight: 600;
+}
+
+.feed-row-context {
+    color: var(--mud-palette-text-secondary);
+}
+
+.feed-row-more {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--mud-palette-text-secondary);
+    cursor: pointer;
+}
+
+.feed-row-more:hover {
+    text-decoration: underline;
+}
+
+.feed-row-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.feed-dot,
+.feed-time-dot {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--mud-palette-primary);
+}
+
+.feed-time-dot {
+    margin-right: 4px;
+}
+
+.feed-row-status ::deep .feed-check {
+    flex: 0 0 auto;
+    width: 12px;
+    height: 12px;
+    color: var(--mud-palette-success);
+}
+
+.feed-row-time {
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--mud-typography-caption-size);
+    white-space: nowrap;
+    color: var(--mud-palette-text-secondary);
+}
+
+.feed-row-unresolved {
+    color: var(--mud-palette-primary);
+}
+
+/* The hover x takes the age's place while the row is hovered or focused. */
+.feed-row-dismissable:hover .feed-row-time,
+.feed-row-dismissable:focus-within .feed-row-time {
+    visibility: hidden;
+}
+
+.feed-row ::deep .hover-reveal-menu {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+}
+
+.feed-row-members {
+    display: flex;
+    flex-direction: column;
+}

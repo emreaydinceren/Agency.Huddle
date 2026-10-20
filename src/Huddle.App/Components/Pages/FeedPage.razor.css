@@ -1,0 +1,58 @@
+/* The Feed Tab (Feed spec 6.9): the Live chip, the read-only note, and the one-row filter bar. */
+::deep .feed-live-chip {
+    height: 22px;
+    margin: 0 0 0 8px;
+}
+
+.feed-live-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 8px;
+    border-radius: 50%;
+    background: var(--mud-palette-success);
+}
+
+.feed-readonly {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 16px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.feed-readonly-text {
+    color: var(--mud-palette-text-secondary);
+}
+
+.feed-filter-bar ::deep .feed-category-control {
+    max-width: 100%;
+}
+
+.feed-filter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    margin-bottom: 16px;
+}
+
+.feed-filter-end {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+::deep .feed-team-select {
+    width: 160px;
+}
+
+::deep .feed-team-icon {
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+::deep .feed-show-more {
+    margin: 8px 0;
+}

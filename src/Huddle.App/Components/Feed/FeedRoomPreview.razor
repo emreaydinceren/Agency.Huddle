@@ -1,0 +1,86 @@
+@*
+    The read-only preview of a Room inside an expanded Feed card (Feed spec 6.13): its Members, why it waits for the Human and the time of
+    its last Message. Never a Message's text. A Room that is gone says so. Read when the preview is drawn; nothing is written.
+*@
+@using Agency.Huddle.App.NeedsYou
+@inject ITeamDirectory Directory
+@inject IChatStore Transcript
+@inject NeedsYouTracker Tracker
+@inject TimeProvider Clock
+
+@if (this.loaded)
+{
+    @if (this.room is null)
+    {
+        <div class="feed-preview feed-preview-deleted">This Room was deleted</div>
+    }
+    else
+    {
+        <div class="feed-preview feed-room-preview">
+            <div class="feed-preview-head">
+                <span class="feed-preview-tile" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Size="Size.Small" /></span>
+                <span class="feed-preview-title">@this.room.Name</span>
+            </div>
+            <div class="feed-room-members">
+                @foreach (User member in this.members)
+                {
+                    <span class="feed-room-member" @key="member.Id">
+                        <TeammateAvatar Name="@member.Name" Size="Size.Small" />
+                        <span class="feed-room-member-name">@member.Name</span>
+                    </span>
+                }
+            </div>
+            @if (this.reasons.Count > 0)
+            {
+                <div class="feed-room-reason">Waiting on you: @string.Join(", ", this.reasons)</div>
+            }
+            @if (this.lastMessage is { } last)
+            {
+                <div class="feed-room-last">Last message @this.TimeText(last)</div>
+            }
+        </div>
+    }
+}
+
+@code {
+    private bool loaded;
+    private Room? room;
+    private IReadOnlyList<User> members = [];
+    private IReadOnlyList<string> reasons = [];
+    private DateTimeOffset? lastMessage;
+
+    /// <summary>The Room to preview.</summary>
+    [Parameter, EditorRequired]
+    public required string RoomId { get; set; }
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        this.room = await this.Directory.GetRoomAsync(this.RoomId);
+        if (this.room is not null)
+        {
+            this.members = await this.Directory.GetRoomMembersAsync(this.RoomId);
+            IReadOnlyList<ChatMessage> tail = await this.Transcript.ReadTailAsync(this.RoomId, 1);
+            this.lastMessage = tail.Count > 0 ? tail[^1].Timestamp : null;
+            this.reasons = ReasonNames(this.Tracker.ReasonsHeld(this.RoomId));
+        }
+
+        this.loaded = true;
+    }
+
+    private static List<string> ReasonNames(NeedsYouReason held) =>
+    [
+        .. new[] { (NeedsYouReason.Mention, "mention"), (NeedsYouReason.Question, "question"), (NeedsYouReason.Form, "form"), (NeedsYouReason.Budget, "budget") }
+            .Where(pair => held.HasFlag(pair.Item1))
+            .Select(static pair => pair.Item2),
+    ];
+
+    /// <summary>The clock time of a Message in the Human's zone, with the date when it was not today.</summary>
+    private string TimeText(DateTimeOffset at)
+    {
+        TimeZoneInfo zone = this.Clock.LocalTimeZone;
+        DateTimeOffset local = TimeZoneInfo.ConvertTime(at, zone);
+        bool today = DateOnly.FromDateTime(local.DateTime) == DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(this.Clock.GetUtcNow(), zone).DateTime);
+        return local.ToString(today ? "HH:mm" : "MMM d HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+    }
+}

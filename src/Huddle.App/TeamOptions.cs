@@ -2,6 +2,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.References;
@@ -45,6 +46,9 @@ public sealed class TeamOptions
 
     /// <summary>Configuration for a Library document's History, bound from <c>Team:DocHistory</c> per DocHistory spec §6.9.</summary>
     public DocHistoryOptions DocHistory { get; set; } = new();
+
+    /// <summary>Configuration for the Feed, bound from <c>Team:Feed</c> per Feed spec §6.11.</summary>
+    public FeedOptions Feed { get; set; } = new();
 
     /// <summary>Configuration for team and teammate folder names, per Spec §7. Shared with the Tasks feature.</summary>
     public TeamsOptions Teams { get; set; } = new();

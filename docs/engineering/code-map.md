@@ -508,6 +508,20 @@ Needs You — the sidebar card of Rooms waiting on the Human, `docs/Huddle.Needs
 | `Components/NeedsYou/NeedsYouList.razor` | The rows, with no chrome and no idea where it is placed; reports its count through `CountChanged`. |
 | `Components/NeedsYou/NeedsYouCard.razor` | The left sidebar's card around the list; hidden while the count is 0. Placed in `MainLayout.razor` above `RoomList`. |
 | `Data/IChatStore.cs`, `FileChatStore.cs` | `ReadTailAsync`: the last N Messages, read from the end of the Transcript file. |
+Feed — one stored history of what Teammates and Huddle did, `docs/Huddle.Feed-Specifications.md`, ADR-0063. Paths are relative to `src/Huddle.App`:
+
+| Path | Responsibility |
+| --- | --- |
+| `Feed/IFeedPublisher.cs`, `FeedMessage.cs`, `FeedActor.cs` | What a producer calls (`Post`, `Resolve`) and the item it describes. Both only enqueue and never throw. |
+| `Feed/FeedSourceType.cs`, `FeedSourceTypes.cs`, `FeedPayload.cs` and the `*Payload.cs` records, `FeedPayloads.cs`, `FeedEnvelope.cs` | The source types with their wire names, the one payload record per type, and the JSON envelope in the `payload` column. A row this build cannot read comes back with a null payload. |
+| `Feed/FeedCategory.cs`, `FeedCategories.cs` | The Category control's six values and the one Category each source type belongs to. |
+| `Feed/FeedQueue.cs`, `NullFeedPublisher.cs`, `FeedCommand.cs` and its records | The bounded channel behind `IFeedPublisher`, and the commands the writer applies (post, resolve, mark seen, dismiss, mark Tab seen). |
+| `Feed/FeedWriter.cs` | The only code that writes `feed_events`: batches in one transaction, fills a Room's name and Team in, raises `FeedEvents` after commit, runs the clean-up on a timer. |
+| `Feed/FeedStore.cs`, `FeedItem.cs`, `FeedQuery.cs`, `FeedCounts.cs`, `FeedEvents.cs`, `FeedOptions.cs` | The table in `team.db`, its keyset-paged reads, the hub the UI listens to, and the `Feed:*` options. |
+| `Tasks/TaskFeedRules.cs`, `Tasks/TaskFeedStartup.cs`, `Tasks/IRequestConfirmers.cs`, `Tasks/RequestConfirmers.cs` | The pure rule that turns a Task change into items and resolutions, the startup pass that resolves what ended while Huddle was stopped, and the shared "can an Agent confirm this Team's Request" check. |
+| `NeedsYou/NeedsYouTracker.cs`, `NeedsYou/NeedsYouStartupScan.cs`, `Services/ChatService.cs`, `Teams/TeamRoomReconciler.cs`, `DocHistory/DocHistoryStore.cs` | The producers; each posts after its own write. `ChatService` takes an optional `FeedActor` on its Room-lifecycle methods (internal overloads). |
+| `Components/Feed/FeedSummary.cs`, `FeedTime.cs`, `FeedGrouping.cs` and their records | The interface copy, ages, day headings and the grouping of neighbouring items; pure. |
+
 Helpers — background agents that make one stateless judgement and let Huddle apply the Verdict, `docs/Huddle.Helpers-Specifications.md`. Paths are relative to `src/Huddle.App`:
 
 | Path | Responsibility |

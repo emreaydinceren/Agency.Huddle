@@ -1,12 +1,14 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Elicitation;
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.Tests.Feed;
 
 namespace Agency.Huddle.Tests.Teams;
 
@@ -36,6 +38,28 @@ public sealed class TeamRoomReconcilerTests
         Assert.Contains(members, m => m.Id == KnownIds.Human);
         Assert.Contains(members, m => m.Name == "Nova");
         Assert.Contains(members, m => m.Name == "Ada");
+    }
+
+    /// <summary>Creating a Team Room posts one room-created item by Huddle naming the Human and the members; finding it again posts nothing (Feed spec §6.5.3).</summary>
+    [Fact]
+    public async Task Reconcile_CreatingTeamRoom_PostsRoomCreatedAsHuddleOnce()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture f = await Fixture.CreateAsync(["Nova", "Ada"], ct);
+        RecordingFeedPublisher feed = new();
+        TeamRoomReconciler reconciler = f.NewReconciler(feed);
+        f.Catalog.Teams = [Team("Marketing", "Nova", "Ada")];
+
+        await reconciler.ReconcileAsync(ct);
+        await reconciler.ReconcileAsync(ct);
+
+        FeedMessage post = Assert.Single(feed.Posts, message => message.SourceType == FeedSourceType.RoomCreated);
+        Room room = await f.TeamRoomAsync("Marketing", ct);
+        Assert.Equal(room.Id, post.TargetKey);
+        Assert.Equal(FeedActor.Huddle, post.Actor);
+        RoomCreatedPayload payload = Assert.IsType<RoomCreatedPayload>(post.Payload);
+        Assert.Equal(["You", "Nova", "Ada"], payload.Members);
+        Assert.Equal("Marketing", payload.Team);
     }
 
     /// <summary>A Team that exists only because a Persona label names it (no folder) still gets its Team Room (T2).</summary>
@@ -506,6 +530,11 @@ public sealed class TeamRoomReconcilerTests
         /// <summary>Another reconciler over the same services, as a second host start would build.</summary>
         public TeamRoomReconciler NewReconciler() =>
             new(this.Directory, this.Chat, this.Catalog, this.Events, NullLogger<TeamRoomReconciler>.Instance);
+
+        /// <summary>A reconciler over the same services that tells <paramref name="feed"/> about the Rooms it creates.</summary>
+        /// <param name="feed">The Feed publisher.</param>
+        public TeamRoomReconciler NewReconciler(IFeedPublisher feed) =>
+            new(this.Directory, this.Chat, this.Catalog, this.Events, NullLogger<TeamRoomReconciler>.Instance, feed);
 
         /// <summary>A reconciler over the same services but another catalog and logger.</summary>
         /// <param name="catalog">The catalog it reads.</param>

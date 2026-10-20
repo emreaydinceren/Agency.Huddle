@@ -1,6 +1,7 @@
 using System.IO.Pipes;
 using System.Text.Json;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 
@@ -160,7 +161,7 @@ internal sealed class AgentConnection
         }
 
         this.Agent = user;
-        await this.chat.EnsureRoomForAsync(user, ct).ConfigureAwait(false);
+        await this.chat.EnsureRoomForAsync(user, FeedActor.Huddle, ct).ConfigureAwait(false);
         this.gateway.Register(this);
 
         var welcome = await this.BuildWelcomeAsync(user, ct).ConfigureAwait(false);

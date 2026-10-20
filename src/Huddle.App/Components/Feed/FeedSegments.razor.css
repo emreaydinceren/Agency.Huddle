@@ -1,0 +1,49 @@
+/* Reference chips of a Feed summary. The NavTabLink inside is a MudNavLink, so its own box is reset to an inline pill. */
+.feed-segments ::deep .feed-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    padding: 0 4px;
+    min-height: 0;
+    width: auto;
+    vertical-align: baseline;
+    font-size: var(--mud-typography-caption-size);
+    line-height: 1.5;
+    border: 1px solid var(--ink-edge);
+    border-radius: 999px;
+    color: var(--mud-palette-text-primary);
+    text-decoration: none;
+}
+
+.feed-segments ::deep .feed-chip .mud-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 0;
+    width: auto;
+    padding: 0;
+    color: inherit;
+}
+
+.feed-segments ::deep .feed-chip .mud-icon-root {
+    width: 12px;
+    height: 12px;
+}
+
+.feed-segments ::deep .feed-chip-id {
+    font-family: var(--mud-typography-code-family, ui-monospace, monospace);
+    color: var(--mud-palette-primary);
+}
+
+.feed-segments ::deep .feed-chip-path {
+    font-family: var(--mud-typography-code-family, ui-monospace, monospace);
+}
+
+.feed-segments ::deep .feed-chip-title,
+.feed-segments ::deep .feed-chip-label,
+.feed-segments ::deep .feed-chip-path {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

@@ -19,6 +19,7 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | Get started with your own copy | [Install](#install) |
 | Find your way around the screen | [A quick tour of the screen](#a-quick-tour-of-the-screen), [Tabs](#tabs) and [Global search](#global-search) |
 | See which Rooms and Tasks are waiting on you | [Needs you](#needs-you) |
+| See what your Teammates did while you were away | [Feed](#feed) |
 | Decide whether a Task is done, or what leaves the Team | [The Human gate](#the-human-gate) |
 | Read a Teammate's status badge or a chip | [Status at a glance](#status-at-a-glance) and [Chips](#chips) |
 | Understand how Teammates, Teams, Tasks and memory relate | [The data model](#the-data-model) |
@@ -159,6 +160,20 @@ The list lives in memory. After a restart, Rooms with an unanswered mention (wit
 **Tasks waiting for your decision** are listed too, after the Rooms and under the same count. A Task row shows its id and title with "Waiting on you · Proof 4/4", and opens the **Needs you** page at that Task. A Task is listed while it is under the [Human gate](#the-human-gate), in the Needs you status, and not yet accepted. It has no check (✓): it leaves the list only when you decide, or when its status changes. These rows are read from the Task files, so a restart loses none of them.
 
 The **Needs you** page lists the Tasks first, each as a decision card where you can Accept, Request changes or Decline, then the Rooms. When nothing waits, it says "Nothing needs you".
+
+### Feed
+
+The **Feed** is one list of what your Teammates and Huddle did, and what is waiting for you. It is the way to catch up after an hour away: the Tasks Teammates created, the Rooms that started, the documents that changed, and the asks that came and went. It is read-only. It never changes the work, and it never shows the text of a Message.
+
+**The Notifications bell.** The **Notifications** button at the right of the Top Bar shows how many new items ask for you: a Task assigned to you, a gated Task waiting for your approval, a Mention, a Question or a Form, a Room that reached its Budget, a Request only you can confirm, and a Task move that a gate stopped. Opening it shows the **Notifications** panel in the Right sidebar and marks what it shows as seen, so the number goes away; the items stay. The panel opens on **Needs you**. Choose **All**, **Tasks**, **Documents**, **Rooms** or **Gates** to see the rest of the Feed, each with its count. Hover a row and press its ✕ to hide that Notification from the bell. It stays in the Feed. **See all activity** at the bottom opens the Feed Tab on the same Category.
+
+An item you caused yourself never rings the bell. A Notification fades and leaves **Needs you** once the reason is gone: you posted in the Room, you accepted the Task, the Task was reassigned.
+
+**The Feed Tab.** The **Feed** icon at the bottom of the Activity bar opens the Feed in a Tab. The header shows a **Live** chip, because new items arrive on their own, and the note "Read-only — the Feed never changes the work and never shows message text." Below it, **All**, **Needs you**, **Tasks**, **Documents**, **Rooms** and **Gates** each show a count, and the **All teams** select narrows the list to one Team. Click a Teammate's avatar to see only that Teammate's items; the Tab remembers the filter in its address.
+
+Items are cards, newest first, under day headings. A card shows who did what, a chip for the Task, Room or document it is about, the Team, and for a Notification a pill such as "Waiting for you". Press the chevron to expand a card into a preview of the Task, Room or document, with the other items about it under "In the Feed", and **Open Task**, **Open Room** or **Open document**. **Review in Needs you** appears for a gated Task that is waiting. Those buttons only open things; deciding, replying and accepting stay in the Needs you page and the Room. A thin bar at a card's left edge marks items you have not seen in the Feed Tab yet; it clears the next time you open the Tab. If new items arrive while you are scrolled down, a "↑ n new items" pill appears at the top. Press it to add them.
+
+Feed items are kept for 30 days (a Notification you dismissed, 30 days after you dismissed it). To turn the Feed off, set `Team:Feed:Enabled` to `false`; the bell and the **Feed** icon then disappear. See the [Engineering Guide](Huddle.EngineeringGuide.md) for the keys.
 
 ### Tabs
 

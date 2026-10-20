@@ -21,10 +21,26 @@ internal sealed class RightSidebarService
     /// <summary>Whether the sidebar is shown. It starts closed.</summary>
     public bool IsOpen { get; private set; }
 
-    /// <summary>Opens the sidebar when it is closed, and closes it when it is open.</summary>
+    /// <summary>What the sidebar shows while open. <see cref="RightSidebarMode.Subject"/> unless the Notifications button opened it.</summary>
+    public RightSidebarMode Mode { get; private set; }
+
+    /// <summary>Opens the sidebar when it is closed, and closes it when it is open. Always in <see cref="RightSidebarMode.Subject"/> mode.</summary>
     public void Toggle()
     {
         this.IsOpen = !this.IsOpen;
+        this.Mode = RightSidebarMode.Subject;
+        this.Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// The Notifications button: opens the sidebar in <see cref="RightSidebarMode.Notifications"/> mode when it is closed or showing
+    /// a Subject, and closes it when it is already showing Notifications.
+    /// </summary>
+    public void ToggleNotifications()
+    {
+        bool showing = this.IsOpen && this.Mode == RightSidebarMode.Notifications;
+        this.IsOpen = !showing;
+        this.Mode = showing ? RightSidebarMode.Subject : RightSidebarMode.Notifications;
         this.Changed?.Invoke();
     }
 

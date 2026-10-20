@@ -1,0 +1,380 @@
+@*
+    One card of the Feed Tab (Feed spec 6.13): an item, or a group of neighbouring items drawn as one. Collapsed it shows an unseen bar, a
+    40px avatar with a kind badge, the summary with its reference chips, a meta line (the context word, the Room chip, the Team chip), a
+    status pill for a Notification, the age and a chevron. Expanded, under an Edge line, it shows a read-only preview of the target, the
+    related items under "In the Feed" and navigation buttons. The parent owns which card is expanded; nothing here writes anything.
+    The card never shows Message text.
+*@
+@using Agency.Huddle.App.Feed
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Tabs
+@inject TimeProvider Clock
+@inject TabService Tabs
+@inject NavigationManager Navigation
+@inject LibraryPathResolver LibraryResolver
+@inject TaskStore Store
+
+<div class="@this.RootClass" data-feed-id="@this.Group.Lead.Id">
+    @if (this.Unseen)
+    {
+        <span class="feed-card-bar" aria-hidden="true"></span>
+    }
+    <div class="feed-card-top">
+        <div class="feed-card-avatar">
+            @this.AvatarContent
+            <span class="@("feed-card-badge feed-badge-" + this.Category)" data-badge="@this.Badge.Name" aria-hidden="true">
+                <MudIcon Icon="@this.Badge.Icon" Size="Size.Small" />
+            </span>
+        </div>
+        <div class="feed-card-main" role="@(this.Address is null ? null : "link")" tabindex="@(this.Address is null ? null : "0")" @onclick="this.OpenTarget" @onkeydown="this.OnBodyKeyDown">
+            <div class="feed-card-summary feed-clamp-3">
+                @if (!this.Line.OmitActor)
+                {
+                    <span class="feed-card-actor">@this.ActorName</span>
+                    @(" ")
+                }
+
+                <FeedSegments Item="this.Group.Lead" />
+
+                @if (this.Purpose is { } purpose)
+                {
+                    <strong class="feed-card-purpose">@(" " + purpose)</strong>
+                }
+
+                @if (this.Group.More > 0)
+                {
+                    @(" ")
+                    <button type="button" class="feed-card-more" @onclick="this.ToggleMembers" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">@($"and {this.Group.More} more {FeedSummary.NounOf(this.Group.Lead.SourceType)}")</button>
+                }
+            </div>
+            <div class="feed-card-meta">
+                @if (this.ContextWord.Length > 0)
+                {
+                    <span class="feed-meta-context">@this.ContextWord</span>
+                }
+
+                @if (this.MetaRoomName is { } roomName)
+                {
+                    @if (this.ContextWord.Length > 0)
+                    {
+                        <span class="feed-meta-sep" aria-hidden="true"> • </span>
+                    }
+
+                    <span @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+                        <NavTabLink Href="@("/rooms/" + this.target.Id)" TabTitle="@roomName" Match="NavLinkMatch.All" Class="feed-meta-chip">
+                            <MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Size="Size.Small" /> <span class="feed-meta-room">@roomName</span>
+                        </NavTabLink>
+                    </span>
+                }
+
+                @if (this.MetaTeam is { } team)
+                {
+                    @if (this.ContextWord.Length > 0 || this.MetaRoomName is not null)
+                    {
+                        <span class="feed-meta-sep" aria-hidden="true"> • </span>
+                    }
+
+                    <span class="feed-team-chip"><span class="feed-team-monogram" aria-hidden="true">@FeedCardText.Monogram(team)</span> <span class="feed-team-name">@team</span></span>
+                }
+            </div>
+            @if (this.Pill is { } pill)
+            {
+                <div class="feed-card-pills">
+                    <span class="@("feed-pill feed-pill-" + PillName(pill.Kind))">
+                        @if (pill.Pause)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Pause" Size="Size.Small" Class="feed-pill-pause" />
+                        }
+                        @if (pill.Kind == FeedPillKind.Done)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="feed-pill-check" />
+                        }
+                        @pill.Text
+                    </span>
+                </div>
+            }
+        </div>
+        <div class="feed-card-side">
+            <span class="@this.AgeClass" title="@this.FullTime">@FeedTime.CardAge(this.Clock.GetUtcNow(), this.Group.Lead.At)</span>
+            <button type="button" class="feed-card-chevron" aria-label="Show details" aria-expanded="@(this.Expanded ? "true" : "false")" @onclick="this.OnToggle">
+                <MudIcon Icon="@(this.Expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small" />
+            </button>
+        </div>
+    </div>
+
+    @if (this.showMembers)
+    {
+        <div class="feed-card-members">
+            @foreach (FeedItem member in this.Group.Items.Skip(1))
+            {
+                <FeedCard @key="member.Id" Group="new FeedGroup([member])" TabSeenUpTo="this.TabSeenUpTo" Expanded="this.openMember == member.Id" OnToggle="@(() => this.ToggleMember(member.Id))" />
+            }
+        </div>
+    }
+
+    @if (this.Expanded)
+    {
+        <div class="feed-card-details">
+            <hr class="feed-card-edge" />
+            @if (this.Caption.Length > 0)
+            {
+                <div class="feed-card-caption">@this.Caption</div>
+            }
+
+            @switch (this.target.Kind)
+            {
+                case FeedTargetKind.Task when this.task is { } found:
+                    <FeedTaskPreview Item="found" />
+                    break;
+                case FeedTargetKind.Task:
+                    <div class="feed-preview feed-preview-deleted">This Task was deleted</div>
+                    break;
+                case FeedTargetKind.Room:
+                    <FeedRoomPreview RoomId="@this.target.Id" />
+                    break;
+                case FeedTargetKind.Document:
+                    <FeedDocumentPreview Path="@this.target.Id" />
+                    break;
+            }
+
+            <FeedRelated Item="this.Group.Lead" ExtraTargets="this.ExtraTargets" />
+
+            @if (this.target.Kind != FeedTargetKind.None)
+            {
+                <div class="feed-card-buttons">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="feed-btn feed-btn-open" OnClick="this.OpenTarget">@this.OpenLabel</MudButton>
+                    @if (this.CanReview)
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small" StartIcon="@Icons.Material.Filled.Warning" Class="feed-btn feed-btn-review" OnClick="this.ReviewInNeedsYou">Review in Needs you</MudButton>
+                    }
+                    @if (this.OriginRoomId is { } originRoom)
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.ChatBubbleOutline" Class="feed-btn feed-btn-room" OnClick="@(() => this.Go("/rooms/" + originRoom))">Open Room</MudButton>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private FeedTarget target = new(FeedTargetKind.None, string.Empty);
+    private TaskItem? task;
+    private bool showMembers;
+    private long? openMember;
+
+    /// <summary>The item, or the neighbouring items, this card draws. The first item leads the card.</summary>
+    [Parameter, EditorRequired]
+    public required FeedGroup Group { get; set; }
+
+    /// <summary>The Feed Tab's seen mark: an item above it gets the unseen bar. The page reads it before it marks the Tab seen.</summary>
+    [Parameter]
+    public long TabSeenUpTo { get; set; }
+
+    /// <summary>The list's minute counter, which changes once a minute so every card redraws its ages together. Zero outside a list.</summary>
+    [CascadingParameter(Name = "FeedTick")]
+    public int Tick { get; set; }
+
+    /// <summary>Whether the card is expanded. The parent holds this, so only one card is expanded at a time.</summary>
+    [Parameter]
+    public bool Expanded { get; set; }
+
+    /// <summary>Called when the chevron is pressed; the parent flips <see cref="Expanded"/>.</summary>
+    [Parameter]
+    public EventCallback OnToggle { get; set; }
+
+    /// <summary>Called with a Teammate's Name when the avatar is clicked. Huddle and the Human have no such click, and without a handler the avatar is not a button.</summary>
+    [Parameter]
+    public EventCallback<string> OnTeammate { get; set; }
+
+    private FeedItem Lead => this.Group.Lead;
+
+    private FeedSummaryLine Line => FeedSummary.Of(this.Lead);
+
+    private bool Unseen => this.Lead.Id > this.TabSeenUpTo;
+
+    private FeedBadge Badge => FeedCardText.BadgeOf(this.Lead.SourceType);
+
+    private string Category => this.Lead.SourceType is { } type ? FeedCategories.Of(type).ToString().ToLowerInvariant() : "all";
+
+    private string ActorName => this.Lead.Actor.Kind == FeedActorKind.Human ? "You" : this.Lead.Actor.Name;
+
+    private string RootClass =>
+        "feed-card"
+        + (this.Unseen ? " feed-card-unseen" : string.Empty)
+        + (this.Expanded ? " feed-card-expanded" : string.Empty)
+        + (this.Lead.Notify && !this.Group.AnyUnresolved ? " feed-card-resolved" : string.Empty);
+
+    private string AgeClass => this.Unseen ? "feed-card-age feed-card-age-unseen" : "feed-card-age";
+
+    private FeedPill? Pill => FeedCardText.PillOf(this.Lead, this.Clock.GetUtcNow(), this.Clock.LocalTimeZone, this.task?.DueDate);
+
+    private string FullTime
+    {
+        get
+        {
+            DateTimeOffset local = TimeZoneInfo.ConvertTime(this.Lead.At, this.Clock.LocalTimeZone);
+            return HumanDate.Full(DateOnly.FromDateTime(local.DateTime)) + " " + local.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+        }
+    }
+
+    /// <summary>The trailing purpose of the line in 600. A context that only repeats the Team ("in Growth") is left to the Team chip.</summary>
+    private string? Purpose => this.Line.Context is { Length: > 0 } context && !context.StartsWith("in ", StringComparison.Ordinal) ? context : null;
+
+    private string OpenLabel => this.target.Kind switch
+    {
+        FeedTargetKind.Task => "Open Task",
+        FeedTargetKind.Room => "Open Room",
+        _ => "Open document",
+    };
+
+    private string Caption
+    {
+        get
+        {
+            string? team = FeedSummary.TeamOf(this.Lead.Payload) is { Length: > 0 } named ? named : this.task?.Location.Team;
+            string suffix = team is null ? string.Empty : " · " + team;
+            return this.target.Kind switch
+            {
+                FeedTargetKind.Task => "Task" + suffix,
+                FeedTargetKind.Room => "Room" + suffix,
+                FeedTargetKind.Document => "Document · Library",
+                _ => string.Empty,
+            };
+        }
+    }
+
+    private string? OriginRoomId => this.target.Kind == FeedTargetKind.Task ? this.task?.OriginRoomId : null;
+
+    /// <summary>A Task's origin Room and the Library files it links: more targets whose items belong under "In the Feed".</summary>
+    private IReadOnlyList<string> ExtraTargets
+    {
+        get
+        {
+            if (this.task is null)
+            {
+                return [];
+            }
+
+            List<string> targets = [];
+            if (this.task.OriginRoomId is { Length: > 0 } room)
+            {
+                targets.Add(room);
+            }
+
+            targets.AddRange(TaskAttachmentText.PathLines(this.task.Description));
+            return targets;
+        }
+    }
+
+    /// <summary>Whether Review in Needs you shows: an unresolved Notification about a gated Task that waits in Needs You.</summary>
+    private bool CanReview =>
+        this.Lead.Notify
+        && this.Lead.ResolvedAt is null
+        && this.task is { IsGated: true, Status: TaskState.NeedsYou } waiting
+        && Acceptance.Of(waiting).State != AcceptanceState.Valid;
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        this.target = FeedTarget.Of(this.Lead);
+        this.task = this.target.Kind == FeedTargetKind.Task && TaskId.TryParse(this.target.Id, out TaskId id) ? this.Store.Get(id) : null;
+    }
+
+    /// <summary>Redraws the ages and the waiting minutes. The list's one minute timer redraws every card by changing <see cref="Tick"/>; this is for a test to call without waiting.</summary>
+    /// <returns>A task that completes once the card is redrawn.</returns>
+    public Task RefreshAgeAsync() => this.InvokeAsync(this.StateHasChanged);
+
+    private static string PillName(FeedPillKind kind) => kind switch
+    {
+        FeedPillKind.Waiting => "waiting",
+        FeedPillKind.Assigned => "assigned",
+        _ => "done",
+    };
+
+    private static string? RoomNameOf(FeedPayload? payload) => payload switch
+    {
+        RoomWaitPayload p => p.RoomName ?? "a Room that was deleted",
+        RoomCreatedPayload p => p.RoomName,
+        RoomJoinedPayload p => p.RoomName,
+        RoomArchivedPayload p => p.RoomName,
+        _ => null,
+    };
+
+    private string ContextWord => FeedCardText.ContextWord(this.target.Kind);
+
+    private string? MetaRoomName => this.target.Kind == FeedTargetKind.Room ? RoomNameOf(this.Lead.Payload) : null;
+
+    private string? MetaTeam => FeedSummary.TeamOf(this.Lead.Payload) is { Length: > 0 } team ? team : null;
+
+    private RenderFragment AvatarContent => builder =>
+    {
+        FeedActor actor = this.Lead.Actor;
+        if (actor.Kind == FeedActorKind.Agent && this.OnTeammate.HasDelegate)
+        {
+            builder.OpenElement(8, "button");
+            builder.AddAttribute(9, "type", "button");
+            builder.AddAttribute(10, "class", "feed-card-avatar-button");
+            builder.AddAttribute(11, "aria-label", actor.Name);
+            builder.AddAttribute(12, "onclick", EventCallback.Factory.Create<MouseEventArgs>(this, () => this.OnTeammate.InvokeAsync(actor.Name)));
+            builder.OpenComponent<TeammateAvatar>(0);
+            builder.AddComponentParameter(1, nameof(TeammateAvatar.Name), this.ActorName);
+            builder.AddComponentParameter(2, nameof(TeammateAvatar.Size), Size.Medium);
+            builder.CloseComponent();
+            builder.CloseElement();
+            return;
+        }
+
+        if (actor.Kind is FeedActorKind.Agent or FeedActorKind.Human)
+        {
+            builder.OpenComponent<TeammateAvatar>(0);
+            builder.AddComponentParameter(1, nameof(TeammateAvatar.Name), this.ActorName);
+            builder.AddComponentParameter(2, nameof(TeammateAvatar.Size), Size.Medium);
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenElement(3, "span");
+        builder.AddAttribute(4, "class", "feed-card-mark");
+        builder.AddAttribute(5, "aria-hidden", "true");
+        builder.OpenComponent<MudIcon>(6);
+        builder.AddComponentParameter(7, nameof(MudIcon.Icon), actor.Kind == FeedActorKind.Huddle ? Icons.Material.Filled.ToggleOn : Icons.Material.Filled.EditNote);
+        builder.CloseComponent();
+        builder.CloseElement();
+    };
+
+    private void ToggleMembers() => this.showMembers = !this.showMembers;
+
+    private void ToggleMember(long id) => this.openMember = this.openMember == id ? null : id;
+
+    private string? Address => this.target.Address(this.LibraryResolver);
+
+    private void OpenTarget()
+    {
+        if (this.Address is { } address)
+        {
+            this.Go(address);
+        }
+    }
+
+    /// <summary>Enter on the focused body does what a click does; a link is activated by Enter alone.</summary>
+    private void OnBodyKeyDown(KeyboardEventArgs args)
+    {
+        if (string.Equals(args.Key, "Enter", StringComparison.Ordinal))
+        {
+            this.OpenTarget();
+        }
+    }
+
+    private void ReviewInNeedsYou()
+    {
+        this.Tabs.Open("/needs-you");
+        this.Navigation.NavigateTo("/needs-you#" + this.target.Id);
+    }
+
+    private void Go(string address)
+    {
+        this.Tabs.Open(address);
+        this.Navigation.NavigateTo(address);
+    }
+}

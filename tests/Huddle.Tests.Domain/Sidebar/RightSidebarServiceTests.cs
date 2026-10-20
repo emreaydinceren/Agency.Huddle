@@ -14,6 +14,49 @@ public sealed class RightSidebarServiceTests
         return new DocumentSubject(path, LibraryFileKind.Markdown, text);
     }
 
+    /// <summary>The Notifications button opens a closed sidebar in Notifications mode and closes it on the second press.</summary>
+    [Fact]
+    public void ToggleNotifications_ClosedOpensInNotificationsThenCloses()
+    {
+        RightSidebarService service = new();
+
+        service.ToggleNotifications();
+        Assert.True(service.IsOpen);
+        Assert.Equal(RightSidebarMode.Notifications, service.Mode);
+
+        service.ToggleNotifications();
+        Assert.False(service.IsOpen);
+        Assert.Equal(RightSidebarMode.Subject, service.Mode);
+    }
+
+    /// <summary>The Notifications button on a sidebar already showing a Subject switches it to Notifications and keeps it open.</summary>
+    [Fact]
+    public void ToggleNotifications_WhileShowingSubject_SwitchesToNotifications()
+    {
+        RightSidebarService service = new();
+        service.Toggle();
+
+        service.ToggleNotifications();
+
+        Assert.True(service.IsOpen);
+        Assert.Equal(RightSidebarMode.Notifications, service.Mode);
+    }
+
+    /// <summary>The Subject toggle keeps its meaning: it closes an open sidebar and opens in Subject mode, whatever mode was showing.</summary>
+    [Fact]
+    public void Toggle_AfterNotifications_ClosesThenOpensInSubjectMode()
+    {
+        RightSidebarService service = new();
+        service.ToggleNotifications();
+
+        service.Toggle();
+        Assert.False(service.IsOpen);
+
+        service.Toggle();
+        Assert.True(service.IsOpen);
+        Assert.Equal(RightSidebarMode.Subject, service.Mode);
+    }
+
     /// <summary>A Subject set for a Tab is returned for that Tab.</summary>
     [Fact]
     public void SubjectFor_AfterSet_ReturnsIt()
