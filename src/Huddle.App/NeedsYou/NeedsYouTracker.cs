@@ -83,6 +83,19 @@ internal sealed class NeedsYouTracker
         }
     }
 
+    /// <summary>The reasons the Room holds now, whether or not the Human has dismissed it.</summary>
+    /// <param name="roomId">The Room.</param>
+    /// <returns>The reasons, or <see cref="NeedsYouReason.None"/>.</returns>
+    internal NeedsYouReason ReasonsHeld(string roomId)
+    {
+        lock (this.gate)
+        {
+            return this.rooms.TryGetValue(roomId, out RoomState? state)
+                ? state.Reasons.Keys.Aggregate(NeedsYouReason.None, static (flags, reason) => flags | reason)
+                : NeedsYouReason.None;
+        }
+    }
+
     /// <summary>
     /// Hides a Room until something new makes it wait again. Drops the Mention reason, which the tracker
     /// owns; the Question, Form and Budget reasons stay true in their stores, and the card or Form in the
