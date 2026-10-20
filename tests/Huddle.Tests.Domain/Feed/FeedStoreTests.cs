@@ -125,6 +125,24 @@ public sealed class FeedStoreTests
         Assert.Equal("GRO-4", limited.Single().TargetKey);
     }
 
+    /// <summary>ExcludeDismissed leaves dismissed Notifications out before the limit is applied, so older undismissed ones fill the page.</summary>
+    [Fact]
+    public void Page_ExcludeDismissed_AppliesBeforeTheLimit()
+    {
+        using TempDataDir dir = new();
+        FeedStore store = new(dir.Options());
+        FeedItem older = FeedTestSupport.Post(store, FeedTestSupport.NeedsYou("GRO-1"));
+        FeedItem dismissedA = FeedTestSupport.Post(store, FeedTestSupport.NeedsYou("GRO-2"));
+        FeedItem dismissedB = FeedTestSupport.Post(store, FeedTestSupport.NeedsYou("GRO-3"));
+        _ = store.Apply([new DismissCommand(dismissedA.Id, T0), new DismissCommand(dismissedB.Id, T0)]);
+
+        IReadOnlyList<FeedItem> kept = store.Page(new FeedQuery(null, 2, null, null, FeedCategory.NeedsYou, ExcludeDismissed: true));
+        IReadOnlyList<FeedItem> everything = store.Page(new FeedQuery(null, 2, null, null, FeedCategory.NeedsYou));
+
+        Assert.Equal([older.Id], kept.Select(item => item.Id));
+        Assert.Equal([dismissedB.Id, dismissedA.Id], everything.Select(item => item.Id));
+    }
+
     /// <summary>The unseen count is Notifications that are unseen, undismissed and unresolved.</summary>
     [Fact]
     public void UnseenCount_CountsOnlyUnseenUndismissedUnresolvedNotifications()

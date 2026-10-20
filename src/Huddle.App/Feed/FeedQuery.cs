@@ -6,4 +6,5 @@ namespace Agency.Huddle.App.Feed;
 /// <param name="Teammate">Only items by this actor (case-insensitive), or <see langword="null"/>.</param>
 /// <param name="Team">Only items about this Team (case-insensitive), or <see langword="null"/>.</param>
 /// <param name="Category">The segment to list.</param>
-internal sealed record FeedQuery(long? BeforeId, int Limit, string? Teammate, string? Team, FeedCategory Category = FeedCategory.All);
+/// <param name="ExcludeDismissed">Whether Notifications the Human dismissed are left out, before the limit is applied. The panel's Needs you list sets it.</param>
+internal sealed record FeedQuery(long? BeforeId, int Limit, string? Teammate, string? Team, FeedCategory Category = FeedCategory.All, bool ExcludeDismissed = false);

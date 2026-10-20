@@ -65,6 +65,33 @@ public sealed class FeedStartupReconciliationTests
         Assert.Empty(recorder.Posts);
     }
 
+    /// <summary>A gate-decision Notification stays while the Task is still in the status the move left, and is resolved once it has moved.</summary>
+    [Fact]
+    public async Task Tasks_GateDecisionDue_HoldsOnlyWhileTheStatusIsUnchanged()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using FeedHarness harness = new();
+        using TaskToolHarness tasks = new();
+        TaskActor actor = TaskActors.Human(tasks.Options.Value);
+        TaskItem waiting = Assert.IsType<TaskResult.Saved>(tasks.Service.Create(new TaskDraft("Waiting", "Platform", null), actor)).Task;
+        TaskItem moved = Assert.IsType<TaskResult.Saved>(tasks.Service.Create(new TaskDraft("Moved", "Platform", null), actor)).Task;
+        _ = tasks.Service.Update(moved.Id, new TaskPatch { Status = TaskState.ToDo }, null, actor, humanOverridesGates: true);
+        await harness.Writer.StartAsync(ct);
+        harness.Queue.Post(Decision(waiting.Id.ToString(), TaskState.Backlog.ToWire()));
+        harness.Queue.Post(Decision(moved.Id.ToString(), TaskState.Backlog.ToWire()));
+        await harness.DrainAsync(ct);
+        await harness.Writer.StopAsync(ct);
+        RecordingFeedPublisher recorder = new();
+        TaskFeedStartup startup = new(harness.Store, tasks.Store, recorder, new NoConfirmers(), new ConfiguredHumanIdentity(tasks.Options.Value.HumanName), NullLogger<TaskFeedStartup>.Instance);
+
+        startup.Reconcile();
+
+        Assert.Equal(new FeedResolution(moved.Id.ToString(), FeedSourceType.GateDecisionDue), Assert.Single(recorder.Resolutions));
+    }
+
+    private static FeedMessage Decision(string id, string fromStatus) =>
+        new(FeedSourceType.GateDecisionDue, id, FeedTestSupport.Agent(), true, new GateDecisionPayload(id, "T", "Platform", "g", "m", fromStatus, TaskState.Done.ToWire()));
+
     private static FeedMessage Assigned(string id) =>
         new(FeedSourceType.TaskAssignedToYou, id, FeedTestSupport.Agent(), true, new TaskAssignedPayload(id, "T", "Platform", null));
 

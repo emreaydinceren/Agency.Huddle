@@ -5,6 +5,37 @@ internal static class FeedCategories
 {
     private static readonly Dictionary<FeedCategory, IReadOnlyList<FeedSourceType>> TypesByCategory = BuildIndex();
 
+    /// <summary>The six Categories in the order the Category control, the counts and the panel draw them.</summary>
+    public static IReadOnlyList<FeedCategory> Order { get; } =
+        [FeedCategory.All, FeedCategory.NeedsYou, FeedCategory.Tasks, FeedCategory.Documents, FeedCategory.Rooms, FeedCategory.Gates];
+
+    /// <summary>The label a Category carries in the Category control and the panel.</summary>
+    /// <param name="category">The Category.</param>
+    /// <returns>The label.</returns>
+    public static string Label(FeedCategory category) => category switch
+    {
+        FeedCategory.NeedsYou => "Needs you",
+        FeedCategory.Tasks => "Tasks",
+        FeedCategory.Documents => "Documents",
+        FeedCategory.Rooms => "Rooms",
+        FeedCategory.Gates => "Gates",
+        _ => "All",
+    };
+
+    /// <summary>The number the Category's segment shows.</summary>
+    /// <param name="counts">The six counts.</param>
+    /// <param name="category">The Category.</param>
+    /// <returns>Its count.</returns>
+    public static int CountOf(FeedCounts counts, FeedCategory category) => category switch
+    {
+        FeedCategory.NeedsYou => counts.NeedsYou,
+        FeedCategory.Tasks => counts.Tasks,
+        FeedCategory.Documents => counts.Documents,
+        FeedCategory.Rooms => counts.Rooms,
+        FeedCategory.Gates => counts.Gates,
+        _ => counts.All,
+    };
+
     /// <summary>The one type segment (Tasks, Gates, Rooms or Documents) a source type belongs to.</summary>
     /// <param name="type">The source type.</param>
     /// <returns>The segment.</returns>

@@ -95,8 +95,14 @@ public sealed class FeedWriterTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using FeedHarness harness = new();
-        int visibleAtRaise = -1;
-        harness.Events.ItemsAdded += items => visibleAtRaise = harness.Store.Page(Everything).Count(row => items.Any(added => added.Id == row.Id));
+        int raises = 0;
+        int notVisible = 0;
+        harness.Events.ItemsAdded += items =>
+        {
+            _ = Interlocked.Increment(ref raises);
+            HashSet<long> stored = [.. harness.Store.Page(Everything).Select(row => row.Id)];
+            _ = Interlocked.Add(ref notVisible, items.Count(added => !stored.Contains(added.Id)));
+        };
         harness.Queue.Post(FeedTestSupport.NeedsYou("GRO-1"));
         harness.Queue.Post(FeedTestSupport.NeedsYou("GRO-2"));
         harness.Queue.Resolve("GRO-1", FeedSourceType.TaskNeedsYou);
@@ -105,9 +111,10 @@ public sealed class FeedWriterTests
         await harness.DrainAsync(ct);
         await harness.Writer.StopAsync(ct);
 
-        Assert.True(visibleAtRaise >= 1);
+        Assert.True(Volatile.Read(ref raises) >= 1);
+        Assert.Equal(0, Volatile.Read(ref notVisible));
         Assert.Equal(["GRO-1", "GRO-2"], harness.Added.Select(item => item.TargetKey).Where(key => key.StartsWith("GRO-", StringComparison.Ordinal)));
-        Assert.True(harness.ChangedCount >= 1);
+        Assert.Equal(1, harness.ChangedCount);
     }
 
     /// <summary>A batch whose updates touch no row raises no ItemsChanged.</summary>

@@ -27,6 +27,7 @@ internal sealed class FeedStore
         );
         CREATE INDEX IF NOT EXISTS ix_feed_events_created_at ON feed_events(created_at);
         CREATE INDEX IF NOT EXISTS ix_feed_events_target     ON feed_events(target_key, source_type);
+        CREATE INDEX IF NOT EXISTS ix_feed_events_open       ON feed_events(resolved_at, seen_at) WHERE notify = 1;
         CREATE TABLE IF NOT EXISTS feed_state (
             key    TEXT PRIMARY KEY,
             value  TEXT NOT NULL
@@ -36,11 +37,6 @@ internal sealed class FeedStore
     private const string Columns = "id, created_at, source_type, target_key, actor, notify, seen_at, dismissed_at, resolved_at, payload";
     private const string TabSeenKey = "tab_seen_up_to";
     private const string TeamExpression = "(CASE WHEN json_valid(payload) THEN json_extract(payload, '$.data.team') END)";
-
-    private static readonly FeedCategory[] CountOrder =
-    [
-        FeedCategory.All, FeedCategory.NeedsYou, FeedCategory.Tasks, FeedCategory.Documents, FeedCategory.Rooms, FeedCategory.Gates,
-    ];
 
     private readonly string connectionString;
 
@@ -81,6 +77,11 @@ internal sealed class FeedStore
 
         AppendActorAndTeam(sql, command, query.Teammate, query.Team);
         _ = sql.Append(" AND ").Append(CategoryCondition(query.Category, command));
+        if (query.ExcludeDismissed)
+        {
+            _ = sql.Append(" AND dismissed_at IS NULL");
+        }
+
         _ = sql.Append(" ORDER BY id DESC LIMIT CAST($limit AS INTEGER)");
         _ = command.Parameters.AddWithValue("$limit", Text(query.Limit));
         command.CommandText = sql.ToString();
@@ -164,10 +165,10 @@ internal sealed class FeedStore
         using SqliteConnection connection = this.OpenConnection();
         using SqliteCommand command = connection.CreateCommand();
         StringBuilder sql = new("SELECT ");
-        for (int i = 0; i < CountOrder.Length; i++)
+        for (int i = 0; i < FeedCategories.Order.Count; i++)
         {
             _ = sql.Append(i == 0 ? string.Empty : ", ")
-                .Append("COALESCE(SUM(CASE WHEN ").Append(CategoryCondition(CountOrder[i], command)).Append(" THEN 1 ELSE 0 END), 0)");
+                .Append("COALESCE(SUM(CASE WHEN ").Append(CategoryCondition(FeedCategories.Order[i], command)).Append(" THEN 1 ELSE 0 END), 0)");
         }
 
         _ = sql.Append(" FROM feed_events WHERE 1 = 1");
