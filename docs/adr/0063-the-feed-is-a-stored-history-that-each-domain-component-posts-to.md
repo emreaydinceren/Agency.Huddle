@@ -53,7 +53,9 @@ the shape of `TaskEvents`. Producers call after their own write and outside thei
 queue, a database error or a bad payload is logged and dropped. **A Feed failure never fails or
 slows the domain operation.**
 
-**No grouping, no Message text.** One row per event. A Room item names the Room and what happened,
+**One stored row per event, no Message text.** One row per event; the list may draw neighbouring
+rows of one actor, kind and Team as one grouped line (amended 2026-10-20), but nothing is merged in
+storage. A Room item names the Room and what happened,
 never what anyone wrote.
 
 **Seen, dismissed, resolved and cleaned up.** Opening the panel sets `seen_at`; the unseen count is
@@ -61,8 +63,9 @@ the badge. Dismiss sets `dismissed_at` and hides the row from the panel only. A 
 Notification stays, dimmed, and leaves the count. A dismissed Notification is deleted 30 days after
 its dismissal and an Activity row 30 days after its creation, both `Team:Feed` settings.
 
-**The Feed Tab is read-only in v1.** It pages by `id`, not by offset, so live inserts at the top do
-not shift pages. A click opens the target in a Tab; an avatar or a Team chip filters.
+**The Feed Tab is read-only in v1.** It pages by `id`, not by offset, so new rows at the top do
+not shift pages; they wait behind a "↑ N new items" pill unless the list is at its top (amended
+2026-10-20). The Right sidebar panel shows the same Feed, opening on Needs you. A click opens the target in a Tab; an avatar or a Team chip filters.
 
 ## Why a table, when ADR-0050 rejected one
 
@@ -79,7 +82,7 @@ card is lost when Huddle stops), so each producer resolves its own stale rows at
 | The Feed subscribes to `RoomEvents` and `TaskEvents` and decides what each means | It would repeat the rules of Needs You, the Human gate and Requests in a second place, and drift from them. The component that decides is the one that knows |
 | Producers insert directly | A locked or slow database would slow a Task write or a Message post, and its exceptions would reach domain code |
 | Replace Needs You with the Feed's Notifications | Needs You is live state rebuilt from the Transcript and the Task files. A stored list can disagree with it (ADR-0050) |
-| Group repeated items ("Nova created 15 Tasks") | Owner decision. Grouping hides which item is which and needs rules nobody has agreed |
+| Merge repeated items into one stored row ("Nova created 15 Tasks") | Owner decision. Merging hides which item is which from counts, filters and `Resolve`; grouping is done only when drawn |
 | Page by offset | A live insert at the top would shift every later page and repeat an item |
 | A column per payload field | Each source type has different fields. A typed record in a JSON column keeps the table fixed |
 | A separate `feed.db` | `team.db` already holds Huddle's own state in WAL mode ([ADR-0042](0042-cadence-state-is-persisted-so-a-restart-does-not-double-fire.md)) |
