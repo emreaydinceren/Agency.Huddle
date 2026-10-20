@@ -8,7 +8,6 @@
 @using Agency.Huddle.App.Feed
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Tabs
-@implements IDisposable
 @inject TimeProvider Clock
 @inject TabService Tabs
 @inject NavigationManager Navigation
@@ -27,7 +26,7 @@
                 <MudIcon Icon="@this.Badge.Icon" Size="Size.Small" />
             </span>
         </div>
-        <div class="feed-card-main" @onclick="this.OpenTarget">
+        <div class="feed-card-main" role="@(this.Address is null ? null : "link")" tabindex="@(this.Address is null ? null : "0")" @onclick="this.OpenTarget" @onkeydown="this.OnBodyKeyDown">
             <div class="feed-card-summary feed-clamp-3">
                 @if (!this.Line.OmitActor)
                 {
@@ -45,7 +44,7 @@
                 @if (this.Group.More > 0)
                 {
                     @(" ")
-                    <button type="button" class="feed-card-more" @onclick="this.ToggleMembers" @onclick:stopPropagation="true">@($"and {this.Group.More} more {FeedSummary.NounOf(this.Group.Lead.SourceType)}")</button>
+                    <button type="button" class="feed-card-more" @onclick="this.ToggleMembers" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">@($"and {this.Group.More} more {FeedSummary.NounOf(this.Group.Lead.SourceType)}")</button>
                 }
             </div>
             <div class="feed-card-meta">
@@ -61,7 +60,7 @@
                         <span class="feed-meta-sep" aria-hidden="true"> • </span>
                     }
 
-                    <span @onclick:stopPropagation="true">
+                    <span @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
                         <NavTabLink Href="@("/rooms/" + this.target.Id)" TabTitle="@roomName" Match="NavLinkMatch.All" Class="feed-meta-chip">
                             <MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Size="Size.Small" /> <span class="feed-meta-room">@roomName</span>
                         </NavTabLink>
@@ -159,7 +158,6 @@
 </div>
 
 @code {
-    private ITimer? timer;
     private FeedTarget target = new(FeedTargetKind.None, string.Empty);
     private TaskItem? task;
     private bool showMembers;
@@ -172,6 +170,10 @@
     /// <summary>The Feed Tab's seen mark: an item above it gets the unseen bar. The page reads it before it marks the Tab seen.</summary>
     [Parameter]
     public long TabSeenUpTo { get; set; }
+
+    /// <summary>The list's minute counter, which changes once a minute so every card redraws its ages together. Zero outside a list.</summary>
+    [CascadingParameter(Name = "FeedTick")]
+    public int Tick { get; set; }
 
     /// <summary>Whether the card is expanded. The parent holds this, so only one card is expanded at a time.</summary>
     [Parameter]
@@ -273,22 +275,15 @@
         && Acceptance.Of(waiting).State != AcceptanceState.Valid;
 
     /// <inheritdoc />
-    protected override void OnInitialized() =>
-        this.timer = this.Clock.CreateTimer(_ => this.Repaint(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
-
-    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         this.target = FeedTarget.Of(this.Lead);
         this.task = this.target.Kind == FeedTargetKind.Task && TaskId.TryParse(this.target.Id, out TaskId id) ? this.Store.Get(id) : null;
     }
 
-    /// <summary>Redraws the ages and the waiting minutes. The minute timer calls it; it is public so a test can call it without waiting.</summary>
+    /// <summary>Redraws the ages and the waiting minutes. The list's one minute timer redraws every card by changing <see cref="Tick"/>; this is for a test to call without waiting.</summary>
     /// <returns>A task that completes once the card is redrawn.</returns>
     public Task RefreshAgeAsync() => this.InvokeAsync(this.StateHasChanged);
-
-    /// <summary>Stops the minute timer.</summary>
-    public void Dispose() => this.timer?.Dispose();
 
     private static string PillName(FeedPillKind kind) => kind switch
     {
@@ -311,8 +306,6 @@
     private string? MetaRoomName => this.target.Kind == FeedTargetKind.Room ? RoomNameOf(this.Lead.Payload) : null;
 
     private string? MetaTeam => FeedSummary.TeamOf(this.Lead.Payload) is { Length: > 0 } team ? team : null;
-
-    private void Repaint() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 
     private RenderFragment AvatarContent => builder =>
     {
@@ -354,11 +347,22 @@
 
     private void ToggleMember(long id) => this.openMember = this.openMember == id ? null : id;
 
+    private string? Address => this.target.Address(this.LibraryResolver);
+
     private void OpenTarget()
     {
-        if (this.target.Address(this.LibraryResolver) is { } address)
+        if (this.Address is { } address)
         {
             this.Go(address);
+        }
+    }
+
+    /// <summary>Enter on the focused body does what a click does; a link is activated by Enter alone.</summary>
+    private void OnBodyKeyDown(KeyboardEventArgs args)
+    {
+        if (string.Equals(args.Key, "Enter", StringComparison.Ordinal))
+        {
+            this.OpenTarget();
         }
     }
 

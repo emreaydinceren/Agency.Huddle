@@ -84,19 +84,68 @@ internal sealed class FeedPager(FeedStore store, int pageSize, bool hideDismisse
         return matching;
     }
 
-    /// <summary>Whether a row that is drawn has since been resolved or dismissed, or has left the query altogether in the Needs you view.</summary>
-    /// <returns><see langword="true"/> when the list should be read again.</returns>
-    public bool ShownRowsChanged()
+    /// <summary>
+    /// Brings the rows already drawn up to date without a new list: a row whose resolved or dismissed state changed is replaced by its new
+    /// version in <see cref="Items"/>, and in the Needs you view a row that left the query is removed. <see cref="ListKey"/> stays, so the
+    /// list keeps its expanded card and its waiting new items.
+    /// </summary>
+    /// <returns>What changed, for the list to patch the rows it holds itself.</returns>
+    public FeedRefresh RefreshInPlace()
     {
         Dictionary<long, FeedItem> current = store.Page(this.QueryFor(null, Math.Max(pageSize, this.loadedCount))).ToDictionary(static item => item.Id);
-        return this.known.Any(entry => current.TryGetValue(entry.Key, out FeedItem? now)
-            ? entry.Value != this.StateOf(now)
-            : this.Category == FeedCategory.NeedsYou);
+        List<FeedItem> changed = [];
+        HashSet<long> removed = [];
+        foreach ((long id, (bool Resolved, bool Dismissed) before) in this.known.ToList())
+        {
+            if (!current.TryGetValue(id, out FeedItem? now))
+            {
+                if (this.Category == FeedCategory.NeedsYou)
+                {
+                    _ = removed.Add(id);
+                    _ = this.known.Remove(id);
+                }
+            }
+            else if (before != this.StateOf(now))
+            {
+                this.known[id] = this.StateOf(now);
+                if (this.Category == FeedCategory.NeedsYou && (now.ResolvedAt is not null || this.IsHidden(now)))
+                {
+                    _ = removed.Add(id);
+                }
+                else
+                {
+                    changed.Add(now);
+                }
+            }
+        }
+
+        if (changed.Count == 0 && removed.Count == 0)
+        {
+            return FeedRefresh.None;
+        }
+
+        Dictionary<long, FeedItem> replacements = changed.ToDictionary(static item => item.Id);
+        this.Items = [.. this.Items.Where(item => !removed.Contains(item.Id)).Select(item => replacements.GetValueOrDefault(item.Id, item))];
+        return new FeedRefresh(changed, removed);
     }
 
-    /// <summary>Hides a Notification the Human just dismissed until the writer has applied it.</summary>
-    /// <param name="id">The item's id.</param>
-    public void Hide(long id) => this.hidden.Add(id);
+    /// <summary>Hides Notifications the Human just dismissed: they leave <see cref="Items"/> at once and stay out until the writer has applied the dismissal.</summary>
+    /// <param name="ids">The items' ids.</param>
+    /// <returns>The removal, for the list to patch the rows it holds itself.</returns>
+    public FeedRefresh Hide(IReadOnlyList<long> ids)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+
+        HashSet<long> removed = [.. ids];
+        foreach (long id in removed)
+        {
+            _ = this.hidden.Add(id);
+            _ = this.known.Remove(id);
+        }
+
+        this.Items = [.. this.Items.Where(item => !removed.Contains(item.Id))];
+        return new FeedRefresh([], removed);
+    }
 
     /// <summary>Whether an item belongs to the list under the current filter, mirroring the store's query for items that arrive live.</summary>
     /// <param name="item">The item.</param>

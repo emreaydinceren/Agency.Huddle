@@ -24,6 +24,11 @@
     private const int Limit = 5;
 
     private IReadOnlyList<FeedItem> items = [];
+    private FeedItem? loadedFor;
+    private IReadOnlyList<string> loadedTargets = [];
+
+    /// <summary>How many times the store was read. A redraw that changes neither the item nor the extra targets does not read again.</summary>
+    internal int LoadCount { get; private set; }
 
     /// <summary>The card's own item.</summary>
     [Parameter, EditorRequired]
@@ -34,5 +39,16 @@
     public IReadOnlyList<string> ExtraTargets { get; set; } = [];
 
     /// <inheritdoc />
-    protected override void OnParametersSet() => this.items = this.Store.Related(this.Item, this.ExtraTargets, Limit);
+    protected override void OnParametersSet()
+    {
+        if (this.loadedFor is not null && this.loadedFor == this.Item && this.loadedTargets.SequenceEqual(this.ExtraTargets, StringComparer.Ordinal))
+        {
+            return;
+        }
+
+        this.loadedFor = this.Item;
+        this.loadedTargets = [.. this.ExtraTargets];
+        this.items = this.Store.Related(this.Item, this.ExtraTargets, Limit);
+        this.LoadCount++;
+    }
 }

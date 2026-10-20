@@ -433,6 +433,13 @@ window.huddleFeed = {
             scroller.scrollTop = 0;
         }
     },
+    // Moves focus onto the checked radio of a group, after the arrow keys changed the choice.
+    focusChecked(group) {
+        const checkedChip = group && group.querySelector("[role='radio'][aria-checked='true']");
+        if (checkedChip) {
+            checkedChip.focus();
+        }
+    },
 };
 
 // Remembers which Right sidebar panels a viewer collapsed (Right sidebar spec D-8). A per-viewer

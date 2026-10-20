@@ -6,6 +6,7 @@
 @using Agency.Huddle.App.Feed
 @inject TimeProvider Clock
 @inject IJSRuntime Js
+@implements IDisposable
 
 <div class="feed-list" @ref="this.root" @onkeydown="this.OnKeyDown">
     @if (this.pending.Count > 0)
@@ -13,31 +14,33 @@
         <button type="button" class="feed-new-pill" @onclick="this.ShowPendingAsync">@this.PillText</button>
     }
 
-    @foreach (Day day in this.days)
-    {
-        <div class="feed-day" @key="day.Key">
-            <div class="feed-day-heading">
-                <span class="feed-day-word">@day.Heading.Word</span>
-                @if (day.Heading.Date is { } date)
+    <CascadingValue Name="FeedTick" Value="this.tick">
+        @foreach (Day day in this.days)
+        {
+            <div class="feed-day" @key="day.Key">
+                <div class="feed-day-heading">
+                    <span class="feed-day-word">@day.Heading.Word</span>
+                    @if (day.Heading.Date is { } date)
+                    {
+                        <span class="feed-day-date">@date</span>
+                    }
+                    <span class="feed-day-rule" aria-hidden="true"></span>
+                </div>
+                @foreach (FeedGroup group in day.Groups)
                 {
-                    <span class="feed-day-date">@date</span>
+                    @if (this.Mode == FeedListMode.Cards)
+                    {
+                        <FeedCard @key="group.Lead.Id" Group="group" TabSeenUpTo="this.TabSeenUpTo" OnTeammate="this.OnTeammate"
+                                  Expanded="this.expandedId == group.Lead.Id" OnToggle="@(() => this.Toggle(group.Lead.Id))" />
+                    }
+                    else
+                    {
+                        <FeedItemRow @key="group.Lead.Id" Group="group" OnDismiss="this.OnDismiss" OnDismissMany="this.OnDismissMany" OnTeammate="this.OnTeammate" />
+                    }
                 }
-                <span class="feed-day-rule" aria-hidden="true"></span>
             </div>
-            @foreach (FeedGroup group in day.Groups)
-            {
-                @if (this.Mode == FeedListMode.Cards)
-                {
-                    <FeedCard @key="group.Lead.Id" Group="group" TabSeenUpTo="this.TabSeenUpTo" OnTeammate="this.OnTeammate"
-                              Expanded="this.expandedId == group.Lead.Id" OnToggle="@(() => this.Toggle(group.Lead.Id))" />
-                }
-                else
-                {
-                    <FeedItemRow @key="group.Lead.Id" Group="group" OnDismiss="this.OnDismiss" OnTeammate="this.OnTeammate" />
-                }
-            }
-        </div>
-    }
+        }
+    </CascadingValue>
 </div>
 
 @code {
@@ -46,6 +49,8 @@
     private ElementReference root;
     private long? expandedId;
     private IReadOnlyList<Day> days = [];
+    private ITimer? ticker;
+    private int tick;
 
     /// <summary>The items to draw, newest first.</summary>
     [Parameter, EditorRequired]
@@ -54,6 +59,14 @@
     /// <summary>Passed to every row: called with a Notification when its x is pressed. When it is not set the rows have no x.</summary>
     [Parameter]
     public EventCallback<FeedItem> OnDismiss { get; set; }
+
+    /// <summary>Passed to every row: called once with all the Notifications of a grouped row when its x is pressed.</summary>
+    [Parameter]
+    public EventCallback<IReadOnlyList<FeedItem>> OnDismissMany { get; set; }
+
+    /// <summary>Called with the items the list draws from its waiting or arriving items: at once when it is at its top, or when the "new items" pill is pressed.</summary>
+    [Parameter]
+    public EventCallback<IReadOnlyList<FeedItem>> OnNewItemsInserted { get; set; }
 
     /// <summary>Passed to every row: called with a Teammate's Name when its avatar is clicked.</summary>
     [Parameter]
@@ -69,8 +82,54 @@
 
     private string PillText => this.pending.Count == 1 ? "↑ 1 new item" : $"↑ {this.pending.Count} new items";
 
+    /// <summary>Starts the one minute timer that redraws the ages and the waiting minutes of every card, when the list draws cards.</summary>
+    protected override void OnInitialized()
+    {
+        if (this.Mode == FeedListMode.Cards)
+        {
+            this.ticker = this.Clock.CreateTimer(_ => this.Tick(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+        }
+    }
+
     /// <inheritdoc />
     protected override void OnParametersSet() => this.Rebuild();
+
+    /// <summary>Stops the minute timer.</summary>
+    public void Dispose() => this.ticker?.Dispose();
+
+    /// <summary>
+    /// Patches the rows the list holds itself (arrived items drawn at once, and those waiting behind the pill) after the parent refreshed
+    /// its own items in place: changed rows are replaced by their new versions and removed rows leave. The expanded card and the pill stay.
+    /// </summary>
+    /// <param name="refresh">What the parent's refresh changed.</param>
+    internal void Refresh(FeedRefresh refresh)
+    {
+        ArgumentNullException.ThrowIfNull(refresh);
+
+        Patch(this.inserted, refresh);
+        Patch(this.pending, refresh);
+        this.Rebuild();
+        this.StateHasChanged();
+    }
+
+    private static void Patch(List<FeedItem> held, FeedRefresh refresh)
+    {
+        _ = held.RemoveAll(item => refresh.Removed.Contains(item.Id));
+        foreach (FeedItem changed in refresh.Changed)
+        {
+            int index = held.FindIndex(item => item.Id == changed.Id);
+            if (index >= 0)
+            {
+                held[index] = changed;
+            }
+        }
+    }
+
+    private void Tick() => _ = RendererDispatch.Repaint(this.InvokeAsync, () =>
+    {
+        this.tick++;
+        this.StateHasChanged();
+    });
 
     /// <summary>
     /// Takes items that arrived after the list was drawn. A list scrolled to its top draws them at once; otherwise they wait behind
@@ -96,6 +155,7 @@
         else
         {
             this.inserted.AddRange(fresh);
+            await this.OnNewItemsInserted.InvokeAsync(fresh);
         }
 
         this.Rebuild();
@@ -119,9 +179,11 @@
 
     private async Task ShowPendingAsync()
     {
-        this.inserted.AddRange(this.pending);
+        List<FeedItem> shown = [.. this.pending];
+        this.inserted.AddRange(shown);
         this.pending.Clear();
         this.Rebuild();
+        await this.OnNewItemsInserted.InvokeAsync(shown);
         await this.ScrollToTopAsync();
     }
 

@@ -1,4 +1,9 @@
 /* One Feed row: avatar | body | age (Feed spec 6.12). Colours come from the theme: Quiet ink is the secondary text, Accent is the primary. */
+.feed-row:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: -2px;
+}
+
 .feed-row {
     position: relative;
     display: grid;

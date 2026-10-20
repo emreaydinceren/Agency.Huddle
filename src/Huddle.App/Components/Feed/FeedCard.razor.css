@@ -104,6 +104,12 @@
     cursor: pointer;
 }
 
+.feed-card-main:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+}
+
 .feed-clamp-3 {
     display: -webkit-box;
     -webkit-box-orient: vertical;

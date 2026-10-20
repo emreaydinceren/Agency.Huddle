@@ -27,12 +27,6 @@
 
 .feed-filter-bar ::deep .feed-category-control {
     max-width: 100%;
-    overflow-x: auto;
-}
-
-.feed-filter-bar ::deep .feed-category-control .mud-toggle-item {
-    flex: none;
-    white-space: nowrap;
 }
 
 .feed-filter-bar {

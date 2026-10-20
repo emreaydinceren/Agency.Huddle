@@ -31,7 +31,7 @@
         _ => @<text>@segment.Text</text>,
     };
 
-    private RenderFragment TaskChip(FeedSegment segment) => @<span @onclick:stopPropagation="true">
+    private RenderFragment TaskChip(FeedSegment segment) => @<span @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
         <NavTabLink Href="@("/tasks/item/" + segment.TargetId)" TabTitle="@segment.TargetId" Match="NavLinkMatch.All" Class="feed-chip feed-chip-task" title="@segment.Tooltip">
             @if (this.TaskStateOf(segment.TargetId) is { } state)
             {
@@ -52,7 +52,7 @@
             : this.LinkChip("feed-chip-document", href, segment.Text, Icons.Material.Filled.Description, mono: true);
     }
 
-    private RenderFragment LinkChip(string cssClass, string href, string label, string icon, bool mono = false) => @<span @onclick:stopPropagation="true">
+    private RenderFragment LinkChip(string cssClass, string href, string label, string icon, bool mono = false) => @<span @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
         <NavTabLink Href="@href" TabTitle="@label" Match="NavLinkMatch.All" Class="@("feed-chip " + cssClass)">
             <MudIcon Icon="@icon" Size="Size.Small" />
             <span class="@(mono ? "feed-chip-path" : "feed-chip-label")">@label</span>

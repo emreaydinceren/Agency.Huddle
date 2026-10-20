@@ -44,7 +44,7 @@
 
         <div class="feed-filter-bar">
             <HuddleSegmentedControl T="FeedCategory" Value="@this.category" ValueChanged="this.OnCategoryChosen" Class="feed-category-control" ItemCount="6">
-                @foreach (FeedCategory entry in Order)
+                @foreach (FeedCategory entry in FeedCategories.Order)
                 {
                     <MudToggleItem Value="@entry" Text="@this.SegmentText(entry)" />
                 }
@@ -69,14 +69,14 @@
             </div>
         </div>
 
-        @if (this.items.Count == 0 && !this.arrived)
+        @if (this.Pager.Items.Count == 0 && !this.Pager.Arrived)
         {
             <EmptyState Title="@this.EmptyTitle" Text="@this.EmptyText" />
         }
 
-        <FeedList @key="this.listKey" @ref="this.list" Items="this.items" Mode="FeedListMode.Cards" TabSeenUpTo="this.tabSeenUpTo" OnTeammate="this.OnTeammateChosen" />
+        <FeedList @key="this.Pager.ListKey" @ref="this.list" Items="this.Pager.Items" Mode="FeedListMode.Cards" TabSeenUpTo="this.tabSeenUpTo" OnTeammate="this.OnTeammateChosen" />
 
-        @if (this.hasMore)
+        @if (this.Pager.HasMore)
         {
             <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="feed-show-more" OnClick="this.ShowMore">Show more</MudButton>
         }
@@ -84,28 +84,16 @@
 </MudContainer>
 
 @code {
-    private static readonly FeedCategory[] Order =
-    [
-        FeedCategory.All, FeedCategory.NeedsYou, FeedCategory.Tasks, FeedCategory.Documents, FeedCategory.Rooms, FeedCategory.Gates,
-    ];
-
-    private readonly Dictionary<long, bool> known = [];
+    private FeedPager? pager;
     private FeedCategory category;
     private string? teammate;
     private string? team;
     private string? loadedFilter;
     private FeedCounts counts = new(0, 0, 0, 0, 0, 0);
-    private IReadOnlyList<FeedItem> items = [];
     private FeedList? list;
     private ITimer? seenTimer;
     private bool subscribed;
-    private int listKey;
-    private int loadedCount;
-    private long lowestLoadedId;
-    private long highestLoadedId;
     private long tabSeenUpTo;
-    private bool hasMore;
-    private bool arrived;
 
     /// <summary>The Tab showing this page, which knows its own address; the browser URL names only the focused group's Tab.</summary>
     [CascadingParameter]
@@ -122,6 +110,8 @@
     /// <summary>The Team whose items are shown, from <c>?team=</c>.</summary>
     [Parameter]
     public string? Team { get; set; }
+
+    private FeedPager Pager => this.pager ??= new FeedPager(this.Store, this.PageSize);
 
     private bool Enabled => this.Options.Value.Feed.Enabled;
 
@@ -213,7 +203,7 @@
         this.category = parsed;
         this.teammate = parsedTeammate;
         this.team = parsedTeam;
-        this.Load(this.PageSize);
+        this.Load();
     }
 
     /// <summary>Starts the two-second timer that marks the Tab seen.</summary>
@@ -239,15 +229,8 @@
         this.seenTimer?.Dispose();
     }
 
-    private string SegmentText(FeedCategory entry) => entry switch
-    {
-        FeedCategory.NeedsYou => $"Needs you {this.counts.NeedsYou}",
-        FeedCategory.Tasks => $"Tasks {this.counts.Tasks}",
-        FeedCategory.Documents => $"Documents {this.counts.Documents}",
-        FeedCategory.Rooms => $"Rooms {this.counts.Rooms}",
-        FeedCategory.Gates => $"Gates {this.counts.Gates}",
-        _ => $"All {this.counts.All}",
-    };
+    private string SegmentText(FeedCategory entry) =>
+        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{FeedCategories.Label(entry)} {FeedCategories.CountOf(this.counts, entry)}");
 
     private static string BuildUrl(FeedCategory category, string? teammate, string? team)
     {
@@ -305,7 +288,7 @@
 
     private void MarkTabSeen(object? state)
     {
-        long highest = Volatile.Read(ref this.highestLoadedId);
+        long highest = this.Pager.HighestLoadedId;
         if (highest > 0)
         {
             this.Services.GetService<FeedQueue>()?.MarkTabSeen(highest);
@@ -313,80 +296,26 @@
     }
 
     /// <summary>Whether an item belongs to the list under the current filter, mirroring the store's query for items that arrive live.</summary>
-    private bool Matches(FeedItem item)
+    /// <summary>Starts a fresh list for the current filter and re-reads the counts.</summary>
+    private void Load()
     {
-        if (this.teammate is { } name && !string.Equals(item.Actor.Name, name, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        if (this.team is { } teamName && !string.Equals(FeedSummary.TeamOf(item.Payload), teamName, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return this.category switch
-        {
-            FeedCategory.All => true,
-            FeedCategory.NeedsYou => item.Notify && item.ResolvedAt is null,
-            _ => item.SourceType is { } type && FeedCategories.Of(type) == this.category,
-        };
-    }
-
-    private FeedQuery QueryFor(long? beforeId, int limit) => new(beforeId, limit, this.teammate, this.team, this.category);
-
-    /// <summary>Reads the first <paramref name="limit"/> items of the filter and starts a fresh list.</summary>
-    private void Load(int limit)
-    {
-        IReadOnlyList<FeedItem> page = this.Store.Page(this.QueryFor(null, limit));
-        this.items = page;
-        this.loadedCount = page.Count;
-        this.lowestLoadedId = page.Count > 0 ? page[^1].Id : 0;
-        this.hasMore = page.Count >= limit;
-        this.arrived = false;
-        this.listKey++;
-        this.known.Clear();
-        foreach (FeedItem item in page)
-        {
-            this.known[item.Id] = item.ResolvedAt is not null;
-        }
-
-        long newest = page.Count > 0 ? page[0].Id : 0;
-        _ = Interlocked.Exchange(ref this.highestLoadedId, Math.Max(Volatile.Read(ref this.highestLoadedId), newest));
+        this.Pager.Category = this.category;
+        this.Pager.Teammate = this.teammate;
+        this.Pager.Team = this.team;
+        this.Pager.Load();
         this.counts = this.Store.Counts(this.teammate, this.team);
     }
 
-    private void ShowMore()
-    {
-        IReadOnlyList<FeedItem> older = this.Store.Page(this.QueryFor(this.lowestLoadedId, this.PageSize));
-        this.items = [.. this.items, .. older];
-        this.loadedCount += older.Count;
-        this.lowestLoadedId = older.Count > 0 ? older[^1].Id : this.lowestLoadedId;
-        this.hasMore = older.Count >= this.PageSize;
-        foreach (FeedItem item in older)
-        {
-            this.known[item.Id] = item.ResolvedAt is not null;
-        }
-    }
+    private void ShowMore() => this.Pager.ShowMore();
 
     private void OnItemsAdded(IReadOnlyList<FeedItem> added)
     {
         _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
         {
-            List<FeedItem> matching = [.. added.Where(item => this.Matches(item) && !this.known.ContainsKey(item.Id))];
-            if (matching.Count > 0)
+            IReadOnlyList<FeedItem> matching = this.Pager.Take(added);
+            if (matching.Count > 0 && this.list is not null)
             {
-                this.arrived = true;
-                this.loadedCount += matching.Count;
-                foreach (FeedItem item in matching)
-                {
-                    this.known[item.Id] = item.ResolvedAt is not null;
-                }
-
-                if (this.list is not null)
-                {
-                    await this.list.AddNewItemsAsync(matching);
-                }
+                await this.list.AddNewItemsAsync(matching);
             }
 
             this.counts = this.Store.Counts(this.teammate, this.team);
@@ -396,24 +325,17 @@
 
     private void OnItemsChanged()
     {
-        _ = RendererDispatch.Repaint(this.InvokeAsync, this.ReloadIfShownRowsChanged);
+        _ = RendererDispatch.Repaint(this.InvokeAsync, this.RefreshShownRows);
     }
 
-    /// <summary>Re-reads the counts, and reloads the list when a row it shows has since been resolved.</summary>
-    private void ReloadIfShownRowsChanged()
+    /// <summary>Re-reads the counts, and brings the rows shown up to date in place: the list keeps its open card and its waiting new items.</summary>
+    private void RefreshShownRows()
     {
-        IReadOnlyList<FeedItem> page = this.Store.Page(this.QueryFor(null, Math.Max(this.PageSize, this.loadedCount)));
-        Dictionary<long, FeedItem> current = page.ToDictionary(static item => item.Id);
-        bool changed = this.known.Any(entry => current.TryGetValue(entry.Key, out FeedItem? now)
-            ? entry.Value != (now.ResolvedAt is not null)
-            : this.category == FeedCategory.NeedsYou);
-        if (changed)
+        FeedRefresh refresh = this.Pager.RefreshInPlace();
+        this.counts = this.Store.Counts(this.teammate, this.team);
+        if (refresh.Any)
         {
-            this.Load(Math.Max(this.PageSize, this.loadedCount));
-        }
-        else
-        {
-            this.counts = this.Store.Counts(this.teammate, this.team);
+            this.list?.Refresh(refresh);
         }
 
         this.StateHasChanged();

@@ -17,13 +17,13 @@
     <div class="feed-row-members">
         @foreach (FeedItem member in this.Group.Items)
         {
-            <FeedItemRow @key="member.Id" Group="new FeedGroup([member])" OnDismiss="this.OnDismiss" OnTeammate="this.OnTeammate" />
+            <FeedItemRow @key="member.Id" Group="new FeedGroup([member])" OnDismiss="this.OnDismiss" OnDismissMany="this.OnDismissMany" OnTeammate="this.OnTeammate" />
         }
     </div>
 }
 else
 {
-    <div class="@this.RowClass" @onclick="this.OpenTarget">
+    <div class="@this.RowClass" role="@(this.TargetAddress() is null ? null : "link")" tabindex="@(this.TargetAddress() is null ? null : "0")" @onclick="this.OpenTarget" @onkeydown="this.OnBodyKeyDown">
         <div class="feed-row-avatar">
             @this.AvatarContent
         </div>
@@ -31,7 +31,7 @@ else
             <div class="feed-row-summary feed-clamp-3">
                 @if (this.RoomWaitSentence is { } sentence)
                 {
-                    <button type="button" class="feed-row-more" @onclick="this.Expand" @onclick:stopPropagation="true">@sentence</button>
+                    <button type="button" class="feed-row-more" @onclick="this.Expand" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">@sentence</button>
                 }
                 else
                 {
@@ -51,7 +51,7 @@ else
                     @if (this.Group.More > 0)
                     {
                         @(" ")
-                        <button type="button" class="feed-row-more" @onclick="this.Expand" @onclick:stopPropagation="true">@($"and {this.Group.More} more {FeedSummary.NounOf(this.Group.Lead.SourceType)}")</button>
+                        <button type="button" class="feed-row-more" @onclick="this.Expand" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">@($"and {this.Group.More} more {FeedSummary.NounOf(this.Group.Lead.SourceType)}")</button>
                     }
                 }
             </div>
@@ -79,7 +79,7 @@ else
         </span>
         @if (this.CanDismiss)
         {
-            <span @onclick:stopPropagation="true">
+            <span @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
                 <MudTooltip Text="Dismiss" Class="hover-reveal-menu">
                     <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Dismiss"
                                    Class="hover-reveal-menu-button feed-row-dismiss"
@@ -104,9 +104,17 @@ else
     [Parameter]
     public EventCallback<FeedItem> OnDismiss { get; set; }
 
+    /// <summary>
+    /// Called once with every Notification of a grouped row when its hover x is pressed, so the parent can dismiss them together and read
+    /// once. A row of a single Notification uses <see cref="OnDismiss"/>. When it is not set a group falls back to <see cref="OnDismiss"/> per member.
+    /// </summary>
+    [Parameter]
+    public EventCallback<IReadOnlyList<FeedItem>> OnDismissMany { get; set; }
+
     /// <summary>Called with a Teammate's Name when the avatar is clicked. Huddle and the Human have no such click.</summary>
     [Parameter]
     public EventCallback<string> OnTeammate { get; set; }
+
 
     private FeedSummaryLine Line => FeedSummary.Of(this.Group.Lead);
 
@@ -114,7 +122,7 @@ else
 
     private bool IsNotification => this.Group.Lead.Notify;
 
-    private bool CanDismiss => this.IsNotification && this.OnDismiss.HasDelegate;
+    private bool CanDismiss => this.IsNotification && (this.OnDismiss.HasDelegate || this.OnDismissMany.HasDelegate);
 
     private string ActorName => this.Group.Lead.Actor.Kind == FeedActorKind.Human ? "You" : this.Group.Lead.Actor.Name;
 
@@ -204,11 +212,34 @@ else
 
     private Task TeammateClickedAsync() => this.OnTeammate.InvokeAsync(this.Group.Lead.Actor.Name);
 
+    /// <summary>Enter on the focused row does what a click does; a link is activated by Enter alone.</summary>
+    private void OnBodyKeyDown(KeyboardEventArgs args)
+    {
+        if (string.Equals(args.Key, "Enter", StringComparison.Ordinal))
+        {
+            this.OpenTarget();
+        }
+    }
+
     private async Task DismissAsync()
     {
-        foreach (FeedItem item in this.Group.Items.Where(static item => item.Notify))
+        List<FeedItem> notifications = [.. this.Group.Items.Where(static item => item.Notify)];
+        if (notifications.Count > 1 && this.OnDismissMany.HasDelegate)
         {
-            await this.OnDismiss.InvokeAsync(item);
+            await this.OnDismissMany.InvokeAsync(notifications);
+            return;
+        }
+
+        foreach (FeedItem item in notifications)
+        {
+            if (this.OnDismiss.HasDelegate)
+            {
+                await this.OnDismiss.InvokeAsync(item);
+            }
+            else
+            {
+                await this.OnDismissMany.InvokeAsync([item]);
+            }
         }
     }
 }
