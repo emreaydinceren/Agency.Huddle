@@ -28,7 +28,7 @@
             {
                 @if (this.Mode == FeedListMode.Cards)
                 {
-                    <FeedCard @key="group.Lead.Id" Group="group" TabSeenUpTo="this.TabSeenUpTo"
+                    <FeedCard @key="group.Lead.Id" Group="group" TabSeenUpTo="this.TabSeenUpTo" OnTeammate="this.OnTeammate"
                               Expanded="this.expandedId == group.Lead.Id" OnToggle="@(() => this.Toggle(group.Lead.Id))" />
                 }
                 else

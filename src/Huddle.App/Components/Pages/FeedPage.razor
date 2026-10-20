@@ -1,0 +1,421 @@
+@page "/feed"
+@*
+    The Feed Tab (Feed spec 6.9): what Teammates and Huddle did, newest first, as cards under day headings. The header is the owner's
+    wireframe: the title with a Live chip, the read-only note, then the filter bar - the Category control with its counts, the
+    Teammate chip when one is set, and the Team select. Every filter is a query parameter (?category=, ?teammate=, ?team=), so a Tab
+    that remembers its URL remembers its filter, and choosing a filter navigates the Tab. The page pages by id ("Show more"), takes
+    live items through the list's "New items" pill, re-reads the counts when items arrive or change, and marks the Tab seen two seconds
+    after it was shown. It is read-only: no dismiss, no accept, no reply. When the Feed is turned off it draws only an empty state.
+*@
+@implements IDisposable
+@using Agency.Huddle.App.Components.Feed
+@using Agency.Huddle.App.Feed
+@using Agency.Huddle.App.Tabs
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Options
+@inject FeedStore Store
+@inject FeedEvents Events
+@inject IOptions<TeamOptions> Options
+@inject ITeamCatalog Catalog
+@inject TimeProvider Clock
+@inject TabService Tabs
+@inject NavigationManager Navigation
+@inject IServiceProvider Services
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="page-reading pa-4 feed-page">
+    @if (!this.Enabled)
+    {
+        <EmptyState Title="The Feed is turned off." Text="Set Team:Feed:Enabled to turn it on." />
+    }
+    else
+    {
+        <PageHeader Title="Feed" Subtitle="What Teammates and Huddle did, newest first. Each line links to the Task, Room or document it's about.">
+            <TitleTrailing>
+                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text" Class="feed-live-chip">
+                    <span class="feed-live-dot" aria-hidden="true"></span>Live
+                </MudChip>
+            </TitleTrailing>
+        </PageHeader>
+
+        <div class="feed-readonly">
+            <MudIcon Icon="@Icons.Material.Outlined.Visibility" Size="Size.Small" />
+            <MudText Typo="Typo.caption" Class="feed-readonly-text">Read-only — the Feed never changes the work and never shows message text.</MudText>
+        </div>
+
+        <div class="feed-filter-bar">
+            <HuddleSegmentedControl T="FeedCategory" Value="@this.category" ValueChanged="this.OnCategoryChosen" Class="feed-category-control" ItemCount="6">
+                @foreach (FeedCategory entry in Order)
+                {
+                    <MudToggleItem Value="@entry" Text="@this.SegmentText(entry)" />
+                }
+            </HuddleSegmentedControl>
+
+            <div class="feed-filter-end">
+                @if (this.teammate is { } name)
+                {
+                    <TaskFilterChip Label="Teammate" Value="@name" IsSet="true" NoMenu="true" OnClear="this.ClearTeammate" Class="feed-teammate-chip" />
+                }
+
+                <MudSelect T="string" Value="@(this.team ?? string.Empty)" ValueChanged="this.OnTeamChosen" Dense="true" Variant="Variant.Outlined"
+                           Margin="Margin.Dense" Class="feed-team-select" aria-label="Team">
+                    <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
+                    @foreach (string teamName in this.TeamNames)
+                    {
+                        <MudSelectItem T="string" Value="@teamName">
+                            <MudIcon Icon="@Icons.Material.Outlined.Groups" Size="Size.Small" Class="feed-team-icon" /> @teamName
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            </div>
+        </div>
+
+        @if (this.items.Count == 0 && !this.arrived)
+        {
+            <EmptyState Title="@this.EmptyTitle" Text="@this.EmptyText" />
+        }
+
+        <FeedList @key="this.listKey" @ref="this.list" Items="this.items" Mode="FeedListMode.Cards" TabSeenUpTo="this.tabSeenUpTo" OnTeammate="this.OnTeammateChosen" />
+
+        @if (this.hasMore)
+        {
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="feed-show-more" OnClick="this.ShowMore">Show more</MudButton>
+        }
+    }
+</MudContainer>
+
+@code {
+    private static readonly FeedCategory[] Order =
+    [
+        FeedCategory.All, FeedCategory.NeedsYou, FeedCategory.Tasks, FeedCategory.Documents, FeedCategory.Rooms, FeedCategory.Gates,
+    ];
+
+    private readonly Dictionary<long, bool> known = [];
+    private FeedCategory category;
+    private string? teammate;
+    private string? team;
+    private string? loadedFilter;
+    private FeedCounts counts = new(0, 0, 0, 0, 0, 0);
+    private IReadOnlyList<FeedItem> items = [];
+    private FeedList? list;
+    private ITimer? seenTimer;
+    private bool subscribed;
+    private int listKey;
+    private int loadedCount;
+    private long lowestLoadedId;
+    private long highestLoadedId;
+    private long tabSeenUpTo;
+    private bool hasMore;
+    private bool arrived;
+
+    /// <summary>The Tab showing this page, which knows its own address; the browser URL names only the focused group's Tab.</summary>
+    [CascadingParameter]
+    public TabPageContext? Page { get; set; }
+
+    /// <summary>The Category, from <c>?category=</c>. Filled from the Tab's URL by <c>TabPageRoutes</c>; an unknown value reads as All.</summary>
+    [Parameter]
+    public string? Category { get; set; }
+
+    /// <summary>The Teammate whose items are shown, from <c>?teammate=</c>.</summary>
+    [Parameter]
+    public string? Teammate { get; set; }
+
+    /// <summary>The Team whose items are shown, from <c>?team=</c>.</summary>
+    [Parameter]
+    public string? Team { get; set; }
+
+    private bool Enabled => this.Options.Value.Feed.Enabled;
+
+    private int PageSize => Math.Max(1, this.Options.Value.Feed.PageSize);
+
+    private IEnumerable<string> TeamNames
+    {
+        get
+        {
+            List<string> names = [.. this.Catalog.Teams.Select(static summary => summary.Name)];
+            if (this.team is { } chosen && !names.Contains(chosen, StringComparer.OrdinalIgnoreCase))
+            {
+                names.Add(chosen);
+            }
+
+            return names;
+        }
+    }
+
+    private string EmptyTitle
+    {
+        get
+        {
+            if (this.teammate is { } name)
+            {
+                return $"Nothing from {name} yet.";
+            }
+
+            return this.category switch
+            {
+                FeedCategory.NeedsYou => "Nothing needs you",
+                FeedCategory.All when this.team is null => "Nothing yet",
+                _ => "Nothing here yet.",
+            };
+        }
+    }
+
+    private string EmptyText
+    {
+        get
+        {
+            if (this.teammate is not null)
+            {
+                return string.Empty;
+            }
+
+            return this.category switch
+            {
+                FeedCategory.NeedsYou => "Asks from your Teammates appear here.",
+                FeedCategory.All when this.team is null => "What your Teammates do appears here.",
+                _ => "Try All, or another Team.",
+            };
+        }
+    }
+
+    /// <summary>Reads the Tab-seen mark once, so the cards above it keep their unseen bar while the page is open, then listens for Feed changes.</summary>
+    protected override void OnInitialized()
+    {
+        if (!this.Enabled)
+        {
+            return;
+        }
+
+        this.tabSeenUpTo = this.Store.TabSeenUpTo();
+        this.Events.ItemsAdded += this.OnItemsAdded;
+        this.Events.ItemsChanged += this.OnItemsChanged;
+        this.Catalog.Changed += this.OnCatalogChanged;
+        this.subscribed = true;
+    }
+
+    /// <summary>Loads the first page again whenever the address names a different filter.</summary>
+    protected override void OnParametersSet()
+    {
+        if (!this.Enabled)
+        {
+            return;
+        }
+
+        FeedCategory parsed = FeedCategories.Parse(this.Category);
+        string? parsedTeammate = string.IsNullOrWhiteSpace(this.Teammate) ? null : this.Teammate;
+        string? parsedTeam = string.IsNullOrWhiteSpace(this.Team) ? null : this.Team;
+        string filter = $"{parsed}|{parsedTeammate}|{parsedTeam}";
+        if (string.Equals(filter, this.loadedFilter, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.loadedFilter = filter;
+        this.category = parsed;
+        this.teammate = parsedTeammate;
+        this.team = parsedTeam;
+        this.Load(this.PageSize);
+    }
+
+    /// <summary>Starts the two-second timer that marks the Tab seen.</summary>
+    /// <param name="firstRender">Whether this is the first render.</param>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && this.Enabled)
+        {
+            this.seenTimer = this.Clock.CreateTimer(this.MarkTabSeen, null, TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
+        }
+    }
+
+    /// <summary>Unsubscribes from the Feed hub and the Team catalog and stops the timer.</summary>
+    public void Dispose()
+    {
+        if (this.subscribed)
+        {
+            this.Events.ItemsAdded -= this.OnItemsAdded;
+            this.Events.ItemsChanged -= this.OnItemsChanged;
+            this.Catalog.Changed -= this.OnCatalogChanged;
+        }
+
+        this.seenTimer?.Dispose();
+    }
+
+    private string SegmentText(FeedCategory entry) => entry switch
+    {
+        FeedCategory.NeedsYou => $"Needs you {this.counts.NeedsYou}",
+        FeedCategory.Tasks => $"Tasks {this.counts.Tasks}",
+        FeedCategory.Documents => $"Documents {this.counts.Documents}",
+        FeedCategory.Rooms => $"Rooms {this.counts.Rooms}",
+        FeedCategory.Gates => $"Gates {this.counts.Gates}",
+        _ => $"All {this.counts.All}",
+    };
+
+    private static string BuildUrl(FeedCategory category, string? teammate, string? team)
+    {
+        List<string> parts = [];
+        if (category != FeedCategory.All)
+        {
+            parts.Add("category=" + Uri.EscapeDataString(FeedCategories.ToWire(category)));
+        }
+
+        if (teammate is not null)
+        {
+            parts.Add("teammate=" + Uri.EscapeDataString(teammate));
+        }
+
+        if (team is not null)
+        {
+            parts.Add("team=" + Uri.EscapeDataString(team));
+        }
+
+        return parts.Count == 0 ? "/feed" : "/feed?" + string.Join('&', parts);
+    }
+
+    /// <summary>Points this page's Tab, and the address bar, at the filter the Human chose.</summary>
+    private void GoTo(FeedCategory nextCategory, string? nextTeammate, string? nextTeam)
+    {
+        string url = BuildUrl(nextCategory, nextTeammate, nextTeam);
+        if (this.Page is { } page)
+        {
+            _ = this.Tabs.Navigate(page.TabId, url);
+        }
+
+        this.Navigation.NavigateTo(url);
+    }
+
+    private void OnCategoryChosen(FeedCategory chosen)
+    {
+        if (chosen != this.category)
+        {
+            this.GoTo(chosen, this.teammate, this.team);
+        }
+    }
+
+    private void OnTeamChosen(string chosen)
+    {
+        string? next = string.IsNullOrEmpty(chosen) ? null : chosen;
+        if (!string.Equals(next, this.team, StringComparison.Ordinal))
+        {
+            this.GoTo(this.category, this.teammate, next);
+        }
+    }
+
+    private void OnTeammateChosen(string name) => this.GoTo(this.category, name, this.team);
+
+    private void ClearTeammate() => this.GoTo(this.category, null, this.team);
+
+    private void MarkTabSeen(object? state)
+    {
+        long highest = Volatile.Read(ref this.highestLoadedId);
+        if (highest > 0)
+        {
+            this.Services.GetService<FeedQueue>()?.MarkTabSeen(highest);
+        }
+    }
+
+    /// <summary>Whether an item belongs to the list under the current filter, mirroring the store's query for items that arrive live.</summary>
+    private bool Matches(FeedItem item)
+    {
+        if (this.teammate is { } name && !string.Equals(item.Actor.Name, name, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (this.team is { } teamName && !string.Equals(FeedSummary.TeamOf(item.Payload), teamName, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return this.category switch
+        {
+            FeedCategory.All => true,
+            FeedCategory.NeedsYou => item.Notify && item.ResolvedAt is null,
+            _ => item.SourceType is { } type && FeedCategories.Of(type) == this.category,
+        };
+    }
+
+    private FeedQuery QueryFor(long? beforeId, int limit) => new(beforeId, limit, this.teammate, this.team, this.category);
+
+    /// <summary>Reads the first <paramref name="limit"/> items of the filter and starts a fresh list.</summary>
+    private void Load(int limit)
+    {
+        IReadOnlyList<FeedItem> page = this.Store.Page(this.QueryFor(null, limit));
+        this.items = page;
+        this.loadedCount = page.Count;
+        this.lowestLoadedId = page.Count > 0 ? page[^1].Id : 0;
+        this.hasMore = page.Count >= limit;
+        this.arrived = false;
+        this.listKey++;
+        this.known.Clear();
+        foreach (FeedItem item in page)
+        {
+            this.known[item.Id] = item.ResolvedAt is not null;
+        }
+
+        long newest = page.Count > 0 ? page[0].Id : 0;
+        _ = Interlocked.Exchange(ref this.highestLoadedId, Math.Max(Volatile.Read(ref this.highestLoadedId), newest));
+        this.counts = this.Store.Counts(this.teammate, this.team);
+    }
+
+    private void ShowMore()
+    {
+        IReadOnlyList<FeedItem> older = this.Store.Page(this.QueryFor(this.lowestLoadedId, this.PageSize));
+        this.items = [.. this.items, .. older];
+        this.loadedCount += older.Count;
+        this.lowestLoadedId = older.Count > 0 ? older[^1].Id : this.lowestLoadedId;
+        this.hasMore = older.Count >= this.PageSize;
+        foreach (FeedItem item in older)
+        {
+            this.known[item.Id] = item.ResolvedAt is not null;
+        }
+    }
+
+    private void OnItemsAdded(IReadOnlyList<FeedItem> added)
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
+        {
+            List<FeedItem> matching = [.. added.Where(item => this.Matches(item) && !this.known.ContainsKey(item.Id))];
+            if (matching.Count > 0)
+            {
+                this.arrived = true;
+                this.loadedCount += matching.Count;
+                foreach (FeedItem item in matching)
+                {
+                    this.known[item.Id] = item.ResolvedAt is not null;
+                }
+
+                if (this.list is not null)
+                {
+                    await this.list.AddNewItemsAsync(matching);
+                }
+            }
+
+            this.counts = this.Store.Counts(this.teammate, this.team);
+            this.StateHasChanged();
+        });
+    }
+
+    private void OnItemsChanged()
+    {
+        _ = RendererDispatch.Repaint(this.InvokeAsync, this.ReloadIfShownRowsChanged);
+    }
+
+    /// <summary>Re-reads the counts, and reloads the list when a row it shows has since been resolved.</summary>
+    private void ReloadIfShownRowsChanged()
+    {
+        IReadOnlyList<FeedItem> page = this.Store.Page(this.QueryFor(null, Math.Max(this.PageSize, this.loadedCount)));
+        Dictionary<long, FeedItem> current = page.ToDictionary(static item => item.Id);
+        bool changed = this.known.Any(entry => current.TryGetValue(entry.Key, out FeedItem? now) && entry.Value != (now.ResolvedAt is not null));
+        if (changed)
+        {
+            this.Load(Math.Max(this.PageSize, this.loadedCount));
+        }
+        else
+        {
+            this.counts = this.Store.Counts(this.teammate, this.team);
+        }
+
+        this.StateHasChanged();
+    }
+
+    private void OnCatalogChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+}

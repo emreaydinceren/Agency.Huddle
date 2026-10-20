@@ -63,6 +63,7 @@ internal static class TabKeys
             ["settings", ..] => new("settings", "Settings", "settings"),
             ["library", ..] => new("library", "Library", "library"),
             ["needs-you"] => new("needs-you", "Needs you", "needs-you"),
+            ["feed"] => new("feed", "Feed", "feed"),
             _ => new(path, segments[^1], "page"),
         };
     }
