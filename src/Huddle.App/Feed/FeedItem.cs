@@ -11,7 +11,7 @@ namespace Agency.Huddle.App.Feed;
 /// <param name="DismissedAt">When it was dismissed (Notifications only).</param>
 /// <param name="ResolvedAt">When its condition ended (Notifications only).</param>
 /// <param name="Payload">What it says, or <see langword="null"/> when the row is unreadable ("Something happened").</param>
-internal sealed record FeedItem(
+public sealed record FeedItem(
     long Id,
     DateTimeOffset At,
     FeedSourceType? SourceType,

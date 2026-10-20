@@ -1,0 +1,263 @@
+@*
+    One row of the Feed (Feed spec 6.12): a single item, or a group of neighbouring items drawn as one line. A three-column grid: the
+    actor's avatar, the body (the summary line with its reference chips, then a Notification's status line), and the right-aligned age.
+    The Right sidebar panel draws these rows, and so does the Feed Tab's list. Every word comes from FeedSummary, so the copy of spec 7
+    is not repeated here. The row never shows Message text.
+*@
+@using Agency.Huddle.App.Feed
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Tabs
+@inject TimeProvider Clock
+@inject TabService Tabs
+@inject NavigationManager Navigation
+@inject ITaskReferenceResolver TaskReferences
+@inject LibraryPathResolver LibraryResolver
+
+@if (this.expanded)
+{
+    <div class="feed-row-members">
+        @foreach (FeedItem member in this.Group.Items)
+        {
+            <FeedItemRow @key="member.Id" Group="new FeedGroup([member])" OnDismiss="this.OnDismiss" OnTeammate="this.OnTeammate" />
+        }
+    </div>
+}
+else
+{
+    <div class="@this.RowClass" @onclick="this.OpenTarget">
+        <div class="feed-row-avatar">
+            @this.AvatarContent
+        </div>
+        <div class="feed-row-body">
+            <div class="feed-row-summary feed-clamp-3">
+                @if (this.RoomWaitSentence is { } sentence)
+                {
+                    <button type="button" class="feed-row-more" @onclick="this.Expand" @onclick:stopPropagation="true">@sentence</button>
+                }
+                else
+                {
+                    @if (!this.Line.OmitActor)
+                    {
+                        <span class="feed-row-actor">@this.ActorName</span>
+                        @(" ")
+                    }
+
+                    @foreach (FeedSegment segment in this.Line.Segments)
+                    {
+                        @this.SegmentContent(segment)
+                    }
+
+                    @if (this.Line.Context is { Length: > 0 } context)
+                    {
+                        <span class="feed-row-context">@(" · " + context)</span>
+                    }
+
+                    @if (this.Group.More > 0)
+                    {
+                        @(" ")
+                        <button type="button" class="feed-row-more" @onclick="this.Expand" @onclick:stopPropagation="true">@($"and {this.Group.More} more {FeedSummary.NounOf(this.Group.Lead.SourceType)}")</button>
+                    }
+                }
+            </div>
+            @if (this.Status is { } status)
+            {
+                <div class="feed-row-status">
+                    @if (this.Group.AnyUnresolved)
+                    {
+                        <span class="feed-dot" aria-hidden="true"></span>
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="feed-check" aria-hidden="true" />
+                    }
+                    <span class="feed-row-status-text">@status.Text</span>
+                </div>
+            }
+        </div>
+        <span class="@this.TimeClass" title="@this.FullTime">
+            @if (this.Group.AnyUnresolved)
+            {
+                <span class="feed-time-dot" aria-hidden="true"></span>
+            }
+            @FeedTime.Age(this.Clock.GetUtcNow(), this.Group.Lead.At)
+        </span>
+        @if (this.CanDismiss)
+        {
+            <span @onclick:stopPropagation="true">
+                <MudTooltip Text="Dismiss" Class="hover-reveal-menu">
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Dismiss"
+                                   Class="hover-reveal-menu-button feed-row-dismiss"
+                                   OnClick="this.DismissAsync" />
+                </MudTooltip>
+            </span>
+        }
+    </div>
+}
+
+@code {
+    private bool expanded;
+
+    /// <summary>The item, or the neighbouring items, this row draws. The first item leads the line.</summary>
+    [Parameter, EditorRequired]
+    public required FeedGroup Group { get; set; }
+
+    /// <summary>
+    /// Called with each Notification of the row when its hover x is pressed. When it is not set there is no x, which is how the Feed
+    /// Tab (a read-only history) draws these rows.
+    /// </summary>
+    [Parameter]
+    public EventCallback<FeedItem> OnDismiss { get; set; }
+
+    /// <summary>Called with a Teammate's Name when the avatar is clicked. Huddle and the Human have no such click.</summary>
+    [Parameter]
+    public EventCallback<string> OnTeammate { get; set; }
+
+    private FeedSummaryLine Line => FeedSummary.Of(this.Group.Lead);
+
+    private FeedStatusLine? Status => FeedSummary.StatusOf(this.Group.Lead, this.Clock.LocalTimeZone);
+
+    private bool IsNotification => this.Group.Lead.Notify;
+
+    private bool CanDismiss => this.IsNotification && this.OnDismiss.HasDelegate;
+
+    private string ActorName => this.Group.Lead.Actor.Kind == FeedActorKind.Human ? "You" : this.Group.Lead.Actor.Name;
+
+    private string RowClass =>
+        "feed-row hover-reveal-row"
+        + (this.IsNotification && !this.Group.AnyUnresolved ? " feed-row-resolved" : string.Empty)
+        + (this.CanDismiss ? " feed-row-dismissable" : string.Empty);
+
+    private string TimeClass => this.Group.AnyUnresolved ? "feed-row-time feed-row-unresolved" : "feed-row-time";
+
+    private string FullTime
+    {
+        get
+        {
+            DateTimeOffset local = TimeZoneInfo.ConvertTime(this.Group.Lead.At, this.Clock.LocalTimeZone);
+            return HumanDate.Full(DateOnly.FromDateTime(local.DateTime)) + " " + local.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+        }
+    }
+
+    /// <summary>"In Growth, 3 Rooms stopped to wait for you" for a group of Room waits in one Team, or <see langword="null"/> for any other row.</summary>
+    private string? RoomWaitSentence =>
+        this.Group.More > 0 && this.Group.Lead.Payload is RoomWaitPayload { Team: { Length: > 0 } team }
+            ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"In {team}, {this.Group.Items.Count} Rooms stopped to wait for you")
+            : null;
+
+    private RenderFragment AvatarContent => builder =>
+    {
+        FeedActor actor = this.Group.Lead.Actor;
+        switch (actor.Kind)
+        {
+            case FeedActorKind.Agent when this.OnTeammate.HasDelegate:
+                builder.OpenElement(0, "button");
+                builder.AddAttribute(1, "type", "button");
+                builder.AddAttribute(2, "class", "feed-row-avatar-button");
+                builder.AddAttribute(3, "aria-label", actor.Name);
+                builder.AddAttribute(4, "onclick", EventCallback.Factory.Create<MouseEventArgs>(this, this.TeammateClickedAsync));
+                builder.AddEventStopPropagationAttribute(5, "onclick", true);
+                builder.OpenComponent<TeammateAvatar>(6);
+                builder.AddComponentParameter(7, nameof(TeammateAvatar.Name), actor.Name);
+                builder.AddComponentParameter(8, nameof(TeammateAvatar.Size), Size.Small);
+                builder.CloseComponent();
+                builder.CloseElement();
+                break;
+            case FeedActorKind.Agent:
+            case FeedActorKind.Human:
+                builder.OpenComponent<TeammateAvatar>(0);
+                builder.AddComponentParameter(1, nameof(TeammateAvatar.Name), this.ActorName);
+                builder.AddComponentParameter(2, nameof(TeammateAvatar.Size), Size.Small);
+                builder.CloseComponent();
+                break;
+            default:
+                builder.OpenElement(0, "span");
+                builder.AddAttribute(1, "class", "feed-row-mark");
+                builder.AddAttribute(2, "aria-hidden", "true");
+                builder.OpenComponent<MudIcon>(3);
+                builder.AddComponentParameter(4, nameof(MudIcon.Icon), actor.Kind == FeedActorKind.Huddle ? Icons.Material.Filled.ToggleOn : Icons.Material.Filled.EditNote);
+                builder.AddComponentParameter(5, nameof(MudIcon.Size), Size.Small);
+                builder.CloseComponent();
+                builder.CloseElement();
+                break;
+        }
+    };
+
+    private RenderFragment SegmentContent(FeedSegment segment) => segment.Kind switch
+    {
+        FeedSegmentKind.Strong => @<strong>@segment.Text</strong>,
+        FeedSegmentKind.Task => this.TaskChip(segment),
+        FeedSegmentKind.Room => this.LinkChip("feed-chip-room", "/rooms/" + segment.TargetId, segment.Text, Icons.Material.Filled.ChatBubbleOutline),
+        FeedSegmentKind.Document => this.DocumentChip(segment),
+        _ => @<text>@segment.Text</text>,
+    };
+
+    private RenderFragment TaskChip(FeedSegment segment) => @<span @onclick:stopPropagation="true">
+        <NavTabLink Href="@("/tasks/item/" + segment.TargetId)" TabTitle="@segment.TargetId" Match="NavLinkMatch.All" Class="feed-chip feed-chip-task" title="@segment.Tooltip">
+            @if (this.TaskStateOf(segment.TargetId) is { } state)
+            {
+                <TaskStateDot State="state" />
+                @(" ")
+            }
+            <span class="feed-chip-id">#@segment.TargetId</span>
+            @(" ")
+            <span class="feed-chip-title">@segment.Text</span>
+        </NavTabLink>
+    </span>;
+
+    private RenderFragment DocumentChip(FeedSegment segment)
+    {
+        string? href = this.DocumentAddress(segment.TargetId);
+        return href is null
+            ? @<span class="feed-chip feed-chip-document"><MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" /><span class="feed-chip-path">@segment.Text</span></span>
+            : this.LinkChip("feed-chip-document", href, segment.Text, Icons.Material.Filled.Description, mono: true);
+    }
+
+    private RenderFragment LinkChip(string cssClass, string href, string label, string icon, bool mono = false) => @<span @onclick:stopPropagation="true">
+        <NavTabLink Href="@href" TabTitle="@label" Match="NavLinkMatch.All" Class="@("feed-chip " + cssClass)">
+            <MudIcon Icon="@icon" Size="Size.Small" />
+            <span class="@(mono ? "feed-chip-path" : "feed-chip-label")">@label</span>
+        </NavTabLink>
+    </span>;
+
+    private TaskState? TaskStateOf(string? id) =>
+        TaskId.TryParse(id, out TaskId taskId) ? this.TaskReferences.Resolve(taskId)?.Status : null;
+
+    private string? DocumentAddress(string? absolutePath) =>
+        absolutePath is not null && this.LibraryResolver.TryResolveAbsolute(absolutePath, out LibraryPath? path)
+            ? LibraryLinkQuery.BuildPageUri(path)
+            : null;
+
+    /// <summary>The address the row opens: the first reference chip of the lead's line, or <see langword="null"/> when it has none.</summary>
+    private string? TargetAddress()
+    {
+        FeedSegment? reference = this.Line.Segments.FirstOrDefault(static segment => segment.Kind is FeedSegmentKind.Task or FeedSegmentKind.Room or FeedSegmentKind.Document);
+        return reference?.Kind switch
+        {
+            FeedSegmentKind.Task => "/tasks/item/" + reference.TargetId,
+            FeedSegmentKind.Room => "/rooms/" + reference.TargetId,
+            FeedSegmentKind.Document => this.DocumentAddress(reference.TargetId),
+            _ => null,
+        };
+    }
+
+    private void OpenTarget()
+    {
+        if (this.TargetAddress() is { } address)
+        {
+            this.Tabs.Open(address);
+            this.Navigation.NavigateTo(address);
+        }
+    }
+
+    private void Expand() => this.expanded = true;
+
+    private Task TeammateClickedAsync() => this.OnTeammate.InvokeAsync(this.Group.Lead.Actor.Name);
+
+    private async Task DismissAsync()
+    {
+        foreach (FeedItem item in this.Group.Items.Where(static item => item.Notify))
+        {
+            await this.OnDismiss.InvokeAsync(item);
+        }
+    }
+}

@@ -409,6 +409,32 @@ window.teamScroll = {
     },
 };
 
+// The Feed list's scroll awareness (Feed spec 6.12, D-22): the list is not the scroller itself, so both calls act on the
+// nearest scrollable ancestor (the panel body or the page). Unavailable scrolling reads as "at the top".
+window.huddleFeed = {
+    scroller(el) {
+        for (let node = el; node; node = node.parentElement) {
+            const overflow = getComputedStyle(node).overflowY;
+            if ((overflow === "auto" || overflow === "scroll") && node.scrollHeight > node.clientHeight) {
+                return node;
+            }
+        }
+
+        return document.scrollingElement;
+    },
+    // True when the list is scrolled down by more than 4 px.
+    isScrolled(el) {
+        const scroller = window.huddleFeed.scroller(el);
+        return !!scroller && scroller.scrollTop > 4;
+    },
+    scrollToTop(el) {
+        const scroller = window.huddleFeed.scroller(el);
+        if (scroller) {
+            scroller.scrollTop = 0;
+        }
+    },
+};
+
 // Remembers which Right sidebar panels a viewer collapsed (Right sidebar spec D-8). A per-viewer
 // convenience: storage can be missing or throw, so every access is guarded and a failure reads as
 // "expanded".

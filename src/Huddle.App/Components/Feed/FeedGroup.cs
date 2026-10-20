@@ -4,7 +4,7 @@ namespace Agency.Huddle.App.Components.Feed;
 
 /// <summary>Neighbouring Feed items drawn as one line (Feed spec §6.12): the first item leads, the rest are "N more".</summary>
 /// <param name="Items">The items, newest first. Never empty.</param>
-internal sealed record FeedGroup(IReadOnlyList<FeedItem> Items)
+public sealed record FeedGroup(IReadOnlyList<FeedItem> Items)
 {
     /// <summary>The item whose summary the line shows.</summary>
     public FeedItem Lead => this.Items[0];

@@ -1,0 +1,143 @@
+@*
+    The rows of the Feed under their day headings (Feed spec 6.12): the Human's local days, grouping run inside each day, one
+    FeedItemRow per group, and the "New items" pill of D-22. It only draws what it is given: the parent owns the data source, any
+    "Show more" paging, and tells the list about arrivals through AddNewItemsAsync. The Right sidebar panel and the Feed Tab both use it.
+*@
+@using Agency.Huddle.App.Feed
+@inject TimeProvider Clock
+@inject IJSRuntime Js
+
+<div class="feed-list" @ref="this.root">
+    @if (this.pending.Count > 0)
+    {
+        <button type="button" class="feed-new-pill" @onclick="this.ShowPendingAsync">@this.PillText</button>
+    }
+
+    @foreach (Day day in this.days)
+    {
+        <div class="feed-day" @key="day.Key">
+            <div class="feed-day-heading">
+                <span class="feed-day-word">@day.Heading.Word</span>
+                @if (day.Heading.Date is { } date)
+                {
+                    <span class="feed-day-date">@date</span>
+                }
+                <span class="feed-day-rule" aria-hidden="true"></span>
+            </div>
+            @foreach (FeedGroup group in day.Groups)
+            {
+                <FeedItemRow @key="group.Lead.Id" Group="group" OnDismiss="this.OnDismiss" OnTeammate="this.OnTeammate" />
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private readonly List<FeedItem> inserted = [];
+    private readonly List<FeedItem> pending = [];
+    private ElementReference root;
+    private IReadOnlyList<Day> days = [];
+
+    /// <summary>The items to draw, newest first.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<FeedItem> Items { get; set; } = [];
+
+    /// <summary>Passed to every row: called with a Notification when its x is pressed. When it is not set the rows have no x.</summary>
+    [Parameter]
+    public EventCallback<FeedItem> OnDismiss { get; set; }
+
+    /// <summary>Passed to every row: called with a Teammate's Name when its avatar is clicked.</summary>
+    [Parameter]
+    public EventCallback<string> OnTeammate { get; set; }
+
+    private string PillText => this.pending.Count == 1 ? "↑ 1 new item" : $"↑ {this.pending.Count} new items";
+
+    /// <inheritdoc />
+    protected override void OnParametersSet() => this.Rebuild();
+
+    /// <summary>
+    /// Takes items that arrived after the list was drawn. A list scrolled to its top draws them at once; otherwise they wait behind
+    /// the "↑ N new items" pill, so the rows the Human is reading do not move.
+    /// </summary>
+    /// <param name="items">The new items, newest first. Items the list already has are ignored.</param>
+    /// <param name="cancellationToken">Cancels the scroll check.</param>
+    /// <returns>A task that completes once the items are drawn or parked.</returns>
+    public async Task AddNewItemsAsync(IReadOnlyList<FeedItem> items, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        List<FeedItem> fresh = [.. items.Where(item => !this.Knows(item.Id))];
+        if (fresh.Count == 0)
+        {
+            return;
+        }
+
+        if (this.pending.Count > 0 || await this.IsScrolledAsync(cancellationToken))
+        {
+            this.pending.AddRange(fresh);
+        }
+        else
+        {
+            this.inserted.AddRange(fresh);
+        }
+
+        this.Rebuild();
+        this.StateHasChanged();
+    }
+
+    private bool Knows(long id) =>
+        this.Items.Any(item => item.Id == id) || this.inserted.Any(item => item.Id == id) || this.pending.Any(item => item.Id == id);
+
+    private async Task ShowPendingAsync()
+    {
+        this.inserted.AddRange(this.pending);
+        this.pending.Clear();
+        this.Rebuild();
+        await this.ScrollToTopAsync();
+    }
+
+    /// <summary>Whether the list's scroller is scrolled down. A scroller that cannot be asked reads as at the top, so items still arrive.</summary>
+    private async Task<bool> IsScrolledAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await this.Js.InvokeAsync<bool>("huddleFeed.isScrolled", cancellationToken, this.root);
+        }
+        catch (JSDisconnectedException)
+        {
+            return false;
+        }
+    }
+
+    private async Task ScrollToTopAsync()
+    {
+        try
+        {
+            await this.Js.InvokeVoidAsync("huddleFeed.scrollToTop", this.root);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone, so there is nothing left to scroll.
+        }
+    }
+
+    /// <summary>Items drawn at once come first, newest first, minus any the parent has since loaded itself.</summary>
+    private void Rebuild()
+    {
+        HashSet<long> loaded = [.. this.Items.Select(static item => item.Id)];
+        this.inserted.RemoveAll(item => loaded.Contains(item.Id));
+        IEnumerable<FeedItem> ordered = this.inserted.OrderByDescending(static item => item.At).ThenByDescending(static item => item.Id);
+        List<FeedItem> all = [.. ordered, .. this.Items];
+
+        TimeZoneInfo zone = this.Clock.LocalTimeZone;
+        DateTimeOffset now = this.Clock.GetUtcNow();
+        this.days =
+        [
+            .. all
+                .GroupBy(item => FeedTime.DayOf(item.At, zone))
+                .Select(day => new Day(day.Key, FeedTime.DayHeading(now, day.First().At, zone), FeedGrouping.Group([.. day], zone))),
+        ];
+    }
+
+    private sealed record Day(DateOnly Key, FeedDayHeading Heading, IReadOnlyList<FeedGroup> Groups);
+}

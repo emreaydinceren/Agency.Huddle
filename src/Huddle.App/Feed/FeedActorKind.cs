@@ -1,7 +1,7 @@
 namespace Agency.Huddle.App.Feed;
 
 /// <summary>Who did a Feed item's deed: a Human, a Teammate Agent, Huddle itself, or an edit made outside Huddle.</summary>
-internal enum FeedActorKind
+public enum FeedActorKind
 {
     /// <summary>The Human.</summary>
     Human,

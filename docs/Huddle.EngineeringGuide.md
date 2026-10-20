@@ -301,6 +301,14 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `DocHistory:MaxEntries` | `500` | Entries kept per document; the oldest are dropped on the next append. |
 | `DocHistory:MaxSummaryLength` | `200` | The longest summary `log_change` accepts. |
 | `DocHistory:HumanSaveGroupWindow` | `00:05:00` | How close consecutive Human saves must be to share one row in the panel and the History. |
+| `Feed:Enabled` | `true` | Whether the Feed runs at all ([Feed spec](Huddle.Feed-Specifications.md) §6.11). `false` registers a publisher that does nothing, starts no writer and draws neither the Notifications button nor the Feed link. The `feed_events` rows stay where they are. |
+| `Feed:DismissedRetentionDays` | `30` | A dismissed Notification is deleted this many days after its dismissal. Zero or less keeps them forever. |
+| `Feed:ActivityRetentionDays` | `30` | An Activity item is deleted this many days after it was created. Zero or less keeps them forever. |
+| `Feed:CleanupInterval` | `01:00:00` | How often the clean-up of expired rows runs. |
+| `Feed:QueueCapacity` | `10000` | Commands waiting for the writer; beyond it new ones are dropped and logged. |
+| `Feed:BatchSize` | `200` | The most commands one writer transaction applies. |
+| `Feed:PageSize` | `50` | Items per Feed Tab page. |
+| `Feed:PanelLimit` | `50` | The most items the Notifications panel loads before "Show more". |
 | `FileChanges:MaxMemoryEntries` | `100` | The most Memory lines shown in a new session's system prompt; the rest are counted rather than listed. |
 | `Tasks:Enabled` | `true` | `false` hides the UI, offers no tools and wakes no one. The Task files stay where they are. |
 | `Team:Teams:Dir` | `Teams` | Team folders, relative to `DataDir`. Shared with Tasks, and replaces `Tasks:Dir`. Must not overlap `Team:Acp:TeammatesDir`; start-up refuses it otherwise (`LayoutGuard`). |

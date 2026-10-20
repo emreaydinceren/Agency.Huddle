@@ -4,7 +4,7 @@ namespace Agency.Huddle.App.Feed;
 /// What kind of thing a Feed item reports. The <c>source_type</c> column holds the wire name from
 /// <see cref="FeedSourceTypes.ToWire"/>, never the number, so reordering this enum cannot rewrite history.
 /// </summary>
-internal enum FeedSourceType
+public enum FeedSourceType
 {
     /// <summary>A Task was created.</summary>
     TaskCreated,
