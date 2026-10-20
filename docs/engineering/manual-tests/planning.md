@@ -55,6 +55,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 30 | [Chat uploads: the paperclip, paste and drop, the chips, the Message's path lines, the Uploads root and Room delete](uploads.md) | 8 | 0 | 1.0h |
 | 31 | [Skill Packs: SKILLS.md, the AI tool, updates, the move and shared folders](skill-packs.md) | 7 | 1 | 2.5h |
 | 32 | [Document history: the byline, the History, the Recent edits panel and the Stop hook](doc-history.md) | 8 | 4 | 1.6h |
+| 33 | [Human gate: the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page](human-gate.md) | 9 | — | 1.3h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.

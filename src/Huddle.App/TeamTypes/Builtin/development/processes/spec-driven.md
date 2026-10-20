@@ -43,6 +43,12 @@ checkCommand: 'dotnet test'
 - `checks-before-merge`: Huddle refuses a merge or push until an Evidence line shows exit code 0 for the Team's check command, `dotnet test`.
 - `spec-approved-before-build`: Huddle refuses to move a build Task to In Progress until its parent spec Task is marked approved by the human.
 
+## Definition of Done
+
+- QA evidence: evidence from verify
+- Tests pass: command `dotnet test` exits 0
+- Spec reviewed: document reviewed by verify
+
 ## Cadence
 
 - Approve specs before the team starts breaking them down, and keep one spec in build at a time.

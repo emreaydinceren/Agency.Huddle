@@ -383,6 +383,7 @@ internal sealed partial class ViewStore : IDisposable
                 continue;
             }
 
+            view = WithNeedsYouColumn(view);
             IReadOnlyList<string> problems = ViewValidator.Validate(view, fileViews);
             if (problems.Count > 0)
             {
@@ -390,7 +391,7 @@ internal sealed partial class ViewStore : IDisposable
                 continue;
             }
 
-            fileViews.Add(view);
+            fileViews.Add(WithNeedsYou(view));
         }
 
         List<TaskView> views = [BuiltInOrOverride(fileViews, AllTasksId, DefaultAllTasks), BuiltInOrOverride(fileViews, MyTasksId, DefaultMyTasks)];
@@ -403,6 +404,50 @@ internal sealed partial class ViewStore : IDisposable
         }
 
         return new Snapshot(views, invalidViews, null);
+    }
+
+    /// <summary>
+    /// A Board View with no Needs You column gains one, in memory only (Human gate Spec §6.2): right after the column
+    /// that holds Review, else right before the column that holds Done, else at the end. Run before validation, because
+    /// the validator requires a Board's columns to cover every state. Any other View is returned as it is.
+    /// </summary>
+    /// <param name="view">The View as read from the file.</param>
+    private static TaskView WithNeedsYouColumn(TaskView view)
+    {
+        if (view.Kind != ViewKind.Kanban || view.Columns.Any(column => column.States.Contains(TaskState.NeedsYou)))
+        {
+            return view;
+        }
+
+        int index = view.Columns.ToList().FindIndex(column => column.States.Contains(TaskState.Review)) + 1;
+        if (index == 0)
+        {
+            index = view.Columns.ToList().FindIndex(column => column.States.Contains(TaskState.Done));
+            if (index < 0)
+            {
+                index = view.Columns.Count;
+            }
+        }
+
+        List<BoardColumn> columns = [.. view.Columns];
+        columns.Insert(index, new BoardColumn("Needs You", [TaskState.NeedsYou]));
+        return view with { Columns = columns };
+    }
+
+    /// <summary>
+    /// A View whose state filter has Review and not Needs You gains Needs You, in memory only: nothing is written
+    /// back (Human gate Spec §6.2). Any other View is returned as it is.
+    /// </summary>
+    /// <param name="view">The View as read from the file.</param>
+    private static TaskView WithNeedsYou(TaskView view)
+    {
+        IReadOnlyList<TaskState> states = view.Filter.States;
+        if (!states.Contains(TaskState.Review) || states.Contains(TaskState.NeedsYou))
+        {
+            return view;
+        }
+
+        return view with { Filter = view.Filter with { States = [.. states, TaskState.NeedsYou] } };
     }
 
     /// <summary>The file's own entry for <paramref name="id"/>, marked <see cref="TaskView.BuiltIn"/>, or <paramref name="defaultFactory"/>'s result when the file carries none.</summary>

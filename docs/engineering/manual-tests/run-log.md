@@ -5501,6 +5501,80 @@ File: [`docs/engineering/manual-tests/doc-history.md`](doc-history.md#dochistory
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+## Human gate: the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page
+
+### HUMANGATE-01 — Requires your acceptance: only the Human can mark the Task Done (U-1)
+
+File: [`docs/engineering/manual-tests/human-gate.md`](human-gate.md#humangate-01--requires-your-acceptance-only-the-human-can-mark-the-task-done-u-1)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-10-19 | Pass | 7b46143c |  | Paid run, Research Team on Haiku (RESE-0001): early move to Needs You refused at 0/4, allowed at 4/4; Accept took it to Done, logged by the Human. Proof list appeared only after a reload right after turning the gate on (bugs/hg-01-1). |
+
+### HUMANGATE-02 — An Action locks the gate on, and Accept wakes the assignee (U-2)
+
+File: [`docs/engineering/manual-tests/human-gate.md`](human-gate.md#humangate-02--an-action-locks-the-gate-on-and-accept-wakes-the-assignee-u-2)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-10-19 | Pass | 7b46143c |  | Placeholder, locked switch and its aria-label match; after Accept the card read "Accepted by You. Ethan can now send the reply to Acme." and the Task stayed in Needs You; Ethan then moved it to Done. |
+
+### HUMANGATE-03 — Proof 3/4: Accept is locked, Request changes works, Ask posts a Mention (U-3)
+
+File: [`docs/engineering/manual-tests/human-gate.md`](human-gate.md#humangate-03--proof-34-accept-is-locked-request-changes-works-ask-posts-a-mention-u-3)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-10-19 | Pass | 7b46143c |  | Ran with Sources checked (owner Claire) as the open item instead of the checklist detail: "Proof 3/4 — Sources checked still open (Claire)." Accept disabled; Ask and Request changes as written. |
+
+### HUMANGATE-04 — An Agent cannot mark a gated Task Done (U-4)
+
+File: [`docs/engineering/manual-tests/human-gate.md`](human-gate.md#humangate-04--an-agent-cannot-mark-a-gated-task-done-u-4)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-10-19 | Pass | 7b46143c |  | The Agent's move to Done was refused with the H-4 text; the Task stayed in Review. Copy reads "needs You's acceptance" when the Human has no name (bugs/hg-04-1). |
+
+### HUMANGATE-05 — Dragging a gated card to Done on the board (U-5)
+
+File: [`docs/engineering/manual-tests/human-gate.md`](human-gate.md#humangate-05--dragging-a-gated-card-to-done-on-the-board-u-5)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-10-19 | Pass | 7b46143c |  | Real drag: from Review "RESE-0008 goes to Needs you first (Proof 3/4)."; from Needs You "Your decision on RESE-0009", Cancel kept the card, Accept moved it to Done. |
+
+### HUMANGATE-06 — Editing the Task after Accept takes the acceptance away (U-6)
+
+File: [`docs/engineering/manual-tests/human-gate.md`](human-gate.md#humangate-06--editing-the-task-after-accept-takes-the-acceptance-away-u-6)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-10-19 | Pass | 7b46143c |  | Chip "Accepted"; after the description edit "Changed since you accepted it." and the Task listed again "Waiting on you · Proof 4/4". The brief absent-from-the-list state was not observed. |
+
+### HUMANGATE-07 — Decline closes the Task with its reason (U-7)
+
+File: [`docs/engineering/manual-tests/human-gate.md`](human-gate.md#humangate-07--decline-closes-the-task-with-its-reason-u-7)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-10-19 | Pass | 7b46143c |  | Decline disabled with an empty Reason; "Wrong customer" closed it as Rejected, logged "declined: Wrong customer", and woke Ethan with the reason. |
+
+### HUMANGATE-08 — An outside edit that removes the Action is put back (U-8)
+
+File: [`docs/engineering/manual-tests/human-gate.md`](human-gate.md#humangate-08--an-outside-edit-that-removes-the-action-is-put-back-u-8)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-10-19 | Pass | 7b46143c |  | The action: line was restored within 4 s and the panel kept the Action; the log text says "Only You can turn off the Human gate…" (spec shares H-1's text; bugs/hg-08-1). |
+
+### HUMANGATE-09 — Restart keeps every waiting Task on the Needs You page (U-9)
+
+File: [`docs/engineering/manual-tests/human-gate.md`](human-gate.md#humangate-09--restart-keeps-every-waiting-task-on-the-needs-you-page-u-9)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-10-19 | Pass | 7b46143c |  | The same three Tasks listed before and after a restart; page and Tab title "Needs you". Empty state not exercised. |
+
 ---
 
 Back to [the manual test script](../manual-tests.md).

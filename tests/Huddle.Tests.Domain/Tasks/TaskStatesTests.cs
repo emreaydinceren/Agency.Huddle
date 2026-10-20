@@ -106,6 +106,7 @@ public sealed class TaskStatesTests
             TaskState.ToDo,
             TaskState.InProgress,
             TaskState.Review,
+            TaskState.NeedsYou,
             TaskState.Done,
             TaskState.Cancelled,
             TaskState.Duplicate,
@@ -154,5 +155,42 @@ public sealed class TaskPrioritiesTests
         bool parsed = TaskPriorities.TryParse(caseVariant, out TaskPriority result);
         Assert.True(parsed);
         Assert.Equal(TaskPriority.Low, result);
+    }
+
+    /// <summary>Needs You sits at index 4: between Review and Done (Human gate Spec §6.2).</summary>
+    [Fact]
+    public void All_PutsNeedsYouBetweenReviewAndDone()
+    {
+        Assert.Equal(TaskState.Review, TaskStates.All[3]);
+        Assert.Equal(TaskState.NeedsYou, TaskStates.All[4]);
+        Assert.Equal(TaskState.Done, TaskStates.All[5]);
+    }
+
+    /// <summary>The wire name of Needs You has a space and a capital Y.</summary>
+    [Fact]
+    public void ToWire_NeedsYou_IsNeedsYouWithCapitalY()
+    {
+        Assert.Equal("Needs You", TaskState.NeedsYou.ToWire());
+    }
+
+    /// <summary>The wire name, snake_case and the enum identifier all parse to Needs You.</summary>
+    [Theory]
+    [InlineData("Needs You")]
+    [InlineData("needs_you")]
+    [InlineData("NeedsYou")]
+    public void TryParse_NeedsYouSpellings_Parse(string spelling)
+    {
+        bool parsed = TaskStates.TryParse(spelling, out TaskState state);
+
+        Assert.True(parsed);
+        Assert.Equal(TaskState.NeedsYou, state);
+    }
+
+    /// <summary>Needs You is not terminal and not in the Won't do family.</summary>
+    [Fact]
+    public void NeedsYou_IsNeitherTerminalNorWontDo()
+    {
+        Assert.False(TaskState.NeedsYou.IsTerminal());
+        Assert.False(TaskState.NeedsYou.IsWontDo());
     }
 }

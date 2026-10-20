@@ -35,6 +35,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The Chief of Household's Evidence line is the check, and the Human closes each Task.
 
+## Definition of Done
+
+- Details checked: evidence from verify
+- Form reviewed: document reviewed by verify
+
 ## Cadence
 
 - Work the open Tasks nearest deadline first, and keep the number in progress small.

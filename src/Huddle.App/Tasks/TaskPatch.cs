@@ -43,6 +43,12 @@ internal sealed record TaskPatch
     /// <summary>The Task's new Sprint. <see cref="Optional{T}.Set(T)"/> with <see langword="null"/> clears it.</summary>
     public Optional<SprintId?> Sprint { get; init; }
 
+    /// <summary>The Task's new Human gate flag. <see cref="Optional{T}.Set(T)"/> with <see langword="false"/> clears it.</summary>
+    public Optional<bool> HumanGate { get; init; }
+
+    /// <summary>The Task's new action line. <see cref="Optional{T}.Set(T)"/> with <see langword="null"/> clears it.</summary>
+    public Optional<string?> Action { get; init; }
+
     /// <summary>The Task's new description, or <see langword="null"/> to leave it unchanged.</summary>
     public string? Description { get; init; }
 
@@ -69,7 +75,7 @@ internal sealed record TaskPatch
         this.Title is null && this.Status is null && this.Priority is null &&
         !this.Assignee.IsSet && !this.Parent.IsSet && this.BlockedBy is null &&
         !this.DuplicateOf.IsSet && this.Tags is null && !this.StartDate.IsSet &&
-        !this.DueDate.IsSet && !this.Sprint.IsSet && this.Description is null && this.Team is null &&
+        !this.DueDate.IsSet && !this.Sprint.IsSet && !this.HumanGate.IsSet && !this.Action.IsSet && this.Description is null && this.Team is null &&
         !this.Project.IsSet && this.Reason is null && !this.ApprovedBy.IsSet && this.ExtraFields is null;
 
     /// <summary>
@@ -149,6 +155,16 @@ internal sealed record TaskPatch
             fields.Add(TaskField.Sprint);
         }
 
+        if (this.HumanGate.IsSet)
+        {
+            fields.Add(TaskField.HumanGate);
+        }
+
+        if (this.Action.IsSet)
+        {
+            fields.Add(TaskField.Action);
+        }
+
         if (this.Description is not null)
         {
             fields.Add(TaskField.Description);
@@ -191,6 +207,8 @@ internal sealed record TaskPatch
             StartDate = this.StartDate.IsSet ? this.StartDate.Value : current.StartDate,
             DueDate = this.DueDate.IsSet ? this.DueDate.Value : current.DueDate,
             Sprint = this.Sprint.IsSet ? this.Sprint.Value : current.Sprint,
+            HumanGate = this.HumanGate.IsSet ? this.HumanGate.Value : current.HumanGate,
+            Action = this.Action.IsSet ? this.Action.Value : current.Action,
             Description = this.Description ?? current.Description,
             Location = current.Location with { Team = team, Project = project },
             UnknownFields = unknownFields,

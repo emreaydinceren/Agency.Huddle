@@ -53,3 +53,7 @@ MembershipResult
 TeamPageTab
 TeamPageFeatures
 SprintId
+AcceptanceState
+Proof
+ProofItem
+TaskDecision

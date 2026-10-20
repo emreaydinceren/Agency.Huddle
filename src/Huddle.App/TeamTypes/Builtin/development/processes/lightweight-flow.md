@@ -40,6 +40,11 @@ checkCommand: 'dotnet test'
 - `qa-evidence-before-done`: Huddle refuses to move a Task to Done until a member whose role covers verify posts an Evidence line.
 - `checks-before-merge`: Huddle refuses a merge or push until an Evidence line shows exit code 0 for the Team's check command, `dotnet test`.
 
+## Definition of Done
+
+- QA evidence: evidence from verify
+- Tests pass: command `dotnet test` exits 0
+
 ## Cadence
 
 - Work the Team's open Tasks in the order the manager sets, and keep the number in progress small.

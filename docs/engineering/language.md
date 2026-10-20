@@ -180,14 +180,41 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 **Gate**
 : A rule in a Team's **Process** that refuses one change until a condition is met,
   such as a Task moving to Done. Only the Human can override one, and the override is
-  recorded on the Task (ADR-0039).
+  recorded on the Task (ADR-0039), except on a **Human-gated** Task, where nothing
+  overrides (ADR-0061).
 : *Avoid*: check, approval, guard.
 
 **Evidence**
 : A line added to a Task that records what was checked, and by whom. Gates read
   Evidence: a Task's move to Done needs it, and a merge needs one whose check command
-  passed.
-: *Avoid*: proof, log, result.
+  passed. One line of Evidence can meet one item of **Proof**.
+: *Avoid*: proof (that is the checklist), log, result.
+
+**Definition of Done**
+: The list in a Team's **Process** of what must be shown before a **Human-gated** Task
+  reaches the Human: one item per bullet under `## Definition of Done`, each met by
+  Evidence, a passing check, a finished sub-Task or an attached document reviewed after
+  its last edit (ADR-0062).
+: *Avoid*: acceptance criteria, checklist (the checklist on a Task is its **Proof**).
+
+**Proof**
+: A Task's **Definition of Done**, evaluated: each item met or open, counted as
+  "Proof 3/4". Locks the move to **Needs You** and the Human's Accept until it is
+  complete. Shown on every Task, enforced only on a Human-gated one.
+: *Avoid*: Evidence (one line), sign-off, verification.
+
+**Human gate**
+: The rule that a Task reaches Done only when the Human accepts it. A Task is
+  **Human-gated** when it names an **Action** or the Human turned on *Requires your
+  acceptance*. The Human decides with **Accept**, **Request changes** or **Decline**;
+  only an acceptance opens Done, and it is void if the text changes (ADR-0061).
+: *Avoid*: approval, sign-off, override, review (Review is a status).
+
+**Action**
+: What a Human-gated Task will do outside the Team once accepted, in one line: "Send
+  reply to Acme", "Merge PR #418". Setting one locks the **Human gate** on. The
+  assignee carries it out after the Human accepts, then moves the Task to Done.
+: *Avoid*: side effect, outcome, operation.
 
 **Request**
 : A Task in a receiving Team's backlog, asking for a bug, feature, feedback or
@@ -544,6 +571,10 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   listed until the Human posts in it or dismisses it. Opening the Room does not
   clear it. In interface copy the card reads "Needs you". See
   [ADR-0050](../adr/0050-needs-you-is-derived-from-room-events-and-held-in-memory.md).
+: Also the Task status between Review and Done that only a **Human-gated** Task can
+  enter, once its **Proof** is complete. A Task in it, not yet accepted, is listed on
+  the card and the `/needs-you` page; it leaves only by a decision or a status change
+  (ADR-0061). The status and the card share the name on purpose.
 : *Avoid*: inbox, notifications, unread, alerts, pending. **Unread** in
   particular is a different idea: Needs You is about who is blocked on the Human,
   not what the Human has read.

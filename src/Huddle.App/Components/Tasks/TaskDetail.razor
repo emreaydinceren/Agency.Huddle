@@ -33,6 +33,7 @@
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Teams
 @using Agency.Huddle.App.Uploads
+@using Agency.Huddle.App.Tasks.HumanGate
 @using Microsoft.AspNetCore.Components.Forms
 @inject TaskStore Store
 @inject IServiceProvider Provider
@@ -56,6 +57,7 @@
 @inject NavigationManager Navigation
 @inject TaskUploadService Uploader
 @inject ILibraryReferenceResolver LibraryResolver
+@inject IProofSource ProofSource
 @implements IDisposable
 
 <div class="task-detail">
@@ -96,7 +98,10 @@ else if (this.loaded is { } task)
     {
         <MudAlert Severity="Severity.Warning" role="alert" Class="task-detail-gate-refusal">
             <span class="task-detail-gate-refusal-text">@refusal.Message</span>
-            <MudButton Size="Size.Medium" Class="task-detail-gate-override" OnClick="this.MoveAnywayAsync">Move anyway</MudButton>
+            @if (this.CanMoveAnyway(refusal))
+            {
+                <MudButton Size="Size.Medium" Class="task-detail-gate-override" OnClick="this.MoveAnywayAsync">Move anyway</MudButton>
+            }
         </MudAlert>
     }
 
@@ -535,6 +540,22 @@ else if (this.loaded is { } task)
         @sideContent
     }
 
+    @if (!this.createMode)
+    {
+        <TaskHumanGate HumanGate="@effective.HumanGate" HumanGateChanged="this.OnHumanGateChanged"
+                       Action="@effective.Action" ActionChanged="this.OnActionChanged"
+                       Assignee="@effective.Assignee" HumanName="@this.Human.Name" />
+        @if (this.proof.Total > 0)
+        {
+            <TaskProofList Task="@task" Proof="@this.proof" HumanName="@this.Human.Name" />
+        }
+
+        @if (task.IsGated && task.Status is TaskState.Review or TaskState.NeedsYou)
+        {
+            <TaskDecisionCard Task="@task" Proof="@this.proof" Blocked="@this.HasPending" OnReload="this.OnDecisionReload" />
+        }
+    }
+
     @* Cancel, then the one filled primary action (Save, always here, never in the alert above). In the Tasks drawer the host draws
        them in the drawer's sticky footer instead (ExternalFooter, audit B4k). The rare actions - Make a copy and Close/Reopen -
        live in the title row's Actions menu, and Expand beside it. *@
@@ -600,6 +621,7 @@ else if (this.loaded is { } task)
     private string? baseVersion;
     private TaskResult.Conflict? conflict;
     private TaskResult.GateRefused? gateRefusal;
+    private Proof proof = Proof.Empty;
     private Dictionary<TaskField, ConflictChoice> conflictChoices = [];
     private string? saveError;
     private IReadOnlyList<string> saveProblems = [];
@@ -879,7 +901,8 @@ else if (this.loaded is { } task)
         item.Sprint);
 
     /// <summary>Re-reads <see cref="Id"/> from <see cref="Store"/>: updates <see cref="loaded"/>, and advances <see cref="baseVersion"/> only while <see cref="pending"/> is empty (corrections-B5 D14 item 6).</summary>
-    private void Refresh()
+    /// <param name="withProof">Whether to recompute the Proof too (a change to this Task or to one of its children).</param>
+    private void Refresh(bool withProof = true)
     {
         if (this.Id is not { } id)
         {
@@ -900,6 +923,46 @@ else if (this.loaded is { } task)
         {
             this.baseVersion = current.Version;
         }
+
+        if (withProof)
+        {
+            this.RefreshProof(current);
+        }
+    }
+
+    /// <summary>Recomputes <see cref="proof"/> for <paramref name="task"/>; a Proof that cannot be read from disk is shown as no Proof.</summary>
+    /// <param name="task">The Task to evaluate.</param>
+    private void RefreshProof(TaskItem task)
+    {
+        try
+        {
+            this.proof = this.ProofSource.For(task);
+        }
+        catch (IOException)
+        {
+            // A Document the Proof reads is locked or missing for a moment; no Proof is shown until the next change.
+            this.proof = Proof.Empty;
+        }
+    }
+
+    /// <summary>Whether Move anyway is offered for <paramref name="refusal"/>: the gate allows an override and the Task is not gated (a gated Task is decided on the card, Spec §6.8).</summary>
+    /// <param name="refusal">The refusal being shown.</param>
+    private bool CanMoveAnyway(TaskResult.GateRefused refusal) => refusal.CanOverride && this.loaded is not { IsGated: true };
+
+    /// <summary>Records the Human gate switch as a pending edit; nothing is saved.</summary>
+    /// <param name="value">The switch's new value.</param>
+    private void OnHumanGateChanged(bool value) => this.SetPending(this.pending with { HumanGate = Optional<bool>.Set(value) });
+
+    /// <summary>Records the Action text as a pending edit; a blank text clears the Action. Nothing is saved.</summary>
+    /// <param name="value">The Action text.</param>
+    private void OnActionChanged(string? value) =>
+        this.SetPending(this.pending with { Action = Optional<string?>.Set(string.IsNullOrWhiteSpace(value) ? null : value) });
+
+    /// <summary>The decision card reported a version conflict: re-read the Task and its Proof (never the panel's own Conflict state, Spec corrections P10 item 9).</summary>
+    private void OnDecisionReload()
+    {
+        this.Refresh();
+        this.StateHasChanged();
     }
 
     /// <summary>Resolves <see cref="loaded"/>'s Origin Room name, or leaves it <see langword="null"/> when there is none or it no longer exists (Spec §13.6).</summary>
@@ -915,18 +978,19 @@ else if (this.loaded is { } task)
         this.originRoomName = room?.Name;
     }
 
-    private void OnTaskChanged(TaskChange change) => this.DispatchRefresh();
+    private void OnTaskChanged(TaskChange change) => this.DispatchRefresh(change.After.Id == this.Id || change.After.Parent == this.Id);
 
-    private void OnTasksReloaded() => this.DispatchRefresh();
+    private void OnTasksReloaded() => this.DispatchRefresh(true);
 
-    private void OnActivityChanged() => this.DispatchRefresh();
+    private void OnActivityChanged() => this.DispatchRefresh(false);
 
     /// <summary>Marshals a requery back onto the render's synchronisation context (the <c>RoomList.razor</c> pattern), tolerating a disposed component.</summary>
-    private void DispatchRefresh()
+    /// <param name="withProof">Whether the change can alter this Task's Proof.</param>
+    private void DispatchRefresh(bool withProof)
     {
         _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
         {
-            this.Refresh();
+            this.Refresh(withProof);
             await this.RefreshOriginRoomAsync();
             this.StateHasChanged();
         });
@@ -1589,6 +1653,8 @@ else if (this.loaded is { } task)
         TaskField.StartDate => patch with { StartDate = default },
         TaskField.DueDate => patch with { DueDate = default },
         TaskField.Description => patch with { Description = null },
+        TaskField.HumanGate => patch with { HumanGate = default },
+        TaskField.Action => patch with { Action = default },
         TaskField.Location => patch with { Team = null, Project = default },
         TaskField.Status => patch with { Status = null, Reason = null, DuplicateOf = default },
         _ => patch,
@@ -1653,7 +1719,7 @@ else if (this.loaded is { } task)
     /// </summary>
     private async Task MoveAnywayAsync()
     {
-        if (this.gateRefusal is not { } refusal)
+        if (this.gateRefusal is not { } refusal || !this.CanMoveAnyway(refusal))
         {
             return;
         }

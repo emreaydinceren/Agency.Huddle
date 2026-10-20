@@ -35,6 +35,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The product manager's Evidence line is the check before a spec is ready, and the Human closes each Task.
 
+## Definition of Done
+
+- Assumptions checked: evidence from verify
+- Spec reviewed: document reviewed by verify
+
 ## Cadence
 
 - Define one problem at a time, and research before you design.

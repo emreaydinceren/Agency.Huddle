@@ -166,7 +166,10 @@ if ($RedTask) {
     # A red recorded on top of stashed work is misleading at review time - the diff the red file's
     # header shows would not be the whole story. Refuse before doing anything else.
     $callerToplevel = (git rev-parse --show-toplevel).Trim()
-    $stashList = @(& git -C $callerToplevel stash list 2>&1)
+    # The stash is shared by every worktree; only an entry made on the caller's own branch can hide
+    # that worktree's work, so entries from other branches (another session's) are ignored.
+    $callerBranch = (git -C $callerToplevel rev-parse --abbrev-ref HEAD).Trim()
+    $stashList = @(& git -C $callerToplevel stash list 2>&1 | Where-Object { $_ -match "^stash@\{\d+\}: (WIP on|On) $([regex]::Escape($callerBranch)):" })
     if (($stashList | Where-Object { $_ -ne '' }).Count -gt 0) {
         Write-Host "RED REFUSED: git stash list is non-empty in $callerToplevel - pop or drop the stash before recording a red baseline."
         foreach ($s in $stashList) {

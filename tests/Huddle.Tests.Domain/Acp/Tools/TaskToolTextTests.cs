@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Tasks;
 
@@ -441,5 +442,67 @@ public sealed class TaskToolTextTests
         Assert.False(ok);
         Assert.Null(result);
         Assert.Equal("Could not save the task: A file named PLAT-0001.md already exists in Platform", refusal);
+    }
+
+    /// <summary>The Tasks help paragraph reached through <c>get_help</c> (Human gate Spec §6.10), as written by default.</summary>
+    private static string HelpParagraph => PromptCatalog.Get("getHelp.tasks").Default;
+
+    /// <summary>The help paragraph says what counts as outward and names the <c>human_gate</c> argument.</summary>
+    [Fact]
+    public void HelpParagraph_NamesOutwardActionsAndTheGate()
+    {
+        string text = HelpParagraph;
+
+        Assert.Contains("outward", text, StringComparison.Ordinal); // contains-ok: a required phrase inside the long help/tool text; the full text is pinned by the prompt golden.
+        Assert.Contains("human_gate", text, StringComparison.Ordinal); // contains-ok: a required phrase inside the long help/tool text; the full text is pinned by the prompt golden.
+    }
+
+    /// <summary>The help paragraph tells a Teammate to set the Action before doing it.</summary>
+    [Fact]
+    public void HelpParagraph_TellsATeammateToSetTheActionBeforeDoingIt()
+    {
+        string text = HelpParagraph;
+
+        Assert.Contains("set the Action before", text, StringComparison.Ordinal); // contains-ok: a required phrase inside the long help/tool text; the full text is pinned by the prompt golden.
+    }
+
+    /// <summary>The help paragraph says that only the Human accepts.</summary>
+    [Fact]
+    public void HelpParagraph_SaysOnlyTheHumanAccepts()
+    {
+        string text = HelpParagraph;
+
+        Assert.Contains("Only the Human can Accept", text, StringComparison.Ordinal); // contains-ok: a required phrase inside the long help/tool text; the full text is pinned by the prompt golden.
+    }
+
+    /// <summary>The help paragraph says the assignee carries out the Action after acceptance and then moves the Task to Done.</summary>
+    [Fact]
+    public void HelpParagraph_SaysDoneComesAfterTheAction()
+    {
+        string text = HelpParagraph;
+
+        Assert.Contains("carries out the Action", text, StringComparison.Ordinal); // contains-ok: a required phrase inside the long help/tool text; the full text is pinned by the prompt golden.
+        Assert.Contains("then moves the Task to Done", text, StringComparison.Ordinal); // contains-ok: a required phrase inside the long help/tool text; the full text is pinned by the prompt golden.
+    }
+
+    /// <summary>The help paragraph names the tools bare and never with the <c>mcp__team__</c> prefix.</summary>
+    [Fact]
+    public void HelpParagraph_NamesToolsBareWithoutThePrefix()
+    {
+        string text = HelpParagraph;
+
+        Assert.Contains("update_task", text, StringComparison.Ordinal); // contains-ok: a required phrase inside the long help/tool text; the full text is pinned by the prompt golden.
+        Assert.DoesNotContain("mcp__team__", text, StringComparison.Ordinal);
+    }
+
+    /// <summary>The help paragraph keeps the vocabulary: Accept, Needs You, Teammate; never "approval" or "sign-off".</summary>
+    [Fact]
+    public void HelpParagraph_UsesTheHouseWords()
+    {
+        string text = HelpParagraph;
+
+        Assert.Contains("Needs You", text, StringComparison.Ordinal); // contains-ok: a required phrase inside the long help/tool text; the full text is pinned by the prompt golden.
+        Assert.DoesNotContain("approval", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sign-off", text, StringComparison.OrdinalIgnoreCase);
     }
 }

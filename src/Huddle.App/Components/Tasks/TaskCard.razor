@@ -20,6 +20,19 @@
         <div class="task-card-header">
             <span class="task-card-id">@this.Task.Id.ToString()</span>
             <TaskPriorityChip Priority="this.Task.Priority" />
+            @if (this.Task.IsGated)
+            {
+                @* Never computes Proof per card render (RK5): only a Needs You card reads its acceptance. *@
+                @if (this.Task.Status == TaskState.NeedsYou)
+                {
+                    bool accepted = Acceptance.Of(this.Task).State == AcceptanceState.Valid;
+                    <StatusChip Color="@(accepted ? Color.Success : Color.Warning)" Class="task-card-gate-chip" Icon="@Icons.Material.Filled.Lock">@(accepted ? HumanGateCopy.BoardChipAccepted : HumanGateCopy.BoardChipNeedsYou)</StatusChip>
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Class="task-card-gate-lock" aria-label="@HumanGateCopy.LockAriaLabel" />
+                }
+            }
         </div>
 
         <div class="task-card-title">

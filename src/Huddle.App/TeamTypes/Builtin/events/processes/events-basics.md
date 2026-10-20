@@ -34,6 +34,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The Event Lead's Evidence line is the check, and the Human closes each Task.
 
+## Definition of Done
+
+- Bookings confirmed: evidence from verify
+- Run sheet reviewed: document reviewed by verify
+
 ## Cadence
 
 - Work the open Tasks nearest deadline first.

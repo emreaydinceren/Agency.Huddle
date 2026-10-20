@@ -17,6 +17,7 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="CheckCommand">The command whose exit code the checks gate looks for, or <see langword="null"/>.</param>
 /// <param name="UnknownGates">Gate ids in the frontmatter that Huddle does not know, in file order.</param>
 /// <param name="MissingSections">PR-6 outline headings absent from the body, in outline order.</param>
+/// <param name="DefinitionOfDone">The items of the optional <c>## Definition of Done</c> section, in file order.</param>
 /// <param name="Text">The whole document text, verbatim.</param>
 internal sealed record ProcessDocument(
     string Title,
@@ -28,6 +29,7 @@ internal sealed record ProcessDocument(
     string? CheckCommand,
     IReadOnlyList<string> UnknownGates,
     IReadOnlyList<string> MissingSections,
+    IReadOnlyList<DoneItem> DefinitionOfDone,
     string Text)
 {
     private const string Delimiter = "---";
@@ -102,8 +104,82 @@ internal sealed record ProcessDocument(
             string.IsNullOrWhiteSpace(checkCommand) ? null : checkCommand,
             unknownGates,
             OutlineHeadings.Where(heading => !headings.Contains(heading)).ToList(),
+            ReadDefinitionOfDone(body),
             text);
         return true;
+    }
+
+    private static List<DoneItem> ReadDefinitionOfDone(string[] body)
+    {
+        List<DoneItem> items = [];
+        bool inSection = false;
+        foreach (string raw in body)
+        {
+            string line = raw.Trim();
+            if (line.StartsWith('#'))
+            {
+                if (inSection)
+                {
+                    break;
+                }
+
+                inSection = string.Equals(line.TrimStart('#').Trim(), "Definition of Done", StringComparison.OrdinalIgnoreCase);
+                continue;
+            }
+
+            if (inSection && line.StartsWith("- ", StringComparison.Ordinal))
+            {
+                items.Add(ParseDoneBullet(line[2..].Trim()));
+            }
+        }
+
+        return items;
+    }
+
+    private static DoneItem ParseDoneBullet(string text)
+    {
+        int colon = text.IndexOf(':', StringComparison.Ordinal);
+        if (colon < 0)
+        {
+            return new DoneItem(text, new DoneRule.Unreadable(text), ProofItemSource.Process);
+        }
+
+        string label = text[..colon].Trim();
+        string rule = text[(colon + 1)..].Trim();
+        return new DoneItem(label, ParseDoneRule(rule, text), ProofItemSource.Process);
+    }
+
+    private static DoneRule ParseDoneRule(string rule, string text)
+    {
+        const string evidence = "evidence from ";
+        const string tagged = "task tagged ";
+        const string reviewed = "document reviewed by ";
+        const string commandPrefix = "command `";
+        const string commandSuffix = "` exits 0";
+
+        if (rule.StartsWith(evidence, StringComparison.Ordinal) && rule[evidence.Length..].Trim() is { Length: > 0 } step)
+        {
+            return new DoneRule.EvidenceFrom(step);
+        }
+
+        if (rule.StartsWith(tagged, StringComparison.Ordinal) && rule[tagged.Length..].Trim() is { Length: > 0 } tag)
+        {
+            return new DoneRule.TaskTagged(tag);
+        }
+
+        if (rule.StartsWith(reviewed, StringComparison.Ordinal) && rule[reviewed.Length..].Trim() is { Length: > 0 } reviewStep)
+        {
+            return new DoneRule.DocumentReviewedBy(reviewStep);
+        }
+
+        if (rule.StartsWith(commandPrefix, StringComparison.Ordinal)
+            && rule.EndsWith(commandSuffix, StringComparison.Ordinal)
+            && rule.Length > commandPrefix.Length + commandSuffix.Length)
+        {
+            return new DoneRule.CommandExits(rule[commandPrefix.Length..^commandSuffix.Length]);
+        }
+
+        return new DoneRule.Unreadable(text);
     }
 
     /// <summary>Reads the <c>key: value</c> lines between the frontmatter delimiters.</summary>
@@ -229,6 +305,15 @@ internal sealed record ProcessDocument(
         return joined.Length == 0 ? null : joined;
     }
 
+    /// <summary>The four gates a Process.md may declare; <see cref="GateId.HumanGate"/> and <see cref="GateId.ProofIncomplete"/> are refusal ids only.</summary>
+    private static readonly GateId[] ProcessGates =
+    [
+        GateId.QaEvidenceBeforeDone,
+        GateId.ChecksBeforeMerge,
+        GateId.SpecApprovedBeforeBuild,
+        GateId.FailingTestBeforeFix,
+    ];
+
     private static string QuotedId(GateId gate) => string.Concat("'", ToId(gate), "'");
 
     /// <summary>Returns the frontmatter id of a gate.</summary>
@@ -240,6 +325,8 @@ internal sealed record ProcessDocument(
         GateId.ChecksBeforeMerge => "checks-before-merge",
         GateId.SpecApprovedBeforeBuild => "spec-approved-before-build",
         GateId.FailingTestBeforeFix => "failing-test-before-fix",
+        GateId.HumanGate => "human-gate",
+        GateId.ProofIncomplete => "proof-incomplete",
 #pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(gate), gate, null),
 #pragma warning restore HAA0601
@@ -254,6 +341,8 @@ internal sealed record ProcessDocument(
         GateId.ChecksBeforeMerge => "Checks before merge",
         GateId.SpecApprovedBeforeBuild => "Spec approved before build",
         GateId.FailingTestBeforeFix => "Failing test before fix",
+        GateId.HumanGate => "Human gate",
+        GateId.ProofIncomplete => "Proof incomplete",
 #pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(gate), gate, null),
 #pragma warning restore HAA0601
@@ -264,7 +353,7 @@ internal sealed record ProcessDocument(
     /// <returns><see langword="true"/> when <paramref name="id"/> names one of the four gates.</returns>
     public static bool TryParseGate(string id, out GateId gate)
     {
-        foreach (GateId candidate in Enum.GetValues<GateId>())
+        foreach (GateId candidate in ProcessGates)
         {
             if (string.Equals(ToId(candidate), id, StringComparison.Ordinal))
             {

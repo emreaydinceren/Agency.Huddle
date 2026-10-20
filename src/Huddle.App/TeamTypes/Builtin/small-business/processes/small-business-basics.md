@@ -36,6 +36,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The business manager's Evidence line is the check before a Task is ready, and the Human closes each Task.
 
+## Definition of Done
+
+- Numbers checked: evidence from verify
+- Plan reviewed: document reviewed by verify
+
 ## Cadence
 
 - Customer replies first, then the books, then marketing.

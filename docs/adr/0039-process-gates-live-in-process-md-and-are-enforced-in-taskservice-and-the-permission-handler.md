@@ -5,6 +5,13 @@ date: 2026-10-08
 
 # Process gates live in Process.md and are enforced in TaskService and the permission handler
 
+> [!NOTE]
+> **Amended by [ADR-0061](0061-a-human-gated-task-waits-in-needs-you-for-the-humans-acceptance.md)
+> (proposed 2026-10-19).** On a Human-gated Task the Human's override does not apply: no gate
+> refusal on that Task can be passed with "Move anyway". Ordinary Tasks are unchanged.
+> [ADR-0062](0062-a-teams-definition-of-done-is-a-proof-checklist-in-process-md.md) adds a
+> Definition of Done to `Process.md`; it is not a gate id, so the four ids below stay fixed.
+
 A Team's **process** says how its work is done, and its **gates** are the few rules that
 refuse a change until a condition is met. A Team lists its gates in its `Process.md`. The app
 enforces them at the two places where the change happens: `TaskService` for a Task's status,

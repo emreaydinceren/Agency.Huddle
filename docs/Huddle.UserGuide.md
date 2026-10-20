@@ -18,7 +18,8 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | --- | --- |
 | Get started with your own copy | [Install](#install) |
 | Find your way around the screen | [A quick tour of the screen](#a-quick-tour-of-the-screen), [Tabs](#tabs) and [Global search](#global-search) |
-| See which Rooms are waiting on you | [Needs you](#needs-you) |
+| See which Rooms and Tasks are waiting on you | [Needs you](#needs-you) |
+| Decide whether a Task is done, or what leaves the Team | [The Human gate](#the-human-gate) |
 | Read a Teammate's status badge or a chip | [Status at a glance](#status-at-a-glance) and [Chips](#chips) |
 | Understand how Teammates, Teams, Tasks and memory relate | [The data model](#the-data-model) |
 | Free a long-running Teammate's memory without restarting it | [Freeing a Teammate's memory with `/compact`](#freeing-a-teammates-memory-with-compact) |
@@ -152,6 +153,10 @@ Each row shows an icon for every reason, the Room's name, and who asked and when
 A Room leaves the list when you **post in it**, or when you press the check (✓) on its row. Opening a Room does not clear it, so you can read a Room and come back to it later. The check hides the Room until something new makes it wait again; it does not answer the Question or Form behind it. Pressing **Continue** on a paused Room clears only the paused reason. When nothing is waiting, the card is not drawn.
 
 The list lives in memory. After a restart, Rooms with an unanswered mention (within the last 50 Messages) are listed again; a Question or Form that was waiting is gone, and so is any dismissal.
+
+**Tasks waiting for your decision** are listed too, after the Rooms and under the same count. A Task row shows its id and title with "Waiting on you · Proof 4/4", and opens the **Needs you** page at that Task. A Task is listed while it is under the [Human gate](#the-human-gate), in the Needs you status, and not yet accepted. It has no check (✓): it leaves the list only when you decide, or when its status changes. These rows are read from the Task files, so a restart loses none of them.
+
+The **Needs you** page lists the Tasks first, each as a decision card where you can Accept, Request changes or Decline, then the Rooms. When nothing waits, it says "Nothing needs you".
 
 ### Tabs
 
@@ -1508,11 +1513,15 @@ The Team and Project are not fields. They come from the folder the file is in.
 
 | Status | Group |
 | --- | --- |
-| Backlog, To Do, In Progress, Review | Open |
+| Backlog, To Do, In Progress, Review, Needs you | Open |
 | Done | Finished |
 | Cancelled, Duplicate, Rejected | Won't do |
 
-You can move a Task from any status to any other. **Duplicate** requires naming
+**Needs you** is the ninth status: a Task whose Proof is in and whose decision is
+yours. See [The Human gate](#the-human-gate).
+
+You can move a Task from any status to any other, except that a Task under the
+Human gate reaches Done only through your **Accept**. **Duplicate** requires naming
 the original Task. **Cancelled** and **Rejected** accept an optional reason.
 
 **Closed is separate from status.** Closing a Task hides it from active Views and
@@ -1632,6 +1641,134 @@ chip, and a Task that woke a Teammate links to **Woken in Room {name}**.
 **In the background:** Views are saved to `views.json` in the data root. If that
 file has a syntax error, Huddle shows the line and column and makes Views
 read-only until you fix it.
+
+### The Human gate
+
+**Your Teammates do the work. You make the calls.** The **Human gate** keeps a Task
+from becoming Done without you. Anything that leaves the Team or cannot easily be
+undone, such as sending, paying, signing, publishing or merging, stops and waits for
+you. Teammates draft as much as they like; the Task shows you the work and the Proof,
+and you judge the evidence rather than the tone.
+
+A Task goes through five steps: **Draft, Check, Track, Gate, Decide.** The assignee
+drafts. Other Teammates supply the Proof the Team asks for. The Task's Change log
+records who did what. When the Proof is complete the assignee moves the Task to
+**Needs you**, and you **Accept**, **Request changes** or **Decline**. Two rules hold
+however the Team's process is set up: only you can mark a gated Task Done, and a
+Team's process can add Proof but never remove your decision.
+
+What needs no gate: internal notes, drafts, research and ordinary Task updates.
+What is always gated: customer messages, money, contracts, public posts, merges to
+main and deleting data. A Teammate about to do one of these names it in the Task's
+**Action** first.
+
+#### Turning it on, and the Action
+
+Open a Task. Its panel has a **Human gate** section ("You decide whether this is
+done") under the fields.
+
+- **Requires your acceptance** switches the gate on for this Task. The switch is
+  locked on, with a lock icon, once the Task has an Action: "This Task names an Action
+  that leaves the team."
+- **What will happen** is the Action, one line, such as `Send reply to Acme`. Leave
+  it empty ("Nothing leaves the team") for work that only needs your decision.
+- **Can move to Done** shows "<you> only": that is the rule in one chip.
+
+The section explains what Accept will do. With no Action, Accepting marks the Task
+Done and nothing is sent or published. With an Action, Accepting lets the assignee
+carry it out, and the assignee then moves the Task to Done.
+
+#### Proof and the Definition of Done
+
+**Proof** is the checklist a gated Task must complete before it reaches you. Each line
+is one item of **Evidence**, such as a test run or a reviewer's check. The checklist
+comes from the Team's **Definition of Done**, a `## Definition of Done` section in its
+`Process.md`. Every built-in process template ships one. A line is a label, a colon
+and a rule:
+
+```markdown
+## Definition of Done
+
+- QA evidence: evidence from verify
+- Citation check: task tagged citation-check
+- Tests pass: command `dotnet test Huddle.slnx --` exits 0
+- Skeptic review: document reviewed by verify
+```
+
+| Rule | It is met when |
+| --- | --- |
+| `evidence from <step>` | a Teammate whose role covers that step added an Evidence line with a command to the Task |
+| ``command `<cmd>` exits 0`` | the latest Evidence line for that command passed |
+| `task tagged <tag>` | a sub-Task with that tag is Done |
+| `document reviewed by <step>` | a document attached to the Task was reviewed by that step after its last edit, and nobody has objected since |
+
+The **Proof** list on the Task panel shows a tick or an open circle per line, with
+who owns the open ones and what is missing, such as "19 of 23 in #RSH-209". On an
+open line, **Ask <name>** posts a Message from you in the Task's Room: "@Ruth,
+RSH-208 needs Citation check before it can come to me." On an ordinary Task the list
+reads "Definition of Done (for information)": it guides, and locks nothing. A line
+Huddle can't read says "Huddle can't read this rule" and never counts as met.
+
+#### Needs you, the ninth status
+
+**Needs you** sits between **Review** and **Done**. It means "the Proof is in, the
+decision is yours". The assignee moves a gated Task there once the Proof is
+complete; Huddle does not do it for them.
+
+Gated Tasks waiting for you appear in the sidebar's **Needs you** card (see
+[Needs you](#needs-you)) and on the **Needs you** page, oldest wait first. The page
+shows each Task as a **decision card**:
+
+- the chip **Your decision**, and "All Proof is in." (or "3 of 4 Proof items are in.");
+- what Accept will do, and the trail: "Drafted by Miriam · Checked by Ruth · Tracked
+  as RSH-208";
+- **Request changes** and **Accept**, and a **More decisions** menu holding **Decline**.
+
+If the Proof is incomplete, Accept is locked: "Proof 3/4 — citation check still
+open (Ruth, 19 of 23 in #RSH-209). Accept unlocks when it's in." You can still
+**Request changes**, and use **Ask <name>**. While the Task is still in Review,
+the card says Accept unlocks when the assignee moves it to Needs you. Save any edits
+to the Task before deciding.
+
+#### Accept, Request changes, Decline
+
+| You choose | What happens |
+| --- | --- |
+| **Accept** | Your name and the time are recorded against the exact text you accepted. With no Action the Task becomes Done. With an Action the assignee is woken to carry it out and then moves the Task to Done. |
+| **Request changes** | You write a reason (required). The assignee is woken with your reason. |
+| **Decline** | You write a reason (required). The Task becomes Rejected and closed, the assignee is woken with the reason, and the Change log reads `declined: <reason>`. |
+
+Your reason also reaches the next retrospective, so over time the Team learns what
+you accept quickly and what needs a closer look. If anyone changes the Task after you
+accepted it, the card says "Changed since you accepted it." and the Task returns to
+the Needs you list for a new decision. Every decision is a line in the Task's Change log.
+
+#### Dragging a card into Done
+
+On the board, a gated card shows a lock chip: "Needs you", or "Accepted" once you
+have accepted it. Dropping it on **Done** is a shortcut to the decision, never the
+decision itself:
+
+- **From Review or earlier:** refused ("RSH-208 goes to Needs you first (Proof 3/4)"),
+  and the card stays.
+- **From Needs you with the Proof incomplete:** refused, with the locked notice and
+  an **Ask <name>** button.
+- **From Needs you with the Proof complete:** the decision card opens in a dialog,
+  "Your decision on RSH-208". **Accept** completes the move; **Cancel** or Escape
+  leaves the card where it was.
+
+There is no **Move anyway** for a gated Task.
+
+#### Known limits
+
+- **A document edited outside Huddle keeps its review.** A review goes stale when
+  the document is edited in Huddle afterwards. An edit made in another editor leaves
+  no history entry, so the review stays valid. Check the document yourself before
+  you accept.
+- **The gate guards the Task's status, not the outward action itself.** A Teammate
+  that can send email can still send it. The gate makes sure the Task is not Done
+  without you, and that the Action was named; it does not block the tool. Give
+  Teammates only the tools you are happy for them to use.
 
 ### Editing Task files by hand
 

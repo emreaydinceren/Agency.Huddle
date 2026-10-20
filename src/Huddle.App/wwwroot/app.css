@@ -5155,6 +5155,85 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     margin: 16px 0;
 }
 
+/* ---- Human gate section of the Task panel (TaskHumanGate) ---- */
+.task-human-gate {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.task-human-gate-header,
+.task-human-gate-switch,
+.task-human-gate-done-rule {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-human-gate-subheading,
+.task-human-gate-helper,
+.task-human-gate-explanation {
+    color: var(--mud-palette-text-secondary);
+}
+
+.task-human-gate-lock {
+    color: var(--mud-palette-text-secondary);
+}
+
+.task-proof-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 16px 0;
+}
+
+.task-proof-heading {
+    font-weight: 500;
+}
+
+.task-proof-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.task-proof-mark-met {
+    color: var(--mud-palette-success);
+}
+
+.task-proof-mark-open,
+.task-proof-owner,
+.task-proof-detail {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ---- Decision card of a gated Task (TaskDecisionCard) ---- */
+.task-decision-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.task-decision-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-decision-locked,
+.task-decision-review,
+.task-decision-trail {
+    color: var(--mud-palette-text-secondary);
+}
+
+.task-decision-stale,
+.task-decision-message {
+    color: var(--mud-palette-warning-text);
+}
+
 /* ---- Team page toolbar -----------------------------------------------------------------------
    The Team page toolbar (action button and search box) sits in a column that the persistent 240px
    drawer leaves very narrow on a phone: let the two wrap onto their own lines and let the search box
@@ -8329,4 +8408,22 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
    must not fill the button inside it. Last in the sheet so it wins the tie with those rules. */
 :root:has([data-hu-surface]) .task-filter-chip .task-filter-chip-button.mud-button-outlined:not(:hover) {
     background: transparent;
+}
+
+/* Needs You on screen (Human gate P12). The card heading is a link to the page and keeps the plain caption look; a Task row stacks
+   its id and title over the waiting line; the page leaves the cards a gap. */
+.needs-you-title .mud-nav-link {
+    padding: 0;
+    min-height: 0;
+    background: transparent;
+}
+
+.needs-you-task-row .mud-nav-link-text {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+}
+
+.needs-you-page-task {
+    margin-bottom: 16px;
 }

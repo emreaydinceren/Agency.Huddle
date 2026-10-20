@@ -35,6 +35,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The incident commander's Evidence line is the check before an incident is closed, and the Human closes each Task.
 
+## Definition of Done
+
+- Fix verified: evidence from verify
+- Write-up reviewed: document reviewed by verify
+
 ## Cadence
 
 - Mitigate first, find the root cause second.

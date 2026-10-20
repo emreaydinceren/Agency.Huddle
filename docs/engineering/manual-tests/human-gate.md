@@ -1,0 +1,239 @@
+# Human gate
+
+Prove, in a real browser, that a Task which names an Action, or which the Human marked **Requires your acceptance**, cannot reach Done without the Human: that the Proof list and the decision card show what is still open, that Accept stays locked until the Proof is complete, that every other route to Done is refused, that an edit after acceptance takes the acceptance away, that Decline closes the Task with its reason, that an outside edit of the file is reverted, and that a restart loses nothing. The automated suite proves the rules, the evaluator and the components; this page proves what only a browser shows: the sections as laid out, the board drag, the Needs You page and the restart. The design is [the Human gate spec](../../Huddle.HumanGate-Specifications.md), its use cases U-1 to U-9 map to HUMANGATE-01 to HUMANGATE-09 in order, and the decisions are [ADR-0061](../../adr/0061-a-human-gated-task-waits-in-needs-you-for-the-humans-acceptance.md) and [ADR-0062](../../adr/0062-a-teams-definition-of-done-is-a-proof-checklist-in-process-md.md).
+
+**9 tests** · 9 free · about 1.3 hours. Written 2026-10-19; **not yet run by a person**. All nine
+were run on 2026-10-19 by agents driving the built-in browser as a paid run (real Haiku Teammates
+in a hired Research Team instead of the mock cast) and passed; HUMANGATE-03 used Sources checked
+instead of the checklist detail, and HUMANGATE-06 and -09 did not see the brief absent state or
+the empty page.
+
+Read [the manual test script](../manual-tests.md) first, then [Common procedures](common.md), which defines the terminals, procedures and oracles this page names. Both are assumed below.
+
+## Setup
+
+Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat). The mock Teammates stand in for the Agents, so no test here spends money. This area adds:
+
+1. Wait until **Ada** and **Bo** are both **Online** on `/teammates`. Treat Ada as the assignee ("Miriam" and "Leo" in the spec) and Bo as the Teammate who owns an open Proof item.
+2. Use a Team whose `Process.md` has a `## Definition of Done` section of four items, the last of them a checked document or a checklist that Bo owns, so that the Proof can be 3/4 and then 4/4. Where a test needs a Task with a Proof, create it under that Team.
+3. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'`. Task files are `$data\Teams\<Team>\_tasks\<ID>.md`.
+4. The exact interface strings below are those of the Task panel, the decision card, the board and the Needs You page. A pass means the text matches, not just the meaning.
+
+## Tests
+
+### HUMANGATE-01 — Requires your acceptance: only the Human can mark the Task Done (U-1)
+
+**Free** · about 10 min
+
+*Proves U-1: the switch, the helper line, the Proof list, the move to Needs you and the Human's Accept.*
+
+**Before you start**
+
+- Setup is done. A Task `T1` is assigned to Ada under the Team from Setup, in To Do, with no Action.
+
+**Steps**
+
+1. Open `T1` and find the section with the chip `Human gate`.
+2. Switch on `Requires your acceptance`. Read the helper line and the `Can move to Done` line.
+3. Read the heading above the Definition of Done list.
+4. Ask Ada (in her Room) to move `T1` to Needs you. Complete all four Proof items first, then repeat.
+5. Open `T1` again. Read the card, then press `Accept`.
+
+**Pass if — all of these**
+
+- At step 1 the line under the chip reads `You decide whether this is done`.
+- At step 2 the helper line reads `Ada can move it to Needs you once every line has Proof. Teammates can't mark it Done.` and `Can move to Done` carries the chip `<Human> only`.
+- At step 3 the heading reads `Proof`.
+- Before the Proof is complete, Ada's move to Needs you is refused; with 4/4 it succeeds and the card chip reads `Your decision` with `All Proof is in.`
+- After `Accept` the Task is Done, and its Change log names the Human who accepted.
+
+### HUMANGATE-02 — An Action locks the gate on, and Accept wakes the assignee (U-2)
+
+**Free** · about 10 min
+
+*Proves U-2: the locked switch, the Accept sentence with the Action, and the wake after acceptance.*
+
+**Before you start**
+
+- A Task `T2` assigned to Ada, with a complete Proof (4/4) and no Action yet.
+
+**Steps**
+
+1. Open `T2`. In the field `What will happen` read the placeholder, then type `send the reply to Acme` and save.
+2. Look at the switch `Requires your acceptance` and hover the lock icon.
+3. Read the explanation under it.
+4. Have Ada move `T2` to Needs you. Open the card and press `Accept`.
+5. Open Ada's Room.
+
+**Pass if — all of these**
+
+- The placeholder at step 1 reads `Nothing leaves the team`.
+- At step 2 the switch is on and cannot be turned off; the lock's tooltip reads `This Task names an Action that leaves the team.`
+- At step 3 the explanation ends `Accepting lets Ada send the reply to Acme.`
+- After step 4 the card reads `Accepted by <Human>. Ada can now send the reply to Acme.` and the Task is not yet Done.
+- At step 5 Ada has been woken with a Message that carries the decision, and when she moves `T2` to Done it is Done.
+
+### HUMANGATE-03 — Proof 3/4: Accept is locked, Request changes works, Ask posts a Mention (U-3)
+
+**Free** · about 10 min
+
+*Proves U-3: the locked notice, the unlocked Request changes, and the Ask button.*
+
+**Before you start**
+
+- A gated Task `T3` in Review, assigned to Ada, with three of four Proof items met and the fourth open and owned by Bo, with a detail such as `19 of 23`.
+
+**Steps**
+
+1. Open `T3` and read the decision card.
+2. Try to press `Accept`.
+3. In the Proof list press `Ask Bo`.
+4. Open the Room named in the snackbar and read the last Message.
+5. Back on the card, press `Request changes`, type `Please finish the check` in the field `Reason`, and confirm.
+
+**Pass if — all of these**
+
+- At step 1 the first line reads `3 of 4 Proof items are in.` and the notice reads `Proof 3/4 — <label> still open (Bo, 19 of 23). Accept unlocks when it's in.`
+- At step 2 `Accept` is disabled.
+- At step 3 a snackbar reads `Asked Bo in <room>.` and the button's accessible name is `Ask Bo for <label>`.
+- At step 4 the Message is from the Human and reads `@Bo, T3 needs <label> before it can come to me.`
+- At step 5 the dialog title reads `Request changes on T3`, the Task leaves Review as changes requested, and its Change log has the reason.
+
+### HUMANGATE-04 — An Agent cannot mark a gated Task Done (U-4)
+
+**Free** · about 6 min
+
+*Proves U-4: the refusal reaches the Agent as a tool result.*
+
+**Before you start**
+
+- A gated Task `T4` assigned to Ada, in Review or To Do, not accepted.
+
+**Steps**
+
+1. In Ada's Room ask her to set `T4` to Done with `update_task`.
+2. Read her answer and `T4`'s Change log.
+3. Open `T4`.
+
+**Pass if — all of these**
+
+- Ada reports that the Task waits for the Human's acceptance in Needs You.
+- `T4` is not Done and its state is unchanged.
+- No acceptance line appears in the Change log.
+
+### HUMANGATE-05 — Dragging a gated card to Done on the board (U-5)
+
+**Free** · about 10 min
+
+*Proves U-5: the refusal from Review, the dialog from Needs You, Accept completing the move and Cancel leaving it.*
+
+**Before you start**
+
+- Two gated Tasks, `T5a` in Review with Proof 3/4, and `T5b` in Needs You with Proof 4/4. The Board is open, grouped by state.
+
+**Steps**
+
+1. Drag `T5a` into the Done column.
+2. Read the snackbar and check where the card is.
+3. Look at the cards for `T5a` and `T5b` for a chip.
+4. Drag `T5b` into the Done column. Read the dialog title.
+5. Press `Cancel`. Check the column.
+6. Drag `T5b` to Done again and press `Accept`.
+
+**Pass if — all of these**
+
+- At step 2 the snackbar reads `T5a goes to Needs you first (Proof 3/4).` and the card is still in Review.
+- At step 3 `T5b` shows the chip `Needs you`, and `T5a` shows a lock icon whose accessible name is `Human gate`.
+- At step 4 the dialog title reads `Your decision on T5b`, and there is no `Move anyway` button on either card.
+- At step 5 `T5b` is still in Needs You.
+- At step 6 the Task moves to Done.
+
+### HUMANGATE-06 — Editing the Task after Accept takes the acceptance away (U-6)
+
+**Free** · about 8 min
+
+*Proves U-6: the acceptance is bound to the title, Action and description.*
+
+**Before you start**
+
+- A gated Task `T6` with an Action, accepted by the Human and not yet Done.
+
+**Steps**
+
+1. Open the Needs You page and note whether `T6` is listed.
+2. Change the description of `T6` as the assignee would, save, and read the card.
+3. Open the Needs You page again.
+
+**Pass if — all of these**
+
+- At step 1 `T6` is not listed, because the acceptance is valid.
+- At step 2 the card shows `Changed since you accepted it.` and `Accept` is enabled again.
+- At step 3 `T6` is listed as `T6 <title>` with `Waiting on you · Proof 4/4`.
+
+### HUMANGATE-07 — Decline closes the Task with its reason (U-7)
+
+**Free** · about 8 min
+
+*Proves U-7: the overflow menu, the required reason, the state, the wake and the log line.*
+
+**Before you start**
+
+- A gated Task `T7` in Needs You, assigned to Ada.
+
+**Steps**
+
+1. On the card open the menu whose accessible name is `More decisions` and choose `Decline`.
+2. Try to confirm with an empty field `Reason`.
+3. Type `Wrong customer` and confirm.
+4. Open Ada's Room and the Task's Change log.
+
+**Pass if — all of these**
+
+- The dialog title at step 1 reads `Decline T7` and the field is labelled `Reason`.
+- At step 2 the dialog does not confirm.
+- After step 3 `T7` is Rejected and closed.
+- Ada has been woken with the reason, and the Change log has the line `declined: Wrong customer`.
+
+### HUMANGATE-08 — An outside edit that removes the Action is put back (U-8)
+
+**Free** · about 8 min
+
+*Proves U-8: the outside-edit guard.*
+
+**Before you start**
+
+- A gated Task `T8` with `action:` in its frontmatter. Keep the app running.
+
+**Steps**
+
+1. In `T-B` open `$data\Teams\<Team>\_tasks\T8.md` in an editor and delete the `action:` line. Save.
+2. Wait two seconds, then reread the file.
+3. Open `T8` in the app and read its Change log.
+
+**Pass if — all of these**
+
+- The `action:` line is back in the file with its old value.
+- The Change log's last line begins `outside edit refused by Human gate`.
+- The Task panel still shows the Action and the locked switch.
+
+### HUMANGATE-09 — Restart keeps every waiting Task on the Needs You page (U-9)
+
+**Free** · about 8 min
+
+*Proves U-9: Needs You reads the Task files, not memory.*
+
+**Before you start**
+
+- Two gated Tasks, `T9a` and `T9b`, both in Needs You and not accepted.
+
+**Steps**
+
+1. Open the Needs You page and the sidebar card. Note the count.
+2. Stop the app and relaunch it with the `P-LAUNCH-UAT` launch command without re-running the seeder.
+3. Open the sidebar card and then the Needs You page.
+
+**Pass if — all of these**
+
+- At step 1 both Tasks are listed, each as `<id> <title>` with `Waiting on you · Proof <m>/<n>`, and the card count includes both.
+- At step 3 both are listed again, without any Mention or Question being needed.
+- The page title and tab title read `Needs you`; with nothing waiting the page shows `Nothing needs you` and `Tasks waiting for your decision and Rooms waiting on you appear here.`

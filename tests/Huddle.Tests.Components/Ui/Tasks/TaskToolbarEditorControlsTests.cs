@@ -203,12 +203,12 @@ public sealed class TaskToolbarEditorControlsTests
         await root.InvokeAsync(() => root.Find(".task-toolbar-filter-state").MouseDownAsync());
 
         Assert.Equal(
-            ["All", "Open", "Backlog", "To Do", "In Progress", "Review", "Closed", "Done", "Cancelled", "Duplicate", "Rejected"],
+            ["All", "Open", "Backlog", "To Do", "In Progress", "Review", "Needs You", "Closed", "Done", "Cancelled", "Duplicate", "Rejected"],
             root.FindAll(".task-toolbar-filter-state-group, .task-toolbar-filter-state-option").Select(el => el.TextContent.Trim()));
 
         IRenderedComponent<MudSelect<string>> select = FindSelect<string>(root, "task-toolbar-filter-state");
         await root.InvokeAsync(() => select.Instance.SelectedValuesChanged.InvokeAsync(["Review", "@open"]));
-        Assert.Equal([TaskState.Backlog, TaskState.ToDo, TaskState.InProgress, TaskState.Review], raised?.Filter.States);
+        Assert.Equal([TaskState.Backlog, TaskState.ToDo, TaskState.InProgress, TaskState.Review, TaskState.NeedsYou], raised?.Filter.States);
 
         await root.InvokeAsync(() => select.Instance.SelectedValuesChanged.InvokeAsync(["Review", "@closed"]));
         Assert.Equal([TaskState.Done, TaskState.Cancelled, TaskState.Duplicate, TaskState.Rejected], raised?.Filter.States);

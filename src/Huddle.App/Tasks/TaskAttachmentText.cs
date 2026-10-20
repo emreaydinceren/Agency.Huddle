@@ -38,7 +38,17 @@ internal static class TaskAttachmentText
         return body + separator + line;
     }
 
+    /// <summary>The Library path lines of a description: each line that is one backticked path.</summary>
+    /// <param name="description">The Task description.</param>
+    /// <returns>The paths, without their backticks, in description order.</returns>
+    internal static IEnumerable<string> PathLines(string description)
+    {
+        ArgumentNullException.ThrowIfNull(description);
+        return description.Split('\n').Select(static line => line.Trim()).Where(IsPathLine).Select(static line => line[1..^1]);
+    }
+
     /// <summary>Whether <paramref name="line"/> is exactly one code span holding a Library path.</summary>
+    /// <param name="line">The line.</param>
     private static bool IsPathLine(string line)
     {
         string trimmed = line.Trim();

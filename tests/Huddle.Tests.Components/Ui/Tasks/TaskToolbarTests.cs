@@ -262,7 +262,7 @@ public sealed class TaskToolbarTests
         var saved = Save(store, "v1", ViewKind.List, []);
         TaskView notDoneMine = saved with
         {
-            Filter = new TaskFilter { States = [TaskState.Backlog, TaskState.ToDo, TaskState.InProgress, TaskState.Review], Assignees = ["@me"] },
+            Filter = new TaskFilter { States = [TaskState.Backlog, TaskState.ToDo, TaskState.InProgress, TaskState.Review, TaskState.NeedsYou], Assignees = ["@me"] },
         };
 
         TaskView? raised = null;
@@ -323,10 +323,10 @@ public sealed class TaskToolbarTests
         await root.InvokeAsync(() => root.Find(".task-toolbar-status .task-filter-chip-button").ClickAsync());
 
         Assert.Equal(
-            ["All", "Open", "Backlog", "To Do", "In Progress", "Review", "Closed", "Done", "Cancelled", "Duplicate", "Rejected"],
+            ["All", "Open", "Backlog", "To Do", "In Progress", "Review", "Needs You", "Closed", "Done", "Cancelled", "Duplicate", "Rejected"],
             root.FindAll(".mud-popover-open .mud-menu-item").Select(item => item.TextContent.Trim()));
         Assert.Equal(2, root.FindAll(".mud-popover-open .task-status-group").Count);
-        Assert.Equal(8, root.FindAll(".mud-popover-open .task-status-sub").Count);
+        Assert.Equal(9, root.FindAll(".mud-popover-open .task-status-sub").Count);
     }
 
     /// <summary>The columns a Board View needs to pass <c>ViewValidator</c>: every <see cref="TaskState"/> covered exactly once, mirroring <c>BoardLayout.DefaultColumns</c> (internal to the production assembly, so restated here rather than referenced).</summary>
@@ -336,6 +336,7 @@ public sealed class TaskToolbarTests
         new("To Do", [TaskState.ToDo]),
         new("In Progress", [TaskState.InProgress]),
         new("Review", [TaskState.Review]),
+        new("Needs You", [TaskState.NeedsYou]),
         new("Done", [TaskState.Done]),
         new("Won't do", [TaskState.Cancelled, TaskState.Duplicate, TaskState.Rejected]),
     ];

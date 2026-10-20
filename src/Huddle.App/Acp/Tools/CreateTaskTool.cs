@@ -74,6 +74,8 @@ internal sealed class CreateTaskTool(
             ["start_date"] = new JsonObject { ["type"] = "string" },
             ["due_date"] = new JsonObject { ["type"] = "string" },
             ["sprint"] = new JsonObject { ["type"] = "string" },
+            ["human_gate"] = new JsonObject { ["type"] = "boolean" },
+            ["action"] = new JsonObject { ["type"] = "string" },
         },
         ["required"] = new JsonArray { "title", "team" },
     };
@@ -110,7 +112,17 @@ internal sealed class CreateTaskTool(
             return actorRefusal;
         }
 
-        TaskDraft draft = BuildDraft(raw, values, actor);
+        if (!TaskToolText.TryGetBool(arguments, "human_gate", false, out bool humanGate, out string gateRefusal)
+            || !TaskToolText.TryGetString(arguments, "action", out string? action, out gateRefusal))
+        {
+            return gateRefusal;
+        }
+
+        TaskDraft draft = BuildDraft(raw, values, actor) with
+        {
+            HumanGate = humanGate,
+            Action = string.IsNullOrWhiteSpace(action) ? null : action,
+        };
 
         if (!TaskToolText.TryRun(() => tasks.Create(draft, actor), out TaskResult? result, out string runRefusal))
         {

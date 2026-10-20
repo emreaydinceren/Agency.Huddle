@@ -162,6 +162,13 @@ public sealed class NeedsYouComponentTests
     private static MudBunitContext NewContext(NeedsYouFixture fixture)
     {
         MudBunitContext ctx = new();
+
+        // The card also lists the gated Tasks, so it needs a Task source; this one has none waiting, which leaves the Room tests as they were.
+        Agency.Huddle.Tests.Acp.Tools.TaskToolHarness harness = new();
+        harness.AddTo(ctx.Services);
+        ctx.Services.AddSingleton(_ => harness);
+        ctx.Services.AddSingleton(sp => new NeedsYouTaskSource(
+            sp.GetRequiredService<Agency.Huddle.Tests.Acp.Tools.TaskToolHarness>().Store, new NeedsYouTaskTestHost.ThreeOfFourProofSource(), harness.Events));
         ctx.Services.AddSingleton(fixture.Tracker);
         ctx.Services.AddSingleton<ITeamDirectory>(fixture.Team);
         ctx.Services.AddSingleton(fixture.Events);

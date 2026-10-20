@@ -214,6 +214,7 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Appearance and Themes](manual-tests/appearance-theme.md): the Appearance tab, the Theme list and the accent colour.
 - [Avatar library](manual-tests/avatar-library.md): choosing a face from the library, its picker and filters.
 - [Document history](manual-tests/doc-history.md): the byline, the History and the Recent edits panel, and how often Agents log.
+- [Human gate](manual-tests/human-gate.md): the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page for gated Tasks.
 - [File Changes, Watched Folders and Memory](manual-tests/file-changes.md): the paid File Changes checks.
 - [Creating Rooms and inviting Agents](manual-tests/invite-rooms.md): Room creation, invitations and Room naming.
 - [Library explorer and editor](manual-tests/library.md): the Library tree, document view and editor.

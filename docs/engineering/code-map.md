@@ -508,6 +508,27 @@ Needs You — the sidebar card of Rooms waiting on the Human, `docs/Huddle.Needs
 | `Components/NeedsYou/NeedsYouList.razor` | The rows, with no chrome and no idea where it is placed; reports its count through `CountChanged`. |
 | `Components/NeedsYou/NeedsYouCard.razor` | The left sidebar's card around the list; hidden while the count is 0. Placed in `MainLayout.razor` above `RoomList`. |
 | `Data/IChatStore.cs`, `FileChatStore.cs` | `ReadTailAsync`: the last N Messages, read from the end of the Transcript file. |
+Human gate — a Task that names an Action, or requires the Human's acceptance, waits in Needs You until its Proof is complete and the Human decides, `docs/Huddle.HumanGate-Specifications.md`. Paths are relative to `src/Huddle.App`:
+
+| Path | Responsibility |
+| --- | --- |
+| `Tasks/HumanGate/HumanGateRules.cs` | The pure rules H-1 to H-5 that keep a gated Task from skipping the Human, for Human and Agent actors. `TaskService` calls them before a write. |
+| `Tasks/HumanGate/Acceptance.cs`, `AcceptanceInfo.cs`, `AcceptanceState.cs` | Reads from the Change log whether the Human's acceptance still counts: `None`, `Valid` or `Stale`. |
+| `Tasks/HumanGate/ContentFingerprint.cs` | The hash an acceptance is bound to: title, Action and description. |
+| `Tasks/HumanGate/ProofEvaluator.cs` | Pure: turns a Team's Definition of Done and a `ProofContext` into a `Proof`. Merges the ADR-0039 gates once; an Unreadable item is never met; an empty list is complete. |
+| `Tasks/HumanGate/Proof.cs`, `ProofItem.cs`, `ProofDocument.cs`, `ProofContext.cs` | The Proof and its lines (public, they reach component parameters), and the gathered input of the evaluator. |
+| `Tasks/HumanGate/ProofContextBuilder.cs`, `ProofSource.cs`, `IProofSource.cs` | Gather a Task's `ProofContext` from the live stores and evaluate it; the interface is what the components and the tools take. |
+| `Tasks/HumanGate/TaskDecision.cs` | The Human's three decisions: accept, request changes, decline. |
+| `Teams/DoneItem.cs`, `DoneRule.cs`, `ProofItemSource.cs` | One line of a Definition of Done and its closed set of four rules (ADR-0062); where a Proof item came from. `ProcessDocument` parses the section. |
+| `NeedsYou/NeedsYouTaskSource.cs`, `NeedsYouTaskEntry.cs` | The gated Tasks waiting on the Human. Holds no list: every read goes to `TaskStore`, so a restart loses nothing (ADR-0050 amended). |
+| `Tasks/TaskService.cs` (`Decide`, `OnOutsideEdit`) | Applies a decision with its precondition and version check, ignores `humanOverridesGates` on gated Tasks, and reverts and logs an outside edit that the gate forbids. |
+| `Components/Tasks/HumanGateCopy.cs` | Every user-facing string of the gate, in one place; the components and tests share it. |
+| `Components/Tasks/TaskHumanGate.razor` | The Human gate section of the Task panel: switch, Action field, helper line, Done rule chip. |
+| `Components/Tasks/TaskProofList.razor` | The Proof list with the `Ask <owner>` button that posts a Mention in the Task's Room. |
+| `Components/Tasks/TaskDecisionCard.razor` | The decision card: Proof count, locked notice, Accept, Request changes and Decline. |
+| `Components/Tasks/TaskDecisionDialog.razor` | The card as a dialog, opened when a gated card with complete Proof is dropped on Done (board). |
+| `Components/NeedsYou/NeedsYouPage.razor` | The Needs you page at `/needs-you`: Task rows and Room rows, with its empty state. |
+
 Tabs — the open pages in the strip above the content, `docs/Huddle.Tabs-Specifications.md`. Paths are relative to `src/Huddle.App`:
 
 | Path | Responsibility |

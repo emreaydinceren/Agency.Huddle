@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Profile;
+using Agency.Huddle.App.Tasks.HumanGate;
 using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Tasks;
@@ -49,6 +50,7 @@ internal sealed class TaskService : IDisposable
     private readonly ILogger<TaskService> logger;
     private readonly ProcessGateService? gates;
     private readonly IHumanIdentity human;
+    private readonly IProofSource? proofSource;
 
     /// <summary>
     /// Wires this service to the Task index and to the Change log's clock. Deliberately does not
@@ -66,6 +68,7 @@ internal sealed class TaskService : IDisposable
     /// <param name="logger">Used for diagnostics; unused so far.</param>
     /// <param name="gates">Decides whether the Team's process gates refuse a status change (PR-7); <see langword="null"/> enforces none.</param>
     /// <param name="human">The Human's live identity; <see langword="null"/> fixes it at <see cref="TeamOptions.HumanName"/>.</param>
+    /// <param name="proof">Evaluates a Task's Proof for the Human gate rules; <see langword="null"/> means an empty, complete Proof.</param>
     public TaskService(
         TaskStore store,
         TaskIdAllocator ids,
@@ -76,7 +79,8 @@ internal sealed class TaskService : IDisposable
         TimeProvider clock,
         ILogger<TaskService> logger,
         ProcessGateService? gates = null,
-        IHumanIdentity? human = null)
+        IHumanIdentity? human = null,
+        IProofSource? proof = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(ids);
@@ -95,6 +99,7 @@ internal sealed class TaskService : IDisposable
         this.clock = clock;
         this.logger = logger;
         this.gates = gates;
+        this.proofSource = proof;
         this.human = human ?? new ConfiguredHumanIdentity(options.Value.HumanName);
 
         // Settled corrections-B2 D6 item 13: TaskEvents is a plain hub; this is the one place that
@@ -177,6 +182,186 @@ internal sealed class TaskService : IDisposable
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Records the Human's decision on a Task waiting for them (Human gate Spec §6.6): Accept, Request changes or Decline.
+    /// </summary>
+    /// <param name="id">The Task.</param>
+    /// <param name="decision">What the Human decides.</param>
+    /// <param name="note">The reason or the requested changes; required for Request changes and Decline.</param>
+    /// <param name="baseVersion">The version the Human was shown; a mismatch returns <see cref="TaskResult.Conflict"/>.</param>
+    /// <param name="actor">Who decides; must be the Human.</param>
+    public TaskResult Decide(TaskId id, TaskDecision decision, string? note, string baseVersion, TaskActor actor)
+    {
+        ArgumentNullException.ThrowIfNull(baseVersion);
+        ArgumentNullException.ThrowIfNull(actor);
+
+        TaskChange? change;
+        TaskResult result;
+        lock (this.mutateGate)
+        {
+            (result, change) = this.DecideCore(id, decision, note, baseVersion, actor);
+        }
+
+        if (change is not null)
+        {
+            this.events.RaiseTaskChanged(change);
+        }
+
+        return result;
+    }
+
+    /// <summary>The body of <see cref="Decide"/>, run under <see cref="mutateGate"/>: checks, then one write.</summary>
+    /// <param name="id">The Task.</param>
+    /// <param name="decision">What the Human decides.</param>
+    /// <param name="note">The note.</param>
+    /// <param name="baseVersion">The version the Human was shown.</param>
+    /// <param name="actor">Who decides.</param>
+    private (TaskResult Result, TaskChange? Change) DecideCore(TaskId id, TaskDecision decision, string? note, string baseVersion, TaskActor actor)
+    {
+        TaskItem? current = this.store.Get(id);
+        string? text = this.store.ReadText(id);
+        if (current is null || text is null)
+        {
+            return (new TaskResult.NotFound(id), null);
+        }
+
+        if (actor.Kind != TaskActorKind.Human)
+        {
+            return (new TaskResult.Refused([string.Create(CultureInfo.InvariantCulture, $"Only {this.human.Name} can decide on {id}.")]), null);
+        }
+
+        if (!string.Equals(baseVersion, current.Version, StringComparison.Ordinal))
+        {
+            return (new TaskResult.Conflict(current, []), null);
+        }
+
+        string? problem = this.DecisionProblem(current, decision, note);
+        if (problem is not null)
+        {
+            return (new TaskResult.Refused([problem]), null);
+        }
+
+        DateTimeOffset at = TruncateToSeconds(this.clock.GetUtcNow());
+        string? trimmed = note?.Trim();
+        return decision switch
+        {
+            TaskDecision.Accept => this.AcceptCore(current, text, at, actor),
+            TaskDecision.RequestChanges => this.RewriteCore(current, text, TaskState.InProgress, "changes requested: " + trimmed, at, actor, decision, trimmed),
+            _ => this.DeclineCore(current, text, "declined: " + trimmed, at, actor, trimmed),
+        };
+    }
+
+    /// <summary>The refusal text for a decision that does not apply, or <see langword="null"/> when it does.</summary>
+    /// <param name="current">The Task now.</param>
+    /// <param name="decision">The decision.</param>
+    /// <param name="note">The note.</param>
+    private string? DecisionProblem(TaskItem current, TaskDecision decision, string? note)
+    {
+        string notWaiting = string.Create(CultureInfo.InvariantCulture, $"{current.Id} isn't waiting for your decision.");
+        bool waiting = !current.Location.Closed
+            && (decision == TaskDecision.Accept
+                ? current.Status == TaskState.NeedsYou && Acceptance.Of(current).State != AcceptanceState.Valid && this.ProofOf(current).IsComplete
+                : current.Status is TaskState.Review or TaskState.NeedsYou);
+        if (!waiting)
+        {
+            return notWaiting;
+        }
+
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            return decision switch
+            {
+                TaskDecision.RequestChanges => "Say what needs to change.",
+                TaskDecision.Decline => "Say why you're declining.",
+                _ => null,
+            };
+        }
+
+        return null;
+    }
+
+    /// <summary>Accept: appends <c>accepted &lt;hash&gt;</c>, and for a Task with no Action also moves it to Done, in one write.</summary>
+    /// <param name="current">The Task now, in Needs You.</param>
+    /// <param name="text">Its file text.</param>
+    /// <param name="at">When.</param>
+    /// <param name="actor">The Human.</param>
+    private (TaskResult Result, TaskChange? Change) AcceptCore(TaskItem current, string text, DateTimeOffset at, TaskActor actor)
+    {
+        ChangeLogEntry accepted = new(at, actor.Name, "accepted " + ContentFingerprint.Of(current.Title, current.Action, current.Description));
+        if (!string.IsNullOrWhiteSpace(current.Action))
+        {
+            return this.WriteDecision(current, TaskFileFormat.AppendEntry(text, accepted), current.Location, [], accepted, actor, TaskDecision.Accept, null);
+        }
+
+        TaskItem withAcceptance = current with { ChangeLog = [.. current.ChangeLog, accepted] };
+        TaskItem done = withAcceptance with { Status = TaskState.Done };
+        if (HumanGateRules.Check(withAcceptance, done, actor, this.ProofOf(done), this.human.Name) is { } refusal)
+        {
+            return (new TaskResult.GateRefused(refusal.Gate, refusal.Message, CanOverride: false), null);
+        }
+
+        return this.RewriteCore(current, TaskFileFormat.AppendEntry(text, accepted), TaskState.Done, null, at, actor, TaskDecision.Accept, null);
+    }
+
+    /// <summary>Writes a status change with an optional leading note entry and the status entry, in one write.</summary>
+    /// <param name="current">The Task now.</param>
+    /// <param name="text">Its file text (possibly with entries already appended).</param>
+    /// <param name="status">The new status.</param>
+    /// <param name="noteEntry">The note entry summary, or <see langword="null"/> for none.</param>
+    /// <param name="at">When.</param>
+    /// <param name="actor">The Human.</param>
+    /// <param name="decision">The decision.</param>
+    /// <param name="note">The note.</param>
+    private (TaskResult Result, TaskChange? Change) RewriteCore(TaskItem current, string text, TaskState status, string? noteEntry, DateTimeOffset at, TaskActor actor, TaskDecision decision, string? note)
+    {
+        TaskItem candidate = current with { Status = status };
+        IReadOnlyList<FieldChange> diff = TaskDiff.Compare(current, candidate);
+        string withNote = noteEntry is null ? text : TaskFileFormat.AppendEntry(text, new ChangeLogEntry(at, actor.Name, noteEntry));
+        ChangeLogEntry statusEntry = new(at, actor.Name, TaskDiff.Summarise(diff));
+        string finalText = TaskFileFormat.AppendEntry(TaskFileFormat.ReplaceHead(withNote, candidate), statusEntry);
+        return this.WriteDecision(current, finalText, current.Location, diff, statusEntry, actor, decision, note);
+    }
+
+    /// <summary>Decline: rejects the Task and moves it to the closed location in one <see cref="TaskStore.Move"/>.</summary>
+    /// <param name="current">The Task now.</param>
+    /// <param name="text">Its file text.</param>
+    /// <param name="declined">The <c>declined: ...</c> entry summary.</param>
+    /// <param name="at">When.</param>
+    /// <param name="actor">The Human.</param>
+    /// <param name="note">The reason.</param>
+    private (TaskResult Result, TaskChange? Change) DeclineCore(TaskItem current, string text, string declined, DateTimeOffset at, TaskActor actor, string? note)
+    {
+        TaskItem candidate = current with { Status = TaskState.Rejected };
+        IReadOnlyList<FieldChange> diff = TaskDiff.Compare(current, candidate);
+        ChangeLogEntry closed = new(at, actor.Name, "closed");
+        string withDeclined = TaskFileFormat.AppendEntry(TaskFileFormat.ReplaceHead(text, candidate), new ChangeLogEntry(at, actor.Name, declined));
+        string finalText = TaskFileFormat.AppendEntry(withDeclined, closed);
+        return this.WriteDecision(current, finalText, current.Location with { Closed = true }, diff, closed, actor, TaskDecision.Decline, note);
+    }
+
+    /// <summary>Writes the decided text (moving it when the location changed) and builds the result and the one change.</summary>
+    /// <param name="current">The Task now.</param>
+    /// <param name="finalText">The full new file text.</param>
+    /// <param name="location">Where the Task ends up.</param>
+    /// <param name="diff">What changed.</param>
+    /// <param name="entry">The last entry written.</param>
+    /// <param name="actor">The Human.</param>
+    /// <param name="decision">The decision.</param>
+    /// <param name="note">The note.</param>
+    private (TaskResult Result, TaskChange? Change) WriteDecision(TaskItem current, string finalText, TaskLocation location, IReadOnlyList<FieldChange> diff, ChangeLogEntry entry, TaskActor actor, TaskDecision decision, string? note)
+    {
+        TaskItem? written = location == current.Location
+            ? this.store.Write(current, current.Version, finalText)
+            : this.store.Move(current, current.Version, location, finalText);
+        if (written is null)
+        {
+            return (new TaskResult.Conflict(this.store.Get(current.Id) ?? current, []), null);
+        }
+
+        TaskChange change = new(current, written, diff, actor, entry, decision, note);
+        return (new TaskResult.Saved(written, change), change);
     }
 
     /// <summary>
@@ -321,13 +506,29 @@ internal sealed class TaskService : IDisposable
         // diff against) gets the bare summary, with no diff suffix.
         if (edit.Before is null)
         {
-            ChangeLogEntry bareEntry = new(at, actor.Name, "edited outside Huddle");
-            TaskItem? bareWritten = this.store.AppendEntry(edit.After.Id, edit.After.Version, bareEntry);
+            return this.OnOutsideCreation(edit.After, actor, at);
+        }
 
-            // null means the disk version moved again before this append reached it; a newer save
-            // will be reported by the next rebuild, so this one is silently skipped (Settled
-            // corrections-B2 D6 item 8).
-            return bareWritten is null ? null : new TaskChange(null, bareWritten, [], actor, bareEntry);
+        if (Acceptance.AcceptedCount(edit.After) > Acceptance.AcceptedCount(edit.Before))
+        {
+            // The forged entry is refused and logged, then the rest of the same write (a status move, a gate switch) is
+            // judged against the re-read Task, so one write cannot forge an acceptance and use it.
+            TaskChange? forged = this.RefuseForgedAcceptance(edit.After, actor, at);
+            return forged is null ? null : this.ContinueOutsideEdit(new OutsideEdit(edit.Before, forged.After), actor, at) ?? forged;
+        }
+
+        return this.ContinueOutsideEdit(edit, actor, at);
+    }
+
+    /// <summary>The part of an outside edit of an existing Task that follows the forged-acceptance check: the Human gate, the process gates and the log entry.</summary>
+    /// <param name="edit">The Task's state before and after the outside edit.</param>
+    /// <param name="actor">The outside-edit actor.</param>
+    /// <param name="at">When the edit was seen.</param>
+    private TaskChange? ContinueOutsideEdit(OutsideEdit edit, TaskActor actor, DateTimeOffset at)
+    {
+        if (edit.Before is null)
+        {
+            return null;
         }
 
         IReadOnlyList<FieldChange> changes = this.LabelSprintChange(TaskDiff.Compare(edit.Before, edit.After), edit.Before, edit.After);
@@ -339,10 +540,21 @@ internal sealed class TaskService : IDisposable
         // An outside edit cannot dodge a gate: a move into a gated status that the gate refuses is reverted
         // (head only; the body and Evidence stay as written) and logged. Evidence-only and approved edits are
         // not reverted: they only matter when the status next moves, which runs the gate again.
-        string? afterText = edit.Before.Status != edit.After.Status && edit.After.Status is TaskState.InProgress or TaskState.Review or TaskState.Done
+        bool statusChanged = edit.Before.Status != edit.After.Status;
+        bool gateTouched = edit.Before.HumanGate != edit.After.HumanGate
+            || !string.Equals(edit.Before.Action, edit.After.Action, StringComparison.Ordinal)
+            || edit.Before.IsGated
+            || edit.After.IsGated;
+        string? afterText = (statusChanged && edit.After.Status is TaskState.InProgress or TaskState.Review or TaskState.Done or TaskState.NeedsYou) || gateTouched
             ? this.store.ReadText(edit.After.Id)
             : null;
-        if (afterText is not null && this.CheckGates(edit.Before, edit.After, afterText, actor) is { } refusal)
+        if (afterText is not null && this.RevertHumanGateEdit(edit, afterText, actor, at) is { } humanReverted)
+        {
+            return humanReverted;
+        }
+
+        if (afterText is not null && statusChanged && edit.After.Status is TaskState.InProgress or TaskState.Review or TaskState.Done
+            && this.CheckGates(edit.Before, edit.After, afterText, actor) is { } refusal)
         {
             ChangeLogEntry refused = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"outside edit refused by gate: {refusal.Message}"));
             string reverted = TaskFileFormat.AppendEntry(TaskFileFormat.ReplaceHead(afterText, edit.Before), refused);
@@ -357,6 +569,92 @@ internal sealed class TaskService : IDisposable
         TaskItem? written = this.store.AppendEntry(edit.After.Id, edit.After.Version, entry);
 
         return written is null ? null : new TaskChange(edit.Before, written, changes, actor, entry);
+    }
+
+    /// <summary>A file created outside Huddle: reset when the Human gate refuses its status, else logged with the bare summary.</summary>
+    /// <param name="created">The new Task as the file reads.</param>
+    /// <param name="actor">The outside-edit actor.</param>
+    /// <param name="at">When the file was seen.</param>
+    private TaskChange? OnOutsideCreation(TaskItem created, TaskActor actor, DateTimeOffset at)
+    {
+        if (this.ResetGatedCreation(created, actor, at) is { } reset)
+        {
+            return reset;
+        }
+
+        ChangeLogEntry bareEntry = new(at, actor.Name, "edited outside Huddle");
+        TaskItem? bareWritten = this.store.AppendEntry(created.Id, created.Version, bareEntry);
+
+        // null means the disk version moved again before this append reached it; a newer save
+        // will be reported by the next rebuild, so this one is silently skipped (Settled
+        // corrections-B2 D6 item 8).
+        return bareWritten is null ? null : new TaskChange(null, bareWritten, [], actor, bareEntry);
+    }
+
+    /// <summary>
+    /// Reverts what the Human gate refuses in an outside edit: the status, <c>human_gate</c> and <c>action</c> go back to
+    /// what they were, while the rest of the edit (title, description, Evidence) stays, and the refusal is logged.
+    /// </summary>
+    /// <param name="edit">The outside edit.</param>
+    /// <param name="afterText">The file text as it now reads.</param>
+    /// <param name="actor">The outside-edit actor.</param>
+    /// <param name="at">When the edit was seen.</param>
+    /// <returns>The change to raise, or <see langword="null"/> when the Human gate refuses nothing (or the file moved on).</returns>
+    private TaskChange? RevertHumanGateEdit(OutsideEdit edit, string afterText, TaskActor actor, DateTimeOffset at)
+    {
+        TaskItem before = edit.Before ?? edit.After;
+        bool intoDoneOrNeedsYou = before.Status != edit.After.Status && edit.After.Status is TaskState.NeedsYou or TaskState.Done;
+        Proof proof = intoDoneOrNeedsYou ? this.ProofOf(edit.After) : Proof.Empty;
+        if (HumanGateRules.Check(before, edit.After, actor, proof, this.human.Name) is not { } refusal)
+        {
+            return null;
+        }
+
+        ChangeLogEntry refused = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"outside edit refused by Human gate: {refusal.Message}"));
+        TaskItem reverted = edit.After with { Status = before.Status, HumanGate = before.HumanGate, Action = before.Action };
+        string text = TaskFileFormat.AppendEntry(TaskFileFormat.ReplaceHead(afterText, reverted), refused);
+        return this.store.Write(edit.After, edit.After.Version, text) is { } restored
+            ? new TaskChange(edit.After, restored, TaskDiff.Compare(edit.After, restored), actor, refused)
+            : null;
+    }
+
+    /// <summary>
+    /// An <c>accepted</c> entry that an outside edit added is not an acceptance: only Huddle's Accept writes one. The refusal
+    /// is logged, and <see cref="Acceptance.Of"/> reads that entry as voiding the acceptance.
+    /// </summary>
+    /// <param name="after">The Task as the file now reads.</param>
+    /// <param name="actor">The outside-edit actor.</param>
+    /// <param name="at">When the edit was seen.</param>
+    /// <returns>The change to raise, or <see langword="null"/> when the file moved on.</returns>
+    private TaskChange? RefuseForgedAcceptance(TaskItem after, TaskActor actor, DateTimeOffset at)
+    {
+        string summary = string.Create(CultureInfo.InvariantCulture, $"{Acceptance.RefusedPrefix}only {this.human.Name} can accept {after.Id}, in Huddle.");
+        ChangeLogEntry refused = new(at, actor.Name, summary);
+        return this.store.AppendEntry(after.Id, after.Version, refused) is { } written
+            ? new TaskChange(after, written, TaskDiff.Compare(after, written), actor, refused)
+            : null;
+    }
+
+    /// <summary>
+    /// A Task that appears outside Huddle already in Needs You or Done against the Human gate (H-5, H-3) is reset to Review and the refusal logged.
+    /// </summary>
+    /// <param name="created">The new Task as the file reads.</param>
+    /// <param name="actor">The outside-edit actor.</param>
+    /// <param name="at">When the file was seen.</param>
+    /// <returns>The change to raise, or <see langword="null"/> when H-5 refuses nothing (or the file moved on).</returns>
+    private TaskChange? ResetGatedCreation(TaskItem created, TaskActor actor, DateTimeOffset at)
+    {
+        if (HumanGateRules.Check(null, created, actor, Proof.Empty, this.human.Name) is not { } refusal
+            || this.store.ReadText(created.Id) is not { } text)
+        {
+            return null;
+        }
+
+        ChangeLogEntry refused = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"outside edit refused by Human gate: {refusal.Message}"));
+        string reset = TaskFileFormat.AppendEntry(TaskFileFormat.ReplaceHead(text, created with { Status = TaskState.Review }), refused);
+        return this.store.Write(created, created.Version, reset) is { } restored
+            ? new TaskChange(null, restored, [], actor, refused)
+            : null;
     }
 
     /// <summary>
@@ -472,13 +770,20 @@ internal sealed class TaskService : IDisposable
             return (new TaskResult.Refused(problems), null);
         }
 
+        // The Human gate (H-5 and H-3) runs first and is never overridable.
+        Proof proof = candidate.Status == TaskState.NeedsYou ? this.ProofOf(candidate) : Proof.Empty;
+        if (HumanGateRules.Check(null, candidate, actor, proof, this.human.Name) is { } humanRefusal)
+        {
+            return (new TaskResult.GateRefused(humanRefusal.Gate, humanRefusal.Message, CanOverride: false), null);
+        }
+
         // A Task may be created in a gated status only when no gate refuses it (the Human may override on request).
         GateRefusal? refusal = candidate.Status is TaskState.InProgress or TaskState.Review or TaskState.Done
             ? this.CheckGates(candidate with { Status = TaskState.Backlog }, candidate, string.Empty, actor)
             : null;
-        if (refusal is not null && (actor.Kind != TaskActorKind.Human || !humanOverridesGates))
+        if (refusal is not null && (actor.Kind != TaskActorKind.Human || !humanOverridesGates || candidate.IsGated))
         {
-            return (new TaskResult.GateRefused(refusal.Gate, refusal.Message), null);
+            return (new TaskResult.GateRefused(refusal.Gate, refusal.Message, CanOverride: !candidate.IsGated), null);
         }
 
         return this.WriteNewTask(candidate, team, refusal, actor);
@@ -507,6 +812,8 @@ internal sealed class TaskService : IDisposable
             StartDate = draft.StartDate,
             DueDate = draft.DueDate,
             Sprint = draft.Sprint,
+            HumanGate = draft.HumanGate,
+            Action = draft.Action,
             Description = draft.Description,
             UnknownFields = draft.ExtraFields ?? [],
             Location = new TaskLocation(team, project, false),
@@ -604,22 +911,62 @@ internal sealed class TaskService : IDisposable
             return (new TaskResult.Refused([LeaveBacklogRefusal]), null);
         }
 
-        // Spec §Gates: runs after validation, the version check and the "nothing changed" exit, so a
-        // stale or no-op update never reports a gate, and before any write. The Human overrides.
-        GateRefusal? refusal = current.Status != candidate.Status ? this.CheckGates(current, candidate, currentText, actor) : null;
-        if (refusal is not null && (actor.Kind != TaskActorKind.Human || !humanOverridesGates))
+        if (this.RefuseUpdate(current, candidate, currentText, actor, humanOverridesGates, out GateRefusal? refusal, out Proof proof) is { } refused)
         {
-            return (new TaskResult.GateRefused(refusal.Gate, refusal.Message), null);
+            return (refused, null);
         }
 
-        return this.WriteUpdate(current, candidate, resolvedPatch, diff, currentText, refusal, actor);
+        return this.WriteUpdate(current, candidate, resolvedPatch, diff, currentText, refusal, actor, proof);
     }
 
+    /// <summary>
+    /// Runs the Human gate (Spec §6.4: never overridable, before the process gates) and then the process gates (Spec §Gates),
+    /// after validation, the version check and the "nothing changed" exit, so a stale or no-op update never reports a gate.
+    /// The Human overrides a process gate, except on a Human-gated Task.
+    /// </summary>
+    /// <param name="current">The Task now.</param>
+    /// <param name="candidate">The Task as the patch would leave it.</param>
+    /// <param name="text">The Task's file text.</param>
+    /// <param name="actor">Who makes the change.</param>
+    /// <param name="humanOverridesGates">Whether the Human asked to override.</param>
+    /// <param name="overridden">The process gate refusal the Human overrode, or <see langword="null"/>.</param>
+    /// <param name="proof">The Proof evaluated for a move into Needs You or Done, otherwise empty.</param>
+    /// <returns>The refusal to return, or <see langword="null"/> when the change may be written.</returns>
+    private TaskResult.GateRefused? RefuseUpdate(TaskItem current, TaskItem candidate, string text, TaskActor actor, bool humanOverridesGates, out GateRefusal? overridden, out Proof proof)
+    {
+        overridden = null;
+        bool gated = current.IsGated || candidate.IsGated;
+        proof = current.Status != candidate.Status && candidate.Status is TaskState.NeedsYou or TaskState.Done ? this.ProofOf(candidate) : Proof.Empty;
+        if (HumanGateRules.Check(current, candidate, actor, proof, this.human.Name) is { } humanRefusal)
+        {
+            return new TaskResult.GateRefused(humanRefusal.Gate, humanRefusal.Message, CanOverride: false);
+        }
+
+        GateRefusal? refusal = current.Status != candidate.Status ? this.CheckGates(current, candidate, text, actor) : null;
+        if (refusal is not null && (actor.Kind != TaskActorKind.Human || !humanOverridesGates || gated))
+        {
+            return new TaskResult.GateRefused(refusal.Gate, refusal.Message, CanOverride: !gated);
+        }
+
+        overridden = refusal;
+        return null;
+    }
+
+    /// <summary>Evaluates a Task's Proof, or returns the empty (complete) Proof when no source is wired.</summary>
+    /// <param name="task">The Task.</param>
+    private Proof ProofOf(TaskItem task) => this.proofSource?.For(task) ?? Proof.Empty;
+
     /// <summary>Appends the Change log entry for an accepted update and writes the Task, moving it when its Team or Project changed.</summary>
-    private (TaskResult Result, TaskChange? Change) WriteUpdate(TaskItem current, TaskItem candidate, TaskPatch resolvedPatch, IReadOnlyList<FieldChange> diff, string currentText, GateRefusal? refusal, TaskActor actor)
+    private (TaskResult Result, TaskChange? Change) WriteUpdate(TaskItem current, TaskItem candidate, TaskPatch resolvedPatch, IReadOnlyList<FieldChange> diff, string currentText, GateRefusal? refusal, TaskActor actor, Proof proof)
     {
         DateTimeOffset at = TruncateToSeconds(this.clock.GetUtcNow());
         string summary = TaskDiff.Summarise(diff);
+        if (current.Status != TaskState.NeedsYou && candidate.Status == TaskState.NeedsYou)
+        {
+            string counts = string.Create(CultureInfo.InvariantCulture, $"{proof.MetCount}/{proof.Total}");
+            summary = summary.Replace(" → Needs You", $" → Needs You (Proof {counts})", StringComparison.Ordinal);
+        }
+
         if (resolvedPatch.Reason is { Length: > 0 } reason)
         {
             summary = string.Create(CultureInfo.InvariantCulture, $"{summary} (reason: {reason})");
@@ -737,7 +1084,7 @@ internal sealed class TaskService : IDisposable
 
     /// <summary>Whether the Task is a bug: a <c>request: bug</c> field or a <c>bug</c> label.</summary>
     /// <param name="task">The Task.</param>
-    private static bool HasBugMarker(TaskItem task) =>
+    internal static bool HasBugMarker(TaskItem task) =>
         task.Tags.Contains("bug", StringComparer.OrdinalIgnoreCase)
         || string.Equals(UnknownValue(task, "request"), "bug", StringComparison.OrdinalIgnoreCase);
 

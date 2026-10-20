@@ -33,5 +33,6 @@ internal abstract record TaskResult
     /// <summary>A process gate in the Team's <c>Process.md</c> refused the status change (PR-7, Spec §Gates); the Human can override it.</summary>
     /// <param name="Gate">The gate that refused.</param>
     /// <param name="Message">The refusal text, returned to the caller unchanged.</param>
-    internal sealed record GateRefused(Agency.Huddle.App.Teams.GateId Gate, string Message) : TaskResult;
+    /// <param name="CanOverride">Whether the Human can override the refusal; <see langword="false"/> for every refusal on a Human-gated Task.</param>
+    internal sealed record GateRefused(Agency.Huddle.App.Teams.GateId Gate, string Message, bool CanOverride = true) : TaskResult;
 }

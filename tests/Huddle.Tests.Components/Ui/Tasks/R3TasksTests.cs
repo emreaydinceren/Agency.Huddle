@@ -133,7 +133,7 @@ public sealed class R3TasksTests
         Assert.Equal(["Done", "Won't do"], cut.FindAll(".task-board-column-rail .task-board-rail-label").Select(label => label.TextContent.Trim()).Distinct(StringComparer.Ordinal));
         Assert.Equal(2, cut.FindAll("div.task-board-column-header-rail").Count);
         string style = cut.Find(".task-board-columns").GetAttribute("style") ?? string.Empty;
-        Assert.Equal("grid-template-columns: minmax(260px, 300px) minmax(260px, 300px) minmax(260px, 300px) minmax(260px, 300px) 40px 40px;", style);
+        Assert.Equal("grid-template-columns: minmax(260px, 300px) minmax(260px, 300px) minmax(260px, 300px) minmax(260px, 300px) minmax(260px, 300px) 40px 40px;", style);
         Assert.Equal(style, cut.Find(".task-board-lane-columns").GetAttribute("style"));
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("grid-auto-columns: minmax(260px, 300px)", CssText.RuleBody(CssText.AppCss(), ".task-board-lane-columns"), StringComparison.Ordinal);
@@ -151,7 +151,7 @@ public sealed class R3TasksTests
         IRenderedComponent<TaskBoard> cut = RenderBoard(ctx, harness, BoardView(), [TestTasks.Make(id: "PLAT-0001", status: TaskState.Done), TestTasks.Make(id: "PLAT-0002", status: TaskState.Cancelled)]);
 
         Assert.Empty(cut.FindAll("div.task-board-column-header-rail"));
-        Assert.Equal(["Backlog is empty.", "Nothing to do yet.", "Nothing in progress.", "Nothing in review."], cut.FindAll(".task-board-column-empty").Select(e => e.TextContent.Trim()));
+        Assert.Equal(["Backlog is empty.", "Nothing to do yet.", "Nothing in progress.", "Nothing in review.", "Nothing needs you."], cut.FindAll(".task-board-column-empty").Select(e => e.TextContent.Trim()));
     }
 
     /// <summary>A rail is a column that opens while its name is being renamed, so the field fits.</summary>

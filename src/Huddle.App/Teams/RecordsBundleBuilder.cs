@@ -21,7 +21,7 @@ internal sealed class RecordsBundleBuilder(TaskStore tasks, ITeamCatalog teams, 
 
     private static readonly string[] WakeLimitMarkers = ["wake limit", "wake-up limit"];
 
-    private static readonly string[] EscalationMarkers = [$"{Arrow} declined", "escalat"];
+    private static readonly string[] EscalationMarkers = [$"{Arrow} declined", "escalat", "changes requested:", "declined:"];
 
     /// <summary>Collects the Team's records since <paramref name="since"/>.</summary>
     /// <param name="team">The Team name (any case).</param>

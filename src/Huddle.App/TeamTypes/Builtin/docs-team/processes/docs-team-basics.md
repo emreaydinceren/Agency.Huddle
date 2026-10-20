@@ -35,6 +35,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The Docs Lead's Evidence line, with the tester's result, is the check, and the Human closes each Task.
 
+## Definition of Done
+
+- Technical review: document reviewed by verify
+- Examples tried: evidence from verify
+
 ## Cadence
 
 - Work the open Tasks in the order the Docs Lead sets, most-read pages first.

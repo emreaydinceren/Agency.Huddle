@@ -35,6 +35,11 @@ retro: { every: 14, unit: 'days' }
 
 - `qa-evidence-before-done`: Huddle refuses to move a Task to Done until a member whose role covers verify posts an Evidence line.
 
+## Definition of Done
+
+- QA evidence: evidence from verify
+- Method reviewed: document reviewed by verify
+
 ## Cadence
 
 - Agree the metric definitions before preparing data, and keep one analysis in progress at a time.
