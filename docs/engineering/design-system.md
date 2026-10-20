@@ -7,8 +7,8 @@ a component or write a stylesheet for `src/Huddle.App`.
 every other UI resource.
 
 **These rules are binding for new and changed code.** Where today's code does not follow
-a rule yet, the gap is a row in [UX-Issues.md](UX-Issues.md), and the row's ID is named
-next to the rule. Don't copy a pattern from the code without checking it against this
+a rule yet, the gap is an open defect,
+not a licence. Don't copy a pattern from the code without checking it against this
 page: the code still holds drift, and this page wins. If a rule is wrong for your case,
 change the rule in the same change and say why. Don't quietly make an exception.
 
@@ -1227,8 +1227,6 @@ below.
 
 **Before you start**
 
-- [ ] Read the rows of [UX-Issues.md](UX-Issues.md) for the area you are touching. If your
-      change fixes a row, delete it in the same change.
 - [ ] Find the nearest existing screen in [wireframes.md](wireframes.md) and reuse its
       containers and codes.
 
@@ -1300,7 +1298,6 @@ These are open questions, not decisions. Raise them before relying on them.
 ## See also
 
 - [UXDesignGuidelines.md](UXDesignGuidelines.md): the hub for every UI resource, by task.
-- [UX-Issues.md](UX-Issues.md): where today's code breaks these rules.
 - [wireframes.md](wireframes.md): the code and name of every UI container.
 - [rules.md](rules.md): the binding behaviour rules, including the stylesheet and Avatar rows.
 - [MudBlazorDesign.md](../../agents/MudBlazorDesign.md): choosing a component for a spec.

@@ -8,7 +8,7 @@ using Agency.Huddle.Tests.Ui;
 
 namespace Agency.Huddle.Tests.Waiting;
 
-/// <summary>Pins <see cref="Eventually.HistoryCountAsync"/> and <see cref="Eventually.DirectRoomAsync(IServiceProvider, string, CancellationToken, TimeSpan?)"/> (test-split plan R1 rows 2-3).</summary>
+/// <summary>Pins <see cref="Eventually.HistoryCountAsync"/> and <see cref="Eventually.DirectRoomAsync(IServiceProvider, string, CancellationToken, TimeSpan?)"/>.</summary>
 public sealed class EventuallyWrappersTests
 {
     private static readonly TimeSpan shortTimeout = TimeSpan.FromMilliseconds(150);

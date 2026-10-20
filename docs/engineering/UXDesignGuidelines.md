@@ -56,8 +56,8 @@ describing a screen that no longer exists is incomplete.
    [catalog](#reusable-parts-catalog) for the file and its parameters.
 3. **Read the rule** in [design-system.md](design-system.md) for anything the lookup
    points to.
-4. **Read the open defects** for those files or codes in [UX-Issues.md](UX-Issues.md), so
-   you don't copy one.
+4. **Check the code** you are about to copy against that rule: the code still holds drift,
+   so don't copy a pattern you haven't checked.
 5. **Build, then check** it in the running app with the
    [checklist](design-system.md#checklist-for-a-new-or-changed-screen), and update
    wireframes.md.
@@ -382,7 +382,6 @@ the catalog above.
 | [design-system.md](design-system.md) | How the UI looks, reads and behaves: tokens, type roles, chips, avatars, spacing, shape, elevation, icons, motion, focus, layout, overlay anatomy, component defaults, interface copy, stylesheet rules, the checklist | **Yes**, for new and changed UI | Before you design a screen, write markup or touch a stylesheet |
 | Theme vocabulary (Ground, Ink, Quiet ink, Signal, Second cue, the ink ladder) | Defined once, in [design-system.md › Colour](design-system.md#colour). The skin model that carries them is in [theme-authoring.md](theme-authoring.md) | **Yes**, with design-system.md | Before you pick a line, a fill or a signal colour |
 | [wireframes.md](wireframes.md) | The code, name and component of every container, an SVG figure per screen, and the words for UI parts | **Yes**, for vocabulary; update it with your change | Before you discuss, specify, report on or change a part of the screen |
-| [UX-Issues.md](UX-Issues.md) | The few rows the UX consistency delivery did not close, with a note on what is left | No: a backlog | Before you change an area |
 | [language.md](language.md) | The defined terms and the words to avoid | **Yes** | Before you write a label, a message or help text |
 | [rules.md](rules.md) | Behaviour rules the compiler can't check | **Yes** | Before you edit anything in `src/Huddle.App` |
 | [MudBlazorDesign.md](../../agents/MudBlazorDesign.md) | Whether MudBlazor already ships what a spec needs, and where its example is | Guidance | While writing a spec or plan with UI |
@@ -420,7 +419,6 @@ change.
    contradicts design-system.md is out of date.
 5. The code. It is evidence of what ships, not of what is right: the audit found well over
    a hundred places where it disagrees with the rules. Check a pattern before you copy it.
-6. [UX-Issues.md](UX-Issues.md)'s suggested fixes, which are proposals.
 
 ## By task
 
@@ -433,8 +431,8 @@ change.
 | **Writing a stylesheet** | The [stylesheet classes](#stylesheet-classes), design-system.md's [Foundations](design-system.md#foundations) and [Writing the stylesheet](design-system.md#writing-the-stylesheet) |
 | **Writing labels, messages or empty states** | [language.md](language.md), then [Interface copy](design-system.md#interface-copy) |
 | **Adding a Theme or changing a palette** | [Adding a Theme](design-system.md#adding-a-theme-or-changing-a-palette), [manual-tests/appearance-theme.md](manual-tests/appearance-theme.md) |
-| **Fixing a UX issue** | Its row in [UX-Issues.md](UX-Issues.md), then the design-system.md rule it cites. Delete the row in the same change |
-| **Reviewing a UI change** | The [checklist](design-system.md#checklist-for-a-new-or-changed-screen), the UX-Issues rows for the area, and whether wireframes.md changed where it should have |
+| **Fixing a UX issue** | The design-system.md rule it breaks, then the [checklist](design-system.md#checklist-for-a-new-or-changed-screen) |
+| **Reviewing a UI change** | The [checklist](design-system.md#checklist-for-a-new-or-changed-screen), and whether wireframes.md changed where it should have |
 | **Reporting a UI bug or asking for a change** | wireframes.md: name the container by its code, then the change |
 
 ## The rules most often broken
@@ -471,7 +469,7 @@ Check these first. Each links to the rule that owns it.
 
 ## Working on a UI change
 
-**Before.** Find the screen and its codes in wireframes.md, read the UX-Issues rows for
+**Before.** Find the screen and its codes in wireframes.md, read the design-system.md rules for
 the files or codes you will touch, and find your parts in the
 [lookup](#i-need-use-this) and [catalog](#reusable-parts-catalog).
 
@@ -522,7 +520,6 @@ browser's `preview_start` instead of starting the server itself. Then check:
 - [Huddle.UserGuide.md](../Huddle.UserGuide.md) if a Human sees the change.
 - This page's [catalog](#reusable-parts-catalog) if you added, renamed or removed a
   shared component, helper or utility class.
-- [UX-Issues.md](UX-Issues.md): delete each row you fixed.
 - [Index.md](../Index.md) if you added, renamed or deleted a page under `docs/`.
 
 **The convention test.** `tests/Huddle.Tests.Domain/Ui/Conventions` (`UiConventionTests`) scans
@@ -566,5 +563,3 @@ Build with `dotnet build Huddle.slnx` and test with `dotnet test Huddle.slnx --`
   "Agency.Huddle" is for namespaces. Name an action and show one glyph: "Close (×)",
   "More (⋮)".
 - **A new container** gets a code and a row in [wireframes.md](wireframes.md) when it ships.
-- **A new audit** appends to [UX-Issues.md](UX-Issues.md) with the date, commit and method,
-  and never reuses an ID.

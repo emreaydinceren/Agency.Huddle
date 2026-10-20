@@ -10,7 +10,7 @@ and [ADR-0050](adr/0050-needs-you-is-derived-from-room-events-and-held-in-memory
 This is the design for the **Human gate** on Tasks: a Task that names something leaving the Team,
 or that the Human marked, waits in **Needs You** until its Proof is complete and the Human accepts
 it. It builds on the [Tasks specification](Huddle.Tasks-Specifications.md), the process gates in
-the [Teams specification](engineering/teams-spec.md) (*Gates*), and the
+[ADR-0039](adr/0039-process-gates-live-in-process-md-and-are-enforced-in-taskservice-and-the-permission-handler.md), and the
 [Needs You specification](Huddle.NeedsYou-Specifications.md).
 
 It is written for the engineers or agents building it, with no memory of the conversation that

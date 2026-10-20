@@ -62,8 +62,11 @@ the folder layout of the old single project, so `Ui/Tasks/TasksPageTests.cs` is 
 
 A test file goes to the first project whose rule it matches, checked in this order:
 
-1. Not `.cs` or `.razor` (content): the project the content table in
-   [test-split-plan.md](../docs/engineering/test-split-plan.md) (§S9) names.
+1. Not `.cs` or `.razor` (content): beside the tests that read it. Goldens under `Acp/Golden/` go to
+   `Huddle.Tests.Hosted`; `SkillPacks/Fixtures/**` goes to `Huddle.Tests.Common` (copied to the output
+   folder in its csproj); `SkillPacks/Move/Golden/` goes to `Huddle.Tests.SkillPacks`;
+   `Teams/neutrality-allow.txt` and `Ui/Conventions/Baseline/*.txt` go to `Huddle.Tests.Domain`; the
+   `Ui/**` Node harnesses (`*.harness.*`, `*-harness.*`) go to `Huddle.Tests.Agents`.
 2. No `[Fact` or `[Theory` in the file: `Huddle.Tests.Common`.
 3. Mentions `TeamWebApplicationFactory`: `Huddle.Tests.Hosted`.
 4. Mentions `PipeHostFixture`, `MockAdapterFixture`, `FakeAgentProcess*`, `ProcessStartInfo` or
