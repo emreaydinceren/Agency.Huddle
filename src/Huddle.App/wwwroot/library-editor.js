@@ -27,6 +27,7 @@ import {
   yaml,
 } from "./lib/codemirror/codemirror.bundle.js";
 import { planCommand, wikiLinkBeforeCaret } from "./markdown-commands.js";
+import { wireToolbar } from "./markdown-toolbar.js";
 
 function languageExtension(languageId) {
   switch (languageId) {
@@ -115,87 +116,16 @@ function commandKey(key, name) {
 }
 
 /**
- * Wires the Markdown toolbar element to `view` with ONE delegated listener set, so a click edits the
- * document without a trip through the Blazor circuit. `mousedown` is prevented so the editor keeps its
- * focus and selection; the buttons follow the WAI-ARIA toolbar pattern (a roving tabindex: one tab stop,
- * Left/Right/Home/End move, Escape returns to the editor). Returns the function that detaches it all.
+ * Wires the Markdown toolbar element to `view` through the helper the Task Description's textarea shares
+ * (markdown-toolbar.js), so a click edits the document without a trip through the Blazor circuit and the editor
+ * keeps its focus and selection. Returns the function that detaches it all.
  */
 function attachToolbar(view, toolbar) {
-  const buttons = () => [...toolbar.querySelectorAll("[data-md-command]")];
-  const commandButton = (target) => (target instanceof Element ? target.closest("[data-md-command]") : null);
-
-  const setActive = (active) => {
-    for (const button of buttons()) {
-      button.tabIndex = button === active ? 0 : -1;
-    }
-  };
-
-  const onMouseDown = (event) => {
-    if (commandButton(event.target) !== null) {
-      event.preventDefault();
-    }
-  };
-
-  const onClick = (event) => {
-    const button = commandButton(event.target);
-    if (button !== null) {
-      applyCommand(view, button.dataset.mdCommand);
-    }
-  };
-
-  const onFocusIn = (event) => {
-    const button = commandButton(event.target);
-    if (button !== null) {
-      setActive(button);
-    }
-  };
-
-  const onKeyDown = (event) => {
-    if (event.key === "Escape") {
-      view.focus();
-      return;
-    }
-
-    const all = buttons();
-    const current = all.indexOf(commandButton(event.target));
-    if (current === -1) {
-      return;
-    }
-
-    let next = -1;
-    switch (event.key) {
-      case "ArrowRight":
-        next = (current + 1) % all.length;
-        break;
-      case "ArrowLeft":
-        next = (current - 1 + all.length) % all.length;
-        break;
-      case "Home":
-        next = 0;
-        break;
-      case "End":
-        next = all.length - 1;
-        break;
-      default:
-        return;
-    }
-
-    event.preventDefault();
-    setActive(all[next]);
-    all[next].focus();
-  };
-
-  toolbar.addEventListener("mousedown", onMouseDown);
-  toolbar.addEventListener("click", onClick);
-  toolbar.addEventListener("focusin", onFocusIn);
-  toolbar.addEventListener("keydown", onKeyDown);
-
-  return () => {
-    toolbar.removeEventListener("mousedown", onMouseDown);
-    toolbar.removeEventListener("click", onClick);
-    toolbar.removeEventListener("focusin", onFocusIn);
-    toolbar.removeEventListener("keydown", onKeyDown);
-  };
+  return wireToolbar(
+    toolbar,
+    (name) => applyCommand(view, name),
+    () => view.focus(),
+  );
 }
 
 /**

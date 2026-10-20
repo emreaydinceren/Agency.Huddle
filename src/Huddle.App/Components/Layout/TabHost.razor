@@ -8,11 +8,13 @@
     open the page is not rendered at all, so the empty state is real rather than a page standing
     behind a blank strip.
 *@
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Tabs
 @implements IDisposable
 @inject TabService Tabs
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject IDialogService Dialogs
 
 <div class="tab-groups">
     @foreach (TabGroup group in this.Tabs.Groups)
@@ -57,12 +59,17 @@
     /// </summary>
     /// <param name="action">The shortcut: <c>close</c>, <c>next</c> or <c>previous</c>.</param>
     [JSInvokable]
-    public Task ShortcutAsync(string action)
+    public async Task ShortcutAsync(string action)
     {
         string? activeBefore = this.Tabs.Active?.Id;
         switch (action)
         {
             case "close" when this.Tabs.Active is { } active:
+                if (this.Tabs.IsDirty(active.Key) && !await this.Dialogs.ConfirmAsync("Discard changes?", $"Your unsaved edits in {active.Title} will be lost.", "Discard", danger: true))
+                {
+                    return;
+                }
+
                 this.Tabs.Close(active.Id);
                 break;
             case "next":
@@ -72,15 +79,13 @@
                 this.Tabs.ActivateRelative(-1);
                 break;
             default:
-                return Task.CompletedTask;
+                return;
         }
 
         if (this.Tabs.Active is { } now && !string.Equals(now.Id, activeBefore, StringComparison.Ordinal))
         {
             this.Navigation.NavigateTo(now.Url);
         }
-
-        return Task.CompletedTask;
     }
 
     /// <summary>Unsubscribes from <see cref="TabService.Changed"/> and navigation, and removes the shortcuts.</summary>

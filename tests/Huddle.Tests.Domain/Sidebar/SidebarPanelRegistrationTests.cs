@@ -1,6 +1,7 @@
 using Agency.Huddle.App;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Sidebar;
+using Agency.Huddle.App.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -77,6 +78,60 @@ public sealed class SidebarPanelRegistrationTests
 
         string[] expected = ["members", "room-documents"];
         Assert.Equal(expected, ids);
+    }
+
+    /// <summary>A Task open for editing gets Activity and Linked documents; Blocked by and Blocks join it only when the Subject says the Task has rows for them (read view spec D-8).</summary>
+    [Fact]
+    public void Task_GetsActivityAndDocuments_AndTheBlockerPanelsOnlyWhenTheyHaveRows()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildProvider(dataDir, new Dictionary<string, string?>());
+        SidebarPanelCatalog catalog = provider.GetRequiredService<SidebarPanelCatalog>();
+        _ = TaskId.TryParse("PLAT-0013", out TaskId id);
+
+        List<string> bare = catalog.For(new TaskSubject(id)).Select(static panel => panel.Id).ToList();
+        List<string> both = catalog.For(new TaskSubject(id, HasBlockers: true, IsBlocking: true)).Select(static panel => panel.Id).ToList();
+
+        Assert.Equal(["task-activity", "task-documents"], bare);
+        Assert.Equal(["task-activity", "task-blockers", "task-blocks", "task-documents"], both);
+    }
+
+    /// <summary>None of the four Task panels applies to a Room or a document.</summary>
+    [Fact]
+    public void TaskPanels_DoNotApplyToARoomOrADocument()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildProvider(dataDir, new Dictionary<string, string?>());
+        SidebarPanelCatalog catalog = provider.GetRequiredService<SidebarPanelCatalog>();
+
+        List<string> room = catalog.For(new RoomSubject("ab12")).Select(static panel => panel.Id).ToList();
+        List<string> document = catalog.For(MarkdownSubject()).Select(static panel => panel.Id).ToList();
+
+        Assert.DoesNotContain(room.Concat(document), static id => id.StartsWith("task-", StringComparison.Ordinal));
+    }
+
+    /// <summary>With the Library off, the Task's Linked documents panel is not registered; the others stay.</summary>
+    [Fact]
+    public void TaskDocuments_LibraryDisabled_IsNotOffered()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildProvider(dataDir, new Dictionary<string, string?> { ["Team:Library:Enabled"] = "false" });
+        SidebarPanelCatalog catalog = provider.GetRequiredService<SidebarPanelCatalog>();
+        _ = TaskId.TryParse("PLAT-0013", out TaskId id);
+
+        List<string> ids = catalog.For(new TaskSubject(id, HasBlockers: true, IsBlocking: true)).Select(static panel => panel.Id).ToList();
+
+        Assert.Equal(["task-activity", "task-blockers", "task-blocks"], ids);
+    }
+
+    /// <summary>The Task Subject's key names the Task alone, so its panels stay mounted while its flags change.</summary>
+    [Fact]
+    public void TaskSubject_KeyIgnoresTheFlags()
+    {
+        _ = TaskId.TryParse("PLAT-0013", out TaskId id);
+
+        Assert.Equal("task:PLAT-0013", new TaskSubject(id, HasBlockers: true, IsBlocking: true).Key);
+        Assert.Equal(new TaskSubject(id).Key, new TaskSubject(id, HasBlockers: true).Key);
     }
 
     /// <summary>Builds the real container with the Team data directory and the given feature switches.</summary>

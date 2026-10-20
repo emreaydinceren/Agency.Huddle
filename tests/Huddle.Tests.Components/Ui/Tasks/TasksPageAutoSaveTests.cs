@@ -99,6 +99,37 @@ public sealed class TasksPageAutoSaveTests
         Assert.Equal("New view 2", ViewActions.NewViewName(harness.Views));
     }
 
+    /// <summary>
+    /// A Tab showing <c>/tasks/new</c> moves to the new View's own address, so showing it again (a restored layout) opens that View instead of
+    /// creating another "New view" each time.
+    /// </summary>
+    [Fact]
+    public async Task NewRoute_MovesItsTabToTheNewView_SoItIsNotCreatedAgain()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        Agency.Huddle.App.Tabs.Tab tab = harness.Tabs.Open("/tasks/new");
+        Agency.Huddle.App.Tabs.TabPageContext context = new(tab.Url, tab.Id);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+
+        _ = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<Microsoft.AspNetCore.Components.CascadingValue<Agency.Huddle.App.Tabs.TabPageContext>>(0);
+            builder.AddComponentParameter(1, "Value", context);
+            builder.AddComponentParameter(2, "ChildContent", (Microsoft.AspNetCore.Components.RenderFragment)(inner =>
+            {
+                inner.OpenComponent<TasksPage>(0);
+                inner.CloseComponent();
+            }));
+            builder.CloseComponent();
+        });
+
+        TaskView created = Assert.Single(harness.Views.Views, static view => string.Equals(view.Name, "New view", StringComparison.Ordinal));
+        Agency.Huddle.App.Tabs.Tab moved = Assert.Single(harness.Tabs.Tabs);
+        Assert.Equal($"/tasks/{created.Id}", moved.Url);
+        Assert.Equal($"tasks:{created.Id}", moved.Key);
+    }
+
     /// <summary>Renders the Tasks page on the View <paramref name="viewId"/>, beside the popover and dialog hosts its menus need.</summary>
     /// <param name="ctx">The bUnit context.</param>
     /// <param name="viewId">The View's id.</param>

@@ -439,8 +439,13 @@ window.huddleSidebar = {
         window.huddleSidebar.unwatchHeadings();
         let last;
         let frame = 0;
+        let timer = 0;
+        let stopped = false;
         const report = () => {
             frame = 0;
+            if (stopped) {
+                return;
+            }
             let current = null;
             for (const id of ids) {
                 const element = document.getElementById(id);
@@ -455,7 +460,8 @@ window.huddleSidebar = {
             }
             if (current !== null && current !== last) {
                 last = current;
-                ref.invokeMethodAsync("OnHeadingInView", current);
+                // The panel may be gone by the time this lands (its reference is disposed with it): nothing is left to tell.
+                ref.invokeMethodAsync("OnHeadingInView", current).catch(() => { });
             }
         };
         const onScroll = () => {
@@ -464,8 +470,16 @@ window.huddleSidebar = {
             }
         };
         document.addEventListener("scroll", onScroll, { capture: true, passive: true });
-        window.huddleSidebar._headingWatch = () => document.removeEventListener("scroll", onScroll, { capture: true });
-        window.setTimeout(report, 100);
+        window.huddleSidebar._headingWatch = () => {
+            // Stop the pending frame and the first-report timer too, or one can still call into a disposed panel.
+            stopped = true;
+            window.clearTimeout(timer);
+            if (frame) {
+                window.cancelAnimationFrame(frame);
+            }
+            document.removeEventListener("scroll", onScroll, { capture: true });
+        };
+        timer = window.setTimeout(report, 100);
     },
     unwatchHeadings() {
         const stop = window.huddleSidebar._headingWatch;

@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 980" width="1100" height="980" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 11: The Task read view in the detail drawer">
+<title>Figure 11: The Task read view in the detail drawer</title>
+<defs><filter id="sh" x="-10%" y="-10%" width="125%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.22"/></filter><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7280"/></marker></defs>
+<rect width="1100" height="980" fill="#ffffff"/>
+<text x="24" y="30" font-size="18" font-weight="700" fill="#1f2430">Figure 11: The Task read view (proposed)</text>
+<text x="24" y="48" font-size="12" fill="#6b7280">T7 hosts TaskReadView (T15) instead of the editable TaskDetail. Every value is text; Edit (T15b) opens the Task edit page (Figure 12) in a new Tab.</text>
+
+<!-- dimmed Tasks page -->
+<rect x="24" y="64" width="560" height="896" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<text x="304" y="96" font-size="11" font-weight="600" fill="#6b7280" text-anchor="middle">Tasks page (T1), unchanged</text>
+<text x="304" y="112" font-size="10" fill="#6b7280" text-anchor="middle" font-style="italic">List or Kanban (T4) render exactly as today</text>
+<rect x="44" y="130" width="520" height="30" rx="3" fill="#f6f7f9" stroke="#8b93a1"/>
+<rect x="44" y="166" width="520" height="30" rx="3" fill="#dbeafe" stroke="#8b93a1"/>
+<text x="56" y="185" font-size="10" fill="#1f2430">selected row: PLAT-0013  Findings memo v2</text>
+<rect x="44" y="202" width="520" height="30" rx="3" fill="#f6f7f9" stroke="#8b93a1"/>
+<rect x="44" y="238" width="520" height="30" rx="3" fill="#f6f7f9" stroke="#8b93a1"/>
+
+<!-- drawer T7 -->
+<rect x="600" y="64" width="476" height="896" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.4" filter="url(#sh)"/>
+<rect x="596" y="58" width="25" height="17" rx="8.5" fill="#b45309"/><text x="608.5" y="70.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T7</text>
+<text x="627" y="71" font-size="11" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Task detail (drawer, unchanged shell)</text>
+<rect x="600" y="64" width="6" height="896" fill="#d1d5db"/>
+<text x="603" y="520" font-size="9" fill="#6b7280" text-anchor="middle" transform="rotate(-90 603 520)">T7a</text>
+
+<text x="620" y="96" font-size="12" fill="#6b7280">PLAT-0013 · Platform</text>
+<text x="620" y="118" font-size="16" font-weight="600" fill="#1f2430">Findings memo v2 — accept or request changes</text>
+<text x="1056" y="96" font-size="14" fill="#6b7280" text-anchor="end">✕</text>
+
+<!-- T15a action row -->
+<rect x="614" y="130" width="450" height="34" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-dasharray="0"/>
+<rect x="610" y="124" width="34" height="17" rx="8.5" fill="#b45309"/><text x="627" y="136.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T15a</text>
+<text x="650" y="137" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Action row</text>
+<rect x="874" y="135" width="74" height="24" rx="4" fill="#ffffff" stroke="#0e7c86" stroke-width="1.2"/>
+<text x="911" y="151" font-size="10" font-weight="600" fill="#0e7c86" text-anchor="middle">✎ Edit ↗</text>
+<rect x="870" y="160" width="34" height="14" rx="7" fill="#b45309"/><text x="887" y="170.5" font-size="9" font-weight="700" fill="#fff" text-anchor="middle">T15b</text>
+<text x="980" y="151" font-size="12" fill="#6b7280" text-anchor="middle">⧉</text>
+<text x="1012" y="151" font-size="12" fill="#6b7280" text-anchor="middle">⋮</text>
+<text x="1044" y="151" font-size="9" fill="#6b7280" text-anchor="middle">menu</text>
+
+<!-- T15c request strip (dashed) -->
+<rect x="614" y="180" width="450" height="28" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-dasharray="6 4"/>
+<rect x="610" y="174" width="34" height="17" rx="8.5" fill="#b45309"/><text x="627" y="186.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T15c</text>
+<text x="650" y="201" font-size="10" fill="#6b7280">Request strip · only on a Request · as today, read-only</text>
+
+<!-- T15d property grid -->
+<rect x="614" y="222" width="450" height="268" rx="4" fill="#ffffff" stroke="#8b93a1"/>
+<rect x="610" y="216" width="34" height="17" rx="8.5" fill="#b45309"/><text x="627" y="228.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T15d</text>
+<text x="650" y="229" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Property grid · 28px rows · label 96px</text>
+<g font-size="11">
+<text x="628" y="254" fill="#6b7280">Status</text><circle cx="728" cy="250" r="4" fill="#d97706"/><rect x="736" y="241" width="74" height="16" rx="8" fill="#fef3c7"/><text x="773" y="253" fill="#92400e" text-anchor="middle" font-size="10">Needs you</text>
+<text x="868" y="254" fill="#6b7280">Priority</text><rect x="930" y="241" width="54" height="16" rx="8" fill="#fee2e2"/><text x="957" y="253" fill="#991b1b" text-anchor="middle" font-size="10">High</text>
+<line x1="622" y1="264" x2="1056" y2="264" stroke="#e5e7eb"/>
+<text x="628" y="282" fill="#6b7280">Assignee</text><circle cx="732" cy="278" r="8" fill="#cbd5e1"/><text x="746" y="282" fill="#1f2430">Miriam</text><text x="790" y="282" fill="#0e7c86" font-size="10">Woken in Room Plan</text>
+<line x1="622" y1="292" x2="1056" y2="292" stroke="#e5e7eb"/>
+<text x="628" y="310" fill="#6b7280">Team</text><text x="724" y="310" fill="#1f2430">Platform</text>
+<text x="868" y="310" fill="#6b7280">Project</text><text x="930" y="310" fill="#9ca3af">—</text>
+<line x1="622" y1="320" x2="1056" y2="320" stroke="#e5e7eb"/>
+<text x="628" y="338" fill="#6b7280">Sprint</text><text x="724" y="338" fill="#1f2430">S-12</text>
+<text x="868" y="338" fill="#6b7280">Parent</text><text x="930" y="338" fill="#0e7c86">PLAT-0009</text>
+<line x1="622" y1="348" x2="1056" y2="348" stroke="#e5e7eb"/>
+<text x="628" y="366" fill="#6b7280">Blocked by</text><rect x="724" y="355" width="78" height="16" rx="8" fill="#f3f4f6" stroke="#d1d5db"/><text x="763" y="367" fill="#1f2430" text-anchor="middle" font-size="10">PLAT-0011</text>
+<line x1="622" y1="376" x2="1056" y2="376" stroke="#e5e7eb"/>
+<text x="628" y="394" fill="#6b7280">Tags</text><rect x="724" y="383" width="54" height="16" rx="8" fill="#f3f4f6" stroke="#d1d5db"/><text x="751" y="395" fill="#1f2430" text-anchor="middle" font-size="10">synthesis</text>
+<line x1="622" y1="404" x2="1056" y2="404" stroke="#e5e7eb"/>
+<text x="628" y="422" fill="#6b7280">Start</text><text x="724" y="422" fill="#9ca3af">—</text>
+<text x="868" y="422" fill="#6b7280">Due</text><text x="930" y="422" fill="#1f2430" font-weight="600">Today</text>
+<line x1="622" y1="432" x2="1056" y2="432" stroke="#e5e7eb"/>
+<text x="628" y="450" fill="#6b7280">Origin</text><text x="724" y="450" fill="#0e7c86">Room Plan</text>
+<text x="630" y="478" font-size="10" fill="#6b7280" font-style="italic">two label | value pairs per row from 440px of drawer width; one pair per row narrower</text>
+</g>
+
+<!-- T15e description -->
+<rect x="614" y="504" width="450" height="104" rx="4" fill="#ffffff" stroke="#8b93a1"/>
+<rect x="610" y="498" width="34" height="17" rx="8.5" fill="#b45309"/><text x="627" y="510.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T15e</text>
+<text x="650" y="511" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Description · rendered Markdown, no toggle</text>
+<rect x="628" y="528" width="400" height="8" rx="3" fill="#d1d5db"/>
+<rect x="628" y="544" width="420" height="8" rx="3" fill="#d1d5db"/>
+<rect x="628" y="560" width="360" height="8" rx="3" fill="#d1d5db"/>
+<text x="628" y="592" font-size="10" fill="#0e7c86">[[Findings memo v2]] · attachment links as links</text>
+
+<!-- T15f gate summary -->
+<rect x="614" y="622" width="450" height="66" rx="4" fill="#fffbeb" stroke="#8b93a1" stroke-dasharray="6 4"/>
+<rect x="610" y="616" width="34" height="17" rx="8.5" fill="#b45309"/><text x="627" y="628.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T15f</text>
+<text x="650" y="629" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Human gate, read-only (T10's rows as text)</text>
+<text x="628" y="652" font-size="10" fill="#1f2430">Requires your acceptance: On · What will happen: Nothing leaves the team</text>
+<text x="628" y="672" font-size="10" fill="#6b7280">Can move to Done: Emre only</text>
+
+<!-- T11 proof -->
+<rect x="614" y="702" width="450" height="76" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-dasharray="6 4"/>
+<rect x="610" y="696" width="25" height="17" rx="8.5" fill="#b45309"/><text x="622.5" y="708.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T11</text>
+<text x="641" y="709" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Proof list, unchanged (Ask still works)</text>
+<text x="628" y="732" font-size="10" fill="#1f2430">✓ Every claim cites a source        41/41 · Ruth</text>
+<text x="628" y="750" font-size="10" fill="#1f2430">○ Citation check                    19/23 · Ruth   Ask Ruth</text>
+
+<!-- T12 decision -->
+<rect x="614" y="792" width="450" height="70" rx="4" fill="#fffbeb" stroke="#8b93a1" stroke-dasharray="6 4"/>
+<rect x="610" y="786" width="25" height="17" rx="8.5" fill="#b45309"/><text x="622.5" y="798.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T12</text>
+<text x="641" y="799" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Decision card, unchanged and live</text>
+<rect x="628" y="826" width="100" height="24" rx="4" fill="#fff" stroke="#8b93a1"/><text x="678" y="842" font-size="10" text-anchor="middle" fill="#1f2430">Request changes</text>
+<rect x="736" y="826" width="64" height="24" rx="4" fill="#0e7c86"/><text x="768" y="842" font-size="10" text-anchor="middle" fill="#fff">Accept</text>
+
+<!-- T15g change log + meta -->
+<rect x="614" y="876" width="450" height="68" rx="4" fill="#ffffff" stroke="#8b93a1"/>
+<rect x="610" y="870" width="34" height="17" rx="8.5" fill="#b45309"/><text x="627" y="882.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T15g</text>
+<text x="650" y="883" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Change log (collapsed) and footer meta, as today</text>
+<text x="628" y="908" font-size="10" fill="#1f2430">▸ Change log (6)</text>
+<text x="628" y="930" font-size="10" fill="#6b7280">Created Oct 8 · Updated today 11:02</text>
+<text x="1056" y="930" font-size="9" fill="#6b7280" text-anchor="end" font-style="italic">no sticky footer: nothing to save</text>
+</svg>

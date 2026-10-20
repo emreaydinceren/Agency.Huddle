@@ -481,45 +481,38 @@ public sealed class R3TasksTests
 
     // ---- B4k, B4j, B4p: the drawer's footer, title edit and draft ----
 
-    /// <summary>The drawer shows no footer for an untouched Task; an edit shows Cancel and Save in the sticky footer, and the Task's own body has no action row (audit B4k).</summary>
+    /// <summary>An existing Task's drawer is the read view: no footer, no Cancel or Save, and no form control at all (read view spec D-1). A draft keeps the footer, pinned below.</summary>
     [Fact]
-    public async Task Drawer_FooterShowsWhileThereAreChanges_AndSaveWritesThem()
+    public async Task Drawer_ExistingTask_HasNoFooterAndNoEditor()
     {
         using TaskToolHarness harness = new();
-        TaskItem task = CreateTask(harness, "Alpha");
+        _ = CreateTask(harness, "Alpha");
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
         await ClickTaskRowAsync(cut, "Alpha");
 
+        Assert.NotEmpty(cut.FindAll(".task-read-view"));
         Assert.Empty(cut.FindAll(".resizable-drawer-footer"));
-        Assert.Empty(cut.FindAll(".task-detail .task-detail-actions"));
-        await EditPriorityAsync(cut, TaskPriority.Urgent);
-
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".resizable-drawer-footer")));
-        IReadOnlyList<IElement> buttons = cut.FindAll(".resizable-drawer-footer button");
-        Assert.Equal(["Cancel", "Save"], buttons.Select(b => b.TextContent.Trim()));
-        await cut.InvokeAsync(() => cut.Find(".resizable-drawer-footer .task-detail-save").ClickAsync());
-
-        Assert.Equal(TaskPriority.Urgent, harness.Store.Get(task.Id)?.Priority);
-        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".resizable-drawer-footer")));
+        Assert.Empty(cut.FindAll(".task-detail-save"));
+        Assert.Empty(cut.FindAll(".task-read-view input, .task-read-view textarea, .task-read-view select"));
     }
 
-    /// <summary>The footer's Cancel discards the edit and closes the drawer.</summary>
+    /// <summary>The footer's Cancel on a draft discards the edit and closes the drawer; no Task is created.</summary>
     [Fact]
     public async Task Drawer_FooterCancel_DiscardsAndCloses()
     {
         using TaskToolHarness harness = new();
-        TaskItem task = CreateTask(harness, "Alpha");
+        _ = CreateTask(harness, "Alpha");
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
-        await ClickTaskRowAsync(cut, "Alpha");
+        await cut.InvokeAsync(() => cut.Find(".tasks-new-task").ClickAsync());
         await EditPriorityAsync(cut, TaskPriority.Urgent);
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".resizable-drawer-footer .task-detail-cancel")));
 
         await cut.InvokeAsync(() => cut.Find(".resizable-drawer-footer .task-detail-cancel").ClickAsync());
 
-        Assert.Equal(TaskPriority.Medium, harness.Store.Get(task.Id)?.Priority);
-        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("tr.task-row-selected")));
+        Assert.Single(harness.Store.All);
+        cut.WaitForAssertion(() => Assert.False(cut.FindComponent<Agency.Huddle.App.Components.Shared.ResizableEndDrawer>().Instance.Open));
     }
 
     /// <summary>A new draft opens with its title field in the body, focused and titled "Task title", no ID in front of it, and the footer showing at once (audit B4p, E3).</summary>
@@ -543,7 +536,7 @@ public sealed class R3TasksTests
         Assert.Empty(cut.FindAll(".tasks-detail-drawer.is-title-editing"));
     }
 
-    /// <summary>Editing a saved Task's title replaces the drawer's own copy: the drawer is marked and CSS hides the heading; the field is at the title's size (audit B4j).</summary>
+    /// <summary>The read view has no title edit (the title is edited on the edit page), and the CSS that lets an inline title field replace the drawer's own copy keeps the title's size (audit B4j).</summary>
     [Fact]
     public async Task EditTitle_ReplacesTheDrawerTitle()
     {
@@ -552,11 +545,9 @@ public sealed class R3TasksTests
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
         await ClickTaskRowAsync(cut, "Alpha");
+
         Assert.Empty(cut.FindAll(".is-title-editing"));
-
-        await cut.InvokeAsync(() => cut.Find("button[aria-label='Edit title']").ClickAsync());
-
-        cut.WaitForAssertion(() => Assert.True(HasClass(DetailDrawer(cut).Instance.Class, "is-title-editing")));
+        Assert.Empty(cut.FindAll("button[aria-label='Edit title']"));
         string css = CssText.AppCss();
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("display: none;", CssText.RuleBody(css, ".tasks-detail-drawer.is-title-editing .resizable-drawer-title"), StringComparison.Ordinal);
@@ -987,8 +978,4 @@ public sealed class R3TasksTests
         IRenderedComponent<MudSelect<TaskPriority>> select = cut.FindComponent<TaskDetail>().FindComponents<MudSelect<TaskPriority>>().Single();
         await cut.InvokeAsync(() => select.Instance.ValueChanged.InvokeAsync(value));
     }
-
-    /// <summary>The page's own detail drawer.</summary>
-    private static IRenderedComponent<MudDrawer> DetailDrawer(IRenderedComponent<ContainerFragment> cut) =>
-        cut.FindComponents<MudDrawer>().Single(d => HasClass(d.Instance.Class, "tasks-detail-drawer"));
 }

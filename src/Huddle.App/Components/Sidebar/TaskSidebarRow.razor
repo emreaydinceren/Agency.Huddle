@@ -1,0 +1,18 @@
+@*
+    One Task in a Right sidebar panel (docs/Huddle.TaskReadView-Specifications.md, D-8): the id in 12px Quiet ink, the title as a
+    one-line link that opens the Task, and its live state dot. Shared by the Blocked by and Blocks panels.
+*@
+@using Agency.Huddle.App.Components.Tasks
+
+<div class="@(this.Task.Status.IsTerminal() ? "sidebar-row room-tasks-row room-task-closed" : "sidebar-row room-tasks-row")">
+    <span class="room-task-id">@this.Task.Id</span>
+    <MudLink Typo="Typo.body2" Color="Color.Inherit" Underline="Underline.None" Class="sidebar-row-text" title="@($"{this.Task.Id} {this.Task.Title}")"
+             Href="@($"/tasks/item/{Uri.EscapeDataString(this.Task.Id.ToString())}")">@this.Task.Title</MudLink>
+    <span class="@TaskStateDot.ClassFor(this.Task.Status)" role="img" aria-label="@this.Task.Status.ToWire()" title="@this.Task.Status.ToWire()"></span>
+</div>
+
+@code {
+    /// <summary>The Task to draw.</summary>
+    [Parameter, EditorRequired]
+    public required TaskItem Task { get; set; }
+}

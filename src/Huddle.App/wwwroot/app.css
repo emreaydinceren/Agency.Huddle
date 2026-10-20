@@ -2178,6 +2178,174 @@ a.team-ref,
     font-size: var(--mud-typography-body2-size);
 }
 
+/* ---- Task read view (T15) and Task edit page (K): docs/Huddle.TaskReadView-Specifications.md ---- */
+
+/* The read view is a text body in the detail drawer; its width, not the window's, decides one pair per row or two. */
+.task-read-view {
+    container-type: inline-size;
+    container-name: task-read-view;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* T15a: the Closed chip at the left, Edit, Copy id and the menu at the right, 32px high. */
+.task-read-view-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+}
+
+.task-read-view-actions-spacer {
+    flex: 1 1 auto;
+}
+
+/* T15d: a label and a value per row, 28px high with an Edge hairline between rows. */
+.task-read-view-props {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 24px;
+    margin: 0;
+}
+
+.task-read-view-prop {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 8px;
+    min-height: 28px;
+    border-bottom: 1px solid var(--ink-edge);
+    overflow-wrap: anywhere;
+}
+
+.task-read-view-prop dt {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
+.task-read-view-prop dd {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    min-width: 0;
+    margin: 0;
+    color: var(--mud-palette-text-primary);
+    font-size: var(--mud-typography-body2-size);
+}
+
+.task-read-view-empty {
+    color: var(--mud-palette-text-secondary);
+    opacity: 0.8;
+}
+
+.task-read-view-blocker {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.task-read-view-blocker-status {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
+.task-read-view-prop.task-overdue dd {
+    color: var(--mud-palette-error);
+}
+
+.task-read-view-description-empty {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-body2-size);
+}
+
+.task-human-gate-readonly {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: var(--mud-typography-body2-size);
+}
+
+@container task-read-view (min-width: 440px) {
+    .task-read-view-props {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .task-read-view-prop.is-wide {
+        grid-column: 1 / -1;
+    }
+}
+
+/* K2: the page header holds the page's name and actions; it sticks to the top of the page container so Cancel and Save stay in reach (D-5). */
+.task-edit-page-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    margin: -16px -16px 16px;
+    padding: 16px 16px 0;
+    background-color: var(--mud-palette-surface);
+}
+
+.task-edit-page-header .page-header {
+    margin-bottom: 0;
+}
+
+.task-edit-page-eyebrow {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
+/* K2a: the two buttons stay together when the header's actions wrap below the title. */
+.task-edit-page-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.task-edit-page {
+    container-type: inline-size;
+    container-name: task-edit-page;
+}
+
+@container task-edit-page (max-width: 600px) {
+    .task-edit-page-header .page-header-row {
+        flex-wrap: wrap;
+    }
+}
+
+/* K3 and D-6: the editor is two columns only when the editor itself is 1024px wide, never by the window's width, which ignores the sidebars and a second
+   Tab group. TaskDetail's own grid breaks at MudBlazor's window breakpoint, so inside the page it is one column until this container is wide enough. */
+.task-edit-page-editor {
+    container-type: inline-size;
+    container-name: task-edit-editor;
+}
+
+.task-edit-page-editor .task-detail-grid > .task-detail-col-fields,
+.task-edit-page-editor .task-detail-grid > .task-detail-col-side {
+    flex-basis: 100%;
+    max-width: 100%;
+}
+
+@container task-edit-editor (min-width: 1024px) {
+    .task-edit-page-editor .task-detail-grid > .task-detail-col-fields {
+        flex-basis: 58.3333%;
+        max-width: 58.3333%;
+    }
+
+    .task-edit-page-editor .task-detail-grid > .task-detail-col-side {
+        flex-basis: 41.6667%;
+        max-width: 41.6667%;
+    }
+}
+
+/* K3a: the Markdown toolbar sits between the Description's label line and its field (D-7). */
+.task-detail-description-editor .markdown-toolbar {
+    padding: 0 0 4px;
+    border-bottom: 0;
+}
+
 /* ---- Traits: transcript and composer ------------------------------------------------------------------------
    Variant rules for the message, marks, composer and send traits (ADR-0057, lifted from the Nordic pack). Each is
    scoped to the marker attribute the skin renders, so a Theme that does not choose the variant never sees it. The

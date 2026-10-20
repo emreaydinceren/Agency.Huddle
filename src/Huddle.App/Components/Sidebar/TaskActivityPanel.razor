@@ -1,0 +1,106 @@
+@*
+    The Right sidebar's Activity panel for a Task open in its edit page (docs/Huddle.TaskReadView-Specifications.md, D-8):
+    what the app works out about the Task's wakes - the last Room it woke a Teammate in, how much of the wake budget is
+    spent, and whether a Teammate is working on it now. It reads TaskActivity and TurnActivity only, so it shows the Task
+    as stored and never an unsaved edit in the form. It has no count: a row is not a thing to tally.
+*@
+@using Agency.Huddle.App.Sidebar
+@using Agency.Huddle.App.Tasks
+@using Agency.Huddle.App.Components.Tasks
+@implements IDisposable
+@inject TaskActivity Activity
+@inject TurnActivity Turns
+@inject TaskEvents TaskEvents
+@inject ITeamDirectory Directory
+@inject TimeProvider Clock
+
+@if (this.Subject is TaskSubject subject)
+{
+    WakeRecord? lastWake = this.Activity.LastWake(subject.Id);
+    WakeBudget budget = this.Activity.Budget(subject.Id);
+    string? working = this.WorkingTeammate(lastWake);
+
+    @if (lastWake is null && working is null && budget.Used == 0)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary task-activity-empty" role="status">Not woken yet.</MudText>
+    }
+    else
+    {
+        @if (lastWake is { RoomId: { } roomId, RoomName: { } roomName })
+        {
+            <div class="sidebar-row task-activity-row task-activity-woken">
+                <MudLink Typo="Typo.body2" Color="Color.Inherit" Underline="Underline.None" Class="sidebar-row-text" Href="@($"/rooms/{roomId}")"
+                         title="@($"Woken in Room {roomName}")">@($"Woken in Room {roomName}")</MudLink>
+                <span class="sidebar-row-meta">@TaskDates.Human(lastWake.At, this.Clock)</span>
+            </div>
+        }
+
+        <div class="@(budget.Exhausted ? "sidebar-row task-activity-row task-activity-budget task-activity-budget-exhausted" : "sidebar-row task-activity-row task-activity-budget")">
+            <span class="sidebar-row-text">@($"Wakes: {budget.Used} of {budget.Granted}")</span>
+        </div>
+
+        @if (working is not null)
+        {
+            <div class="sidebar-row task-activity-row task-activity-working">
+                <TaskAssignee Name="@working" Presence="PresenceState.Awake" />
+                <span class="sidebar-row-text">is working on it</span>
+            </div>
+        }
+    }
+}
+
+@code {
+    /// <summary>The page's Subject; anything but a Task renders nothing.</summary>
+    [Parameter, EditorRequired]
+    public required PageSubject Subject { get; set; }
+
+    /// <summary>The Tab the panel's Subject lives in.</summary>
+    [Parameter, EditorRequired]
+    public required string TabId { get; set; }
+
+    /// <summary>The frame's context; this panel reports no count.</summary>
+    [CascadingParameter]
+    public SidebarPanelContext? Panel { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.Activity.Changed += this.OnChanged;
+        this.Activity.Woken += this.OnWoken;
+        this.Turns.Changed += this.OnChanged;
+        this.TaskEvents.TaskChanged += this.OnTaskChanged;
+        this.TaskEvents.TasksReloaded += this.OnChanged;
+    }
+
+    /// <summary>Stops listening.</summary>
+    public void Dispose()
+    {
+        this.Activity.Changed -= this.OnChanged;
+        this.Activity.Woken -= this.OnWoken;
+        this.Turns.Changed -= this.OnChanged;
+        this.TaskEvents.TaskChanged -= this.OnTaskChanged;
+        this.TaskEvents.TasksReloaded -= this.OnChanged;
+    }
+
+    /// <summary>
+    /// The Teammate working on the Task now, by the rule <see cref="AiReactingChip"/> applies: the last wake's Room has a Turn
+    /// running for the Teammate it woke. Null when there is no such wake or the Teammate is not known.
+    /// </summary>
+    /// <param name="lastWake">The Task's last wake.</param>
+    private string? WorkingTeammate(WakeRecord? lastWake)
+    {
+        if (lastWake is not { RoomId: { } roomId })
+        {
+            return null;
+        }
+
+        User? assignee = this.Directory.FindUserByName(lastWake.Assignee);
+        return assignee is not null && this.Turns.IsBusyIn(assignee.Id, roomId) ? lastWake.Assignee : null;
+    }
+
+    private void OnTaskChanged(TaskChange change) => this.OnChanged();
+
+    private void OnWoken(WakeRecord record) => this.OnChanged();
+
+    private void OnChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+}

@@ -137,6 +137,7 @@ Every page has its own address, so you can bookmark it:
 | `/teams/{Team}/projects/{Project}` | A Project page |
 | `/tasks/{viewId}` | A saved Task View |
 | `/tasks/item/{TaskId}` | One Task, opened over your last View, for example `/tasks/item/BUSI-0001` |
+| `/tasks/item/{TaskId}/edit` | One Task in edit mode, in a Tab of its own, for example `/tasks/item/BUSI-0001/edit` |
 | `/library?scopeRoot=teams&scopePath=` | The Library, scoped to a root |
 | `/settings/{tab}` | Settings: Profile, Prompts, Appearance, Personas, Skills, Team types, Library. A blank system opens on `/settings/profile` until you save a profile |
 
@@ -250,6 +251,7 @@ It holds one or more panels, depending on the page:
 | --- | --- |
 | A chat Room | **Members**, **Tasks in this chat**, **Documents in this chat** |
 | A Markdown note in the Library | **Outline**, **Linked documents** |
+| A Task in its edit page | **Activity**, **Blocked by**, **Blocks**, **Linked documents** (the last three only when they have something to show) |
 | Any other page | None. The sidebar says `Nothing to show for this page.` |
 
 | Panel | What it shows | What selecting it does |
@@ -1468,6 +1470,28 @@ adapter that can read files. Without them, Teammates get no memory index.
 
 A **Task** is a Markdown file under a Team or Project. You and your Teammates
 see the same Tasks, and a change to an assigned Task wakes the assignee.
+
+### Opening and editing a Task
+
+Click a Task in the List or on the Board and it opens in a panel on the right. The panel is for reading: it shows
+the Task's status, priority, assignee, Team and Project, Sprint, parent, blockers, tags, dates, origin and its
+description, then the Human gate, Proof and your decision if the Task has them, and the Change log. Nothing in it
+changes the Task, so a stray key cannot leave an unsaved edit behind. You can still **Accept**, **Request changes**
+or **Decline** a gated Task there, **Ask** for Proof, copy the id or link, make a copy, and close or reopen the Task.
+
+Choose **Edit** to change the Task. The Task opens in a Tab of its own, "Edit BUSI-0001", next to the Tab you were in.
+Choosing Edit again on the same Task goes back to that Tab. The Tab keeps its place until you close it. **Cancel** and
+**Save** are at the top right of the page and stay in view as you scroll, and the Tab shows a dot (●) while you have
+edits that are not saved. **View task** goes back to the read-only panel. The page is two columns when it is wide
+enough (about 1024 pixels), and one column when the sidebars take its room.
+
+The description has the same formatting buttons as a note in the Library (bold, italic, heading, code, bulleted list
+and task list), with the same shortcuts (Ctrl+B, Ctrl+I, Ctrl+E). **New task** still opens a form in the panel.
+
+While an edit Tab is open, the [Right sidebar](#the-right-sidebar) shows what Huddle works out about the Task:
+**Activity** (the Room it last woke a Teammate in, how many of its wakes are used, and who is working on it now),
+**Blocked by**, **Blocks** (the open Tasks waiting on it) and **Linked documents** (the Library files its description
+links to). They show the Task as saved, not your unsaved edits.
 
 ### What a Task file looks like
 

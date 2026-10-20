@@ -1,6 +1,7 @@
 @*
     Spec §6.8: the "Human gate" section of the Task panel. It never saves: it raises
     HumanGateChanged and ActionChanged and the Task panel buffers them with its other edits.
+    With ReadOnly (the Task read view, T15f) the switch and the Action field are text and nothing is raised.
 *@
 
 <div class="task-human-gate">
@@ -8,20 +9,31 @@
         <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="task-human-gate-chip" Text="@HumanGateCopy.Heading" />
         <span class="task-human-gate-subheading">@HumanGateCopy.Subheading</span>
     </div>
-    <div class="task-human-gate-switch">
-        <MudSwitch T="bool" Value="@(this.HumanGate || this.HasAction)" ValueChanged="@this.HumanGateChanged"
-                   Disabled="@this.HasAction" Color="Color.Primary" Label="@HumanGateCopy.SwitchLabel" />
-        @if (this.HasAction)
-        {
-            <MudTooltip Text="@HumanGateCopy.LockedTooltip">
-                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Class="task-human-gate-lock"
-                         aria-label="@HumanGateCopy.LockedTooltip" />
-            </MudTooltip>
-        }
-    </div>
-    <MudTextField T="string" Value="@this.Action" ValueChanged="@this.ActionChanged" Lines="1"
-                  Label="@HumanGateCopy.ActionLabel" Placeholder="@HumanGateCopy.ActionPlaceholder"
-                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="task-human-gate-action" />
+    @if (this.ReadOnly)
+    {
+        @* The read view (T15f): the switch and the Action field as text. Nothing here edits a Task. *@
+        <div class="task-human-gate-readonly">
+            <div class="task-human-gate-readonly-row task-human-gate-readonly-switch">@($"{HumanGateCopy.SwitchLabel}: {(this.HumanGate || this.HasAction ? "On" : "Off")}")</div>
+            <div class="task-human-gate-readonly-row task-human-gate-readonly-action">@($"{HumanGateCopy.ActionLabel}: {(this.Action is { } action && !string.IsNullOrWhiteSpace(action) ? action.Trim() : HumanGateCopy.ActionPlaceholder)}")</div>
+        </div>
+    }
+    else
+    {
+        <div class="task-human-gate-switch">
+            <MudSwitch T="bool" Value="@(this.HumanGate || this.HasAction)" ValueChanged="@this.HumanGateChanged"
+                       Disabled="@this.HasAction" Color="Color.Primary" Label="@HumanGateCopy.SwitchLabel" />
+            @if (this.HasAction)
+            {
+                <MudTooltip Text="@HumanGateCopy.LockedTooltip">
+                    <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Class="task-human-gate-lock"
+                             aria-label="@HumanGateCopy.LockedTooltip" />
+                </MudTooltip>
+            }
+        </div>
+        <MudTextField T="string" Value="@this.Action" ValueChanged="@this.ActionChanged" Lines="1"
+                      Label="@HumanGateCopy.ActionLabel" Placeholder="@HumanGateCopy.ActionPlaceholder"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="task-human-gate-action" />
+    }
     <div class="task-human-gate-helper">@HumanGateCopy.Helper(this.AssigneeName)</div>
     <div class="task-human-gate-done-rule">
         <span>@HumanGateCopy.DoneRuleLabel</span>
@@ -32,6 +44,10 @@
 </div>
 
 @code {
+    /// <summary>Whether the section is drawn as text for the read view: the switch and the Action field become "Requires your acceptance: On" and "What will happen: {action}". Defaults to the editable section.</summary>
+    [Parameter]
+    public bool ReadOnly { get; set; }
+
     /// <summary>Whether the Task requires the Human's acceptance.</summary>
     [Parameter]
     public bool HumanGate { get; set; }

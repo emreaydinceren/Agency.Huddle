@@ -503,8 +503,13 @@ else if (this.loaded is { } task)
 
                 @if (this.descriptionMode == DescriptionViewMode.Edit)
                 {
-                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Description" ValueChanged="this.OnDescriptionChanged"
-                                  Lines="10" Sizing="InputSizing.Auto" MaxLines="30" Label="Description" Placeholder="Add a description…" Class="task-detail-description task-detail-description-field long-text-field" />
+                    @* The Library's Markdown toolbar (L3g) above the field, without the [[ ]] button: markdown-textarea.js wires it to the field's
+                       textarea once rendered (read view spec D-7). The wrapper is what the script searches inside. *@
+                    <div class="task-detail-description-editor" @ref="this.descriptionEditor">
+                        <MarkdownToolbar ShowWikilink="false" />
+                        <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Description" ValueChanged="this.OnDescriptionChanged"
+                                      Lines="10" Sizing="InputSizing.Auto" MaxLines="30" Label="Description" Placeholder="Add a description…" Class="task-detail-description task-detail-description-field long-text-field" />
+                    </div>
                 }
                 else
                 {
@@ -632,6 +637,9 @@ else if (this.loaded is { } task)
     private string tagInput = string.Empty;
     private string? originRoomName;
     private MudFileUpload<IReadOnlyList<IBrowserFile>>? attachPicker;
+    private ElementReference descriptionEditor;
+    private IJSObjectReference? textareaModule;
+    private IJSObjectReference? toolbarHandle;
 
     private bool uploading;
     private bool disposed;
@@ -671,6 +679,10 @@ else if (this.loaded is { } task)
     [Parameter]
     public EventCallback<bool> TitleEditingChanged { get; set; }
 
+    /// <summary>Raised with the new id when Save creates the Task from a draft (B10), so a host can show the saved Task another way: the Tasks drawer switches to the read view.</summary>
+    [Parameter]
+    public EventCallback<TaskId> OnCreated { get; set; }
+
     /// <summary>Raised when the Panel or dialog should close: Cancel (always), and Expand just before its own dialog opens (Spec §13.6, corrections-B7 "14.4" item 1, theming plan 7.6). The caller (the Tasks page, its own drawer's own <c>OnClose</c>) is a later dispatch's wiring (14.5).</summary>
     [Parameter]
     public EventCallback OnClose { get; set; }
@@ -708,6 +720,67 @@ else if (this.loaded is { } task)
         || (effective.Status == TaskState.Duplicate && effective.DuplicateOf is null)
         || this.SprintProblem() is not null
         || (this.conflict is { } openConflict && !openConflict.Fields.All(this.conflictChoices.ContainsKey));
+
+    /// <summary>
+    /// Wires the Description's Markdown toolbar to its textarea while the field is in Edit, and takes the wiring away when it is not
+    /// (read view spec D-7). The script lives in <c>markdown-textarea.js</c>, so a command edits the text in the browser and raises the
+    /// field's own <c>change</c>, which this component reads like typing.
+    /// </summary>
+    /// <param name="firstRender">Unused: the wiring is checked after every render.</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        _ = firstRender;
+        bool wanted = !this.disposed && this.loaded is not null && !this.deleted && this.descriptionMode == DescriptionViewMode.Edit && this.descriptionEditor.Context is not null;
+        if (wanted == (this.toolbarHandle is not null))
+        {
+            return;
+        }
+
+        if (!wanted)
+        {
+            await this.DetachToolbarAsync();
+            return;
+        }
+
+        try
+        {
+            this.textareaModule ??= await this.JS.InvokeAsync<IJSObjectReference>("import", "./markdown-textarea.js");
+            this.toolbarHandle = await this.textareaModule.InvokeAsync<IJSObjectReference>("attachIn", this.descriptionEditor);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone; there is no field left to wire.
+        }
+        catch (JSException)
+        {
+            // The script could not attach (the field was replaced by a later render). The Description stays an ordinary field, and the next render asks again.
+        }
+    }
+
+    /// <summary>Detaches the Description toolbar's listeners, if attached; a circuit that is already gone has none to detach.</summary>
+    private async Task DetachToolbarAsync()
+    {
+        IJSObjectReference? handle = this.toolbarHandle;
+        this.toolbarHandle = null;
+        if (handle is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await handle.InvokeVoidAsync("dispose");
+            await handle.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone, and the listeners went with the page.
+        }
+        catch (JSException)
+        {
+            // The field was removed by the render that asked for this; its listeners went with it.
+        }
+    }
 
     /// <summary>Tells a host that draws the footer when what it shows has changed since the last render.</summary>
     /// <param name="firstRender">Unused: the footer is checked after every render.</param>
@@ -1784,6 +1857,7 @@ else if (this.loaded is { } task)
             switch (result)
             {
                 case TaskResult.Saved saved:
+                    bool wasCreate = this.createMode;
                     this.loaded = saved.Task;
                     this.baseVersion = saved.Task.Version;
                     this.unsavedUploads.Clear();
@@ -1792,6 +1866,11 @@ else if (this.loaded is { } task)
                     this.conflictChoices = [];
                     this.createMode = false;
                     this.SetTitleEditing(false);
+                    if (wasCreate)
+                    {
+                        _ = this.OnCreated.InvokeAsync(saved.Task.Id);
+                    }
+
                     break;
                 case TaskResult.Unchanged unchanged:
                     this.loaded = unchanged.Task;
@@ -1837,7 +1916,7 @@ else if (this.loaded is { } task)
     /// <summary>A Change log entry's date, in the Human's local time through the injected <see cref="TimeProvider"/> (J51) - never <see cref="DateTimeOffset.ToLocalTime"/>'s machine time zone, so a test can pin a fixed <see cref="TimeProvider.LocalTimeZone"/> and get a deterministic string.</summary>
     /// <param name="at">The entry's UTC instant.</param>
     /// <param name="clock">Supplies <see cref="TimeProvider.LocalTimeZone"/>.</param>
-    private static string FormatChangeLogDate(DateTimeOffset at, TimeProvider clock) =>
+    internal static string FormatChangeLogDate(DateTimeOffset at, TimeProvider clock) =>
         TimeZoneInfo.ConvertTime(at, clock.LocalTimeZone).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
     /// <summary>The Save button's label for <paramref name="preview"/> (Spec §13.6's table): "Save &amp; notify {name}" only for an Awake or Asleep assignee, plain "Save" otherwise.</summary>
@@ -1868,7 +1947,7 @@ else if (this.loaded is { } task)
     /// <summary>The triage chip text for a Request: <c>Needs triage</c> for an untriaged Backlog Request, else the state's name; <see langword="null"/> for no chip.</summary>
     /// <param name="triage">The Request's triage state.</param>
     /// <param name="status">The Task's Status.</param>
-    private static string? RequestTriageText(TriageState triage, TaskState status) => triage switch
+    internal static string? RequestTriageText(TriageState triage, TaskState status) => triage switch
     {
         TriageState.NeedsInfo => "Needs info",
         TriageState.Accepted => "Accepted",
@@ -1884,6 +1963,7 @@ else if (this.loaded is { } task)
         this.Activity.Changed -= this.OnActivityChanged;
         this.Sprints.SprintsChanged -= this.OnSprintsChanged;
         this.disposed = true;
+        _ = this.DetachToolbarAsync();
         this.uploadCts.Cancel();
         this.uploadCts.Dispose();
     }

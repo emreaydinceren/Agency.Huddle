@@ -423,7 +423,7 @@ public sealed partial class TaskBoardColumnMenuTests
         });
     }
 
-    /// <summary>corrections-B7 12.4 item 8 and 14.5.i item 4: a Board View renders <see cref="TaskBoard"/> in the page, and opening a card puts a real <see cref="TaskDetail"/> (Panel mode) in the detail drawer for that Task - the 14.5.i replacement for the placeholder this test used to pin.</summary>
+    /// <summary>corrections-B7 12.4 item 8 and 14.5.i item 4: a Board View renders <see cref="TaskBoard"/> in the page, and opening a card puts the <see cref="TaskReadView"/> in the detail drawer for that Task (read view spec D-1).</summary>
     [Fact]
     public async Task Page_BoardView_CardOpenOpensTheDetailDrawer()
     {
@@ -437,9 +437,7 @@ public sealed partial class TaskBoardColumnMenuTests
         Assert.Empty(cut.FindComponents<TaskListView>());
         await cut.InvokeAsync(() => cut.Find($"button[aria-label='Open {task.Id}']").ClickAsync());
 
-        TaskDetail detail = cut.FindComponent<TaskDetail>().Instance;
-        Assert.Equal(task.Id, detail.Id);
-        Assert.Equal(TaskDetailMode.Panel, detail.Mode);
+        Assert.Equal(task.Id, cut.FindComponent<TaskReadView>().Instance.Id);
     }
 
     /// <summary>Plan 12.4.t: hiding a column from the header updates the Board's hidden-count chip.</summary>
