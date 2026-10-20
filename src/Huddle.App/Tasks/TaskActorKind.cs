@@ -11,4 +11,7 @@ public enum TaskActorKind
 
     /// <summary>Someone outside Huddle who edited the file.</summary>
     OutsideHuddle,
+
+    /// <summary>A Helper: a background judgement Huddle applied.</summary>
+    Helper,
 }
