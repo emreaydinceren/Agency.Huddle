@@ -44,12 +44,9 @@ internal sealed class FeedWriter(
         {
             _ = store.DeleteExpired(dismissedCutoff, activityCutoff);
         }
-        catch (SqliteException ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogWarning(ex, "Feed clean-up failed; it runs again at the next interval.");
-        }
-        catch (IOException ex)
-        {
+            // The Feed can never take the app down: whatever went wrong, the rows are still there and the next interval tries again.
             logger.LogWarning(ex, "Feed clean-up failed; it runs again at the next interval.");
         }
     }
@@ -130,6 +127,23 @@ internal sealed class FeedWriter(
         }
     }
 
+    /// <summary>Reads a Room for the fill-in. The fill-in only adds facts, so a failed lookup keeps the nulls rather than dropping the batch.</summary>
+    /// <param name="roomId">The Room.</param>
+    /// <param name="ct">Cancels the lookup.</param>
+    private async Task<Room?> TryGetRoomAsync(string roomId, CancellationToken ct)
+    {
+        try
+        {
+            return await directory.GetRoomAsync(roomId, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Adding a name to an item is a courtesy; losing every other producer's items in the batch is not.
+            logger.LogWarning(ex, "The Feed could not read Room {RoomId} to fill in its name.", roomId);
+            return null;
+        }
+    }
+
     private async Task<List<FeedCommand>> FillInRoomsAsync(List<FeedCommand> batch, CancellationToken ct)
     {
         Dictionary<string, Room?> rooms = new(StringComparer.Ordinal);
@@ -141,7 +155,7 @@ internal sealed class FeedWriter(
                 RoomWaitPayload wait = (RoomWaitPayload)post.Message.Payload;
                 if (!rooms.TryGetValue(wait.RoomId, out Room? room))
                 {
-                    room = await directory.GetRoomAsync(wait.RoomId, ct).ConfigureAwait(false);
+                    room = await this.TryGetRoomAsync(wait.RoomId, ct).ConfigureAwait(false);
                     rooms[wait.RoomId] = room;
                 }
 

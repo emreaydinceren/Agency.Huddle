@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Reflection;
 using System.Text.Json;
 
 namespace Agency.Huddle.App.Feed;
@@ -6,6 +8,8 @@ namespace Agency.Huddle.App.Feed;
 internal static class FeedPayloads
 {
     private const int Version = 1;
+
+    private static readonly ConcurrentDictionary<Type, PropertyInfo[]> NonNullableProperties = new();
 
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web) { WriteIndented = false };
 
@@ -67,6 +71,10 @@ internal static class FeedPayloads
             if (type is { } known && wire.Data.ValueKind == JsonValueKind.Object)
             {
                 payload = wire.Data.Deserialize(TypeOf(known), Options) as FeedPayload;
+                if (payload is not null && !HasRequiredMembers(payload))
+                {
+                    payload = null;
+                }
             }
 
             return new FeedEnvelope(ActorKindFromWire(wire.ActorKind), payload);
@@ -75,6 +83,23 @@ internal static class FeedPayloads
         {
             return default;
         }
+    }
+
+    /// <summary>
+    /// Whether every member a payload declares non-nullable was present in the JSON. A row from a newer build that renamed a field
+    /// would otherwise deserialise with nulls the UI is entitled to assume away, so it reads as an unreadable item instead.
+    /// </summary>
+    /// <param name="payload">The deserialised payload.</param>
+    private static bool HasRequiredMembers(FeedPayload payload) =>
+        NonNullableProperties.GetOrAdd(payload.GetType(), static type => ListNonNullableProperties(type))
+            .All(property => property.GetValue(payload) is not null);
+
+    private static PropertyInfo[] ListNonNullableProperties(Type type)
+    {
+        NullabilityInfoContext context = new();
+        return [.. type
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(property => !property.PropertyType.IsValueType && context.Create(property).ReadState == NullabilityState.NotNull)];
     }
 
     private static string ActorKindToWire(FeedActorKind kind) => kind switch

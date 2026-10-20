@@ -404,7 +404,9 @@
     {
         IReadOnlyList<FeedItem> page = this.Store.Page(this.QueryFor(null, Math.Max(this.PageSize, this.loadedCount)));
         Dictionary<long, FeedItem> current = page.ToDictionary(static item => item.Id);
-        bool changed = this.known.Any(entry => current.TryGetValue(entry.Key, out FeedItem? now) && entry.Value != (now.ResolvedAt is not null));
+        bool changed = this.known.Any(entry => current.TryGetValue(entry.Key, out FeedItem? now)
+            ? entry.Value != (now.ResolvedAt is not null)
+            : this.category == FeedCategory.NeedsYou);
         if (changed)
         {
             this.Load(Math.Max(this.PageSize, this.loadedCount));

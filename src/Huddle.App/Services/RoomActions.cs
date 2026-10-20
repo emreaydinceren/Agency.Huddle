@@ -16,7 +16,8 @@ internal static class RoomActions
     {
         try
         {
-            _ = await chat.SetRoomArchivedAsync(roomId, archived, ct).ConfigureAwait(false);            return null;
+            _ = await chat.SetRoomArchivedAsync(roomId, archived, ct).ConfigureAwait(false);
+            return null;
         }
         catch (ChatException ex)
         {

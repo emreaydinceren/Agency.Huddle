@@ -115,6 +115,18 @@ public sealed class FeedPayloadsTests
         Assert.Equal(FeedActorKind.Agent, unknownType.ActorKind);
     }
 
+    /// <summary>A data object that lacks a required field (a renamed field from a newer build) reads as an unreadable item, not as a payload with nulls.</summary>
+    [Fact]
+    public void Read_MissingRequiredField_GivesNullPayload()
+    {
+        FeedEnvelope missingTeam = FeedPayloads.Read("{\"v\":1,\"actorKind\":\"agent\",\"data\":{\"id\":\"GRO-1\",\"title\":\"T\"}}", FeedSourceType.TaskCreated);
+        FeedEnvelope complete = FeedPayloads.Read("{\"v\":1,\"actorKind\":\"agent\",\"data\":{\"id\":\"GRO-1\",\"title\":\"T\",\"team\":\"Growth\"}}", FeedSourceType.TaskCreated);
+
+        Assert.Null(missingTeam.Payload);
+        Assert.Equal(FeedActorKind.Agent, missingTeam.ActorKind);
+        Assert.IsType<TaskCreatedPayload>(complete.Payload);
+    }
+
     /// <summary>Every actor kind has its own wire name and survives the envelope.</summary>
     [Fact]
     public void ActorKind_EveryKind_RoundTrips()

@@ -301,6 +301,22 @@ public sealed partial class FeedPageTests
         Assert.Contains(ask.Id, CardIds(cut));
     }
 
+    /// <summary>In the Needs you view a resolved item leaves the query, so its card must disappear rather than stay drawn as still waiting.</summary>
+    [Fact]
+    public async Task ItemsChanged_InNeedsYouView_DropsTheResolvedCard()
+    {
+        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        FeedItem ask = host.Feed.PostNeedsYou();
+        await using MudBunitContext ctx = NewContext(host);
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "needs-you");
+        Assert.Contains(ask.Id, CardIds(cut));
+
+        host.Feed.Resolve(ask);
+        await cut.InvokeAsync(() => host.Feed.Events.RaiseItemsChanged());
+
+        cut.WaitForAssertion(() => Assert.DoesNotContain(ask.Id, CardIds(cut)));
+    }
+
     /// <summary>Two seconds after the page is shown it marks the Tab seen up to the newest item once, and cards above the old mark keep their unseen bar.</summary>
     [Fact]
     public async Task TabSeen_IsMarkedOnceTwoSecondsAfterTheFirstShow()

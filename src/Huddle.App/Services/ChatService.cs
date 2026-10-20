@@ -820,7 +820,7 @@ public sealed partial class ChatService
                 new RoomCreatedPayload(room.Id, room.Name, room.Team, [humanName, .. agentNames]),
                 ct).ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
             // Same rule as PostFeedAsync: the Room is already created, and the Feed can never fail the work that caused it.
             ChatService.LogFeedFailed(this.logger, ex, room.Id);
@@ -845,7 +845,7 @@ public sealed partial class ChatService
             FeedActor who = actor ?? new FeedActor(FeedActorKind.Human, await this.HumanNameAsync(ct).ConfigureAwait(false));
             this.FeedPublisher.Post(new FeedMessage(type, room.Id, who, false, payload));
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
             // The Feed records and never decides (Feed spec policy 4): a failing lookup must not fail the Room change that caused it.
             ChatService.LogFeedFailed(this.logger, ex, room.Id);

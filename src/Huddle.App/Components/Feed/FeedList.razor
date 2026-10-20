@@ -132,7 +132,7 @@
         {
             return await this.Js.InvokeAsync<bool>("huddleFeed.isScrolled", cancellationToken, this.root);
         }
-        catch (JSDisconnectedException)
+        catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException)
         {
             return false;
         }
