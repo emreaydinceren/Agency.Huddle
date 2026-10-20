@@ -83,7 +83,7 @@ else if (this.loaded)
 
         List<DocumentRow> found = [];
         HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
-        foreach ((int _, int _, string path) in LibraryPathPatterns.Find(task.Description))
+        foreach (string path in TaskDocumentsPanel.PathsIn(task.Description))
         {
             if (this.LibraryResolver.ResolvePath(path) is { } reference && seen.Add(reference.RootId + "/" + reference.RelativePath))
             {
@@ -98,6 +98,28 @@ else if (this.loaded)
         this.loaded = true;
         this.Panel?.SetCount(found.Count);
     }
+
+    /// <summary>
+    /// The Library paths the Description preview would try to link: the Windows, <c>file:</c> and UNC paths in its text, and a rooted POSIX path
+    /// that is a whole code span (<c>`/data/Uploads/a.md`</c>), in the order they appear.
+    /// </summary>
+    /// <param name="description">The saved Description.</param>
+    private static IEnumerable<string> PathsIn(string description)
+    {
+        List<(int Index, string Path)> paths = [.. LibraryPathPatterns.Find(description).Select(static match => (match.Index, match.Path))];
+        foreach (System.Text.RegularExpressions.Match span in CodeSpan.Matches(description))
+        {
+            if (LibraryPathPatterns.TryMatchWhole(span.Groups[1].Value, out string? whole))
+            {
+                paths.Add((span.Index, whole));
+            }
+        }
+
+        return paths.OrderBy(static entry => entry.Index).Select(static entry => entry.Path);
+    }
+
+    /// <summary>A backtick span on one line; its content is tested with <see cref="LibraryPathPatterns.TryMatchWhole"/>.</summary>
+    private static readonly System.Text.RegularExpressions.Regex CodeSpan = new("`([^`\\r\\n]+)`", System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
 
     private void OnTaskChanged(TaskChange change) => this.Redraw();
 

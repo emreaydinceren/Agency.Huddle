@@ -167,8 +167,8 @@ public sealed class TaskPanelsTests
     public async Task Documents_ListsTheLibraryFilesTheDescriptionLinks()
     {
         using TaskToolHarness harness = new();
-        string present = OperatingSystem.IsWindows() ? @"C:\notes\plan\Design.md" : "/notes/plan/Design.md";
-        string gone = OperatingSystem.IsWindows() ? @"C:\notes\plan\Old.md" : "/notes/plan/Old.md";
+        const string present = "file:///notes/plan/Design.md";
+        const string gone = "file:///notes/plan/Old.md";
         TaskItem task = CreateTask(harness, "Linked", description: $"See {present} and {gone} and {present} again.");
         await using MudBunitContext ctx = UiTestHost.Create(services => services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver(
             resolvePath: path => path.EndsWith("Design.md", StringComparison.Ordinal)
@@ -183,6 +183,20 @@ public sealed class TaskPanelsTests
         Assert.Equal("plan", cut.Find(".task-documents-row").GetAttribute("title"));
         Assert.Equal("Not found", cut.FindAll(".task-documents-row")[1].QuerySelector(".sidebar-row-meta")?.TextContent.Trim());
         Assert.Equal(2, panel.Count);
+    }
+
+    /// <summary>A rooted POSIX path written as a whole code span is a link in the Description preview, so it is a row here too.</summary>
+    [Fact]
+    public async Task Documents_PosixPathInACodeSpan_IsListed()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness, "Spanned", description: "See `/notes/plan/Design.md` for the plan.");
+        await using MudBunitContext ctx = UiTestHost.Create(services => services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver(
+            resolvePath: _ => new LibraryReference("notes", "plan/Design.md", Exists: true)))).WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> cut = Render<TaskDocumentsPanel>(ctx, new SidebarPanelContext(), task.Id);
+
+        Assert.Equal("Design.md", cut.Find(".task-documents-row a").TextContent.Trim());
     }
 
     /// <summary>A Description with no Library path says so.</summary>
@@ -204,7 +218,7 @@ public sealed class TaskPanelsTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, "Plain", description: "Nothing yet.");
-        string path = OperatingSystem.IsWindows() ? @"C:\notes\Added.md" : "/notes/Added.md";
+        const string path = "file:///notes/Added.md";
         await using MudBunitContext ctx = UiTestHost.Create(services => services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver(
             resolvePath: _ => new LibraryReference("notes", "Added.md", Exists: true)))).WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = Render<TaskDocumentsPanel>(ctx, new SidebarPanelContext(), task.Id);
