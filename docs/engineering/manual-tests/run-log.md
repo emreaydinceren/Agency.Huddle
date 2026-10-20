@@ -5575,6 +5575,57 @@ File: [`docs/engineering/manual-tests/human-gate.md`](human-gate.md#humangate-09
 | --- | --- | --- | --- | --- |
 | 2026-10-19 | Pass | 7b46143c |  | The same three Tasks listed before and after a restart; page and Tab title "Needs you". Empty state not exercised. |
 
+## Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the override, the daily cap and a failing Adapter
+
+### HELPERS-01 — The Helpers tab shows the Needs Human card (U-1 setup)
+
+File: [`docs/engineering/manual-tests/helpers.md`](helpers.md#helpers-01--the-helpers-tab-shows-the-needs-human-card-u-1-setup)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### HELPERS-02 — Save and Reset to defaults, and a restart keeps both (U-7 setup)
+
+File: [`docs/engineering/manual-tests/helpers.md`](helpers.md#helpers-02--save-and-reset-to-defaults-and-a-restart-keeps-both-u-7-setup)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### HELPERS-03 — A Teammate's Task that leaves the team gets the gate (U-1, U-5)
+
+File: [`docs/engineering/manual-tests/helpers.md`](helpers.md#helpers-03--a-teammates-task-that-leaves-the-team-gets-the-gate-u-1-u-5)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### HELPERS-04 — A harmless Task is left alone (U-2, U-4, U-11)
+
+File: [`docs/engineering/manual-tests/helpers.md`](helpers.md#helpers-04--a-harmless-task-is-left-alone-u-2-u-4-u-11)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### HELPERS-05 — The Human's override is final (U-5)
+
+File: [`docs/engineering/manual-tests/helpers.md`](helpers.md#helpers-05--the-humans-override-is-final-u-5)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### HELPERS-06 — The daily cap pauses the Helper and Continue allows a few more (U-7)
+
+File: [`docs/engineering/manual-tests/helpers.md`](helpers.md#helpers-06--the-daily-cap-pauses-the-helper-and-continue-allows-a-few-more-u-7)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### HELPERS-07 — A failure leaves the Task as saved and says why (U-8, U-10)
+
+File: [`docs/engineering/manual-tests/helpers.md`](helpers.md#helpers-07--a-failure-leaves-the-task-as-saved-and-says-why-u-8-u-10)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ---
 
 Back to [the manual test script](../manual-tests.md).

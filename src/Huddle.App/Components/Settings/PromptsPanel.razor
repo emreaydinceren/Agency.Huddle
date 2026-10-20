@@ -23,6 +23,9 @@
 *@
 
 @using Agency.Huddle.App.Prompts
+@using Microsoft.AspNetCore.WebUtilities
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 @foreach (var group in this.Groups)
 {
@@ -31,7 +34,7 @@
 
         @foreach (var field in group.Fields)
         {
-            <div class="prompts-field">
+            <div class="@(this.IsHighlighted(field.Key) ? "prompts-field search-hit-flash" : "prompts-field")" id="@PromptFieldId(field.Key)">
                 <div class="prompts-field-header">
                     <span class="prompts-field-label">@field.Label</span>
                     @if (field.Timing == PromptTiming.NextSession)
@@ -101,6 +104,40 @@
     /// <summary>Raised when a field's Reset button is clicked, carrying that field's key.</summary>
     [Parameter]
     public EventCallback<string> ResetRequested { get; set; }
+
+    private string? highlight;
+    private bool scrolled;
+
+    /// <summary>The element id of a prompt's field, which <c>?highlight=</c> scrolls to.</summary>
+    /// <param name="key">The prompt's key.</param>
+    internal static string PromptFieldId(string key) => $"prompt-field-{key}";
+
+    /// <summary>Reads <c>?highlight=&lt;key&gt;</c>, as a Helper card's "Edit the prompt" link sets it.</summary>
+    protected override void OnInitialized()
+    {
+        this.highlight = QueryHelpers.ParseQuery(new Uri(this.Navigation.Uri).Query).TryGetValue("highlight", out var values) ? values.ToString() : null;
+    }
+
+    /// <summary>Scrolls the highlighted field into view once it is drawn.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (this.scrolled || string.IsNullOrEmpty(this.highlight) || !this.Groups.Any(group => group.Fields.Any(field => this.IsHighlighted(field.Key))))
+        {
+            return;
+        }
+
+        this.scrolled = true;
+        try
+        {
+            _ = await this.JS.InvokeAsync<bool>("teamScroll.intoView", PromptFieldId(this.highlight));
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone before the scroll; there is nothing left to scroll.
+        }
+    }
+
+    private bool IsHighlighted(string key) => string.Equals(key, this.highlight, StringComparison.Ordinal);
 
     private Task OnFieldInput(string key, string? text)
     {

@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
-using Agency.Huddle.Acp.DotAcp;
 using Agency.Huddle.Acp.Hosting;
 
 namespace Agency.Huddle.App.Acp;
@@ -20,32 +19,11 @@ internal sealed class AdapterProcessProbeRunner(IOptions<TeamOptions> options, I
     {
         ArgumentNullException.ThrowIfNull(processOptions);
 
-        DotAcpAgentHost? host = null;
-        IAgentSession? session = null;
-        try
-        {
-            var launcher = new AgentProcessLauncher(loggerFactory.CreateLogger<AgentProcessLauncher>());
-            var hostOptions = new DotAcpHostOptions("Team.App", TraceWire: options.Value.Acp.TraceWire);
-            host = new DotAcpAgentHost(processOptions, launcher, hostOptions, loggerFactory);
-            await host.StartAsync(cancellationToken).ConfigureAwait(false);
+        AgentSessionOptions sessionOptions = new(probeCwd, new AutoApprovePermissionHandler(), model: model);
+        ThrowawayAdapterSession adapter = await ThrowawayAdapterSession.StartAsync(
+            processOptions, sessionOptions, options.Value.Acp.TraceWire, loggerFactory, cancellationToken).ConfigureAwait(false);
+        await using var adapterScope = adapter.ConfigureAwait(false);
 
-            session = await host.StartSessionAsync(
-                new AgentSessionOptions(probeCwd, new AutoApprovePermissionHandler(), model: model),
-                cancellationToken).ConfigureAwait(false);
-
-            return new AdapterProbeOutcome(session.Models, session.EffortLevels) { Modes = session.ModeOptions };
-        }
-        finally
-        {
-            if (session is not null)
-            {
-                await session.DisposeAsync().ConfigureAwait(false);
-            }
-
-            if (host is not null)
-            {
-                await host.DisposeAsync().ConfigureAwait(false);
-            }
-        }
+        return new AdapterProbeOutcome(adapter.Session.Models, adapter.Session.EffortLevels) { Modes = adapter.Session.ModeOptions };
     }
 }

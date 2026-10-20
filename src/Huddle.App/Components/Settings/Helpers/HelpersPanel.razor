@@ -1,0 +1,27 @@
+@*
+    The Helpers tab (wireframe G9): an intro, where the Human's choices are stored, and one card per registered Helper.
+    When Adapters are off the cards are read only and a notice says why (Helpers Spec §6.7).
+*@
+
+@using Agency.Huddle.App.Helpers
+@using Microsoft.Extensions.Options
+@inject HelperRegistry Registry
+@inject IOptions<TeamOptions> Options
+
+<SettingsIntro>@HelpersCopy.Intro</SettingsIntro>
+
+<StoredAt Label="Stored at" Path="@this.StorePath" />
+
+@if (!this.Options.Value.Acp.Enabled)
+{
+    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">@HelpersCopy.AdaptersOff</MudAlert>
+}
+
+@foreach (IHelperAgent entry in this.Registry.All)
+{
+    <HelperCard HelperId="@entry.Id.Value" AdaptersOn="@this.Options.Value.Acp.Enabled" @key="@entry.Id.Value" />
+}
+
+@code {
+    private string StorePath => System.IO.Path.Combine(this.Options.Value.DataDir, "team.db");
+}

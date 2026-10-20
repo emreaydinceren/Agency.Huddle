@@ -1,0 +1,236 @@
+@*
+    One Helper on Settings › Helpers (wireframe G9a): its name and state, the on switch, the Adapter, Model and Effort it runs on, the
+    daily cap, a link to its prompt, what it spent today, its last run and last error, and Continue when it is paused. Save writes
+    the Human's row and Reset to defaults deletes it (Helpers Spec §6.6 and §6.7).
+
+    The card re-reads usage and status when the dispatcher raises StatusChanged; it never overwrites a draft the Human is editing.
+*@
+
+@implements IDisposable
+@using Agency.Huddle.App.Helpers
+@using Microsoft.Extensions.Options
+@inject HelperRegistry Registry
+@inject HelperSettingsResolver Resolver
+@inject HelperSettingsStore SettingsStore
+@inject HelperBudget Budget
+@inject HelperStatusStore StatusStore
+@inject HelperDispatcher Dispatcher
+@inject TimeProvider Clock
+
+@if (this.helper is not null)
+{
+    <MudPaper Outlined="true" Class="pa-3 mb-4 helper-card" data-helper="@this.helper.Id.Value">
+        <div class="helper-card-header d-flex align-center gap-2 mb-1">
+            <MudText Typo="Typo.subtitle1" HtmlTag="h2">@this.helper.DisplayName</MudText>
+            <StatusChip Color="@this.Chip.Color" Icon="@this.Chip.Icon" Class="helper-card-chip">@this.Chip.Text</StatusChip>
+        </div>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">@this.helper.Description</MudText>
+
+        <MudSwitch T="bool" Value="@this.enabled" ValueChanged="this.OnEnabledChanged" Disabled="@(!this.AdaptersOn)"
+                   Color="Color.Primary" Label="@HelpersCopy.SwitchLabel" />
+
+        <AdapterModelEffortPicker Adapter="@this.adapter" Model="@this.model" Effort="@this.effort"
+                                  Disabled="@(!this.AdaptersOn)" SelectionChanged="this.OnSelectionChanged" />
+
+        <MudNumericField T="int" Label="@HelpersCopy.CapLabel" Value="@this.dailyCap" ValueChanged="this.OnCapChanged" Min="1"
+                         HelperText="@HelpersCopy.CapHelper" Disabled="@(!this.AdaptersOn)"
+                         Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2 helper-card-cap" />
+
+        <MudLink Href="@HelpersCopy.PromptHref(this.helper.PromptKeys[0])" Class="d-block mb-2">@HelpersCopy.PromptLink</MudLink>
+
+        <MudText Typo="Typo.body2" Class="helper-card-usage">@this.UsageText</MudText>
+        @if (this.status.LastRunAt is not null && this.status.LastResult is not null)
+        {
+            <MudText Typo="Typo.body2" Class="helper-card-last-run">@HelpersCopy.LastRun(this.TimeOfDay(this.status.LastRunAt.Value), this.status.LastResult)</MudText>
+        }
+
+        @if (this.CurrentError is { } error)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2 helper-card-error" role="status">
+                @HelpersCopy.LastError(this.TimeOfDay(error.At), error.Message)
+            </MudAlert>
+        }
+
+        @if (this.IsPaused)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2 helper-card-paused" role="status">
+                <span>@HelpersCopy.Paused</span>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="ml-3 helper-card-continue" OnClick="this.OnContinue">
+                    @HelpersCopy.Continue(this.baseline.ContinueGrant)
+                </MudButton>
+            </MudAlert>
+        }
+
+        <MudStack Row="true" Spacing="2" Class="mt-3">
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="helper-card-save"
+                       Disabled="@(!this.CanSave)" OnClick="this.OnSave">@HelpersCopy.Save</MudButton>
+            <MudButton Variant="Variant.Text" Size="Size.Small" Class="helper-card-reset"
+                       Disabled="@(!this.AdaptersOn)" OnClick="this.OnReset">@HelpersCopy.Reset</MudButton>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    private IHelperAgent? helper;
+    private HelperSettings baseline = new(false, null, null, null, 1, 10, 10, 60);
+    private HelperUsage usage = HelperUsage.None;
+    private HelperStatus status = HelperStatus.None;
+    private bool enabled;
+    private string? adapter;
+    private string? model;
+    private string? effort;
+    private int dailyCap = 1;
+
+    /// <summary>The id of the Helper this card shows. Bound with <c>@</c>: a string parameter bound without it would pass the literal text.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string HelperId { get; set; } = string.Empty;
+
+    /// <summary>Whether Adapters are on in this installation; when they are not, the card is read only.</summary>
+    [Parameter]
+    public bool AdaptersOn { get; set; } = true;
+
+    /// <inheritdoc/>
+    protected override void OnInitialized()
+    {
+        this.helper = this.Registry.Find(new HelperId(this.HelperId));
+        this.Dispatcher.StatusChanged += this.OnStatusChanged;
+        this.LoadDraft();
+    }
+
+    /// <inheritdoc/>
+    public void Dispose() => this.Dispatcher.StatusChanged -= this.OnStatusChanged;
+
+    private bool IsPaused => this.baseline.Enabled && this.helper is not null && this.Budget.IsPaused(this.helper.Id, this.baseline.DailyCap);
+
+    /// <summary>The last error while it is still the latest word: the latest run failed. A good run after it hides it.</summary>
+    private (DateTimeOffset At, string Message)? CurrentError =>
+        this.status is { LastErrorAt: { } at, LastError: { } message } && (this.status.LastRunAt is null || at >= this.status.LastRunAt)
+            ? (at, message)
+            : null;
+
+    private bool CanSave =>
+        this.AdaptersOn && (this.enabled != this.baseline.Enabled
+            || !string.Equals(this.adapter, this.baseline.Adapter, StringComparison.Ordinal)
+            || !string.Equals(this.model, this.baseline.Model, StringComparison.Ordinal)
+            || !string.Equals(this.effort, this.baseline.Effort, StringComparison.Ordinal)
+            || this.dailyCap != this.baseline.DailyCap);
+
+    /// <summary>The chip: Off when the Human turned it off, Paused at its cap, otherwise On. The icon carries the state beside the colour.</summary>
+    private (string Text, Color Color, string Icon) Chip
+    {
+        get
+        {
+            // The chip shows what the Helper does now (the saved setting), not the unsaved switch.
+            if (!this.baseline.Enabled)
+            {
+                return (HelpersCopy.ChipOff, Color.Default, Icons.Material.Filled.PowerSettingsNew);
+            }
+
+            return this.IsPaused
+                ? (HelpersCopy.ChipPaused, Color.Warning, Icons.Material.Filled.PauseCircle)
+                : (HelpersCopy.ChipOn, Color.Success, Icons.Material.Filled.CheckCircle);
+        }
+    }
+
+    private string UsageText
+    {
+        get
+        {
+            string text = HelpersCopy.Usage(this.usage.Calls, this.baseline.DailyCap + this.usage.Granted);
+            if (this.usage.Skipped > 0)
+            {
+                text += " · " + HelpersCopy.Skipped(this.usage.Skipped);
+            }
+
+            return this.usage.Cost is { } cost ? text + " · " + HelpersCopy.Cost(cost, this.usage.Currency) : text;
+        }
+    }
+
+    /// <summary>The local time of day of <paramref name="at"/>, such as <c>10:42</c>.</summary>
+    private string TimeOfDay(DateTimeOffset at) =>
+        TimeZoneInfo.ConvertTime(at, this.Clock.LocalTimeZone).ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>Reads the effective settings into the draft, and the activity beside them.</summary>
+    private void LoadDraft()
+    {
+        if (this.helper is null)
+        {
+            return;
+        }
+
+        this.baseline = this.Resolver.For(this.helper);
+        this.enabled = this.baseline.Enabled;
+        this.adapter = this.baseline.Adapter;
+        this.model = this.baseline.Model;
+        this.effort = this.baseline.Effort;
+        this.dailyCap = this.baseline.DailyCap;
+        this.LoadActivity();
+    }
+
+    private void LoadActivity()
+    {
+        if (this.helper is null)
+        {
+            return;
+        }
+
+        this.usage = this.Budget.Today(this.helper.Id);
+        this.status = this.StatusStore.Get(this.helper.Id);
+    }
+
+    private void OnStatusChanged()
+    {
+        _ = RendererDispatch.Repaint(
+            this.InvokeAsync,
+            () =>
+            {
+                this.LoadActivity();
+                this.StateHasChanged();
+            });
+    }
+
+    private void OnEnabledChanged(bool value) => this.enabled = value;
+
+    private void OnCapChanged(int value) => this.dailyCap = Math.Max(1, value);
+
+    private void OnSelectionChanged((string? Adapter, string? Model, string? Effort) selection)
+    {
+        this.adapter = selection.Adapter;
+        this.model = selection.Model;
+        this.effort = selection.Effort;
+    }
+
+    private void OnSave()
+    {
+        if (this.helper is null)
+        {
+            return;
+        }
+
+        this.SettingsStore.Save(this.helper.Id, new HelperSettingsRow(this.enabled, this.adapter, this.model, this.effort, this.dailyCap));
+        this.LoadDraft();
+    }
+
+    private void OnReset()
+    {
+        if (this.helper is null)
+        {
+            return;
+        }
+
+        this.SettingsStore.Delete(this.helper.Id);
+        this.LoadDraft();
+    }
+
+    private void OnContinue()
+    {
+        if (this.helper is null)
+        {
+            return;
+        }
+
+        this.Budget.Grant(this.helper.Id, this.baseline.ContinueGrant);
+        this.LoadActivity();
+    }
+}

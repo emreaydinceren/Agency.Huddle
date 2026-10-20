@@ -3,6 +3,7 @@
 @implements IDisposable
 @using Agency.Huddle.App.Prompts
 @using Agency.Huddle.App.Components.Settings
+@using Agency.Huddle.App.Components.Settings.Helpers
 @using Agency.Huddle.App.Skills
 @using Agency.Huddle.App.Skills.Ui
 @using Agency.Huddle.App.SkillSources
@@ -86,6 +87,9 @@
                         </MudStack>
                     </form>
                     break;
+                case SettingsTab.Helpers:
+                    <HelpersPanel />
+                    break;
                 case SettingsTab.Appearance:
                     <Appearance />
                     break;
@@ -144,6 +148,7 @@
     [
         new(SettingsTab.Profile, "Profile", Icons.Material.Outlined.AccountCircle),
         new(SettingsTab.Prompts, "Prompts", Icons.Material.Outlined.EditNote),
+        new(SettingsTab.Helpers, "Helpers", Icons.Material.Outlined.Psychology),
         new(SettingsTab.Appearance, "Appearance", Icons.Material.Outlined.Palette),
         new(SettingsTab.Personas, "Personas", Icons.Material.Outlined.People),
         new(SettingsTab.Skills, "Skills", Icons.Material.Outlined.AutoAwesome),

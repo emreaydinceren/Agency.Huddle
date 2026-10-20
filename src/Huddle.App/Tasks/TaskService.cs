@@ -878,7 +878,7 @@ internal sealed class TaskService : IDisposable
         TaskPatch resolvedPatch = this.ResolvePatch(patch, current.Location.Team);
         TaskItem candidate = resolvedPatch.ApplyTo(current);
 
-        List<string> problems = this.Validate(candidate, resolvedPatch.Fields(), resolvedPatch.Reason);
+        List<string> problems = this.Validate(candidate, resolvedPatch.Fields(), resolvedPatch.Reason, !current.HumanGate && candidate.HumanGate);
         if (problems.Count > 0)
         {
             return (new TaskResult.Refused(problems), null);
@@ -1290,7 +1290,8 @@ internal sealed class TaskService : IDisposable
     /// <param name="candidate">The Task as it would be after the change.</param>
     /// <param name="touchedFields">The fields being changed, or <see langword="null"/> for every field.</param>
     /// <param name="reason">The reason offered with the change, if any.</param>
-    private List<string> Validate(TaskItem candidate, IReadOnlyCollection<TaskField>? touchedFields, string? reason)
+    /// <param name="turnsGateOn">Whether the change turns the Human gate from off to on, which is the one other change that may carry a reason.</param>
+    private List<string> Validate(TaskItem candidate, IReadOnlyCollection<TaskField>? touchedFields, string? reason, bool turnsGateOn = false)
     {
         List<string> problems = [];
 
@@ -1346,7 +1347,7 @@ internal sealed class TaskService : IDisposable
             this.AddSprintProblems(candidate.Sprint, problems);
         }
 
-        AddReasonProblems(reason, candidate.Status, problems);
+        AddReasonProblems(reason, candidate.Status, turnsGateOn, problems);
 
         return problems;
     }
@@ -1601,8 +1602,8 @@ internal sealed class TaskService : IDisposable
         }
     }
 
-    /// <summary>Spec §9.2: a reason is at most 200 characters, and only given with Cancelled or Rejected.</summary>
-    private static void AddReasonProblems(string? reason, TaskState status, List<string> problems)
+    /// <summary>Spec §9.2: a reason is at most 200 characters, and only given with Cancelled or Rejected, or when the change turns the Human gate on (Helpers Spec §6.11).</summary>
+    private static void AddReasonProblems(string? reason, TaskState status, bool turnsGateOn, List<string> problems)
     {
         if (reason is not { Length: > 0 })
         {
@@ -1614,7 +1615,7 @@ internal sealed class TaskService : IDisposable
             problems.Add(string.Create(CultureInfo.InvariantCulture, $"Reason is {reason.Length} characters; the limit is 200."));
         }
 
-        if (status is not (TaskState.Cancelled or TaskState.Rejected))
+        if (!turnsGateOn && status is not (TaskState.Cancelled or TaskState.Rejected))
         {
             problems.Add("A reason is only recorded when the status becomes Cancelled or Rejected.");
         }

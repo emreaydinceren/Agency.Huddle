@@ -26,7 +26,7 @@ internal static class ContentFingerprint
 
     /// <summary>Removes the <c>## Evidence</c> section and trims the end of what remains.</summary>
     /// <param name="description">The description.</param>
-    private static string WithoutEvidence(string description)
+    internal static string WithoutEvidence(string description)
     {
         string normalized = description.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
         List<string> kept = [];

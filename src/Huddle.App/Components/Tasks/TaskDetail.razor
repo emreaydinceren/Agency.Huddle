@@ -506,7 +506,7 @@ else if (this.loaded is { } task)
     {
         <TaskHumanGate HumanGate="@effective.HumanGate" HumanGateChanged="this.OnHumanGateChanged"
                        Action="@effective.Action" ActionChanged="this.OnActionChanged"
-                       Assignee="@effective.Assignee" HumanName="@this.Human.Name" />
+                       Assignee="@effective.Assignee" HumanName="@this.Human.Name" ChangeLog="@task.ChangeLog" />
         @if (this.proof.Total > 0)
         {
             <TaskProofList Task="@task" Proof="@this.proof" HumanName="@this.Human.Name" />
