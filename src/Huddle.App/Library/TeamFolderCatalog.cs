@@ -16,13 +16,14 @@ internal static class TeamFolderCatalog
     /// <param name="resolver">Checks each Team folder against the Library's path boundary.</param>
     /// <param name="teamsRoot">The already-resolved Teams root.</param>
     /// <param name="teams">The board's current Team folders (<see cref="TaskStore.Teams"/>).</param>
-    internal static IReadOnlyList<LibraryTeamFolder> List(LibraryPathResolver resolver, LibraryPath teamsRoot, IReadOnlyList<TeamFolder> teams)
+    /// <returns>The board's own <see cref="TeamFolder"/> entries, filtered and re-ordered: the Library shows the same Name, Projects and orphan flag.</returns>
+    internal static IReadOnlyList<TeamFolder> List(LibraryPathResolver resolver, LibraryPath teamsRoot, IReadOnlyList<TeamFolder> teams)
     {
         ArgumentNullException.ThrowIfNull(resolver);
         ArgumentNullException.ThrowIfNull(teamsRoot);
         ArgumentNullException.ThrowIfNull(teams);
 
-        List<LibraryTeamFolder> folders = [];
+        List<TeamFolder> folders = [];
         foreach (TeamFolder team in teams)
         {
             DirectoryInfo directory = new(Path.Combine(teamsRoot.FullPath, team.Name));
@@ -31,7 +32,7 @@ internal static class TeamFolderCatalog
                 continue;
             }
 
-            folders.Add(new LibraryTeamFolder(team.Name, team.IsOrphan, team.Projects));
+            folders.Add(team);
         }
 
         return [.. folders.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)];

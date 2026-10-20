@@ -30,11 +30,9 @@ internal sealed class AskHumanTool(
 
     private const string MentionReason = "must not contain '@'. The answer is posted as the Human, so a Mention in it would speak for them.";
 
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     public string Name => "ask_human";
 
-    public string Description => prompts.Render("tool.askHuman.description", NoValues);
+    public string Description => prompts.Render("tool.askHuman.description");
 
     public JsonObject InputSchema => new JsonObject
     {

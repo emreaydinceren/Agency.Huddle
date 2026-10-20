@@ -128,7 +128,7 @@ internal sealed class SprintProposalService(
             }
         }
 
-        string mention = await this.MentionAsync(proposal.Proposer, ct).ConfigureAwait(false);
+        string mention = await HumanPost.MentionAsync(directory, proposal.Proposer, ct).ConfigureAwait(false);
         string added = applied.Count == 0 ? "none" : string.Join(", ", applied);
         string text = $"Approved Sprint '{proposal.Name}'{(existed ? " (it already existed)" : string.Empty)}. Added: {added}.";
         if (skipped.Count > 0)
@@ -160,7 +160,7 @@ internal sealed class SprintProposalService(
             return Gone();
         }
 
-        string mention = await this.MentionAsync(proposal.Proposer, ct).ConfigureAwait(false);
+        string mention = await HumanPost.MentionAsync(directory, proposal.Proposer, ct).ConfigureAwait(false);
         string reasonText = string.IsNullOrWhiteSpace(reason) ? NoDeclineReason : reason.Trim();
         string text = $"Declined the proposed Sprint '{proposal.Name}': {reasonText}{mention}";
         await this.PostAsync(roomId, text, ct).ConfigureAwait(false);
@@ -209,29 +209,16 @@ internal sealed class SprintProposalService(
         };
     }
 
-    /// <summary>The trailing Mention that wakes the proposer, or an empty string when the proposer no longer exists.</summary>
-    /// <param name="proposer">The proposer's name.</param>
-    /// <param name="ct">Cancels the lookup.</param>
-    private async Task<string> MentionAsync(string proposer, CancellationToken ct)
-    {
-        User? user = await directory.FindUserByNameAsync(proposer, ct).ConfigureAwait(false);
-        return user is null ? string.Empty : " @" + user.Name;
-    }
-
     /// <summary>Posts <paramref name="text"/> in the room as the Human; a refused post is logged, never thrown.</summary>
     /// <param name="roomId">The room to post in.</param>
     /// <param name="text">The text.</param>
     /// <param name="ct">Cancels the post.</param>
     private async Task PostAsync(string roomId, string text, CancellationToken ct)
     {
-        User human = await directory.GetHumanAsync(ct).ConfigureAwait(false);
-        try
+        string? problem = await HumanPost.TryPostAsync(chat, directory, roomId, text, ct).ConfigureAwait(false);
+        if (problem is not null)
         {
-            _ = await chat.PostAsync(roomId, human.Id, text, ct: ct).ConfigureAwait(false);
-        }
-        catch (ChatException ex)
-        {
-            logger.LogWarning("Could not post the Sprint proposal outcome in room {RoomId}: {Problem}", roomId, ex.Message);
+            logger.LogWarning("Could not post the Sprint proposal outcome in room {RoomId}: {Problem}", roomId, problem);
         }
     }
 }

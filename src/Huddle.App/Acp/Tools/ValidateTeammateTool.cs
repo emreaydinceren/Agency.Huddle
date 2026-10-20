@@ -12,35 +12,16 @@ namespace Agency.Huddle.App.Acp.Tools;
 /// </summary>
 internal sealed class ValidateTeammateTool(CandidateChecker checker, IPromptSource prompts) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     public string Name => "validate_teammate";
 
-    public string Description => prompts.Render("tool.validateTeammate.description", NoValues);
+    public string Description => prompts.Render("tool.validateTeammate.description");
 
     public JsonObject InputSchema => new JsonObject
     {
         ["type"] = "object",
         ["properties"] = new JsonObject
         {
-            ["candidate"] = new JsonObject
-            {
-                ["type"] = "object",
-                ["properties"] = new JsonObject
-                {
-                    ["name"] = new JsonObject { ["type"] = "string" },
-                    ["alias"] = new JsonObject { ["type"] = "string" },
-                    ["title"] = new JsonObject { ["type"] = "string" },
-                    ["body"] = new JsonObject { ["type"] = "string" },
-                    ["teams"] = new JsonObject
-                    {
-                        ["type"] = "array",
-                        ["items"] = new JsonObject { ["type"] = "string" },
-                    },
-                    ["consult_when"] = new JsonObject { ["type"] = "string" },
-                },
-                ["required"] = new JsonArray { "name", "alias", "title", "body" },
-            },
+            ["candidate"] = CandidateJson.Schema(),
         },
         ["required"] = new JsonArray { "candidate" },
     };

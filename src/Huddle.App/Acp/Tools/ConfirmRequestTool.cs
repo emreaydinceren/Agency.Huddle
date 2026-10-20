@@ -27,13 +27,11 @@ internal sealed class ConfirmRequestTool(
     /// <summary>The role coverage step a confirming member must have.</summary>
     private const string VerifyCoverage = "verify";
 
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
     public string Name => "confirm_request";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.confirmRequest.description", NoValues);
+    public string Description => prompts.Render("tool.confirmRequest.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new()

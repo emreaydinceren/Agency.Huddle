@@ -65,23 +65,14 @@ internal static class RequestTaskLookup
                 task = unchanged.Task;
                 refusal = string.Empty;
                 return true;
-            case TaskResult.Refused refused:
-                refusal = string.Join('\n', refused.Problems);
-                break;
-            case TaskResult.GateRefused gateRefused:
-                refusal = gateRefused.Message;
-                break;
-            case TaskResult.Conflict conflict:
-                refusal = string.Create(CultureInfo.InvariantCulture, $"{conflict.Current.Id} was changed by someone else; please try again.");
-                break;
-            case TaskResult.NotFound notFound:
-                refusal = string.Create(CultureInfo.InvariantCulture, $"Unknown task '{notFound.Id}'.");
-                break;
             default:
-                throw new UnreachableException("TaskService writes return only Saved, Unchanged, Refused, GateRefused, Conflict or NotFound.");
-        }
+                if (!TaskToolText.TryDescribeRefusal(result, out refusal))
+                {
+                    throw new UnreachableException("TaskService writes return only Saved, Unchanged, Refused, GateRefused, Conflict or NotFound.");
+                }
 
-        task = null;
-        return false;
+                task = null;
+                return false;
+        }
     }
 }

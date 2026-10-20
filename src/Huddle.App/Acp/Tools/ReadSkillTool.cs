@@ -10,11 +10,9 @@ internal sealed class ReadSkillTool(SkillStore skills, PersonaStore personas, st
 {
     private const string SkillMdFileName = "SKILL.md";
 
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     public string Name => "read_skill";
 
-    public string Description => prompts.Render("tool.readSkill.description", NoValues);
+    public string Description => prompts.Render("tool.readSkill.description");
 
     public JsonObject InputSchema => new JsonObject
     {

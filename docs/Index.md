@@ -132,6 +132,7 @@ that exercise it. All are **chat** unless stated.
 | [installer.md](engineering/installer.md) | How to install Agency.Huddle on Windows or macOS, what the installer checks and why it stays idempotent, release process, integrity verification | chat | ~4k |
 | [decisions.md](engineering/decisions.md) | The decision record and the old-to-new vocabulary mapping | chat | ~6.3k |
 | [analyzer-decisions.md](engineering/analyzer-decisions.md) | Which compiler and Sonar rules are off or on, what each group rests on, and which are proven to fire | chat | ~4.5k |
+| [duplication-log.md](engineering/duplication-log.md) | Before acting on a row of `Report-Duplication.ps1`: which duplicates were extracted, which are kept as copies on purpose, and why, one section per iteration | chat | small |
 | [wireframes.md](engineering/wireframes.md) | The code and name of every UI container, drawn as SVG wireframes from the shell down to each page and overlay | chat | ~4k |
 | [UX-Issues.md](engineering/UX-Issues.md) | The audit of `src/Huddle.App` against the design system: inconsistencies, reuse opportunities, violations and documentation drift, one row each | chat | ~20k |
 | [UX-Issues-Plan.md](engineering/UX-Issues-Plan.md) | The delivery plan that closes every row of UX-Issues.md: deliverables U0 to U28, the convention test, row ownership and the tracker | chat | ~40k |

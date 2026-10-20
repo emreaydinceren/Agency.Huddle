@@ -27,8 +27,6 @@ internal sealed class ListTasksTool(
     IPromptSource prompts,
     string callerAgentId) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <summary>The default <c>limit</c> when the argument is omitted (Spec §11.4).</summary>
     private const int DefaultLimit = 50;
 
@@ -42,7 +40,7 @@ internal sealed class ListTasksTool(
     public string Name => "list_tasks";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.listTasks.description", NoValues);
+    public string Description => prompts.Render("tool.listTasks.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject

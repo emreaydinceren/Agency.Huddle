@@ -54,14 +54,10 @@ internal sealed partial class QuestionService(
         User? asker = await directory.GetUserAsync(pending.AskerAgentId, ct).ConfigureAwait(false);
         string text = Compose(pending, answers, asker?.Name);
 
-        User human = await directory.GetHumanAsync(ct).ConfigureAwait(false);
-        try
+        string? problem = await HumanPost.TryPostAsync(chat, directory, roomId, text, ct).ConfigureAwait(false);
+        if (problem is not null)
         {
-            _ = await chat.PostAsync(roomId, human.Id, text, ct: ct).ConfigureAwait(false);
-        }
-        catch (ChatException ex)
-        {
-            LogPostFailed(logger, roomId, ex.Message);
+            LogPostFailed(logger, roomId, problem);
             return null;
         }
 

@@ -110,7 +110,7 @@ internal sealed class RetroProposalService(
 
         if (outcome.Kind == RetroChangeOutcomeKind.Applied)
         {
-            string text = outcome.Text + await this.MentionAsync(set.Proposer, ct).ConfigureAwait(false);
+            string text = outcome.Text + await HumanPost.MentionAsync(directory, set.Proposer, ct).ConfigureAwait(false);
             await this.PostAsync(roomId, text, ct).ConfigureAwait(false);
             return outcome with { Text = text };
         }
@@ -145,7 +145,7 @@ internal sealed class RetroProposalService(
         }
 
         string reasonText = string.IsNullOrWhiteSpace(reason) ? NoReason : reason.Trim();
-        string text = $"Rejected '{change.Title}': {reasonText}{await this.MentionAsync(set.Proposer, ct).ConfigureAwait(false)}";
+        string text = $"Rejected '{change.Title}': {reasonText}{await HumanPost.MentionAsync(directory, set.Proposer, ct).ConfigureAwait(false)}";
         await this.PostAsync(roomId, text, ct).ConfigureAwait(false);
         return new RetroChangeOutcome(RetroChangeOutcomeKind.Rejected, text);
     }
@@ -329,22 +329,16 @@ internal sealed class RetroProposalService(
         return summary is not null && summary.Members.Contains(name, StringComparer.OrdinalIgnoreCase) ? personas.Get(name) : null;
     }
 
-    private async Task<string> MentionAsync(string proposer, CancellationToken ct)
-    {
-        User? user = await directory.FindUserByNameAsync(proposer, ct).ConfigureAwait(false);
-        return user is null ? string.Empty : " @" + user.Name;
-    }
-
+    /// <summary>Posts <paramref name="text"/> in the room as the Human; a refused post is logged, never thrown.</summary>
+    /// <param name="roomId">The room to post in.</param>
+    /// <param name="text">The text.</param>
+    /// <param name="ct">Cancels the post.</param>
     private async Task PostAsync(string roomId, string text, CancellationToken ct)
     {
-        User human = await directory.GetHumanAsync(ct).ConfigureAwait(false);
-        try
+        string? problem = await HumanPost.TryPostAsync(chat, directory, roomId, text, ct).ConfigureAwait(false);
+        if (problem is not null)
         {
-            _ = await chat.PostAsync(roomId, human.Id, text, ct: ct).ConfigureAwait(false);
-        }
-        catch (ChatException ex)
-        {
-            logger.LogWarning("Could not post the retro proposal outcome in room {RoomId}: {Problem}", roomId, ex.Message);
+            logger.LogWarning("Could not post the retro proposal outcome in room {RoomId}: {Problem}", roomId, problem);
         }
     }
 }

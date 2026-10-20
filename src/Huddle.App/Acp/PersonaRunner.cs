@@ -7,6 +7,7 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.References;
 using Agency.Huddle.App.Services;
@@ -34,8 +35,6 @@ namespace Agency.Huddle.App.Acp;
 /// </remarks>
 internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
 {
-    private const int MaxConnectAttempts = 30;
-    private static readonly TimeSpan ConnectRetryDelay = TimeSpan.FromMilliseconds(200);
     private const int MaxDescriptionLength = 200;
 
     private readonly Persona persona;
@@ -815,31 +814,15 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
 
     private async Task<NamedPipeClientStream> ConnectAsync(CancellationToken ct)
     {
-        for (var attempt = 1; attempt <= MaxConnectAttempts; attempt++)
+        NamedPipeClientStream? client = await PipeClientConnector.TryConnectAsync(this.options.PipeName, ct).ConfigureAwait(false);
+        if (client is not null)
         {
-            var client = new NamedPipeClientStream(".", this.options.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-            try
-            {
-                await client.ConnectAsync(100, ct).ConfigureAwait(false);
-                return client;
-            }
-            catch (TimeoutException)
-            {
-                await client.DisposeAsync().ConfigureAwait(false);
-            }
-            catch (IOException)
-            {
-                await client.DisposeAsync().ConfigureAwait(false);
-            }
-
-            if (attempt < MaxConnectAttempts)
-            {
-                await Task.Delay(ConnectRetryDelay, ct).ConfigureAwait(false);
-            }
+            return client;
         }
 
+
         throw new InvalidOperationException(
-            $"Persona '{this.persona.Name}' failed to connect to pipe '{this.options.PipeName}' after {MaxConnectAttempts} attempts.");
+            $"Persona '{this.persona.Name}' failed to connect to pipe '{this.options.PipeName}' after {PipeClientConnector.Attempts} attempts.");
     }
 
     /// <summary>

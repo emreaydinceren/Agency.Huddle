@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using System.IO.Pipes;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Pipes;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Demo;
@@ -13,9 +14,7 @@ namespace Agency.Huddle.App.Demo;
 /// </summary>
 public sealed class DemoAgentHost : BackgroundService
 {
-    private const int MaxConnectAttempts = 30;
     private const int ReplyChunkCount = 3;
-    private static readonly TimeSpan ConnectRetryDelay = TimeSpan.FromMilliseconds(200);
     private static readonly TimeSpan ReplyChunkDelay = TimeSpan.FromMilliseconds(40);
     private static readonly string[] DefaultNames = ["echo", "alpha"];
 
@@ -124,33 +123,17 @@ public sealed class DemoAgentHost : BackgroundService
 
     private async Task<NamedPipeClientStream?> ConnectAsync(string name, CancellationToken ct)
     {
-        for (var attempt = 1; attempt <= MaxConnectAttempts; attempt++)
+        NamedPipeClientStream? client = await PipeClientConnector.TryConnectAsync(this.options.PipeName, ct).ConfigureAwait(false);
+        if (client is not null)
         {
-            var client = new NamedPipeClientStream(".", this.options.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-            try
-            {
-                await client.ConnectAsync(100, ct).ConfigureAwait(false);
-                return client;
-            }
-            catch (TimeoutException)
-            {
-                await client.DisposeAsync().ConfigureAwait(false);
-            }
-            catch (IOException)
-            {
-                await client.DisposeAsync().ConfigureAwait(false);
-            }
-
-            if (attempt < MaxConnectAttempts)
-            {
-                await Task.Delay(ConnectRetryDelay, ct).ConfigureAwait(false);
-            }
+            return client;
         }
+
 
         this.logger.LogWarning(
             "Demo agent {AgentName} failed to connect to pipe {PipeName} after {Attempts} attempts.",
 #pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
-            name, this.options.PipeName, MaxConnectAttempts);
+            name, this.options.PipeName, PipeClientConnector.Attempts);
 #pragma warning restore HAA0601
         return null;
     }

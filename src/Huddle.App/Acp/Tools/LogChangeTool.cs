@@ -21,13 +21,11 @@ internal sealed class LogChangeTool(
     string agentName,
     IPromptSource prompts) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
     public string Name => "log_change";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.logChange.description", NoValues);
+    public string Description => prompts.Render("tool.logChange.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => BuildSchema();

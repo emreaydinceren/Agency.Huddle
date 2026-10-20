@@ -176,11 +176,16 @@ edits to a test frozen by `Freeze-Tests.ps1`.
    the full suite at each batch boundary and before a push, and two or three times for concurrency
    or UI work. For each row that was red, name the line in `src/` that turned it green; a row
    that went green with no `src/` change was satisfied by something else.
-6. **Demand mutation proof** for any test that arrived green.
-7. **Treat any new flaky test as a bug** to root-cause before commit. In this delivery that rule
+6. **Run `Report-Duplication.ps1` before you commit.** It is advice, not a gate, and never fails.
+   Read each row under "Added on this branch": a block the implementer copied from existing code.
+   Either send it back to extract a shared helper, or keep the copy when it reads better (two tools
+   of the same shape, a data table) and log that call with its reason. The "Existing" rows are not
+   this task's to fix.
+7. **Demand mutation proof** for any test that arrived green.
+8. **Treat any new flaky test as a bug** to root-cause before commit. In this delivery that rule
    found a harness trap and three real store bugs. A retry, a longer wait or a wider tolerance
    is not a root cause.
-8. **Settle ambiguity yourself and log it.** Record each judgement call with its reason in a
+9. **Settle ambiguity yourself and log it.** Record each judgement call with its reason in a
    numbered list; report them all at the end.
 
 ## Getting an independent review

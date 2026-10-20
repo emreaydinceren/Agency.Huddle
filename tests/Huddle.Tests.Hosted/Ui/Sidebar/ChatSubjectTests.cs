@@ -1,23 +1,11 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using MudBlazor;
-using Agency.Huddle.App;
-using Agency.Huddle.App.Acp;
-using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Elicitation;
-using Agency.Huddle.App.Library;
-using Agency.Huddle.App.Pipes;
-using Agency.Huddle.App.Questions;
-using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tabs;
-using Agency.Huddle.App.Tasks;
-using Agency.Huddle.App.Teammates;
-using Agency.Huddle.Tests.Library;
 
 namespace Agency.Huddle.Tests.Ui.Sidebar;
 
@@ -84,44 +72,13 @@ public sealed class ChatSubjectTests
             .Add(p => p.Value, new TabPageContext("/rooms/" + roomId, ChatSubjectTests.TabId))
             .Add(p => p.ChildContent, ChatSubjectTests.ChatFragment(roomId)));
 
+    /// <summary>The Room page context from <see cref="ChatPageContext"/>, with loose JS interop for the scripts the page calls.</summary>
+    /// <param name="factory">The factory whose composed singletons to reuse.</param>
+    /// <returns>The context.</returns>
     private static MudBunitContext NewChatContext(TeamWebApplicationFactory factory)
     {
-        MudBunitContext ctx = new();
-        IServiceProvider source = factory.Services;
+        MudBunitContext ctx = ChatPageContext.Create(factory);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
-        ctx.Services.AddSingleton(source.GetRequiredService<ITeamDirectory>());
-        ctx.Services.AddSingleton(source.GetRequiredService<IChatStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<RoomEvents>());
-        ctx.Services.AddSingleton(source.GetRequiredService<ChatService>());
-        // Chat navigates through ServerNavigator, which needs the circuit connection tracker the app registers.
-        Agency.Huddle.App.Circuits.CircuitServiceCollectionExtensions.AddCircuitConnection(ctx.Services);
-        ctx.Services.AddSingleton(source.GetRequiredService<Drafts>());
-        ctx.Services.AddSingleton(source.GetRequiredService<IAgentGateway>());
-        ctx.Services.AddSingleton(source.GetRequiredService<PersonaHealth>());
-        ctx.Services.AddSingleton(source.GetRequiredService<RoomFollows>());
-        ctx.Services.AddSingleton(source.GetRequiredService<PersonaStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<AvatarStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<Agency.Huddle.App.Profile.IHumanIdentity>());
-        ctx.Services.AddSingleton(source.GetRequiredService<IMentionAliasSource>());
-        ctx.Services.AddSingleton(source.GetRequiredService<ProposalStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<ProposalService>());
-        ctx.Services.AddSingleton(source.GetRequiredService<HireLimitGuard>());
-        ctx.Services.AddSingleton(source.GetRequiredService<SprintProposalStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<SprintProposalService>());
-        ctx.Services.AddSingleton(source.GetRequiredService<TaskStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<Agency.Huddle.App.Teams.RetroProposalStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<Agency.Huddle.App.Teams.RetroProposalService>());
-        ctx.Services.AddSingleton(source.GetRequiredService<QuestionStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<QuestionService>());
-        ctx.Services.AddSingleton(source.GetRequiredService<IOptions<TeamOptions>>());
-        ctx.Services.AddSingleton(source.GetRequiredService<ElicitationStore>());
-        ctx.Services.AddSingleton(source.GetRequiredService<ElicitationService>());
-        ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
-        ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver());
-        ctx.Services.AddSingleton(new TabService());
-
-        // Chat navigates through ServerNavigator when a Rooms event moves the Human off a Room.
-        ctx.Services.AddFakeCircuitConnection();
         return ctx;
     }
 }

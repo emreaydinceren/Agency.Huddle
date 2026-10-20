@@ -22,13 +22,11 @@ internal sealed class ProposeSprintTool(
     string callerAgentId,
     IPromptSource prompts) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
     public string Name => "propose_sprint";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.proposeSprint.description", NoValues);
+    public string Description => prompts.Render("tool.proposeSprint.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject

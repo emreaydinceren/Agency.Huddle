@@ -9,11 +9,9 @@ using Agency.Huddle.App.Services;
 /// <summary>Posts a Message into a Room, as the calling Agent.</summary>
 internal sealed class PostMessageTool(ChatService chat, string callerAgentId, IPromptSource prompts, OwnPosts ownPosts) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     public string Name => "post_message";
 
-    public string Description => prompts.Render("tool.postMessage.description", NoValues);
+    public string Description => prompts.Render("tool.postMessage.description");
 
     public JsonObject InputSchema => new JsonObject
     {

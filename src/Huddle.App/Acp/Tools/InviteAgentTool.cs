@@ -15,13 +15,11 @@ using Agency.Huddle.Contracts;
 /// </remarks>
 internal sealed class InviteAgentTool(ChatService chat, ITeamDirectory teamDirectory, IMentionAliasSource aliasSource, IPromptSource prompts) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
     public string Name => "invite_agent";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.inviteAgent.description", NoValues);
+    public string Description => prompts.Render("tool.inviteAgent.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject

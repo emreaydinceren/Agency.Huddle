@@ -22,11 +22,9 @@ internal sealed class ProposeTeammatesTool(
     string callerAgentId,
     IPromptSource prompts) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     public string Name => "propose_teammates";
 
-    public string Description => prompts.Render("tool.proposeTeammates.description", NoValues);
+    public string Description => prompts.Render("tool.proposeTeammates.description");
 
     public JsonObject InputSchema => new JsonObject
     {
@@ -37,24 +35,7 @@ internal sealed class ProposeTeammatesTool(
             ["candidates"] = new JsonObject
             {
                 ["type"] = "array",
-                ["items"] = new JsonObject
-                {
-                    ["type"] = "object",
-                    ["properties"] = new JsonObject
-                    {
-                        ["name"] = new JsonObject { ["type"] = "string" },
-                        ["alias"] = new JsonObject { ["type"] = "string" },
-                        ["title"] = new JsonObject { ["type"] = "string" },
-                        ["body"] = new JsonObject { ["type"] = "string" },
-                        ["teams"] = new JsonObject
-                        {
-                            ["type"] = "array",
-                            ["items"] = new JsonObject { ["type"] = "string" },
-                        },
-                        ["consult_when"] = new JsonObject { ["type"] = "string" },
-                    },
-                    ["required"] = new JsonArray { "name", "alias", "title", "body" },
-                },
+                ["items"] = CandidateJson.Schema(),
             },
         },
         ["required"] = new JsonArray { "roomId", "candidates" },

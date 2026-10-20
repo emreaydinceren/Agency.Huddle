@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.SkillPacks.Folders;
 
 /// <summary>
 /// Splits a Persona file's optional leading YAML frontmatter block into an ordered list of
@@ -555,7 +556,7 @@ internal static class PersonaFrontmatter
         return builder.ToString();
     }
 
-    /// <summary>Single-quotes a scalar, doubling any interior <c>'</c> per YAML's own escape for it - the inverse of <see cref="StripYamlQuotes"/>'s single-quote branch.</summary>
+    /// <summary>Single-quotes a scalar, doubling any interior <c>'</c> per YAML's own escape for it - the inverse of <see cref="YamlScalars.StripQuotes"/>'s single-quote branch.</summary>
     private static string QuoteScalar(string value) => $"'{value.Replace("'", "''")}'";
 
     /// <summary>
@@ -777,7 +778,7 @@ internal static class PersonaFrontmatter
         {
             if (line.TrimStart().StartsWith("- ", StringComparison.Ordinal) && this.currentListKey is not null)
             {
-                this.currentListValues.Add(StripYamlQuotes(line.TrimStart()[2..].Trim()));
+                this.currentListValues.Add(YamlScalars.StripQuotes(line.TrimStart()[2..].Trim()));
                 return true;
             }
 
@@ -811,7 +812,7 @@ internal static class PersonaFrontmatter
             {
                 this.currentListKey = key;
             }
-            else if (TryParseFlowList(value, out var flowItems))
+            else if (YamlScalars.TryParseFlowList(value, out IReadOnlyList<string> flowItems))
             {
                 if (flowItems.Count > 0)
                 {
@@ -820,7 +821,7 @@ internal static class PersonaFrontmatter
             }
             else
             {
-                this.fields.Add(new PersonaFrontmatterField(key, StripYamlQuotes(value)));
+                this.fields.Add(new PersonaFrontmatterField(key, YamlScalars.StripQuotes(value)));
             }
         }
 
@@ -918,95 +919,6 @@ internal static class PersonaFrontmatter
         }
 
         return string.Join('\n', paragraphs);
-    }
-
-    /// <summary>
-    /// Strips a single layer of matching <c>'...'</c> or <c>"..."</c> quoting from a plain scalar
-    /// or list-item value. For a single-quoted value, YAML's own escape for an embedded
-    /// apostrophe (<c>''</c>) is unescaped to <c>'</c>. Values that are not quoted, or whose
-    /// quotes do not match, are returned unchanged.
-    /// </summary>
-    private static string StripYamlQuotes(string raw)
-    {
-        if (raw.Length >= 2)
-        {
-            var first = raw[0];
-            var last = raw[^1];
-
-            if (first == last && (first == '\'' || first == '"'))
-            {
-                var inner = raw[1..^1];
-                return first == '\'' ? inner.Replace("''", "'") : inner;
-            }
-        }
-
-        return raw;
-    }
-
-    /// <summary>
-    /// Recognises a YAML bracketed flow list, for example <c>['Finances', 'Email']</c>, and splits
-    /// it into quote-stripped, trimmed items — dropping empty ones, so <c>[]</c> yields no items.
-    /// A value that is not wrapped in matching <c>[...]</c> is not a flow list.
-    /// </summary>
-    private static bool TryParseFlowList(string value, out List<string> items)
-    {
-        if (value.Length < 2 || value[0] != '[' || value[^1] != ']')
-        {
-            items = [];
-            return false;
-        }
-
-        items = SplitFlowListItems(value[1..^1])
-            .Select(item => StripYamlQuotes(item.Trim()))
-            .Where(item => item.Length > 0)
-            .ToList();
-        return true;
-    }
-
-    /// <summary>
-    /// Splits a flow list's inner text on top-level commas, tracking whether a <c>'</c> or <c>"</c>
-    /// is currently open so a comma inside a quoted item (for example <c>'Router, triage'</c>) does
-    /// not split it — the same real-data concern that keeps plain scalars from being guessed as
-    /// lists by their comma content.
-    /// </summary>
-    private static List<string> SplitFlowListItems(string inner)
-    {
-        var items = new List<string>();
-        StringBuilder current = new();
-        char? openQuote = null;
-
-        foreach (var ch in inner)
-        {
-            if (openQuote is not null)
-            {
-                current.Append(ch);
-                if (ch == openQuote.Value)
-                {
-                    openQuote = null;
-                }
-
-                continue;
-            }
-
-            if (ch is '\'' or '"')
-            {
-                openQuote = ch;
-                current.Append(ch);
-                continue;
-            }
-
-            if (ch == ',')
-            {
-                items.Add(current.ToString());
-                current.Clear();
-                continue;
-            }
-
-            current.Append(ch);
-        }
-
-        items.Add(current.ToString());
-        return items;
     }
 
     /// <summary>Splits a frontmatter key on <c>_</c>/<c>-</c> and capitalizes each word.</summary>

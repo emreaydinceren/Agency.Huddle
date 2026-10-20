@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace Agency.Huddle.SkillPacks.Folders;
 
 /// <summary>
@@ -83,7 +81,7 @@ public static class SkillFrontmatter
 
             if (line.TrimStart().StartsWith("- ", StringComparison.Ordinal) && this.listKey is not null)
             {
-                this.listValues.Add(StripQuotes(line.TrimStart()[2..].Trim()));
+                this.listValues.Add(YamlScalars.StripQuotes(line.TrimStart()[2..].Trim()));
                 return;
             }
 
@@ -141,7 +139,7 @@ public static class SkillFrontmatter
             {
                 this.listKey = key;
             }
-            else if (TryParseFlowList(value, out List<string> items))
+            else if (YamlScalars.TryParseFlowList(value, out IReadOnlyList<string> items))
             {
                 if (items.Count > 0)
                 {
@@ -150,7 +148,7 @@ public static class SkillFrontmatter
             }
             else
             {
-                this.fields.Add(new SkillFrontmatterField(key, StripQuotes(value)));
+                this.fields.Add(new SkillFrontmatterField(key, YamlScalars.StripQuotes(value)));
             }
         }
 
@@ -239,68 +237,4 @@ public static class SkillFrontmatter
         return string.Join('\n', paragraphs);
     }
 
-    /// <summary>Strips one layer of matching quotes; <c>''</c> inside single quotes becomes <c>'</c>.</summary>
-    private static string StripQuotes(string raw)
-    {
-        if (raw.Length >= 2 && raw[0] == raw[^1] && raw[0] is '\'' or '"')
-        {
-            string inner = raw[1..^1];
-            return raw[0] == '\'' ? inner.Replace("''", "'", StringComparison.Ordinal) : inner;
-        }
-
-        return raw;
-    }
-
-    /// <summary>Recognises a bracketed flow list and splits it on top-level commas.</summary>
-    private static bool TryParseFlowList(string value, out List<string> items)
-    {
-        if (value.Length < 2 || value[0] != '[' || value[^1] != ']')
-        {
-            items = [];
-            return false;
-        }
-
-        items = [.. SplitFlowListItems(value[1..^1]).Select(static item => StripQuotes(item.Trim())).Where(static item => item.Length > 0)];
-        return true;
-    }
-
-    /// <summary>Splits a flow list's inner text on commas outside quotes.</summary>
-    private static List<string> SplitFlowListItems(string inner)
-    {
-        List<string> items = [];
-        StringBuilder current = new();
-        char? openQuote = null;
-        foreach (char ch in inner)
-        {
-            if (openQuote is not null)
-            {
-                current.Append(ch);
-                if (ch == openQuote.Value)
-                {
-                    openQuote = null;
-                }
-
-                continue;
-            }
-
-            if (ch is '\'' or '"')
-            {
-                openQuote = ch;
-                current.Append(ch);
-                continue;
-            }
-
-            if (ch == ',')
-            {
-                items.Add(current.ToString());
-                current.Clear();
-                continue;
-            }
-
-            current.Append(ch);
-        }
-
-        items.Add(current.ToString());
-        return items;
-    }
 }
