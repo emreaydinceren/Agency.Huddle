@@ -13,15 +13,10 @@ using Agency.Huddle.Tests.Acp.Tools;
 using TasksPage = Agency.Huddle.App.Components.Pages.Tasks;
 
 /// <summary>
-/// Pins corrections-B7's 14.5.i (the third page-wiring step): the detail drawer hosts a real
-/// <see cref="TaskDetail"/> (<see cref="TaskDetailMode.Panel"/>) instead of the placeholder, for both
-/// an opened row and "+ New task" (the header button and the empty-state button, seeded from
-/// <see cref="NewTaskDefaults"/>); switching what the drawer shows always goes through
-/// <see cref="TaskDetail.ConfirmDiscardAsync"/> first, and Cancel on that "Discard changes?" box
-/// keeps the Task that was already open; the drawer's <c>OverlayAutoClose</c> follows
-/// <see cref="TaskDetail.HasPending"/>; and the page also hosts <see cref="WakeToasts"/> and
-/// <see cref="AiReactingChip"/>, the latter watching every Task in the current effective View,
-/// unnarrowed by the search box.
+/// Pins what the Tasks page's detail drawer does: it hosts the read-only <see cref="TaskReadView"/> for an opened row or card (and nothing editable),
+/// Escape closes it, its <c>ContentKey</c> is the Task's id, "+ New task" opens the edit page's new-Task Tab with the View's Team and Project and leaves
+/// the drawer closed; and the page also hosts <see cref="WakeToasts"/> and <see cref="AiReactingChip"/>, the latter watching every Task in the
+/// current effective View, unnarrowed by the search box.
 /// </summary>
 public sealed class TasksPageDetailTests
 {

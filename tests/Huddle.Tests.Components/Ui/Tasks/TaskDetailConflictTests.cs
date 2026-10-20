@@ -70,33 +70,6 @@ public sealed class TaskDetailConflictTests
             cut.TextOf(".task-detail-conflict-alert")));
     }
 
-    /// <summary>
-    /// Manual test TASKS-07 finding F17: at Panel width (~300 px) the conflict table's four columns
-    /// overflow horizontally, pushing the radios off-screen. The Panel must use the stacked
-    /// <c>.task-detail-conflict-stacked</c> layout instead of a <see cref="MudSimpleTable"/>; the
-    /// Expanded layout, which has room for the columns, keeps the table.
-    /// </summary>
-    [Fact]
-    public async Task Conflict_PanelUsesStackedLayout_ExpandedKeepsTable()
-    {
-        using TaskToolHarness harness = new();
-        TaskItem panelTask = CreateTask(harness, priority: TaskPriority.Medium);
-        await using MudBunitContext panelCtx = UiTestHost.Create().WithHarness(harness);
-        var panelCut = RenderPanel(panelCtx, panelTask.Id);
-        await CausePriorityConflictAsync(panelCut, harness, panelTask, mine: TaskPriority.Urgent, theirs: TaskPriority.Low);
-
-        Assert.Single(panelCut.FindAll(".task-detail-conflict-stacked"));
-        Assert.Empty(panelCut.FindAll(".task-detail-conflict-table"));
-
-        TaskItem expandedTask = CreateTask(harness, title: "Other", priority: TaskPriority.Medium);
-        await using MudBunitContext expandedCtx = UiTestHost.Create().WithHarness(harness);
-        var expandedCut = RenderExpanded(expandedCtx, expandedTask.Id);
-        await CausePriorityConflictAsync(expandedCut, harness, expandedTask, mine: TaskPriority.Urgent, theirs: TaskPriority.Low);
-
-        Assert.Single(expandedCut.FindAll(".task-detail-conflict-table"));
-        Assert.Empty(expandedCut.FindAll(".task-detail-conflict-stacked"));
-    }
-
     /// <summary>Contrast to <see cref="Conflict_OutsideEdit_BannerSaysChangedOutsideHuddle_NotYou"/>: an Agent's concurrent edit keeps the original "{Name} changed…" wording exactly.</summary>
     [Fact]
     public async Task Conflict_AgentEdit_BannerKeepsNameChangedWording()
@@ -128,15 +101,15 @@ public sealed class TaskDetailConflictTests
         var cut = RenderPanel(ctx, task.Id);
         await CausePriorityConflictAsync(cut, harness, task, mine: TaskPriority.Urgent, theirs: TaskPriority.Low);
 
-        IReadOnlyList<bool> checkedStates = [.. cut.FindAll(".task-detail-conflict-stacked input[type=\"radio\"]").Select(r => r.HasAttribute("checked"))];
+        IReadOnlyList<bool> checkedStates = [.. cut.FindAll(".task-detail-conflict-table input[type=\"radio\"]").Select(r => r.HasAttribute("checked"))];
         Assert.Equal([false, false], checkedStates);
         Assert.True(cut.FindButton("Save").HasAttribute("disabled"));
 
-        IElement keepMineInput = cut.FindAll(".task-detail-conflict-stacked label.mud-radio").Single(l => l.TextContent.Contains("Keep mine", StringComparison.Ordinal)).QuerySelector("input[type=\"radio\"]")
+        IElement keepMineInput = cut.FindAll(".task-detail-conflict-table label.mud-radio").Single(l => l.TextContent.Contains("Keep mine", StringComparison.Ordinal)).QuerySelector("input[type=\"radio\"]")
             ?? throw new InvalidOperationException("Keep mine radio input not found.");
         await cut.InvokeAsync(() => keepMineInput.ClickAsync());
 
-        Assert.True(cut.Find(".task-detail-conflict-stacked input[type=\"radio\"]").HasAttribute("checked"));
+        Assert.True(cut.Find(".task-detail-conflict-table input[type=\"radio\"]").HasAttribute("checked"));
         Assert.False(cut.FindButton("Save").HasAttribute("disabled"));
     }
 
@@ -656,26 +629,13 @@ public sealed class TaskDetailConflictTests
         return Assert.IsType<TaskResult.Saved>(result).Task;
     }
 
-    /// <summary>Renders <c>TaskDetail</c> in Panel mode for <paramref name="id"/> - mirrors <c>TaskDetailTests.RenderPanel</c>.</summary>
+    /// <summary>Renders <c>TaskDetail</c> for <paramref name="id"/> - mirrors <c>TaskDetailTests.RenderPanel</c>.</summary>
     private static IRenderedComponent<ContainerFragment> RenderPanel(MudBunitContext ctx, TaskId id)
     {
         return ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<TaskDetail>(0);
             builder.AddAttribute(1, nameof(TaskDetail.Id), (TaskId?)id);
-            builder.AddAttribute(2, nameof(TaskDetail.Mode), TaskDetailMode.Panel);
-            builder.CloseComponent();
-        });
-    }
-
-    /// <summary>Renders <c>TaskDetail</c> in Expanded mode for <paramref name="id"/> - for finding F17's Panel-vs-Expanded conflict layout markup test.</summary>
-    private static IRenderedComponent<ContainerFragment> RenderExpanded(MudBunitContext ctx, TaskId id)
-    {
-        return ctx.RenderWithPopovers(builder =>
-        {
-            builder.OpenComponent<TaskDetail>(0);
-            builder.AddAttribute(1, nameof(TaskDetail.Id), (TaskId?)id);
-            builder.AddAttribute(2, nameof(TaskDetail.Mode), TaskDetailMode.Expanded);
             builder.CloseComponent();
         });
     }

@@ -4,7 +4,6 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using Agency.Huddle.App.Components.Shared;
-using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Tools;
 using static Agency.Huddle.Tests.Ui.Tasks.TaskDetailFieldsTestSupport;
@@ -18,15 +17,13 @@ public sealed class TaskDetailAssigneeTests
     // ---------------------------------------------------------------------------------------------
 
     /// <summary>The Assignee picker is a <c>Strict</c> autocomplete (Spec §13.6) - this alone forces the new <c>AssigneeOption</c> item type's red.</summary>
-    /// <param name="mode">Both entry points.</param>
-    [Theory]
-    [MemberData(nameof(TaskDetailFieldsTestSupport.BothModesData), MemberType = typeof(TaskDetailFieldsTestSupport))]
-    public async Task Assignee_AutocompleteIsStrict(TaskDetailMode mode)
+    [Fact]
+    public async Task Assignee_AutocompleteIsStrict()
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, mode);
+        var cut = RenderDetail(ctx, task.Id);
 
         IRenderedComponent<MudAutocomplete<AssigneeOption>> assignee = cut.FindComponents<MudAutocomplete<AssigneeOption>>().Single(m => string.Equals(m.Instance.Class, "task-detail-assignee", StringComparison.Ordinal));
 
@@ -42,16 +39,14 @@ public sealed class TaskDetailAssigneeTests
     /// hand-constructed), rather than opening the popover, since bUnit cannot easily drive a debounced
     /// popover open from a plain text change.
     /// </summary>
-    /// <param name="mode">Both entry points.</param>
-    [Theory]
-    [MemberData(nameof(TaskDetailFieldsTestSupport.BothModesData), MemberType = typeof(TaskDetailFieldsTestSupport))]
-    public async Task Assignee_OptionTemplate_ShowsTeammateAvatarInPresenceBadge_AndExactName(TaskDetailMode mode)
+    [Fact]
+    public async Task Assignee_OptionTemplate_ShowsTeammateAvatarInPresenceBadge_AndExactName()
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         harness.Gateway.SetOnline(harness.NovaId ?? throw new InvalidOperationException("NovaId missing"));
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, mode);
+        var cut = RenderDetail(ctx, task.Id);
         IRenderedComponent<MudAutocomplete<AssigneeOption>> assignee = cut.FindComponents<MudAutocomplete<AssigneeOption>>().Single(m => string.Equals(m.Instance.Class, "task-detail-assignee", StringComparison.Ordinal));
         Func<string?, CancellationToken, Task<IEnumerable<AssigneeOption>>?> search = assignee.Instance.SearchFunc
             ?? throw new InvalidOperationException("Assignee autocomplete has no SearchFunc.");
@@ -82,7 +77,7 @@ public sealed class TaskDetailAssigneeTests
         harness.Gateway.SetOnline(harness.NovaId ?? throw new InvalidOperationException("NovaId missing"));
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
         IRenderedComponent<MudAutocomplete<AssigneeOption>> assignee = cut.FindComponents<MudAutocomplete<AssigneeOption>>().Single(m => string.Equals(m.Instance.Class, "task-detail-assignee", StringComparison.Ordinal));
         Func<string?, CancellationToken, Task<IEnumerable<AssigneeOption>>?> search = assignee.Instance.SearchFunc
             ?? throw new InvalidOperationException("Assignee autocomplete has no SearchFunc.");
@@ -113,7 +108,7 @@ public sealed class TaskDetailAssigneeTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
         IRenderedComponent<MudAutocomplete<AssigneeOption>> assignee = cut.FindComponents<MudAutocomplete<AssigneeOption>>().Single(m => string.Equals(m.Instance.Class, "task-detail-assignee", StringComparison.Ordinal));
         Func<string?, CancellationToken, Task<IEnumerable<AssigneeOption>>?> search = assignee.Instance.SearchFunc
             ?? throw new InvalidOperationException("Assignee autocomplete has no SearchFunc.");
@@ -145,7 +140,7 @@ public sealed class TaskDetailAssigneeTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
         IRenderedComponent<MudAutocomplete<AssigneeOption>> assignee = cut.FindComponents<MudAutocomplete<AssigneeOption>>().Single(m => string.Equals(m.Instance.Class, "task-detail-assignee", StringComparison.Ordinal));
         Func<string?, CancellationToken, Task<IEnumerable<AssigneeOption>>?> search = assignee.Instance.SearchFunc
             ?? throw new InvalidOperationException("Assignee autocomplete has no SearchFunc.");
@@ -168,16 +163,14 @@ public sealed class TaskDetailAssigneeTests
     }
 
     /// <summary>When the Task has a <c>LastWake</c>, a line underneath the Assignee reads exactly "Woken in Room: {name}" (Spec §13.6) and links to the Room.</summary>
-    /// <param name="mode">Both entry points.</param>
-    [Theory]
-    [MemberData(nameof(TaskDetailFieldsTestSupport.BothModesData), MemberType = typeof(TaskDetailFieldsTestSupport))]
-    public async Task Assignee_WithLastWake_ShowsWokenInRoomExactText(TaskDetailMode mode)
+    [Fact]
+    public async Task Assignee_WithLastWake_ShowsWokenInRoomExactText()
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         TaskItem task = CreateTask(harness, assignee: "Nova");
         harness.TaskActivity.Record(new WakeRecord(task.Id, "Nova", "room-1", "SAML Integration", WakeOutcome.Woken, DateTimeOffset.UtcNow));
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, mode);
+        var cut = RenderDetail(ctx, task.Id);
 
         Assert.Equal("Woken in Room SAML Integration", TextOf(cut, ".task-detail-woken-link"));
         Assert.Equal("/rooms/room-1", cut.Find(".task-detail-woken-link").GetAttribute("href"));

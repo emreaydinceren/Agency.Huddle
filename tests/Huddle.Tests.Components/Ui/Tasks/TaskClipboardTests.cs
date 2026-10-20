@@ -73,7 +73,7 @@ public sealed class TaskClipboardTests
         string link = $"{ctx.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().BaseUri}tasks/item/{task.Id}";
         ctx.JSInterop.Setup<bool>(CopyHelper, link).SetResult(true);
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
-        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id);
 
         await cut.InvokeAsync(() => cut.Find($"button[aria-label=\"Actions for {task.Id}\"]").ClickAsync());
         IElement item = cut.FindAll(".mud-menu-item").Single(element => string.Equals(element.TextContent.Trim(), "Copy link", StringComparison.Ordinal));

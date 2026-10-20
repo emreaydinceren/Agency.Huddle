@@ -299,22 +299,6 @@ public sealed class TaskDetailActionsTests
         Assert.False(fieldsColumn.Contains(cut.Find(".task-detail-description")));
     }
 
-    /// <summary>Panel is a single column (Spec §13.6): neither column hook renders, but the same controls do.</summary>
-    [Fact]
-    public async Task Panel_SingleColumn_NoColumnHooksRendered()
-    {
-        using TaskToolHarness harness = new();
-        TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderPanel(ctx, task.Id);
-
-        Assert.Empty(cut.FindAll(".task-detail-col-fields"));
-        Assert.Empty(cut.FindAll(".task-detail-col-side"));
-        Assert.NotEmpty(cut.FindAll(".task-detail-priority"));
-        Assert.NotEmpty(cut.FindAll(".task-detail-status"));
-        Assert.NotEmpty(cut.FindAll(".task-detail-description"));
-    }
-
     /// <summary>The Budget banner carries <c>role="status"</c> (corrections-B7 "14.4" item 4 - it supersedes the plain <c>MudAlert</c> 14.1.i shipped with no role).</summary>
     [Fact]
     public async Task BudgetBanner_HasStatusRole()
@@ -390,16 +374,16 @@ public sealed class TaskDetailActionsTests
         TaskItem created = harness.Store.All.Single(t => string.Equals(t.Title, "Copy of Ship the thing", StringComparison.Ordinal));
         Assert.Equal(TaskPriority.Urgent, created.Priority);
         Assert.Equal(TaskState.Backlog, created.Status);
-        Assert.Equal($"{created.Id}: Copy of Ship the thing", cut.TextOf(".task-detail-title-display"));
+        Assert.Equal("Copy of Ship the thing", cut.TextOf(".task-detail-title-display"));
     }
 
     /// <summary>
-    /// Manual test TASKS-01 finding F8: after a successful create-mode Save the panel stays open (J51)
-    /// and must switch to the created Task's own header - the id shown, and the copy button present -
-    /// exactly as when that Task is opened normally, rather than keeping the draft's id-less header.
+    /// Manual test TASKS-01 finding F8: after a successful create-mode Save the editor stays open (J51)
+    /// and must switch to the created Task's own header - the copy-id button present, and no draft-only controls -
+    /// exactly as when that Task is opened normally. (The id itself is the edit page's eyebrow.)
     /// </summary>
     [Fact]
-    public async Task CreateMode_Save_Success_HeaderShowsCreatedIdAndCopyButton()
+    public async Task CreateMode_Save_Success_HeaderShowsTheCopyIdButton()
     {
         using TaskToolHarness harness = new();
         TaskDraft draft = new("Ship the thing", "Platform", null);
@@ -409,7 +393,7 @@ public sealed class TaskDetailActionsTests
         await cut.InvokeAsync(() => cut.FindButton("Save").ClickAsync());
 
         TaskItem created = harness.Store.All.Single(t => string.Equals(t.Title, "Ship the thing", StringComparison.Ordinal));
-        Assert.Equal(created.Id.ToString(), cut.TextOf(".task-id"));
+        Assert.Equal(created.Title, cut.TextOf(".task-detail-title-display"));
         Assert.Single(cut.FindAll(".task-detail-copy-id"));
     }
 
@@ -470,7 +454,6 @@ public sealed class TaskDetailActionsTests
         {
             builder.OpenComponent<TaskDetail>(0);
             builder.AddAttribute(1, nameof(TaskDetail.Id), (TaskId?)id);
-            builder.AddAttribute(2, nameof(TaskDetail.Mode), TaskDetailMode.Panel);
             if (onClose is { } callback)
             {
                 builder.AddAttribute(3, nameof(TaskDetail.OnClose), callback);
@@ -487,7 +470,6 @@ public sealed class TaskDetailActionsTests
         {
             builder.OpenComponent<TaskDetail>(0);
             builder.AddAttribute(1, nameof(TaskDetail.Id), (TaskId?)id);
-            builder.AddAttribute(2, nameof(TaskDetail.Mode), TaskDetailMode.Expanded);
             builder.CloseComponent();
         });
     }
@@ -499,7 +481,6 @@ public sealed class TaskDetailActionsTests
         {
             builder.OpenComponent<TaskDetail>(0);
             builder.AddAttribute(1, nameof(TaskDetail.Draft), draft);
-            builder.AddAttribute(2, nameof(TaskDetail.Mode), TaskDetailMode.Panel);
             builder.CloseComponent();
         });
     }

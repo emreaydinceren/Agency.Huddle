@@ -43,7 +43,7 @@ public sealed class RequestTaskPanelTests
         TaskItem task = CreateRequest(harness, string.Empty, string.Empty, string.Empty, TaskState.Backlog);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
 
         Assert.Equal("Request · Bug · from Web Team", TextOf(cut, ".task-detail-request-chip"));
         Assert.Equal("Joe", TextOf(cut, ".task-detail-request-requester"));
@@ -61,7 +61,7 @@ public sealed class RequestTaskPanelTests
         TaskItem task = CreateRequest(harness, triage, string.Empty, string.Empty, TaskState.Backlog);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
 
         Assert.Equal(expected, TextOf(cut, ".task-detail-request-triage"));
     }
@@ -74,7 +74,7 @@ public sealed class RequestTaskPanelTests
         TaskItem task = CreateRequest(harness, string.Empty, string.Empty, string.Empty, TaskState.ToDo);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
 
         Assert.Empty(cut.FindAll(".task-detail-request-triage"));
         Assert.Single(cut.FindAll(".task-detail-request-chip"));
@@ -88,7 +88,7 @@ public sealed class RequestTaskPanelTests
         TaskItem task = CreateRequest(harness, "declined", "Out of scope", "Ana", TaskState.Backlog);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
 
         Assert.Equal("Out of scope", TextOf(cut, ".task-detail-request-decline-reason"));
         Assert.Equal("Ana", TextOf(cut, ".task-detail-request-confirmed-by"));
@@ -102,7 +102,7 @@ public sealed class RequestTaskPanelTests
         TaskItem task = CreateRequest(harness, "accepted", string.Empty, string.Empty, TaskState.Backlog);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
 
         Assert.Empty(cut.FindAll(".task-detail-request-decline-reason"));
         Assert.Empty(cut.FindAll(".task-detail-request-confirmed-by"));
@@ -116,7 +116,7 @@ public sealed class RequestTaskPanelTests
         TaskItem task = CreateTask(harness, status: TaskState.Backlog);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
 
         Assert.Empty(cut.FindAll("[class*='task-detail-request']"));
     }

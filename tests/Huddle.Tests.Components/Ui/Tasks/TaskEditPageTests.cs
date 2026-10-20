@@ -292,7 +292,6 @@ public sealed class TaskEditPageTests
         IRenderedComponent<ContainerFragment> cut = RenderInTab(ctx, harness, task.Id.ToString(), out _);
 
         TaskDetail detail = cut.Find(".task-edit-page-editor").ParentElement is not null ? cut.FindComponent<TaskDetail>().Instance : throw new InvalidOperationException("No editor.");
-        Assert.Equal(TaskDetailMode.Expanded, detail.Mode);
         Assert.True(detail.ExternalFooter);
         Assert.Equal(task.Id, detail.Id);
     }

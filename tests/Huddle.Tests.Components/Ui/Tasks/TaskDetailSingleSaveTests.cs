@@ -21,19 +21,16 @@ namespace Agency.Huddle.Tests.Ui.Tasks;
 public sealed class TaskDetailSingleSaveTests
 {
     /// <summary>With or without edits, the Save is exactly one Filled button in the actions row, in both layouts.</summary>
-    /// <param name="mode">Which layout renders.</param>
     /// <param name="edited">Whether a Priority edit is pending.</param>
     [Theory]
-    [InlineData(TaskDetailMode.Panel, false)]
-    [InlineData(TaskDetailMode.Panel, true)]
-    [InlineData(TaskDetailMode.Expanded, false)]
-    [InlineData(TaskDetailMode.Expanded, true)]
-    public async Task Save_WithOrWithoutEdits_IsOneFilledButtonInTheActionsRow(TaskDetailMode mode, bool edited)
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Save_WithOrWithoutEdits_IsOneFilledButtonInTheActionsRow(bool edited)
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, mode);
+        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id);
         if (edited)
         {
             await EditPriorityAsync(cut, TaskPriority.Urgent);
@@ -55,7 +52,7 @@ public sealed class TaskDetailSingleSaveTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id);
         if (edited)
         {
             await EditPriorityAsync(cut, TaskPriority.Urgent);
@@ -73,7 +70,7 @@ public sealed class TaskDetailSingleSaveTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id);
         await EditPriorityAsync(cut, TaskPriority.Urgent);
 
         IReadOnlyList<string> labels = [.. cut.FindAll(".task-detail-unsaved button").Select(button => button.TextContent.Trim())];
@@ -89,7 +86,7 @@ public sealed class TaskDetailSingleSaveTests
         TaskItem task = CreateTask(harness);
         bool closed = false;
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderDetailWithClose(ctx, task.Id, TaskDetailMode.Panel, EventCallback.Factory.Create(this, () => closed = true));
+        IRenderedComponent<ContainerFragment> cut = RenderDetailWithClose(ctx, task.Id, EventCallback.Factory.Create(this, () => closed = true));
 
         File.Delete(task.Path);
         harness.Store.RebuildFromWatcher();
@@ -103,16 +100,13 @@ public sealed class TaskDetailSingleSaveTests
     }
 
     /// <summary>The conflict's Description boxes are inert through <c>Disabled</c>, never <c>ReadOnly</c>, in both layouts.</summary>
-    /// <param name="mode">Which layout renders.</param>
-    [Theory]
-    [InlineData(TaskDetailMode.Panel)]
-    [InlineData(TaskDetailMode.Expanded)]
-    public async Task ConflictDescription_FieldsAreDisabled_NotReadOnly(TaskDetailMode mode)
+    [Fact]
+    public async Task ConflictDescription_FieldsAreDisabled_NotReadOnly()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, mode);
+        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id);
         IRenderedComponent<MudTextField<string>> description = cut.FindComponents<MudTextField<string>>().Single(m => m.Instance.Class?.Contains("task-detail-description-field", StringComparison.Ordinal) is true);
         await cut.InvokeAsync(() => description.Instance.ValueChanged.InvokeAsync("Mine: some plan."));
         _ = harness.Service.Update(task.Id, new TaskPatch { Description = "Theirs: a different plan." }, baseVersion: null, new TaskActor(TaskActorKind.Agent, "Nova", null));
@@ -136,7 +130,7 @@ public sealed class TaskDetailSingleSaveTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id);
 
         Assert.Empty(cut.FindAll("button[aria-label=\"More actions\"]"));
         await cut.InvokeAsync(() => cut.Find($"button[aria-label=\"Actions for {task.Id}\"]").ClickAsync());
@@ -177,7 +171,7 @@ public sealed class TaskDetailSingleSaveTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id);
         IRenderedComponent<MudAutocomplete<AssigneeOption>> assignee = cut.FindComponents<MudAutocomplete<AssigneeOption>>().Single(m => string.Equals(m.Instance.Class, "task-detail-assignee", StringComparison.Ordinal));
         RenderFragment<AssigneeOption> itemTemplate = assignee.Instance.ItemTemplate ?? throw new InvalidOperationException("The Assignee picker has no ItemTemplate.");
         AssigneeOption nova = new("Nova", "Engineer", null);
@@ -193,15 +187,13 @@ public sealed class TaskDetailSingleSaveTests
     /// <summary>Renders <c>TaskDetail</c> for <paramref name="id"/> with an <c>OnClose</c> callback.</summary>
     /// <param name="ctx">The bUnit context.</param>
     /// <param name="id">The Task.</param>
-    /// <param name="mode">Which layout renders.</param>
     /// <param name="onClose">Raised by Cancel and Close.</param>
-    private static IRenderedComponent<ContainerFragment> RenderDetailWithClose(MudBunitContext ctx, TaskId id, TaskDetailMode mode, EventCallback onClose)
+    private static IRenderedComponent<ContainerFragment> RenderDetailWithClose(MudBunitContext ctx, TaskId id, EventCallback onClose)
     {
         return ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<TaskDetail>(0);
             builder.AddAttribute(1, nameof(TaskDetail.Id), (TaskId?)id);
-            builder.AddAttribute(2, nameof(TaskDetail.Mode), mode);
             builder.AddAttribute(3, nameof(TaskDetail.OnClose), onClose);
             builder.CloseComponent();
         });
