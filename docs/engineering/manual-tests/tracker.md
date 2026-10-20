@@ -1112,15 +1112,15 @@ Human gate: the Proof list, the decision card, Accept and Decline, the board dra
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [HUMANGATE-01](human-gate.md#humangate-01--requires-your-acceptance-only-the-human-can-mark-the-task-done-u-1) |  | Active |  |  |
-| [HUMANGATE-02](human-gate.md#humangate-02--an-action-locks-the-gate-on-and-accept-wakes-the-assignee-u-2) |  | Active |  |  |
-| [HUMANGATE-03](human-gate.md#humangate-03--proof-34-accept-is-locked-request-changes-works-ask-posts-a-mention-u-3) |  | Active |  |  |
-| [HUMANGATE-04](human-gate.md#humangate-04--an-agent-cannot-mark-a-gated-task-done-u-4) |  | Active |  |  |
-| [HUMANGATE-05](human-gate.md#humangate-05--dragging-a-gated-card-to-done-on-the-board-u-5) |  | Active |  |  |
-| [HUMANGATE-06](human-gate.md#humangate-06--editing-the-task-after-accept-takes-the-acceptance-away-u-6) |  | Active |  |  |
-| [HUMANGATE-07](human-gate.md#humangate-07--decline-closes-the-task-with-its-reason-u-7) |  | Active |  |  |
-| [HUMANGATE-08](human-gate.md#humangate-08--an-outside-edit-that-removes-the-action-is-put-back-u-8) |  | Active |  |  |
-| [HUMANGATE-09](human-gate.md#humangate-09--restart-keeps-every-waiting-task-on-the-needs-you-page-u-9) |  | Active |  |  |
+| [HUMANGATE-01](human-gate.md#humangate-01--requires-your-acceptance-only-the-human-can-mark-the-task-done-u-1) |  | Pass |  | 2026-10-19 paid run (Haiku) |
+| [HUMANGATE-02](human-gate.md#humangate-02--an-action-locks-the-gate-on-and-accept-wakes-the-assignee-u-2) |  | Pass |  | 2026-10-19 paid run (Haiku) |
+| [HUMANGATE-03](human-gate.md#humangate-03--proof-34-accept-is-locked-request-changes-works-ask-posts-a-mention-u-3) |  | Pass |  | 2026-10-19 paid run (Haiku) |
+| [HUMANGATE-04](human-gate.md#humangate-04--an-agent-cannot-mark-a-gated-task-done-u-4) |  | Pass |  | 2026-10-19 paid run (Haiku) |
+| [HUMANGATE-05](human-gate.md#humangate-05--dragging-a-gated-card-to-done-on-the-board-u-5) |  | Pass |  | 2026-10-19 paid run (Haiku) |
+| [HUMANGATE-06](human-gate.md#humangate-06--editing-the-task-after-accept-takes-the-acceptance-away-u-6) |  | Pass |  | 2026-10-19 paid run (Haiku) |
+| [HUMANGATE-07](human-gate.md#humangate-07--decline-closes-the-task-with-its-reason-u-7) |  | Pass |  | 2026-10-19 paid run (Haiku) |
+| [HUMANGATE-08](human-gate.md#humangate-08--an-outside-edit-that-removes-the-action-is-put-back-u-8) |  | Pass |  | 2026-10-19 paid run (Haiku) |
+| [HUMANGATE-09](human-gate.md#humangate-09--restart-keeps-every-waiting-task-on-the-needs-you-page-u-9) |  | Pass |  | 2026-10-19 paid run (Haiku) |
 
 ---
 
