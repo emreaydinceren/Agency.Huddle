@@ -125,7 +125,7 @@
     /// <param name="tab">The Tab to close.</param>
     private async Task CloseAsync(Tab tab)
     {
-        if (this.Tabs.IsDirty(tab.Key) && !await this.Dialogs.ConfirmAsync("Discard changes?", $"Your unsaved edits in {tab.Title} will be lost.", "Discard", danger: true))
+        if (this.Tabs.IsDirty(tab.Key) && !await this.Dialogs.ConfirmAsync("Discard changes?", $"Your unsaved edits in {tab.Title.TrimEnd('●', ' ')} will be lost.", "Discard", danger: true))
         {
             return;
         }

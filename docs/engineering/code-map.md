@@ -39,7 +39,7 @@ the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 | `Components/Tasks/TaskColors.cs` | The Spec §13.10 mapping from a Task's state, priority or presence to a MudBlazor `Color` (and the priority icon). |
 | `Components/Tasks/TaskDetailMode.cs` | Which of `TaskDetail`'s two layouts (Spec §13.6) is shown. |
 | `Components/Tasks/ConflictChoice.cs` | Which side of a conflicting field the Human picked when resolving a `TaskResult.Conflict` (Spec §13.7). |
-| `Components/Tasks/NewTaskDefaults.cs` | The Team and Project a freshly opened create-mode `TaskDetail` dialog should default to (Spec §13.3). |
+| `Components/Tasks/NewTaskDefaults.cs` | The Team and Project a new Task's edit page should start in (Spec §13.3). |
 | `Components/Tasks/TaskToolbar.razor` | The page's toolbar (Spec §13.3): the header row (counts, Group by, List | Kanban, New task) and the Filter-menu row with a `TaskFilterChip` per filter that is set. Every change is saved to the View as it is made. |
 | `Components/Tasks/TaskViewNav.razor` | The sidebar's list of Views (Spec §13.1), one `MudNavGroup` titled "Tasks" between Teammates and Settings. |
 | `Sidebar/SidebarPanelCatalog.cs` | The Right sidebar's panel picker: for a Subject, the registered panels that apply and whose feature switch is on, in Order. Pure over the registrations and the bound options. |
@@ -48,8 +48,8 @@ the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 | `Components/Tasks/TaskListView.razor` | The List (Spec §13.3a): a read-only `MudDataGrid<TaskItem>` whose columns follow `View.Fields` and whose grouping matches `TaskQuery`'s own ordering rule. |
 | `Components/Tasks/TaskBoard.razor` | The Board (Spec §13.4): one `MudDropContainer` with one `MudDropZone` per lane/column, laid out from `BoardLayout.Build`. |
 | `Components/Tasks/TaskCard.razor` | The Board's card (Spec §13.4): a `<div>` root so the ⋮ menu's activator and the Awake link sit outside the clickable open-detail control. |
-| `Components/Tasks/TaskDetail.razor` | Task detail (Spec §13.6), both the drawer and expanded layouts: every field, the Save/Revert cycle, the conflict UI, Expand/Close/Reopen/Make a copy, and the Change log. |
-| `Components/Tasks/TaskDetailDialog.razor` | Task detail's Expanded layout (Spec §13.6): wraps `TaskDetail` in a `MudDialog`, taking only an id or a create/copy draft. |
+| `Components/Tasks/TaskDetail.razor` | Task detail (Spec §13.6), the editor hosted by the edit page: every field, the Save/Revert cycle, the conflict UI, Close/Reopen/Make a copy, and the Change log. |
+| `Components/Tasks/TaskTabs.cs` | How a Task is opened for editing: always in the edit page's own Tab (`OpenNew`, `OpenCopy`, `OpenEdit`), and the draft a copy starts from. |
 | `Components/Tasks/FieldsDialog.razor` | The **Fields…** dialog (Spec §13.5): reorder, switch off, remove and add the View's fields. |
 | `Components/Tasks/TaskFilterChip.razor` | One "Label: Value" filter or Group by chip of the toolbar, with a menu and a clear button; also the Members tab's team type filter in `BuildTeam`, in its `NoMenu` form (no caret, no menu). |
 | `Components/Tasks/ViewActions.cs` | Rename (through `NameDialog`), delete confirm and the default name of a new View. |

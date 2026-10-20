@@ -34,134 +34,6 @@ using Agency.Huddle.Tests.Acp.Tools;
 /// </summary>
 public sealed class TaskDetailActionsTests
 {
-    /// <summary>Expand with nothing pending opens <c>TaskDetailDialog</c> with only the id - no confirmation, no <c>Draft</c> - and it independently loads the same Task (Spec §13.6).</summary>
-    [Fact]
-    public async Task Expand_NoPendingEdits_OpensDialogWithOnlyId_AndClosesThePanel()
-    {
-        using TaskToolHarness harness = new();
-        TaskItem task = CreateTask(harness, title: "Ship the thing");
-        bool closed = false;
-        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => closed = true));
-
-        await cut.InvokeAsync(() => cut.Find(".task-detail-expand").ClickAsync());
-
-        IRenderedComponent<TaskDetailDialog> dialog = cut.FindComponent<TaskDetailDialog>();
-        Assert.Equal(task.Id, dialog.Instance.Id);
-        Assert.Null(dialog.Instance.Draft);
-        Assert.Equal(TaskDetailMode.Expanded, dialog.FindComponent<TaskDetail>().Instance.Mode);
-        Assert.Equal("Ship the thing", TextOf(dialog, ".task-detail-title-display"));
-        Assert.True(closed);
-    }
-
-    /// <summary>Expand with a pending edit asks "Discard changes?" first (corrections-B5 D14 item 7); Cancel on that message box keeps the Panel open with the edit intact and never opens the dialog.</summary>
-    [Fact]
-    public async Task Expand_WithPendingEdits_AsksDiscardChangesFirst_CancelKeepsThePanelAndPending()
-    {
-        using TaskToolHarness harness = new();
-        TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        bool closed = false;
-        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => closed = true));
-        await EditPriorityAsync(cut, TaskPriority.Urgent);
-
-        _ = cut.InvokeAsync(() => { _ = cut.Find(".task-detail-expand").ClickAsync(); });
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
-        Assert.Equal("Discard changes?", cut.Find(".mud-dialog-title").TextContent.Trim());
-        Assert.Equal("Your unsaved edits to this task will be lost.", cut.Find(".mud-dialog-content").TextContent.Trim());
-        Assert.Equal(["Cancel", "Discard"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
-
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).ClickAsync());
-
-        Assert.Empty(cut.FindComponents<TaskDetailDialog>());
-        Assert.Equal("Unsaved edits", cut.TextOf(".task-detail-unsaved-text"));
-        Assert.False(closed);
-    }
-
-    /// <summary>Confirming "Discard changes?" from Expand clears <c>pending</c>, opens the dialog with only the id, and closes the Panel.</summary>
-    [Fact]
-    public async Task Expand_WithPendingEdits_ConfirmDiscard_OpensDialogAndClosesThePanel()
-    {
-        using TaskToolHarness harness = new();
-        TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        bool closed = false;
-        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => closed = true));
-        await EditPriorityAsync(cut, TaskPriority.Urgent);
-
-        _ = cut.InvokeAsync(() => { _ = cut.Find(".task-detail-expand").ClickAsync(); });
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
-        Assert.Equal("Discard changes?", cut.Find(".mud-dialog-title").TextContent.Trim());
-        Assert.Equal("Your unsaved edits to this task will be lost.", cut.Find(".mud-dialog-content").TextContent.Trim());
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Discard", StringComparison.Ordinal)).ClickAsync());
-
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<TaskDetailDialog>()));
-        Assert.Equal(task.Id, cut.FindComponent<TaskDetailDialog>().Instance.Id);
-        Assert.Equal(TaskPriority.Medium, harness.Store.Get(task.Id)?.Priority);
-        Assert.True(closed);
-    }
-
-    /// <summary>Expand raises <c>OnClose</c> BEFORE it shows the dialog (theming plan 7.6): on <c>/tasks/item/{id}</c> the host navigates when it closes, and a dialog opened first was lost with the route.</summary>
-    [Fact]
-    public async Task Expand_RaisesOnCloseBeforeTheDialogIsShown()
-    {
-        using TaskToolHarness harness = new();
-        TaskItem task = CreateTask(harness);
-        IRenderedComponent<ContainerFragment>? cut = null;
-        int? dialogsWhenClosed = null;
-        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => dialogsWhenClosed = cut?.FindComponents<TaskDetailDialog>().Count));
-
-        await cut.InvokeAsync(() => cut.Find(".task-detail-expand").ClickAsync());
-
-        Assert.Equal(0, dialogsWhenClosed);
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<TaskDetailDialog>()));
-    }
-
-    /// <summary>
-    /// The expanded dialog survives the host's own navigation on close (theming plan 7.6): on <c>/tasks/item/{id}</c> the
-    /// Tasks page answers <c>OnClose</c> by navigating to the view's path. In the browser that location change arrives
-    /// after the dialog has opened (the test replays it in that order), and MudBlazor closes a dialog on any path change
-    /// unless its options say otherwise.
-    /// </summary>
-    [Fact]
-    public async Task Expand_HostNavigatesOnClose_DialogStaysOpen()
-    {
-        using TaskToolHarness harness = new();
-        TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
-        navigation.NavigateTo("/tasks/item/" + task.Id);
-        bool closed = false;
-        var cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => closed = true));
-
-        await cut.InvokeAsync(() => cut.Find(".task-detail-expand").ClickAsync());
-        cut.WaitForAssertion(() => Assert.Single(cut.FindComponents<TaskDetailDialog>()));
-        Assert.True(closed);
-        await cut.InvokeAsync(() => navigation.NavigateTo("/tasks/all", replace: true));
-
-        Assert.Single(cut.FindComponents<TaskDetailDialog>());
-    }
-
-    /// <summary>Declining the "Discard changes?" box on Expand raises neither <c>OnClose</c> nor the dialog (theming plan 7.6).</summary>
-    [Fact]
-    public async Task Expand_DeclinedDiscard_NeitherClosesNorOpensTheDialog()
-    {
-        using TaskToolHarness harness = new();
-        TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
-        int closes = 0;
-        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => closes++));
-        await EditPriorityAsync(cut, TaskPriority.Urgent);
-
-        _ = cut.InvokeAsync(() => { _ = cut.Find(".task-detail-expand").ClickAsync(); });
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).ClickAsync());
-
-        Assert.Equal(0, closes);
-        Assert.Empty(cut.FindComponents<TaskDetailDialog>());
-    }
-
     /// <summary><see cref="TaskDetail.ConfirmDiscardAsync"/> (the method the page calls before switching <c>Id</c>, corrections-B5 D14 item 7) returns <see langword="true"/> immediately, with no message box, when nothing is pending.</summary>
     [Fact]
     public async Task ConfirmDiscardAsync_NoPending_ReturnsTrueWithNoMessageBox()
@@ -196,29 +68,23 @@ public sealed class TaskDetailActionsTests
         Assert.True(closed);
     }
 
-    /// <summary>Make a copy opens a new <c>TaskDetailDialog</c> in create mode from the Panel's own effective (pending-included) fields: <c>Copy of</c> title, Backlog status, the assignee kept - and writes nothing to the Store (Spec §13.6).</summary>
+    /// <summary>Make a copy opens a new Task as a copy of the saved one in the edit page's own Tab (<c>task-copy:{id}</c>, permanent) and writes nothing to the Store (Spec §13.6).</summary>
     [Fact]
-    public async Task MakeACopy_OpensCreateModeDialog_FromEffectiveFields_AndWritesNothing()
+    public async Task MakeACopy_OpensTheCopyTab_AndWritesNothing()
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         TaskItem task = CreateTask(harness, title: "Ship the thing", priority: TaskPriority.Medium, assignee: "Nova");
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
-        await EditPriorityAsync(cut, TaskPriority.Urgent);
         int tasksBefore = harness.Store.All.Count;
 
         await ClickMenuItemAsync(cut, "Make a copy…");
 
-        IRenderedComponent<TaskDetailDialog> dialog = cut.FindComponent<TaskDetailDialog>();
-        Assert.Null(dialog.Instance.Id);
-        TaskDraft draft = dialog.Instance.Draft ?? throw new InvalidOperationException("Draft missing.");
-        Assert.Equal("Copy of Ship the thing", draft.Title);
-        Assert.Equal(TaskState.Backlog, draft.Status);
-        Assert.Equal(TaskPriority.Urgent, draft.Priority);
-        Assert.Equal("Nova", draft.Assignee);
-        Assert.Equal(task.Location.Team, draft.Team);
+        Agency.Huddle.App.Tabs.Tab tab = Assert.Single(harness.Tabs.Tabs);
+        Assert.Equal($"task-copy:{task.Id}", tab.Key);
+        Assert.Equal($"/tasks/item/{task.Id}/copy", tab.Url);
+        Assert.False(tab.IsPreview);
         Assert.Equal(tasksBefore, harness.Store.All.Count);
-        Assert.Equal(TaskPriority.Medium, harness.Store.Get(task.Id)?.Priority);
     }
 
     /// <summary>Close task with nothing pending calls only <see cref="TaskService.Close"/>: one new "closed" Change log entry, and the button becomes Reopen.</summary>
@@ -690,10 +556,6 @@ public sealed class TaskDetailActionsTests
         await shown;
         return closing;
     }
-
-    /// <summary>The trimmed text content of the one element matching <paramref name="cssSelector"/>, inside a dialog rendered through the real <see cref="IDialogService"/> rather than the Panel's own root.</summary>
-    private static string TextOf(IRenderedComponent<TaskDetailDialog> dialog, string cssSelector) =>
-        dialog.Find(cssSelector).TextContent.Trim();
 
     /// <summary>
     /// The fixed instant <see cref="ChangeLog_EntryDate_FormatsAsHumanLocalTimeViaInjectedClock"/>

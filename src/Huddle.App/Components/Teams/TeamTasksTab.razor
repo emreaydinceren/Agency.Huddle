@@ -11,7 +11,7 @@
     The Tasks come from TaskQuery over the store exactly as the Tasks page builds them, requeried on
     TaskEvents.TasksReloaded and TaskChanged (corrections-D7b item 22). The Board gets no OnEditColumns
     or ViewChanged, so its column editing is inert here; its Columns are the defaults, because an empty
-    list renders no columns at all. "New task" opens the expanded TaskDetailDialog on a draft for this
+    list renders no columns at all. "New task" opens the edit page on a new Task for this
     Team (and Project); a card opens the same dialog on its id (the Tasks page's drawer with its
     discard confirmation is not copied), and its Copy id is the Tasks page's own copy path.
 *@
@@ -23,7 +23,8 @@
 @inject ISprintCatalog Sprints
 @inject IOptions<TeamOptions> Options
 @inject IHumanIdentity Human
-@inject IDialogService Dialogs
+@inject Agency.Huddle.App.Tabs.TabService Tabs
+@inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
 
@@ -154,20 +155,20 @@
         return TaskQuery.Sort(filtered, view.Sort);
     }
 
-    /// <summary>"New task": opens the expanded dialog in create mode on a draft for this Team and Project, whatever defaults the toolbar names.</summary>
-    private async Task NewTaskAsync(NewTaskDefaults __)
+    /// <summary>"New task": opens a new Task in the edit page's own Tab on this Team and Project, whatever defaults the toolbar names.</summary>
+    private Task NewTaskAsync(NewTaskDefaults __)
     {
-        TaskDraft draft = new(string.Empty, this.Team, this.OnProjectPage ? this.Project : null);
-        DialogParameters<TaskDetailDialog> parameters = new() { { dialog => dialog.Draft, draft } };
-        _ = await this.Dialogs.ShowAsync<TaskDetailDialog>("New task", parameters, TaskDetailDialog.Options);
+        TaskTabs.OpenNew(this.Tabs, this.Navigation, this.Team, this.OnProjectPage ? this.Project : null);
+        return Task.CompletedTask;
     }
 
-    /// <summary>Opens the expanded dialog on the clicked card's Task.</summary>
+    /// <summary>Opens the clicked card's Task: its read view on the Tasks page, from where Edit opens the edit page.</summary>
     /// <param name="id">The Task's id.</param>
-    private async Task OpenTaskAsync(TaskId id)
+    private Task OpenTaskAsync(TaskId id)
     {
-        DialogParameters<TaskDetailDialog> parameters = new() { { dialog => dialog.Id, id } };
-        _ = await this.Dialogs.ShowAsync<TaskDetailDialog>(this.Store.Get(id) is { } opened ? $"{id} · {opened.Title}" : id.ToString(), parameters, TaskDetailDialog.Options);
+        Agency.Huddle.App.Tabs.Tab target = this.Tabs.Open($"/tasks/item/{Uri.EscapeDataString(id.ToString())}");
+        this.Navigation.NavigateTo(target.Url);
+        return Task.CompletedTask;
     }
 
     /// <summary>Copies a card's id to the clipboard, with the same success or warning toast as the Tasks page.</summary>

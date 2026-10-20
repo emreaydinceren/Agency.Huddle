@@ -471,16 +471,17 @@ drive a real drag and this is the only place that path is exercised at all.*
 5. Tab to the View's ⋮ menu, open **Fields…**, and using only the keyboard, change one Field's switch and Save.
 6. Tab to a Task's row to open it, Tab to **Edit** and press Enter, edit the Title on the edit page
    with the keyboard, and Tab to **Save** in the page header.
-7. Click **+ New task** with the keyboard, edit a field, press **Esc**, and confirm the **Discard
-   changes?** prompt appears and can be answered from the keyboard. Then, on an edit page with an
-   unsaved change, Tab to **Cancel**: the Tab closes at once and the edit is discarded, with no prompt.
+7. Click **+ New task** with the keyboard (it opens a "New task" Tab), edit a field, Tab to the Tab's
+   close button and press Enter: the **Discard changes?** prompt appears and can be answered from the
+   keyboard. Then, on an edit page with an unsaved change, Tab to **Cancel**: the Tab closes at once and
+   the edit is discarded, with no prompt.
 
 **Pass if — all of these**
 - Every one of steps 1-7 is reachable with no mouse click at any point, including opening menus,
   choosing a state, saving a View, and editing/saving/cancelling a Task.
 - The **Move to** menu's items are keyboard-navigable and Enter commits the same way a drop does
   (including the Duplicate picker / reason prompt when a terminal Won't-do state is chosen).
-- **Discard changes?** (on the New task drawer) is answerable via keyboard — Tab to a button, Enter.
+- **Discard changes?** (closing a Tab with unsaved edits) is answerable via keyboard — Tab to a button, Enter.
 - Focus is visibly on the control you tabbed to at every step (a visible focus ring).
 
 **Fail if — any of these**
@@ -952,25 +953,25 @@ scroll position into the next one.*
 
 **Steps**
 
-1. Open a Task from `/tasks` so the drawer opens and press **Esc**. Then click **+ New task**, change
-   the Priority and press **Esc** again.
+1. Open a Task from `/tasks` so the drawer opens and press **Esc**. Then open it again and click
+   **Edit**, change the Priority, and close its Tab with the **×**.
 2. Open `/tasks/item/<id>` for a Task directly and click **Edit**. The drawer has no Expand button.
-3. Close the dialog. Open the long Task, scroll the drawer to the bottom, then click **+ New task**.
+3. Open the long Task, scroll the drawer to the bottom, then click another Task in the List.
 
 **Pass if — all of these**
 
-- Step 1: the first **Esc** closes the drawer; the second asks **Discard changes?** and the
-  drawer stays open until you answer.
+- Step 1: **Esc** closes the read-only drawer with no question; closing the edit Tab with an unsaved
+  change asks **Discard changes?** and the Tab stays open until you answer.
 - Step 2: a permanent "Edit {id}" Tab opens with the Task's editor; the drawer closes; clicking **Edit**
   again on that Task goes back to the same Tab.
-- Step 3: the new-Task form starts at its top, with the Title field visible.
+- Step 3: the next Task's read view starts at its top.
 
 **Fail if — any of these**
 - **Esc** does nothing, or discards the edit without asking -> `ResizableEndDrawer`'s key handler or
   the page's close guard is not wired.
 - **Edit** opens a preview Tab, a second Tab, or none -> `TaskReadView.EditAsync` or the Tab key
   `task-edit:{id}` has regressed.
-- The new-Task form is scrolled down -> the drawer body is not keyed by `ContentKey`.
+- The next Task's read view is scrolled down -> the drawer body is not keyed by `ContentKey`.
 
 ---
 

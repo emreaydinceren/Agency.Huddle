@@ -72,6 +72,25 @@ public sealed class TabPageRoutesTests
         Assert.Equal("PLAT-0013", item.Parameters["TaskIdText"]);
     }
 
+    /// <summary>The new-Task and copy addresses resolve to the same edit page, with the id segment and the Team and Project query values filled in.</summary>
+    [Fact]
+    public void Resolve_AppAssembly_NewAndCopyAddressesReachTheEditPage()
+    {
+        TabPageRoutes app = new(typeof(Agency.Huddle.App.ServiceCollectionExtensions).Assembly);
+
+        TabPage? created = app.Resolve("/tasks/item/new/edit?team=Platform&project=Alpha");
+        TabPage? copy = app.Resolve("/tasks/item/PLAT-0013/copy");
+
+        Assert.NotNull(created);
+        Assert.Equal(typeof(Agency.Huddle.App.Components.Pages.TaskEditPage), created.Component);
+        Assert.Equal("new", created.Parameters["TaskIdText"]);
+        Assert.Equal("Platform", created.Parameters["Team"]);
+        Assert.Equal("Alpha", created.Parameters["Project"]);
+        Assert.NotNull(copy);
+        Assert.Equal(typeof(Agency.Huddle.App.Components.Pages.TaskEditPage), copy.Component);
+        Assert.Equal("PLAT-0013", copy.Parameters["TaskIdText"]);
+    }
+
     /// <summary>An address with no template resolves to nothing, so the pane can say so.</summary>
     [Theory]
     [InlineData("/nowhere")]

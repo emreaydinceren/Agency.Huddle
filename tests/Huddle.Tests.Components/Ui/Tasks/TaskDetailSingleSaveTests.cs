@@ -170,40 +170,6 @@ public sealed class TaskDetailSingleSaveTests
         Assert.Equal(["Copy id", "Copy link", "Make a copy"], labels);
     }
 
-    /// <summary>Expand titles the dialog <c>Id · Title</c>, shows the dialog's own close button, and leaves the id row out of the body.</summary>
-    [Fact]
-    public async Task Expand_TitlesTheDialogIdDotTitle_WithCloseButtonAndNoSecondId()
-    {
-        using TaskToolHarness harness = new();
-        TaskItem task = CreateTask(harness, title: "Ship the thing");
-        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
-
-        await cut.InvokeAsync(() => cut.Find(".task-detail-expand").ClickAsync());
-
-        IRenderedComponent<TaskDetailDialog> dialog = cut.FindComponent<TaskDetailDialog>();
-        Assert.Equal($"{task.Id} · Ship the thing", cut.Find(".mud-dialog-title").TextContent.Trim());
-        Assert.True(TaskDetailDialog.Options.CloseButton);
-        Assert.Empty(dialog.FindAll(".task-detail-title-display .task-id"));
-        Assert.Equal("Ship the thing", dialog.Find(".task-detail-title-display").TextContent.Trim());
-    }
-
-    /// <summary>Make a copy opens the dialog titled <c>Copy of …</c>, not "New task".</summary>
-    [Fact]
-    public async Task MakeACopy_TitlesTheDialogWithThePassedTitle()
-    {
-        using TaskToolHarness harness = new();
-        TaskItem task = CreateTask(harness, title: "Ship the thing");
-        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
-
-        await cut.InvokeAsync(() => cut.Find($"button[aria-label=\"Actions for {task.Id}\"]").ClickAsync());
-        IElement item = cut.FindAll(".mud-menu-item").Single(element => string.Equals(element.TextContent.Trim(), "Make a copy…", StringComparison.Ordinal));
-        await cut.InvokeAsync(() => item.ClickAsync());
-
-        Assert.Equal("Copy of Ship the thing", cut.Find(".mud-dialog-title").TextContent.Trim());
-    }
-
     /// <summary>The Assignee picker's Persona option is a <see cref="TaskAssignee"/>: unknown presence draws no dot and never the word "Offline".</summary>
     [Fact]
     public async Task AssigneePickerOption_IsATaskAssignee_WithNoOfflineGuess()

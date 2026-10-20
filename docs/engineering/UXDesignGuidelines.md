@@ -235,7 +235,7 @@ the shell and follow [In-place action rows](design-system.md#in-place-action-row
 | `AvatarEditorDialog`, `AvatarLibraryDialog` | `Components/Shared/` | `Name`, `Current`, `Deferred` | A thin dialog around a buffered `AvatarEditor`; the library dialog draws its filters with `ChipCloud` |
 | `TeammateCard` | `Components/Shared/` | `Mode`, `Name`, … | Its header comment explains why an open dialog's parameters are frozen |
 | `ArchivedChatsDialog` | `Components/Shared/` | | A list dialog opened from `ArchivedChats` |
-| `TaskDetailDialog`, `ReasonDialog`, `DuplicatePickerDialog` | `Components/Tasks/` | `Id`, `Draft`; `Excluding` | |
+| `ReasonDialog`, `DuplicatePickerDialog` | `Components/Tasks/` | `Excluding` | |
 | `FieldsDialog` | `Components/Tasks/` | `ViewId` | A View's Fields, opened from `T2a`'s "Fields…": show, hide, reorder (drag or up and down), add and remove; Save writes through `ViewStore`, Cancel writes nothing. It replaced the View editor's Fields section |
 | `SkillImportDialog` | `Components/Settings/` | | A multi-step dialog with Back |
 

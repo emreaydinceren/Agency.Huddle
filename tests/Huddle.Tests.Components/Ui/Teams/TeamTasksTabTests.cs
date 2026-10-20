@@ -238,9 +238,9 @@ public sealed class TeamTasksTabTests
         Assert.Equal(DefaultColumnLabels, rig.Tab.FindAll(ColumnLabel).Select(e => e.TextContent.Trim()).ToArray());
     }
 
-    /// <summary>New task on the Team page opens the create dialog on a blank draft for the Team, with no Project.</summary>
+    /// <summary>New task on the Team page opens the edit page's new-Task Tab for the Team, with no Project.</summary>
     [Fact]
-    public async Task NewTask_OnTheTeamPage_OpensTheDialogWithTheTeamDraft()
+    public async Task NewTask_OnTheTeamPage_OpensTheNewTaskTabForTheTeam()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -250,14 +250,15 @@ public sealed class TeamTasksTabTests
 
         await rig.Tab.InvokeAsync(() => rig.Tab.Find(ActionButton).ClickAsync());
 
-        IRenderedComponent<TaskDetailDialog> dialog = rig.WaitForDialog<TaskDetailDialog>();
-        Assert.Null(dialog.Instance.Id);
-        Assert.Equal(new TaskDraft(string.Empty, "Business", null), dialog.Instance.Draft);
+        Agency.Huddle.App.Tabs.Tab tab = Assert.Single(harness.Tabs.Tabs);
+        Assert.Equal("task-new-edit", tab.Key);
+        Assert.Equal("/tasks/item/new/edit?team=Business", tab.Url);
+        Assert.False(tab.IsPreview);
     }
 
-    /// <summary>New task on the Project page opens the create dialog on a draft for the Team and the Project.</summary>
+    /// <summary>New task on the Project page opens the new-Task Tab for the Team and the Project.</summary>
     [Fact]
-    public async Task NewTask_OnTheProjectPage_OpensTheDialogWithTheProjectDraft()
+    public async Task NewTask_OnTheProjectPage_OpensTheNewTaskTabForTheProject()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -267,14 +268,14 @@ public sealed class TeamTasksTabTests
 
         await rig.Tab.InvokeAsync(() => rig.Tab.Find(ActionButton).ClickAsync());
 
-        IRenderedComponent<TaskDetailDialog> dialog = rig.WaitForDialog<TaskDetailDialog>();
-        Assert.Null(dialog.Instance.Id);
-        Assert.Equal(new TaskDraft(string.Empty, "Business", "Marketing"), dialog.Instance.Draft);
+        Agency.Huddle.App.Tabs.Tab tab = Assert.Single(harness.Tabs.Tabs);
+        Assert.Equal("task-new-edit", tab.Key);
+        Assert.Equal("/tasks/item/new/edit?team=Business&project=Marketing", tab.Url);
     }
 
-    /// <summary>Opening a card opens <c>TaskDetailDialog</c> on that Task's id, with no draft.</summary>
+    /// <summary>Opening a card opens that Task on the Tasks page (its read view), from where Edit opens the editor.</summary>
     [Fact]
-    public async Task OpeningACard_OpensTheDialogOnTheTasksId()
+    public async Task OpeningACard_OpensTheTaskOnTheTasksPage()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -284,9 +285,9 @@ public sealed class TeamTasksTabTests
 
         await rig.Tab.InvokeAsync(() => rig.Tab.Find($"button.task-card-open[aria-label='Open {tasks.Taxes.Id}']").ClickAsync());
 
-        IRenderedComponent<TaskDetailDialog> dialog = rig.WaitForDialog<TaskDetailDialog>();
-        Assert.Equal(tasks.Taxes.Id, dialog.Instance.Id);
-        Assert.Null(dialog.Instance.Draft);
+        Agency.Huddle.App.Tabs.Tab tab = Assert.Single(harness.Tabs.Tabs);
+        Assert.Equal($"task:{tasks.Taxes.Id}", tab.Key);
+        Assert.Equal($"/tasks/item/{tasks.Taxes.Id}", tab.Url);
     }
 
     /// <summary>A card's Copy id copies exactly the id and shows the success toast.</summary>
@@ -437,7 +438,6 @@ public sealed class TeamTasksTabTests
     {
         harness.AddTo(ctx.Services);
         IRenderedComponent<MudPopoverProvider> popovers = ctx.Render<MudPopoverProvider>();
-        IRenderedComponent<MudDialogProvider> dialogs = ctx.Render<MudDialogProvider>();
         IRenderedComponent<TeamTasksTab> tab = ctx.Render<TeamTasksTab>(p =>
         {
             p.Add(t => t.Team, team);
@@ -448,7 +448,7 @@ public sealed class TeamTasksTabTests
                 p.Add(t => t.SearchChanged, EventCallback.Factory.Create<string?>(searched, searched.Add));
             }
         });
-        return new Rig(tab, popovers, dialogs);
+        return new Rig(tab, popovers);
     }
 
     /// <summary>The five seeded Tasks: Business/Marketing, Business/Taxes, Business (no Project), Household/Marketing, Household (no Project).</summary>
@@ -459,11 +459,10 @@ public sealed class TeamTasksTabTests
     /// <param name="HouseholdNone">Household, no Project.</param>
     private sealed record Seeded(TaskItem Marketing, TaskItem Taxes, TaskItem NoProject, TaskItem HouseholdMarketing, TaskItem HouseholdNone);
 
-    /// <summary>The rendered tab, its popover provider (the card menus) and its dialog provider, with the ways to drive a card.</summary>
+    /// <summary>The rendered tab and its popover provider (the card menus), with the ways to drive a card.</summary>
     /// <param name="tab">The tab.</param>
     /// <param name="popovers">Where the card menus render.</param>
-    /// <param name="dialogs">Where the dialogs render.</param>
-    private sealed class Rig(IRenderedComponent<TeamTasksTab> tab, IRenderedComponent<MudPopoverProvider> popovers, IRenderedComponent<MudDialogProvider> dialogs)
+    private sealed class Rig(IRenderedComponent<TeamTasksTab> tab, IRenderedComponent<MudPopoverProvider> popovers)
     {
         /// <summary>The tab.</summary>
         public IRenderedComponent<TeamTasksTab> Tab { get; } = tab;
@@ -501,16 +500,6 @@ public sealed class TeamTasksTabTests
         {
             await this.Tab.InvokeAsync(() => this.Tab.Find($"button[aria-label='Actions for {item.Id}']").ClickAsync());
             await this.ClickMenuItemAsync("Copy id");
-        }
-
-        /// <summary>Waits until a dialog of type <typeparamref name="TDialog"/> is open, and returns it.</summary>
-        /// <typeparam name="TDialog">The dialog component.</typeparam>
-        /// <returns>The open dialog.</returns>
-        public IRenderedComponent<TDialog> WaitForDialog<TDialog>()
-            where TDialog : IComponent
-        {
-            dialogs.WaitForAssertion(() => Assert.NotEmpty(dialogs.FindComponents<TDialog>()));
-            return dialogs.FindComponent<TDialog>();
         }
 
         private Task ClickMenuItemAsync(string text)

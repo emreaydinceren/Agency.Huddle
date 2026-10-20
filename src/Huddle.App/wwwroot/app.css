@@ -6715,10 +6715,6 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     height: auto;
 }
 
-.tasks-detail-drawer.is-title-editing .resizable-drawer-title {
-    display: none;
-}
-
 /* The Status field is the Board's second cue, a state dot, beside the select (audit B4r). */
 .task-detail-status-field {
     display: flex;

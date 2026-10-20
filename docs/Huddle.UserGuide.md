@@ -1480,13 +1480,13 @@ changes the Task, so a stray key cannot leave an unsaved edit behind. You can st
 or **Decline** a gated Task there, **Ask** for Proof, copy the id or link, make a copy, and close or reopen the Task.
 
 Choose **Edit** to change the Task. The Task opens in a Tab of its own, "Edit BUSI-0001", next to the Tab you were in.
-Choosing Edit again on the same Task goes back to that Tab. The Tab keeps its place until you close it. **Cancel** and
+Choosing Edit again on the same Task goes back to that Tab. The Tab keeps its place until you close it, and closing it with unsaved edits asks "Discard changes?". **Cancel** and
 **Save** are at the top right of the page and stay in view as you scroll, and the Tab shows a dot (●) while you have
 edits that are not saved. **View task** goes back to the read-only panel. The page is two columns when it is wide
 enough (about 1024 pixels), and one column when the sidebars take its room.
 
 The description has the same formatting buttons as a note in the Library (bold, italic, heading, code, bulleted list
-and task list), with the same shortcuts (Ctrl+B, Ctrl+I, Ctrl+E). **New task** still opens a form in the panel.
+and task list), with the same shortcuts (Ctrl+B, Ctrl+I, Ctrl+E). **New task** and **Make a copy** open the same editor in their own Tab, so there is one place to edit a Task.
 
 While an edit Tab is open, the [Right sidebar](#the-right-sidebar) shows what Huddle works out about the Task:
 **Activity** (the Room it last woke a Teammate in, how many of its wakes are used, and who is working on it now),
@@ -1554,11 +1554,12 @@ There is no delete.
 
 ### Creating and editing Tasks
 
-Select **New task** on the Tasks page or a Team page's Tasks tab. The panel has
-Title, Status, Priority, Assignee, Team / Project, Parent, blockers, Tags, Start
-and Due date, and a description with **Edit** and **Preview**. Select **Save**.
-If the Task is assigned to a Teammate, the button reads **Save & notify
-{Name}**.
+Select **New task** on the Tasks page or a Team page's Tasks tab. A new Tab,
+"New task", opens with the same editor you get from **Edit**: Title, Status,
+Priority, Assignee, Team / Project, Parent, blockers, Tags, Start and Due date,
+and a description with **Edit** and **Preview**. Select **Save** at the top
+right. If the Task is assigned to a Teammate, the button reads **Save & notify
+{Name}**. After the first save the same Tab becomes that Task's edit page.
 
 | Action | In the background |
 | --- | --- |
@@ -1566,8 +1567,8 @@ If the Task is assigned to a Teammate, the button reads **Save & notify
 | **Edit any field** | Rewrites the frontmatter and appends one Change log line summarising what changed, such as `status: To Do → In Progress`. |
 | **Drag a card on the Board** | Saves immediately, same as an edit. |
 | **Change Team or Project** | Moves the file to the other folder's `_tasks/`, and logs `moved: A → B`. A new Project name typed here creates the Project folder. |
-| **Close task** / **Reopen** | In the panel's **⋮** menu. Moves the file into or out of `_tasks/_closed/` and logs `closed` or `reopened`. |
-| **Make a copy** | In the panel's **⋮** menu. Opens an unsaved copy titled `Copy of …`. Nothing is written until you save. |
+| **Close task** / **Reopen** | In the **⋮** menu of the read-only panel or the edit page. Moves the file into or out of `_tasks/_closed/` and logs `closed` or `reopened`. |
+| **Make a copy** | In the **⋮** menu of the read-only panel or the edit page. Opens a "New task" Tab holding an unsaved copy titled `Copy of …`. Nothing is written until you save. The copy is of the Task as saved, not of edits still pending. |
 
 Every write goes to a temporary file first and is then moved into place, so a
 Task file is never half-written. If someone else (a Teammate, or you in another
