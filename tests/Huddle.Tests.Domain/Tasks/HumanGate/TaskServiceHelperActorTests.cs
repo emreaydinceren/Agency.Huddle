@@ -50,7 +50,8 @@ public sealed class TaskServiceHelperActorTests
 
         TaskResult result = harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress, Reason = "because" }, task.Version, Helper);
 
-        Assert.IsNotType<TaskResult.Saved>(result);
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains("A reason is only recorded when the status becomes Cancelled or Rejected.", refused.Problems);
         Assert.Equal(TaskState.Review, harness.Store.Get(task.Id)?.Status);
     }
 
@@ -63,7 +64,8 @@ public sealed class TaskServiceHelperActorTests
 
         TaskResult result = harness.Service.Update(task.Id, new TaskPatch { Title = "Reply to Acme today", Reason = "because" }, task.Version, Helper);
 
-        Assert.IsNotType<TaskResult.Saved>(result);
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains("A reason is only recorded when the status becomes Cancelled or Rejected.", refused.Problems);
     }
 
     /// <summary>The Helper cannot turn the gate off.</summary>

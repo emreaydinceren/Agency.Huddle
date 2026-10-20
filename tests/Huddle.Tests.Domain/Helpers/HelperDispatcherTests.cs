@@ -153,8 +153,8 @@ public sealed class HelperDispatcherTests : IDisposable
 
         this.clock.Advance(TimeSpan.FromSeconds(11));
         await Eventually.UntilAsync(() => this.process.Calls == 2, TestContext.Current.CancellationToken, TestBudgets.Standard);
-        await Task.Delay(100, TestContext.Current.CancellationToken);
 
+        // The proof that a third never ran alongside is the peak below, read after every run has finished.
         Assert.Equal(2, this.process.Calls);
         release.SetResult();
         await this.AppliedAsync(3);
@@ -187,7 +187,9 @@ public sealed class HelperDispatcherTests : IDisposable
 
         dispatcher.Enqueue(this.helper.Id, "k1", "text");
         this.clock.Advance(TimeSpan.FromSeconds(11));
-        await Task.Delay(100, TestContext.Current.CancellationToken);
+
+        // The timer callback ran inside Advance, so Stop waits for any run it started: nothing is left to arrive late.
+        await dispatcher.StopAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(0, this.process.Calls);
         Assert.Empty(this.helper.Applied);
@@ -201,7 +203,7 @@ public sealed class HelperDispatcherTests : IDisposable
 
         dispatcher.Enqueue(this.helper.Id, "k1", "text");
         this.clock.Advance(TimeSpan.FromSeconds(11));
-        await Task.Delay(100, TestContext.Current.CancellationToken);
+        await dispatcher.StopAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(0, this.process.Calls);
     }
@@ -288,7 +290,9 @@ public sealed class HelperDispatcherTests : IDisposable
 
         await dispatcher.StopAsync(TestContext.Current.CancellationToken);
         this.clock.Advance(TimeSpan.FromSeconds(11));
-        await Task.Delay(100, TestContext.Current.CancellationToken);
+
+        // A second Stop waits for any run the late timer would have started.
+        await dispatcher.StopAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(0, this.process.Calls);
     }

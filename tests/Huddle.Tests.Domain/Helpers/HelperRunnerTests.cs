@@ -5,6 +5,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Waiting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -192,10 +193,7 @@ public sealed class HelperRunnerTests : IDisposable
         HelperRunner runner = this.Build();
 
         Task<HelperOutcome<ScriptedVerdict>> run = runner.RunAsync(this.helper, Settings with { TimeoutSeconds = 30 }, "x", TestContext.Current.CancellationToken);
-        while (this.process.Calls == 0)
-        {
-            await Task.Delay(5, TestContext.Current.CancellationToken);
-        }
+        await Eventually.UntilAsync(() => this.process.Calls > 0, TestContext.Current.CancellationToken, TestBudgets.Standard);
 
         this.clock.Advance(TimeSpan.FromSeconds(31));
 
@@ -209,10 +207,7 @@ public sealed class HelperRunnerTests : IDisposable
         this.process.Hold = new TaskCompletionSource().Task;
         using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         Task<HelperOutcome<ScriptedVerdict>> run = this.Build().RunAsync(this.helper, Settings, "x", cts.Token);
-        while (this.process.Calls == 0)
-        {
-            await Task.Delay(5, TestContext.Current.CancellationToken);
-        }
+        await Eventually.UntilAsync(() => this.process.Calls > 0, TestContext.Current.CancellationToken, TestBudgets.Standard);
 
         await cts.CancelAsync();
 
