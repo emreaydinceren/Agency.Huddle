@@ -7,6 +7,7 @@
 }
 
 .feed-category-count {
+    margin-inline-start: 4px;
     color: var(--mud-palette-text-secondary);
     font-variant-numeric: tabular-nums;
 }
@@ -21,5 +22,5 @@
 
 ::deep .feed-see-all .mud-nav-link {
     color: var(--mud-palette-primary);
-    font-size: 13px;
+    font-size: var(--mud-typography-body2-size);
 }

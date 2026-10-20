@@ -3,7 +3,7 @@
 }
 
 .feed-related-caption {
-    font-size: 12px;
+    font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     color: var(--mud-palette-text-secondary);
     margin-bottom: 2px;
@@ -22,6 +22,6 @@
     position: absolute;
     right: 8px;
     bottom: 4px;
-    font-size: 11px;
+    font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-primary);
 }

@@ -1,6 +1,6 @@
 .feed-doc-where {
     font-family: var(--mud-typography-code-family, ui-monospace, monospace);
-    font-size: 13px;
+    font-size: var(--mud-typography-body2-size);
     overflow-wrap: anywhere;
 }
 
@@ -10,7 +10,7 @@
 
 .feed-doc-entry {
     padding: 4px 0;
-    font-size: 12px;
+    font-size: var(--mud-typography-caption-size);
 }
 
 .feed-doc-actor {

@@ -8,7 +8,7 @@
     display: inline-block;
     width: 8px;
     height: 8px;
-    margin-right: 6px;
+    margin-right: 8px;
     border-radius: 50%;
     background: var(--mud-palette-success);
 }
@@ -16,13 +16,23 @@
 .feed-readonly {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     margin: 4px 0 16px;
     color: var(--mud-palette-text-secondary);
 }
 
 .feed-readonly-text {
     color: var(--mud-palette-text-secondary);
+}
+
+.feed-filter-bar ::deep .feed-category-control {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.feed-filter-bar ::deep .feed-category-control .mud-toggle-item {
+    flex: none;
+    white-space: nowrap;
 }
 
 .feed-filter-bar {
@@ -45,7 +55,7 @@
 }
 
 ::deep .feed-team-icon {
-    margin-right: 6px;
+    margin-right: 8px;
     vertical-align: middle;
 }
 

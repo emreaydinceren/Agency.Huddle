@@ -5,9 +5,9 @@
     grid-template-columns: 20px minmax(0, 1fr) auto;
     align-items: start;
     column-gap: 8px;
-    padding: 6px 8px;
+    padding: 8px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--mud-typography-body2-size);
     line-height: 1.35;
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
 }
@@ -31,7 +31,7 @@
 .feed-row-mark {
     width: 20px;
     height: 20px;
-    font-size: 9px;
+    font-size: var(--mud-typography-caption-size);
 }
 
 .feed-row-mark {
@@ -87,9 +87,9 @@
 .feed-row-status {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     margin-top: 2px;
-    font-size: 12px;
+    font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
     white-space: nowrap;
     overflow: hidden;
@@ -120,7 +120,7 @@
 .feed-row-time {
     display: inline-flex;
     align-items: center;
-    font-size: 12px;
+    font-size: var(--mud-typography-caption-size);
     white-space: nowrap;
     color: var(--mud-palette-text-secondary);
 }

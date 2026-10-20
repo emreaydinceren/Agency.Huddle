@@ -5,8 +5,8 @@
     padding: 12px 12px 12px 16px;
     overflow: hidden;
     border: 1px solid var(--ink-edge);
-    border-radius: 8px;
-    font-size: 14px;
+    border-radius: calc(var(--mud-default-borderradius) * 2);
+    font-size: var(--mud-typography-body2-size);
     line-height: 1.4;
     background-color: var(--mud-palette-surface);
 }
@@ -50,7 +50,7 @@
 .feed-card-mark {
     width: 40px;
     height: 40px;
-    font-size: 14px;
+    font-size: var(--mud-typography-body2-size);
 }
 
 .feed-card-mark {
@@ -132,7 +132,7 @@
 
 .feed-card-meta {
     margin-top: 4px;
-    font-size: 12px;
+    font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }
 
@@ -163,8 +163,8 @@
     justify-content: center;
     width: 14px;
     height: 14px;
-    border-radius: 3px;
-    font-size: 8px;
+    border-radius: var(--mud-default-borderradius);
+    font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     color: var(--mud-palette-primary-text);
     background-color: var(--mud-palette-primary);
@@ -173,8 +173,8 @@
 .feed-card-pills {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 6px;
+    gap: 8px;
+    margin-top: 8px;
 }
 
 .feed-pill {
@@ -184,7 +184,7 @@
     padding: 1px 8px;
     border: 1px solid currentColor;
     border-radius: 999px;
-    font-size: 12px;
+    font-size: var(--mud-typography-caption-size);
     white-space: nowrap;
 }
 
@@ -215,7 +215,7 @@
 }
 
 .feed-card-age {
-    font-size: 12px;
+    font-size: var(--mud-typography-caption-size);
     white-space: nowrap;
     color: var(--mud-palette-text-secondary);
 }
@@ -249,8 +249,8 @@
 }
 
 .feed-card-caption {
-    margin-bottom: 6px;
-    font-size: 12px;
+    margin-bottom: 8px;
+    font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     color: var(--mud-palette-text-secondary);
 }
@@ -266,6 +266,6 @@
     padding: 12px;
     border: 1px dashed var(--ink-edge);
     border-radius: var(--mud-default-borderradius);
-    font-size: 13px;
+    font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);
 }
