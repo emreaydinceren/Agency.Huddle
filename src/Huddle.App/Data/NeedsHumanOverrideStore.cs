@@ -60,17 +60,19 @@ internal sealed class NeedsHumanOverrideStore
         ArgumentException.ThrowIfNullOrWhiteSpace(taskId);
         lock (this.gate)
         {
-            if (!this.ids.Add(taskId))
+            if (this.ids.Contains(taskId))
             {
                 return;
             }
 
+            // Written first: if the INSERT throws, the id is not remembered in memory either, so a retry is not skipped.
             using SqliteConnection connection = this.OpenConnection();
             using SqliteCommand command = connection.CreateCommand();
             command.CommandText = "INSERT OR IGNORE INTO needs_human_overrides(task_id, at) VALUES($id, $at);";
             command.Parameters.AddWithValue("$id", taskId);
             command.Parameters.AddWithValue("$at", this.timeProvider.GetUtcNow().ToString("O", CultureInfo.InvariantCulture));
             command.ExecuteNonQuery();
+            _ = this.ids.Add(taskId);
         }
     }
 

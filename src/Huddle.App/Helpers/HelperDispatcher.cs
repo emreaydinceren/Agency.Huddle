@@ -23,6 +23,7 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
     private readonly TimeProvider clock;
     private readonly SemaphoreSlim concurrency;
     private readonly CancellationTokenSource stopping = new();
+    private bool stopped;
     private readonly HashSet<Task> running = [];
 
     /// <summary>Creates the dispatcher over the registered invokers.</summary>
@@ -76,7 +77,7 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
         string slot = $"{helperId.Value}\n{key}";
         lock (this.gate)
         {
-            if (this.stopping.IsCancellationRequested)
+            if (this.stopped)
             {
                 return;
             }
@@ -109,6 +110,8 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
         Task[] inFlight;
         lock (this.gate)
         {
+            // Set under the gate so no Enqueue or timer starts a run after the snapshot below.
+            this.stopped = true;
             foreach (Pending entry in this.pending.Values)
             {
                 entry.Timer?.Dispose();
@@ -176,26 +179,23 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
     /// <summary>The timer fired: take the input and run it on the thread pool.</summary>
     private void Fire(string slot)
     {
-        Pending entry;
-        object input;
+        Task task;
         lock (this.gate)
         {
-            if (!this.pending.TryGetValue(slot, out Pending? found) || found.Input is null || found.Running)
+            if (this.stopped || !this.pending.TryGetValue(slot, out Pending? found) || found.Input is null || found.Running)
             {
                 return;
             }
 
-            entry = found;
-            input = found.Input;
+            Pending entry = found;
+            object input = found.Input;
             entry.Input = null;
             entry.Timer?.Dispose();
             entry.Timer = null;
             entry.Running = true;
-        }
 
-        Task task = Task.Run(() => this.RunAsync(slot, entry, input), CancellationToken.None);
-        lock (this.gate)
-        {
+            // The run joins the set in the same critical section that took the input, so StopAsync's snapshot cannot miss it.
+            task = Task.Run(() => this.RunAsync(slot, entry, input), CancellationToken.None);
             _ = this.running.Add(task);
         }
 

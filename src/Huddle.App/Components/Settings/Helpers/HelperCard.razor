@@ -101,7 +101,7 @@
     /// <inheritdoc/>
     public void Dispose() => this.Dispatcher.StatusChanged -= this.OnStatusChanged;
 
-    private bool IsPaused => this.enabled && this.helper is not null && this.Budget.IsPaused(this.helper.Id, this.baseline.DailyCap);
+    private bool IsPaused => this.baseline.Enabled && this.helper is not null && this.Budget.IsPaused(this.helper.Id, this.baseline.DailyCap);
 
     /// <summary>The last error while it is still the latest word: the latest run failed. A good run after it hides it.</summary>
     private (DateTimeOffset At, string Message)? CurrentError =>
@@ -121,7 +121,8 @@
     {
         get
         {
-            if (!this.enabled)
+            // The chip shows what the Helper does now (the saved setting), not the unsaved switch.
+            if (!this.baseline.Enabled)
             {
                 return (HelpersCopy.ChipOff, Color.Default, Icons.Material.Filled.PowerSettingsNew);
             }
@@ -180,8 +181,13 @@
 
     private void OnStatusChanged()
     {
-        this.LoadActivity();
-        _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+        _ = RendererDispatch.Repaint(
+            this.InvokeAsync,
+            () =>
+            {
+                this.LoadActivity();
+                this.StateHasChanged();
+            });
     }
 
     private void OnEnabledChanged(bool value) => this.enabled = value;

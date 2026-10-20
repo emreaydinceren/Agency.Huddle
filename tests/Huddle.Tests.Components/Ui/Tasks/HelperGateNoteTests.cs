@@ -70,6 +70,20 @@ public sealed class HelperGateNoteTests
         Assert.Null(HelperGateNote.For(log, gateOn: true, [NeedsHuman]));
     }
 
+    /// <summary>A gate-on that shares a summary with another change, after a Helper's and a Human's gate-off, is the Human's: no line.</summary>
+    [Fact]
+    public void CombinedSummaryGateOnAfterHumanOff_ShowsNothing()
+    {
+        IReadOnlyList<ChangeLogEntry> log =
+        [
+            Entry("Scripted (Helper)", "human gate on (reason: outward)"),
+            Entry("You", "human gate off"),
+            Entry("You", "status Review; human gate on"),
+        ];
+
+        Assert.Null(HelperGateNote.For(log, gateOn: true, [NeedsHuman]));
+    }
+
     /// <summary>With the gate off, as the panel now shows it, there is no line, whatever the log says.</summary>
     [Fact]
     public void GateOff_ShowsNothing()

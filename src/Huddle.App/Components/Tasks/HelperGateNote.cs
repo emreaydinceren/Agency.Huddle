@@ -11,6 +11,7 @@ namespace Agency.Huddle.App.Components.Tasks;
 internal static class HelperGateNote
 {
     private const string GateOn = "human gate on";
+    private const string GateOff = "human gate off";
     private const string ReasonMarker = "(reason: ";
 
     /// <summary>The line to show, or <see langword="null"/> when the gate is off or the latest gate-on entry is not a Helper's.</summary>
@@ -28,7 +29,13 @@ internal static class HelperGateNote
         for (int i = changeLog.Count - 1; i >= 0; i--)
         {
             ChangeLogEntry entry = changeLog[i];
-            if (!entry.Summary.StartsWith(GateOn, StringComparison.Ordinal))
+            if (entry.Summary.Contains(GateOff, StringComparison.Ordinal))
+            {
+                // The Human (or a Teammate) turned it off after any earlier Helper entry; whatever holds it on now is not the Helper's word.
+                return null;
+            }
+
+            if (!entry.Summary.Contains(GateOn, StringComparison.Ordinal))
             {
                 continue;
             }
