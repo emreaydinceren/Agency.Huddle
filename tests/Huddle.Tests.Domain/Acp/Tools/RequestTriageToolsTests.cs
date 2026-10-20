@@ -88,7 +88,7 @@ public sealed class RequestTriageToolsTests
         /// <summary>Builds the confirm tool for a caller.</summary>
         /// <param name="caller">The caller's name.</param>
         public ConfirmRequestTool ConfirmTool(string caller) =>
-            new(Catalog(), this.Harness.Service, this.Harness.Store, this.Harness.Personas, this.Gates, this.Notifier, this.Harness.Directory, this.Ids[caller], new FakePromptSource());
+            new(this.Harness.Service, this.Harness.Store, new RequestConfirmers(Catalog(), this.Harness.Personas, this.Gates), this.Notifier, this.Harness.Directory, this.Ids[caller], new FakePromptSource());
 
         /// <summary>The seeded Request as the store holds it now.</summary>
         public TaskItem Current() => this.Harness.Store.All.Single(task => task.Id.ToString() == TaskId);
@@ -262,6 +262,29 @@ public sealed class RequestTriageToolsTests
 
         Assert.Equal("A Request in To Do (triage Accepted) cannot take the Accept event.", result);
         Assert.Empty(scene.Notifier.Calls);
+    }
+
+    /// <summary>A Team with a member whose role covers verify has a confirmer; a Team whose members have no such role does not (Feed spec FD-7).</summary>
+    [Fact]
+    public async Task TeamHasConfirmer_QaMemberOrNone_ReportsWhetherAnAgentCanConfirm()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        FakeTeamCatalog catalog = new()
+        {
+            Teams =
+            [
+                new TeamSummary("Design", [], ["Dana", "Quinn", "Pat"], true) { Manager = "Dana", TeamType = new VersionedRef("web", "1.2.0") },
+                new TeamSummary("Lone", [], ["Pat"], true) { Manager = "Pat", TeamType = new VersionedRef("web", "1.2.0") },
+            ],
+        };
+        RequestConfirmers confirmers = new(catalog, scene.Harness.Personas, scene.Gates);
+
+        Assert.True(confirmers.TeamHasConfirmer("Design"));
+        Assert.False(confirmers.TeamHasConfirmer("Lone"));
+        Assert.False(confirmers.TeamHasConfirmer("Nowhere"));
+        Assert.True(confirmers.IsVerifierOf("Design", "Quinn"));
+        Assert.False(confirmers.IsVerifierOf("Design", "Pat"));
     }
 
     /// <summary>The requesting Team's QA confirms a Done Request: confirmed_by is set, the Task closes and the receiving manager is woken.</summary>

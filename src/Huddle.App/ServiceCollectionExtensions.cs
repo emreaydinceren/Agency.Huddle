@@ -394,6 +394,7 @@ public static class ServiceCollectionExtensions
 
         // The Team's process gates; TaskService asks it before every Task status change (PR-7).
         services.AddSingleton<Agency.Huddle.App.Teams.ProcessGateService>();
+        services.AddSingleton<Agency.Huddle.App.Tasks.IRequestConfirmers, Agency.Huddle.App.Tasks.RequestConfirmers>();
 
         // The Proof of a Task: its Definition of Done evaluated against the live stores (HG, ADR-0062).
         services.AddSingleton<Agency.Huddle.App.Tasks.HumanGate.ProofContextBuilder>();

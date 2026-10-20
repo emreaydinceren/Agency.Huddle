@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Tools;
 using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Teams;
@@ -529,11 +530,9 @@ public sealed partial class PromptCatalogTests
         store.Save("tool.confirmRequest.description", overriddenText);
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         ConfirmRequestTool tool = new(
-            new FakeTeamCatalog(),
             harness.Service,
             harness.Store,
-            harness.Personas,
-            TaskGateText.BuildGates(gateDir, null),
+            new RequestConfirmers(new FakeTeamCatalog(), harness.Personas, TaskGateText.BuildGates(gateDir, null)),
             new FakeRequestNotifier(),
             harness.Directory,
             "caller-id",
