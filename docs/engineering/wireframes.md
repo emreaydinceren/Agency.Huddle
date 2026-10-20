@@ -128,10 +128,10 @@ this.
 | `S2f` | Library link | `LibraryNavLink` | One link to the Library page. It lists no roots and has no "+ Add folder" |
 | `S2g` | Sidebar footer | | Retired: Archived chats and Settings moved to the Activity bar's bottom toolbar (`S5b`) |
 | `S3` | Workspace | `MudMainContent` `.main-column` | Also holds the invisible `TabSync`, `TabPersistence` and `LibraryLinkRouter` |
-| `S4` | Right sidebar | `RightSidebar` (`MudDrawer`, end, persistent, 280px) | Drawn dashed: shown only while toggled open from `S1c`; starts closed in each circuit. Draws the panels the Panel catalog picks for the focused pane's Subject, sorted by `Order`. Each panel sits in a `SidebarPanelFrame`: a 32px header button with the icon, the title (13px/600), the count the panel reports (12px Quiet ink; none until it does) and a chevron that collapses the body, remembered per viewer; an Edge line separates one panel from the next. Rows are 32px and one line in Ink (the Outline's are 28px): a Task row is its ID (12px Quiet ink), the title and the state dot; a member row is a 24px avatar with the presence badge on its rim, then the name; the Outline heading in view wears the Selected treatment. The v1 panels: for a Room, Members, Tasks in this chat and Documents in this chat; for a Markdown document, Outline, Linked documents and Recent edits (the newest five entries of its History, with **See all** scrolling to `L3i`). It follows focus to the other pane or another Tab. When no panel applies, it shows an `EmptyState` with the single sentence "Nothing to show for this page." The Task drawer opens beside the Right sidebar |
+| `S4` | Right sidebar | `RightSidebar` (`MudDrawer`, end, persistent, 280px) | Drawn dashed: shown only while toggled open from `S1c`; starts closed in each circuit. In Notifications mode (opened by `NotificationsButton`) it draws one `SidebarPanelFrame` titled "Notifications" around `NotificationsPanel` (Figure 13, `F4`); otherwise it draws the panels the Panel catalog picks for the focused pane's Subject, sorted by `Order`. Each panel sits in a `SidebarPanelFrame`: a 32px header button with the icon, the title (13px/600), the count the panel reports (12px Quiet ink; none until it does) and a chevron that collapses the body, remembered per viewer; an Edge line separates one panel from the next. Rows are 32px and one line in Ink (the Outline's are 28px): a Task row is its ID (12px Quiet ink), the title and the state dot; a member row is a 24px avatar with the presence badge on its rim, then the name; the Outline heading in view wears the Selected treatment. The v1 panels: for a Room, Members, Tasks in this chat and Documents in this chat; for a Markdown document, Outline, Linked documents and Recent edits (the newest five entries of its History, with **See all** scrolling to `L3i`). It follows focus to the other pane or another Tab. When no panel applies, it shows an `EmptyState` with the single sentence "Nothing to show for this page." The Task drawer opens beside the Right sidebar |
 | `S5` | Activity bar | `ActivityBar` (`nav.activity-bar`), 48px | Always shown, at the left edge of the left `MudDrawer`, like VS Code's Activity Bar. Two toolbars: one aligned to the top, one to the bottom |
 | `S5a` | Top toolbar | `.activity-bar-top`, one `MudIconButton` per view | Chats, Teams, Teammates, Tasks and Library, with their entity icons; Tasks and Library are left out when their feature is off. Each button is a 40px tile with the inset rounded shape (0.75 of the base radius). The selected button is pressed (`aria-pressed`) and wears the Accent tint (14%, 20% hovered) with the accent icon. Clicking another button switches the Sidebar (`S2`) to that view; clicking the pressed one collapses the Sidebar. Each button has a tooltip and an `aria-label`, and names `S2` in `aria-controls` |
-| `S5b` | Bottom toolbar | `.activity-bar-bottom`, `MudNavMenu` `.nav-settings` | Archived chats and Settings: two icon-only 48px links, each with an `aria-label` and a tooltip (OP-4). Settings opens a Tab, so its link wears the active treatment on `/settings` |
+| `S5b` | Bottom toolbar | `.activity-bar-bottom`, `MudNavMenu` `.nav-settings` | Feed, Archived chats and Settings: three icon-only 48px links, each with an `aria-label` and a tooltip (OP-4). Feed is a `NavTabLink` with the `DynamicFeed` icon to `/feed`; it opens a Tab (Figure 13) and is not drawn while `Team:Feed:Enabled` is false. Settings opens a Tab, so its link wears the active treatment on `/settings` |
 
 `W1`, `W3` and `W6` appear here only to show where Figure 2 plugs in.
 
@@ -497,8 +497,8 @@ Figure 12's narrow inset as `S4`.
 
 ## Figure 13: The Feed page
 
-`FeedPage.razor`, route `/feed` (Tab title "Feed"); designed in the
-[Feed spec §6.9](../Huddle.Feed-Specifications.md#69-the-feed-tab), not built yet. Drawn from the owner's header and row wireframes (2026-10-20).
+`FeedPage.razor`, route `/feed` (Tab title "Feed"); built to the
+[Feed spec §6.9](../Huddle.Feed-Specifications.md#69-the-feed-tab) (2026-10-20, slice 1). Drawn from the owner's header and row wireframes (2026-10-20).
 
 ![Figure 13a: the Feed Tab header, with the Live chip, the read-only note, the Category control with counts and the Team select](../images/wireframes/13a-feed-header.svg)
 
@@ -519,7 +519,7 @@ from the Activity bar's "Feed" link (`S5b`) and the Notifications panel's "See a
 | `F3a` | Category | `HuddleSegmentedControl<FeedCategory>`, six segments | All, Needs you, Tasks, Documents, Rooms, Gates, each with its count. Needs you overlaps the others, so the counts don't add up. Sets `?category=` |
 | `F3b` | Team select | `MudSelect`, Dense, Outlined, the `Groups` icon | "All teams", then each Team. Sets `?team=` |
 | `F3c` | Teammate chip | `TaskFilterChip` | Drawn dashed: only when an avatar was clicked. "Teammate: Nova ×" |
-| `F4` | Item list (panel) | `F8` day groups of `F9` rows, newest first | The Right sidebar's Feed panel (spec §6.8), with a wrapping Category chip set that opens on Needs you. The Feed Tab draws `F12` cards instead |
+| `F4` | Item list (panel) | `NotificationsPanel` over `FeedList`: `F8` day groups of `F9` rows, newest first | The Right sidebar's Feed panel (spec §6.8), with a wrapping Category chip set that opens on Needs you. The Feed Tab draws `F12` cards instead |
 | `F5` | Show more | `MudButton`, Text variant | Loads the next page by id |
 | `F6` | Empty state | `EmptyState` | Drawn dashed: the copy depends on the filter (spec §6.9). `F2` and `F3` stay drawn |
 | `F7` | New items pill | Floating Accent pill, top centre of `F4` | Drawn dashed: only while new items wait because the list is scrolled. "↑ 3 new items"; a click inserts them and scrolls to the top |
@@ -534,14 +534,14 @@ from the Activity bar's "Feed" link (`S5b`) and the Notifications panel's "See a
 | `F10b` | Avatar with kind badge | 40px `TeammateAvatar`, 16px round badge at bottom right | The badge names the kind (check, document, person, gauge, lock, @, ?, form, plus) |
 | `F10c` | Summary | 14px, wraps to at most 3 lines | Name in 600, verb, reference chips, a trailing purpose in 600 ("for you to publish") |
 | `F10d` | Meta line | 12px Quiet ink, " • " between parts | Relation ("assigned by you", "Library"), Room chip, Team chip (two-letter monogram tile and Name) |
-| `F10e` | Status pills | Outlined pills, one line | Drawn dashed: Notifications only. "Waiting for you · 20 min" (Warning), "Assigned to you · due Tue 13 Oct" (Info), "Post by 11:30" (clock), "Done · 13:25" once resolved |
+| `F10e` | Status pills | Outlined pills, one line | Drawn dashed: Notifications only. "Waiting for you · 20 min" (Warning), "Assigned to you · due Tue 13 Oct" (Info), "Done · 13:25" once resolved. The "Post by 11:30" deadline pill of the wireframe is not built: a Task's due date has no time |
 | `F10f` | Age and chevron | Right column | Age ("16 min"), then the expand chevron (`aria-expanded`, "Show details") |
 | `F11` | Expanded card | `FeedCard` expanded in place | Drawn dashed: one card at a time; `Escape` collapses. `F11a` to `F11d` under an Edge line |
 | `F11a` | Target kind and Team | Caption | "Task · Support Desk", "Room · …", "Document · Library" |
-| `F11b` | Target preview | Inset outlined box, read-only | Task: id, title, property grid (Status, Assignee, Assigned by, Due, Proof, Room, File), the Proof list and the gate sentence. Room: Scope, Members, why it waits, last activity. Document: root, path, last three History entries |
+| `F11b` | Target preview | Inset outlined box, read-only | Task: id, title, property grid (Status, Assignee as avatar and Name with no job title, Assigned by, Due, Proof, Room, File), the Proof list and the gate sentence. Room: Scope, Members, why it waits, last activity. Document: root, path, last three History entries |
 | `F11c` | In the Feed | Caption and up to 5 `F9` rows | Items about the same target, and for a Task its origin Room and linked files; the card's own item tagged "This item" |
 | `F11d` | Navigation buttons | `MudButton`s: filled, outlined, text | Open Task (or Open Room, Open document), Review in Needs you (only for an unresolved gated Task in Needs You), Open Room. None changes anything |
-| `F12` | Card list | `F8` day headings over `F10` cards | The Feed Tab body. The Right sidebar panel draws `F9` rows instead |
+| `F12` | Card list | `FeedList` in card mode: `F8` day headings over `F10` `FeedCard`s | The Feed Tab body. The Right sidebar panel draws `F9` rows instead |
 
 ## Using the codes
 

@@ -1,6 +1,6 @@
 # Huddle.Feed — Design Specification (slice 1)
 
-**Date:** 2026-10-20 · **Status:** Designed, not built · **Decision record:**
+**Date:** 2026-10-20 · **Status:** Built 2026-10-20 (slice 1) · **Decision record:**
 [ADR-0063](adr/0063-the-feed-is-a-stored-history-that-each-domain-component-posts-to.md); sits beside
 [ADR-0050](adr/0050-needs-you-is-derived-from-room-events-and-held-in-memory.md) and
 [ADR-0061](adr/0061-a-human-gated-task-waits-in-needs-you-for-the-humans-acceptance.md) without
@@ -889,6 +889,20 @@ Settled with the owner: D-1 to D-9. Made in this specification and open to revie
 | OD-5 | A rename leaves old items under the old Name, as Document History does (ADR-0060). The avatar of a renamed Teammate stops matching | Keep in v1. If it matters, `PersonaRenameCascade` can rewrite the `actor` column in one statement |
 | OD-6 | Should Unarchive and Room rename be activity too? | Not in slice 1 (not asked for); two source types later |
 | OD-7 | The bell's panel now shows the whole Feed, opening on Needs you (D-21), but keeps the title "Notifications" | Keep "Notifications": the bell and its count are about the Human. Rename to "Feed" if the All view turns out to be what people use |
+
+### Deviations from this design
+
+Slice 1 was built as designed, except for these facts.
+
+1. `ChatService`'s Room-lifecycle methods take the `FeedActor` through new `internal` overloads; the existing signatures post as the Human. A required parameter would have changed about 227 test call sites.
+2. `TaskFeedRules.For` takes a `proofOf` function, so it can count Proof for `TaskNeedsYou`.
+3. A resolution is emitted when a condition turns false for a change that had it true, not on every change.
+4. The `RoomCreated` member list carries the Human's Name first.
+5. `FeedItem`, `FeedActor`, `FeedActorKind`, `FeedSourceType` and `FeedGroup` are `public`, because Razor `[Parameter]` types cannot be `internal` (precedent: `PageSubject`).
+6. The card has no "Post by" deadline pill (a Task's due date has no time) and no Assignee job title.
+7. The Needs you chip count still includes dismissed Notifications.
+8. The disabled page text "The Feed is turned off." and "Set Team:Feed:Enabled to turn it on." is not in §7.
+9. The filter query values (`category`, `teammate`, `team`) are plain `[Parameter]`s filled by `TabPageRoutes`.
 
 ---
 

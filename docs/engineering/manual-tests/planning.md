@@ -56,6 +56,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 31 | [Skill Packs: SKILLS.md, the AI tool, updates, the move and shared folders](skill-packs.md) | 7 | 1 | 2.5h |
 | 32 | [Document history: the byline, the History, the Recent edits panel and the Stop hook](doc-history.md) | 8 | 4 | 1.6h |
 | 33 | [Human gate: the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page](human-gate.md) | 9 | — | 1.3h |
+| 34 | [Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart](feed.md) | 14 | 2 | 2.4h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.
