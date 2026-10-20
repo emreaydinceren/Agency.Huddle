@@ -2,7 +2,6 @@ namespace Agency.Huddle.Tests.Ui.Tasks;
 
 using Bunit;
 using MudBlazor;
-using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Tools;
@@ -24,7 +23,7 @@ public sealed class TaskDetailPlacementTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
 
         IRenderedComponent<MudSelect<string>> team = cut.FindComponents<MudSelect<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-team", StringComparison.Ordinal));
         IRenderedComponent<MudAutocomplete<string>> project = cut.FindComponents<MudAutocomplete<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-project", StringComparison.Ordinal));
@@ -40,7 +39,7 @@ public sealed class TaskDetailPlacementTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Expanded);
+        var cut = RenderDetail(ctx, task.Id);
 
         IRenderedComponent<MudSelect<string>> team = cut.FindComponents<MudSelect<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-team", StringComparison.Ordinal));
         IRenderedComponent<MudAutocomplete<string>> project = cut.FindComponents<MudAutocomplete<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-project", StringComparison.Ordinal));
@@ -54,15 +53,13 @@ public sealed class TaskDetailPlacementTests
     /// Checked at both entry points (the task lists "both modes"): both
     /// layouts now show a visible <c>Label</c> too, and the <c>aria-label</c> must keep working as the accessible name.
     /// </summary>
-    /// <param name="mode">Both entry points.</param>
-    [Theory]
-    [MemberData(nameof(TaskDetailFieldsTestSupport.BothModesData), MemberType = typeof(TaskDetailFieldsTestSupport))]
-    public async Task TeamProject_HaveTheirOwnAccessibleNames(TaskDetailMode mode)
+    [Fact]
+    public async Task TeamProject_HaveTheirOwnAccessibleNames()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, mode);
+        var cut = RenderDetail(ctx, task.Id);
 
         Assert.Equal("Team", cut.Find(".task-detail-team input").GetAttribute("aria-label"));
         Assert.Equal("Project", cut.Find(".task-detail-project input").GetAttribute("aria-label"));
@@ -75,7 +72,7 @@ public sealed class TaskDetailPlacementTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
         IRenderedComponent<MudAutocomplete<string>> project = cut.FindComponents<MudAutocomplete<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-project", StringComparison.Ordinal));
         Assert.True(project.Instance.CoerceValue);
 
@@ -90,15 +87,13 @@ public sealed class TaskDetailPlacementTests
     // ---------------------------------------------------------------------------------------------
 
     /// <summary>The Parent picker is <c>Strict</c> and its <c>ToStringFunc</c> gives "PLAT-0030 · title" (Spec §13.6's own example format).</summary>
-    /// <param name="mode">Both entry points.</param>
-    [Theory]
-    [MemberData(nameof(TaskDetailFieldsTestSupport.BothModesData), MemberType = typeof(TaskDetailFieldsTestSupport))]
-    public async Task Parent_AutocompleteStrict_ToStringFuncFormatsIdMiddleDotTitle(TaskDetailMode mode)
+    [Fact]
+    public async Task Parent_AutocompleteStrict_ToStringFuncFormatsIdMiddleDotTitle()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, mode);
+        var cut = RenderDetail(ctx, task.Id);
         IRenderedComponent<MudAutocomplete<TaskItem>> parent = cut.FindComponents<MudAutocomplete<TaskItem>>().Single(m => string.Equals(m.Instance.Class, "task-detail-parent", StringComparison.Ordinal));
         Assert.True(parent.Instance.Strict);
 
@@ -113,30 +108,26 @@ public sealed class TaskDetailPlacementTests
     // ---------------------------------------------------------------------------------------------
 
     /// <summary>Origin shows a link to <c>/rooms/{id}</c> when the origin Room still exists (Spec §13.6).</summary>
-    /// <param name="mode">Both entry points.</param>
-    [Theory]
-    [MemberData(nameof(TaskDetailFieldsTestSupport.BothModesData), MemberType = typeof(TaskDetailFieldsTestSupport))]
-    public async Task Origin_RoomStillExists_ShowsLinkToRoom(TaskDetailMode mode)
+    [Fact]
+    public async Task Origin_RoomStillExists_ShowsLinkToRoom()
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         Room room = await harness.Directory.CreateRoomAsync("Origin room", [KnownIds.Human, harness.NovaId!], Xunit.TestContext.Current.CancellationToken);
         TaskItem task = CreateTask(harness, originRoomId: room.Id);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, mode);
+        var cut = RenderDetail(ctx, task.Id);
 
         Assert.Equal($"/rooms/{room.Id}", cut.Find(".task-detail-origin a").GetAttribute("href"));
     }
 
     /// <summary>Origin shows the exact Spec §13.6 text "(Room no longer exists)" when the origin Room is gone.</summary>
-    /// <param name="mode">Both entry points.</param>
-    [Theory]
-    [MemberData(nameof(TaskDetailFieldsTestSupport.BothModesData), MemberType = typeof(TaskDetailFieldsTestSupport))]
-    public async Task Origin_RoomNoLongerExists_ShowsExactParenthetical(TaskDetailMode mode)
+    [Fact]
+    public async Task Origin_RoomNoLongerExists_ShowsExactParenthetical()
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         TaskItem task = CreateTask(harness, originRoomId: "no-such-room");
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, mode);
+        var cut = RenderDetail(ctx, task.Id);
 
         Assert.Equal("(Room no longer exists)", TextOf(cut, ".task-detail-origin"));
     }
@@ -146,16 +137,14 @@ public sealed class TaskDetailPlacementTests
     // ---------------------------------------------------------------------------------------------
 
     /// <summary>Created and Updated show <see cref="TaskItem.Created"/>/<see cref="TaskItem.Updated"/> as a human date ("Today"), with the full date in the tooltip.</summary>
-    /// <param name="mode">Both entry points.</param>
-    [Theory]
-    [MemberData(nameof(TaskDetailFieldsTestSupport.BothModesData), MemberType = typeof(TaskDetailFieldsTestSupport))]
-    public async Task CreatedUpdated_ShowDerivedDatesAsHumanDates(TaskDetailMode mode)
+    [Fact]
+    public async Task CreatedUpdated_ShowDerivedDatesAsHumanDates()
     {
         Agency.Huddle.Tests.Acp.Fakes.ManualTimeProvider clock = new(new DateTimeOffset(2026, 10, 16, 12, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
         using TaskToolHarness harness = new(clock);
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, mode);
+        var cut = RenderDetail(ctx, task.Id);
 
         Assert.Equal("Created Today", TextOf(cut, ".task-detail-created"));
         Assert.Equal("Updated Today", TextOf(cut, ".task-detail-updated"));
@@ -163,22 +152,20 @@ public sealed class TaskDetailPlacementTests
     }
 
     /// <summary>Closed shows only when the Task has a <see cref="TaskItem.ClosedAt"/> (Spec §13.6).</summary>
-    /// <param name="mode">Both entry points.</param>
-    [Theory]
-    [MemberData(nameof(TaskDetailFieldsTestSupport.BothModesData), MemberType = typeof(TaskDetailFieldsTestSupport))]
-    public async Task Closed_ShownOnlyWhenClosedAtIsSet(TaskDetailMode mode)
+    [Fact]
+    public async Task Closed_ShownOnlyWhenClosedAtIsSet()
     {
         Agency.Huddle.Tests.Acp.Fakes.ManualTimeProvider clock = new(new DateTimeOffset(2026, 10, 16, 12, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
         using TaskToolHarness harness = new(clock);
         TaskItem openTask = CreateTask(harness, title: "Still open");
         await using MudBunitContext openCtx = UiTestHost.Create().WithHarness(harness);
-        var openCut = RenderDetail(openCtx, openTask.Id, mode);
+        var openCut = RenderDetail(openCtx, openTask.Id);
         Assert.Empty(openCut.FindAll(".task-detail-closed"));
 
         TaskResult closeResult = harness.Service.Close(openTask.Id, TaskActors.Human(harness.Options.Value));
         TaskItem closedTask = Assert.IsType<TaskResult.Saved>(closeResult).Task;
         await using MudBunitContext closedCtx = UiTestHost.Create().WithHarness(harness);
-        var closedCut = RenderDetail(closedCtx, closedTask.Id, mode);
+        var closedCut = RenderDetail(closedCtx, closedTask.Id);
 
         Assert.Equal("Closed Today", TextOf(closedCut, ".task-detail-closed"));
     }

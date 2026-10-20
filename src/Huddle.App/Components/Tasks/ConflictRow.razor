@@ -35,33 +35,17 @@
     </text>;
 }
 
-@if (this.Stacked)
-{
-    <div class="task-detail-conflict-row">
-        <div class="task-detail-conflict-field">@TaskDiff.FieldLabel(this.Field)</div>
-        @theirs
-        @yours
-        @choices
-    </div>
-}
-else
-{
-    <tr class="task-detail-conflict-row">
-        <td class="task-detail-conflict-field">@TaskDiff.FieldLabel(this.Field)</td>
-        <td>@theirs</td>
-        <td>@yours</td>
-        <td>@choices</td>
-    </tr>
-}
+<tr class="task-detail-conflict-row">
+    <td class="task-detail-conflict-field">@TaskDiff.FieldLabel(this.Field)</td>
+    <td>@theirs</td>
+    <td>@yours</td>
+    <td>@choices</td>
+</tr>
 
 @code {
     /// <summary>The conflicting field.</summary>
     [Parameter, EditorRequired]
     public TaskField Field { get; set; }
-
-    /// <summary>Whether the row stacks in a div (Panel) rather than being a table row (Expanded).</summary>
-    [Parameter]
-    public bool Stacked { get; set; }
 
     /// <summary>Whether the two sides are long text, shown in inert six-line fields.</summary>
     [Parameter]

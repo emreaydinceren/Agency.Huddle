@@ -526,7 +526,7 @@ public sealed class R3TasksTests
         TaskItem task = CreateTask(harness, "Alpha");
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
-        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id);
 
         Assert.Equal(["Status and priority", "People", "Planning", "Dates", "Description"], cut.FindAll(".task-detail h3.group-label").Select(h => h.TextContent.Trim()));
         Assert.Empty(cut.FindAll(".task-detail .group-heading"));
@@ -541,7 +541,7 @@ public sealed class R3TasksTests
         TaskItem task = CreateTask(harness, "Alpha");
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
-        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id);
 
         IElement field = cut.Find(".task-detail-description-field");
         Assert.Contains("long-text-field", field.ClassList);
@@ -558,7 +558,7 @@ public sealed class R3TasksTests
         TaskItem task = CreateTask(harness, "Alpha");
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
-        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id);
 
         Assert.Equal(0, cut.FindComponent<MudExpansionPanels>().Instance.Elevation);
         string rule = CssText.RuleBody(CssText.AppCss(), ".task-detail-changelog.mud-expansion-panels .mud-expand-panel");
@@ -576,7 +576,7 @@ public sealed class R3TasksTests
         TaskItem task = CreateTask(harness, "Alpha");
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
-        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id);
 
         Assert.Equal("None", cut.FindComponents<MudAutocomplete<string>>().Single(m => HasClass(m.Instance.Class, "task-detail-project")).Instance.Placeholder);
         Assert.Equal("None", cut.FindComponents<MudAutocomplete<string>>().Single(m => HasClass(m.Instance.Class, "task-detail-sprint-field")).Instance.Placeholder);
@@ -602,7 +602,7 @@ public sealed class R3TasksTests
         TaskItem task = CreateTask(harness, "Alpha", status: TaskState.InProgress, priority: TaskPriority.High);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
-        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id);
 
         IElement dot = cut.Find(".task-detail-status-field .task-state-dot");
         Assert.Contains("task-state-dot-info", dot.ClassList);
@@ -631,7 +631,7 @@ public sealed class R3TasksTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, "Alpha");
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id);
 
         await cut.InvokeAsync(() => cut.Find($"button[aria-label='Actions for {task.Id}']").ClickAsync());
 
@@ -651,7 +651,7 @@ public sealed class R3TasksTests
         TaskItem task = CreateTask(harness, "Alpha", assignee: "Nova");
         int log = task.ChangeLog.Count;
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id);
 
         await cut.InvokeAsync(() => cut.Find($"button[aria-label='Actions for {task.Id}']").ClickAsync());
         Task closing = cut.InvokeAsync(() => cut.FindAll(".mud-menu-item").Single(i => string.Equals(i.TextContent.Trim(), "Close task…", StringComparison.Ordinal)).ClickAsync());
@@ -677,7 +677,7 @@ public sealed class R3TasksTests
         TaskItem task = CreateTask(harness, "Alpha");
         _ = harness.Service.Close(task.Id, TaskActors.Human(harness.Options.Value));
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id);
 
         await cut.InvokeAsync(() => cut.Find($"button[aria-label='Actions for {task.Id}']").ClickAsync());
         IReadOnlyList<IElement> items = cut.FindAll(".mud-menu-item");

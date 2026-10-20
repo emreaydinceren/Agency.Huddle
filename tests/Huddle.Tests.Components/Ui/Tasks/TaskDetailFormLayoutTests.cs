@@ -3,7 +3,6 @@ namespace Agency.Huddle.Tests.Ui.Tasks;
 using AngleSharp.Dom;
 using Bunit;
 using MudBlazor;
-using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Tools;
 using static Agency.Huddle.Tests.Ui.Tasks.TaskDetailFieldsTestSupport;
@@ -15,15 +14,13 @@ using static Agency.Huddle.Tests.Ui.Tasks.TaskDetailFieldsTestSupport;
 public sealed class TaskDetailFormLayoutTests
 {
     /// <summary>The form is four Group labels (12px/600, Quiet ink), in order: Status and priority, People, Planning, Dates (audit B4i).</summary>
-    /// <param name="mode">Both entry points.</param>
-    [Theory]
-    [MemberData(nameof(TaskDetailFieldsTestSupport.BothModesData), MemberType = typeof(TaskDetailFieldsTestSupport))]
-    public async Task Form_HasTheFourGroupHeadingsInOrder(TaskDetailMode mode)
+    [Fact]
+    public async Task Form_HasTheFourGroupHeadingsInOrder()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, mode);
+        var cut = RenderDetail(ctx, task.Id);
 
         string[] headings = [.. cut.FindAll(".task-detail-group > .group-label").Select(h => h.TextContent.Trim())];
 
@@ -38,7 +35,7 @@ public sealed class TaskDetailFormLayoutTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
 
         Assert.Single(cut.FindAll(".task-detail-groups"));
         Assert.Equal(4, cut.FindAll(".task-detail-group .task-detail-props").Count);
@@ -50,15 +47,13 @@ public sealed class TaskDetailFormLayoutTests
     }
 
     /// <summary>Every text, select, picker and date input in the form is labelled by a MudBlazor label, and has a visible row label beside it.</summary>
-    /// <param name="mode">Both entry points.</param>
-    [Theory]
-    [MemberData(nameof(TaskDetailFieldsTestSupport.BothModesData), MemberType = typeof(TaskDetailFieldsTestSupport))]
-    public async Task Form_EveryInputHasALabel(TaskDetailMode mode)
+    [Fact]
+    public async Task Form_EveryInputHasALabel()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, mode);
+        var cut = RenderDetail(ctx, task.Id);
 
         IReadOnlyList<IElement> inputs = [.. cut.FindAll(".task-detail-prop-value input, .task-detail-prop-value textarea").Where(i => !string.Equals(i.GetAttribute("type"), "hidden", StringComparison.Ordinal))];
         Assert.NotEmpty(inputs);
@@ -83,7 +78,7 @@ public sealed class TaskDetailFormLayoutTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
 
         Assert.Equal("Team", RowLabel(cut.Find(".task-detail-team")));
         Assert.Equal("Project", RowLabel(cut.Find(".task-detail-project")));

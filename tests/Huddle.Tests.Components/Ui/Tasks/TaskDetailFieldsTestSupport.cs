@@ -14,50 +14,32 @@ using Agency.Huddle.Tests.Acp.Tools;
 /// </summary>
 internal static class TaskDetailFieldsTestSupport
 {
-    /// <summary>Both of <c>TaskDetail</c>'s entry points.</summary>
-    private static readonly TaskDetailMode[] BothModes = [TaskDetailMode.Panel, TaskDetailMode.Expanded];
-
-    /// <summary>Both of <c>TaskDetail</c>'s entry points, for a <c>[Theory]</c> that repeats one rule at each (R6/R7).</summary>
-    public static IEnumerable<object[]> BothModesData() => BothModes.Select(m => new object[] { m });
-
-    /// <summary>The cross-product of both entry points and the two Won't-do states that show a Reason field.</summary>
-    public static IEnumerable<object[]> BothModesTimesWontDoReasonStates()
+    /// <summary>The two Won't-do states that show a Reason field.</summary>
+    public static IEnumerable<object[]> WontDoReasonStates()
     {
-        foreach (TaskDetailMode mode in BothModes)
-        {
-            yield return [mode, TaskState.Cancelled];
-            yield return [mode, TaskState.Rejected];
-        }
+        yield return [TaskState.Cancelled];
+        yield return [TaskState.Rejected];
     }
 
-    /// <summary>The cross-product of both entry points and one vs. two open blockers (singular vs. plural summary text).</summary>
-    public static IEnumerable<object[]> BothModesTimesBlockerCounts()
+    /// <summary>One vs. two open blockers (singular vs. plural summary text).</summary>
+    public static IEnumerable<object[]> BlockerCounts()
     {
-        foreach (TaskDetailMode mode in BothModes)
-        {
-            yield return [mode, 1];
-            yield return [mode, 2];
-        }
+        yield return [1];
+        yield return [2];
     }
 
-    /// <summary>The cross-product of both entry points and a terminal vs. non-terminal blocker Status (J46: the check icon only for terminal).</summary>
-    public static IEnumerable<object[]> BothModesTimesBlockerTerminalStates()
+    /// <summary>A terminal vs. non-terminal blocker Status (J46: the check icon only for terminal).</summary>
+    public static IEnumerable<object[]> BlockerTerminalStates()
     {
-        foreach (TaskDetailMode mode in BothModes)
-        {
-            yield return [mode, TaskState.Done, true];
-            yield return [mode, TaskState.InProgress, false];
-        }
+        yield return [TaskState.Done, true];
+        yield return [TaskState.InProgress, false];
     }
 
-    /// <summary>The cross-product of both entry points and the Start/Due date fields.</summary>
-    public static IEnumerable<object[]> BothModesTimesDateFields()
+    /// <summary>The Start and Due date fields.</summary>
+    public static IEnumerable<object[]> DateFields()
     {
-        foreach (TaskDetailMode mode in BothModes)
-        {
-            yield return [mode, "start"];
-            yield return [mode, "due"];
-        }
+        yield return ["start"];
+        yield return ["due"];
     }
 
     /// <summary>Creates a Task through <see cref="TaskService"/> with every field this file's tests need to control.</summary>
@@ -77,14 +59,13 @@ internal static class TaskDetailFieldsTestSupport
         return Assert.IsType<TaskResult.Saved>(result).Task;
     }
 
-    /// <summary>Renders <c>TaskDetail</c> for <paramref name="id"/> in <paramref name="mode"/>, inside <see cref="MudBunitContext.RenderWithPopovers"/> (the Won't-do menu and pickers are popovers).</summary>
-    internal static IRenderedComponent<ContainerFragment> RenderDetail(MudBunitContext ctx, TaskId id, TaskDetailMode mode)
+    /// <summary>Renders <c>TaskDetail</c> for <paramref name="id"/>, inside <see cref="MudBunitContext.RenderWithPopovers"/> (the Won't-do menu and pickers are popovers).</summary>
+    internal static IRenderedComponent<ContainerFragment> RenderDetail(MudBunitContext ctx, TaskId id)
     {
         return ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<TaskDetail>(0);
             builder.AddAttribute(1, nameof(TaskDetail.Id), (TaskId?)id);
-            builder.AddAttribute(2, nameof(TaskDetail.Mode), mode);
             builder.CloseComponent();
         });
     }

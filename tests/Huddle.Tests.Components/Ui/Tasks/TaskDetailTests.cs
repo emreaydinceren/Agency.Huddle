@@ -35,21 +35,6 @@ using Agency.Huddle.Tests.Factories;
 /// </summary>
 public sealed class TaskDetailTests
 {
-    /// <summary>Rendering with an existing Task's id shows that Task's id and title (Spec §13.6 Title row).</summary>
-    [Fact]
-    public async Task Load_ExistingTaskId_PanelRowHoldsIconsNotTheTitle()
-    {
-        using TaskToolHarness harness = new();
-        TaskItem task = CreateTask(harness, title: "Ship the thing");
-        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-
-        var cut = RenderPanel(ctx, task.Id);
-
-        Assert.Empty(cut.FindAll(".task-detail-title-display"));
-        Assert.Single(cut.FindAll(".task-detail-copy-id"));
-        Assert.Contains("Created", cut.TextOf(".task-detail-footer-meta"), StringComparison.Ordinal);
-    }
-
     /// <summary>Editing Priority adds it to <c>pending</c> and shows the "Unsaved edits" alert with <c>role="status"</c> (Spec §13.6).</summary>
     [Fact]
     public async Task EditingPriority_AddsToPending_ShowsUnsavedEditsAlertWithStatusRole()
@@ -484,7 +469,6 @@ public sealed class TaskDetailTests
         {
             builder.OpenComponent<TaskDetail>(0);
             builder.AddAttribute(1, nameof(TaskDetail.Id), (TaskId?)id);
-            builder.AddAttribute(2, nameof(TaskDetail.Mode), TaskDetailMode.Panel);
             builder.CloseComponent();
         });
     }

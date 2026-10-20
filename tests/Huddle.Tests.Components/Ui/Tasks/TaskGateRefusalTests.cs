@@ -26,7 +26,7 @@ public sealed class TaskGateRefusalTests
         using TaskToolHarness harness = new(gates: TaskGateText.BuildGates(gateDir, TaskGateText.Process(TaskGateText.QaGate)));
         TaskItem task = CreateTask(harness, status: TaskState.Backlog);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id);
 
         await SetStatusAsync(cut, TaskState.Done);
         await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
@@ -43,7 +43,7 @@ public sealed class TaskGateRefusalTests
         using TaskToolHarness harness = new(gates: TaskGateText.BuildGates(gateDir, TaskGateText.Process(TaskGateText.QaGate)));
         TaskItem task = CreateTask(harness, status: TaskState.Backlog);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id);
         await SetStatusAsync(cut, TaskState.Done);
         await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
 
@@ -70,7 +70,6 @@ public sealed class TaskGateRefusalTests
         {
             builder.OpenComponent<TaskDetail>(0);
             builder.AddAttribute(1, nameof(TaskDetail.Draft), draft);
-            builder.AddAttribute(2, nameof(TaskDetail.Mode), TaskDetailMode.Panel);
             builder.CloseComponent();
         });
         await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
@@ -96,7 +95,7 @@ public sealed class TaskGateRefusalTests
         using TaskToolHarness harness = new(gates: TaskGateText.BuildGates(gateDir, TaskGateText.Process(TaskGateText.QaGate)));
         TaskItem task = CreateTask(harness, status: TaskState.Backlog);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id);
         await SetStatusAsync(cut, TaskState.Done);
         await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
 
@@ -117,7 +116,7 @@ public sealed class TaskGateRefusalTests
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
-        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id);
 
         Assert.Equal("Gates: " + GateId, TextOf(cut, ".task-detail-gates"));
     }
@@ -130,7 +129,7 @@ public sealed class TaskGateRefusalTests
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
-        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id);
 
         Assert.Empty(cut.FindAll(".task-detail-gates"));
     }

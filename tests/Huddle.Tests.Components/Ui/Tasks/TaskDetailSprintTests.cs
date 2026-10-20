@@ -4,7 +4,6 @@ using Bunit;
 using Bunit.Rendering;
 using MudBlazor;
 using MudBlazor.Extensions;
-using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Tools;
 using Agency.Huddle.Tests.Tasks;
@@ -27,7 +26,7 @@ public sealed class TaskDetailSprintTests
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
         IRenderedComponent<MudAutocomplete<string>> field = SprintField(cut);
 
         IEnumerable<string> all = await field.Instance.SearchFunc!("", ct)!;
@@ -44,7 +43,7 @@ public sealed class TaskDetailSprintTests
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
 
         await TypeSprintAsync(cut, "Release train");
 
@@ -61,7 +60,7 @@ public sealed class TaskDetailSprintTests
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
 
         await TypeSprintAsync(cut, "auth HARDENING");
 
@@ -76,7 +75,7 @@ public sealed class TaskDetailSprintTests
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
 
         await TypeSprintAsync(cut, "S3");
 
@@ -92,7 +91,7 @@ public sealed class TaskDetailSprintTests
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
         await TypeSprintAsync(cut, "Release train");
 
         await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
@@ -110,7 +109,7 @@ public sealed class TaskDetailSprintTests
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
         await cut.InvokeAsync(() => SprintField(cut).Instance.ValueChanged.InvokeAsync("Sprint 1"));
 
         await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
@@ -127,7 +126,7 @@ public sealed class TaskDetailSprintTests
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
         await TypeSprintAsync(cut, "Release train");
         File.Delete(harness.SprintsFilePath);
         Directory.CreateDirectory(harness.SprintsFilePath);
@@ -147,7 +146,7 @@ public sealed class TaskDetailSprintTests
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
         await TypeSprintAsync(cut, "Release train");
         await ChangePriorityAsync(cut, TaskPriority.Urgent);
         TaskResult outside = harness.Service.Update(task.Id, new TaskPatch { Priority = TaskPriority.Low }, null, TaskActors.Human(harness.Options.Value));
@@ -167,7 +166,7 @@ public sealed class TaskDetailSprintTests
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
         await TypeSprintAsync(cut, "Late sprint");
         string withLate = TwoSprints + "- S3 | Late sprint\n";
         // Written by hand a moment before Save: the store's snapshot has not seen it yet, so Create answers Existing
@@ -187,7 +186,7 @@ public sealed class TaskDetailSprintTests
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
         await TypeSprintAsync(cut, "Release train");
 
         await cut.InvokeAsync(() => FindButton(cut, "Revert").ClickAsync());
@@ -210,7 +209,7 @@ public sealed class TaskDetailSprintTests
             new TaskDraft("Holder", "Platform", null, Sprint: new SprintId(2)), TaskActors.Human(harness.Options.Value))).Task;
         TaskItem viewed = CreateTask(harness, title: "Viewed");
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, viewed.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, viewed.Id);
         Assert.Contains("Auth hardening", await SprintField(cut).Instance.SearchFunc!("", ct)!);
 
         TaskResult moved = harness.Service.Update(holder.Id, new TaskPatch { Sprint = Optional<SprintId?>.Set(null) }, null, TaskActors.Human(harness.Options.Value));
@@ -226,7 +225,7 @@ public sealed class TaskDetailSprintTests
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
         TaskItem task = harness.SeedOnDisk(TestTasks.Make(id: "PLAT-0042", sprint: new SprintId(9)));
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
 
         Assert.Equal("S9", SprintField(cut).Instance.GetState(x => x.Value));
         Assert.Equal("Not in sprints.md", cut.Find(".task-detail-sprint-missing").GetAttribute("aria-label"));
@@ -247,7 +246,7 @@ public sealed class TaskDetailSprintTests
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
         TaskItem task = harness.SeedOnDisk(TestTasks.Make(id: "PLAT-0042", sprint: new SprintId(9)));
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
         await ChangePriorityAsync(cut, TaskPriority.Urgent);
 
         await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
@@ -265,7 +264,7 @@ public sealed class TaskDetailSprintTests
         harness.Gateway.SetOnline(harness.NovaId ?? throw new InvalidOperationException("NovaId missing"));
         TaskItem task = CreateTask(harness, assignee: "Nova");
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        var cut = RenderDetail(ctx, task.Id);
 
         await cut.InvokeAsync(() => SprintField(cut).Instance.ValueChanged.InvokeAsync("Sprint 1"));
 
@@ -280,7 +279,7 @@ public sealed class TaskDetailSprintTests
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Expanded);
+        var cut = RenderDetail(ctx, task.Id);
 
         MudAutocomplete<string> field = SprintField(cut).Instance;
 

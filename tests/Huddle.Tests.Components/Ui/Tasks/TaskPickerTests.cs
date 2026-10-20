@@ -63,7 +63,7 @@ public sealed class TaskPickerTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id);
 
         await SetStatusAsync(cut, TaskState.Duplicate);
 
@@ -79,7 +79,7 @@ public sealed class TaskPickerTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id);
 
         IReadOnlyList<IRenderedComponent<TaskPicker>> pickers = cut.FindComponents<TaskPicker>();
 
@@ -95,7 +95,7 @@ public sealed class TaskPickerTests
         TaskItem task = CreateTask(harness);
         TaskItem other = CreateTask(harness, "Other");
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id);
         await SetStatusAsync(cut, TaskState.Duplicate);
         IRenderedComponent<TaskPicker> picker = cut.FindComponent<TaskPicker>();
 
@@ -115,7 +115,6 @@ public sealed class TaskPickerTests
         IRenderedComponent<ConflictRow> row = ctx.Render<ConflictRow>(p =>
         {
             p.Add(r => r.Field, TaskField.Priority);
-            p.Add(r => r.Stacked, true);
         });
 
         Assert.Equal("priority: keep mine or take theirs", row.Find("[role='radiogroup'], .mud-radio-group").GetAttribute("aria-label"));

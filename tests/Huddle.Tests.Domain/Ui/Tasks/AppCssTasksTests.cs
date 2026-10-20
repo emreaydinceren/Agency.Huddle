@@ -175,21 +175,6 @@ public sealed class AppCssTasksTests
         Assert.Contains("display: flex", rule, StringComparison.Ordinal);
     }
 
-    /// <summary>Manual test TASKS-07 finding F17: the Panel's stacked conflict row is scoped to <c>.task-detail-conflict-stacked</c> and laid out as a column, so it never reaches the Expanded layout's table row.</summary>
-    [Fact]
-    public void AppCss_DeclaresConflictStackedRow_ScopedAndColumnLaidOut()
-    {
-        string text = CssText.AppCss(CssNewlines.AsIs);
-
-        int classIndex = text.IndexOf(".task-detail-conflict-stacked .task-detail-conflict-row", StringComparison.Ordinal);
-        Assert.True(classIndex >= 0, "Expected a scoped .task-detail-conflict-stacked .task-detail-conflict-row rule in app.css.");
-        int braceEnd = text.IndexOf('}', classIndex);
-        Assert.True(braceEnd > classIndex, "Expected the rule to be closed.");
-        string rule = text[classIndex..(braceEnd + 1)];
-        // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("flex-direction: column", rule, StringComparison.Ordinal);
-    }
-
     /// <summary>The List's header cells are 12px/600 secondary, its rows 36px (32px Dense) and its fixed columns 110, 120 and 40px (S5).</summary>
     [Fact]
     public void AppCss_ListHeaderRowsAndColumns_FollowTheSpec()

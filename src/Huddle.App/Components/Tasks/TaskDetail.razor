@@ -120,40 +120,19 @@ else if (this.loaded is { } task)
             @TaskDetail.ConflictBannerText(activeConflict, conflictFieldList)
         </MudAlert>
 
-        @if (this.Mode == TaskDetailMode.Panel)
-        {
-            @* Manual test TASKS-07 finding F17: at Panel width (~300 px) the table's four columns
-               (Field, Theirs, Yours, radios) overflow horizontally and push the radios off-screen.
-               Each row stacks instead - field label, then Theirs/Yours, then the radios - so nothing
-               needs horizontal room. Expanded keeps the table (plenty of width there). *@
-            <div class="task-detail-conflict-stacked">
+        <MudSimpleTable Dense="true" Class="task-detail-conflict-table">
+            <tbody>
                 @foreach (TaskField conflictField in activeConflict.Fields)
                 {
                     FieldChange? change = conflictDiff.FirstOrDefault(c => c.Field == conflictField);
-                    <ConflictRow Field="conflictField" Stacked="true" IsDescription="@(conflictField == TaskField.Description)"
+                    <ConflictRow Field="conflictField" IsDescription="@(conflictField == TaskField.Description)"
                                  TheirsText="@(conflictField == TaskField.Description ? activeConflict.Current.Description : change?.Old)"
                                  YoursText="@(conflictField == TaskField.Description ? effective.Description : change?.New)"
                                  Choice="@(this.conflictChoices.TryGetValue(conflictField, out ConflictChoice chosenChoice) ? chosenChoice : (ConflictChoice?)null)"
                                  ChoiceChanged="@(choice => this.ResolveConflict(conflictField, choice))" />
                 }
-            </div>
-        }
-        else
-        {
-            <MudSimpleTable Dense="true" Class="task-detail-conflict-table">
-                <tbody>
-                    @foreach (TaskField conflictField in activeConflict.Fields)
-                    {
-                        FieldChange? change = conflictDiff.FirstOrDefault(c => c.Field == conflictField);
-                        <ConflictRow Field="conflictField" Stacked="false" IsDescription="@(conflictField == TaskField.Description)"
-                                     TheirsText="@(conflictField == TaskField.Description ? activeConflict.Current.Description : change?.Old)"
-                                     YoursText="@(conflictField == TaskField.Description ? effective.Description : change?.New)"
-                                     Choice="@(this.conflictChoices.TryGetValue(conflictField, out ConflictChoice chosenChoice) ? chosenChoice : (ConflictChoice?)null)"
-                                     ChoiceChanged="@(choice => this.ResolveConflict(conflictField, choice))" />
-                    }
-                </tbody>
-            </MudSimpleTable>
-        }
+            </tbody>
+        </MudSimpleTable>
     }
 
     @if (budgetExhausted)
@@ -189,17 +168,8 @@ else if (this.loaded is { } task)
                 }
                 else
                 {
-                    @* The Panel's drawer header already shows the id line and the name, so the Panel row is the icons alone
-                       (the title text returns in the edit field); Expanded sits in a dialog titled "Id · Title" and shows the name. *@
-                    @if (this.Mode == TaskDetailMode.Panel && this.Id is not null)
-                    {
-                        <span class="task-detail-title-spacer"></span>
-                    }
-                    else
-                    {
-                        @* A Task made from a Draft keeps its name here: the drawer header still reads "New task". *@
-                        <span class="task-detail-title-display">@if (this.Mode == TaskDetailMode.Panel && !this.createMode){<span class="task-id">@effective.Id.ToString()</span>@(": ")}@effective.Title</span>
-                    }
+                    @* The page header shows the saved title as its h1; this row shows the Task's name, with the pencil that edits it. *@
+                    <span class="task-detail-title-display">@effective.Title</span>
                     <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="Edit title" OnClick="this.BeginEditTitle" />
                     @if (!this.createMode)
                     {
@@ -527,18 +497,10 @@ else if (this.loaded is { } task)
             }
         </text>;
 
-    @if (this.Mode == TaskDetailMode.Expanded)
-    {
-        <MudGrid Class="task-detail-grid">
-            <MudItem xs="12" md="7" Class="task-detail-col-fields">@fieldsContent</MudItem>
-            <MudItem xs="12" md="5" Class="task-detail-col-side">@sideContent</MudItem>
-        </MudGrid>
-    }
-    else
-    {
-        @fieldsContent
-        @sideContent
-    }
+    <MudGrid Class="task-detail-grid">
+        <MudItem xs="12" md="7" Class="task-detail-col-fields">@fieldsContent</MudItem>
+        <MudItem xs="12" md="5" Class="task-detail-col-side">@sideContent</MudItem>
+    </MudGrid>
 
     @if (!this.createMode)
     {
@@ -653,10 +615,6 @@ else if (this.loaded is { } task)
     /// <summary>A draft for create or copy mode, used only when <see cref="Id"/> is <see langword="null"/> (Spec §13.6, corrections-B7 "14.4" item 2). The edit page passes only one of <see cref="Id"/> or this, never both.</summary>
     [Parameter]
     public TaskDraft? Draft { get; set; }
-
-    /// <summary>Whether this instance is the Panel or the Expanded dialog layout. The two share every field's logic; only the Team/Project combining (Spec §13.6) differs so far.</summary>
-    [Parameter]
-    public TaskDetailMode Mode { get; set; }
 
     /// <summary>
     /// True when the host draws Cancel and Save itself, in <see cref="ResizableEndDrawer"/>'s sticky footer (the Tasks page, audit B4k), so this component draws

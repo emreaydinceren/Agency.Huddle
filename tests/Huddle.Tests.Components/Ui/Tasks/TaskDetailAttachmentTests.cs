@@ -58,7 +58,6 @@ public sealed class TaskDetailAttachmentTests
         {
             builder.OpenComponent<TaskDetail>(0);
             builder.AddAttribute(1, nameof(TaskDetail.Draft), new TaskDraft("T", "Platform", null));
-            builder.AddAttribute(2, nameof(TaskDetail.Mode), TaskDetailMode.Panel);
             builder.CloseComponent();
         });
 
@@ -358,7 +357,6 @@ public sealed class TaskDetailAttachmentTests
         {
             builder.OpenComponent<TaskDetail>(0);
             builder.AddAttribute(1, nameof(TaskDetail.Id), (TaskId?)id);
-            builder.AddAttribute(2, nameof(TaskDetail.Mode), TaskDetailMode.Panel);
             builder.CloseComponent();
         });
     }

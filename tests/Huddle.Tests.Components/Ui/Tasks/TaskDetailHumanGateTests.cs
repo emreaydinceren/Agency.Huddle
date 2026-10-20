@@ -67,7 +67,7 @@ public sealed class TaskDetailHumanGateTests
     private static IRenderedComponent<ContainerFragment> RenderOver(MudBunitContext ctx, Proof proof, TaskId id)
     {
         ctx.Services.AddSingleton<IProofSource>(new StubProofSource(proof));
-        return RenderDetail(ctx, id, TaskDetailMode.Panel);
+        return RenderDetail(ctx, id);
     }
 
     /// <summary>The "Requires your acceptance" switch of the Human gate section.</summary>

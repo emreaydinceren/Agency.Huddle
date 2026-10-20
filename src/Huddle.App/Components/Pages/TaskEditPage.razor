@@ -77,7 +77,7 @@ else
 
         @* K3: the editor. The container query of D-6 lives on this div. Keyed, so a new Task that has just been saved loads as the saved Task. *@
         <div class="task-edit-page-editor">
-            <TaskDetail @ref="this.detail" @key="this.DetailKey" Id="this.editing" Draft="this.draft" Mode="TaskDetailMode.Expanded" ExternalFooter="true"
+            <TaskDetail @ref="this.detail" @key="this.DetailKey" Id="this.editing" Draft="this.draft" ExternalFooter="true"
                         OnClose="this.CloseTab" OnCreated="this.OnCreated" HasPendingChanged="this.OnHasPendingChanged" FooterStateChanged="this.OnFooterStateChanged" />
         </div>
     </MudContainer>

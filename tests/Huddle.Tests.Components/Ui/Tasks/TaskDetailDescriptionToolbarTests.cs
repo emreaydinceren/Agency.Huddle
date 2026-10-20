@@ -19,16 +19,14 @@ public sealed class TaskDetailDescriptionToolbarTests
         Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Described", "Platform", null, Description: "Some text."), TaskActors.Human(harness.Options.Value))).Task;
 
     /// <summary>In Edit the Description has the toolbar with six buttons and no <c>[[ ]]</c> button, ahead of the field.</summary>
-    [Theory]
-    [InlineData(TaskDetailMode.Panel)]
-    [InlineData(TaskDetailMode.Expanded)]
-    public async Task Edit_ShowsTheToolbarWithoutTheWikilinkButton(TaskDetailMode mode)
+    [Fact]
+    public async Task Edit_ShowsTheToolbarWithoutTheWikilinkButton()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
-        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id, mode);
+        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id);
 
         Assert.Equal(
             [
@@ -53,7 +51,7 @@ public sealed class TaskDetailDescriptionToolbarTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id);
 
         await cut.InvokeAsync(() => TaskDetailFieldsTestSupport.FindButton(cut, "Preview").ClickAsync());
 
@@ -96,7 +94,7 @@ public sealed class TaskDetailDescriptionToolbarTests
         BunitJSModuleInterop handle = module.SetupModule("attachIn", _ => true);
         handle.SetupVoid("dispose", _ => true).SetVoidResult();
 
-        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id);
 
         cut.WaitForAssertion(() => Assert.Single(module.Invocations["attachIn"]));
     }
