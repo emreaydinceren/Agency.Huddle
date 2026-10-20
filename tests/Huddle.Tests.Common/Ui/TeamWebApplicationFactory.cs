@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Pipes;
+using Agency.Huddle.Tests.Helpers;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Tasks;
 
@@ -98,6 +100,12 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
     public FakeModelCatalog FakeModelCatalog { get; } = new();
 
     /// <summary>
+    /// The <see cref="IHelperProcessRunner"/> this factory wires in place of the real one: the real runner spawns an
+    /// adapter process for every Helper call, and no test may.
+    /// </summary>
+    internal FakeHelperProcessRunner FakeHelperProcessRunner { get; } = new();
+
+    /// <summary>
     /// The <see cref="IAgentGateway"/> this factory wires in place of the real <c>AgentGateway</c>.
     /// Both default to every Agent offline, so a test that never touches this behaves exactly as one
     /// that never knew this fake existed; a test can call <see cref="FakeAgentGateway.SetOnline"/> to
@@ -151,6 +159,7 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
         {
             services.AddSingleton<IModelCatalog>(this.FakeModelCatalog);
             services.AddSingleton<IAgentGateway>(this.FakeAgentGateway);
+            services.AddSingleton<IHelperProcessRunner>(this.FakeHelperProcessRunner);
         });
     }
 

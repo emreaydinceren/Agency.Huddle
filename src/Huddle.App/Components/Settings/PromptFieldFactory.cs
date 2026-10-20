@@ -21,6 +21,7 @@ internal static class PromptFieldFactory
     private const string PromptPrefix = "prompt.";
     private const string InstallSkillPackPrefix = "installSkillPack.";
     private const string SkillPromptPrefix = "skillPrompt.";
+    private const string HelperPrefix = "helper.";
 
     // RowsFor's clamp: 2 so a one-line prompt still reads as a text box rather than a slot, 14 so the
     // longest defaults (getHelp.rooms, systemPrompt.tools) cannot make their own field dominate the
@@ -41,6 +42,7 @@ internal static class PromptFieldFactory
         (PromptPrefix, "Cadence"),
         (InstallSkillPackPrefix, "Skill Packs: install file"),
         (SkillPromptPrefix, "Skill Packs: prompts you paste"),
+        (HelperPrefix, "Helpers"),
     ];
 
     /// <summary>
