@@ -575,9 +575,38 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   enter, once its **Proof** is complete. A Task in it, not yet accepted, is listed on
   the card and the `/needs-you` page; it leaves only by a decision or a status change
   (ADR-0061). The status and the card share the name on purpose.
-: *Avoid*: inbox, notifications, unread, alerts, pending. **Unread** in
-  particular is a different idea: Needs You is about who is blocked on the Human,
-  not what the Human has read.
+: *Avoid*: inbox, notifications (a **Notification** is a stored **Feed item**,
+  ADR-0063), unread, alerts, pending. **Unread** in particular is a different
+  idea: Needs You is about who is blocked on the Human, not what the Human has read.
+
+**Feed**
+: The stored history of what Teammates and Huddle did: one row per event, posted by
+  the component that knows it, never worked out from other events. Shown as the
+  Notifications panel and the Feed Tab (`/feed`). Beside **Needs You**, not instead
+  of it. See
+  [ADR-0063](../adr/0063-the-feed-is-a-stored-history-that-each-domain-component-posts-to.md).
+: *Avoid*: timeline, activity log, inbox, stream.
+
+**Feed item**
+: One row of the Feed: who, when, what, and the stable key of its target (a Task id,
+  a Room id, a Library path). Never holds Message text.
+: *Avoid*: post (a Message's word), event, entry (a History or Change log line).
+
+**Notification**
+: A Feed item its sender marked for the Human (`notify`). It is shown in the
+  Notifications panel, is counted until seen, and can be dismissed. It is resolved,
+  dimmed and uncounted when its sender says the condition cleared.
+: *Avoid*: alert, unread (the count is **unseen**), Needs You (the live list).
+
+**Activity**
+: A Feed item that is not a Notification: shown only in the Feed Tab, and deleted
+  after `Team:Feed:ActivityRetentionDays`.
+: *Avoid*: Change log (a Task's own history), History (a document's).
+
+**Feed publisher**
+: `IFeedPublisher`, the one interface producers call: `Post` and `Resolve`, both
+  enqueue-only and never throwing.
+: *Avoid*: notifier (`IRequestNotifier` wakes Personas), event bus.
 
 **Greeting**
 : The first Message the built-in Chief of Staff posts to a new Human, unprompted,
@@ -609,6 +638,28 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   passes for `agency-acp`. Paid checks proving this live have not yet been run —
   see [Known limits](known-limits.md).
 : *Avoid*: conversation, thread, agent session, instance.
+
+**Helper**
+: A background agent that makes one stateless judgement about an event and answers
+  in JSON, which Huddle parses into a **Verdict** and applies through the ordinary
+  domain service. It has no tools, no Room, no Persona and no Room Budget, and posts
+  no Messages. In code, `HelperAgent` (`IHelperAgent<TInput, TVerdict>`). If it
+  talks, keeps memory or works in a Room, it is a Teammate instead. Each Helper has
+  a daily call cap; reaching it pauses that Helper until the Human presses Continue.
+  See [ADR-0064](../adr/0064-a-helper-judges-an-event-and-the-app-applies-its-verdict.md).
+: Capitalised, it means only this. The lowercase "helper" (a code utility class,
+  MudBlazor helper text) is unrelated.
+: *Avoid*: special agent, bot, assistant, background Teammate.
+
+**Verdict**
+: A Helper's parsed answer, a typed record such as `NeedsHumanVerdict(NeedsHuman,
+  Reason)`. Huddle applies it; the Helper never acts.
+
+**Needs Human Helper**
+: The first Helper. It reads each Task a Teammate creates or rewrites and turns its
+  Human gate on when the work leaves the Team or can't be undone, writing as
+  `Needs Human (Helper)` with its reason in the Change log. It never turns the gate
+  off, and never judges a Task again once the Human has turned that Task's gate off.
 
 ## Library
 
