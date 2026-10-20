@@ -1,0 +1,24 @@
+.feed-doc-where {
+    font-family: var(--mud-typography-code-family, ui-monospace, monospace);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.feed-doc-root {
+    font-weight: 600;
+}
+
+.feed-doc-entry {
+    padding: 4px 0;
+    font-size: 12px;
+}
+
+.feed-doc-actor {
+    font-weight: 600;
+}
+
+.feed-doc-kind,
+.feed-doc-time,
+.feed-doc-summary {
+    color: var(--mud-palette-text-secondary);
+}

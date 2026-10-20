@@ -1,0 +1,62 @@
+@*
+    The read-only preview of a Library document inside an expanded Feed card (Feed spec 6.13): its Library root and path, and its last three
+    History entries as Document History shows them (ADR-0060). A document that is gone says so. Nothing is written.
+*@
+@using Agency.Huddle.App.DocHistory
+@using Agency.Huddle.App.Library
+@inject LibraryPathResolver LibraryResolver
+@inject DocHistoryStore History
+@inject TimeProvider Clock
+
+@if (this.path is null)
+{
+    <div class="feed-preview feed-preview-deleted">This document was deleted</div>
+}
+else
+{
+    <div class="feed-preview feed-doc-preview">
+        <div class="feed-preview-head">
+            <span class="feed-preview-tile" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" /></span>
+            <span class="feed-doc-where"><span class="feed-doc-root">@this.path.Root.DisplayName</span> <span class="feed-doc-path">@this.path.RelativePath</span></span>
+        </div>
+        @foreach (DocHistoryEntry entry in this.entries)
+        {
+            <div class="feed-doc-entry">
+                <span class="feed-doc-actor">@entry.Actor</span>
+                <span class="feed-doc-kind">@DocHistoryView.KindLabel(entry)</span>
+                <span class="feed-doc-time">@FeedTime.Age(this.Clock.GetUtcNow(), entry.At)</span>
+                @if (entry.Summary.Length > 0)
+                {
+                    <div class="feed-doc-summary">@entry.Summary</div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The most History entries shown.</summary>
+    private const int Limit = 3;
+
+    private LibraryPath? path;
+    private IReadOnlyList<DocHistoryEntry> entries = [];
+
+    /// <summary>The document's absolute path.</summary>
+    [Parameter, EditorRequired]
+    public required string Path { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        if (this.LibraryResolver.TryResolveAbsolute(this.Path, out LibraryPath? resolved) && System.IO.File.Exists(resolved.FullPath))
+        {
+            this.path = resolved;
+            this.entries = this.History.Enabled ? [.. this.History.Read(resolved).Reverse().Take(Limit)] : [];
+        }
+        else
+        {
+            this.path = null;
+            this.entries = [];
+        }
+    }
+}

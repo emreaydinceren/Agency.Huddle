@@ -1,0 +1,27 @@
+.feed-related {
+    margin-top: 12px;
+}
+
+.feed-related-caption {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+    margin-bottom: 2px;
+}
+
+.feed-related-row {
+    position: relative;
+}
+
+.feed-related-own {
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
+}
+
+.feed-related-tag {
+    position: absolute;
+    right: 8px;
+    bottom: 4px;
+    font-size: 11px;
+    color: var(--mud-palette-primary);
+}

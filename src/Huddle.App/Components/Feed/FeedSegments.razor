@@ -1,0 +1,64 @@
+@*
+    The words and reference chips of a Feed item's summary (Feed spec 6.12), after the actor's Name: text, bold names, and the Task, Room
+    and Document chips. The Feed row and the Feed card both draw their summary through it, so a chip looks and opens the same in both. A chip
+    opens its own target and stops the click, so the row or card around it does not also open its target.
+*@
+@using Agency.Huddle.App.Feed
+@using Agency.Huddle.App.Library
+@inject ITaskReferenceResolver TaskReferences
+@inject LibraryPathResolver LibraryResolver
+
+<span class="feed-segments">
+    @foreach (FeedSegment segment in this.Segments)
+    {
+        @this.SegmentContent(segment)
+    }
+</span>
+
+@code {
+    /// <summary>The item whose summary segments are drawn.</summary>
+    [Parameter, EditorRequired]
+    public required FeedItem Item { get; set; }
+
+    private IReadOnlyList<FeedSegment> Segments => FeedSummary.Of(this.Item).Segments;
+
+    private RenderFragment SegmentContent(FeedSegment segment) => segment.Kind switch
+    {
+        FeedSegmentKind.Strong => @<strong>@segment.Text</strong>,
+        FeedSegmentKind.Task => this.TaskChip(segment),
+        FeedSegmentKind.Room => this.LinkChip("feed-chip-room", "/rooms/" + segment.TargetId, segment.Text, Icons.Material.Filled.ChatBubbleOutline),
+        FeedSegmentKind.Document => this.DocumentChip(segment),
+        _ => @<text>@segment.Text</text>,
+    };
+
+    private RenderFragment TaskChip(FeedSegment segment) => @<span @onclick:stopPropagation="true">
+        <NavTabLink Href="@("/tasks/item/" + segment.TargetId)" TabTitle="@segment.TargetId" Match="NavLinkMatch.All" Class="feed-chip feed-chip-task" title="@segment.Tooltip">
+            @if (this.TaskStateOf(segment.TargetId) is { } state)
+            {
+                <TaskStateDot State="state" />
+                @(" ")
+            }
+            <span class="feed-chip-id">#@segment.TargetId</span>
+            @(" ")
+            <span class="feed-chip-title">@segment.Text</span>
+        </NavTabLink>
+    </span>;
+
+    private RenderFragment DocumentChip(FeedSegment segment)
+    {
+        string? href = FeedTarget.DocumentAddress(this.LibraryResolver, segment.TargetId);
+        return href is null
+            ? @<span class="feed-chip feed-chip-document"><MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" /><span class="feed-chip-path">@segment.Text</span></span>
+            : this.LinkChip("feed-chip-document", href, segment.Text, Icons.Material.Filled.Description, mono: true);
+    }
+
+    private RenderFragment LinkChip(string cssClass, string href, string label, string icon, bool mono = false) => @<span @onclick:stopPropagation="true">
+        <NavTabLink Href="@href" TabTitle="@label" Match="NavLinkMatch.All" Class="@("feed-chip " + cssClass)">
+            <MudIcon Icon="@icon" Size="Size.Small" />
+            <span class="@(mono ? "feed-chip-path" : "feed-chip-label")">@label</span>
+        </NavTabLink>
+    </span>;
+
+    private TaskState? TaskStateOf(string? id) =>
+        TaskId.TryParse(id, out TaskId taskId) ? this.TaskReferences.Resolve(taskId)?.Status : null;
+}

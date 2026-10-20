@@ -1,0 +1,263 @@
+/* One card of the Feed Tab (Feed spec 6.13). Colours come from the theme: Edge is --ink-edge, Quiet ink the secondary text, Accent the primary. */
+.feed-card {
+    position: relative;
+    margin: 0 0 8px;
+    padding: 12px 12px 12px 16px;
+    overflow: hidden;
+    border: 1px solid var(--ink-edge);
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.4;
+    background-color: var(--mud-palette-surface);
+}
+
+.feed-card-bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 3px;
+    background-color: var(--mud-palette-primary);
+}
+
+.feed-card-resolved .feed-card-avatar,
+.feed-card-resolved .feed-card-summary {
+    opacity: 0.7;
+}
+
+.feed-card-top {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    column-gap: 12px;
+    align-items: start;
+}
+
+.feed-card-avatar {
+    position: relative;
+    width: 40px;
+    height: 40px;
+}
+
+.feed-card-avatar ::deep .mud-avatar,
+.feed-card-mark {
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
+}
+
+.feed-card-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid var(--ink-edge);
+    color: var(--mud-palette-text-secondary);
+}
+
+.feed-card-badge {
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--mud-palette-surface);
+    box-sizing: content-box;
+    color: var(--mud-palette-primary-text);
+    background-color: var(--mud-palette-primary);
+}
+
+.feed-card-badge ::deep .mud-icon-root {
+    width: 12px;
+    height: 12px;
+}
+
+.feed-badge-gates,
+.feed-badge-needsyou {
+    color: var(--mud-palette-warning-text);
+    background-color: var(--mud-palette-warning);
+}
+
+.feed-badge-documents {
+    color: var(--mud-palette-info-text);
+    background-color: var(--mud-palette-info);
+}
+
+.feed-badge-rooms {
+    color: var(--mud-palette-secondary-text);
+    background-color: var(--mud-palette-secondary);
+}
+
+.feed-card-main {
+    min-width: 0;
+    cursor: pointer;
+}
+
+.feed-clamp-3 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+}
+
+.feed-card-actor,
+.feed-card-purpose {
+    font-weight: 600;
+}
+
+.feed-card-more {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--mud-palette-text-secondary);
+    cursor: pointer;
+}
+
+.feed-card-more:hover {
+    text-decoration: underline;
+}
+
+.feed-card-meta {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.feed-card-meta ::deep .feed-meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: auto;
+    min-height: 0;
+    padding: 0;
+    color: inherit;
+}
+
+.feed-card-meta ::deep .feed-meta-chip .mud-icon-root {
+    width: 12px;
+    height: 12px;
+}
+
+.feed-team-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.feed-team-monogram {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    font-size: 8px;
+    font-weight: 600;
+    color: var(--mud-palette-primary-text);
+    background-color: var(--mud-palette-primary);
+}
+
+.feed-card-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.feed-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 8px;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.feed-pill ::deep .mud-icon-root {
+    width: 14px;
+    height: 14px;
+}
+
+.feed-pill-waiting {
+    color: var(--mud-palette-warning-darken, var(--mud-palette-warning));
+}
+
+.feed-pill-assigned {
+    color: var(--mud-palette-info-darken, var(--mud-palette-info));
+}
+
+.feed-pill-done {
+    border-color: transparent;
+    padding-left: 0;
+    color: var(--mud-palette-text-secondary);
+}
+
+.feed-card-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.feed-card-age {
+    font-size: 12px;
+    white-space: nowrap;
+    color: var(--mud-palette-text-secondary);
+}
+
+.feed-card-age-unseen {
+    color: var(--mud-palette-primary);
+}
+
+.feed-card-chevron {
+    display: inline-flex;
+    padding: 2px;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--mud-palette-text-secondary);
+    cursor: pointer;
+}
+
+.feed-card-chevron:hover {
+    background-color: color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent);
+}
+
+.feed-card-members {
+    margin-top: 8px;
+}
+
+.feed-card-edge {
+    margin: 12px 0;
+    border: 0;
+    border-top: 1px solid var(--ink-edge);
+}
+
+.feed-card-caption {
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
+.feed-card-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.feed-card ::deep .feed-preview-deleted {
+    padding: 12px;
+    border: 1px dashed var(--ink-edge);
+    border-radius: var(--mud-default-borderradius);
+    font-size: 13px;
+    color: var(--mud-palette-text-secondary);
+}

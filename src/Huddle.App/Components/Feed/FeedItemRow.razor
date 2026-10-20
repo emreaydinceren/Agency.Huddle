@@ -10,7 +10,6 @@
 @inject TimeProvider Clock
 @inject TabService Tabs
 @inject NavigationManager Navigation
-@inject ITaskReferenceResolver TaskReferences
 @inject LibraryPathResolver LibraryResolver
 
 @if (this.expanded)
@@ -42,10 +41,7 @@ else
                         @(" ")
                     }
 
-                    @foreach (FeedSegment segment in this.Line.Segments)
-                    {
-                        @this.SegmentContent(segment)
-                    }
+                    <FeedSegments Item="this.Group.Lead" />
 
                     @if (this.Line.Context is { Length: > 0 } context)
                     {
@@ -182,51 +178,6 @@ else
         }
     };
 
-    private RenderFragment SegmentContent(FeedSegment segment) => segment.Kind switch
-    {
-        FeedSegmentKind.Strong => @<strong>@segment.Text</strong>,
-        FeedSegmentKind.Task => this.TaskChip(segment),
-        FeedSegmentKind.Room => this.LinkChip("feed-chip-room", "/rooms/" + segment.TargetId, segment.Text, Icons.Material.Filled.ChatBubbleOutline),
-        FeedSegmentKind.Document => this.DocumentChip(segment),
-        _ => @<text>@segment.Text</text>,
-    };
-
-    private RenderFragment TaskChip(FeedSegment segment) => @<span @onclick:stopPropagation="true">
-        <NavTabLink Href="@("/tasks/item/" + segment.TargetId)" TabTitle="@segment.TargetId" Match="NavLinkMatch.All" Class="feed-chip feed-chip-task" title="@segment.Tooltip">
-            @if (this.TaskStateOf(segment.TargetId) is { } state)
-            {
-                <TaskStateDot State="state" />
-                @(" ")
-            }
-            <span class="feed-chip-id">#@segment.TargetId</span>
-            @(" ")
-            <span class="feed-chip-title">@segment.Text</span>
-        </NavTabLink>
-    </span>;
-
-    private RenderFragment DocumentChip(FeedSegment segment)
-    {
-        string? href = this.DocumentAddress(segment.TargetId);
-        return href is null
-            ? @<span class="feed-chip feed-chip-document"><MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" /><span class="feed-chip-path">@segment.Text</span></span>
-            : this.LinkChip("feed-chip-document", href, segment.Text, Icons.Material.Filled.Description, mono: true);
-    }
-
-    private RenderFragment LinkChip(string cssClass, string href, string label, string icon, bool mono = false) => @<span @onclick:stopPropagation="true">
-        <NavTabLink Href="@href" TabTitle="@label" Match="NavLinkMatch.All" Class="@("feed-chip " + cssClass)">
-            <MudIcon Icon="@icon" Size="Size.Small" />
-            <span class="@(mono ? "feed-chip-path" : "feed-chip-label")">@label</span>
-        </NavTabLink>
-    </span>;
-
-    private TaskState? TaskStateOf(string? id) =>
-        TaskId.TryParse(id, out TaskId taskId) ? this.TaskReferences.Resolve(taskId)?.Status : null;
-
-    private string? DocumentAddress(string? absolutePath) =>
-        absolutePath is not null && this.LibraryResolver.TryResolveAbsolute(absolutePath, out LibraryPath? path)
-            ? LibraryLinkQuery.BuildPageUri(path)
-            : null;
-
     /// <summary>The address the row opens: the first reference chip of the lead's line, or <see langword="null"/> when it has none.</summary>
     private string? TargetAddress()
     {
@@ -235,7 +186,7 @@ else
         {
             FeedSegmentKind.Task => "/tasks/item/" + reference.TargetId,
             FeedSegmentKind.Room => "/rooms/" + reference.TargetId,
-            FeedSegmentKind.Document => this.DocumentAddress(reference.TargetId),
+            FeedSegmentKind.Document => FeedTarget.DocumentAddress(this.LibraryResolver, reference.TargetId),
             _ => null,
         };
     }

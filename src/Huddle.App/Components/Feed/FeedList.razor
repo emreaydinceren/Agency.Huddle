@@ -7,7 +7,7 @@
 @inject TimeProvider Clock
 @inject IJSRuntime Js
 
-<div class="feed-list" @ref="this.root">
+<div class="feed-list" @ref="this.root" @onkeydown="this.OnKeyDown">
     @if (this.pending.Count > 0)
     {
         <button type="button" class="feed-new-pill" @onclick="this.ShowPendingAsync">@this.PillText</button>
@@ -26,7 +26,15 @@
             </div>
             @foreach (FeedGroup group in day.Groups)
             {
-                <FeedItemRow @key="group.Lead.Id" Group="group" OnDismiss="this.OnDismiss" OnTeammate="this.OnTeammate" />
+                @if (this.Mode == FeedListMode.Cards)
+                {
+                    <FeedCard @key="group.Lead.Id" Group="group" TabSeenUpTo="this.TabSeenUpTo"
+                              Expanded="this.expandedId == group.Lead.Id" OnToggle="@(() => this.Toggle(group.Lead.Id))" />
+                }
+                else
+                {
+                    <FeedItemRow @key="group.Lead.Id" Group="group" OnDismiss="this.OnDismiss" OnTeammate="this.OnTeammate" />
+                }
             }
         </div>
     }
@@ -36,6 +44,7 @@
     private readonly List<FeedItem> inserted = [];
     private readonly List<FeedItem> pending = [];
     private ElementReference root;
+    private long? expandedId;
     private IReadOnlyList<Day> days = [];
 
     /// <summary>The items to draw, newest first.</summary>
@@ -49,6 +58,14 @@
     /// <summary>Passed to every row: called with a Teammate's Name when its avatar is clicked.</summary>
     [Parameter]
     public EventCallback<string> OnTeammate { get; set; }
+
+    /// <summary>Whether each group is a compact row (the Right sidebar panel) or an expandable card (the Feed Tab).</summary>
+    [Parameter]
+    public FeedListMode Mode { get; set; } = FeedListMode.Rows;
+
+    /// <summary>In <see cref="FeedListMode.Cards"/>, the Feed Tab's seen mark: a card whose item is above it gets the unseen bar.</summary>
+    [Parameter]
+    public long TabSeenUpTo { get; set; }
 
     private string PillText => this.pending.Count == 1 ? "↑ 1 new item" : $"↑ {this.pending.Count} new items";
 
@@ -83,6 +100,18 @@
 
         this.Rebuild();
         this.StateHasChanged();
+    }
+
+    /// <summary>Expands the card led by item <paramref name="id"/>, collapsing any other, or collapses it when it is the open one.</summary>
+    private void Toggle(long id) => this.expandedId = this.expandedId == id ? null : id;
+
+    /// <summary>Escape collapses the expanded card.</summary>
+    private void OnKeyDown(KeyboardEventArgs args)
+    {
+        if (string.Equals(args.Key, "Escape", StringComparison.Ordinal))
+        {
+            this.expandedId = null;
+        }
     }
 
     private bool Knows(long id) =>

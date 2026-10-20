@@ -1,0 +1,38 @@
+@*
+    "In the Feed" of an expanded Feed card (Feed spec 6.13): up to five compact rows about the card's target, and for a Task about its origin
+    Room and the Library files it links, newest first. The card's own item is tagged "This item". It only reads the store.
+*@
+@using Agency.Huddle.App.Feed
+@inject FeedStore Store
+
+<div class="feed-related">
+    <div class="feed-related-caption">In the Feed</div>
+    @foreach (FeedItem related in this.items)
+    {
+        <div class="@(related.Id == this.Item.Id ? "feed-related-row feed-related-own" : "feed-related-row")" @key="related.Id">
+            <FeedItemRow Group="new FeedGroup([related])" />
+            @if (related.Id == this.Item.Id)
+            {
+                <span class="feed-related-tag">This item</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The most related items shown.</summary>
+    private const int Limit = 5;
+
+    private IReadOnlyList<FeedItem> items = [];
+
+    /// <summary>The card's own item.</summary>
+    [Parameter, EditorRequired]
+    public required FeedItem Item { get; set; }
+
+    /// <summary>More target keys to include: a Task's origin Room and the files it links.</summary>
+    [Parameter]
+    public IReadOnlyList<string> ExtraTargets { get; set; } = [];
+
+    /// <inheritdoc />
+    protected override void OnParametersSet() => this.items = this.Store.Related(this.Item, this.ExtraTargets, Limit);
+}
