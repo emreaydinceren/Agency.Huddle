@@ -1,0 +1,112 @@
+@*
+    The Right sidebar's Linked documents panel for a Task open in its edit page (docs/Huddle.TaskReadView-Specifications.md, D-8):
+    one row per Library file the saved Description links to, found the way the Description preview finds them
+    (LibraryPathPatterns, then ILibraryReferenceResolver). A link to a file that is gone is a row in Quiet ink, "Not found".
+    Not registered while the Library is off.
+*@
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Sidebar
+@using Agency.Huddle.App.Tasks
+@implements IDisposable
+@inject TaskStore Store
+@inject TaskEvents TaskEvents
+@inject ILibraryReferenceResolver LibraryResolver
+
+@if (this.rows.Count > 0)
+{
+    @foreach (DocumentRow row in this.rows)
+    {
+        <div class="sidebar-row task-documents-row" title="@row.Folder">
+            <MudIcon Icon="@Icons.Material.Outlined.InsertDriveFile" Size="Size.Small" />
+            @if (row.Exists)
+            {
+                <MudLink Typo="Typo.body2" Color="Color.Inherit" Underline="Underline.None" Class="sidebar-row-text" Href="@row.Href" title="@row.Folder">@row.Name</MudLink>
+            }
+            else
+            {
+                <span class="sidebar-row-text sidebar-row-quiet mud-text-secondary">@row.Name</span>
+                <span class="sidebar-row-meta">Not found</span>
+            }
+        </div>
+    }
+}
+else if (this.loaded)
+{
+    <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">The description links to no files.</MudText>
+}
+
+@code {
+    private sealed record DocumentRow(string Name, string Folder, string Href, bool Exists);
+
+    private List<DocumentRow> rows = [];
+    private bool loaded;
+
+    /// <summary>The page's Subject; anything but a Task renders nothing.</summary>
+    [Parameter, EditorRequired]
+    public required PageSubject Subject { get; set; }
+
+    /// <summary>The Tab the panel's Subject lives in.</summary>
+    [Parameter, EditorRequired]
+    public required string TabId { get; set; }
+
+    /// <summary>The frame's context, which receives the row count.</summary>
+    [CascadingParameter]
+    public SidebarPanelContext? Panel { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.TaskEvents.TaskChanged += this.OnTaskChanged;
+        this.TaskEvents.TasksReloaded += this.OnTasksReloaded;
+    }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet() => this.Resolve();
+
+    /// <summary>Stops listening.</summary>
+    public void Dispose()
+    {
+        this.TaskEvents.TaskChanged -= this.OnTaskChanged;
+        this.TaskEvents.TasksReloaded -= this.OnTasksReloaded;
+    }
+
+    /// <summary>Reads the saved Description's Library paths and resolves each one once; a path the resolver does not know is no row, as it is no link in the preview.</summary>
+    private void Resolve()
+    {
+        if (this.Subject is not TaskSubject subject || this.Store.Get(subject.Id) is not { } task)
+        {
+            this.rows = [];
+            this.loaded = false;
+            this.Panel?.SetCount(null);
+            return;
+        }
+
+        List<DocumentRow> found = [];
+        HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
+        foreach ((int _, int _, string path) in LibraryPathPatterns.Find(task.Description))
+        {
+            if (this.LibraryResolver.ResolvePath(path) is { } reference && seen.Add(reference.RootId + "/" + reference.RelativePath))
+            {
+                int slash = reference.RelativePath.LastIndexOf('/');
+                string name = slash >= 0 ? reference.RelativePath[(slash + 1)..] : reference.RelativePath;
+                string folder = slash >= 0 ? reference.RelativePath[..slash] : reference.RootId;
+                found.Add(new DocumentRow(name, folder, LibraryLinkQuery.BuildPageUri(reference.RootId, reference.RelativePath), reference.Exists));
+            }
+        }
+
+        this.rows = found;
+        this.loaded = true;
+        this.Panel?.SetCount(found.Count);
+    }
+
+    private void OnTaskChanged(TaskChange change) => this.Redraw();
+
+    private void OnTasksReloaded() => this.Redraw();
+
+    private void Redraw() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+    {
+        this.Resolve();
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+}

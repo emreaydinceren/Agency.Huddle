@@ -148,6 +148,10 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     /// <param name="id">The Task's id.</param>
     public TaskItem? Get(TaskId id) => this.index.ById.GetValueOrDefault(id);
 
+    /// <summary>Every Task whose Blocked by names <paramref name="id"/>: the Tasks waiting on it, in the store's order. The wake of dependants and the Right sidebar's Blocks panel both read this.</summary>
+    /// <param name="id">The Task that blocks the others.</param>
+    public IReadOnlyList<TaskItem> BlockedOn(TaskId id) => [.. this.index.All.Where(task => task.BlockedBy.Contains(id))];
+
     /// <summary>
     /// Writes <paramref name="text"/> to a brand-new file for <paramref name="task"/>, refusing to
     /// overwrite an existing one (Settled corrections-B2 D6 item 6: Create never overwrites - the id

@@ -214,11 +214,18 @@
                             OverlayAutoClose="@(!this.detailHasPending)" ShowFooter="@this.FooterVisible"
                             Class="@(this.titleEditing ? "tasks-detail-drawer is-title-editing" : "tasks-detail-drawer")">
             <ChildContent>
-                @if (this.selectedTaskId is not null || this.selectedDraft is not null)
+                @if (this.selectedDraft is not null)
                 {
+                    @* A draft is edited in the drawer, as before; after its first Save the drawer switches to the read view (OnDraftCreated). *@
                     <TaskDetail @ref="this.detail" @key="this.DetailKey" Id="this.selectedTaskId" Draft="this.selectedDraft"
                                 Mode="TaskDetailMode.Panel" OnClose="this.OnDetailClosed" HasPendingChanged="this.OnDetailHasPendingChanged"
-                                ExternalFooter="true" FooterStateChanged="this.OnFooterStateChanged" TitleEditingChanged="this.OnTitleEditingChanged" />
+                                ExternalFooter="true" FooterStateChanged="this.OnFooterStateChanged" TitleEditingChanged="this.OnTitleEditingChanged"
+                                OnCreated="this.OnDraftCreated" />
+                }
+                else if (this.selectedTaskId is { } readId)
+                {
+                    @* T15: an existing Task is read here and edited in its own Tab (docs/Huddle.TaskReadView-Specifications.md, D-1, D-2). *@
+                    <TaskReadView @key="readId" Id="readId" OnClose="this.OnDetailClosed" OnEdit="this.OnReadViewEdit" />
                 }
             </ChildContent>
             <Footer>
@@ -416,7 +423,14 @@
         TaskView created = new() { Id = Guid.NewGuid().ToString("N"), Name = ViewActions.NewViewName(this.Views), Kind = ViewKind.List };
         if (this.Views.Save(created).Saved)
         {
-            this.Navigation.NavigateTo($"/tasks/{created.Id}", replace: true);
+            // The Tab showing /tasks/new moves to the new View's address too: a Tab left on /tasks/new would make another View each time it is restored or shown again.
+            string url = $"/tasks/{created.Id}";
+            if (this.Page is { } page)
+            {
+                _ = this.Tabs.Navigate(page.TabId, url);
+            }
+
+            this.Navigation.NavigateTo(url, replace: true);
         }
     }
     /// <summary>
@@ -557,6 +571,31 @@
     /// nothing mounted yet - the drawer has never been opened - there is nothing to discard.
     /// </summary>
     private Task<bool> ConfirmSwitchAsync() => this.detail is null ? Task.FromResult(true) : this.detail.ConfirmDiscardAsync();
+
+    /// <summary>
+    /// After a draft's first Save (B10): the drawer shows the new Task in the read view instead of the form that just created it. The
+    /// form is unmounted by the render this triggers, so it is forgotten here and cannot answer for the new Task's pending edits.
+    /// </summary>
+    /// <param name="id">The id the new Task was given.</param>
+    private void OnDraftCreated(TaskId id)
+    {
+        this.detail = null;
+        this.selectedDraft = null;
+        this.selectedTaskId = id;
+        this.detailHasPending = false;
+        this.titleEditing = false;
+        this.StateHasChanged();
+    }
+
+    /// <summary>
+    /// Edit in the read view (B3): the drawer closes first, and the read view then navigates to the edit page's Tab. The URL is left to that
+    /// navigation: an item route's usual replace with the View's path would race it.
+    /// </summary>
+    private void OnReadViewEdit()
+    {
+        this.detailOpen = false;
+        this.titleEditing = false;
+    }
 
     /// <summary>Closes the detail drawer (<see cref="TaskDetail.OnClose"/>): Cancel, a successful Close/Reopen, or returning from Expand.</summary>
     private void OnDetailClosed() => this.OnDetailOpenChanged(false);

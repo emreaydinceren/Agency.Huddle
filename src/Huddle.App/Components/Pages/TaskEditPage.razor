@@ -1,0 +1,210 @@
+@*
+    The Task edit page (K, docs/Huddle.TaskReadView-Specifications.md): one Task, edited in a Tab of its own. The body is today's
+    TaskDetail (Expanded, with its footer drawn here, D-3), so every behaviour it has - conflicts, gate refusals, Move anyway, the Human
+    gate switch, attachments, the Change log, the wake label on Save and the leave-the-page prompt - is unchanged. What the page adds is a
+    header (K2) holding the id line, the Task's title, View task, Copy id, and Cancel and Save (K2a, D-5), and the Right sidebar's
+    Subject (D-8). Only the active Tab is mounted (ADR-0045), so the Tab's title carries a dot while edits are pending.
+*@
+
+@page "/tasks/item/{TaskIdText}/edit"
+@implements IDisposable
+@using Microsoft.Extensions.Options
+@using Agency.Huddle.App.Tabs
+@inject TaskStore Store
+@inject TaskEvents Events
+@inject IOptions<TeamOptions> Options
+@inject TabService Tabs
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+
+@if (!this.Options.Value.Tasks.Enabled)
+{
+    @* K6: the Tasks page's own notice, in the same words. *@
+    <MudContainer MaxWidth="MaxWidth.Large" Class="pa-4">
+        <MudAlert Severity="Severity.Info" role="status" Class="tasks-disabled-alert">Tasks are turned off.</MudAlert>
+    </MudContainer>
+}
+else if (this.editing is not { } id)
+{
+    @* K5: an id that does not parse, or names no Task. *@
+    <EmptyState FullPane="true" Icon="@Icons.Material.Outlined.TaskAlt" Title="@($"There is no Task {this.TaskIdText}")" Text="It may have been deleted or moved.">
+        <Action>
+            <MudButton Variant="Variant.Text" Size="Size.Medium" Href="/tasks" Class="task-edit-page-open-tasks">Open Tasks</MudButton>
+        </Action>
+    </EmptyState>
+}
+else
+{
+    <PageSubjectSource Value="@this.Subject" />
+    <FocusedPageTitle Title="@($"Edit {id}")" />
+    <MudContainer MaxWidth="MaxWidth.Large" Class="pa-4 task-edit-page">
+        @* K2: the page header, sticky to the top of the page container. *@
+        <div class="task-edit-page-header">
+            @if (this.Eyebrow is { } eyebrow)
+            {
+                <div class="task-edit-page-eyebrow">@eyebrow</div>
+            }
+
+            <PageHeader Title="@this.PageTitle" SetPageTitle="false" Chrome="true">
+                <Actions>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-edit-page-view" OnClick="this.ViewTask">View task</MudButton>
+                    <MudTooltip Text="Copy id">
+                        <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" aria-label="@($"Copy task id {id}")"
+                                       Class="task-edit-page-copy-id" OnClick="@(() => this.CopyIdAsync(id))" />
+                    </MudTooltip>
+                    @* K2a: always shown, because a page has no other way out. Save is the header's one filled button. *@
+                    <div class="task-edit-page-actions">
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-detail-cancel" OnClick="this.CancelAsync">Cancel</MudButton>
+                        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="task-detail-save" OnClick="this.SaveAsync"
+                                   Disabled="@this.SaveDisabled">@(this.detail?.FooterSaveLabel ?? "Save")</MudButton>
+                    </div>
+                </Actions>
+            </PageHeader>
+        </div>
+
+        @* K3: today's editor. The container query of D-6 lives on this div. *@
+        <div class="task-edit-page-editor">
+            <TaskDetail @ref="this.detail" Id="id" Mode="TaskDetailMode.Expanded" ExternalFooter="true"
+                        OnClose="this.CloseTab" HasPendingChanged="this.OnHasPendingChanged" FooterStateChanged="this.OnFooterStateChanged" />
+        </div>
+    </MudContainer>
+}
+
+@code {
+    private TaskId? editing;
+    private TaskDetail? detail;
+    private bool hasPending;
+    private string? resolvedText;
+
+    /// <summary>The route's Task id segment.</summary>
+    [Parameter]
+    public string? TaskIdText { get; set; }
+
+    /// <summary>The Tab showing this page, which knows its own address; the browser URL names only the focused group's Tab.</summary>
+    [CascadingParameter]
+    public TabPageContext? Page { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.Events.TaskChanged += this.OnTaskChanged;
+        this.Events.TasksReloaded += this.OnTasksReloaded;
+    }
+
+    /// <summary>Resolves the route's id once per id: a Task deleted while the page is open keeps the editor, whose own alert says so (B8), instead of becoming the missing notice.</summary>
+    protected override void OnParametersSet()
+    {
+        if (string.Equals(this.resolvedText, this.TaskIdText, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.resolvedText = this.TaskIdText;
+        this.hasPending = false;
+        this.editing = this.TaskIdText is { } text && TaskId.TryParse(text, out TaskId parsed) && this.Store.Get(parsed) is not null ? parsed : null;
+    }
+
+    /// <summary>After each render, keeps the Tab's title in step with the editor's pending edits.</summary>
+    /// <param name="firstRender">Unused.</param>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        _ = firstRender;
+        this.SyncTabTitle();
+    }
+
+    /// <summary>The Tab's key, from the page's own address.</summary>
+    private string TabKey => TabKeys.Describe(this.Page?.Url ?? this.Navigation.Uri).Key;
+
+    /// <summary>The saved Task, or <see langword="null"/> when it is gone.</summary>
+    private TaskItem? Saved => this.editing is { } id ? this.Store.Get(id) : null;
+
+    /// <summary>The h1: the Task's saved title. <see cref="TaskDetail"/>'s own title control edits it.</summary>
+    private string PageTitle => this.Saved?.Title ?? "Task";
+
+    /// <summary>The line above the title, as the drawer's: the id, then the Project or, with none, the Team.</summary>
+    private string? Eyebrow => this.Saved is { } task ? $"{task.Id} · {task.Location.Project ?? task.Location.Team}" : null;
+
+    /// <summary>The Subject the Right sidebar's Task panels read: the saved Task's id, and which of its two lists have rows. Null once the Task is gone.</summary>
+    private TaskSubject? Subject => this.Saved is { } task
+        ? new TaskSubject(task.Id, task.BlockedBy.Count > 0, this.Store.BlockedOn(task.Id).Any(static waiting => !waiting.Status.IsTerminal()))
+        : null;
+
+    /// <summary>Save is off while nothing has changed and while <see cref="TaskDetail"/> itself refuses it (a Duplicate with no original, a bad Sprint name, an unresolved conflict).</summary>
+    private bool SaveDisabled => this.detail is not { } open || !open.HasPending || open.FooterSaveDisabled;
+
+    /// <summary>Save: <see cref="TaskDetail"/>'s own, so the wake, the gates and the Proof apply as they do in the drawer.</summary>
+    private Task SaveAsync() => this.detail is { } open ? open.SaveAsync() : Task.CompletedTask;
+
+    /// <summary>Cancel (B6): <see cref="TaskDetail"/>'s Cancel discards the edits and removes the uploads since the last save, then asks to close, which closes this Tab.</summary>
+    private Task CancelAsync() => this.detail is { } open ? open.CancelAsync() : Task.CompletedTask;
+
+    /// <summary>Closes this page's Tab and follows the Tab that becomes active, as the Tab strip's own close does.</summary>
+    private void CloseTab()
+    {
+        string? before = this.Tabs.Active?.Id;
+        this.Tabs.CloseByKey(this.TabKey);
+        if (this.Tabs.Active is { } now && !string.Equals(now.Id, before, StringComparison.Ordinal))
+        {
+            this.Navigation.NavigateTo(now.Url);
+        }
+    }
+
+    /// <summary>View task (B13): opens the item route in the Tasks page's Tab, or in a new preview Tab when none is open. This Tab stays.</summary>
+    private void ViewTask()
+    {
+        if (this.editing is { } id)
+        {
+            Tab target = this.Tabs.Open($"/tasks/item/{Uri.EscapeDataString(id.ToString())}");
+            this.Navigation.NavigateTo(target.Url);
+        }
+    }
+
+    /// <summary>Copy id, called straight from the click so the browser's clipboard permission stays inside the click's own user activation.</summary>
+    /// <param name="id">The Task id to copy.</param>
+    private Task CopyIdAsync(TaskId id) => TaskClipboard.CopyIdAsync(this.JS, this.Snackbar, id, CancellationToken.None);
+
+    /// <summary>The editor's pending edits appeared or went: redraw Save, and mark the Tab.</summary>
+    /// <param name="pending">Whether the editor now has an unsaved edit.</param>
+    private void OnHasPendingChanged(bool pending)
+    {
+        this.hasPending = pending;
+        this.SyncTabTitle();
+        this.StateHasChanged();
+    }
+
+    /// <summary>The editor's Save label or enabled state changed: draw the header's Save again.</summary>
+    private void OnFooterStateChanged() => this.StateHasChanged();
+
+    /// <summary>Sets the Tab's title to "Edit {id}", with " ●" after it while edits are pending, as the Library's document title does.</summary>
+    private void SyncTabTitle()
+    {
+        if (this.editing is { } id)
+        {
+            string title = this.hasPending ? $"Edit {id} ●" : $"Edit {id}";
+            this.Tabs.SetTitle(this.TabKey, title);
+            this.Tabs.SetDirty(this.TabKey, this.hasPending);
+        }
+    }
+
+    private void OnTaskChanged(TaskChange change) => this.Redraw();
+
+    private void OnTasksReloaded() => this.Redraw();
+
+    /// <summary>A change to any Task can move the header, the Subject or the sidebar's rows, so the page draws again.</summary>
+    private void Redraw() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        // Switching to another Tab unmounts the page and its edits go with it, so the Tab is neither marked nor guarded any more.
+        this.Tabs.SetDirty(this.TabKey, false);
+        if (this.editing is { } id)
+        {
+            this.Tabs.SetTitle(this.TabKey, $"Edit {id}");
+        }
+
+        this.Events.TaskChanged -= this.OnTaskChanged;
+        this.Events.TasksReloaded -= this.OnTasksReloaded;
+    }
+}

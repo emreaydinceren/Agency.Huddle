@@ -55,6 +55,23 @@ public sealed class TabPageRoutesTests
         Assert.False(page.Parameters.ContainsKey("other"));
     }
 
+    /// <summary>In the app's own assembly the edit address resolves to the Task edit page, and the plain item address still to the Tasks page, with the id filled in (read view spec, "What changes in code").</summary>
+    [Fact]
+    public void Resolve_AppAssembly_TaskEditRouteBeatsTheItemRoute()
+    {
+        TabPageRoutes app = new(typeof(Agency.Huddle.App.ServiceCollectionExtensions).Assembly);
+
+        TabPage? edit = app.Resolve("/tasks/item/PLAT-0013/edit");
+        TabPage? item = app.Resolve("/tasks/item/PLAT-0013");
+
+        Assert.NotNull(edit);
+        Assert.Equal(typeof(Agency.Huddle.App.Components.Pages.TaskEditPage), edit.Component);
+        Assert.Equal("PLAT-0013", edit.Parameters["TaskIdText"]);
+        Assert.NotNull(item);
+        Assert.NotEqual(typeof(Agency.Huddle.App.Components.Pages.TaskEditPage), item.Component);
+        Assert.Equal("PLAT-0013", item.Parameters["TaskIdText"]);
+    }
+
     /// <summary>An address with no template resolves to nothing, so the pane can say so.</summary>
     [Theory]
     [InlineData("/nowhere")]

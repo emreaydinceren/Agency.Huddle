@@ -19,6 +19,7 @@ internal sealed class TabService
 
     private readonly List<GroupState> groups = [];
     private readonly Dictionary<string, IReadOnlyList<TrailCrumb>> trails = new(StringComparer.Ordinal);
+    private readonly HashSet<string> dirtyKeys = new(StringComparer.Ordinal);
     private IReadOnlyList<TabGroup> groupSnapshot = [];
     private IReadOnlyList<Tab> tabSnapshot = [];
     private string focusedId;
@@ -260,6 +261,23 @@ internal sealed class TabService
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
         this.Replace(tab => string.Equals(tab.Key, key, StringComparison.Ordinal), tab => tab with { Title = title });
     }
+
+    /// <summary>
+    /// Records whether the page in the Tab with <paramref name="key"/> holds edits that closing the Tab would lose. The Tab strip and the
+    /// close shortcut ask the Human before they close a Tab for which this is <see langword="true"/>. A page sets it while it has pending
+    /// edits and clears it when they are saved, discarded or the page goes away. It changes no Tab and raises no event.
+    /// </summary>
+    /// <param name="key">The key of the Tab whose page holds the edits.</param>
+    /// <param name="dirty">Whether the page has unsaved edits.</param>
+    public void SetDirty(string key, bool dirty)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        _ = dirty ? this.dirtyKeys.Add(key) : this.dirtyKeys.Remove(key);
+    }
+
+    /// <summary>Whether the page in the Tab with <paramref name="key"/> has unsaved edits (<see cref="SetDirty(string, bool)"/>).</summary>
+    /// <param name="key">The key of the Tab to ask about.</param>
+    public bool IsDirty(string key) => this.dirtyKeys.Contains(key);
 
     /// <summary>
     /// Replaces the breadcrumb trail <see cref="Trail(Tab)"/> gives for the Tab with <paramref name="key"/>,

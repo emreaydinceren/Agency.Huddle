@@ -508,7 +508,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         }
 
         TaskItem finished = change.After;
-        List<TaskItem> candidates = [.. this.store.All.Where(task => task.BlockedBy.Contains(finished.Id))];
+        IReadOnlyList<TaskItem> candidates = this.store.BlockedOn(finished.Id);
         foreach (TaskItem blocked in candidates)
         {
             bool open = blocked.Status is not (TaskState.Done or TaskState.Cancelled or TaskState.Duplicate or TaskState.Rejected);

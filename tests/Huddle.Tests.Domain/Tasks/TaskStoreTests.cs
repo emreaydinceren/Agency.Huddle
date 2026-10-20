@@ -32,6 +32,26 @@ public sealed class TaskStoreTests
         Assert.NotNull(store.Get(second));
     }
 
+    /// <summary><see cref="TaskStore.BlockedOn"/> returns exactly the Tasks whose Blocked by names the id, and none when nothing does.</summary>
+    [Fact]
+    public void BlockedOn_NamesTheTasksWaitingOnTheId()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        _ = TaskId.TryParse("PLAT-0001", out TaskId blocker);
+        _ = TaskId.TryParse("PLAT-0004", out TaskId other);
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", blockedBy: [blocker], location: new("Platform", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0003.md"), TestTasks.Make(id: "PLAT-0003", blockedBy: [other, blocker], location: new("Platform", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0004.md"), TestTasks.Make(id: "PLAT-0004", location: new("Platform", null, false)));
+        using PersonaStore personas = dir.CreatePersonaStore();
+
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        Assert.Equal(["PLAT-0002", "PLAT-0003"], store.BlockedOn(blocker).Select(static task => task.Id.ToString()).Order(StringComparer.Ordinal));
+        Assert.Empty(store.BlockedOn(default));
+    }
+
     /// <summary>A file directly at the Tasks root, not inside any Team's <c>_tasks/</c> folder, is
     /// ignored: it is neither indexed nor rejected (Spec §6.3, Task G1.1.i).</summary>
     [Fact]

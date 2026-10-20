@@ -56,7 +56,7 @@ public sealed class TaskRouteAndCopyTests
         });
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".tasks-header .task-toolbar-header")));
-        Assert.Equal(task.Id, cut.FindComponent<TaskDetail>().Instance.Id);
+        Assert.Equal(task.Id, cut.FindComponent<TaskReadView>().Instance.Id);
     }
 
     /// <summary>Spec §13.13.3 step 1: an id that parses but names no Task shows the exact wording with <c>role="status"</c>.</summary>

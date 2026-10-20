@@ -4,6 +4,7 @@
     (attachToolbar) wires the row to its CodeMirror view with delegated listeners, so a click edits the
     document in the browser with no trip through the Blazor circuit and the editor keeps its selection
     (ADR-0028: each command is one small transaction touching only the selection or the chosen lines).
+    A Task's Description textarea wires the same row through markdown-textarea.js (ShowWikilink off).
     The row is a WAI-ARIA toolbar: one tab stop (a roving tabindex that starts on Bold), Left/Right/Home/End
     move between buttons and Escape returns to the editor. The marker data-md-toolbar is how the editor finds it.
 *@
@@ -26,12 +27,22 @@
     <MudTooltip Text="Task list">
         <MudIconButton Icon="@Icons.Material.Filled.Checklist" Size="Size.Small" aria-label="Task list" Class="markdown-toolbar-task-list" tabindex="-1" data-md-command="@Commands.TaskList" />
     </MudTooltip>
-    <MudTooltip Text="Link to a note">
-        <MudButton Size="Size.Small" aria-label="Link to a note" Class="markdown-toolbar-wikilink" tabindex="-1" data-md-command="@Commands.Wikilink">[[ ]]</MudButton>
-    </MudTooltip>
+    @if (this.ShowWikilink)
+    {
+        <MudTooltip Text="Link to a note">
+            <MudButton Size="Size.Small" aria-label="Link to a note" Class="markdown-toolbar-wikilink" tabindex="-1" data-md-command="@Commands.Wikilink">[[ ]]</MudButton>
+        </MudTooltip>
+    }
 </div>
 
 @code {
+    /// <summary>
+    /// Whether the <c>[[ ]]</c> button shows. It opens CodeMirror's note suggestions, so a host whose field is a plain
+    /// textarea (a Task's Description, which has Link a Library file instead) turns it off. The Library keeps the default.
+    /// </summary>
+    [Parameter]
+    public bool ShowWikilink { get; set; } = true;
+
     /// <summary>The command names <c>markdown-commands.js</c>'s <c>planCommand</c> understands, as the buttons' <c>data-md-command</c> values.</summary>
     public static class Commands
     {

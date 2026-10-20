@@ -25,9 +25,9 @@ using TasksPage = Agency.Huddle.App.Components.Pages.Tasks;
 /// </summary>
 public sealed class TasksPageDetailTests
 {
-    /// <summary>Clicking a List row opens the drawer's <see cref="TaskDetail"/> for that row's Task.</summary>
+    /// <summary>Clicking a List row opens the drawer's <see cref="TaskReadView"/> for that row's Task, and no editor (read view spec D-1).</summary>
     [Fact]
-    public async Task RowOpen_ClickingATask_ShowsTaskDetailForThatId()
+    public async Task RowOpen_ClickingATask_ShowsTheReadViewForThatId()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, "Alpha");
@@ -37,12 +37,11 @@ public sealed class TasksPageDetailTests
 
         await ClickTaskRowAsync(cut, "Alpha");
 
-        TaskDetail detail = cut.FindComponent<TaskDetail>().Instance;
-        Assert.Equal(task.Id, detail.Id);
-        Assert.Equal(TaskDetailMode.Panel, detail.Mode);
+        Assert.Equal(task.Id, cut.FindComponent<TaskReadView>().Instance.Id);
+        Assert.Empty(cut.FindComponents<TaskDetail>());
     }
 
-    /// <summary>Clicking the already-open Task again is a no-op: no "Discard changes?" prompt, and the same <see cref="TaskDetail"/> instance (with its pending edit intact) stays mounted.</summary>
+    /// <summary>Clicking the already-open Task again is a no-op: no "Discard changes?" prompt, and the same <see cref="TaskReadView"/> instance stays mounted.</summary>
     [Fact]
     public async Task RowOpen_ClickingTheAlreadyOpenTask_DoesNotPromptOrRecreateTheDetail()
     {
@@ -53,14 +52,12 @@ public sealed class TasksPageDetailTests
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
         await ClickTaskRowAsync(cut, "Alpha");
-        TaskDetail firstInstance = cut.FindComponent<TaskDetail>().Instance;
-        await EditPriorityAsync(cut, TaskPriority.Urgent);
+        TaskReadView firstInstance = cut.FindComponent<TaskReadView>().Instance;
 
         await ClickTaskRowAsync(cut, "Alpha");
 
         Assert.Empty(cut.FindAll(".mud-dialog-actions button"));
-        Assert.Same(firstInstance, cut.FindComponent<TaskDetail>().Instance);
-        Assert.True(firstInstance.HasPending);
+        Assert.Same(firstInstance, cut.FindComponent<TaskReadView>().Instance);
     }
 
     /// <summary>"+ New task" (the header button) opens the drawer's <see cref="TaskDetail"/> in create mode; with no single-Team filter, <see cref="NewTaskDefaults"/> is blank.</summary>
@@ -104,19 +101,18 @@ public sealed class TasksPageDetailTests
         Assert.Equal("Alpha", draft.Project);
     }
 
-    /// <summary>Opening a second Task while the first has a pending edit asks "Discard changes?"; Cancel leaves the first Task open with its edit intact (corrections-B7 14.5.i item 2).</summary>
+    /// <summary>Opening a Task while a new task's draft has a pending edit asks "Discard changes?"; Cancel leaves the draft open with its edit intact (corrections-B7 14.5.i item 2). Only a draft is edited in the drawer now.</summary>
     [Fact]
     public async Task SwitchingToAnotherTask_WithPendingEdits_CancelKeepsTheCurrentTask()
     {
         using TaskToolHarness harness = new();
-        TaskItem taskA = CreateTask(harness, "Alpha");
+        _ = CreateTask(harness, "Alpha");
         _ = CreateTask(harness, "Bravo");
 
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
-        await ClickTaskRowAsync(cut, "Alpha");
-        await EditPriorityAsync(cut, TaskPriority.Urgent);
+        await OpenDraftWithPendingEditAsync(cut);
 
         _ = cut.InvokeAsync(() => { _ = FindTaskRow(cut, "Bravo").ClickAsync(); });
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
@@ -124,11 +120,11 @@ public sealed class TasksPageDetailTests
 
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).ClickAsync());
 
-        Assert.Equal(taskA.Id, cut.FindComponent<TaskDetail>().Instance.Id);
+        Assert.NotNull(cut.FindComponent<TaskDetail>().Instance.Draft);
         Assert.True(cut.FindComponent<TaskDetail>().Instance.HasPending);
     }
 
-    /// <summary>Confirming "Discard changes?" switches the drawer to the newly clicked Task, discarding the first's pending edit (corrections-B7 14.5.i item 2).</summary>
+    /// <summary>Confirming "Discard changes?" switches the drawer to the newly clicked Task's read view, discarding the draft's pending edit (corrections-B7 14.5.i item 2).</summary>
     [Fact]
     public async Task SwitchingToAnotherTask_WithPendingEdits_DiscardSwitchesToTheNewTask()
     {
@@ -139,16 +135,15 @@ public sealed class TasksPageDetailTests
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
-        await ClickTaskRowAsync(cut, "Alpha");
-        await EditPriorityAsync(cut, TaskPriority.Urgent);
+        await OpenDraftWithPendingEditAsync(cut);
 
         _ = cut.InvokeAsync(() => { _ = FindTaskRow(cut, "Bravo").ClickAsync(); });
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
 
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Discard", StringComparison.Ordinal)).ClickAsync());
 
-        cut.WaitForAssertion(() => Assert.Equal(taskB.Id, cut.FindComponent<TaskDetail>().Instance.Id));
-        Assert.False(cut.FindComponent<TaskDetail>().Instance.HasPending);
+        cut.WaitForAssertion(() => Assert.Equal(taskB.Id, cut.FindComponent<TaskReadView>().Instance.Id));
+        Assert.Empty(cut.FindComponents<TaskDetail>());
     }
 
     /// <summary>
@@ -170,7 +165,7 @@ public sealed class TasksPageDetailTests
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
-        await ClickTaskRowAsync(cut, "Alpha");
+        await cut.InvokeAsync(() => cut.Find(".tasks-new-task").ClickAsync());
         Assert.True(DetailDrawer(cut).Instance.OverlayAutoClose);
 
         await EditPriorityAsync(cut, TaskPriority.Urgent);
@@ -198,7 +193,7 @@ public sealed class TasksPageDetailTests
         Assert.False(cut.FindComponent<ResizableEndDrawer>().Instance.Open);
     }
 
-    /// <summary>Escape with an unsaved edit asks "Discard changes?" first; Cancel keeps the drawer open with the edit intact (theming plan 7.5, the unsaved-changes guard).</summary>
+    /// <summary>Escape with an unsaved edit in a new task's draft asks "Discard changes?" first; Cancel keeps the drawer open with the edit intact (theming plan 7.5, the unsaved-changes guard).</summary>
     [Fact]
     public async Task Escape_WithPendingEdit_AsksFirst_CancelKeepsTheDrawerOpen()
     {
@@ -206,8 +201,7 @@ public sealed class TasksPageDetailTests
         _ = CreateTask(harness, "Alpha");
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
-        await ClickTaskRowAsync(cut, "Alpha");
-        await EditPriorityAsync(cut, TaskPriority.Urgent);
+        await OpenDraftWithPendingEditAsync(cut);
 
         _ = PressEscapeAsync(cut);
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
@@ -226,8 +220,7 @@ public sealed class TasksPageDetailTests
         _ = CreateTask(harness, "Alpha");
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
-        await ClickTaskRowAsync(cut, "Alpha");
-        await EditPriorityAsync(cut, TaskPriority.Urgent);
+        await OpenDraftWithPendingEditAsync(cut);
 
         _ = PressEscapeAsync(cut);
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
@@ -320,6 +313,13 @@ public sealed class TasksPageDetailTests
     /// <summary>Clicks the List row whose Title cell contains <paramref name="title"/>.</summary>
     private static Task ClickTaskRowAsync(IRenderedComponent<ContainerFragment> cut, string title) =>
         cut.InvokeAsync(() => FindTaskRow(cut, title).ClickAsync());
+
+    /// <summary>Opens "+ New task" and gives its draft a pending edit: the drawer's editor is for a draft only, so this is how a test gets unsaved edits there.</summary>
+    private static async Task OpenDraftWithPendingEditAsync(IRenderedComponent<ContainerFragment> cut)
+    {
+        await cut.InvokeAsync(() => cut.Find(".tasks-new-task").ClickAsync());
+        await EditPriorityAsync(cut, TaskPriority.Urgent);
+    }
 
     /// <summary>
     /// Sets the mounted <see cref="TaskDetail"/>'s Priority through its rendered <c>MudSelect</c>,

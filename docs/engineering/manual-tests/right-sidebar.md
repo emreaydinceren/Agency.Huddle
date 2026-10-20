@@ -59,7 +59,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 - After step 1 the Message shows the Task as a chip.
 - At step 2 the panel lists the Task, with its state.
-- At step 3 the Task opens in the Task detail, and the Room stays on screen.
+- At step 3 the Task opens in its own Tab (its Task detail), and the Room's Tab stays open in the strip.
 
 ### RSIDE-03 — A Markdown document shows Outline and Linked documents
 
@@ -135,7 +135,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Before you start**
 
-- `Plan.md` links to `Notes.md`, as set up in step 3.
+- `Plan.md` links to `Notes.md` with `[[Notes]]`, and `Notes.md` links back with `[[Plan]]`, as set up in step 3. The panel lists outgoing `[[wikilinks]]` only, so it needs both links.
 
 **Steps**
 

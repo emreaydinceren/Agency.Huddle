@@ -16,6 +16,8 @@ public sealed class TabKeysTests
     [InlineData("/tasks/board", "tasks:board")]
     [InlineData("/tasks/new", "task-new")]
     [InlineData("/tasks/item/7", "task:7")]
+    [InlineData("/tasks/item/PLAT-0013", "task:PLAT-0013")]
+    [InlineData("/tasks/item/PLAT-0013/edit", "task-edit:PLAT-0013")]
     [InlineData("/teammates", "teammates")]
     [InlineData("/settings", "settings")]
     [InlineData("/settings/appearance", "settings")]

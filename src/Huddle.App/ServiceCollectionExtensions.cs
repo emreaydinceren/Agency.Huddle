@@ -567,6 +567,7 @@ public static class ServiceCollectionExtensions
             static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.LinkedDocumentsPanel), static options => options.Library.Enabled));
         services.AddSidebarPanel(new Sidebar.SidebarPanel("recent-edits", "Recent edits", MudBlazor.Icons.Material.Filled.History, 30,
             static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.RecentEditsPanel), static options => options.Library.Enabled && options.DocHistory.Enabled));
+        services.AddTaskEditSidebarPanels();
         services.AddScoped<Sidebar.PageCommandBus>();
         services.AddScoped<Components.Shared.TeammateCardOpener>();
 
@@ -596,6 +597,20 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(new Tabs.TabPageRoutes(typeof(ServiceCollectionExtensions).Assembly));
 
         return services;
+    }
+
+    /// <summary>The Right sidebar's panels for a Task open in its edit page (docs/Huddle.TaskReadView-Specifications.md, D-8): what the app works out about one Task. Apart from Activity, each hides itself through its Subject when it would be empty.</summary>
+    /// <param name="services">The service collection to add the panels to.</param>
+    private static void AddTaskEditSidebarPanels(this IServiceCollection services)
+    {
+        services.AddSidebarPanel(new Sidebar.SidebarPanel("task-activity", "Activity", MudBlazor.Icons.Material.Filled.Bolt, 10,
+            static subject => subject is Sidebar.TaskSubject, typeof(Components.Sidebar.TaskActivityPanel), static options => options.Tasks.Enabled));
+        services.AddSidebarPanel(new Sidebar.SidebarPanel("task-blockers", "Blocked by", MudBlazor.Icons.Material.Filled.Block, 20,
+            static subject => subject is Sidebar.TaskSubject { HasBlockers: true }, typeof(Components.Sidebar.TaskBlockersPanel), static options => options.Tasks.Enabled));
+        services.AddSidebarPanel(new Sidebar.SidebarPanel("task-blocks", "Blocks", MudBlazor.Icons.Material.Filled.Block, 25,
+            static subject => subject is Sidebar.TaskSubject { IsBlocking: true }, typeof(Components.Sidebar.TaskBlocksPanel), static options => options.Tasks.Enabled));
+        services.AddSidebarPanel(new Sidebar.SidebarPanel("task-documents", "Linked documents", MudBlazor.Icons.Material.Filled.Link, 30,
+            static subject => subject is Sidebar.TaskSubject, typeof(Components.Sidebar.TaskDocumentsPanel), static options => options.Tasks.Enabled && options.Library.Enabled));
     }
 
     /// <summary>Registers the adapter probe, work-mode policy, model catalog, built-in Teammate reset and the Human rename cascade.</summary>

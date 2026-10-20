@@ -18,9 +18,11 @@
     (the same OpenMenuAsync approach RoomList uses for its rows), and filled for whichever Tab was
     right-clicked.
 *@
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Tabs
 @inject TabService Tabs
 @inject NavigationManager Navigation
+@inject IDialogService Dialogs
 
 <div class="tab-strip" role="tablist" aria-label="Open pages">
     @foreach (Tab tab in this.Group.Tabs)
@@ -67,7 +69,7 @@
                     }
                 </span>
                 <button type="button" class="tab-close" aria-label="@($"Close {tab.Title}")"
-                        @onclick="@(() => this.Close(tab))" @onclick:stopPropagation="true"
+                        @onclick="@(() => this.CloseAsync(tab))" @onclick:stopPropagation="true"
                         @ondblclick:stopPropagation="true">
                     <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
                 </button>
@@ -90,7 +92,7 @@
                              OnClick="@(() => this.Move(target, left: true))">Move left</MudMenuItem>
                 <MudMenuItem Icon="@TabIcons.MoveSelectionRight" Disabled="@(!this.Tabs.CanMoveRight(target.Id))"
                              OnClick="@(() => this.Move(target, left: false))">Move right</MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.Close" OnClick="@(() => this.Close(target))">Close</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.Close" OnClick="@(() => this.CloseAsync(target))">Close</MudMenuItem>
             }
         </ChildContent>
     </MudMenu>
@@ -116,8 +118,18 @@
         this.Navigation.NavigateTo(tab.Url);
     }
 
-    private void Close(Tab tab)
+    /// <summary>
+    /// Closes <paramref name="tab"/>. A Tab whose page has unsaved edits asks "Discard changes?" first (<see cref="TabService.IsDirty"/>), and
+    /// stays open when the Human declines.
+    /// </summary>
+    /// <param name="tab">The Tab to close.</param>
+    private async Task CloseAsync(Tab tab)
     {
+        if (this.Tabs.IsDirty(tab.Key) && !await this.Dialogs.ConfirmAsync("Discard changes?", $"Your unsaved edits in {tab.Title} will be lost.", "Discard", danger: true))
+        {
+            return;
+        }
+
         string? before = this.Tabs.Active?.Id;
         this.Tabs.Close(tab.Id);
         this.FollowFocus(before);
@@ -140,13 +152,8 @@
         }
     }
 
-    private void OnMouseUp(Tab tab, MouseEventArgs e)
-    {
-        if (e.Button == 1 && !tab.IsPinned)
-        {
-            this.Close(tab);
-        }
-    }
+    private Task OnMouseUp(Tab tab, MouseEventArgs e) =>
+        e.Button == 1 && !tab.IsPinned ? this.CloseAsync(tab) : Task.CompletedTask;
 
     private async Task OnContextMenuAsync(Tab tab, MouseEventArgs e)
     {

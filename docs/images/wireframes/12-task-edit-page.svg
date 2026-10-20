@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1040" width="1200" height="1040" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 12: The Task edit page in its own Tab">
+<title>Figure 12: The Task edit page in its own Tab</title>
+<rect width="1200" height="1040" fill="#ffffff"/>
+<text x="24" y="30" font-size="18" font-weight="700" fill="#1f2430">Figure 12: The Task edit page (proposed)</text>
+<text x="24" y="48" font-size="12" fill="#6b7280">TaskEditPage at /tasks/item/{id}/edit, opened by Edit (T15b) as a permanent Tab (W4). The body is today's TaskDetail (Expanded) plus the Markdown toolbar. Cancel and Save are in the header.</text>
+
+<!-- workspace -->
+<rect x="24" y="64" width="1152" height="700" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<text x="34" y="80" font-size="10" fill="#6b7280">Group pane (W2), wide: K3 is 1024px or more</text>
+
+<!-- tab strip -->
+<rect x="36" y="88" width="1128" height="32" rx="3" fill="#e5e7eb" stroke="#8b93a1"/>
+<rect x="40" y="92" width="170" height="28" fill="#e5e7eb" stroke="#c4c9d1"/><text x="56" y="110" font-size="11" fill="#6b7280">☰ All open</text>
+<rect x="210" y="92" width="190" height="28" fill="#ffffff" stroke="#8b93a1"/><text x="226" y="110" font-size="11" font-weight="500" fill="#1f2430">✎ Edit PLAT-0013 ●</text><text x="388" y="110" font-size="11" fill="#6b7280" text-anchor="end">✕</text>
+<rect x="206" y="84" width="34" height="17" rx="8.5" fill="#475569"/><text x="223" y="96.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">W4</text>
+<text x="412" y="110" font-size="10" fill="#6b7280" font-style="italic">new permanent Tab, right of the Tasks Tab; ● while there are unsaved edits</text>
+
+<!-- K1 page -->
+<rect x="36" y="128" width="1128" height="624" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="32" y="122" width="25" height="17" rx="8.5" fill="#7c3aed"/><text x="44.5" y="134.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">K1</text>
+<text x="63" y="135" font-size="11" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Page container · MudContainer MaxWidth.Large, left-aligned, pa-4</text>
+
+<!-- K2 header (sticky) -->
+<rect x="52" y="148" width="1096" height="62" rx="4" fill="#ffffff" stroke="#8b93a1"/>
+<line x1="52" y1="210" x2="1148" y2="210" stroke="#8b93a1" stroke-width="2"/>
+<rect x="48" y="142" width="25" height="17" rx="8.5" fill="#7c3aed"/><text x="60.5" y="154.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">K2</text>
+<text x="79" y="155" font-size="11" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Page header (PageHeader), sticky to the top</text>
+<text x="68" y="176" font-size="12" fill="#6b7280">PLAT-0013 · Platform</text>
+<text x="68" y="200" font-size="20" font-weight="600" fill="#1f2430">Findings memo v2 — accept or request changes</text>
+<text x="600" y="176" font-size="10" fill="#6b7280" font-style="italic">shell crumb (S1a): Tasks</text>
+<text x="808" y="186" font-size="11" fill="#1f2430" text-anchor="middle">View task</text>
+<text x="868" y="186" font-size="12" fill="#6b7280" text-anchor="middle">⧉  ⋮</text>
+<line x1="900" y1="170" x2="900" y2="196" stroke="#d1d5db"/>
+<!-- K2a -->
+<rect x="912" y="164" width="226" height="36" rx="4" fill="#ffffff" stroke="#7c3aed" stroke-dasharray="4 3"/>
+<rect x="908" y="157" width="34" height="17" rx="8.5" fill="#7c3aed"/><text x="925" y="169.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">K2a</text>
+<text x="958" y="188" font-size="11" fill="#1f2430" text-anchor="middle">Cancel</text>
+<rect x="1004" y="171" width="128" height="24" rx="4" fill="#0e7c86"/><text x="1068" y="187" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">Save and wake</text>
+
+<!-- K3 body, two columns -->
+<rect x="52" y="222" width="1096" height="518" rx="4" fill="#f6f7f9" stroke="#8b93a1"/>
+<rect x="48" y="216" width="25" height="17" rx="8.5" fill="#7c3aed"/><text x="60.5" y="228.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">K3</text>
+<text x="79" y="229" font-size="11" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Editor · TaskDetail Mode=Expanded · two columns from 1024px of its own width</text>
+<text x="68" y="252" font-size="10" fill="#6b7280" font-style="italic">notices first when they apply: save error, gate refusal, conflict (as today)</text>
+
+<rect x="68" y="262" width="620" height="462" rx="4" fill="#ffffff" stroke="#8b93a1"/>
+<text x="80" y="282" font-size="10" font-weight="600" fill="#6b7280">fields (7 of 12)</text>
+<g font-size="11">
+<text x="80" y="306" font-weight="600" fill="#6b7280" font-size="10">STATUS AND PRIORITY</text>
+<rect x="80" y="314" width="270" height="28" rx="4" fill="#fff" stroke="#8b93a1"/><text x="90" y="332" fill="#1f2430">Status ▾</text>
+<rect x="362" y="314" width="270" height="28" rx="4" fill="#fff" stroke="#8b93a1"/><text x="372" y="332" fill="#1f2430">Priority ▾</text>
+<text x="80" y="366" font-weight="600" fill="#6b7280" font-size="10">PEOPLE</text>
+<rect x="80" y="374" width="270" height="28" rx="4" fill="#fff" stroke="#8b93a1"/><text x="90" y="392" fill="#1f2430">Assignee ▾</text>
+<text x="80" y="426" font-weight="600" fill="#6b7280" font-size="10">PLANNING</text>
+<rect x="80" y="434" width="270" height="28" rx="4" fill="#fff" stroke="#8b93a1"/><text x="90" y="452" fill="#1f2430">Team / Project</text>
+<rect x="362" y="434" width="270" height="28" rx="4" fill="#fff" stroke="#8b93a1"/><text x="372" y="452" fill="#1f2430">Sprint · Parent · Blocked by · Tags</text>
+<text x="80" y="486" font-weight="600" fill="#6b7280" font-size="10">DATES</text>
+<rect x="80" y="494" width="270" height="28" rx="4" fill="#fff" stroke="#8b93a1"/><text x="90" y="512" fill="#1f2430">Start</text>
+<rect x="362" y="494" width="270" height="28" rx="4" fill="#fff" stroke="#8b93a1"/><text x="372" y="512" fill="#1f2430">Due</text>
+<text x="80" y="546" font-weight="600" fill="#6b7280" font-size="10">DESCRIPTION              🔗  📎   Edit | Preview</text>
+<rect x="80" y="554" width="596" height="28" rx="4" fill="#f6f7f9" stroke="#7c3aed" stroke-dasharray="4 3"/>
+<rect x="76" y="548" width="34" height="17" rx="8.5" fill="#7c3aed"/><text x="93" y="560.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">K3a</text>
+<text x="120" y="573" font-size="12" font-weight="700" fill="#1f2430">B</text><text x="142" y="573" font-size="12" font-style="italic" fill="#1f2430">I</text><text x="162" y="573" font-size="12" font-weight="600" fill="#1f2430">H</text><text x="184" y="573" font-size="11" fill="#1f2430">&lt;/&gt;</text><text x="214" y="573" font-size="12" fill="#1f2430">☰</text><text x="236" y="573" font-size="12" fill="#1f2430">☑</text>
+<text x="268" y="573" font-size="10" fill="#6b7280" font-style="italic">Markdown toolbar (L3g), no [[ ]] · Edit only</text>
+<rect x="80" y="588" width="596" height="124" rx="4" fill="#fff" stroke="#8b93a1"/>
+<rect x="92" y="604" width="500" height="8" rx="3" fill="#d1d5db"/><rect x="92" y="620" width="540" height="8" rx="3" fill="#d1d5db"/><rect x="92" y="636" width="420" height="8" rx="3" fill="#d1d5db"/>
+</g>
+
+<rect x="704" y="262" width="428" height="462" rx="4" fill="#ffffff" stroke="#8b93a1"/>
+<text x="716" y="282" font-size="10" font-weight="600" fill="#6b7280">side (5 of 12)</text>
+<rect x="716" y="294" width="404" height="96" rx="4" fill="#fffbeb" stroke="#8b93a1"/><text x="728" y="314" font-size="10" font-weight="600" fill="#1f2430">T10 Human gate (switch, What will happen)</text>
+<rect x="716" y="402" width="404" height="96" rx="4" fill="#fff" stroke="#8b93a1"/><text x="728" y="422" font-size="10" font-weight="600" fill="#1f2430">T11 Proof list</text>
+<rect x="716" y="510" width="404" height="96" rx="4" fill="#fffbeb" stroke="#8b93a1" stroke-dasharray="6 4"/><text x="728" y="530" font-size="10" font-weight="600" fill="#1f2430">T12 Decision card (locked while edits are unsaved)</text>
+<rect x="716" y="618" width="404" height="56" rx="4" fill="#fff" stroke="#8b93a1"/><text x="728" y="638" font-size="10" font-weight="600" fill="#1f2430">Change log · footer meta</text>
+
+<!-- narrow inset -->
+<text x="24" y="796" font-size="13" font-weight="700" fill="#1f2430">Narrow: K3 under 1024px, here because the Right sidebar is open</text>
+<rect x="24" y="806" width="520" height="220" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="36" y="818" width="496" height="52" rx="4" fill="#ffffff" stroke="#8b93a1"/>
+<line x1="36" y1="870" x2="532" y2="870" stroke="#8b93a1" stroke-width="2"/>
+<rect x="32" y="812" width="25" height="17" rx="8.5" fill="#7c3aed"/><text x="44.5" y="824.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">K2</text>
+<text x="50" y="852" font-size="15" font-weight="600" fill="#1f2430">Findings memo v2 — accept…</text>
+<text x="380" y="852" font-size="11" fill="#1f2430">⋮  Cancel</text>
+<rect x="452" y="836" width="72" height="24" rx="4" fill="#0e7c86"/><text x="488" y="852" font-size="10" font-weight="600" fill="#fff" text-anchor="middle">Save</text>
+<rect x="36" y="880" width="496" height="134" rx="4" fill="#f6f7f9" stroke="#8b93a1"/>
+<rect x="32" y="874" width="25" height="17" rx="8.5" fill="#7c3aed"/><text x="44.5" y="886.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">K3</text>
+<text x="63" y="887" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">one column</text>
+<rect x="48" y="898" width="472" height="40" rx="4" fill="#ffffff" stroke="#8b93a1"/><text x="60" y="922" font-size="10" fill="#1f2430">fields: Status and priority, People, Planning, Dates, Description</text>
+<rect x="48" y="944" width="472" height="18" rx="3" fill="#fffbeb" stroke="#8b93a1"/><text x="60" y="957" font-size="9" fill="#1f2430">T10 Human gate</text>
+<rect x="48" y="966" width="472" height="18" rx="3" fill="#ffffff" stroke="#8b93a1"/><text x="60" y="979" font-size="9" fill="#1f2430">T11 Proof list</text>
+<rect x="48" y="988" width="472" height="18" rx="3" fill="#fffbeb" stroke="#8b93a1" stroke-dasharray="4 3"/><text x="60" y="1001" font-size="9" fill="#1f2430">T12 Decision card · then Change log and meta</text>
+<!-- S4 right sidebar -->
+<rect x="556" y="806" width="300" height="220" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.4" stroke-dasharray="6 4"/>
+<rect x="552" y="800" width="25" height="17" rx="8.5" fill="#475569"/><text x="564.5" y="812.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">S4</text>
+<text x="583" y="813" font-size="11" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Right sidebar · TaskSubject · read-only</text>
+<g font-size="10">
+<rect x="566" y="824" width="280" height="56" rx="3" fill="#f6f7f9" stroke="#c4c9d1"/>
+<text x="574" y="838" font-weight="600" fill="#1f2430">⚡ Activity</text><text x="838" y="838" fill="#6b7280" text-anchor="end">⌄</text>
+<text x="574" y="854" fill="#0e7c86">Woken in Room Plan · 11:02</text>
+<text x="574" y="870" fill="#1f2430">Wakes: 2 of 5 · Miriam is working on it</text>
+<rect x="566" y="886" width="280" height="40" rx="3" fill="#f6f7f9" stroke="#c4c9d1"/>
+<text x="574" y="900" font-weight="600" fill="#1f2430">⊘ Blocked by</text><text x="820" y="900" fill="#6b7280" text-anchor="end">1</text><text x="838" y="900" fill="#6b7280" text-anchor="end">⌄</text>
+<text x="574" y="917" fill="#6b7280">PLAT-0011</text><text x="630" y="917" fill="#1f2430">Citation check</text><circle cx="834" cy="914" r="4" fill="#2563eb"/>
+<rect x="566" y="932" width="280" height="40" rx="3" fill="#f6f7f9" stroke="#c4c9d1"/>
+<text x="574" y="946" font-weight="600" fill="#1f2430">⊘ Blocks</text><text x="820" y="946" fill="#6b7280" text-anchor="end">1</text><text x="838" y="946" fill="#6b7280" text-anchor="end">⌄</text>
+<text x="574" y="963" fill="#6b7280">PLAT-0017</text><text x="630" y="963" fill="#1f2430">Sensitivity v2</text><circle cx="834" cy="960" r="4" fill="#9ca3af"/>
+<rect x="566" y="978" width="280" height="40" rx="3" fill="#f6f7f9" stroke="#c4c9d1"/>
+<text x="574" y="992" font-weight="600" fill="#1f2430">🔗 Linked documents</text><text x="820" y="992" fill="#6b7280" text-anchor="end">1</text><text x="838" y="992" fill="#6b7280" text-anchor="end">⌄</text>
+<text x="574" y="1009" fill="#1f2430">📄 Findings memo v2.md</text>
+</g>
+<text x="876" y="830" font-size="11" fill="#6b7280">One column: the side content drops below</text>
+<text x="876" y="846" font-size="11" fill="#6b7280">the fields, in the same order. Measured on</text>
+<text x="876" y="862" font-size="11" fill="#6b7280">K3 by a container query, not the window (D-6).</text>
+<text x="876" y="886" font-size="11" fill="#6b7280">K2 stays sticky; Cancel and Save together.</text>
+<text x="876" y="910" font-size="11" fill="#6b7280">S4 shows only computed values about the</text>
+<text x="876" y="926" font-size="11" fill="#6b7280">saved Task (D-8). It opens only when the</text>
+<text x="876" y="942" font-size="11" fill="#6b7280">Human toggles it (S1c).</text>
+</svg>

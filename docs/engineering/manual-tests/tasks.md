@@ -236,8 +236,9 @@ to the View as they are made, and the Rename and Fields dialogs round-trip.*
 6. Open the ⋮ menu and click **Fields…**. Use **+ Add field**, add a field, toggle one existing
    field's switch off (leaving its row in place) and remove another field's row entirely. Click
    **Save**.
-7. Reopen **Fields…** and confirm the list matches what you set. Reorder two rows, click **Cancel**,
-   and reopen to confirm nothing changed.
+7. Reopen **Fields…** and confirm it lists the fields that were on, in the order you set; the field you
+   switched off is no longer a row and is offered again by **+ Add field**. Reorder two rows, click
+   **Cancel**, and reopen to confirm nothing changed.
 
 **Pass if — all of these**
 
@@ -248,16 +249,17 @@ to the View as they are made, and the Rename and Fields dialogs round-trip.*
 - After the reload in step 4 the Status filter, layout and grouping are all still set, with no Save
   click.
 - The widened column keeps its width after the reload (`TaskView.ColumnWidths`).
-- A field switched off (not removed) stays in the Fields dialog but is left out of the View's saved
-  `Fields`; a removed field's row disappears and can be re-added via **+ Add field**.
+- A field switched off (not removed) stays in the Fields dialog until you Save, so you can switch it back on
+  where it was, but it is left out of the View's saved `Fields`; once saved, it and a removed field both
+  come back through **+ Add field** (the View stores only the fields that are on).
 - **Cancel** writes nothing.
 
 **Fail if — any of these**
 
 - A change is lost on reload -> the toolbar is saving to the page's effective View only, not to the
   stored View.
-- A switched-off field is dropped from the Fields dialog entirely (indistinguishable from Remove)
-  -> the switch-vs-remove distinction (J34) has been lost.
+- A switched-off field is dropped from the dialog before you Save, or is still in the saved `Fields` ->
+  the switch-vs-remove distinction (J34) has been lost.
 - A column width is not kept -> `ColumnWidths` is not being written.
 
 **Inconclusive if**
@@ -360,12 +362,17 @@ and editing the same field from two sources shows both versions and blocks Save 
 **Before you start**
 
 - A Task exists and its `.md` file is directly editable.
-- The Task's panel is open in the browser (Edit mode), with the file's current content read on
+- The Task is open on its edit page ("Edit {id}" Tab), with the file's current content read on
   disk first.
+
+> [!NOTE]
+> A saved Task is read in the drawer and edited on its own page: choose **Edit** in the drawer and the Task opens in an
+> "Edit {id}" Tab with **Cancel** and **Save** in the page header. Where this test says "the panel", use that page.
+> **+ New task** still opens an editable form in the drawer.
 
 **Steps**
 
-1. With the panel open and unsaved, in a text editor change a field the panel does **not** also
+1. With the page open and unsaved, in a text editor change a field the panel does **not** also
    have pending (for example, add a Tag if you have only touched the Title in the panel) and save
    the file.
 2. Wait for the panel's own outside-edit detection, then type a change to the Title in the panel
@@ -462,17 +469,18 @@ drive a real drag and this is the only place that path is exercised at all.*
 3. Arrow down to a different state and press Enter.
 4. Confirm (via Tab/Enter, no mouse) that the card moved, the same way the drag path would have.
 5. Tab to the View's ⋮ menu, open **Fields…**, and using only the keyboard, change one Field's switch and Save.
-6. Tab to a Task's title/row to open its panel, edit the Title with the keyboard, and Tab to
-   **Save**.
-7. Tab to **Cancel** on an edited-but-unsaved panel and confirm the **Discard changes?** prompt
-   appears and can be answered from the keyboard.
+6. Tab to a Task's row to open it, Tab to **Edit** and press Enter, edit the Title on the edit page
+   with the keyboard, and Tab to **Save** in the page header.
+7. Click **+ New task** with the keyboard, edit a field, press **Esc**, and confirm the **Discard
+   changes?** prompt appears and can be answered from the keyboard. Then, on an edit page with an
+   unsaved change, Tab to **Cancel**: the Tab closes at once and the edit is discarded, with no prompt.
 
 **Pass if — all of these**
 - Every one of steps 1-7 is reachable with no mouse click at any point, including opening menus,
   choosing a state, saving a View, and editing/saving/cancelling a Task.
 - The **Move to** menu's items are keyboard-navigable and Enter commits the same way a drop does
   (including the Duplicate picker / reason prompt when a terminal Won't-do state is chosen).
-- **Discard changes?** (the `MudExitPrompt`) is answerable via keyboard — Tab to a button, Enter.
+- **Discard changes?** (on the New task drawer) is answerable via keyboard — Tab to a button, Enter.
 - Focus is visibly on the control you tabbed to at every step (a visible focus ring).
 
 **Fail if — any of these**
@@ -930,13 +938,13 @@ any other field (D-S8).*
 - `Rae` never calls `update_task` -> record as a model-behaviour finding per
   [§0.6](../manual-tests.md#06-not-a-defect), unless the tool was unavailable.
 
-### TASKS-20 — Escape closes the Task drawer, Expand opens the dialog over the view, and a new Task opens at the top
+### TASKS-20 — Escape closes the Task drawer, Edit opens the edit page in its own Tab, and a new Task opens at the top
 
 **Free** · about 5 min
 
-*Proves the drawer's Escape key (with the unsaved-changes prompt), that Expand on the item route
-shows the expanded dialog instead of closing the Task, and that the drawer body does not carry a
-previous Task's scroll position into the next one.*
+*Proves the drawer's Escape key (with the unsaved-changes prompt on a new Task), that Edit on the item
+route opens the edit page in its own Tab, and that the drawer body does not carry a previous Task's
+scroll position into the next one.*
 
 **Before you start**
 
@@ -944,22 +952,24 @@ previous Task's scroll position into the next one.*
 
 **Steps**
 
-1. Open a Task from `/tasks` so the drawer opens, press **Esc**, then reopen it, change the
-   Priority and press **Esc** again.
-2. Open `/tasks/item/<id>` for a Task directly and click **Expand** (the arrows icon).
+1. Open a Task from `/tasks` so the drawer opens and press **Esc**. Then click **+ New task**, change
+   the Priority and press **Esc** again.
+2. Open `/tasks/item/<id>` for a Task directly and click **Edit**. The drawer has no Expand button.
 3. Close the dialog. Open the long Task, scroll the drawer to the bottom, then click **+ New task**.
 
 **Pass if — all of these**
 
 - Step 1: the first **Esc** closes the drawer; the second asks **Discard changes?** and the
   drawer stays open until you answer.
-- Step 2: the expanded dialog opens over the View.
+- Step 2: a permanent "Edit {id}" Tab opens with the Task's editor; the drawer closes; clicking **Edit**
+  again on that Task goes back to the same Tab.
 - Step 3: the new-Task form starts at its top, with the Title field visible.
 
 **Fail if — any of these**
 - **Esc** does nothing, or discards the edit without asking -> `ResizableEndDrawer`'s key handler or
   the page's close guard is not wired.
-- **Expand** leaves the view with no dialog -> the dialog opened before the host's close navigation.
+- **Edit** opens a preview Tab, a second Tab, or none -> `TaskReadView.EditAsync` or the Tab key
+  `task-edit:{id}` has regressed.
 - The new-Task form is scrolled down -> the drawer body is not keyed by `ContentKey`.
 
 ---
