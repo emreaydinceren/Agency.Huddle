@@ -65,7 +65,8 @@ internal sealed class TaskToolHarness : IDisposable
     /// </param>
     /// <param name="gates">The process gates the Task service enforces on a status change; <see langword="null"/> (the default) enforces none.</param>
     /// <param name="proof">Supplies a Task's Proof to the Human gate rules; <see langword="null"/> (the default) means an empty, complete Proof.</param>
-    public TaskToolHarness(TimeProvider? clock = null, string? sprintsText = null, Agency.Huddle.App.Teams.ProcessGateService? gates = null, Agency.Huddle.App.Tasks.HumanGate.IProofSource? proof = null)
+    /// <param name="feed">Receives the Feed items the Task service produces; <see langword="null"/> (the default) posts nothing.</param>
+    public TaskToolHarness(TimeProvider? clock = null, string? sprintsText = null, Agency.Huddle.App.Teams.ProcessGateService? gates = null, Agency.Huddle.App.Tasks.HumanGate.IProofSource? proof = null, Agency.Huddle.App.Feed.IFeedPublisher? feed = null)
     {
         this.Options = this.dir.Options();
         this.gates = gates;
@@ -99,7 +100,8 @@ internal sealed class TaskToolHarness : IDisposable
             this.Clock,
             NullLogger<TaskService>.Instance,
             gates,
-            proof: proof);
+            proof: proof,
+            feed: feed);
         this.Views = new ViewStore(this.Options, NullLogger<ViewStore>.Instance);
         this.TurnActivity = new TurnActivity();
         this.TaskActivity = new TaskActivity(this.Options);
