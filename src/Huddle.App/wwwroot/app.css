@@ -2346,6 +2346,42 @@ a.team-ref,
     border-bottom: 0;
 }
 
+/* The Right sidebar toggle's one faint aura pulse, when a panel becomes available while the sidebar is closed (RightSidebarToggle.razor).
+   A ring in the Primary colour grows from the button and fades, once, on a pseudo-element that takes no clicks. The span is re-created for each
+   pulse, which is what restarts it. The ring fades by opacity, not by a tint over transparent (the selected-tint rule). */
+.right-sidebar-toggle-aura {
+    position: relative;
+    display: inline-flex;
+    border-radius: 50%;
+}
+
+.right-sidebar-toggle-aura.is-pulsing::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: right-sidebar-aura 1600ms ease-out 1;
+}
+
+@keyframes right-sidebar-aura {
+    0% {
+        opacity: 0.38;
+        box-shadow: 0 0 0 0 var(--mud-palette-primary);
+    }
+
+    100% {
+        opacity: 0;
+        box-shadow: 0 0 0 12px var(--mud-palette-primary);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .right-sidebar-toggle-aura.is-pulsing::after {
+        animation: none;
+    }
+}
+
 /* ---- Traits: transcript and composer ------------------------------------------------------------------------
    Variant rules for the message, marks, composer and send traits (ADR-0057, lifted from the Nordic pack). Each is
    scoped to the marker attribute the skin renders, so a Theme that does not choose the variant never sees it. The
