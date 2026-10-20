@@ -321,8 +321,17 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
             TestBudgets.Standard);
 
         Assert.False(this.harness.Store.Get(task.Id)?.HumanGate);
-        this.PassTheWait();
-        await Eventually.UntilAsync(() => this.harness.Store.Get(task.Id)?.HumanGate == true, TestContext.Current.CancellationToken, TestBudgets.Standard);
+
+        // The dispatcher starts the held input's wait only after the first run has ended, which can be after its result was recorded
+        // above; a clock advanced once could land before that timer exists, so advance it on every poll.
+        await Eventually.UntilAsync(
+            () =>
+            {
+                this.PassTheWait();
+                return this.harness.Store.Get(task.Id)?.HumanGate == true;
+            },
+            TestContext.Current.CancellationToken,
+            TestBudgets.Standard);
         Assert.Equal(2, this.process.Calls);
     }
 

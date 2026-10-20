@@ -24,6 +24,7 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
     private readonly SemaphoreSlim concurrency;
     private readonly CancellationTokenSource stopping = new();
     private bool stopped;
+    private bool disposed;
     private readonly HashSet<Task> running = [];
 
     /// <summary>Creates the dispatcher over the registered invokers.</summary>
@@ -110,6 +111,12 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
         Task[] inFlight;
         lock (this.gate)
         {
+            // A host that stops a dispatcher the container already disposed has nothing left to stop.
+            if (this.disposed)
+            {
+                return;
+            }
+
             // Set under the gate so no Enqueue or timer starts a run after the snapshot below.
             this.stopped = true;
             foreach (Pending entry in this.pending.Values)
@@ -139,6 +146,13 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
     {
         lock (this.gate)
         {
+            if (this.disposed)
+            {
+                return;
+            }
+
+            this.disposed = true;
+            this.stopped = true;
             foreach (Pending entry in this.pending.Values)
             {
                 entry.Timer?.Dispose();
