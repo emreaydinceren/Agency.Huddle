@@ -16,7 +16,8 @@ A Team's **process** says how its work is done, and its **gates** are the few ru
 refuse a change until a condition is met. A Team lists its gates in its `Process.md`. The app
 enforces them at the two places where the change happens: `TaskService` for a Task's status,
 and `WorkDirPermissionHandler` for a `git merge` or `git push` from the Team's workspace. The
-full design is in the [Teams specification](../engineering/teams-spec.md), under *Gates* and *Runtime behavior*.
+Human's view of them is in the [User Guide](../Huddle.UserGuide.md) (*Process and gates*); the original
+Teams specification has been retired.
 
 ## The problem
 

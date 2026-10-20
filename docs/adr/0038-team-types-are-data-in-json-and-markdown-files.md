@@ -12,8 +12,9 @@ date: 2026-10-08
 A **team type** describes a kind of Team: its roles, the candidates that fill them, its
 process and its skill packs. Every team type is a set of files. The built-in types ship
 embedded in the app, and the user's own types live in a folder beside the data. Code knows
-managers, roles, packs, gates and Requests, but never a role name. The full design is in the
-[Teams specification](../engineering/teams-spec.md), under *Data formats* and *Architecture*.
+managers, roles, packs, gates and Requests, but never a role name. The original
+Teams specification has been retired; this record, [ADR-0049](0049-a-hiring-pool-holds-the-jobs-and-a-team-type-lists-them.md)
+and the [Hiring Pool specification](../Huddle.HiringPool-Specifications.md) carry the design.
 
 ## The problem
 
