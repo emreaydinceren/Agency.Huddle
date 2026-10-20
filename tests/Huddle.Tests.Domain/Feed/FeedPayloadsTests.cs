@@ -179,4 +179,13 @@ public sealed class FeedPayloadsTests
 
         Assert.All(expected, row => Assert.Equal(row.Category, FeedCategories.Parse(row.Text)));
     }
+
+    /// <summary>Every Category has a <c>category=</c> value that parses back to it.</summary>
+    [Fact]
+    public void Categories_ToWire_RoundTripsThroughParse()
+    {
+        Assert.All(Enum.GetValues<FeedCategory>(), category => Assert.Equal(category, FeedCategories.Parse(FeedCategories.ToWire(category))));
+        Assert.Equal("needs-you", FeedCategories.ToWire(FeedCategory.NeedsYou));
+        Assert.Equal("all", FeedCategories.ToWire(FeedCategory.All));
+    }
 }

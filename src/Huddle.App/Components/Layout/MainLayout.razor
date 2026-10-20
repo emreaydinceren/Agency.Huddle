@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 @using Agency.Huddle.App.Appearance
+@using Agency.Huddle.App.Components.Feed
 @using Agency.Huddle.App.Components.Search
 @using Agency.Huddle.App.Tabs
 @using Agency.Huddle.App.Themes
@@ -38,6 +39,7 @@
         </Search>
         <Actions>
             <TasksNeedYouPill />
+            <NotificationsButton />
             <RightSidebarToggle />
             <ThemeModeToggle />
         </Actions>

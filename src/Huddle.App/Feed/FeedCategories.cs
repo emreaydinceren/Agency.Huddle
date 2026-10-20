@@ -37,6 +37,19 @@ internal static class FeedCategories
         _ => FeedCategory.All,
     };
 
+    /// <summary>The <c>category=</c> query value of a segment, the inverse of <see cref="Parse"/>.</summary>
+    /// <param name="category">The segment.</param>
+    /// <returns>The query value.</returns>
+    public static string ToWire(FeedCategory category) => category switch
+    {
+        FeedCategory.NeedsYou => "needs-you",
+        FeedCategory.Tasks => "tasks",
+        FeedCategory.Documents => "documents",
+        FeedCategory.Rooms => "rooms",
+        FeedCategory.Gates => "gates",
+        _ => "all",
+    };
+
     private static Dictionary<FeedCategory, IReadOnlyList<FeedSourceType>> BuildIndex()
     {
         Dictionary<FeedCategory, IReadOnlyList<FeedSourceType>> index = [];

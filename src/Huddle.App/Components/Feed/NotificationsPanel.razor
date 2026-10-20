@@ -1,0 +1,277 @@
+@*
+    The Right sidebar's Notifications panel (Feed spec 6.8, D-21). It shows the Feed, not only Notifications: a compact Category control with
+    the six Categories and their counts, opening on Needs you, then the rows of the chosen Category (FeedList, the Feed Tab's own rows),
+    "Show more", and a last row that opens the Feed Tab on the same Category. Opening the panel is what marks the Notifications it shows as
+    seen. The x on a row dismisses its Notification: in Needs you the row goes at once, in All it stays because dismissing hides it from
+    the bell and not from the Feed. The Category choice lives only as long as the panel does.
+*@
+@using Agency.Huddle.App.Components.Layout
+@using Agency.Huddle.App.Feed
+@using Agency.Huddle.App.Sidebar
+@using Microsoft.Extensions.Options
+@implements IDisposable
+@inject FeedStore Store
+@inject FeedQueue Queue
+@inject FeedEvents Events
+@inject IOptions<TeamOptions> Options
+
+<div class="notifications-panel">
+    <div role="radiogroup" aria-label="Category" class="feed-categories">
+        <MudChipSet T="FeedCategory"
+                    SelectionMode="SelectionMode.SingleSelection"
+                    SelectedValue="@this.category"
+                    SelectedValueChanged="this.OnCategoryChanged">
+            @foreach (FeedCategory entry in Order)
+            {
+                <MudChip T="FeedCategory"
+                         Value="@entry"
+                         Size="Size.Small"
+                         Variant="Variant.Outlined"
+                         role="radio"
+                         aria-checked="@(entry == this.category ? "true" : "false")">
+                    <span>@LabelOf(entry)</span> <span class="feed-category-count">@this.CountOf(entry)</span>
+                </MudChip>
+            }
+        </MudChipSet>
+    </div>
+
+    @if (this.items.Count == 0 && !this.arrived)
+    {
+        <EmptyState Title="@this.EmptyTitle" Text="@this.EmptyText" />
+    }
+
+    <FeedList @key="this.listKey" @ref="this.list" Items="this.items" OnDismiss="this.DismissAsync" />
+
+    @if (this.hasMore)
+    {
+        <MudButton Size="Size.Small" Class="feed-show-more" OnClick="this.ShowMore">Show more</MudButton>
+    }
+
+    <NavTabLink Href="@("/feed?category=" + FeedCategories.ToWire(this.category))" TabTitle="Feed" Match="NavLinkMatch.All" Class="feed-see-all">See all activity</NavTabLink>
+</div>
+
+@code {
+    private static readonly FeedCategory[] Order =
+    [
+        FeedCategory.All, FeedCategory.NeedsYou, FeedCategory.Tasks, FeedCategory.Documents, FeedCategory.Rooms, FeedCategory.Gates,
+    ];
+
+    private readonly HashSet<long> hidden = [];
+    private readonly Dictionary<long, (bool Resolved, bool Dismissed)> known = [];
+    private FeedCategory category = FeedCategory.NeedsYou;
+    private FeedCounts counts = new(0, 0, 0, 0, 0, 0);
+    private IReadOnlyList<FeedItem> items = [];
+    private FeedList? list;
+    private int listKey;
+    private int loadedCount;
+    private long lowestLoadedId;
+    private long markedUpTo;
+    private long arrivedNotificationId;
+    private bool hasMore;
+    private bool arrived;
+
+    /// <summary>The frame's context, which shows the unseen count in the header.</summary>
+    [CascadingParameter]
+    public SidebarPanelContext? Panel { get; set; }
+
+    private int PageSize => Math.Max(1, this.Options.Value.Feed.PanelLimit);
+
+    private string EmptyTitle => this.category == FeedCategory.NeedsYou ? "Nothing needs you" : "Nothing yet";
+
+    private string EmptyText => this.category == FeedCategory.NeedsYou ? "Asks from your Teammates appear here." : "What your Teammates do appears here.";
+
+    /// <summary>Loads the first page of Needs you and listens for Feed changes.</summary>
+    protected override void OnInitialized()
+    {
+        this.Load(this.PageSize);
+        this.Events.ItemsAdded += this.OnItemsAdded;
+        this.Events.ItemsChanged += this.OnItemsChanged;
+    }
+
+    /// <summary>Unsubscribes from the Feed hub.</summary>
+    public void Dispose()
+    {
+        this.Events.ItemsAdded -= this.OnItemsAdded;
+        this.Events.ItemsChanged -= this.OnItemsChanged;
+    }
+
+    private static string LabelOf(FeedCategory entry) => entry switch
+    {
+        FeedCategory.NeedsYou => "Needs you",
+        FeedCategory.Tasks => "Tasks",
+        FeedCategory.Documents => "Documents",
+        FeedCategory.Rooms => "Rooms",
+        FeedCategory.Gates => "Gates",
+        _ => "All",
+    };
+
+    private int CountOf(FeedCategory entry) => entry switch
+    {
+        FeedCategory.NeedsYou => this.counts.NeedsYou,
+        FeedCategory.Tasks => this.counts.Tasks,
+        FeedCategory.Documents => this.counts.Documents,
+        FeedCategory.Rooms => this.counts.Rooms,
+        FeedCategory.Gates => this.counts.Gates,
+        _ => this.counts.All,
+    };
+
+    /// <summary>Whether an item belongs in the chosen Category's list right now.</summary>
+    private bool Matches(FeedItem item) => this.category switch
+    {
+        FeedCategory.All => true,
+        FeedCategory.NeedsYou => item.Notify && item.ResolvedAt is null && item.DismissedAt is null && !this.hidden.Contains(item.Id),
+        _ => item.SourceType is { } type && FeedCategories.Of(type) == this.category,
+    };
+
+    /// <summary>The store's Needs you page includes Notifications dismissed earlier, so those are dropped here.</summary>
+    private List<FeedItem> Visible(IReadOnlyList<FeedItem> page) =>
+        this.category == FeedCategory.NeedsYou ? [.. page.Where(item => item.DismissedAt is null && !this.hidden.Contains(item.Id))] : [.. page];
+
+    /// <summary>Reads the first <paramref name="limit"/> items of the chosen Category and starts a fresh list.</summary>
+    private void Load(int limit)
+    {
+        IReadOnlyList<FeedItem> page = this.Store.Page(new FeedQuery(null, limit, null, null, this.category));
+        this.items = this.Visible(page);
+        this.loadedCount = page.Count;
+        this.lowestLoadedId = page.Count > 0 ? page[^1].Id : 0;
+        this.hasMore = page.Count >= limit;
+        this.arrived = false;
+        this.listKey++;
+        this.RememberShown();
+        this.Refresh();
+    }
+
+    private void RememberShown()
+    {
+        this.known.Clear();
+        foreach (FeedItem item in this.items)
+        {
+            this.Remember(item);
+        }
+    }
+
+    private void Remember(FeedItem item) =>
+        this.known[item.Id] = (item.ResolvedAt is not null, this.category == FeedCategory.NeedsYou && item.DismissedAt is not null);
+
+    /// <summary>Re-reads the counts and the header count, and marks the Notifications now shown as seen.</summary>
+    private void Refresh()
+    {
+        this.counts = this.Store.Counts(null, null);
+        int unseen = this.Store.UnseenCount();
+        this.Panel?.SetCount(unseen > 0 ? unseen : null);
+        this.MarkShownSeen();
+    }
+
+    private void MarkShownSeen()
+    {
+        long highest = this.items.Where(static item => item.Notify).Select(static item => item.Id).DefaultIfEmpty(0).Max();
+        highest = Math.Max(highest, this.arrivedNotificationId);
+        if (highest > this.markedUpTo)
+        {
+            this.markedUpTo = highest;
+            this.Queue.MarkSeen(highest);
+        }
+    }
+
+    private void OnCategoryChanged(FeedCategory chosen)
+    {
+        if (chosen == this.category)
+        {
+            return;
+        }
+
+        this.category = chosen;
+        this.arrivedNotificationId = 0;
+        this.Load(this.PageSize);
+    }
+
+    private void ShowMore()
+    {
+        IReadOnlyList<FeedItem> page = this.Store.Page(new FeedQuery(this.lowestLoadedId, this.PageSize, null, null, this.category));
+        List<FeedItem> older = this.Visible(page);
+        this.items = [.. this.items, .. older];
+        this.loadedCount += page.Count;
+        this.lowestLoadedId = page.Count > 0 ? page[^1].Id : this.lowestLoadedId;
+        this.hasMore = page.Count >= this.PageSize;
+        foreach (FeedItem item in older)
+        {
+            this.Remember(item);
+        }
+
+        this.Refresh();
+    }
+
+    private Task DismissAsync(FeedItem item)
+    {
+        this.Queue.Dismiss(item.Id);
+        if (this.category == FeedCategory.NeedsYou)
+        {
+            _ = this.hidden.Add(item.Id);
+            this.Load(Math.Max(this.PageSize, this.loadedCount));
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void OnItemsAdded(IReadOnlyList<FeedItem> added)
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
+        {
+            await this.TakeArrivalsAsync(added);
+            this.StateHasChanged();
+        });
+    }
+
+    private async Task TakeArrivalsAsync(IReadOnlyList<FeedItem> added)
+    {
+        List<FeedItem> matching = [.. added.Where(item => this.Matches(item) && !this.known.ContainsKey(item.Id))];
+        if (matching.Count > 0)
+        {
+            this.arrived = true;
+            this.loadedCount += matching.Count;
+            foreach (FeedItem item in matching)
+            {
+                this.Remember(item);
+            }
+
+            this.arrivedNotificationId = Math.Max(this.arrivedNotificationId, matching.Where(static item => item.Notify).Select(static item => item.Id).DefaultIfEmpty(0).Max());
+            if (this.list is not null)
+            {
+                await this.list.AddNewItemsAsync(matching);
+            }
+        }
+
+        this.Refresh();
+    }
+
+    private void OnItemsChanged()
+    {
+        _ = RendererDispatch.Repaint(this.InvokeAsync, this.ReloadIfShownRowsChanged);
+    }
+
+    /// <summary>Reloads the list when a row it shows was resolved or dismissed; a change that touches nothing shown only refreshes the counts.</summary>
+    private void ReloadIfShownRowsChanged()
+    {
+        IReadOnlyList<FeedItem> page = this.Store.Page(new FeedQuery(null, Math.Max(this.PageSize, this.loadedCount), null, null, this.category));
+        Dictionary<long, FeedItem> current = page.ToDictionary(static item => item.Id);
+        bool changed = this.known.Any(entry =>
+        {
+            if (!current.TryGetValue(entry.Key, out FeedItem? now))
+            {
+                return this.category == FeedCategory.NeedsYou;
+            }
+
+            return entry.Value != (now.ResolvedAt is not null, this.category == FeedCategory.NeedsYou && now.DismissedAt is not null);
+        });
+        if (changed)
+        {
+            this.Load(Math.Max(this.PageSize, this.loadedCount));
+        }
+        else
+        {
+            this.Refresh();
+        }
+
+        this.StateHasChanged();
+    }
+}

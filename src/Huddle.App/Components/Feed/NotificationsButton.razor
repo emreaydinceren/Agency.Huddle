@@ -1,0 +1,69 @@
+@*
+    The Top bar's bell (Feed spec 6.8, S1c): a 32px icon button with the number of Notifications not yet seen on a badge (hidden at 0,
+    99+ above). Pressing it opens the Right sidebar on the Notifications panel, and pressing it again closes it; it is aria-pressed while
+    that panel shows. It re-reads the count whenever the Feed adds or changes items, and draws nothing while the Feed is off.
+*@
+@using Agency.Huddle.App.Components.Layout
+@using Agency.Huddle.App.Feed
+@using Agency.Huddle.App.Tabs
+@using Microsoft.Extensions.Options
+@implements IDisposable
+@inject FeedStore Store
+@inject FeedEvents Events
+@inject RightSidebarService Sidebar
+@inject IOptions<TeamOptions> Options
+
+@if (this.Options.Value.Feed.Enabled)
+{
+    <MudTooltip Text="Notifications">
+        <MudBadge Content="@this.count" Max="99" Visible="@(this.count > 0)" Overlap="true" Color="Color.Primary" Class="notifications-badge">
+            <MudIconButton Icon="@Icons.Material.Outlined.Notifications"
+                           Size="Size.Small"
+                           Color="@(this.Showing ? Color.Primary : Color.Inherit)"
+                           Class="notifications-button"
+                           aria-label="@this.Label"
+                           aria-pressed="@(this.Showing ? "true" : "false")"
+                           aria-controls="@RightSidebar.ElementId"
+                           OnClick="this.Toggle" />
+        </MudBadge>
+    </MudTooltip>
+}
+
+@code {
+    private int count;
+
+    private bool Showing => this.Sidebar.IsOpen && this.Sidebar.Mode == RightSidebarMode.Notifications;
+
+    private string Label => this.count > 0 ? $"Notifications, {this.count} new" : "Notifications";
+
+    /// <summary>Reads the count and listens for Feed changes and for the panel opening or closing.</summary>
+    protected override void OnInitialized()
+    {
+        this.count = this.Store.UnseenCount();
+        this.Events.ItemsAdded += this.OnItemsAdded;
+        this.Events.ItemsChanged += this.OnChanged;
+        this.Sidebar.Changed += this.OnChanged;
+    }
+
+    /// <summary>Unsubscribes from the Feed hub and the sidebar.</summary>
+    public void Dispose()
+    {
+        this.Events.ItemsAdded -= this.OnItemsAdded;
+        this.Events.ItemsChanged -= this.OnChanged;
+        this.Sidebar.Changed -= this.OnChanged;
+    }
+
+    private void Toggle() => this.Sidebar.ToggleNotifications();
+
+    private void OnItemsAdded(IReadOnlyList<FeedItem> items) => this.OnChanged();
+
+    private void OnChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.count = this.Store.UnseenCount();
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+}
