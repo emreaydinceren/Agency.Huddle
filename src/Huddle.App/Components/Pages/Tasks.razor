@@ -19,19 +19,9 @@
     menus; /tasks/new creates a View under a default name and opens it. An invalid View route
     (corrections-B7 §13.2 item 4) shows its ViewValidator reason, never the "no longer exists"
     wording that only ever meant "no such id at all".
-    14.5.i (this dispatch, third page-wiring step, corrections-B7): the detail drawer now hosts a real
-    TaskDetail (Mode=Panel) instead of the placeholder - opening a row/card, "+ New task" (the toolbar
-    button) and switching between two already-open Tasks all go through
-    ConfirmSwitchAsync, which calls the currently mounted TaskDetail's own ConfirmDiscardAsync before
-    tearing it down (a fresh @key forces recreation, since TaskDetail only loads its Id/Draft once, in
-    OnInitializedAsync - Cancel in that "Discard changes?" box leaves the current Task open).
-    OverlayAutoClose reads detailHasPending, a field this page keeps current from TaskDetail's own
-    HasPendingChanged (settled J58) - never a direct read of TaskDetail.HasPending, because TaskDetail
-    changing its own pending does not, by itself, re-render this ancestor: a direct read could act on
-    a stale "nothing pending" and let the drawer's overlay click silently discard a real edit (the bug
-    J58 fixed). WakeToasts (renders nothing itself) and the page-header AiReactingChip - watching every
-    Task in the current effective View, not narrowed by the search box - are D14's remaining work, per
-    corrections-B5 D14 item 12.
+    The detail drawer (T7) is read-only: it hosts TaskReadView for an existing Task. Editing, a new Task and a copy all open the edit page
+    (TaskEditPage) in a Tab of its own (docs/Huddle.TaskReadView-Specifications.md); WakeToasts (renders nothing itself) and the page-header
+    AiReactingChip - watching every Task in the current effective View, not narrowed by the search box - are corrections-B5 D14 item 12.
 *@
 
 @page "/tasks"
@@ -210,30 +200,15 @@
         }
 
         <ResizableEndDrawer Open="this.detailOpen" OpenChanged="this.OnDrawerOpenChangedAsync" StorageKey="taskDetailPanelWidth"
-                            ContentKey="@(this.selectedTaskId?.ToString() ?? "new")" Title="@this.DetailTitle" Eyebrow="@this.DetailEyebrow"
-                            OverlayAutoClose="@(!this.detailHasPending)" ShowFooter="@this.FooterVisible"
-                            Class="@(this.titleEditing ? "tasks-detail-drawer is-title-editing" : "tasks-detail-drawer")">
+                            ContentKey="@(this.selectedTaskId?.ToString() ?? "none")" Title="@this.DetailTitle" Eyebrow="@this.DetailEyebrow"
+                            Class="tasks-detail-drawer">
             <ChildContent>
-                @if (this.selectedDraft is not null)
-                {
-                    @* A draft is edited in the drawer, as before; after its first Save the drawer switches to the read view (OnDraftCreated). *@
-                    <TaskDetail @ref="this.detail" @key="this.DetailKey" Id="this.selectedTaskId" Draft="this.selectedDraft"
-                                Mode="TaskDetailMode.Panel" OnClose="this.OnDetailClosed" HasPendingChanged="this.OnDetailHasPendingChanged"
-                                ExternalFooter="true" FooterStateChanged="this.OnFooterStateChanged" TitleEditingChanged="this.OnTitleEditingChanged"
-                                OnCreated="this.OnDraftCreated" />
-                }
-                else if (this.selectedTaskId is { } readId)
+                @if (this.selectedTaskId is { } readId)
                 {
                     @* T15: an existing Task is read here and edited in its own Tab (docs/Huddle.TaskReadView-Specifications.md, D-1, D-2). *@
                     <TaskReadView @key="readId" Id="readId" OnClose="this.OnDetailClosed" OnEdit="this.OnReadViewEdit" />
                 }
             </ChildContent>
-            <Footer>
-                @* Cancel, then the one filled primary action, in the drawer's sticky footer while there are changes (audit B4k). *@
-                <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-detail-cancel" OnClick="this.OnFooterCancelAsync">Cancel</MudButton>
-                <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="task-detail-save" OnClick="this.OnFooterSaveAsync"
-                           Disabled="@(this.detail?.FooterSaveDisabled ?? true)">@(this.detail?.FooterSaveLabel ?? "Save")</MudButton>
-            </Footer>
         </ResizableEndDrawer>
     }
 
@@ -255,10 +230,6 @@
     private string? itemNotFoundText;
     private bool detailOpen;
     private TaskId? selectedTaskId;
-    private TaskDraft? selectedDraft;
-    private TaskDetail? detail;
-    private bool detailHasPending;
-    private bool titleEditing;
     private MudMenu? viewMenu;
 
     /// <summary>Subscribes to the three hubs Spec §13.2 (narrowed by corrections-B4 D11 item 9) names.</summary>
@@ -284,7 +255,7 @@
     protected override async Task OnParametersSetAsync()
     {
         this.ResolveEffectiveViewFromRoute();
-        await this.ResolveItemRouteAsync();
+        this.ResolveItemRoute();
 
         if (this.effectiveView?.Fields.Contains("origin", StringComparer.Ordinal) is true)
         {
@@ -341,10 +312,8 @@
     /// <summary>
     /// Spec §13.13.3: parses <see cref="TaskIdText"/> and opens the named Task's panel, or - if the text
     /// is invalid or names no Task - sets <see cref="itemNotFoundText"/> to the exact wording instead.
-    /// Switching away from a different already-open Task goes through <see cref="ConfirmSwitchAsync"/>
-    /// first (corrections-B6 "D15.2" item 2), the same guard <see cref="OnOpenTaskAsync"/> uses.
     /// </summary>
-    private async Task ResolveItemRouteAsync()
+    private void ResolveItemRoute()
     {
         if (this.TaskIdText is not { } text)
         {
@@ -356,7 +325,6 @@
         {
             this.itemNotFoundText = $"No task {text}.";
             this.selectedTaskId = null;
-            this.selectedDraft = null;
             this.detailOpen = false;
             return;
         }
@@ -367,15 +335,7 @@
             return;
         }
 
-        if (!await this.ConfirmSwitchAsync())
-        {
-            return;
-        }
-
-        this.selectedDraft = null;
         this.selectedTaskId = parsed;
-        this.detailHasPending = false;
-        this.titleEditing = false;
         this.detailOpen = true;
     }
 
@@ -520,28 +480,20 @@
         return Task.CompletedTask;
     }
 
-    /// <summary>Opens the detail drawer's <see cref="TaskDetail"/> for the clicked row/card - a no-op when it is already showing that Task - guarded by <see cref="ConfirmSwitchAsync"/> (corrections-B7 14.5.i item 2).</summary>
+    /// <summary>Opens the detail drawer's <see cref="TaskReadView"/> for the clicked row/card - a no-op when it is already showing that Task.</summary>
     /// <param name="id">The clicked Task's id.</param>
-    private async Task OnOpenTaskAsync(TaskId id)
+    private Task OnOpenTaskAsync(TaskId id)
     {
-        if (this.detailOpen && this.selectedTaskId == id)
+        if (!this.detailOpen || this.selectedTaskId != id)
         {
-            return;
+            this.selectedTaskId = id;
+            this.detailOpen = true;
         }
 
-        if (!await this.ConfirmSwitchAsync())
-        {
-            return;
-        }
-
-        this.selectedDraft = null;
-        this.selectedTaskId = id;
-        this.detailHasPending = false;
-        this.titleEditing = false;
-        this.detailOpen = true;
+        return Task.CompletedTask;
     }
 
-    /// <summary>The page header's "New task" button: opens the drawer's create mode with the Team and Project the effective View's filter names.</summary>
+    /// <summary>The page header's "New task" button: opens the edit page on a new Task, with the Team and Project the effective View's filter names.</summary>
     /// <param name="args">The click, unused.</param>
     private Task OnCreateClickedAsync(MouseEventArgs args)
     {
@@ -549,76 +501,34 @@
         return this.OnNewTaskAsync(NewTaskDefaults.For(this.effectiveView));
     }
 
-    /// <summary>"+ New task" (the header button, Spec §13.3): opens the drawer's <see cref="TaskDetail"/> in create mode with <paramref name="defaults"/>.</summary>
+    /// <summary>"+ New task" (the header button, Spec §13.3): opens a new Task in the edit page's Tab with <paramref name="defaults"/>, and closes the drawer.</summary>
     /// <param name="defaults">The Team/Project the effective View's filter names, when it names exactly one.</param>
-    private async Task OnNewTaskAsync(NewTaskDefaults defaults)
+    private Task OnNewTaskAsync(NewTaskDefaults defaults)
     {
-        if (!await this.ConfirmSwitchAsync())
-        {
-            return;
-        }
-
-        this.selectedTaskId = null;
-        this.selectedDraft = new TaskDraft(string.Empty, defaults.Team ?? string.Empty, defaults.Project);
-        this.detailHasPending = false;
-        this.titleEditing = false;
-        this.detailOpen = true;
-    }
-
-    /// <summary>
-    /// Asks the currently mounted <see cref="TaskDetail"/> (if any) to confirm discarding pending
-    /// edits before this page switches what the drawer shows (corrections-B7 14.5.i item 2). With
-    /// nothing mounted yet - the drawer has never been opened - there is nothing to discard.
-    /// </summary>
-    private Task<bool> ConfirmSwitchAsync() => this.detail is null ? Task.FromResult(true) : this.detail.ConfirmDiscardAsync();
-
-    /// <summary>
-    /// After a draft's first Save (B10): the drawer shows the new Task in the read view instead of the form that just created it. The
-    /// form is unmounted by the render this triggers, so it is forgotten here and cannot answer for the new Task's pending edits.
-    /// </summary>
-    /// <param name="id">The id the new Task was given.</param>
-    private void OnDraftCreated(TaskId id)
-    {
-        this.detail = null;
-        this.selectedDraft = null;
-        this.selectedTaskId = id;
-        this.detailHasPending = false;
-        this.titleEditing = false;
-        this.StateHasChanged();
+        this.detailOpen = false;
+        TaskTabs.OpenNew(this.Tabs, this.Navigation, defaults.Team, defaults.Project);
+        return Task.CompletedTask;
     }
 
     /// <summary>
     /// Edit in the read view (B3): the drawer closes first, and the read view then navigates to the edit page's Tab. The URL is left to that
     /// navigation: an item route's usual replace with the View's path would race it.
     /// </summary>
-    private void OnReadViewEdit()
-    {
-        this.detailOpen = false;
-        this.titleEditing = false;
-    }
+    private void OnReadViewEdit() => this.detailOpen = false;
 
-    /// <summary>Closes the detail drawer (<see cref="TaskDetail.OnClose"/>): Cancel, a successful Close/Reopen, or returning from Expand.</summary>
+    /// <summary>Closes the detail drawer: the "This Task was deleted" alert's Close button.</summary>
     private void OnDetailClosed() => this.OnDetailOpenChanged(false);
 
-    /// <summary>
-    /// The drawer's own close request (the close button or Escape). Closing with an unsaved edit asks "Discard changes?"
-    /// through <see cref="TaskDetail.ConfirmDiscardAsync"/> first and stays open when the Human declines; the backdrop
-    /// never reaches here with an edit pending, because <c>OverlayAutoClose</c> is off then.
-    /// </summary>
+    /// <summary>The drawer's own close request (the close button, Escape or the backdrop): nothing in a read view can be lost, so it just closes.</summary>
     /// <param name="open">The drawer's requested Open state.</param>
-    private async Task OnDrawerOpenChangedAsync(bool open)
+    private Task OnDrawerOpenChangedAsync(bool open)
     {
-        if (!open && !await this.ConfirmSwitchAsync())
-        {
-            return;
-        }
-
         this.OnDetailOpenChanged(open);
+        return Task.CompletedTask;
     }
 
     /// <summary>
-    /// Reflects the drawer's own chrome (backdrop click, Escape) closing it, and <see cref="TaskDetail.OnClose"/>
-    /// (Cancel, Close/Reopen, Expand) - both go through here. On the item route (Spec §13.13.3 step 4),
+    /// Reflects the drawer closing (the close button, backdrop, Escape, or the deleted-Task alert's Close). On the item route (Spec §13.13.3 step 4),
     /// closing also replaces the URL with <c>/tasks/{effectiveView.Id}</c>, so Back does not reopen the
     /// panel; the ordinary <c>/tasks</c>/<c>/tasks/{ViewId}</c> routes never change the URL on close.
     /// </summary>
@@ -626,42 +536,11 @@
     private void OnDetailOpenChanged(bool open)
     {
         this.detailOpen = open;
-        if (!open)
-        {
-            this.titleEditing = false;
-        }
-
         if (!open && this.TaskIdText is not null)
         {
             this.Navigation.NavigateTo($"/tasks/{this.effectiveView.Id}", replace: true);
         }
     }
-
-    /// <summary>
-    /// Tracks <see cref="TaskDetail.HasPendingChanged"/> (settled J58): the drawer's own
-    /// <c>OverlayAutoClose</c> reads <see cref="detailHasPending"/>, never <c>this.detail.HasPending</c>
-    /// directly - <see cref="TaskDetail"/> changing its own <c>pending</c> does not, by itself,
-    /// re-render this page, so a direct read could act on a stale "nothing pending" and let the
-    /// overlay silently discard a real edit.
-    /// </summary>
-    /// <param name="hasPending">Whether <see cref="TaskDetail"/> now has an unsaved edit pending.</param>
-    private void OnDetailHasPendingChanged(bool hasPending) => this.detailHasPending = hasPending;
-
-    /// <summary>Whether the drawer's footer (Cancel and Save) shows: while the open Task has changes, and for a new draft. It follows the mounted <see cref="TaskDetail"/>, which tells the page through <c>FooterStateChanged</c> when that changes.</summary>
-    private bool FooterVisible => this.detail?.FooterVisible ?? this.selectedDraft is not null;
-
-    /// <summary>The detail's footer state changed (changes appeared or were saved, the Save label or its enabled state moved): draw the footer again.</summary>
-    private void OnFooterStateChanged() => this.StateHasChanged();
-
-    /// <summary>The inline title edit opened or closed: while it is open the drawer's own copy of a saved Task's title is hidden, so the field replaces it (audit B4j).</summary>
-    /// <param name="editing">Whether a saved Task's title is being edited.</param>
-    private void OnTitleEditingChanged(bool editing) => this.titleEditing = editing;
-
-    /// <summary>The footer's Cancel: discards the edits and closes the drawer, as the detail's own Cancel does.</summary>
-    private Task OnFooterCancelAsync() => this.detail is { } open ? open.CancelAsync() : Task.CompletedTask;
-
-    /// <summary>The footer's Save: saves the open Task or creates the draft.</summary>
-    private Task OnFooterSaveAsync() => this.detail is { } open ? open.SaveAsync() : Task.CompletedTask;
 
     /// <summary>
     /// The document title (audit E2): the Tab's title, so the browser's tab and the Tab strip agree. A Task's item route is "Task {id}", as
@@ -684,59 +563,15 @@
     }
 
     /// <summary>
-    /// <see cref="TaskDetail"/> only loads its <see cref="TaskDetail.Id"/>/<see cref="TaskDetail.Draft"/>
-    /// once, in its own <c>OnInitializedAsync</c> - changing those parameters on the same instance would
-    /// not reload it. Keying on the target (the Task id, or the Draft instance itself for create mode)
-    /// forces Blazor to tear down and recreate <see cref="TaskDetail"/> whenever the drawer switches to
-    /// a different Task or a fresh create-mode Draft.
-    /// </summary>
-    private object DetailKey
-    {
-        get
-        {
-            if (this.selectedDraft is { } draft)
-            {
-                return draft;
-            }
-
-            if (this.selectedTaskId is { } id)
-            {
-                return id;
-            }
-
-            return NoDetailKey;
-        }
-    }
-
-    /// <summary>The <see cref="DetailKey"/> used when neither a Draft nor a Task is selected.</summary>
-    private const string NoDetailKey = "tasks-detail-none";
-
-    /// <summary>
     /// The detail drawer's title: the Task's own name ("Upgrade every service to .NET 10"), never its type, so
     /// the drawer says what is open (design-system "Drawer anatomy"). The id and its Team or Project are the
-    /// line above it (<see cref="DetailEyebrow"/>). A Draft has no id yet and reads "New task".
+    /// line above it (<see cref="DetailEyebrow"/>).
     /// </summary>
-    private string DetailTitle
-    {
-        get
-        {
-            if (this.selectedDraft is not null)
-            {
-                return "New task";
-            }
+    private string DetailTitle => this.selectedTaskId is { } id && this.Store.Get(id) is { } task ? task.Title : "Task";
 
-            if (this.selectedTaskId is { } id && this.Store.Get(id) is { } task)
-            {
-                return task.Title;
-            }
-
-            return "Task";
-        }
-    }
-
-    /// <summary>The line above the drawer's title: the id, then the Project or, with none, the Team ("PLAT-0013 · Platform"). Null for a Draft or a Task that is gone.</summary>
+    /// <summary>The line above the drawer's title: the id, then the Project or, with none, the Team ("PLAT-0013 · Platform"). Null for a Task that is gone.</summary>
     private string? DetailEyebrow =>
-        this.selectedDraft is null && this.selectedTaskId is { } id && this.Store.Get(id) is { } task
+        this.selectedTaskId is { } id && this.Store.Get(id) is { } task
             ? $"{id} · {task.Location.Project ?? task.Location.Team}"
             : null;
 

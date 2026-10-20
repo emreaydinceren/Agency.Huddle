@@ -20,9 +20,9 @@ using Agency.Huddle.Tests.Acp.Tools;
 public sealed class TaskEditPageTests
 {
     /// <summary>Opens the edit Tab for <paramref name="idText"/> and renders the page inside it, as a Tab's page host does.</summary>
-    private static IRenderedComponent<ContainerFragment> RenderInTab(MudBunitContext ctx, TaskToolHarness harness, string idText, out Tab tab)
+    private static IRenderedComponent<ContainerFragment> RenderInTab(MudBunitContext ctx, TaskToolHarness harness, string idText, out Tab tab, string suffix = "edit", string? team = null)
     {
-        Tab opened = harness.Tabs.Open($"/tasks/item/{idText}/edit");
+        Tab opened = harness.Tabs.Open($"/tasks/item/{idText}/{suffix}");
         harness.Tabs.Keep(opened.Id);
         tab = opened;
         TabPageContext context = new(opened.Url, opened.Id);
@@ -34,6 +34,7 @@ public sealed class TaskEditPageTests
             {
                 inner.OpenComponent<TaskEditPage>(0);
                 inner.AddAttribute(1, nameof(TaskEditPage.TaskIdText), idText);
+                inner.AddAttribute(2, nameof(TaskEditPage.Team), team);
                 inner.CloseComponent();
             }));
             builder.CloseComponent();
@@ -49,6 +50,87 @@ public sealed class TaskEditPageTests
     {
         IRenderedComponent<MudSelect<TaskPriority>> select = cut.FindComponent<TaskDetail>().FindComponents<MudSelect<TaskPriority>>().Single();
         await cut.InvokeAsync(() => select.Instance.ValueChanged.InvokeAsync(value));
+    }
+
+    /// <summary>A new Task opens blank in the same editor: "New task" header, no id line, no View task or Copy id, and Save is on at once because it is a change from the start.</summary>
+    [Fact]
+    public async Task New_OpensABlankEditorInTheTeam_WithSaveOn()
+    {
+        using TaskToolHarness harness = new();
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> cut = RenderInTab(ctx, harness, "new", out _, team: "Platform");
+
+        Assert.Equal("New task", cut.Find(".task-edit-page-header h1").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".task-edit-page-eyebrow"));
+        Assert.Empty(cut.FindAll(".task-edit-page-view, .task-edit-page-copy-id"));
+        Assert.False(cut.Find(".task-edit-page-header .task-detail-save").HasAttribute("disabled"));
+        TaskDraft draft = cut.FindComponent<TaskDetail>().Instance.Draft ?? throw new InvalidOperationException("Draft missing.");
+        Assert.Equal("Platform", draft.Team);
+    }
+
+    /// <summary>Saving a new Task creates it, and the same Tab becomes that Task's edit page.</summary>
+    [Fact]
+    public async Task New_Save_CreatesTheTask_AndTheTabBecomesItsEditPage()
+    {
+        using TaskToolHarness harness = new();
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        IRenderedComponent<ContainerFragment> cut = RenderInTab(ctx, harness, "new", out Tab tab, team: "Platform");
+        IRenderedComponent<MudTextField<string>> title = cut.FindComponent<TaskDetail>().FindComponents<MudTextField<string>>()
+            .Single(static field => string.Equals(field.Instance.Class, "task-detail-title", StringComparison.Ordinal));
+        await cut.InvokeAsync(() => title.Instance.ValueChanged.InvokeAsync("Brand new task"));
+
+        await cut.InvokeAsync(() => cut.Find(".task-edit-page-header .task-detail-save").ClickAsync());
+
+        TaskItem created = Assert.Single(harness.Store.All);
+        Assert.Equal("Brand new task", created.Title);
+        Tab moved = Assert.Single(harness.Tabs.Tabs, t => string.Equals(t.Id, tab.Id, StringComparison.Ordinal));
+        Assert.Equal($"task-edit:{created.Id}", moved.Key);
+        Assert.Equal($"/tasks/item/{created.Id}/edit", moved.Url);
+    }
+
+    /// <summary>Cancel on a new Task creates nothing and closes its Tab.</summary>
+    [Fact]
+    public async Task New_Cancel_CreatesNothing_AndClosesTheTab()
+    {
+        using TaskToolHarness harness = new();
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        IRenderedComponent<ContainerFragment> cut = RenderInTab(ctx, harness, "new", out Tab tab, team: "Platform");
+
+        await cut.InvokeAsync(() => cut.Find(".task-edit-page-header .task-detail-cancel").ClickAsync());
+
+        Assert.Empty(harness.Store.All);
+        Assert.DoesNotContain(harness.Tabs.Tabs, t => string.Equals(t.Id, tab.Id, StringComparison.Ordinal));
+    }
+
+    /// <summary>A copy starts as a new Task with "Copy of" the title and Backlog status, and creates nothing until it is saved.</summary>
+    [Fact]
+    public async Task Copy_StartsAsADraftOfTheTask_AndCreatesNothingYet()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness, "Ship the thing");
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> cut = RenderInTab(ctx, harness, task.Id.ToString(), out _, suffix: "copy");
+
+        TaskDraft draft = cut.FindComponent<TaskDetail>().Instance.Draft ?? throw new InvalidOperationException("Draft missing.");
+        Assert.Equal("Copy of Ship the thing", draft.Title);
+        Assert.Equal(TaskState.Backlog, draft.Status);
+        Assert.Equal(task.Location.Team, draft.Team);
+        Assert.Single(harness.Store.All);
+        Assert.Equal("New task", cut.Find(".task-edit-page-header h1").TextContent.Trim());
+    }
+
+    /// <summary>A copy of a Task that does not exist is the missing notice.</summary>
+    [Fact]
+    public async Task Copy_OfAMissingTask_ShowsTheMissingNotice()
+    {
+        using TaskToolHarness harness = new();
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> cut = RenderInTab(ctx, harness, "PLAT-0999", out _, suffix: "copy");
+
+        Assert.Equal("There is no Task PLAT-0999", cut.Find(".empty-state-title").TextContent.Trim());
     }
 
     /// <summary>The page header holds the Task's saved title as its h1 and the eyebrow with the id and Team above it (K2).</summary>

@@ -3,6 +3,11 @@
 **Status:** built 2026-10-19; [OP-1](#open-points) is open. The figures are in
 [wireframes.md](engineering/wireframes.md) (Figures 11 and 12, the `T15` and `K` rows).
 
+**One editor (2026-10-20):** after the first build the other two editors were removed: **New task** and **Make a copy…** open the
+edit page too (`/tasks/item/new/edit?team&project`, `/tasks/item/{id}/copy`; Tab keys `task-new-edit` and `task-copy:{id}`), the Team and Project
+pages' Tasks tab opens a card on the Tasks page and its New task in the edit page, and `TaskDetailDialog`, the drawer form and Expand are gone.
+The scope table, D-1 and B10 below describe the first build; where they say the drawer or a dialog edits a Task, read "the edit page".
+
 **Where the build differs from this design:**
 
 - `TaskSubject` also carries `HasBlockers` and `IsBlocking`. Its `Key` is still `task:{id}`, so the panels stay mounted; the flags are what let
@@ -11,7 +16,7 @@
   editor's pending edits. `K2` has View task, Copy id, Cancel and Save.
 - A Cancelled or Rejected Task's **Reason** in the read view is read back from the Change log entry Save wrote (`(reason: …)`), because the Task file
   has no Reason field.
-- OP-1 is not built: closing or leaving the edit Tab with unsaved edits does not ask, and switching away drops them (the Tab's " ●" warns).
+- OP-1 is built for closing only: closing the edit Tab with unsaved edits asks "Discard changes?" (`TabService.SetDirty`). Switching to another Tab still drops them (the Tab's " ●" warns).
 
 
 Today a Task opens in the detail drawer (`T7`), and the drawer *is* the editor: every field

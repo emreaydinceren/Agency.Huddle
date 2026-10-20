@@ -453,7 +453,7 @@ else if (this.loaded is { } task)
     /// <param name="id">The Task id the link opens.</param>
     private Task CopyLinkAsync(TaskId id) => TaskClipboard.CopyLinkAsync(this.JS, this.Snackbar, this.Navigation.BaseUri, id, CancellationToken.None);
 
-    /// <summary>Make a copy…: opens <see cref="TaskDetailDialog"/> in create mode with a draft of this Task, as the detail does. Writes nothing.</summary>
+    /// <summary>Make a copy…: opens a new Task that starts as a copy of this one in the edit page's own Tab, and closes the drawer. Writes nothing until it is saved.</summary>
     private async Task MakeACopyAsync()
     {
         if (this.loaded is not { } task)
@@ -461,23 +461,8 @@ else if (this.loaded is { } task)
             return;
         }
 
-        TaskDraft copy = new(
-            $"Copy of {task.Title}",
-            task.Location.Team,
-            task.Location.Project,
-            TaskState.Backlog,
-            task.Priority,
-            task.Assignee,
-            task.OriginRoomId,
-            task.Parent,
-            task.BlockedBy,
-            task.Tags,
-            task.StartDate,
-            task.DueDate,
-            task.Description,
-            task.Sprint);
-        DialogParameters<TaskDetailDialog> parameters = new() { { dialog => dialog.Draft, copy } };
-        _ = await this.Dialogs.ShowAsync<TaskDetailDialog>(copy.Title, parameters, TaskDetailDialog.Options);
+        await this.OnEdit.InvokeAsync();
+        TaskTabs.OpenCopy(this.Tabs, this.Navigation, task.Id);
     }
 
     /// <summary>Close task… asks first and then closes; Reopen undoes it. There is nothing pending to save in the read view.</summary>

@@ -497,48 +497,9 @@ public sealed class R3TasksTests
         Assert.Empty(cut.FindAll(".task-read-view input, .task-read-view textarea, .task-read-view select"));
     }
 
-    /// <summary>The footer's Cancel on a draft discards the edit and closes the drawer; no Task is created.</summary>
+    /// <summary>The read view has no title edit (the title is edited on the edit page), and the inline title field keeps the title's size (audit B4j).</summary>
     [Fact]
-    public async Task Drawer_FooterCancel_DiscardsAndCloses()
-    {
-        using TaskToolHarness harness = new();
-        _ = CreateTask(harness, "Alpha");
-        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
-        await cut.InvokeAsync(() => cut.Find(".tasks-new-task").ClickAsync());
-        await EditPriorityAsync(cut, TaskPriority.Urgent);
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".resizable-drawer-footer .task-detail-cancel")));
-
-        await cut.InvokeAsync(() => cut.Find(".resizable-drawer-footer .task-detail-cancel").ClickAsync());
-
-        Assert.Single(harness.Store.All);
-        cut.WaitForAssertion(() => Assert.False(cut.FindComponent<Agency.Huddle.App.Components.Shared.ResizableEndDrawer>().Instance.Open));
-    }
-
-    /// <summary>A new draft opens with its title field in the body, focused and titled "Task title", no ID in front of it, and the footer showing at once (audit B4p, E3).</summary>
-    [Fact]
-    public async Task Draft_OpensWithTheTitleFieldFocused_AndNoId()
-    {
-        using TaskToolHarness harness = new();
-        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
-
-        await cut.InvokeAsync(() => cut.Find(".tasks-new-task").ClickAsync());
-
-        IRenderedComponent<MudTextField<string>> title = cut.FindComponent<TaskDetail>().FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-title", StringComparison.Ordinal));
-        Assert.True(title.Instance.AutoFocus);
-        Assert.Equal("Task title", title.Instance.Placeholder);
-        Assert.DoesNotContain("-0000", cut.Find(".task-detail").TextContent, StringComparison.Ordinal);
-        Assert.Empty(cut.FindAll(".task-detail .task-id"));
-        Assert.Empty(cut.FindAll("button[aria-label='Edit title']"));
-        Assert.Equal("New task", cut.Find(".resizable-drawer-title").TextContent.Trim());
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".resizable-drawer-footer")));
-        Assert.Empty(cut.FindAll(".tasks-detail-drawer.is-title-editing"));
-    }
-
-    /// <summary>The read view has no title edit (the title is edited on the edit page), and the CSS that lets an inline title field replace the drawer's own copy keeps the title's size (audit B4j).</summary>
-    [Fact]
-    public async Task EditTitle_ReplacesTheDrawerTitle()
+    public async Task ReadView_HasNoTitleEdit_AndTheTitleFieldKeepsTheTitleSize()
     {
         using TaskToolHarness harness = new();
         _ = CreateTask(harness, "Alpha");
@@ -546,11 +507,8 @@ public sealed class R3TasksTests
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
         await ClickTaskRowAsync(cut, "Alpha");
 
-        Assert.Empty(cut.FindAll(".is-title-editing"));
         Assert.Empty(cut.FindAll("button[aria-label='Edit title']"));
         string css = CssText.AppCss();
-        // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("display: none;", CssText.RuleBody(css, ".tasks-detail-drawer.is-title-editing .resizable-drawer-title"), StringComparison.Ordinal);
         string field = CssText.RuleBody(css, ".task-detail-title .mud-input-slot,\n.task-detail-title .mud-input > input.mud-input-root.mud-input-root-outlined");
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("font-size: var(--mud-typography-h6-size);", field, StringComparison.Ordinal);
@@ -972,10 +930,4 @@ public sealed class R3TasksTests
     private static Task ClickTaskRowAsync(IRenderedComponent<ContainerFragment> cut, string title) =>
         cut.InvokeAsync(() => cut.FindAll("td").First(td => td.TextContent.Contains(title, StringComparison.Ordinal)).Closest("tr")?.ClickAsync() ?? throw new InvalidOperationException("The cell has no row."));
 
-    /// <summary>Sets the open drawer's Priority through its select, adding a pending edit.</summary>
-    private static async Task EditPriorityAsync(IRenderedComponent<ContainerFragment> cut, TaskPriority value)
-    {
-        IRenderedComponent<MudSelect<TaskPriority>> select = cut.FindComponent<TaskDetail>().FindComponents<MudSelect<TaskPriority>>().Single();
-        await cut.InvokeAsync(() => select.Instance.ValueChanged.InvokeAsync(value));
-    }
 }

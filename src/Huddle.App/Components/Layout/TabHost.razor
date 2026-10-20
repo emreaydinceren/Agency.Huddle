@@ -65,7 +65,7 @@
         switch (action)
         {
             case "close" when this.Tabs.Active is { } active:
-                if (this.Tabs.IsDirty(active.Key) && !await this.Dialogs.ConfirmAsync("Discard changes?", $"Your unsaved edits in {active.Title} will be lost.", "Discard", danger: true))
+                if (this.Tabs.IsDirty(active.Key) && !await this.Dialogs.ConfirmAsync("Discard changes?", $"Your unsaved edits in {active.Title.TrimEnd('●', ' ')} will be lost.", "Discard", danger: true))
                 {
                     return;
                 }

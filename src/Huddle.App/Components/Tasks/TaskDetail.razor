@@ -56,6 +56,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject TaskUploadService Uploader
+@inject Agency.Huddle.App.Tabs.TabService Tabs
 @inject ILibraryReferenceResolver LibraryResolver
 @inject IProofSource ProofSource
 @implements IDisposable
@@ -215,15 +216,9 @@ else if (this.loaded is { } task)
 
                 @if (!this.createMode)
                 {
-                    @if (this.Mode == TaskDetailMode.Panel)
-                    {
-                        @* Expand is a quiet icon of the row under the header, beside Edit, copy and the menu - not in the footer, which holds only Cancel and Save. *@
-                        <MudIconButton Icon="@Icons.Material.Filled.OpenInFull" Size="Size.Small" aria-label="Expand" Class="task-detail-expand" OnClick="this.ExpandAsync" />
-                    }
-
                     <TaskActionsMenu @ref="this.actionsMenu" Id="effective.Id" OnCopyId="@(() => this.CopyIdAsync(effective.Id))" OnCopyLink="@(() => this.CopyLinkAsync(effective.Id))">
                         <ExtraItems>
-                            <MudMenuItem Icon="@ActionIcons.Duplicate" Class="task-detail-copy" OnClick="this.MakeACopyAsync">Make a copy…</MudMenuItem>
+                            <MudMenuItem Icon="@ActionIcons.Duplicate" Class="task-detail-copy" OnClick="this.MakeACopy">Make a copy…</MudMenuItem>
                             @* Close task… is the destructive one: last, after a divider, in Error ink, and it asks first (audit E10). Reopen undoes it, so it is an ordinary item. *@
                             @if (task.Location.Closed)
                             {
@@ -655,7 +650,7 @@ else if (this.loaded is { } task)
     [Parameter]
     public TaskId? Id { get; set; }
 
-    /// <summary>A draft for create or copy mode, used only when <see cref="Id"/> is <see langword="null"/> (Spec §13.6, corrections-B7 "14.4" item 2). <see cref="TaskDetailDialog"/> passes only one of <see cref="Id"/> or this, never both.</summary>
+    /// <summary>A draft for create or copy mode, used only when <see cref="Id"/> is <see langword="null"/> (Spec §13.6, corrections-B7 "14.4" item 2). The edit page passes only one of <see cref="Id"/> or this, never both.</summary>
     [Parameter]
     public TaskDraft? Draft { get; set; }
 
@@ -675,10 +670,6 @@ else if (this.loaded is { } task)
     [Parameter]
     public EventCallback FooterStateChanged { get; set; }
 
-    /// <summary>Raised with <see langword="true"/> when the inline title edit opens and <see langword="false"/> when it closes. The Tasks page hides the drawer's own copy of a saved Task's title while it is open, so the field replaces the title (audit B4j).</summary>
-    [Parameter]
-    public EventCallback<bool> TitleEditingChanged { get; set; }
-
     /// <summary>Raised with the new id when Save creates the Task from a draft (B10), so a host can show the saved Task another way: the Tasks drawer switches to the read view.</summary>
     [Parameter]
     public EventCallback<TaskId> OnCreated { get; set; }
@@ -686,10 +677,6 @@ else if (this.loaded is { } task)
     /// <summary>Raised when the Panel or dialog should close: Cancel (always), and Expand just before its own dialog opens (Spec §13.6, corrections-B7 "14.4" item 1, theming plan 7.6). The caller (the Tasks page, its own drawer's own <c>OnClose</c>) is a later dispatch's wiring (14.5).</summary>
     [Parameter]
     public EventCallback OnClose { get; set; }
-
-    /// <summary>Unused: Expand is self-contained (<see cref="ExpandAsync"/> opens <see cref="TaskDetailDialog"/> directly through the injected <see cref="IDialogService"/>). Kept for a caller that wants to know Expand happened, independent of the close it triggers (which now comes first, before the dialog opens).</summary>
-    [Parameter]
-    public EventCallback OnExpand { get; set; }
 
     /// <summary>
     /// Raised whenever <see cref="HasPending"/> flips between empty and non-empty - an edit, Revert,
@@ -701,6 +688,9 @@ else if (this.loaded is { } task)
     /// </summary>
     [Parameter]
     public EventCallback<bool> HasPendingChanged { get; set; }
+
+    /// <summary>Whether this is a new Task that has not been saved yet. It is a change from the start, so a host that draws Save enables it at once.</summary>
+    public bool IsCreate => this.createMode;
 
     /// <summary>Whether a host that draws the footer shows it: while there are changes to save, and always for a draft, which is a change from the start.</summary>
     public bool FooterVisible => !this.deleted && this.loaded is not null && (this.HasPending || this.createMode);
@@ -1071,7 +1061,7 @@ else if (this.loaded is { } task)
 
     private void BeginEditTitle() => this.SetTitleEditing(true);
 
-    /// <summary>Opens or closes the inline title edit and tells the host, which hides the drawer's own title while a saved Task's is edited.</summary>
+    /// <summary>Opens or closes the inline title edit.</summary>
     /// <param name="editing">Whether the title is being edited.</param>
     private void SetTitleEditing(bool editing)
     {
@@ -1081,7 +1071,6 @@ else if (this.loaded is { } task)
         }
 
         this.titleEditing = editing;
-        _ = this.TitleEditingChanged.InvokeAsync(editing && !this.createMode);
     }
 
     private void OnTitleChanged(string value)
@@ -1548,7 +1537,7 @@ else if (this.loaded is { } task)
     /// item 7): with nothing pending, returns <see langword="true"/> immediately with no prompt.
     /// Otherwise asks through <see cref="IDialogService.ShowMessageBoxAsync(string, string, string, string?, string?, DialogOptions?)"/>
     /// and, only on confirmation, discards <see cref="pending"/> (the same effect as <see cref="Revert"/>)
-    /// and returns <see langword="true"/>. The page calls this before switching <c>Id</c>; <see cref="ExpandAsync"/>
+    /// and returns <see langword="true"/>. The page calls this before switching <c>Id</c>; Expand (now gone)
     /// calls it before opening the dialog.
     /// </summary>
     public async Task<bool> ConfirmDiscardAsync()
@@ -1573,50 +1562,15 @@ else if (this.loaded is { } task)
     }
 
     /// <summary>
-    /// Expand (Spec §13.6): guarded by <see cref="ConfirmDiscardAsync"/>, then closes the Panel through <see cref="OnClose"/>
-    /// and opens <see cref="TaskDetailDialog"/> with only <see cref="Id"/> - never a <see cref="TaskDraft"/>, since the
-    /// dialog loads the Task itself (corrections-B5 D14 item 7). On <c>/tasks/item/{id}</c> the host answers the close by
-    /// navigating to the view's path, and that location change reaches the server after the dialog has opened; MudBlazor
-    /// closes a dialog on a path change by default, so this one opens with <see cref="ExpandOptions"/>.
+    /// Make a copy (Spec §13.6): opens a new Task that starts as a copy of this saved Task in the edit page's own Tab (<see cref="TaskTabs.OpenCopy"/>).
+    /// Writes nothing: the copy does not exist until its own Save. Pending edits here are not copied; the copy is of the Task as stored.
     /// </summary>
-    private async Task ExpandAsync()
+    private void MakeACopy()
     {
-        if (!await this.ConfirmDiscardAsync())
+        if (this.loaded is { } current && !this.createMode)
         {
-            return;
+            TaskTabs.OpenCopy(this.Tabs, this.Navigation, current.Id);
         }
-
-        string? title = this.loaded is { } expanded ? $"{expanded.Id} · {expanded.Title}" : null;
-        DialogParameters<TaskDetailDialog> parameters = new() { { dialog => dialog.Id, this.Id } };
-        await this.OnClose.InvokeAsync();
-        _ = await this.Dialogs.ShowAsync<TaskDetailDialog>(title, parameters, ExpandOptions);
-    }
-
-    /// <summary>
-    /// <see cref="TaskDetailDialog.Options"/>, kept open across the path change Expand's own close causes. The dialog is
-    /// modal, so the only other path change while it is open is the browser's Back, which leaves it over the view.
-    /// </summary>
-    private static readonly DialogOptions ExpandOptions = TaskDetailDialog.Options with { CloseOnNavigation = false };
-
-    /// <summary>
-    /// Make a copy (Spec §13.6): opens a new <see cref="TaskDetailDialog"/> in create mode with a
-    /// <see cref="TaskDraft"/> built from <see cref="Effective"/> (the Panel's own pending-included
-    /// fields, not just <see cref="loaded"/>) - <c>Copy of</c> title, Backlog status, the assignee kept,
-    /// no Origin/Change log/DuplicateOf (a <see cref="TaskDraft"/> never carries those). Writes nothing:
-    /// the copy doesn't exist until its own Save.
-    /// </summary>
-    private async Task MakeACopyAsync()
-    {
-        if (this.loaded is not { } current)
-        {
-            return;
-        }
-
-        TaskItem effective = this.Effective ?? current;
-        TaskDraft copy = TaskDetail.BuildDraft(effective) with { Title = $"Copy of {effective.Title}", Status = TaskState.Backlog };
-
-        DialogParameters<TaskDetailDialog> parameters = new() { { dialog => dialog.Draft, copy } };
-        _ = await this.Dialogs.ShowAsync<TaskDetailDialog>(copy.Title, parameters, TaskDetailDialog.Options);
     }
 
     /// <summary>
