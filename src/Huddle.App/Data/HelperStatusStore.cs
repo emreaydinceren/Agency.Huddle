@@ -64,7 +64,7 @@ internal sealed class HelperStatusStore
         command.ExecuteNonQuery();
     }
 
-    /// <summary>A failed run: sets the error and its time, adds one to the failure count, and keeps the earlier result.</summary>
+    /// <summary>A failed run: sets the error and its time, adds one to the failure count, and keeps the earlier result with its run time, so the two never pair a new time with an old result.</summary>
     /// <param name="id">The Helper.</param>
     /// <param name="at">When it failed.</param>
     /// <param name="error">What went wrong, in words for the card.</param>
@@ -73,8 +73,8 @@ internal sealed class HelperStatusStore
         using SqliteConnection connection = this.OpenConnection();
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO helper_status(helper_id, last_run_at, last_error, last_error_at, consecutive_failures) VALUES($id, $at, $error, $at, 1)
-            ON CONFLICT(helper_id) DO UPDATE SET last_run_at = excluded.last_run_at, last_error = excluded.last_error,
+            INSERT INTO helper_status(helper_id, last_error, last_error_at, consecutive_failures) VALUES($id, $error, $at, 1)
+            ON CONFLICT(helper_id) DO UPDATE SET last_error = excluded.last_error,
                 last_error_at = excluded.last_error_at, consecutive_failures = consecutive_failures + 1;
             """;
         command.Parameters.AddWithValue("$id", id.Value);

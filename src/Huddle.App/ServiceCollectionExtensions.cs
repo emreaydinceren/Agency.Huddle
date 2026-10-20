@@ -79,7 +79,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IHelperAgent>(static sp => sp.GetRequiredService<NeedsHumanHelper>());
         services.AddSingleton<IHelperInvoker>(static sp => new HelperInvoker<NeedsHumanInput, NeedsHumanVerdict>(
             sp.GetRequiredService<NeedsHumanHelper>(),
-            sp.GetRequiredService<HelperRunner>()));
+            sp.GetRequiredService<HelperRunner>(),
+            sp.GetRequiredService<ILoggerFactory>().CreateLogger<HelperInvoker<NeedsHumanInput, NeedsHumanVerdict>>()));
         services.AddSingleton<HelperRegistry>();
 
         services.AddSingleton<HelperDispatcher>();

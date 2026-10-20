@@ -78,6 +78,7 @@ internal sealed class HelperRunner(
         ProcessRun run = await this.RunProcessAsync(helper.Id, processOptions, request, settings.TimeoutSeconds, cancellationToken).ConfigureAwait(false);
         if (run is ProcessRun.Finished finished)
         {
+            this.Account(helper.Id, finished.Turn);
             return Interpret(helper, profile, settings, finished.Turn);
         }
 
@@ -104,6 +105,20 @@ internal sealed class HelperRunner(
             // The adapter process can fail in many ways (launch, protocol, exit); each is a failed call, never a crash of the dispatcher.
             logger.LogWarning(ex, "Helper {HelperId} failed to run.", id.Value);
             return new ProcessRun.Broke(ex.Message);
+        }
+    }
+
+    /// <summary>Records what a finished Turn cost and logs any tool request the session made and was refused (Helpers Spec §6.2).</summary>
+    private void Account(HelperId id, HelperTurn turn)
+    {
+        if (turn.Cost is { } cost)
+        {
+            budget.RecordCost(id, cost.Amount, cost.Currency);
+        }
+
+        if (turn.ToolCallsRefused > 0 && logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Helper {HelperId} asked for a tool and was refused: {Count}.", id.Value, turn.ToolCallsRefused.ToString(CultureInfo.InvariantCulture));
         }
     }
 

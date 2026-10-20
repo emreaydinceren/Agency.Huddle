@@ -10,7 +10,8 @@ namespace Agency.Huddle.App.Helpers;
 /// <typeparam name="TVerdict">The Helper's Verdict.</typeparam>
 /// <param name="helper">The Helper.</param>
 /// <param name="runner">Makes the call.</param>
-internal sealed class HelperInvoker<TInput, TVerdict>(IHelperAgent<TInput, TVerdict> helper, HelperRunner runner) : IHelperInvoker
+/// <param name="logger">Records an unreadable answer or a failed call with the Helper id and key.</param>
+internal sealed class HelperInvoker<TInput, TVerdict>(IHelperAgent<TInput, TVerdict> helper, HelperRunner runner, ILogger logger) : IHelperInvoker
     where TVerdict : class
 {
     /// <summary>How many fingerprints the cache keeps.</summary>
@@ -44,8 +45,10 @@ internal sealed class HelperInvoker<TInput, TVerdict>(IHelperAgent<TInput, TVerd
                 this.Remember(fingerprint, ok.Verdict);
                 return await this.ApplyAsync(key, typed, ok.Verdict, cancellationToken).ConfigureAwait(false);
             case HelperOutcome<TVerdict>.Unparseable unparseable:
+                logger.LogWarning("Helper {HelperId} gave an unreadable answer for {Key}: {Problem}. Text: {Text}", helper.Id.Value, key, unparseable.Problem, unparseable.Text);
                 return new HelperRunReport(HelperRunKind.Failed, Error: $"The answer wasn't the JSON the prompt asks for ({unparseable.Problem})");
             case HelperOutcome<TVerdict>.Failed failed:
+                logger.LogWarning("Helper {HelperId} failed for {Key}: {Reason}", helper.Id.Value, key, failed.Reason);
                 return new HelperRunReport(HelperRunKind.Failed, Error: failed.Reason);
             default:
                 return HelperRunReport.OverBudget;

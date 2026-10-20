@@ -1,7 +1,7 @@
 namespace Agency.Huddle.App.Helpers;
 
 /// <summary>What the Helper's card shows about its last run, kept across a restart.</summary>
-/// <param name="LastRunAt">When it last ran to a result, or failed.</param>
+/// <param name="LastRunAt">When it last ran to a result; a failure does not move it.</param>
 /// <param name="LastResult">What the last good run did, such as <c>Turned the gate on for RSH-0208</c>.</param>
 /// <param name="LastError">The last failure.</param>
 /// <param name="LastErrorAt">When it failed.</param>

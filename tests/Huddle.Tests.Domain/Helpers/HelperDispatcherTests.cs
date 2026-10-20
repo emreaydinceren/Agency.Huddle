@@ -44,7 +44,7 @@ public sealed class HelperDispatcherTests : IDisposable
         HelperSettingsStore settings = new(options);
         HelperStatusStore status = new(options);
         HelperDispatcher dispatcher = new(
-            [new HelperInvoker<string, ScriptedVerdict>(this.helper, runner)],
+            [new HelperInvoker<string, ScriptedVerdict>(this.helper, runner, NullLogger.Instance)],
             new HelperSettingsResolver(settings, options, NullLogger<HelperSettingsResolver>.Instance),
             status,
             options,

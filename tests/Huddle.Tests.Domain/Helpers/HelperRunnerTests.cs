@@ -1,3 +1,5 @@
+using System.Globalization;
+using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
@@ -63,6 +65,21 @@ public sealed class HelperRunnerTests : IDisposable
         Assert.Equal("You judge.", request.SystemPrompt);
         Assert.Equal("Judge: hello", request.Prompt);
         Assert.Equal(Path.Combine(Path.GetFullPath(this.dir.Path), "helpers", "work"), request.Cwd);
+    }
+
+    /// <summary>The cost the adapter reports for a call is added to today's usage, so the card can print the spend.</summary>
+    [Fact]
+    public async Task RunAsync_ReportedCost_IsRecordedInTodaysUsage()
+    {
+        this.process.Handler = static (_, _) => Task.FromResult(
+            new HelperTurn("""{"yes": true, "why": "ok"}""", ModelOffered: true, ToolCallsRefused: 0, new UsageCost(0.0024m, "USD")));
+
+        _ = await this.Build().RunAsync(this.helper, Settings, "hello", TestContext.Current.CancellationToken);
+
+        string day = this.clock.GetLocalNow().Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        HelperUsage usage = new HelperUsageStore(this.dir.Options()).Get(this.helper.Id, day);
+        Assert.Equal(0.0024m, usage.Cost);
+        Assert.Equal("USD", usage.Currency);
     }
 
     /// <summary>A Markdown code fence around the JSON is stripped.</summary>

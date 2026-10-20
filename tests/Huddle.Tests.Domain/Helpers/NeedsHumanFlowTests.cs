@@ -57,7 +57,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
             NullLogger<HelperRunner>.Instance,
             this.clock);
         this.dispatcher = new HelperDispatcher(
-            [new HelperInvoker<NeedsHumanInput, NeedsHumanVerdict>(this.helper, runner)],
+            [new HelperInvoker<NeedsHumanInput, NeedsHumanVerdict>(this.helper, runner, NullLogger.Instance)],
             resolver,
             this.status,
             this.harness.Options,
@@ -173,10 +173,11 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
         await this.CallsAsync(1);
         await this.RecordedAsync();
 
-        _ = this.harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, Leo);
+        TaskResult result = this.harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, Leo);
         this.PassTheWait();
         await SettleAsync();
 
+        Assert.IsType<TaskResult.Saved>(result);
         Assert.Equal(1, this.process.Calls);
     }
 
@@ -232,24 +233,33 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
         this.PassTheWait();
         await this.RecordedAsync();
 
-        _ = this.harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.Cancelled, Title = "Never mind" }, null, Leo);
+        TaskResult result = this.harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.Cancelled, Title = "Never mind" }, null, Leo);
         this.PassTheWait();
         await SettleAsync();
 
+        Assert.IsType<TaskResult.Saved>(result);
         Assert.Equal(1, this.process.Calls);
     }
 
-    /// <summary>The Helper's own gate-on write is not judged again (U-12).</summary>
+    /// <summary>
+    /// A write by the Helper's own actor is not judged (U-12). The write rewrites the title of an open, ungated Task, which every
+    /// other filter would let through, so only the actor check can stop it.
+    /// </summary>
     [Fact]
     public async Task HelperOwnWrite_IsNotJudged()
     {
-        _ = this.Create(Leo);
+        this.process.Text = GateOff;
+        TaskItem task = this.Create(Leo, "Summarise the interview notes");
         this.PassTheWait();
+        await this.CallsAsync(1);
         await this.RecordedAsync();
 
+        TaskResult result = this.harness.Service.Update(
+            task.Id, new TaskPatch { Title = "Send Acme the new contract" }, null, TaskActors.Helper(NeedsHumanHelper.HelperId.Value));
         this.PassTheWait();
         await SettleAsync();
 
+        Assert.IsType<TaskResult.Saved>(result);
         Assert.Equal(1, this.process.Calls);
     }
 

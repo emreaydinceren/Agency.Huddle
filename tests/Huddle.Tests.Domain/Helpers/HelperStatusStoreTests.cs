@@ -47,7 +47,7 @@ public sealed class HelperStatusStoreTests
         Assert.Equal(T1, status.LastErrorAt);
     }
 
-    /// <summary>A failure records the error and time, adds one to the count, and keeps the earlier result.</summary>
+    /// <summary>A failure records the error and time, adds one to the count, and keeps the earlier result with its own run time.</summary>
     [Fact]
     public void RecordFailure_SetsErrorAddsOneKeepsResult()
     {
@@ -59,6 +59,7 @@ public sealed class HelperStatusStoreTests
 
         HelperStatus status = store.Get(NeedsHuman);
         Assert.Equal("No change", status.LastResult);
+        Assert.Equal(T1, status.LastRunAt);
         Assert.Equal("The answer wasn't the JSON the prompt asks for (no object)", status.LastError);
         Assert.Equal(T2, status.LastErrorAt);
         Assert.Equal(1, status.ConsecutiveFailures);
