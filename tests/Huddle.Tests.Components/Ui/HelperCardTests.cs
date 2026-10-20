@@ -94,7 +94,7 @@ public sealed class HelperCardTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderCard(ctx);
 
         Assert.Equal("Scripted", cut.Find("h2").TextContent.Trim());
-        Assert.Contains("A scripted Helper.", cut.Markup, StringComparison.Ordinal); // contains-ok: the description is one paragraph among the card's other text, with no selector of its own.
+        Assert.Equal("A scripted Helper.", cut.Find(".helper-card p.mud-text-secondary").TextContent.Trim());
         Assert.Equal("On", Chip(cut));
         Assert.Equal("0 of 50 calls today", cut.Find(".helper-card-usage").TextContent.Trim());
         Assert.Equal("/settings/prompts?highlight=test.system", cut.Find("a[href^='/settings/prompts']").GetAttribute("href"));
@@ -108,7 +108,7 @@ public sealed class HelperCardTests : IDisposable
         await using MudBunitContext ctx = new();
         this.Register(ctx);
         IRenderedComponent<ContainerFragment> cut = RenderCard(ctx);
-        Assert.Contains("Calls a day before it pauses and asks you.", cut.Find(".helper-card-cap").TextContent, StringComparison.Ordinal); // contains-ok: the field's text content is its label and its helper text together.
+        Assert.Equal("Calls a day before it pauses and asks you.", cut.Find(".helper-card-cap .mud-input-helper-text").TextContent.Trim());
 
         await cut.InvokeAsync(() => cut.Find(".helper-card-cap input").ChangeAsync(new ChangeEventArgs { Value = "0" }));
 
@@ -161,7 +161,7 @@ public sealed class HelperCardTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderCard(ctx);
 
         Assert.Equal("Paused", Chip(cut));
-        Assert.Contains("Paused — daily cap reached", cut.Find(".helper-card-paused").TextContent, StringComparison.Ordinal); // contains-ok: the alert holds the sentence and the Continue button's text.
+        Assert.Equal("Paused — daily cap reached", cut.Find(".helper-card-paused .mud-alert-message > span").TextContent.Trim());
         Assert.Equal("1 skipped while paused", cut.Find(".helper-card-usage").TextContent.Split(" · ")[1]);
         Assert.Equal("Continue (+10 today)", cut.Find(".helper-card-continue").TextContent.Trim());
 
