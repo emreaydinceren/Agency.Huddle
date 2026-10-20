@@ -308,7 +308,7 @@ feature's name. Reuse these before writing a rule:
 | `.toolbar-compact` | A field in a toolbar: a 28px box with 13px text. `SearchField Compact` wears it |
 | `.picker-row` | A list row in a picker dialog: 32px, 13px, an 18px icon in a 24px slot |
 | `.menu-item-destructive` | A destructive `MudMenuItem`: Error ink on the text and icon. It goes last, after a divider |
-| `.nav-action-link` | A sidebar action link ("New chat"): secondary text colour, tight icon gap |
+| `.nav-action-link` | A sidebar action link ("New chat"): secondary text colour; its "+" and label sit on the sidebar grid like any row |
 | `.hover-reveal-row` with `.hover-reveal-menu-button` | A row whose menu button shows on hover or focus |
 | `.btn-action-tight` | A button whose start icon sits close to its label |
 | `.agent-dot` with `.online`, `.degraded`, `.starting`, `.awake`, `.on-avatar` and `.presence-glyph-*` | The badge behind `PresenceBadge` (10px, 12px beside a 40px avatar; the pulse animation is `presence-pulse`); use the component |
@@ -331,7 +331,7 @@ feature's name. Reuse these before writing a rule:
 | `.roster-grid`, `.roster-card` | The Team page's roster of 40px-avatar cards, two rows of 20rem cards that scroll sideways like the role grid |
 | `.build-team-savebar` | The Team page's save bar: rendered only when there are unsaved changes, sticky at the bottom |
 | `.teammates-list`, `.teammates-item`, `.teammate-tile`, `.teammates-group-count` | The Teammates grid (`minmax(240px, 1fr)`), its bordered `<li>` card, the opening `<button>` inside it, and a group's 12px count |
-| `.sidebar-row-label`, `.sidebar-row-meta`, `.sidebar-show-all` | A one-line sidebar label, its trailing count and the "Show all (N)" row |
+| `.sidebar-row-label`, `.sidebar-row-meta`, `.sidebar-show-all` | A one-line sidebar label, its trailing count (on the trailing line, giving way to the hover "...") and the "Show all (N)" row (an arrow in the leading slot). Every sidebar row's geometry is the grid in "Left menu": set `--nav-level` to nest a row, never a padding |
 | `.search-hit-flash` | A brief highlight with a reduced-motion branch: the model for any longer animation |
 | `.room-column`, `.main-column` | The fill-the-pane layout that the page rule points to |
 | `.task-filter-chip` with `-set`, `-unset` | The pill behind `TaskFilterChip`: dashed border while unset, primary border and hover tint once set; use the component |

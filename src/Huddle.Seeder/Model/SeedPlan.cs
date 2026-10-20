@@ -39,6 +39,12 @@ internal sealed record SeedPlan
     /// <summary>Files attached in chats.</summary>
     public IReadOnlyList<SeedUpload> Uploads { get; init; } = [];
 
+    /// <summary>Files uploaded to Tasks.</summary>
+    public IReadOnlyList<SeedTaskUpload> TaskUploads { get; init; } = [];
+
+    /// <summary>History entries of Library Markdown documents, written to <c>doc-history/</c>.</summary>
+    public IReadOnlyList<SeedDocEdit> DocHistory { get; init; } = [];
+
     /// <summary>The Sprints written to <c>sprints.md</c>; empty writes no file.</summary>
     public IReadOnlyList<SeedSprint> Sprints { get; init; } = [];
 

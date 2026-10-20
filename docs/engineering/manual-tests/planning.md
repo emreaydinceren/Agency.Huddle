@@ -43,7 +43,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 19 | [Adapter commands](adapter-commands.md) | 7 | 6 | 1.8h |
 | 20 | [Avatar library: choosing a face from the library](avatar-library.md) | 28 | — | 3.3h |
 | 21 | [File Changes, Watched Folders and Memory](file-changes.md) | 12 | 10 | 3.2h |
-| 22 | [Library explorer and editor](library.md) | 19 | 1 | 2.9h |
+| 22 | [Library explorer and editor](library.md) | 22 | 1 | 3.6h |
 | 23 | [Prompt blocks](prompt-blocks.md) | 6 | 5 | 1.4h |
 | 24 | [Room Sessions: per-Room context, resume and Stop](room-sessions.md) | 12 | — | 5.8h |
 | 25 | [Tasks: creating, moving, viewing and referencing a unit of work](tasks.md) | 19 | 5 | 3.6h |
@@ -54,7 +54,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 29 | [Team chats: the Team Room, Team chats in the sidebar, the Members-tab Message, archiving and Task wakes and digests](team-chats.md) | 11 | — | 1.1h |
 | 30 | [Chat uploads: the paperclip, paste and drop, the chips, the Message's path lines, the Uploads root and Room delete](uploads.md) | 8 | 0 | 1.0h |
 | 31 | [Skill Packs: SKILLS.md, the AI tool, updates, the move and shared folders](skill-packs.md) | 7 | 1 | 2.5h |
-| 32 | [Document history: the byline, the History and the Recent edits panel](doc-history.md) | 6 | 3 | 1.4h |
+| 32 | [Document history: the byline, the History, the Recent edits panel and the Stop hook](doc-history.md) | 8 | 4 | 1.6h |
 | 33 | [Human gate: the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page](human-gate.md) | 9 | — | 1.3h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time

@@ -37,8 +37,8 @@ entity means to a user, read [the user guide](../docs/Huddle.UserGuide.md).
 ## What the `software-co` seed contains for the newer features
 
 Beyond Teammates, Teams, Tasks, Views and notes, the seed exercises Team Rooms, Message
-References, Uploads, Sprints, Requests, the Right sidebar panels, avatar pictures and the Needs you
-card. `manifest.md` in the seed root lists every one with its ids and paths.
+References, Uploads, Task attachments, document History, Sprints, Requests, the Right sidebar panels,
+avatar pictures and the Needs you card. `manifest.md` in the seed root lists every one with its ids and paths.
 
 | Feature | What is seeded | Where to look |
 | --- | --- | --- |
@@ -46,6 +46,8 @@ card. `manifest.md` in the seed root lists every one with its ids and paths.
 | Message References | Every Message that names a Task id, a Library file, a Room or a Team carries `References`, built the way the app's send path builds them. `PLAT-0004` was renamed, so its chip reads "changed" (`SeedTask.FormerTitle`). One cited document, `Customer-Update-Draft.md` in the incident Room, does not exist, so the Documents panel shows "not found". The archived `Q2 retro` Room stores no References, which keeps the reader's text-scan fallback covered. | `Writing/MessageReferences.cs` |
 | Documents in this chat | `Platform standup`, `Launch crew` and `Incident 0412 war room` each cite two to four documents; `Pagination.md` and `Incident-0412.md` are cited more than once. | the Right sidebar |
 | Uploads | A PNG and a text file in the root Room `Owen` (`Uploads/<roomId>/`) and in the Platform Team Room (`Teams/Platform/Uploads/<roomId>/`), each cited by a Message in the composer's format: a blank line, then the path in backticks. | `SoftwareCoLibrary.Uploads`; manifest Uploads table |
+| Task attachments | `GROW-0002` and `SUPP-0008` each link a Library file and carry an upload; the closed `SUPP-0006` carries one upload. Uploads sit in `Uploads/Tasks/<ID>/`, and each attachment is a code-span line with the absolute path after the description, as the Task's attach buttons write it (`TaskAttachmentText`). | `SeedTask.Attachments`, `SoftwareCoLibrary.TaskUploads`; manifest Task attachments table |
+| Document history | `doc-history/<root>/<path>.jsonl` for five notes: the Engineering handbook has eight entries (every kind, both Agents and the Human, two Human saves three minutes apart that group into one row), `Pricing-Brief.md` has an objection, `Incident-0412.md` a review, Alan's private postmortem draft a create, and `Email-Ideas.md` a Human create. Every other note shows "No edits logged." | `SoftwareCoLibrary.DocHistory`, `Writing/DocHistoryWriter.cs`; manifest Document history table |
 | Sprints | `sprints.md` with `S1 Foundations` and `S2 Launch prep` (the highest number is `@current`), `sprint:` on ten Tasks, and the saved View `Current sprint`. | `SoftwareCoTasks.Sprints` |
 | Requests | Five Tasks with the Request fields: untriaged (`PLAT-0016`), needs-info (`PLAT-0017`), accepted (`SUPP-0011`), declined (`GROW-0016`) and one Done but not confirmed (`PLAT-0018`, still open). | `SoftwareCoRequests.cs`; manifest Requests table |
 | Outline and Linked documents | `Teams/Platform/Engineering-Handbook.md` has headings at levels 1 to 4 and links in every wikilink form: `[[Note]]`, `[[Note#Heading]]`, `[[Note\|alias]]` and `[[folder/Note]]`. `[[Legal-Checklist]]` is still the one unresolved link. A PNG sits in a Team folder and a `.txt` note in `Observability`. | `SoftwareCoLibrary.cs` |

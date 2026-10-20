@@ -36,6 +36,7 @@ internal static class SeedRunner
         WriteFiles(plan, dataDir);
         WriteBinaryFiles(plan, dataDir, ids);
         WriteSprints(plan, dataDir);
+        DocHistoryWriter.Write(plan, dataDir);
         SeedIo.WriteText(Path.Combine(dataDir, "views.json"), plan.ViewsJson);
         SeedIo.WriteText(Path.Combine(dataDir, "avatars.json"), plan.AvatarsJson);
         SeedIo.WriteText(Path.Combine(root, "manifest.md"), ManifestWriter.Render(plan, ids, root));
@@ -74,7 +75,7 @@ internal static class SeedRunner
         {
             string? origin = task.OriginRoom is null ? null : ids.RoomIds[task.OriginRoom];
             string path = SeedIo.Resolve(dataDir, TaskFileWriter.RelativePath(task));
-            SeedIo.WriteText(path, TaskFileWriter.Render(task, plan.Today, origin));
+            SeedIo.WriteText(path, TaskFileWriter.Render(task, plan.Today, origin, dataDir));
 
             // Huddle compares the file's modified time with the last Change log entry at start-up; a newer file is
             // recorded as "edited outside Huddle" and loses the backdated Updated date.
@@ -94,6 +95,12 @@ internal static class SeedRunner
         {
             SeedRoom room = plan.Rooms.First(r => string.Equals(r.Key, upload.RoomKey, StringComparison.Ordinal));
             SeedIo.WriteBytes(Path.Combine(MessageReferences.UploadFolder(dataDir, room, ids.RoomIds[room.Key]), upload.FileName), upload.Content);
+        }
+
+        // A Task's uploads live in a folder keyed by its id, so closing or re-filing the Task never moves them.
+        foreach (SeedTaskUpload upload in plan.TaskUploads)
+        {
+            SeedIo.WriteBytes(SeedIo.Resolve(dataDir, upload.RelativePath), upload.Content);
         }
     }
 

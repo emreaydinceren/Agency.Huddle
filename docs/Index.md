@@ -31,7 +31,8 @@ subtree a page is in: **chat** is the chat surface, **acp** is the ACP effort
 | Write or change a test | [testing.md](engineering/testing.md), then [../agents/Testing.md](../agents/Testing.md); for a Razor component also [../agents/BlazorTesting.md](../agents/BlazorTesting.md). Which test project a test goes in: the *Where a test goes* section of [../agents/Testing.md](../agents/Testing.md) |
 | Split `tests/Huddle.Tests` into Common plus five projects by resource use, then fold duplicated test helpers into Common (planned, not started) | [test-split-plan.md](engineering/test-split-plan.md) |
 | Test the running app by hand | [manual-tests.md](engineering/manual-tests.md), [manual-tests/common.md](engineering/manual-tests/common.md), then the feature's page in §5 |
-| Choose which manual tests to run, or record a result | [manual-tests/planning.md](engineering/manual-tests/planning.md), [manual-tests/tracker.md](engineering/manual-tests/tracker.md) |
+| Choose which manual tests to run, or record a result | [manual-tests/planning.md](engineering/manual-tests/planning.md), [manual-tests/tracker.md](engineering/manual-tests/tracker.md), [manual-tests/run-log.md](engineering/manual-tests/run-log.md) |
+| See every past run of a manual test | [manual-tests/run-log.md](engineering/manual-tests/run-log.md) |
 | Build, run, or find a `Team:` configuration key | [Huddle.EngineeringGuide.md](Huddle.EngineeringGuide.md) (Configuration, Build test run) |
 | Debug a red CI run | [../agents/CIPipeline.md](../agents/CIPipeline.md) |
 | Open a PR or talk to the Gitea remote | [../agents/GiteaOperations.md](../agents/GiteaOperations.md) |
@@ -219,6 +220,7 @@ One page per feature area, run by hand in a browser. Start with `common.md`.
 | [common.md](engineering/manual-tests/common.md) | Setup shared by all tests: terminals, states, procedures, oracles |
 | [planning.md](engineering/manual-tests/planning.md) | Choosing which tests to run, cost guidance, test areas |
 | [tracker.md](engineering/manual-tests/tracker.md) | Where each test stands, and recording a result |
+| [run-log.md](engineering/manual-tests/run-log.md) | Every manual test, its file, and the history of its runs |
 | [adapter-commands.md](engineering/manual-tests/adapter-commands.md) | Adapter commands, compaction, profile enforcement, card listing, Stop |
 | [adapters.md](engineering/manual-tests/adapters.md) | Adapter chosen per Persona, several adapters in one Room, streaming |
 | [app-tools.md](engineering/manual-tests/app-tools.md) | App tool registration, discovery, real-model compliance |

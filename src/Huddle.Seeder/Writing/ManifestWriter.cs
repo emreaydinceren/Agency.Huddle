@@ -35,6 +35,8 @@ internal static partial class ManifestWriter
         AppendRequests(text, plan);
         AppendRooms(text, plan, ids);
         AppendUploads(text, plan, root, ids);
+        AppendTaskAttachments(text, plan, root);
+        AppendDocHistory(text, plan);
         AppendViews(text, plan);
         AppendNotes(text, plan);
         AppendFiles(text, plan);
@@ -180,6 +182,37 @@ internal static partial class ManifestWriter
         {
             SeedRoom room = plan.Rooms.First(r => r.Key == upload.RoomKey);
             text.Append(CultureInfo.InvariantCulture, $"| {room.Name} | {upload.FileName} | `{Path.Combine(MessageReferences.UploadFolder(dataDir, room, ids.RoomIds[room.Key]), upload.FileName)}` |\n");
+        }
+
+        text.Append('\n');
+    }
+
+    private static void AppendTaskAttachments(StringBuilder text, SeedPlan plan, string root)
+    {
+        text.Append("## Task attachments\n\nEach is a code-span line at the end of the Task's description. An uploaded file lives in `Uploads/Tasks/<ID>/`.\n\n");
+        text.Append("| Task | Kind | Path |\n| --- | --- | --- |\n");
+        string dataDir = Path.Combine(root, "data");
+        foreach (SeedTask task in plan.Tasks.Where(static t => t.Attachments.Count > 0))
+        {
+            foreach (string attachment in task.Attachments)
+            {
+                string kind = plan.TaskUploads.Any(u => string.Equals(u.RelativePath, attachment, StringComparison.Ordinal)) ? "uploaded" : "linked";
+                text.Append(CultureInfo.InvariantCulture, $"| {task.Id} | {kind} | `{SeedIo.Resolve(dataDir, attachment)}` |\n");
+            }
+        }
+
+        text.Append('\n');
+    }
+
+    private static void AppendDocHistory(StringBuilder text, SeedPlan plan)
+    {
+        text.Append("## Document history\n\nEvery other Markdown note has no History (\"No edits logged.\").\n\n");
+        text.Append("| Document | Entries | Authors | Kinds | History file |\n| --- | --- | --- | --- | --- |\n");
+        foreach (IGrouping<string, SeedDocEdit> document in plan.DocHistory.GroupBy(static e => e.RelativePath, StringComparer.Ordinal))
+        {
+            string authors = string.Join(", ", document.Select(static e => e.Actor).Distinct(StringComparer.Ordinal));
+            string kinds = string.Join(", ", document.Select(static e => e.Kind).Distinct().Select(static kind => Enum.GetName(kind)));
+            text.Append(CultureInfo.InvariantCulture, $"| `{document.Key}` | {document.Count()} | {authors} | {kinds} | `{DocHistoryWriter.HistoryPath(document.Key)}` |\n");
         }
 
         text.Append('\n');
