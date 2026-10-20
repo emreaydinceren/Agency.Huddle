@@ -334,7 +334,7 @@ internal sealed partial class PersonaRenameCascade(
     /// <summary>
     /// Re-derives the name of every Room the renamed Agent belongs to that was still carrying its
     /// auto-name, and leaves alone every Room the Human named by hand. Applies the same comparison
-    /// <see cref="ChatService.InviteAsync"/> already makes, rather than inventing a second rule for
+    /// <see cref="ChatService.InviteAsync(string, string, CancellationToken)"/> already makes, rather than inventing a second rule for
     /// when a Room may be renamed out from under somebody.
     /// </summary>
     private async Task RenameAutoNamedRoomsAsync(string userId, string oldName)

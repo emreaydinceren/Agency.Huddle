@@ -68,7 +68,7 @@ public sealed class ArchivedChatsDialogTests
     /// <summary>
     /// The live end-to-end path: Unarchive from the dialog makes the Room reappear in the sidebar's
     /// own <see cref="RoomList"/>, rendered alongside the dialog in the same fragment - both react to
-    /// the same <see cref="RoomEvents.RoomsChanged"/> publish from <see cref="ChatService.SetRoomArchivedAsync"/>.
+    /// the same <see cref="RoomEvents.RoomsChanged"/> publish from <see cref="ChatService.SetRoomArchivedAsync(string, bool, CancellationToken)"/>.
     /// </summary>
     [Fact]
     public async Task Unarchive_ReturnsTheRoomToTheSidebar()

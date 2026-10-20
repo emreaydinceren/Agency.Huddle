@@ -124,6 +124,7 @@ public static class ServiceCollectionExtensions
             ChatService service = ActivatorUtilities.CreateInstance<ChatService>(sp);
             service.TeamCatalog = sp.GetRequiredService<ITeamCatalog>();
             service.UploadFolders = sp.GetRequiredService<Uploads.IRoomUploadFolders>();
+            service.FeedPublisher = sp.GetService<Feed.IFeedPublisher>();
             return service;
         });
         services.TryAddSingleton<ToolCallLogWriter>();

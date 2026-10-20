@@ -3,6 +3,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
@@ -10,10 +11,10 @@ using Agency.Huddle.Contracts;
 /// <summary>Adds an existing Agent to a Room that already exists — the Invitation, issued by an Agent.</summary>
 /// <remarks>
 /// The counterpart of the Human's <c>/invite @name</c> composer command and the Add teammate control
-/// on the Room header: all three end in <see cref="ChatService.InviteAsync"/>, so a Room renames
+/// on the Room header: all three end in <see cref="ChatService.InviteAsync(string, string, CancellationToken)"/>, so a Room renames
 /// itself after its Agents the same way whoever issued the Invitation.
 /// </remarks>
-internal sealed class InviteAgentTool(ChatService chat, ITeamDirectory teamDirectory, IMentionAliasSource aliasSource, IPromptSource prompts) : IAppTool
+internal sealed class InviteAgentTool(ChatService chat, ITeamDirectory teamDirectory, IMentionAliasSource aliasSource, IPromptSource prompts, string? callerAgentId = null) : IAppTool
 {
     /// <inheritdoc />
     public string Name => "invite_agent";
@@ -78,7 +79,8 @@ internal sealed class InviteAgentTool(ChatService chat, ITeamDirectory teamDirec
 
         try
         {
-            var room = await chat.InviteAsync(roomId, agentName, cancellationToken).ConfigureAwait(false);
+            User? caller = callerAgentId is null ? null : await teamDirectory.GetUserAsync(callerAgentId, cancellationToken).ConfigureAwait(false);
+            var room = await chat.InviteAsync(roomId, agentName, new FeedActor(FeedActorKind.Agent, caller?.Name ?? "An Agent"), cancellationToken).ConfigureAwait(false);
             var count = members.Count + 1;
             return $"Invited {user.Name} into room '{room.Name}' (id {room.Id}). It now has {count} members.";
         }

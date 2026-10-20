@@ -281,7 +281,7 @@ public sealed class ChatServiceTests
 
     /// <summary>
     /// Phase 4: <c>/invite</c> resolves a Persona's Alias the same way <see cref="MentionParser"/>
-    /// does. <see cref="ChatService.InviteAsync"/> only reaches its Alias fallback after
+    /// does. <see cref="ChatService.InviteAsync(string, string, CancellationToken)"/> only reaches its Alias fallback after
     /// <see cref="ITeamDirectory.FindUserByNameAsync"/> misses on the typed handle, so this proves the
     /// whole path end to end - the fallback firing, resolving to the real Name, and adding the right
     /// Agent to the Room - rather than just the fallback's own resolution logic in isolation.
@@ -1391,7 +1391,7 @@ public sealed class ChatServiceTests
     }
 
     /// <summary>
-    /// <see cref="ChatService.EnsureTeamOneToOneAsync"/> is idempotent: a second call finds the Room the
+    /// <see cref="ChatService.EnsureTeamOneToOneAsync(string, User, CancellationToken)"/> is idempotent: a second call finds the Room the
     /// first created, and only the first raises <see cref="RoomEvents.RoomsChanged"/>.
     /// </summary>
     [Fact]
@@ -1434,7 +1434,7 @@ public sealed class ChatServiceTests
         Assert.NotEqual(marketing.Id, sales.Id);
     }
 
-    /// <summary><see cref="ChatService.EnsureRoomForAsync"/> stays root-only: it never returns a scoped Room, even when one exists.</summary>
+    /// <summary><see cref="ChatService.EnsureRoomForAsync(User, CancellationToken)"/> stays root-only: it never returns a scoped Room, even when one exists.</summary>
     [Fact]
     public async Task EnsureRoomFor_NeverReturnsScopedRoom()
     {

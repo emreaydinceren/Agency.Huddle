@@ -3,6 +3,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
@@ -121,7 +122,8 @@ internal sealed class CreateRoomTool(ChatService chat, ITeamDirectory teamDirect
         Room room;
         try
         {
-            room = await chat.CreateRoomForAsync(agentIds, cancellationToken).ConfigureAwait(false);
+            User? caller = await teamDirectory.GetUserAsync(callerAgentId, cancellationToken).ConfigureAwait(false);
+            room = await chat.CreateRoomForAsync(agentIds, null, new FeedActor(FeedActorKind.Agent, caller?.Name ?? "An Agent"), cancellationToken).ConfigureAwait(false);
         }
         catch (ChatException ex)
         {
