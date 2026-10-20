@@ -22,15 +22,14 @@ public sealed class TaskTriggerHelperTests
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
         Cast cast = await StartWakingAsync(harness, ct);
+        harness.Prompts.SetOverride(WakeMessageKey, "@{{assignee}} {{actor}} | {{changes}}");
         TaskItem task = harness.Seed(TestTasks.Make(id: "PLAT-0001", assignee: "Nova", originRoomId: cast.Room.Id));
 
         await RaiseAndFireAsync(harness, task, TaskActors.Helper("Needs Human"), GateOnSummary);
 
         MessagePostedEvent post = Assert.Single(harness.Posts);
         Assert.Equal(KnownIds.Human, post.Message.SenderId);
-        Assert.Contains("was changed by Needs Human (Helper):", post.Message.Text, StringComparison.Ordinal);
-        Assert.Contains(GateOnSummary, post.Message.Text, StringComparison.Ordinal);
-        Assert.StartsWith("@Nova ", post.Message.Text, StringComparison.Ordinal);
+        Assert.Equal("@Nova Needs Human (Helper) | - human gate on (reason: Sends a reply to a customer)", post.Message.Text);
     }
 
     /// <summary>A Helper's change does not spend the Task's Teammate wake budget, however many times it wakes.</summary>
@@ -57,6 +56,7 @@ public sealed class TaskTriggerHelperTests
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
         Cast cast = await StartWakingAsync(harness, ct);
+        harness.Prompts.SetOverride(WakeMessageKey, "{{actor}}");
         TaskItem task = harness.Seed(TestTasks.Make(id: "PLAT-0001", assignee: "Nova", originRoomId: cast.Room.Id));
         harness.Raise(task, TaskActors.Helper("Needs Human"), GateOnSummary);
         harness.Raise(task, HumanActor, "priority: Medium → High");
@@ -64,8 +64,6 @@ public sealed class TaskTriggerHelperTests
         harness.Clock.Advance(DefaultWindow);
         await harness.Trigger.WhenIdleAsync();
 
-        Assert.Equal(2, harness.Posts.Count);
-        Assert.Contains(harness.Posts, static post => post.Message.Text.Contains("changed by Needs Human (Helper):", StringComparison.Ordinal));
-        Assert.Contains(harness.Posts, static post => post.Message.Text.Contains("changed by You:", StringComparison.Ordinal));
+        Assert.Equal(["Needs Human (Helper)", "You"], harness.Posts.Select(static post => post.Message.Text).Order(StringComparer.Ordinal));
     }
 }

@@ -46,7 +46,7 @@ public sealed class HelperSettingsTests
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => new HelperRegistry([first, second]));
 
-        Assert.Contains("needshuman", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Two Helpers are registered with the id 'needshuman'.", error.Message);
     }
 
     /// <summary>The registry lists Helpers in registration order and finds one by id.</summary>

@@ -62,7 +62,7 @@ public sealed class HelperRunnerTests : IDisposable
         HelperSessionRequest request = Assert.Single(this.process.Requests);
         Assert.Equal("You judge.", request.SystemPrompt);
         Assert.Equal("Judge: hello", request.Prompt);
-        Assert.EndsWith(Path.Combine("helpers", "work"), request.Cwd, StringComparison.Ordinal);
+        Assert.Equal(Path.Combine(Path.GetFullPath(this.dir.Path), "helpers", "work"), request.Cwd);
     }
 
     /// <summary>A Markdown code fence around the JSON is stripped.</summary>

@@ -44,10 +44,10 @@
             <MudText Typo="Typo.body2" Class="helper-card-last-run">@HelpersCopy.LastRun(this.TimeOfDay(this.status.LastRunAt.Value), this.status.LastResult)</MudText>
         }
 
-        @if (this.LastErrorIsCurrent)
+        @if (this.CurrentError is { } error)
         {
             <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2 helper-card-error" role="status">
-                @HelpersCopy.LastError(this.TimeOfDay(this.status.LastErrorAt!.Value), this.status.LastError!)
+                @HelpersCopy.LastError(this.TimeOfDay(error.At), error.Message)
             </MudAlert>
         }
 
@@ -103,9 +103,11 @@
 
     private bool IsPaused => this.enabled && this.helper is not null && this.Budget.IsPaused(this.helper.Id, this.baseline.DailyCap);
 
-    private bool LastErrorIsCurrent =>
-        this.status.LastErrorAt is not null && this.status.LastError is not null
-        && (this.status.LastRunAt is null || this.status.LastErrorAt >= this.status.LastRunAt);
+    /// <summary>The last error while it is still the latest word: the latest run failed. A good run after it hides it.</summary>
+    private (DateTimeOffset At, string Message)? CurrentError =>
+        this.status is { LastErrorAt: { } at, LastError: { } message } && (this.status.LastRunAt is null || at >= this.status.LastRunAt)
+            ? (at, message)
+            : null;
 
     private bool CanSave =>
         this.AdaptersOn && (this.enabled != this.baseline.Enabled

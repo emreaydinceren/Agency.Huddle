@@ -46,9 +46,11 @@ public sealed class HelperSessionMetaTests
     [Fact]
     public void For_BuildsAFreshDictionaryEachTime()
     {
-        IReadOnlyDictionary<string, object> first = HelperSessionMeta.For(Profile(isolate: true))!;
-        IReadOnlyDictionary<string, object> second = HelperSessionMeta.For(Profile(isolate: true))!;
+        IReadOnlyDictionary<string, object>? first = HelperSessionMeta.For(Profile(isolate: true));
+        IReadOnlyDictionary<string, object>? second = HelperSessionMeta.For(Profile(isolate: true));
 
+        Assert.NotNull(first);
+        Assert.NotNull(second);
         Assert.NotSame(first, second);
         Assert.NotSame(Options(first), Options(second));
     }

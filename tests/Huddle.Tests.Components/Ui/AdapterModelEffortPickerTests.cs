@@ -124,7 +124,9 @@ public sealed class AdapterModelEffortPickerTests
         await ClickSelectItemAsync(cut, "Codex");
 
         cut.WaitForAssertion(() => Assert.Contains(("codex", (string?)null, (string?)null), raised));
-        cut.WaitForAssertion(() => Assert.Contains("Changing the adapter reset Model and Effort", cut.Find("[role='status']").TextContent, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.Equal(
+            "Changing the adapter reset Model and Effort to their defaults. Each adapter advertises its own models, so choices made for the previous adapter do not carry across — pick them again if you want specific ones.",
+            cut.Find("[role='status']").TextContent.Trim()));
         Assert.Contains("codex", catalog.AdaptersProbed);
     }
 
@@ -160,7 +162,9 @@ public sealed class AdapterModelEffortPickerTests
         await ClickSelectItemAsync(cut, "Sonnet");
 
         cut.WaitForAssertion(() => Assert.Contains((null, "sonnet", (string?)null), raised));
-        cut.WaitForAssertion(() => Assert.Contains("Changing the model reset Effort", cut.Find("[role='status']").TextContent, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.Equal(
+            "Changing the model reset Effort to the default. Each model advertises its own effort levels, so a level chosen for the previous model does not carry across — pick one again if you want a specific level.",
+            cut.Find("[role='status']").TextContent.Trim()));
         Assert.Contains("sonnet", catalog.EffortProbedModels);
     }
 

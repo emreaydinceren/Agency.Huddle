@@ -103,7 +103,11 @@ internal sealed class NeedsHumanHelper(TaskStore tasks, TaskService service, Nee
         string reason = CutReason(verdict.Reason ?? string.Empty);
         for (int attempt = 0; attempt < 2; attempt++)
         {
-            TaskItem? current = tasks.Get(input.Id);
+            if (tasks.Get(input.Id) is not { } current)
+            {
+                return new HelperApplied.Dropped("the Task is gone");
+            }
+
             string? drop = this.WhyDrop(current, input);
             if (drop is not null)
             {
@@ -111,7 +115,7 @@ internal sealed class NeedsHumanHelper(TaskStore tasks, TaskService service, Nee
             }
 
             TaskPatch patch = new() { HumanGate = Optional<bool>.Set(true), Reason = reason };
-            TaskResult result = service.Update(input.Id, patch, current!.Version, actor);
+            TaskResult result = service.Update(input.Id, patch, current.Version, actor);
             switch (result)
             {
                 case TaskResult.Saved:
@@ -125,7 +129,8 @@ internal sealed class NeedsHumanHelper(TaskStore tasks, TaskService service, Nee
                 case TaskResult.GateRefused gateRefused:
                     return new HelperApplied.Refused(gateRefused.Message);
                 default:
-                    return new HelperApplied.Refused($"{input.Id} could not be updated.");
+                    // NotFound: the Task was deleted between the read and the write, so the Verdict has nothing to apply to.
+                    return new HelperApplied.Dropped("the Task is gone");
             }
         }
 
@@ -133,13 +138,8 @@ internal sealed class NeedsHumanHelper(TaskStore tasks, TaskService service, Nee
     }
 
     /// <summary>Why the Verdict no longer applies, or <see langword="null"/> when it still does.</summary>
-    private string? WhyDrop(TaskItem? current, NeedsHumanInput input)
+    private string? WhyDrop(TaskItem current, NeedsHumanInput input)
     {
-        if (current is null)
-        {
-            return "the Task is gone";
-        }
-
         if (current.IsGated)
         {
             return "the Task is already gated";

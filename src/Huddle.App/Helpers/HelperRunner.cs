@@ -75,36 +75,48 @@ internal sealed class HelperRunner(
             return new HelperOutcome<TVerdict>.OverBudget();
         }
 
-        (HelperTurn? turn, string? failure) = await this.RunProcessAsync(helper.Id, processOptions, request, settings.TimeoutSeconds, cancellationToken).ConfigureAwait(false);
-        if (turn is null)
+        ProcessRun run = await this.RunProcessAsync(helper.Id, processOptions, request, settings.TimeoutSeconds, cancellationToken).ConfigureAwait(false);
+        if (run is ProcessRun.Finished finished)
         {
-            return new HelperOutcome<TVerdict>.Failed(failure ?? "The Helper did not run.");
+            return Interpret(helper, profile, settings, finished.Turn);
         }
 
-        return Interpret(helper, profile, settings, turn);
+        return new HelperOutcome<TVerdict>.Failed(((ProcessRun.Broke)run).Reason);
     }
 
-    /// <summary>Runs the process under the Helper's timeout; the Turn is <see langword="null"/> when it failed, and the failure says why.</summary>
-    private async Task<(HelperTurn? Turn, string? Failure)> RunProcessAsync(HelperId id, AgentProcessOptions processOptions, HelperSessionRequest request, int timeoutSeconds, CancellationToken cancellationToken)
+    /// <summary>Runs the process under the Helper's timeout; a timeout or a failure is a <see cref="ProcessRun.Broke"/> that says why.</summary>
+    private async Task<ProcessRun> RunProcessAsync(HelperId id, AgentProcessOptions processOptions, HelperSessionRequest request, int timeoutSeconds, CancellationToken cancellationToken)
     {
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(timeoutSeconds), this.clock);
         using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
         try
         {
             HelperTurn turn = await processRunner.RunAsync(processOptions, request, linked.Token).ConfigureAwait(false);
-            return (turn, null);
+            return new ProcessRun.Finished(turn);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             logger.LogWarning("Helper {HelperId} timed out.", id.Value);
-            return (null, string.Create(CultureInfo.InvariantCulture, $"Timed out after {timeoutSeconds} s"));
+            return new ProcessRun.Broke(string.Create(CultureInfo.InvariantCulture, $"Timed out after {timeoutSeconds} s"));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // The adapter process can fail in many ways (launch, protocol, exit); each is a failed call, never a crash of the dispatcher.
             logger.LogWarning(ex, "Helper {HelperId} failed to run.", id.Value);
-            return (null, ex.Message);
+            return new ProcessRun.Broke(ex.Message);
         }
+    }
+
+    /// <summary>How a process run ended: with a Turn, or with the reason it did not.</summary>
+    private abstract record ProcessRun
+    {
+        /// <summary>The adapter finished the Turn.</summary>
+        /// <param name="Turn">What it produced.</param>
+        public sealed record Finished(HelperTurn Turn) : ProcessRun;
+
+        /// <summary>The call timed out or the process failed.</summary>
+        /// <param name="Reason">Why, in words for the card.</param>
+        public sealed record Broke(string Reason) : ProcessRun;
     }
 
     /// <summary>Turns a finished Turn into an outcome: the Model check, then the JSON.</summary>
@@ -136,7 +148,7 @@ internal sealed class HelperRunner(
 
         if (verdict is null)
         {
-            return Unparseable<TVerdict>(text, "the JSON was null");
+            return Unparseable<TVerdict>(text, "no JSON object");
         }
 
         string? problem = helper.Validate(verdict);

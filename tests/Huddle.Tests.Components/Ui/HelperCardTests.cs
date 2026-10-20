@@ -27,9 +27,18 @@ public sealed class HelperCardTests : IDisposable
     private readonly TempDataDir dir = new();
     private readonly ScriptedHelper helper = new("NeedsHuman", new HelperDefaults(true, "claude", "haiku", "low", 50));
     private readonly ManualTimeProvider clock = new(Noon, TimeZoneInfo.Utc);
-    private HelperSettingsStore? settingsStore;
-    private HelperStatusStore? statusStore;
-    private HelperBudget? budget;
+    private readonly HelperSettingsStore settingsStore;
+    private readonly HelperStatusStore statusStore;
+    private readonly HelperBudget budget;
+
+    /// <summary>Opens the three stores the card reads and writes over the temp directory, so a test can seed and inspect them.</summary>
+    public HelperCardTests()
+    {
+        IOptions<TeamOptions> options = this.dir.Options();
+        this.settingsStore = new HelperSettingsStore(options);
+        this.statusStore = new HelperStatusStore(options);
+        this.budget = new HelperBudget(new HelperUsageStore(options), this.clock);
+    }
 
     /// <summary>Removes the temp data directory.</summary>
     public void Dispose() => this.dir.Dispose();
@@ -44,9 +53,6 @@ public sealed class HelperCardTests : IDisposable
             team.Acp.Enabled = acpEnabled;
             team.Acp.Adapters = [new AdapterProfileOptions { Id = "claude", Command = "node", Args = ["a.js"], UsesToolNamePrefix = false }];
         });
-        this.settingsStore = new HelperSettingsStore(options);
-        this.statusStore = new HelperStatusStore(options);
-        this.budget = new HelperBudget(new HelperUsageStore(options), this.clock);
         HelperSettingsResolver resolver = new(this.settingsStore, options, NullLogger<HelperSettingsResolver>.Instance);
         HelperDispatcher dispatcher = new([], resolver, this.statusStore, options, NullLogger<HelperDispatcher>.Instance, this.clock);
 
@@ -88,7 +94,7 @@ public sealed class HelperCardTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderCard(ctx);
 
         Assert.Equal("Scripted", cut.Find("h2").TextContent.Trim());
-        Assert.Contains("A scripted Helper.", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("A scripted Helper.", cut.Markup, StringComparison.Ordinal); // contains-ok: the description is one paragraph among the card's other text, with no selector of its own.
         Assert.Equal("On", Chip(cut));
         Assert.Equal("0 of 50 calls today", cut.Find(".helper-card-usage").TextContent.Trim());
         Assert.Equal("/settings/prompts?highlight=test.system", cut.Find("a[href^='/settings/prompts']").GetAttribute("href"));
@@ -102,7 +108,7 @@ public sealed class HelperCardTests : IDisposable
         await using MudBunitContext ctx = new();
         this.Register(ctx);
         IRenderedComponent<ContainerFragment> cut = RenderCard(ctx);
-        Assert.Contains("Calls a day before it pauses and asks you.", cut.Find(".helper-card-cap").TextContent, StringComparison.Ordinal);
+        Assert.Contains("Calls a day before it pauses and asks you.", cut.Find(".helper-card-cap").TextContent, StringComparison.Ordinal); // contains-ok: the field's text content is its label and its helper text together.
 
         await cut.InvokeAsync(() => cut.Find(".helper-card-cap input").ChangeAsync(new ChangeEventArgs { Value = "0" }));
 
@@ -122,7 +128,7 @@ public sealed class HelperCardTests : IDisposable
         Assert.True(panel.Find(".helper-card-save").HasAttribute("disabled"));
         Assert.True(panel.Find(".helper-card-reset").HasAttribute("disabled"));
         Assert.True(panel.Find(".mud-switch input").HasAttribute("disabled"));
-        Assert.Contains("Helpers are small background agents", panel.Markup, StringComparison.Ordinal);
+        Assert.Equal("Helpers are small background agents that make one judgement and let Huddle act on it. They don't chat, keep memory or use tools.", panel.Find(".settings-intro").TextContent.Trim());
     }
 
     /// <summary>The panel lists a card per registered Helper and where the choices are stored.</summary>
@@ -148,14 +154,14 @@ public sealed class HelperCardTests : IDisposable
         HelperId id = this.helper.Id;
         for (int i = 0; i < 50; i++)
         {
-            Assert.True(this.budget!.TryReserve(id, 50));
+            Assert.True(this.budget.TryReserve(id, 50));
         }
 
-        Assert.False(this.budget!.TryReserve(id, 50));
+        Assert.False(this.budget.TryReserve(id, 50));
         IRenderedComponent<ContainerFragment> cut = RenderCard(ctx);
 
         Assert.Equal("Paused", Chip(cut));
-        Assert.Contains("Paused — daily cap reached", cut.Find(".helper-card-paused").TextContent, StringComparison.Ordinal);
+        Assert.Contains("Paused — daily cap reached", cut.Find(".helper-card-paused").TextContent, StringComparison.Ordinal); // contains-ok: the alert holds the sentence and the Continue button's text.
         Assert.Equal("1 skipped while paused", cut.Find(".helper-card-usage").TextContent.Split(" · ")[1]);
         Assert.Equal("Continue (+10 today)", cut.Find(".helper-card-continue").TextContent.Trim());
 
@@ -163,7 +169,7 @@ public sealed class HelperCardTests : IDisposable
 
         cut.WaitForAssertion(() => Assert.Equal("On", Chip(cut)));
         Assert.Empty(cut.FindAll(".helper-card-paused"));
-        Assert.StartsWith("50 of 60 calls today", cut.Find(".helper-card-usage").TextContent.Trim(), StringComparison.Ordinal);
+        Assert.Equal("50 of 60 calls today · 1 skipped while paused", cut.Find(".helper-card-usage").TextContent.Trim());
     }
 
     /// <summary>The last run shows its local time and result.</summary>
@@ -172,7 +178,7 @@ public sealed class HelperCardTests : IDisposable
     {
         await using MudBunitContext ctx = new();
         this.Register(ctx);
-        this.statusStore!.RecordSuccess(this.helper.Id, new DateTimeOffset(2026, 10, 20, 10, 42, 0, TimeSpan.Zero), "Turned the gate on for RSH-0208");
+        this.statusStore.RecordSuccess(this.helper.Id, new DateTimeOffset(2026, 10, 20, 10, 42, 0, TimeSpan.Zero), "Turned the gate on for RSH-0208");
 
         IRenderedComponent<ContainerFragment> cut = RenderCard(ctx);
 
@@ -186,7 +192,7 @@ public sealed class HelperCardTests : IDisposable
     {
         await using MudBunitContext ctx = new();
         this.Register(ctx);
-        this.statusStore!.RecordSuccess(this.helper.Id, new DateTimeOffset(2026, 10, 20, 9, 0, 0, TimeSpan.Zero), "No change");
+        this.statusStore.RecordSuccess(this.helper.Id, new DateTimeOffset(2026, 10, 20, 9, 0, 0, TimeSpan.Zero), "No change");
         this.statusStore.RecordFailure(this.helper.Id, new DateTimeOffset(2026, 10, 20, 10, 40, 0, TimeSpan.Zero), "Timed out after 60 s");
 
         IRenderedComponent<ContainerFragment> cut = RenderCard(ctx);
@@ -202,7 +208,7 @@ public sealed class HelperCardTests : IDisposable
     {
         await using MudBunitContext ctx = new();
         this.Register(ctx);
-        this.statusStore!.RecordFailure(this.helper.Id, new DateTimeOffset(2026, 10, 20, 10, 40, 0, TimeSpan.Zero), "Timed out after 60 s");
+        this.statusStore.RecordFailure(this.helper.Id, new DateTimeOffset(2026, 10, 20, 10, 40, 0, TimeSpan.Zero), "Timed out after 60 s");
         this.statusStore.RecordSuccess(this.helper.Id, new DateTimeOffset(2026, 10, 20, 11, 0, 0, TimeSpan.Zero), "No change");
 
         IRenderedComponent<ContainerFragment> cut = RenderCard(ctx);
@@ -223,7 +229,7 @@ public sealed class HelperCardTests : IDisposable
         cut.WaitForAssertion(() => Assert.False(cut.Find(".helper-card-save").HasAttribute("disabled")));
         await cut.InvokeAsync(() => cut.Find(".helper-card-save").ClickAsync());
 
-        HelperSettingsRow? row = this.settingsStore!.Get(this.helper.Id);
+        HelperSettingsRow? row = this.settingsStore.Get(this.helper.Id);
         Assert.NotNull(row);
         Assert.False(row.Enabled);
         cut.WaitForAssertion(() => Assert.Equal("Off", Chip(cut)));

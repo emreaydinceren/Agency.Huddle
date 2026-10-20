@@ -1,6 +1,6 @@
 # Huddle.Helpers — Design Specification
 
-**Date:** 2026-10-20 · **Status:** Proposed · **Decision record:**
+**Date:** 2026-10-20 · **Status:** Built 2026-10-20 (see [Appendix B](#appendix-b-what-the-build-did-differently)) · **Decision record:**
 [ADR-0064](adr/0064-a-helper-judges-an-event-and-the-app-applies-its-verdict.md); builds on
 [ADR-0061](adr/0061-a-human-gated-task-waits-in-needs-you-for-the-humans-acceptance.md),
 [ADR-0026](adr/0026-a-change-to-a-task-wakes-its-assignee.md),
@@ -864,3 +864,24 @@ Each task is one commit: a failing test, the code, a green `dotnet build Huddle.
 | HL-17 | `PromptsPanel` `?highlight=` | bUnit |
 | HL-18 | The Task panel line | bUnit: shown for a Helper's gate-on only |
 | HL-19 | User Guide, wireframes (`G9`, `G9a`), code-map, rules.md row, manual tests page | `Check-All.ps1` |
+
+---
+
+## Appendix B. What the build did differently
+
+Written when the build landed, 2026-10-20. Everything not listed here was built as §6 describes.
+
+| # | Spec | What was built, and why |
+| --- | --- | --- |
+| B-1 | OD-2: an exact Model id from the adapter's catalog | The id is `haiku`. `claude-agent-acp` 0.75.1 lists `default`, `opus[1m]`, `claude-fable-5-1[1m]`, `sonnet` and `haiku`; the adapter keeps these family aliases current, so `haiku` is the stable exact id, and the runner still refuses a Model the session does not list (D-17). `low` Effort is offered |
+| B-2 | OD-3: spike whether `_meta` can switch off built-in tools | It can, and that is not enough. `_meta.claudeCode.options.tools = []` removes the built-in tools, but the model still saw the account's claude.ai connectors. With `options.env.ENABLE_CLAUDEAI_MCP_SERVERS = "false"` and `options.extraArgs["strict-mcp-config"] = null` too, it saw no tools. One short Haiku call at low effort cost $0.069 with the defaults, $0.018 with `tools: []`, and $0.0024 with all three. `HelperSessionMeta` builds the three settings; the findings are in `acp-session-config.md` |
+| B-3 | §6.2 `HelperSessionRequest` has five members | It has a sixth, `Meta`, the dictionary above, because the runner builds it from the Adapter profile |
+| B-4 | §6.3 the dispatcher calls the Helper through `IHelperAgent<TInput, TVerdict>` | The dispatcher cannot name `TVerdict`, so each Helper registers an `IHelperInvoker` (`HelperInvoker<TInput, TVerdict>`), which holds the cache and calls the runner and `ApplyAsync`. `Enqueue<TInput>` is constrained to `class` |
+| B-5 | §6.3 the dispatcher reserves the call after the cache | `HelperRunner` reserves it, after the Adapter and the prompts resolve and before the process starts. A call that cannot start (an unknown Adapter, an uninstalled one) is not counted; one that starts and fails is (D-13) |
+| B-6 | §6.11 `TaskActors.Helper(IHelperAgent)` | `TaskActors.Helper(string displayName)`, so `Tasks` does not depend on `Helpers` |
+| B-7 | D-19 and HL-15: extract the Adapter, Model and Effort selects from `TeammateCard` | **Not done.** `AdapterModelEffortPicker` was written as a new component, with the same rules, and the Helper card uses it. `TeammateCard` still has its own copy: its Work Mode select shares the Effort probe, its handlers write the Persona's frontmatter, and the card has the largest test surface in the app. Switching it onto the picker is a separate change, and until then the two copies must be kept in step (rules.md, ADR-0015) |
+| B-8 | §8 "Conflict with the same content retries once and writes; with new content drops; a second Conflict drops" | The code does this, but the three cases have no test: `TaskService` is a sealed class with no seam for a save between the read and the write |
+| B-9 | §6.7 the card repaints on `StatusChanged` | It does; no test raises the event, because only a finished judgement raises it. The flow tests cover the status the card reads |
+| B-10 | §6.7 the picker's superseded-probe rule (E-4) | Ported to the picker; no test drives two probes in flight |
+| B-11 | §6.7 "Last error (when `last_error_at` is later than the last success)" | The status keeps one `last_run_at`, written by a success and by a failure, so the error is current when `last_error_at` is not earlier than `last_run_at` |
+| B-12 | §6.11 `AddReasonProblems` allows a reason when the patch turns the gate on | `Validate` takes whether the change turns the gate from off to on; a reason on an already-gated Task is still refused. The refusal text for a reason is unchanged |

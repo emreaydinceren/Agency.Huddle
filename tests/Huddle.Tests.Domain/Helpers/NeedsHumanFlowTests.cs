@@ -290,7 +290,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
         await this.RecordedAsync();
 
         Assert.Equal(1, this.process.Calls);
-        Assert.Contains("Draft three", Assert.Single(this.process.Requests).Prompt, StringComparison.Ordinal);
+        Assert.Contains("Draft three", Assert.Single(this.process.Requests).Prompt, StringComparison.Ordinal); // contains-ok: the prompt carries the Task id, team and tags around the title.
     }
 
     /// <summary>A Verdict that arrives after the Task was rewritten is dropped, and the newer save is judged on its own (U-9).</summary>
@@ -403,17 +403,29 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
         HelperApplied applied = await this.helper.ApplyAsync("k", InputOf(task), new NeedsHumanVerdict(true, reason), TestContext.Current.CancellationToken);
 
         Assert.IsType<HelperApplied.Changed>(applied);
-        string summary = this.harness.Store.Get(task.Id)!.ChangeLog[^1].Summary;
-        Assert.Equal($"human gate on (reason: {new string('x', 197)}...)", summary);
+        TaskItem? stored = this.harness.Store.Get(task.Id);
+        Assert.NotNull(stored);
+        Assert.Equal($"human gate on (reason: {new string('x', 197)}...)", stored.ChangeLog[^1].Summary);
     }
 
     /// <summary>A true Verdict with no reason is refused by Validate; a false one needs none.</summary>
     [Fact]
     public void Validate_TrueWithoutReason_IsRefused()
     {
-        Assert.NotNull(this.helper.Validate(new NeedsHumanVerdict(true, "  ")));
+        Assert.Equal("a true answer needs a reason", this.helper.Validate(new NeedsHumanVerdict(true, "  ")));
         Assert.Null(this.helper.Validate(new NeedsHumanVerdict(false, null)));
         Assert.Null(this.helper.Validate(new NeedsHumanVerdict(true, "Sends a reply")));
+    }
+
+    /// <summary>The Helper presents itself on its card as Needs Human, with the sentence the Human reads and the defaults the spec fixes.</summary>
+    [Fact]
+    public void Identity_IsWhatTheCardShows()
+    {
+        Assert.Equal("NeedsHuman", this.helper.Id.Value);
+        Assert.Equal("Needs Human", this.helper.DisplayName);
+        Assert.Equal("Turns on the Human gate when a Teammate's Task leaves the team or can't be undone. It never turns it off.", this.helper.Description);
+        Assert.Equal(["helper.needsHuman.system", "helper.needsHuman.task"], this.helper.PromptKeys);
+        Assert.Equal(new HelperDefaults(true, "claude", "haiku", "low", 50), this.helper.Defaults);
     }
 
     /// <summary>The prompt values carry the Task, drop the Evidence section and cut a long description.</summary>
@@ -430,7 +442,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
         Assert.Equal("Body", values["{{description}}"]);
         string cut = this.helper.PromptValues(input with { Description = new string('y', 7000), Tags = [] })["{{description}}"];
         Assert.Equal(6000 + "[…cut]".Length, cut.Length);
-        Assert.EndsWith("[…cut]", cut, StringComparison.Ordinal);
+        Assert.Equal("[…cut]", cut[^6..]);
         Assert.Equal("none", this.helper.PromptValues(input with { Tags = [] })["{{tags}}"]);
     }
 
