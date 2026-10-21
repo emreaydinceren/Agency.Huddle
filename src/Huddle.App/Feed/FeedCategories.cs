@@ -5,9 +5,9 @@ internal static class FeedCategories
 {
     private static readonly Dictionary<FeedCategory, IReadOnlyList<FeedSourceType>> TypesByCategory = BuildIndex();
 
-    /// <summary>The six Categories in the order the Category control, the counts and the panel draw them.</summary>
+    /// <summary>The seven Categories in the order the Category control, the counts and the panel draw them.</summary>
     public static IReadOnlyList<FeedCategory> Order { get; } =
-        [FeedCategory.All, FeedCategory.NeedsYou, FeedCategory.Tasks, FeedCategory.Documents, FeedCategory.Rooms, FeedCategory.Gates];
+        [FeedCategory.All, FeedCategory.NeedsYou, FeedCategory.Tasks, FeedCategory.Documents, FeedCategory.Rooms, FeedCategory.Gates, FeedCategory.Helpers];
 
     /// <summary>The label a Category carries in the Category control and the panel.</summary>
     /// <param name="category">The Category.</param>
@@ -19,11 +19,12 @@ internal static class FeedCategories
         FeedCategory.Documents => "Documents",
         FeedCategory.Rooms => "Rooms",
         FeedCategory.Gates => "Gates",
+        FeedCategory.Helpers => "Helpers",
         _ => "All",
     };
 
     /// <summary>The number the Category's segment shows.</summary>
-    /// <param name="counts">The six counts.</param>
+    /// <param name="counts">The seven counts.</param>
     /// <param name="category">The Category.</param>
     /// <returns>Its count.</returns>
     public static int CountOf(FeedCounts counts, FeedCategory category) => category switch
@@ -33,10 +34,11 @@ internal static class FeedCategories
         FeedCategory.Documents => counts.Documents,
         FeedCategory.Rooms => counts.Rooms,
         FeedCategory.Gates => counts.Gates,
+        FeedCategory.Helpers => counts.Helpers,
         _ => counts.All,
     };
 
-    /// <summary>The one type segment (Tasks, Gates, Rooms or Documents) a source type belongs to.</summary>
+    /// <summary>The one type segment (Tasks, Gates, Rooms, Documents or Helpers) a source type belongs to.</summary>
     /// <param name="type">The source type.</param>
     /// <returns>The segment.</returns>
     public static FeedCategory Of(FeedSourceType type) => type switch
@@ -46,6 +48,7 @@ internal static class FeedCategories
         FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget
             or FeedSourceType.RoomCreated or FeedSourceType.RoomJoined or FeedSourceType.RoomArchived => FeedCategory.Rooms,
         FeedSourceType.DocumentChanged => FeedCategory.Documents,
+        FeedSourceType.HelperPaused or FeedSourceType.HelperFailing => FeedCategory.Helpers,
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 
@@ -65,6 +68,7 @@ internal static class FeedCategories
         "documents" => FeedCategory.Documents,
         "rooms" => FeedCategory.Rooms,
         "gates" => FeedCategory.Gates,
+        "helpers" => FeedCategory.Helpers,
         _ => FeedCategory.All,
     };
 
@@ -78,6 +82,7 @@ internal static class FeedCategories
         FeedCategory.Documents => "documents",
         FeedCategory.Rooms => "rooms",
         FeedCategory.Gates => "gates",
+        FeedCategory.Helpers => "helpers",
         _ => "all",
     };
 

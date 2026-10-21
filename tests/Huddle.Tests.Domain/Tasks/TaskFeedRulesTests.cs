@@ -16,11 +16,13 @@ public sealed class TaskFeedRulesTests
     private static readonly Func<string, bool> NoConfirmer = static _ => false;
     private static readonly Func<string, bool> HasConfirmer = static _ => true;
 
-    private static FeedEffects Run(TaskItem? before, TaskItem after, TaskActor actor, Func<string, bool>? confirmer = null) =>
-        TaskFeedRules.For(Change(before, after, actor), HumanName, confirmer ?? NoConfirmer, static _ => new Proof([new ProofItem("a", true, null, null, ProofItemSource.Process), new ProofItem("b", false, null, null, ProofItemSource.Process)]));
+    private static readonly TaskActor Helper = TaskActors.Helper("Needs Human");
 
-    private static TaskChange Change(TaskItem? before, TaskItem after, TaskActor actor) =>
-        new(before, after, [], actor, new ChangeLogEntry(DateTimeOffset.UnixEpoch, actor.Name, "x"));
+    private static FeedEffects Run(TaskItem? before, TaskItem after, TaskActor actor, Func<string, bool>? confirmer = null, string? reason = null, TaskDecision? decision = null) =>
+        TaskFeedRules.For(Change(before, after, actor, reason, decision), HumanName, confirmer ?? NoConfirmer, static _ => new Proof([new ProofItem("a", true, null, null, ProofItemSource.Process), new ProofItem("b", false, null, null, ProofItemSource.Process)]));
+
+    private static TaskChange Change(TaskItem? before, TaskItem after, TaskActor actor, string? reason = null, TaskDecision? decision = null) =>
+        new(before, after, [], actor, new ChangeLogEntry(DateTimeOffset.UnixEpoch, actor.Name, "x"), decision, null, reason);
 
     private static TaskItem Task(TaskState status = TaskState.ToDo, string? assignee = null, bool gated = false, IReadOnlyList<KeyValuePair<string, string>>? extra = null) =>
         TestTasks.Make(id: "PLAT-0001", title: "Fix footer", status: status, assignee: assignee, unknownFields: extra) with { HumanGate = gated };
@@ -69,6 +71,85 @@ public sealed class TaskFeedRulesTests
         Assert.Equal(FeedSourceType.TaskGateOn, post.SourceType);
         Assert.False(post.Notify);
         Assert.Empty(byHuman.Posts);
+    }
+
+    /// <summary>A Helper's gate-on is a Notification that carries the reason and the Helper actor; a Teammate's stays Activity with no reason.</summary>
+    [Fact]
+    public void For_GateTurnedOnByHelper_NotifiesWithTheReason()
+    {
+        TaskItem before = Task();
+        TaskItem after = before with { HumanGate = true };
+
+        FeedEffects byHelper = Run(before, after, Helper, reason: "Sends a document outside the Team");
+        FeedEffects byAgent = Run(before, after, Nova, reason: "ignored");
+
+        FeedMessage post = Assert.Single(byHelper.Posts);
+        Assert.Equal(FeedSourceType.TaskGateOn, post.SourceType);
+        Assert.True(post.Notify);
+        Assert.Equal(new FeedActor(FeedActorKind.Helper, "Needs Human (Helper)"), post.Actor);
+        TaskGatePayload payload = Assert.IsType<TaskGatePayload>(post.Payload);
+        Assert.Equal("Sends a document outside the Team", payload.Reason);
+        FeedMessage teammate = Assert.Single(byAgent.Posts);
+        Assert.False(teammate.Notify);
+        Assert.Null(Assert.IsType<TaskGatePayload>(teammate.Payload).Reason);
+    }
+
+    /// <summary>Every kind of Task actor maps to its own Feed actor kind; none falls into Outside Huddle by default.</summary>
+    [Fact]
+    public void For_EachActorKind_PostsItsOwnFeedActorKind()
+    {
+        Dictionary<TaskActorKind, FeedActorKind> expected = new()
+        {
+            [TaskActorKind.Human] = FeedActorKind.Human,
+            [TaskActorKind.Agent] = FeedActorKind.Agent,
+            [TaskActorKind.Helper] = FeedActorKind.Helper,
+            [TaskActorKind.OutsideHuddle] = FeedActorKind.OutsideHuddle,
+        };
+
+        foreach (TaskActorKind kind in Enum.GetValues<TaskActorKind>())
+        {
+            Assert.True(expected.ContainsKey(kind), $"{kind} needs an explicit Feed actor kind.");
+            Assert.Equal(expected[kind], Run(null, Task(), new TaskActor(kind, "Someone", null)).Posts[0].Actor.Kind);
+        }
+    }
+
+    /// <summary>A Helper's gate-on Notification resolves when the gate goes off, a decision is recorded, the Task starts waiting in Needs You, or it closes.</summary>
+    [Fact]
+    public void For_HelperGateOn_ResolvesOnEachOfTheFourConditions()
+    {
+        FeedResolution gateOn = new("PLAT-0001", FeedSourceType.TaskGateOn);
+        TaskItem gated = Task(TaskState.InProgress, gated: true);
+
+        FeedEffects gateOff = Run(gated, gated with { HumanGate = false }, Human);
+        FeedEffects decided = Run(gated, gated with { Status = TaskState.InProgress }, Human, decision: TaskDecision.RequestChanges);
+        FeedEffects waits = Run(gated, gated with { Status = TaskState.NeedsYou }, Nova);
+        FeedEffects closed = Run(gated, gated with { Location = gated.Location with { Closed = true } }, Human);
+        FeedEffects unrelated = Run(gated, gated with { Title = "New" }, Nova);
+
+        Assert.Contains(gateOn, gateOff.Resolutions);
+        Assert.Contains(gateOn, decided.Resolutions);
+        Assert.Contains(gateOn, waits.Resolutions);
+        Assert.Contains(gateOn, closed.Resolutions);
+        Assert.DoesNotContain(gateOn, unrelated.Resolutions);
+    }
+
+    /// <summary>A gate-on item still holds while the Task is open, gated, undecided and not in Needs You; each of those ends it.</summary>
+    [Fact]
+    public void Holds_TaskGateOn_ReflectsEachConditionNow()
+    {
+        TaskItem gated = Task(TaskState.InProgress, gated: true) with
+        {
+            ChangeLog = [new ChangeLogEntry(DateTimeOffset.UnixEpoch, "Needs Human (Helper)", "human gate on (reason: x)")],
+        };
+        TaskItem decided = gated with { ChangeLog = [.. gated.ChangeLog, new ChangeLogEntry(DateTimeOffset.UnixEpoch, HumanName, "changes requested: redo")] };
+        TaskItem accepted = gated with { ChangeLog = [.. gated.ChangeLog, new ChangeLogEntry(DateTimeOffset.UnixEpoch, HumanName, "accepted abcdef123456")] };
+
+        Assert.True(TaskFeedRules.Holds(FeedSourceType.TaskGateOn, gated, HumanName, NoConfirmer, null));
+        Assert.False(TaskFeedRules.Holds(FeedSourceType.TaskGateOn, gated with { HumanGate = false }, HumanName, NoConfirmer, null));
+        Assert.False(TaskFeedRules.Holds(FeedSourceType.TaskGateOn, gated with { Status = TaskState.NeedsYou }, HumanName, NoConfirmer, null));
+        Assert.False(TaskFeedRules.Holds(FeedSourceType.TaskGateOn, gated with { Location = gated.Location with { Closed = true } }, HumanName, NoConfirmer, null));
+        Assert.False(TaskFeedRules.Holds(FeedSourceType.TaskGateOn, decided, HumanName, NoConfirmer, null));
+        Assert.False(TaskFeedRules.Holds(FeedSourceType.TaskGateOn, accepted, HumanName, NoConfirmer, null));
     }
 
     /// <summary>A gated Task entering Needs You posts a Notification with its Proof count; the Human's own move posts none.</summary>

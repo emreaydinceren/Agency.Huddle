@@ -12,6 +12,7 @@ namespace Agency.Huddle.App.Tasks;
 /// <param name="Entry">The Change log entry recorded for this change.</param>
 /// <param name="Decision">The Human's decision when this change records one, otherwise <see langword="null"/>.</param>
 /// <param name="Note">The note given with the decision, otherwise <see langword="null"/>.</param>
+/// <param name="Reason">The reason the patch gave (a Helper's cut Verdict reason), otherwise <see langword="null"/>.</param>
 internal sealed record TaskChange(
     TaskItem? Before,
     TaskItem After,
@@ -19,4 +20,5 @@ internal sealed record TaskChange(
     TaskActor Actor,
     ChangeLogEntry Entry,
     Agency.Huddle.App.Tasks.HumanGate.TaskDecision? Decision = null,
-    string? Note = null);
+    string? Note = null,
+    string? Reason = null);

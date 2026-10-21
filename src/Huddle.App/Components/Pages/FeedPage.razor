@@ -43,7 +43,7 @@
         </div>
 
         <div class="feed-filter-bar">
-            <HuddleSegmentedControl T="FeedCategory" Value="@this.category" ValueChanged="this.OnCategoryChosen" Class="feed-category-control" ItemCount="6">
+            <HuddleSegmentedControl T="FeedCategory" Value="@this.category" ValueChanged="this.OnCategoryChosen" Class="feed-category-control" ItemCount="7">
                 @foreach (FeedCategory entry in FeedCategories.Order)
                 {
                     <MudToggleItem Value="@entry" Text="@this.SegmentText(entry)" />
@@ -89,7 +89,7 @@
     private string? teammate;
     private string? team;
     private string? loadedFilter;
-    private FeedCounts counts = new(0, 0, 0, 0, 0, 0);
+    private FeedCounts counts = new(0, 0, 0, 0, 0, 0, 0);
     private FeedList? list;
     private ITimer? seenTimer;
     private bool subscribed;

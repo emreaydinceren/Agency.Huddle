@@ -57,6 +57,8 @@ internal static class FeedTestSupport
         FeedSourceType.RoomJoined => new RoomJoinedPayload("room-1", "Plan", team, "Sage"),
         FeedSourceType.RoomArchived => new RoomArchivedPayload("room-1", "Plan", team),
         FeedSourceType.DocumentChanged => new DocumentChangedPayload("C:/lib/a.md", "lib", "a.md", "edit", "Fixed a typo"),
+        FeedSourceType.HelperPaused => new HelperPausedPayload("NeedsHuman", "Needs Human", 50, 0),
+        FeedSourceType.HelperFailing => new HelperFailingPayload("NeedsHuman", "Needs Human", 3, "The adapter isn't signed in"),
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
     };
 
@@ -70,7 +72,7 @@ internal static class FeedTestSupport
     {
         bool notify = type is FeedSourceType.TaskNeedsYou or FeedSourceType.TaskAssignedToYou or FeedSourceType.RequestAwaitsYou
             or FeedSourceType.GateDecisionDue or FeedSourceType.RoomMention or FeedSourceType.RoomQuestion
-            or FeedSourceType.RoomForm or FeedSourceType.RoomBudget;
+            or FeedSourceType.RoomForm or FeedSourceType.RoomBudget or FeedSourceType.HelperPaused or FeedSourceType.HelperFailing;
         return new FeedMessage(type, target, Agent(actor), notify, SamplePayload(type, team));
     }
 
