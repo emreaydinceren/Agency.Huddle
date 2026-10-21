@@ -1,8 +1,10 @@
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Feed;
 using Agency.Huddle.Tests.Waiting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -21,6 +23,7 @@ public sealed class HelperDispatcherTests : IDisposable
     private readonly ScriptedHelper helper = new();
     private readonly FakePromptSource prompts = new();
     private readonly FiringTimeProvider clock = new();
+    private readonly RecordingFeedPublisher feed = new();
 
     /// <summary>Sets the two prompts the scripted Helper renders.</summary>
     public HelperDispatcherTests()
@@ -43,13 +46,16 @@ public sealed class HelperDispatcherTests : IDisposable
         HelperRunner runner = new(this.process, new AdapterCatalog(options), this.prompts, new HelperBudget(usage, this.clock), options, NullLogger<HelperRunner>.Instance, this.clock);
         HelperSettingsStore settings = new(options);
         HelperStatusStore status = new(options);
+        HelperSettingsResolver resolver = new(settings, options, NullLogger<HelperSettingsResolver>.Instance);
+        HelperFeed helperFeed = new(this.feed, status, new HelperBudget(usage, this.clock), new HelperRegistry([this.helper]), resolver, NullLogger<HelperFeed>.Instance);
         HelperDispatcher dispatcher = new(
             [new HelperInvoker<string, ScriptedVerdict>(this.helper, runner, NullLogger.Instance)],
-            new HelperSettingsResolver(settings, options, NullLogger<HelperSettingsResolver>.Instance),
+            resolver,
             status,
             options,
             NullLogger<HelperDispatcher>.Instance,
-            this.clock);
+            this.clock,
+            helperFeed);
         return (dispatcher, status, settings, usage);
     }
 
@@ -279,6 +285,50 @@ public sealed class HelperDispatcherTests : IDisposable
 
         Assert.Equal(1, this.process.Calls);
         Assert.Equal(before, status.Get(this.helper.Id));
+    }
+
+    /// <summary>A run that finds the cap reached tells the Feed once, however many more inputs are skipped.</summary>
+    [Fact]
+    public async Task Enqueue_OverBudget_PostsOnePauseItem()
+    {
+        (HelperDispatcher dispatcher, _, HelperSettingsStore settings, HelperUsageStore usage) = this.Build();
+        settings.Save(this.helper.Id, new HelperSettingsRow(true, null, null, null, 1));
+        dispatcher.Enqueue(this.helper.Id, "k1", "first");
+        this.clock.Advance(TimeSpan.FromSeconds(11));
+        await this.AppliedAsync(1);
+        string day = this.clock.GetLocalNow().Date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+
+        foreach (string key in new[] { "k2", "k3" })
+        {
+            int skipped = usage.Get(this.helper.Id, day).Skipped;
+            dispatcher.Enqueue(this.helper.Id, key, key);
+            this.clock.Advance(TimeSpan.FromSeconds(11));
+            await Eventually.UntilAsync(() => usage.Get(this.helper.Id, day).Skipped > skipped, TestContext.Current.CancellationToken, TestBudgets.Standard);
+        }
+
+        FeedMessage post = Assert.Single(this.feed.Posts);
+        Assert.Equal(FeedSourceType.HelperPaused, post.SourceType);
+        Assert.Equal("helper:Scripted", post.TargetKey);
+    }
+
+    /// <summary>The third failure in a row tells the Feed, and the fourth does not tell it again.</summary>
+    [Fact]
+    public async Task Enqueue_ThreeFailuresInARow_PostsOneFailingItem()
+    {
+        (HelperDispatcher dispatcher, HelperStatusStore status, _, _) = this.Build();
+        this.helper.ApplyHandler = static (_, _, _) => new HelperApplied.Refused("Only You can turn off the gate.");
+
+        for (int i = 1; i <= 4; i++)
+        {
+            dispatcher.Enqueue(this.helper.Id, "k" + i, "text" + i);
+            this.clock.Advance(TimeSpan.FromSeconds(11));
+            int expected = i;
+            await Eventually.UntilAsync(() => status.Get(this.helper.Id).ConsecutiveFailures >= expected, TestContext.Current.CancellationToken, TestBudgets.Standard);
+        }
+
+        FeedMessage post = Assert.Single(this.feed.Posts);
+        Assert.Equal(FeedSourceType.HelperFailing, post.SourceType);
+        Assert.Equal(3, Assert.IsType<HelperFailingPayload>(post.Payload).Failures);
     }
 
     /// <summary>Stopping drops what is still waiting.</summary>

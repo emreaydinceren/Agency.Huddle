@@ -43,7 +43,7 @@ internal sealed class HelperStatusStore
             return HelperStatus.None;
         }
 
-        return new HelperStatus(ReadTime(reader, 0), ReadText(reader, 1), ReadText(reader, 2), ReadTime(reader, 3), reader.GetInt32(4));
+        return ReadStatus(reader);
     }
 
     /// <summary>A good run: sets the result and the run time, resets the failure count, and keeps the earlier error.</summary>
@@ -68,20 +68,28 @@ internal sealed class HelperStatusStore
     /// <param name="id">The Helper.</param>
     /// <param name="at">When it failed.</param>
     /// <param name="error">What went wrong, in words for the card.</param>
-    public void RecordFailure(HelperId id, DateTimeOffset at, string error)
+    /// <returns>The status the store now holds, so the caller sees the failure count this write produced.</returns>
+    public HelperStatus RecordFailure(HelperId id, DateTimeOffset at, string error)
     {
         using SqliteConnection connection = this.OpenConnection();
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO helper_status(helper_id, last_error, last_error_at, consecutive_failures) VALUES($id, $error, $at, 1)
             ON CONFLICT(helper_id) DO UPDATE SET last_error = excluded.last_error,
-                last_error_at = excluded.last_error_at, consecutive_failures = consecutive_failures + 1;
+                last_error_at = excluded.last_error_at, consecutive_failures = consecutive_failures + 1
+            RETURNING last_run_at, last_result, last_error, last_error_at, consecutive_failures;
             """;
         command.Parameters.AddWithValue("$id", id.Value);
         command.Parameters.AddWithValue("$at", Format(at));
         command.Parameters.AddWithValue("$error", error);
-        command.ExecuteNonQuery();
+        using SqliteDataReader reader = command.ExecuteReader();
+        _ = reader.Read();
+        return ReadStatus(reader);
     }
+
+    /// <summary>The five status columns, in the order every query selects them.</summary>
+    private static HelperStatus ReadStatus(SqliteDataReader reader) =>
+        new(ReadTime(reader, 0), ReadText(reader, 1), ReadText(reader, 2), ReadTime(reader, 3), reader.GetInt32(4));
 
     /// <summary>The round-trip text of an instant.</summary>
     private static string Format(DateTimeOffset at) => at.ToString("O", CultureInfo.InvariantCulture);

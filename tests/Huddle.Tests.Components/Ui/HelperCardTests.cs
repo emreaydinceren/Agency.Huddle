@@ -3,7 +3,9 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Settings.Helpers;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Helpers;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Feed;
 using Agency.Huddle.Tests.Helpers;
 using AngleSharp.Dom;
 using Bunit;
@@ -30,6 +32,8 @@ public sealed class HelperCardTests : IDisposable
     private readonly HelperSettingsStore settingsStore;
     private readonly HelperStatusStore statusStore;
     private readonly HelperBudget budget;
+    private readonly RecordingFeedPublisher feed = new();
+    private HelperFeed? helperFeed;
 
     /// <summary>Opens the three stores the card reads and writes over the temp directory, so a test can seed and inspect them.</summary>
     public HelperCardTests()
@@ -55,6 +59,8 @@ public sealed class HelperCardTests : IDisposable
         });
         HelperSettingsResolver resolver = new(this.settingsStore, options, NullLogger<HelperSettingsResolver>.Instance);
         HelperDispatcher dispatcher = new([], resolver, this.statusStore, options, NullLogger<HelperDispatcher>.Instance, this.clock);
+        HelperRegistry registry = new([this.helper]);
+        this.helperFeed = new HelperFeed(this.feed, this.statusStore, this.budget, registry, resolver, NullLogger<HelperFeed>.Instance);
 
         ctx.Services.AddSingleton(options);
         ctx.Services.AddSingleton<TimeProvider>(this.clock);
@@ -63,7 +69,8 @@ public sealed class HelperCardTests : IDisposable
         ctx.Services.AddSingleton(this.budget);
         ctx.Services.AddSingleton(resolver);
         ctx.Services.AddSingleton(dispatcher);
-        ctx.Services.AddSingleton(new HelperRegistry([this.helper]));
+        ctx.Services.AddSingleton(registry);
+        ctx.Services.AddSingleton(this.helperFeed);
         ctx.Services.AddSingleton<IModelCatalog>(new FakeModelCatalog());
         ctx.Services.AddSingleton(BuildAdapterCatalog(("claude", "Claude")));
     }
@@ -170,6 +177,48 @@ public sealed class HelperCardTests : IDisposable
         cut.WaitForAssertion(() => Assert.Equal("On", Chip(cut)));
         Assert.Empty(cut.FindAll(".helper-card-paused"));
         Assert.Equal("50 of 60 calls today · 1 skipped while paused", cut.Find(".helper-card-usage").TextContent.Trim());
+    }
+
+    /// <summary>Pressing Continue on a paused Helper resolves its pause item in the Feed.</summary>
+    [Fact]
+    public async Task Continue_ResolvesThePauseItemInTheFeed()
+    {
+        await using MudBunitContext ctx = new();
+        this.Register(ctx);
+        HelperId id = this.helper.Id;
+        for (int i = 0; i < 50; i++)
+        {
+            _ = this.budget.TryReserve(id, 50);
+        }
+
+        Assert.NotNull(this.helperFeed);
+        this.helperFeed.Paused(this.helper, new HelperSettings(true, null, null, null, 50, 10, 10, 60));
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx);
+
+        await cut.InvokeAsync(() => cut.Find(".helper-card-continue").ClickAsync());
+
+        Assert.Equal(new FeedResolution("helper:NeedsHuman", FeedSourceType.HelperPaused), Assert.Single(this.feed.Resolutions));
+    }
+
+    /// <summary>Saving the Helper off and resetting it to an off default both tell the Feed it has nothing left to watch; saving it on does not.</summary>
+    [Fact]
+    public async Task SaveOff_ResolvesTheHelperItemsInTheFeed()
+    {
+        await using MudBunitContext ctx = new();
+        this.Register(ctx);
+        Assert.NotNull(this.helperFeed);
+        this.helperFeed.Paused(this.helper, new HelperSettings(true, null, null, null, 50, 10, 10, 60));
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx);
+        await cut.InvokeAsync(() => cut.Find(".helper-card-cap input").ChangeAsync(new ChangeEventArgs { Value = "40" }));
+        cut.WaitForAssertion(() => Assert.False(cut.Find(".helper-card-save").HasAttribute("disabled")));
+        await cut.InvokeAsync(() => cut.Find(".helper-card-save").ClickAsync());
+        Assert.Empty(this.feed.Resolutions);
+
+        await cut.InvokeAsync(() => cut.Find(".mud-switch input").ChangeAsync(new ChangeEventArgs { Value = false }));
+        cut.WaitForAssertion(() => Assert.False(cut.Find(".helper-card-save").HasAttribute("disabled")));
+        await cut.InvokeAsync(() => cut.Find(".helper-card-save").ClickAsync());
+
+        Assert.Equal(new FeedResolution("helper:NeedsHuman", FeedSourceType.HelperPaused), Assert.Single(this.feed.Resolutions));
     }
 
     /// <summary>The last run shows its local time and result.</summary>

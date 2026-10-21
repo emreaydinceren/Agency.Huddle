@@ -83,6 +83,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<HelperRunner>(),
             sp.GetRequiredService<ILoggerFactory>().CreateLogger<HelperInvoker<NeedsHumanInput, NeedsHumanVerdict>>()));
         services.AddSingleton<HelperRegistry>();
+        services.AddSingleton<HelperFeed>();
 
         services.AddSingleton<HelperDispatcher>();
         services.AddHostedService(static sp => sp.GetRequiredService<HelperDispatcher>());
@@ -112,6 +113,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Feed.IFeedPublisher>(static sp => sp.GetRequiredService<Feed.FeedQueue>());
         services.AddHostedService<Feed.FeedWriter>();
         services.AddHostedService<TaskFeedStartup>();
+        services.AddHostedService<HelperFeedStartup>();
         return services;
     }
 
