@@ -124,4 +124,22 @@ public sealed class TaskTriggerHelperTests
 
         Assert.Equal(["Needs Human (Helper)", "You"], harness.Posts.Select(static post => post.Message.Text).Order(StringComparer.Ordinal));
     }
+
+    /// <summary>A Helper's wake into a Room whose Budget is spent is not posted and is recorded as BudgetSpent, as an Agent's is, instead of reading Woken while the assignee's reply is refused.</summary>
+    [Fact]
+    public async Task HelperWake_IntoASpentRoom_IsRecordedAsBudgetSpentAndNotPosted()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You", AgentMessageBudget = 1 }, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        harness.Gateway.SetOnline(cast.Nova.Id);
+        _ = await harness.Chat.PostAsync(cast.Room.Id, cast.Kai.Id, "Working on it.", ct: ct);
+        TaskItem task = harness.Seed(TestTasks.Make(id: "PLAT-0001", assignee: "Nova", originRoomId: cast.Room.Id));
+
+        await RaiseAndFireAsync(harness, task, TaskActors.Helper("Needs Human"), GateOnSummary);
+
+        Assert.Equal("Working on it.", Assert.Single(harness.Posts).Message.Text);
+        Assert.Equal(WakeOutcome.BudgetSpent, harness.Activity.LastWake(task.Id)?.Outcome);
+    }
 }

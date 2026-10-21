@@ -16,7 +16,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 4. The mock Teammates cannot call Task tools or Mention you, so the free tests make a Notification in two ways. A Form: send `[elicit:one]` in the `Ada` Room and Ada puts one Form to you. A Task handed to you: create a Task on the Tasks page with no assignee, find its file with `Get-ChildItem $data -Recurse -Filter '<ID>.md'`, change its `assignee:` line to `<Human>` in an editor and save. The file edit counts as an edit made outside Huddle, so its Feed item has the outside-edit mark where a Teammate's avatar would be; the Notification itself is the same. A Task you create or assign in the UI makes Activity only, never a Notification, because a Notification is never posted for the Human's own action.
 5. The paid tests need a real Teammate made with [`P-NEW-PERSONA`](common.md#p-new-persona): Name `Keeper`, Title `Keeper`, **Model** Haiku, **Effort** `low`, in a Team named `Growth` whose `Process.md` has a Definition of Done as in [the Human gate page](human-gate.md#setup). Launch them with `P-LAUNCH-PAID` instead of `P-LAUNCH-UAT`.
 6. Restarting means `P-STOP`, then the same launch command **without** re-running the seeder, so the data stays.
-7. The bell is the button labelled `Notifications` at the right of the Top Bar, just left of the Right sidebar toggle. With a count, its label reads `Notifications, <n> new`. The Feed link is the `Feed` icon at the bottom of the Activity bar, above Archived chats.
+7. The bell is the button labelled `Notifications` at the right of the Top Bar, just left of the Right sidebar toggle. With a count, its label reads `Notifications, <n> new`. The Feed link is the `Feed` icon at the top of the Activity bar, above Chats.
 
 ## Tests
 
@@ -135,7 +135,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 1. In a Room with `Keeper`, send `Complete every Proof item on G5, then move G5 to Needs you.`
 2. Look at the bell, then open the Feed Tab, `Needs you`.
 3. Read the top card's summary, meta line and pill.
-4. Open the card (the card body, not a chip). Press `Accept`.
+4. Open the card (press its empty space or the chevron to expand it, then `Open Task`). Press `Accept`.
 5. Look at the Feed Tab and the bell.
 
 **Pass if — all of these**
@@ -168,7 +168,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 - At step 3 the card shows no Message text, only the Room's name.
 - At step 5 the card is dimmed with a `Done` pill and has left the `Needs you` count; the bell count is lower by one.
 
-### FEED-07 — The Feed Tab header shows the Live chip, the read-only note, six counted segments and the Team select
+### FEED-07 — The Feed Tab header shows the Live chip, the read-only note, seven counted segments and the Team select
 
 **Free** · about 10 min
 
@@ -180,7 +180,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Steps**
 
-1. Press the `Feed` icon at the bottom of the Activity bar. Hover it.
+1. Press the `Feed` icon at the top of the Activity bar. Hover it.
 2. Read the page header and the line under it.
 3. Read the filter bar.
 4. Press `Rooms`, then `Needs you`, then `All`. Read the address each time.
@@ -190,8 +190,8 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 - At step 1 a Tab titled `Feed` opens and the tooltip reads `Feed`.
 - At step 2 the title reads `Feed`, a green chip with a dot reads `Live`, the subtitle reads `What Teammates and Huddle did, newest first. Each line links to the Task, Room or document it's about.`, and under it an eye icon and the line `Read-only — the Feed never changes the work and never shows message text.`
-- At step 3 six segments read `All`, `Needs you`, `Tasks`, `Documents`, `Rooms`, `Gates`, each followed by a number, and at the right a select that shows `All teams`.
-- At step 4 the address becomes `/feed?category=rooms`, then `/feed?category=needs-you`, then `/feed`, and the list changes to that Category.
+- At step 3 seven segments read `All`, `Needs you`, `Tasks`, `Documents`, `Rooms`, `Gates`, `Helpers`, each followed by a number, and at the right a select that shows `All teams`.
+- At step 4 the address becomes `/feed?category=rooms`, then `/feed?category=needs-you`, then `/feed`, and the list changes to that Category. Returning to `All` from `Needs you` or from any other Category works every time, and the highlighted segment follows.
 - At step 5 the select lists `All teams` first, then every Team, the address gains `?team=<Team>`, and the `Documents` count is `0` while a Team is chosen.
 
 ### FEED-08 — A card expands to a Task preview with buttons that change nothing
@@ -326,7 +326,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 **Steps**
 
 1. `P-STOP`. Relaunch the `P-LAUNCH-UAT` command with the extra argument `--Team:Feed:Enabled=false`, without re-running the seeder.
-2. Look at the Top Bar and at the bottom of the Activity bar.
+2. Look at the Top Bar and at the top of the Activity bar.
 3. Open `http://localhost:5100/feed`.
 4. Stop and relaunch without the extra argument. Look again.
 

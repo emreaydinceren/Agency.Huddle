@@ -5677,9 +5677,9 @@ File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-06--a-mention-appea
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### FEED-07 — The Feed Tab header shows the Live chip, the read-only note, six counted segments and the Team select
+### FEED-07 — The Feed Tab header shows the Live chip, the read-only note, seven counted segments and the Team select
 
-File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-07--the-feed-tab-header-shows-the-live-chip-the-read-only-note-six-counted-segments-and-the-team-select)
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-07--the-feed-tab-header-shows-the-live-chip-the-read-only-note-seven-counted-segments-and-the-team-select)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |

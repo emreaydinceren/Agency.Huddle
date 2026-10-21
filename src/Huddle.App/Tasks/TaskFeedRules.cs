@@ -39,10 +39,14 @@ internal static class TaskFeedRules
         if (after.IsGated && before?.IsGated != true && !byHuman)
         {
             bool byHelper = change.Actor.Kind == TaskActorKind.Helper;
-            posts.Add(new(FeedSourceType.TaskGateOn, id, actor, byHelper, new TaskGatePayload(id, after.Title, team, after.Action, byHelper ? change.Reason : null)));
+
+            // When the same change makes the Task wait in Needs You, that Notification carries the ask (one ask per Task at a time),
+            // so the gate-on stays Activity with its reason rather than a Notification born resolved.
+            bool notify = byHelper && !(waits && !waited);
+            posts.Add(new(FeedSourceType.TaskGateOn, id, actor, notify, new TaskGatePayload(id, after.Title, team, after.Action, byHelper ? change.Reason : null)));
         }
 
-        if (before is not null && GateAskEnded(change, waits, waited))
+        if (before is not null && GateAskEnded(change, waits && before.IsGated, waited))
         {
             resolutions.Add(new(id, FeedSourceType.TaskGateOn));
         }
@@ -138,7 +142,7 @@ internal static class TaskFeedRules
             FeedSourceType.TaskNeedsYou => Waits(task),
             FeedSourceType.TaskAssignedToYou => TaskQuery.NeedsYou(task, humanName),
             FeedSourceType.RequestAwaitsYou => AwaitsConfirmation(task, teamHasConfirmer, out _),
-            FeedSourceType.TaskGateOn => task.IsGated && !task.Location.Closed && !Waits(task) && task.Status != TaskState.NeedsYou && !DecidedSinceGateOn(task),
+            FeedSourceType.TaskGateOn => task.IsGated && !task.Location.Closed && !Waits(task) && !DecidedSinceGateOn(task),
             FeedSourceType.GateDecisionDue => !task.Location.Closed
                 && payload is GateDecisionPayload gate
                 && string.Equals(task.Status.ToWire(), gate.FromStatus, StringComparison.Ordinal),

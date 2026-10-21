@@ -48,11 +48,6 @@
     width: 160px;
 }
 
-::deep .feed-team-icon {
-    margin-right: 8px;
-    vertical-align: middle;
-}
-
 ::deep .feed-show-more {
     margin: 8px 0;
 }

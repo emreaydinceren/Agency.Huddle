@@ -51,7 +51,7 @@ internal sealed class HelperFeed(
             }
 
             HelperUsage usage = budget.Today(helper.Id);
-            feed.Post(new FeedMessage(
+            this.PostOrForget(this.pausedOpen, helper.Id, new FeedMessage(
                 FeedSourceType.HelperPaused,
                 TargetOf(helper.Id),
                 FeedActor.Huddle,
@@ -62,7 +62,7 @@ internal sealed class HelperFeed(
 
     /// <summary>The Human pressed Continue: the pause item is done.</summary>
     /// <param name="id">The Helper.</param>
-    public void Continued(HelperId id) => this.Safely(() => this.Close(this.pausedOpen, id, FeedSourceType.HelperPaused));
+    public void Continued(HelperId id) => this.Safely(() => this.Resolve(this.pausedOpen, id, FeedSourceType.HelperPaused));
 
     /// <summary>A run went ahead and ended, so the cap has reset if a pause was open, and a failure streak ends or may now qualify.</summary>
     /// <param name="helper">The Helper.</param>
@@ -77,11 +77,11 @@ internal sealed class HelperFeed(
             switch (kind)
             {
                 case HelperRunKind.Applied:
-                    this.Close(this.pausedOpen, helper.Id, FeedSourceType.HelperPaused);
+                    this.ClosePauseIfReset(helper);
                     this.Close(this.failingOpen, helper.Id, FeedSourceType.HelperFailing);
                     break;
                 case HelperRunKind.Failed:
-                    this.Close(this.pausedOpen, helper.Id, FeedSourceType.HelperPaused);
+                    this.ClosePauseIfReset(helper);
                     this.PostFailing(helper, current);
                     break;
                 default:
@@ -94,8 +94,8 @@ internal sealed class HelperFeed(
     /// <param name="id">The Helper.</param>
     public void TurnedOff(HelperId id) => this.Safely(() =>
     {
-        this.Close(this.pausedOpen, id, FeedSourceType.HelperPaused);
-        this.Close(this.failingOpen, id, FeedSourceType.HelperFailing);
+        this.Resolve(this.pausedOpen, id, FeedSourceType.HelperPaused);
+        this.Resolve(this.failingOpen, id, FeedSourceType.HelperFailing);
     });
 
     /// <summary>
@@ -155,12 +155,68 @@ internal sealed class HelperFeed(
 
         string error = current.LastError ?? string.Empty;
         string cut = error.Length > ErrorLimit ? error[..ErrorLimit] : error;
-        feed.Post(new FeedMessage(
+        this.PostOrForget(this.failingOpen, helper.Id, new FeedMessage(
             FeedSourceType.HelperFailing,
             TargetOf(helper.Id),
             FeedActor.Huddle,
             true,
             new HelperFailingPayload(helper.Id.Value, helper.DisplayName, current.ConsecutiveFailures, cut)));
+    }
+
+    /// <summary>Posts an item whose id is already marked open, and unmarks it when the Feed refuses, so the next call can post it.</summary>
+    /// <param name="open">The set the id was added to.</param>
+    /// <param name="id">The Helper.</param>
+    /// <param name="message">The item.</param>
+    private void PostOrForget(HashSet<string> open, HelperId id, FeedMessage message)
+    {
+        try
+        {
+            feed.Post(message);
+        }
+        catch (Exception)
+        {
+            // The Feed refused the item: forget it was open so the next call posts it, and let Safely log the failure.
+            this.Forget(open, id);
+            throw;
+        }
+    }
+
+    /// <summary>Removes an id from a set of open items.</summary>
+    /// <param name="open">The set.</param>
+    /// <param name="id">The Helper.</param>
+    private void Forget(HashSet<string> open, HelperId id)
+    {
+        lock (this.gate)
+        {
+            _ = open.Remove(id.Value);
+        }
+    }
+
+    /// <summary>
+    /// Resolves the pause item when the cap has reset or been raised, that is when the Helper is no longer paused. A run that was already
+    /// under way when the cap was hit ends while it still is, and leaves the item open.
+    /// </summary>
+    /// <param name="helper">The Helper whose run ended.</param>
+    private void ClosePauseIfReset(IHelperAgent helper)
+    {
+        if (!budget.IsPaused(helper.Id, settings.For(helper).DailyCap))
+        {
+            this.Close(this.pausedOpen, helper.Id, FeedSourceType.HelperPaused);
+        }
+    }
+
+    /// <summary>Resolves an item whether or not this process remembers it open: the resolution is idempotent, and a restart whose reconciliation failed has an empty set.</summary>
+    /// <param name="open">The set.</param>
+    /// <param name="id">The Helper.</param>
+    /// <param name="type">The source type.</param>
+    private void Resolve(HashSet<string> open, HelperId id, FeedSourceType type)
+    {
+        lock (this.gate)
+        {
+            _ = open.Remove(id.Value);
+        }
+
+        feed.Resolve(TargetOf(id), type);
     }
 
     /// <summary>Marks an item open.</summary>

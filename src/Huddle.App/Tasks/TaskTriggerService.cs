@@ -936,6 +936,14 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
 
             if (string.Equals(senderId, KnownIds.Huddle, StringComparison.Ordinal))
             {
+                // A Huddle post is exempt from the Room's Budget, but the assignee's reply is not: into a spent Room the wake would read
+                // Woken while the reply is refused, so it is recorded as an Agent's refused wake is and not posted.
+                if (this.chat.GetBudget(room.Id).Exhausted)
+                {
+                    LogBlocked(this.logger, id, WakeBlock.BudgetPaused);
+                    return WakeOutcome.BudgetSpent;
+                }
+
                 _ = await this.chat.PostAsHuddleAsync(room.Id, text, ct).ConfigureAwait(false);
             }
             else
@@ -1018,7 +1026,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     /// <item><description>No Room found: <see cref="ChatService.CreateRoomForAsync(IReadOnlyList{string}, CancellationToken)"/> creates one for the last step's S without the Human (it adds the Human itself, and one Agent gives the direct Room).</description></item>
     /// </list>
     /// Steps 2-4 run in the Task's Team Scope (found and created scoped to <see cref="TaskLocation.Team"/>); a Team the
-    /// catalog does not know stays at the root. Every set tried contains the sender, so <see cref="ChatService.PostAsync"/>'s membership check
+    /// catalog does not know stays at the root. Every set tried contains the sender (Huddle, which takes no seat, aside), so <see cref="ChatService.PostAsync"/>'s membership check
     /// passes. Runs inside the fire gate, which is what keeps two racing fires from creating two Rooms.
     /// </summary>
     /// <param name="task">The latest Task.</param>

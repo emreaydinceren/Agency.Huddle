@@ -190,9 +190,14 @@
             return;
         }
 
-        FeedCategory parsed = FeedCategories.Parse(this.Category);
-        string? parsedTeammate = string.IsNullOrWhiteSpace(this.Teammate) ? null : this.Teammate;
-        string? parsedTeam = string.IsNullOrWhiteSpace(this.Team) ? null : this.Team;
+        // Inside a Tab the Tab's own address is the filter. The parameters cannot say "removed": a parameter missing from the new
+        // address is simply not supplied, so the component keeps the old value (choosing All, or clearing the Teammate, did nothing).
+        (string? wantedCategory, string? wantedTeammate, string? wantedTeam) = this.Page is { } page
+            ? ReadFilter(page.Url)
+            : (this.Category, this.Teammate, this.Team);
+        FeedCategory parsed = FeedCategories.Parse(wantedCategory);
+        string? parsedTeammate = string.IsNullOrWhiteSpace(wantedTeammate) ? null : wantedTeammate;
+        string? parsedTeam = string.IsNullOrWhiteSpace(wantedTeam) ? null : wantedTeam;
         string filter = $"{parsed}|{parsedTeammate}|{parsedTeam}";
         if (string.Equals(filter, this.loadedFilter, StringComparison.Ordinal))
         {
@@ -228,6 +233,23 @@
 
         this.seenTimer?.Dispose();
     }
+
+    /// <summary>The <c>category</c>, <c>teammate</c> and <c>team</c> values of an address; each is <see langword="null"/> when the address lacks it.</summary>
+    /// <param name="url">A site-relative address, with or without a query.</param>
+    private static (string? Category, string? Teammate, string? Team) ReadFilter(string url)
+    {
+        int queryStart = url.IndexOf('?', StringComparison.Ordinal);
+        if (queryStart < 0)
+        {
+            return (null, null, null);
+        }
+
+        Dictionary<string, Microsoft.Extensions.Primitives.StringValues> query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(url[queryStart..]);
+        return (Value(query, "category"), Value(query, "teammate"), Value(query, "team"));
+    }
+
+    private static string? Value(Dictionary<string, Microsoft.Extensions.Primitives.StringValues> query, string name) =>
+        query.TryGetValue(name, out Microsoft.Extensions.Primitives.StringValues values) && values.Count > 0 ? values[0] : null;
 
     private string SegmentText(FeedCategory entry) =>
         string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{FeedCategories.Label(entry)} {FeedCategories.CountOf(this.counts, entry)}");

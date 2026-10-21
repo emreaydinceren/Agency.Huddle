@@ -762,6 +762,12 @@ a.team-ref,
     font-size: max(10px, calc(32px * 0.4));
 }
 
+/* The Teams icon in the Feed's Team select. The dropdown renders in the popover provider, outside the page, so a rule scoped to the page never reaches it. */
+.feed-team-icon {
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
 /* Huddle's own mark in the Transcript (ADR-0065): a Message Huddle wrote itself has no Teammate, so it wears the outlined
    tile the Feed draws for Huddle, at the Transcript's 32px. */
 .huddle-mark {

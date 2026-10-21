@@ -533,7 +533,7 @@ remembers its filter (ADR-0045: a Tab is a remembered URL). An unknown `category
 All.
 
 **Opening it.** A `NavTabLink` "Feed" (`Icons.Material.Outlined.DynamicFeed`, `aria-label` and
-tooltip "Feed") first in the Activity bar's bottom toolbar (`S5b`), above Archived chats: it opens a
+tooltip "Feed") first in the Activity bar's top toolbar (`S5a`), above the Sidebar view buttons (moved there by the owner, 2026-10-20): it opens a
 Tab, like Settings, rather than switching the Sidebar view. Also the panel's "See all activity".
 
 **The header** (owner wireframe, 2026-10-20; codes `F1`–`F3` in
@@ -732,7 +732,9 @@ between cards.
 - **Age and chevron**, right-aligned: "16 min", "2 h", "1 d" (`HumanDate.Full` in the tooltip), and
   under it a chevron button with `aria-expanded` and the `aria-label` "Show details".
 
-Clicking the card body (not a chip, not the chevron) opens the target in a Tab, as before.
+Clicking the card's empty space (not a chip, not a button) expands or collapses the card, as the chevron does, and Enter on the focused body does the same
+(owner, 2026-10-20: "clicking empty space should expand the card"). The body is a `role="button"` tab stop with `aria-expanded` on every card. The target
+opens from the expanded card's Open button and from each chip.
 
 **Expanded card.** The chevron expands the card in place; one card is expanded at a time, and
 `Escape` collapses it. Under the collapsed part, after an Edge line:
@@ -871,7 +873,7 @@ Settled with the owner: D-1 to D-9. Made in this specification and open to revie
 | D-12 | "Only the Human can confirm a Request" means: Done, unconfirmed, and no member of the requesting Team covers `verify`, so `confirm_request` has nobody to call it | Notify on every Request reaching Done (the requesting QA's job, not the Human's) |
 | D-13 | `GateDecisionDue` only for a process-gate refusal of an Agent on an ordinary Task (`CanOverride: true`) | Also Human-gate refusals (nothing for the Human to override there) |
 | D-14 | Notifications live in the Right sidebar through a second mode of `RightSidebarService`, reusing `SidebarPanelFrame` | A Subject that every page publishes; a separate drawer (a second right-hand surface) |
-| D-15 | The Feed link sits in the Activity bar's bottom toolbar and opens a Tab | A sixth Sidebar view with nothing to list |
+| D-15 | The Feed link sits at the top of the Activity bar's top toolbar (it began in the bottom toolbar) and opens a Tab | A sixth Sidebar view with nothing to list |
 | D-16 | The table lives in `team.db`, as `cadence_state` does (ADR-0042) | A `feed.db` of its own |
 | D-17 | New terms: **Feed**, **Feed item**, **Notification**, **Activity**, **Feed publisher** | "Post" as a noun (avoided for Message); "event" (the C# word) |
 | D-18 | The actor's kind and a version ride in the payload envelope; the Team filter uses `json_extract` | Extra columns beyond the owner's list |

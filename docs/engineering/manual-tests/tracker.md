@@ -1152,7 +1152,7 @@ Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-it
 | [FEED-04](feed.md#feed-04--a-task-assigned-to-the-human-appears-and-resolves-when-it-is-reassigned) |  | Active |  | not yet run by a person |
 | [FEED-05](feed.md#feed-05--a-gated-task-moved-to-needs-you-appears-with-its-proof-count-and-resolves-when-accepted) | 💰 | Active |  | not yet run by a person |
 | [FEED-06](feed.md#feed-06--a-mention-appears-and-resolves-when-the-human-posts-in-the-room) | 💰 | Active |  | not yet run by a person |
-| [FEED-07](feed.md#feed-07--the-feed-tab-header-shows-the-live-chip-the-read-only-note-six-counted-segments-and-the-team-select) |  | Active |  | not yet run by a person |
+| [FEED-07](feed.md#feed-07--the-feed-tab-header-shows-the-live-chip-the-read-only-note-seven-counted-segments-and-the-team-select) |  | Active |  | not yet run by a person |
 | [FEED-08](feed.md#feed-08--a-card-expands-to-a-task-preview-with-buttons-that-change-nothing) |  | Active |  | not yet run by a person |
 | [FEED-09](feed.md#feed-09--clicking-an-avatar-filters-the-feed-to-that-teammate) |  | Active |  | not yet run by a person |
 | [FEED-10](feed.md#feed-10--new-items-wait-behind-a-pill-when-the-list-is-scrolled) |  | Active |  | not yet run by a person |

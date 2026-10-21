@@ -298,4 +298,19 @@ public sealed class TaskFeedRulesTests
         Assert.True(TaskFeedRules.Holds(FeedSourceType.RequestAwaitsYou, Task(TaskState.Done, extra: RequestFrom("Design")), HumanName, NoConfirmer, null));
         Assert.False(TaskFeedRules.Holds(FeedSourceType.RequestAwaitsYou, Task(TaskState.Done, extra: RequestFrom("Design")), HumanName, HasConfirmer, null));
     }
+
+    /// <summary>When the Helper's gate-on lands in the same change that makes the Task wait in Needs You, the Needs You Notification carries the ask and the gate-on is Activity with the reason, never a Notification born resolved.</summary>
+    [Fact]
+    public void For_HelperGateOnThatLandsInNeedsYou_IsActivityAndNotResolvedInTheSameBreath()
+    {
+        TaskItem before = Task(TaskState.InProgress);
+        TaskItem after = before with { HumanGate = true, Status = TaskState.NeedsYou };
+
+        FeedEffects effects = Run(before, after, Helper, reason: "Sends a document outside the Team");
+
+        FeedMessage gateOn = Assert.Single(effects.Posts, static post => post.SourceType == FeedSourceType.TaskGateOn);
+        Assert.False(gateOn.Notify);
+        Assert.Equal("Sends a document outside the Team", Assert.IsType<TaskGatePayload>(gateOn.Payload).Reason);
+        Assert.DoesNotContain(new FeedResolution("PLAT-0001", FeedSourceType.TaskGateOn), effects.Resolutions);
+    }
 }

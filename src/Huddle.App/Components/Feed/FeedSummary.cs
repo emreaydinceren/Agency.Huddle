@@ -33,7 +33,7 @@ internal static class FeedSummary
             RoomArchivedPayload p => new([Text("archived "), RoomChip(p.RoomId, p.RoomName)], null),
             DocumentChangedPayload p => new([Text(DocumentVerb(p.Kind) + " "), DocumentChip(p)], p.Summary.Length > 0 ? p.Summary : null),
             HelperPausedPayload p => new(
-                [Text("paused "), HelperChip(p.HelperId, p.Name), Text(string.Create(CultureInfo.InvariantCulture, $": its daily cap of {p.DailyCap} calls is reached"))],
+                [Text("paused "), HelperChip(p.HelperId, p.Name), Text(string.Create(CultureInfo.InvariantCulture, $": its daily cap of {p.DailyCap + p.Granted} calls is reached"))],
                 "Teammates' Tasks are not judged until you continue or the day ends"),
             HelperFailingPayload p => new(
                 [HelperChip(p.HelperId, p.Name), Text(string.Create(CultureInfo.InvariantCulture, $" failed {p.Failures} times in a row"))],

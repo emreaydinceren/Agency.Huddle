@@ -218,7 +218,8 @@ public sealed class HelperCardTests : IDisposable
         cut.WaitForAssertion(() => Assert.False(cut.Find(".helper-card-save").HasAttribute("disabled")));
         await cut.InvokeAsync(() => cut.Find(".helper-card-save").ClickAsync());
 
-        Assert.Equal(new FeedResolution("helper:NeedsHuman", FeedSourceType.HelperPaused), Assert.Single(this.feed.Resolutions));
+        Assert.Contains(new FeedResolution("helper:NeedsHuman", FeedSourceType.HelperPaused), this.feed.Resolutions);
+        Assert.Contains(new FeedResolution("helper:NeedsHuman", FeedSourceType.HelperFailing), this.feed.Resolutions);
     }
 
     /// <summary>The last run shows its local time and result.</summary>

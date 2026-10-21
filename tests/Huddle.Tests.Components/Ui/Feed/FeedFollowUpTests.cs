@@ -49,26 +49,29 @@ public sealed class FeedFollowUpTests
         Assert.Equal(0, singles);
     }
 
-    /// <summary>Enter on a card body opens its target like a click; the body is a link and a tab stop only when it has a target.</summary>
+    /// <summary>Enter on a card body expands it like a click, opening nothing; the body is a button and a tab stop on every card.</summary>
     [Fact]
-    public async Task Card_Enter_OpensTheTarget_AndAnItemWithoutOneIsNoTabStop()
+    public async Task Card_Enter_TogglesTheCard_AndOpensNothing()
     {
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         await using MudBunitContext ctx = host.NewContext();
         NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
-        IRenderedComponent<FeedCard> card = ctx.Render<FeedCard>(parameters => parameters.Add(c => c.Group, new FeedGroup([NeedsYou("GRO-1", 1)])));
+        int toggled = 0;
+        IRenderedComponent<FeedCard> card = ctx.Render<FeedCard>(parameters => parameters
+            .Add(c => c.Group, new FeedGroup([NeedsYou("GRO-1", 1)]))
+            .Add(c => c.OnToggle, Microsoft.AspNetCore.Components.EventCallback.Factory.Create(this, () => toggled++)));
         IRenderedComponent<FeedCard> bare = ctx.Render<FeedCard>(parameters => parameters.Add(c => c.Group, new FeedGroup([FeedTestData.Item(null, null)])));
         string before = navigation.Uri;
 
         card.Find(".feed-card-main").KeyDown(new KeyboardEventArgs { Key = "a" });
-        Assert.Equal(before, navigation.Uri);
+        Assert.Equal(0, toggled);
         card.Find(".feed-card-main").KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
-        Assert.Equal("tasks/item/GRO-1", Where(navigation));
-        Assert.Equal("link", card.Find(".feed-card-main").GetAttribute("role"));
+        Assert.Equal(1, toggled);
+        Assert.Equal(before, navigation.Uri);
+        Assert.Equal("button", card.Find(".feed-card-main").GetAttribute("role"));
         Assert.Equal("0", card.Find(".feed-card-main").GetAttribute("tabindex"));
-        Assert.Null(bare.Find(".feed-card-main").GetAttribute("tabindex"));
-        Assert.Null(bare.Find(".feed-card-main").GetAttribute("role"));
+        Assert.Equal("0", bare.Find(".feed-card-main").GetAttribute("tabindex"));
     }
 
     /// <summary>Enter on a row opens its first reference like a click; a row with no reference is no tab stop.</summary>

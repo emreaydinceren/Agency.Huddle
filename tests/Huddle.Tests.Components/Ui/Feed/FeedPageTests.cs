@@ -384,18 +384,36 @@ public sealed partial class FeedPageTests
 
     /// <summary>Source pin: the Feed link is the first entry of the Activity bar's bottom toolbar, above Archived chats, with an icon, label and tooltip, and only while the Feed is enabled.</summary>
     [Fact]
-    public void MainLayout_PutsTheFeedLinkFirstInTheBottomToolbar_OnlyWhenEnabled()
+    public void MainLayout_PutsTheFeedLinkAtTheTopOfTheActivityBar_OnlyWhenEnabled()
     {
         string layout = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Layout", "MainLayout.razor"));
 
+        int top = layout.IndexOf("<Top>", StringComparison.Ordinal);
         int bottom = layout.IndexOf("<Bottom>", StringComparison.Ordinal);
         int guard = layout.IndexOf("@if (this.FeedOptions.Value.Feed.Enabled)", StringComparison.Ordinal);
         int link = layout.IndexOf("Href=\"/feed\"", StringComparison.Ordinal);
         int archived = layout.IndexOf("<ArchivedChats", StringComparison.Ordinal);
-        Assert.True(bottom >= 0 && bottom < guard && guard < link && link < archived, "The Feed link must open the Bottom slot, behind the Enabled guard, above Archived chats");
+        Assert.True(top >= 0 && top < guard && guard < link && link < bottom && bottom < archived, "The Feed link must sit in the Top slot, behind the Enabled guard, above the Bottom slot that holds Archived chats");
         string tag = layout[layout.LastIndexOf("<MudTooltip", link, StringComparison.Ordinal)..layout.IndexOf("</MudTooltip>", link, StringComparison.Ordinal)];
         Assert.Contains("Text=\"Feed\"", tag, StringComparison.Ordinal); // contains-ok: a source pin on one element of a layout file
         Assert.Contains("aria-label=\"Feed\"", tag, StringComparison.Ordinal); // contains-ok: a source pin on one element of a layout file
         Assert.Contains("Icons.Material.Outlined.DynamicFeed", tag, StringComparison.Ordinal); // contains-ok: a source pin on one element of a layout file
+    }
+
+    /// <summary>
+    /// The Tab's own address is the filter. A component keeps the last value of a parameter that a new address no longer supplies, so
+    /// after choosing Needs you the address /feed (All) still arrives with Category "needs-you"; the page must read All from the address.
+    /// </summary>
+    [Fact]
+    public async Task TabAddressWithoutAFilter_BeatsAStaleParameter()
+    {
+        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        await using MudBunitContext ctx = NewContext(host);
+        TabPageContext page = OpenFeedTab(ctx, "/feed");
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "needs-you", teammate: "Nova", team: "Growth", page: page);
+
+        Assert.Equal("All 0", Text(cut.Find(".huddle-segmented-active-item")));
+        Assert.Empty(cut.FindAll(".feed-teammate-chip"));
     }
 }

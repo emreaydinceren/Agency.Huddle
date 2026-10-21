@@ -26,7 +26,7 @@
                 <MudIcon Icon="@this.Badge.Icon" Size="Size.Small" />
             </span>
         </div>
-        <div class="feed-card-main" role="@(this.Address is null ? null : "link")" tabindex="@(this.Address is null ? null : "0")" @onclick="this.OpenTarget" @onkeydown="this.OnBodyKeyDown">
+        <div class="feed-card-main" role="button" tabindex="0" aria-expanded="@(this.Expanded ? "true" : "false")" @onclick="this.OnToggle" @onkeydown="this.OnBodyKeyDown">
             <div class="feed-card-summary feed-clamp-3">
                 @if (!this.Line.OmitActor)
                 {
@@ -370,14 +370,9 @@
         }
     }
 
-    /// <summary>Enter on the focused body does what a click does; a link is activated by Enter alone.</summary>
-    private void OnBodyKeyDown(KeyboardEventArgs args)
-    {
-        if (string.Equals(args.Key, "Enter", StringComparison.Ordinal))
-        {
-            this.OpenTarget();
-        }
-    }
+    /// <summary>Enter on the focused body does what a click does: it expands or collapses the card. Opening the target is the "Open" button's job, and each chip opens its own.</summary>
+    private Task OnBodyKeyDown(KeyboardEventArgs args) =>
+        string.Equals(args.Key, "Enter", StringComparison.Ordinal) ? this.OnToggle.InvokeAsync() : Task.CompletedTask;
 
     private void ReviewInNeedsYou()
     {

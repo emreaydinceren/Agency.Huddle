@@ -481,9 +481,9 @@ public sealed class FeedCardTests
         Assert.Equal(LibraryLinkQuery.BuildPageUri(path).TrimStart('/'), Where(navigation));
     }
 
-    /// <summary>Clicking the card body opens the target; the chevron does not.</summary>
+    /// <summary>Clicking the card's empty space expands it, as the chevron does, and opens nothing; the Open button and the chips open the target.</summary>
     [Fact]
-    public async Task Card_BodyClick_OpensTarget_ChevronDoesNot()
+    public async Task Card_BodyClick_Expands_AndOpensNothing()
     {
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         await using MudBunitContext ctx = host.NewContext();
@@ -494,10 +494,10 @@ public sealed class FeedCardTests
 
         card.Find("button[aria-label='Show details']").Click();
         Assert.Equal(1, toggled);
-        Assert.Equal(before, navigation.Uri);
         card.Find(".feed-card-main").Click();
 
-        Assert.Equal("tasks/item/GRO-1", Where(navigation));
+        Assert.Equal(2, toggled);
+        Assert.Equal(before, navigation.Uri);
     }
 
     /// <summary>Expanding and clicking through a card writes nothing: no queued command, no new Feed row and the Task file is unchanged.</summary>
@@ -545,22 +545,19 @@ public sealed class FeedCardTests
         Assert.Equal("Sends a document outside the Team", card.Find(".feed-card-purpose").TextContent.Trim());
     }
 
-    /// <summary>A Helper item names the Helper in a chip that opens its card, and opens the same place from the body.</summary>
+    /// <summary>A Helper item names the Helper in a chip that opens its card.</summary>
     [Fact]
-    public async Task Card_HelperPaused_ChipAndBodyOpenTheHelperCard()
+    public async Task Card_HelperPaused_ChipOpensTheHelperCard()
     {
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         await using MudBunitContext ctx = host.NewContext();
-        NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
         IRenderedComponent<FeedCard> card = Render(ctx, HelperItem(FeedSourceType.HelperPaused, PayloadFor(FeedSourceType.HelperPaused)));
 
         Assert.Equal("Huddle", card.Find(".feed-card-actor").TextContent.Trim());
         Assert.Equal("Needs Human", Words(card.Find(".feed-chip-helper").TextContent));
         Assert.Equal("Helpers", Words(card.Find(".feed-meta-context").TextContent));
 
-        card.Find(".feed-card-main").Click();
-
-        Assert.Equal("settings/helpers#helper-NeedsHuman", Where(navigation));
+        Assert.Equal("/settings/helpers#helper-NeedsHuman", card.Find(".feed-chip-helper a").GetAttribute("href"));
     }
 
     /// <summary>An expanded Helper item previews the Helper read-only: state, what it runs on, today's usage, the last result and the last error.</summary>

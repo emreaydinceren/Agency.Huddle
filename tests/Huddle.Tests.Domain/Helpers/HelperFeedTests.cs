@@ -255,4 +255,69 @@ public sealed class HelperFeedTests : IDisposable
         Assert.Empty(this.feed.Posts);
         Assert.Empty(this.feed.Resolutions);
     }
+
+    /// <summary>A run that was already under way when the cap was hit ends while the Helper is still paused, so it must not resolve the pause item or let a second one be posted.</summary>
+    [Fact]
+    public void Ran_WhileStillAtTheCap_KeepsThePauseOpen()
+    {
+        HelperFeed helperFeed = this.Build();
+        _ = this.budget.TryReserve(this.helper.Id, 2);
+        _ = this.budget.TryReserve(this.helper.Id, 2);
+        helperFeed.Paused(this.helper, this.Settings);
+
+        helperFeed.Ran(this.helper, HelperRunKind.Applied, HelperStatus.None);
+        helperFeed.Paused(this.helper, this.Settings);
+
+        Assert.Empty(this.feed.Resolutions);
+        _ = Assert.Single(this.feed.Posts);
+    }
+
+    /// <summary>Continue and turning the Helper off resolve even when this process holds no record of an open item, such as after a restart whose reconciliation failed.</summary>
+    [Fact]
+    public void ContinuedAndTurnedOff_WithNothingOpenInMemory_StillResolve()
+    {
+        HelperFeed helperFeed = this.Build();
+
+        helperFeed.Continued(this.helper.Id);
+        helperFeed.TurnedOff(this.helper.Id);
+
+        Assert.Equal(3, this.feed.Resolutions.Count);
+    }
+
+    /// <summary>A post the Feed refuses does not leave the pause marked open, so the next skipped save posts it.</summary>
+    [Fact]
+    public void Paused_WhenThePostFailsOnce_PostsAgainOnTheNextCall()
+    {
+        FailsOncePublisher flaky = new();
+        HelperFeed helperFeed = this.Build(flaky);
+
+        helperFeed.Paused(this.helper, this.Settings);
+        helperFeed.Paused(this.helper, this.Settings);
+
+        _ = Assert.Single(flaky.Posts);
+    }
+
+    private sealed class FailsOncePublisher : IFeedPublisher
+    {
+        private readonly List<FeedMessage> posts = [];
+        private bool failed;
+
+        public IReadOnlyList<FeedMessage> Posts => this.posts;
+
+        public void Post(FeedMessage message)
+        {
+            if (!this.failed)
+            {
+                this.failed = true;
+                throw new InvalidOperationException("The Feed is down.");
+            }
+
+            this.posts.Add(message);
+        }
+
+        public void Resolve(string targetKey, FeedSourceType type)
+        {
+            // Not under test: only a post can fail here.
+        }
+    }
 }
