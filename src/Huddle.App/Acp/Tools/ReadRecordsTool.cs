@@ -298,7 +298,8 @@ internal sealed class ReadRecordsTool(
         }
 
         if (messages.Any(message => !team.Members.Contains(message.SenderName, StringComparer.OrdinalIgnoreCase)
-            && !string.Equals(message.SenderId, KnownIds.Human, StringComparison.Ordinal)))
+            && !string.Equals(message.SenderId, KnownIds.Human, StringComparison.Ordinal)
+            && !string.Equals(message.SenderId, KnownIds.Huddle, StringComparison.Ordinal)))
         {
             return $"Room {roomId} has participants outside Team {team.Name}.";
         }

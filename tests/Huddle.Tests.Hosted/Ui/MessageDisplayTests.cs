@@ -1,6 +1,7 @@
 using System.Globalization;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Avatars;
+using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
@@ -96,5 +97,50 @@ public sealed class MessageDisplayTests
         Assert.Empty(cut.FindAll(".message-bubble"));
         Assert.DoesNotContain("get_task", cut.Markup, StringComparison.Ordinal);
         Assert.Single(cut.FindAll(".day-separator"));
+    }
+
+    /// <summary>A wake-up Huddle posted itself renders as the same slim system row, not as a Teammate's bubble with the agent-facing line.</summary>
+    [Fact]
+    public async Task MessageList_WakeUpFromHuddle_RendersASlimSystemRow()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = new();
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
+        ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IOptions<TeamOptions>>());
+        ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver());
+        ChatMessage wake = new("m-1", DateTimeOffset.UtcNow, KnownIds.Huddle, "Huddle", WakeText);
+
+        var cut = ctx.Render<MessageList>(parameters => parameters
+            .Add(p => p.Messages, [wake])
+            .Add(p => p.HumanIds, HumanIds));
+
+        Assert.Single(cut.FindAll("details.system-row"));
+        Assert.Empty(cut.FindAll(".message-bubble"));
+        Assert.Empty(cut.FindAll(".huddle-mark"));
+        Assert.DoesNotContain("get_task", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>Any other Message Huddle wrote is an ordinary row named "Huddle" with Huddle's mark, and not the Human's right-hand bubble.</summary>
+    [Fact]
+    public async Task MessageList_OtherHuddleMessage_WearsTheHuddleMark()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = new();
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
+        ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IOptions<TeamOptions>>());
+        ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver());
+        ChatMessage note = new("m-1", DateTimeOffset.UtcNow, KnownIds.Huddle, "Huddle", "Something Huddle noticed.");
+
+        var cut = ctx.Render<MessageList>(parameters => parameters
+            .Add(p => p.Messages, [note])
+            .Add(p => p.HumanIds, HumanIds));
+
+        Assert.Equal("Huddle", cut.Find(".message-sender").TextContent.Trim());
+        Assert.NotNull(cut.Find(".huddle-mark .mud-icon-root"));
+        Assert.Empty(cut.FindAll(".mud-avatar"));
+        Assert.Empty(cut.FindAll(".message-row.human"));
+        Assert.Contains("Something Huddle noticed.", cut.Find(".message-body").TextContent, StringComparison.Ordinal);
     }
 }

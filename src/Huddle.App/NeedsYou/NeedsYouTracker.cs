@@ -128,6 +128,12 @@ internal sealed class NeedsYouTracker
     private void OnMessagePosted(MessagePostedEvent e)
     {
         string roomId = e.Room.Id;
+        if (string.Equals(e.Message.SenderId, KnownIds.Huddle, StringComparison.Ordinal))
+        {
+            // Huddle is neither the Human, whose post answers, nor an Agent, whose post asks (ADR-0065): it changes nothing here.
+            return;
+        }
+
         if (string.Equals(e.Message.SenderId, KnownIds.Human, StringComparison.Ordinal))
         {
             this.Apply(roomId, state =>

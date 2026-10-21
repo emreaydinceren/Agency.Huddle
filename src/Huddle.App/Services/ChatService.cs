@@ -163,7 +163,31 @@ public sealed partial class ChatService
             throw new ChatException(ErrorCodes.BadMessage, "empty message");
         }
 
-        return await this.PostCoreAsync(roomId, senderId, text, messageId, null, ct).ConfigureAwait(false);
+        return await this.PostCoreAsync(roomId, senderId, text, messageId, null, false, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Posts a Message Huddle wrote itself (ADR-0065), such as the wake-up after a Helper changed a Task. The sender is
+    /// <see cref="KnownIds.Huddle"/>, which is not a Member of any Room, so the membership check is skipped for this sender only;
+    /// every other sender still has to be a Member. It is not the Human and not an Agent: it answers no Mention, spends no Budget,
+    /// resets no Budget and drops no waiting Question or form. The Room's post lock, the reference snapshot, the Transcript and the
+    /// events are the same as for any post.
+    /// </summary>
+    /// <param name="roomId">The Room to post into.</param>
+    /// <param name="text">The Message text, which may Mention a Member.</param>
+    /// <param name="ct">Cancels the lookups, the lock wait and the append.</param>
+    /// <returns>The Message that was appended.</returns>
+    /// <exception cref="ChatException">The Room does not exist, or <paramref name="text"/> is blank.</exception>
+    public async Task<ChatMessage> PostAsHuddleAsync(string roomId, string text, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        if (text.TrimEnd().Length == 0)
+        {
+            throw new ChatException(ErrorCodes.BadMessage, "empty message");
+        }
+
+        return await this.PostCoreAsync(roomId, KnownIds.Huddle, text, null, null, true, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -197,7 +221,7 @@ public sealed partial class ChatService
             return null;
         }
 
-        return await this.PostCoreAsync(roomId, humanId, text, null, askerAgentId, ct).ConfigureAwait(false);
+        return await this.PostCoreAsync(roomId, humanId, text, null, askerAgentId, false, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -205,23 +229,29 @@ public sealed partial class ChatService
     /// same per-Room lock and neither can drift from the other's Budget, Question-drop or publish rules.
     /// </summary>
     /// <param name="roomId">The Room to post into.</param>
-    /// <param name="senderId">The sender, as a Member of that Room.</param>
+    /// <param name="senderId">The sender, as a Member of that Room, or <see cref="KnownIds.Huddle"/> when <paramref name="asHuddle"/> is set.</param>
     /// <param name="text">The non-blank Message text.</param>
     /// <param name="messageId">The Message's id, or <see langword="null"/> to generate one.</param>
     /// <param name="withheldFromAgentId">
     /// The Agent the Message is withheld from, or <see langword="null"/> for an ordinary post. Non-null
     /// marks a Human answer, which also mentions nobody.
     /// </param>
+    /// <param name="asHuddle">
+    /// Whether the Message is Huddle's own (ADR-0065). It needs no Membership and, being neither the Human nor an Agent, neither
+    /// spends nor resets the Budget and drops no waiting card.
+    /// </param>
     /// <param name="ct">Cancels the lookups, the lock wait and the append.</param>
     private async Task<ChatMessage> PostCoreAsync(
-        string roomId, string senderId, string text, string? messageId, string? withheldFromAgentId, CancellationToken ct)
+        string roomId, string senderId, string text, string? messageId, string? withheldFromAgentId, bool asHuddle, CancellationToken ct)
     {
         var room = await this.teamDirectory.GetRoomAsync(roomId, ct).ConfigureAwait(false)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
 
         var members = await this.teamDirectory.GetRoomMembersAsync(roomId, ct).ConfigureAwait(false);
-        var sender = members.FirstOrDefault(m => m.Id == senderId)
-            ?? throw new ChatException(ErrorCodes.NotMember, $"'{senderId}' is not a member of room '{roomId}'.");
+        User? sender = asHuddle
+            ? null
+            : members.FirstOrDefault(m => m.Id == senderId)
+                ?? throw new ChatException(ErrorCodes.NotMember, $"'{senderId}' is not a member of room '{roomId}'.");
 
         // The reference lookups need no ordering against other posts, so they run before the Room's post lock
         // is taken (spec §8.2): holding it across them would slow every other writer to the Room. A snapshotter
@@ -240,10 +270,10 @@ public sealed partial class ChatService
             // it granted. This semaphore is what makes read-decide-write atomic - the dictionary is
             // not. It is also what already keeps transcript order equal to event order, so counting
             // anywhere else would let the count describe no prefix of the Transcript.
-            var isAgent = sender.Kind == UserKind.Agent;
+            var isAgent = sender is { Kind: UserKind.Agent };
             var budget = this.CurrentBudget(roomId);
 
-            if (isAgent && budget.Exhausted)
+            if (sender is { Kind: UserKind.Agent } && budget.Exhausted)
             {
                 ChatService.LogBudgetExhausted(this.logger, sender.Name, roomId, budget.Granted);
                 throw new ChatException(ErrorCodes.BudgetExhausted, ChatService.BudgetRefusal(budget.Granted));
@@ -253,11 +283,15 @@ public sealed partial class ChatService
             IReadOnlyList<User> mentions = withheldFromAgentId is null
                 ? MentionParser.Parse(text, members, this.aliasSource.Aliases)
                 : [];
-            var message = new ChatMessage(id, this.timeProvider.GetUtcNow(), sender.Id, sender.Name, text) { References = snapshot };
+            var message = new ChatMessage(id, this.timeProvider.GetUtcNow(), sender?.Id ?? KnownIds.Huddle, sender?.Name ?? KnownIds.HuddleName, text) { References = snapshot };
             await this.store.AppendAsync(roomId, message, ct).ConfigureAwait(false);
 
-            budget = this.SpendBudget(roomId, budget, isAgent);
-            this.DropWaitingCards(roomId, isAgent, withheldFromAgentId);
+            // Huddle is neither the Human nor an Agent: its Message spends no Budget, resets none and drops no waiting card (ADR-0065).
+            if (!asHuddle)
+            {
+                budget = this.SpendBudget(roomId, budget, isAgent);
+                this.DropWaitingCards(roomId, isAgent, withheldFromAgentId);
+            }
 
             this.events.PublishMessagePosted(new MessagePostedEvent(room, message, members, mentions, budget, withheldFromAgentId));
             return message;
