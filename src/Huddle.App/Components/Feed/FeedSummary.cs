@@ -32,6 +32,12 @@ internal static class FeedSummary
             RoomJoinedPayload p => new([Strong(p.Member), Text(" joined "), RoomChip(p.RoomId, p.RoomName)], null, OmitActor: true),
             RoomArchivedPayload p => new([Text("archived "), RoomChip(p.RoomId, p.RoomName)], null),
             DocumentChangedPayload p => new([Text(DocumentVerb(p.Kind) + " "), DocumentChip(p)], p.Summary.Length > 0 ? p.Summary : null),
+            HelperPausedPayload p => new(
+                [Text("paused "), HelperChip(p.HelperId, p.Name), Text(string.Create(CultureInfo.InvariantCulture, $": its daily cap of {p.DailyCap} calls is reached"))],
+                "Teammates' Tasks are not judged until you continue or the day ends"),
+            HelperFailingPayload p => new(
+                [HelperChip(p.HelperId, p.Name), Text(string.Create(CultureInfo.InvariantCulture, $" failed {p.Failures} times in a row"))],
+                p.LastError.Length > 0 ? p.LastError : null),
             _ => new([Text("Something happened")], null, OmitActor: true),
         };
     }
@@ -50,7 +56,12 @@ internal static class FeedSummary
             return null;
         }
 
-        string opening = (item.SourceType == FeedSourceType.RoomBudget ? "Paused " : "Asked ") + Clock(item.At, zone);
+        string opening = item.SourceType switch
+        {
+            FeedSourceType.RoomBudget or FeedSourceType.HelperPaused => "Paused ",
+            FeedSourceType.HelperFailing => "Since ",
+            _ => "Asked ",
+        } + Clock(item.At, zone);
         if (item.ResolvedAt is { } resolvedAt)
         {
             return new(true, opening + " · done " + Clock(resolvedAt, zone));
@@ -61,6 +72,9 @@ internal static class FeedSummary
             TaskNeedsYouPayload p => string.Create(CultureInfo.InvariantCulture, $" · proof {p.ProofMet}/{p.ProofTotal} · waiting for you"),
             GateDecisionPayload => " · only you can move it anyway",
             RoomWaitPayload when item.SourceType == FeedSourceType.RoomBudget => " · waiting for you to continue or wrap up",
+            TaskGatePayload => " · you can turn it off on the Task",
+            HelperPausedPayload => " · Continue is on the Helper's card",
+            HelperFailingPayload => " · Tasks are not being judged",
             _ => " · waiting for you",
         });
     }
@@ -91,14 +105,19 @@ internal static class FeedSummary
         FeedSourceType.TaskCreated or FeedSourceType.TaskGateOn or FeedSourceType.TaskNeedsYou
             or FeedSourceType.TaskAssignedToYou or FeedSourceType.RequestAwaitsYou or FeedSourceType.GateDecisionDue => "Tasks",
         FeedSourceType.DocumentChanged => "documents",
+        FeedSourceType.HelperPaused or FeedSourceType.HelperFailing => "Helpers",
         FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget
             or FeedSourceType.RoomCreated or FeedSourceType.RoomJoined or FeedSourceType.RoomArchived => "Rooms",
         _ => "items",
     };
 
-    private static FeedSummaryLine TaskGate(TaskGatePayload p) => p.Action is { Length: > 0 } action
-        ? new([Text("set the Action \"" + action + "\" on "), TaskChip(p.Id, p.Title)], InTeam(p.Team))
-        : new([Text("turned on Requires your acceptance for "), TaskChip(p.Id, p.Title)], InTeam(p.Team));
+    private static FeedSummaryLine TaskGate(TaskGatePayload p)
+    {
+        string? context = p.Reason is { Length: > 0 } reason ? reason : InTeam(p.Team);
+        return p.Action is { Length: > 0 } action
+            ? new([Text("set the Action \"" + action + "\" on "), TaskChip(p.Id, p.Title)], context)
+            : new([Text("turned on Requires your acceptance for "), TaskChip(p.Id, p.Title)], context);
+    }
 
     private static FeedSummaryLine RoomWait(FeedSourceType? type, RoomWaitPayload p)
     {
@@ -139,6 +158,8 @@ internal static class FeedSummary
     private static FeedSegment Strong(string text) => new(FeedSegmentKind.Strong, text);
 
     private static FeedSegment RoomChip(string roomId, string label) => new(FeedSegmentKind.Room, label, roomId);
+
+    private static FeedSegment HelperChip(string helperId, string name) => new(FeedSegmentKind.Helper, name, helperId);
 
     private static FeedSegment DocumentChip(DocumentChangedPayload p) => new(FeedSegmentKind.Document, p.RelativePath, p.Path);
 

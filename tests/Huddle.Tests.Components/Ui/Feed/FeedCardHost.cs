@@ -1,9 +1,12 @@
+using Agency.Huddle.App;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.Feed;
+using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Tools;
+using Agency.Huddle.Tests.Helpers;
 using Agency.Huddle.Tests.Library;
 using Agency.Huddle.Tests.NeedsYou;
 using Agency.Huddle.Tests.Tasks;
@@ -25,6 +28,7 @@ internal sealed class FeedCardHost : IDisposable
     private readonly FeedPanelHost feed = new();
     private readonly TaskToolHarness tasks;
     private readonly LibraryFileServiceFixture library = LibraryFileServiceFixture.Build();
+    private readonly TempDataDir helperDir = new();
 
     private FeedCardHost(NeedsYouFixture needsYou)
     {
@@ -32,7 +36,23 @@ internal sealed class FeedCardHost : IDisposable
         this.Clock = new ManualTimeProvider(FeedTestData.Now, TimeZoneInfo.Utc);
         this.tasks = new TaskToolHarness(this.Clock);
         this.History = new DocHistoryStore(this.library.BoundOptions, NullLogger<DocHistoryStore>.Instance);
+        Microsoft.Extensions.Options.IOptions<TeamOptions> helperOptions = this.helperDir.Options();
+        this.HelperStatuses = new HelperStatusStore(helperOptions);
+        this.HelperBudget = new HelperBudget(new HelperUsageStore(helperOptions), this.Clock);
+        this.HelperSettings = new HelperSettingsResolver(new HelperSettingsStore(helperOptions), helperOptions, NullLogger<HelperSettingsResolver>.Instance);
     }
+
+    /// <summary>The one registered Helper, a scripted stand-in with the id <c>NeedsHuman</c>.</summary>
+    public ScriptedHelper Helper { get; } = new("NeedsHuman");
+
+    /// <summary>The Helpers' last results and errors, which the Helper preview reads.</summary>
+    public HelperStatusStore HelperStatuses { get; }
+
+    /// <summary>The Helpers' daily usage, which the Helper preview reads.</summary>
+    public HelperBudget HelperBudget { get; }
+
+    /// <summary>The Helpers' effective settings, which the Helper preview reads.</summary>
+    public HelperSettingsResolver HelperSettings { get; }
 
     /// <summary>The Feed store, queue and events.</summary>
     public FeedPanelHost Feed => this.feed;
@@ -78,6 +98,10 @@ internal sealed class FeedCardHost : IDisposable
         ctx.Services.AddSingleton(this.History);
         ctx.Services.AddSingleton<IProofSource>(new FixedProof(this));
         ctx.Services.AddSingleton<ITaskReferenceResolver>(this.tasks.Store);
+        ctx.Services.AddSingleton(new HelperRegistry([this.Helper]));
+        ctx.Services.AddSingleton(this.HelperStatuses);
+        ctx.Services.AddSingleton(this.HelperBudget);
+        ctx.Services.AddSingleton(this.HelperSettings);
         return ctx;
     }
 
@@ -121,6 +145,7 @@ internal sealed class FeedCardHost : IDisposable
         this.tasks.Dispose();
         this.feed.Dispose();
         this.library.Dispose();
+        this.helperDir.Dispose();
         this.NeedsYou.Dispose();
     }
 

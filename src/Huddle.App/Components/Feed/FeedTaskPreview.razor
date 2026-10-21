@@ -3,7 +3,10 @@
     TaskProofList draws them but without the Ask buttons, and the Human gate's sentence. It reads the Task it is given and the Proof
     from IProofSource when it is drawn, and writes nothing.
 *@
+@using Agency.Huddle.App.Components.Tasks
+@using Agency.Huddle.App.Helpers
 @using Agency.Huddle.App.Tasks.HumanGate
+@inject HelperRegistry Helpers
 @inject TimeProvider Clock
 @inject IProofSource Proofs
 @inject ITeamDirectory Directory
@@ -94,6 +97,13 @@
             <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" />
             <span>@this.GateSentence</span>
         </div>
+        @if (this.HelperLine is { } helperLine)
+        {
+            <div class="feed-preview-footer feed-preview-helper-line">
+                <MudIcon Icon="@Icons.Material.Outlined.Psychology" Size="Size.Small" />
+                <span>@helperLine</span>
+            </div>
+        }
     }
 </div>
 
@@ -111,6 +121,9 @@
 
     /// <summary>Who last set the assignee, from the Change log.</summary>
     private string? AssignedBy => this.Item.ChangeLog.LastOrDefault(static entry => entry.Summary.StartsWith("assignee:", StringComparison.Ordinal))?.Actor;
+
+    /// <summary>What the Needs Human Helper said when it turned the gate on, while its latest "human gate on" entry is a Helper's.</summary>
+    private string? HelperLine => HelperGateNote.For(this.Item.ChangeLog, this.Item.IsGated, this.Helpers.All);
 
     private string GateSentence
     {

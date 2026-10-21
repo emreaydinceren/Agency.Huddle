@@ -14,4 +14,7 @@ internal enum FeedTargetKind
 
     /// <summary>A Library document.</summary>
     Document,
+
+    /// <summary>A Helper, opened on Settings > Helpers.</summary>
+    Helper,
 }

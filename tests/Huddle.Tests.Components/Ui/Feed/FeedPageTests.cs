@@ -102,7 +102,7 @@ public sealed partial class FeedPageTests
         Assert.Equal("Read-only — the Feed never changes the work and never shows message text.", Text(cut.Find(".feed-readonly-text")));
     }
 
-    /// <summary>The Category control has six segments, each with its count under the current filters.</summary>
+    /// <summary>The Category control has seven segments, each with its count under the current filters.</summary>
     [Fact]
     public async Task Categories_ShowSixSegmentsWithTheirCounts()
     {
@@ -114,7 +114,7 @@ public sealed partial class FeedPageTests
 
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
-        Assert.Equal(["All 3", "Needs you 1", "Tasks 2", "Documents 0", "Rooms 0", "Gates 1"], Segments(cut));
+        Assert.Equal(["All 3", "Needs you 1", "Tasks 2", "Documents 0", "Rooms 0", "Gates 1", "Helpers 0"], Segments(cut));
     }
 
     /// <summary>Choosing a Category navigates the Tab to it and keeps the Teammate and Team in the address.</summary>
@@ -363,7 +363,7 @@ public sealed partial class FeedPageTests
         Assert.Equal(title, Text(cut.Find(".empty-state-title")));
         Assert.Equal(text, Text(cut.Find(".empty-state-text")));
         Assert.Equal("Feed", Text(cut.Find("h1")));
-        Assert.Equal(6, cut.FindAll(".mud-toggle-item").Count);
+        Assert.Equal(7, cut.FindAll(".mud-toggle-item").Count);
     }
 
     /// <summary>With the Feed turned off the page draws only a plain empty state.</summary>

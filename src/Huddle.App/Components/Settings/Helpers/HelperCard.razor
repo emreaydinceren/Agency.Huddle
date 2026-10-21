@@ -20,7 +20,7 @@
 
 @if (this.helper is not null)
 {
-    <MudPaper Outlined="true" Class="pa-3 mb-4 helper-card" data-helper="@this.helper.Id.Value">
+    <MudPaper Outlined="true" Class="pa-3 mb-4 helper-card" data-helper="@this.helper.Id.Value" id="@Agency.Huddle.App.Components.Feed.FeedTarget.HelperAnchor(this.helper.Id.Value)">
         <div class="helper-card-header d-flex align-center gap-2 mb-1">
             <MudText Typo="Typo.subtitle1" HtmlTag="h2">@this.helper.DisplayName</MudText>
             <StatusChip Color="@this.Chip.Color" Icon="@this.Chip.Icon" Class="helper-card-chip">@this.Chip.Text</StatusChip>

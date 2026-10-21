@@ -288,4 +288,31 @@ public sealed class HelperCardTests : IDisposable
         Assert.Null(this.settingsStore.Get(this.helper.Id));
         cut.WaitForAssertion(() => Assert.Equal("On", Chip(cut)));
     }
+
+    /// <summary>The card carries the anchor id a Feed item's link names.</summary>
+    [Fact]
+    public async Task Card_CarriesTheAnchorTheFeedLinksTo()
+    {
+        await using MudBunitContext ctx = new();
+        this.Register(ctx);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx);
+
+        Assert.Equal("helper-NeedsHuman", cut.Find(".helper-card").GetAttribute("id"));
+    }
+
+    /// <summary>Opening Settings on a Helper's anchor scrolls that card into view once, and an address with no anchor scrolls nothing.</summary>
+    [Fact]
+    public async Task Panel_AddressWithAnAnchor_ScrollsToTheCard()
+    {
+        await using MudBunitContext ctx = new();
+        this.Register(ctx);
+        ctx.JSInterop.Setup<bool>("teamScroll.intoView", "helper-NeedsHuman").SetResult(true);
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/settings/helpers#helper-NeedsHuman");
+
+        IRenderedComponent<HelpersPanel> panel = ctx.Render<HelpersPanel>();
+        panel.Render();
+
+        Assert.Single(ctx.JSInterop.Invocations["teamScroll.intoView"]);
+    }
 }
