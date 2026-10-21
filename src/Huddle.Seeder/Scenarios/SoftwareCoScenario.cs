@@ -159,6 +159,7 @@ internal sealed class SoftwareCoScenario : IScenario
         TaskUploads = SoftwareCoLibrary.TaskUploads,
         DocHistory = SoftwareCoLibrary.DocHistory,
         Sprints = SoftwareCoTasks.Sprints,
+        Feed = SoftwareCoFeed.All,
         ViewsJson = ViewsJson,
         AvatarsJson = AvatarsJson,
         Today = today,

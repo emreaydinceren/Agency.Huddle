@@ -69,6 +69,9 @@ internal sealed record SeedTask
     /// <summary>Extra Change log lines, written between the status changes and the closing entry.</summary>
     public IReadOnlyList<SeedLogNote> ExtraLog { get; init; } = [];
 
+    /// <summary>Whether the Task requires the Human's acceptance (<c>human_gate: true</c>).</summary>
+    public bool HumanGate { get; init; }
+
     /// <summary>The Sprint id the Task is in, such as <c>S2</c>, or <see langword="null"/>.</summary>
     public string? Sprint { get; init; }
 
