@@ -501,7 +501,7 @@ Figure 12's narrow inset as `S4`.
 ## Figure 13: The Feed page
 
 `FeedPage.razor`, route `/feed` (Tab title "Feed"); built to the
-[Feed spec §6.9](../Huddle.Feed-Specifications.md#69-the-feed-tab) (2026-10-20, slice 1). Drawn from the owner's header and row wireframes (2026-10-20).
+[Feed spec §6.9](../Huddle.Feed-Specifications.md#69-the-feed-tab) (2026-10-20, slice 1; the Helpers segment is slice 3, [Helpers in the Feed](../Huddle.HelpersInFeed-Specifications.md)). Drawn from the owner's header and row wireframes (2026-10-20).
 
 ![Figure 13a: the Feed Tab header, with the Live chip, the read-only note, the Category control with counts and the Team select](../images/wireframes/13a-feed-header.svg)
 
@@ -519,7 +519,7 @@ from the Activity bar's "Feed" link (`S5b`) and the Notifications panel's "See a
 | `F2a` | Live chip | A small Success-tinted chip in `TitleTrailing` | A filled dot and "Live": new items arrive on their own. One state in v1 |
 | `F2b` | Read-only note | Caption line, Quiet ink, leading `Visibility` icon | "Read-only — the Feed never changes the work and never shows message text." |
 | `F3` | Filter bar | `div`, one row | `F3a` at the left; `F3c` then `F3b` at the right |
-| `F3a` | Category | `HuddleSegmentedControl<FeedCategory>`, six segments | All, Needs you, Tasks, Documents, Rooms, Gates, each with its count. Needs you overlaps the others, so the counts don't add up. Sets `?category=` |
+| `F3a` | Category | `HuddleSegmentedControl<FeedCategory>`, seven segments | All, Needs you, Tasks, Documents, Rooms, Gates, Helpers, each with its count. Needs you overlaps the others, so the counts don't add up. Sets `?category=` |
 | `F3b` | Team select | `MudSelect`, Dense, Outlined, the `Groups` icon | "All teams", then each Team. Sets `?team=` |
 | `F3c` | Teammate chip | `TaskFilterChip` | Drawn dashed: only when an avatar was clicked. "Teammate: Nova ×" |
 | `F4` | Item list (panel) | `NotificationsPanel` over `FeedList`: `F8` day groups of `F9` rows, newest first | The Right sidebar's Feed panel (spec §6.8), with a wrapping Category chip set that opens on Needs you. The Feed Tab draws `F12` cards instead |
@@ -534,7 +534,7 @@ from the Activity bar's "Feed" link (`S5b`) and the Notifications panel's "See a
 | `F9d` | Age | Right-aligned on the first line | "19m", "1h", "3d"; Accent with a dot while the Notification waits, else Quiet. Tooltip: the full date |
 | `F10` | Feed card | `FeedCard`, outlined, 8px radius | One item (or one drawn group) in the Feed Tab. Clicking the body opens the target |
 | `F10a` | Unseen bar | 3px Accent bar on the left edge | Drawn dashed: items newer than the Tab's seen mark, any kind. The age is Accent while it shows |
-| `F10b` | Avatar with kind badge | 40px `TeammateAvatar`, 16px round badge at bottom right | The badge names the kind (check, document, person, gauge, lock, @, ?, form, plus) |
+| `F10b` | Avatar with kind badge | 40px `TeammateAvatar`, 16px round badge at bottom right | The badge names the kind (check, document, person, gauge, lock, @, ?, form, plus, alert). A Helper's item wears the Helper mark (`Psychology` in the outlined tile) in place of the avatar, and Huddle's items the Huddle mark |
 | `F10c` | Summary | 14px, wraps to at most 3 lines | Name in 600, verb, reference chips, a trailing purpose in 600 ("for you to publish") |
 | `F10d` | Meta line | 12px Quiet ink, " • " between parts | Relation ("assigned by you", "Library"), Room chip, Team chip (two-letter monogram tile and Name) |
 | `F10e` | Status pills | Outlined pills, one line | Drawn dashed: Notifications only. "Waiting for you · 20 min" (Warning), "Assigned to you · due Tue 13 Oct" (Info), "Done · 13:25" once resolved. The "Post by 11:30" deadline pill of the wireframe is not built: a Task's due date has no time |

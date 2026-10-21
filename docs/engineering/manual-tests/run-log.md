@@ -5626,6 +5626,13 @@ File: [`docs/engineering/manual-tests/helpers.md`](helpers.md#helpers-07--a-fail
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+### HELPERS-08 — The wake-up is Huddle's, and it leaves your Mentions alone (Helpers in the Feed §5.6)
+
+File: [`docs/engineering/manual-tests/helpers.md`](helpers.md#helpers-08--the-wake-up-is-huddles-and-it-leaves-your-mentions-alone-helpers-in-the-feed-56)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ## Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart
 
 ### FEED-01 — The bell counts unseen Notifications and opening the panel marks them seen
@@ -5722,6 +5729,27 @@ File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-13--turning-the-fee
 ### FEED-14 — No Message text appears anywhere in the Feed
 
 File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-14--no-message-text-appears-anywhere-in-the-feed)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### FEED-15 — A Helper's gate change is a Notification with its reason, and the wake-up is Huddle's
+
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-15--a-helpers-gate-change-is-a-notification-with-its-reason-and-the-wake-up-is-huddles)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### FEED-16 — A Helper that keeps failing reaches the Feed, and turning it off clears it
+
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-16--a-helper-that-keeps-failing-reaches-the-feed-and-turning-it-off-clears-it)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### FEED-17 — A Helper at its cap reaches the Feed once, and Continue clears it
+
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-17--a-helper-at-its-cap-reaches-the-feed-once-and-continue-clears-it)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |

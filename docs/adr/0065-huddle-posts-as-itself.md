@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-10-20
 ---
 
@@ -31,7 +31,8 @@ Notification. The Human loses an ask they never saw, because of something they n
 - A Huddle Message is drawn with "Huddle" and the Huddle mark.
 - It is not the Human. It answers no Mention, clears nothing from Needs You, and resets no Budget:
   `PersonaRunner.SenderIsHuman` already counts a sender with no Member as not-Human.
-- It is not an Agent. It spends no Agent's Budget and no Task wake budget.
+- It is not an Agent. It spends no Agent's Budget and no Task wake budget. It also spends no Room Budget, resets none
+  and drops no waiting Question or form: `ChatService.PostCoreAsync` skips those two steps for this sender.
 - In this decision, only a Helper's wake-up uses it. The wake-up after an edit made outside Huddle
   follows in a later change (owner, 2026-10-20). Other Huddle-made posts, such as a Budget notice,
   are a separate decision each.
@@ -44,6 +45,8 @@ Notification. The Human loses an ask they never saw, because of something they n
 - The Reply Gate must still deliver a Mention whose sender is not a Member. If it cannot, this
   decision is revisited before it ships.
 - Helpers spec §10 OD-1 (the wake-up resets both Budgets) is closed.
+- Built 2026-10-20. The spike (the spec's HF-9) found five readers that needed a change: `ChatService.PostCoreAsync`,
+  `NeedsYouTracker`, `MessageList.razor`, `ReadRecordsTool` and `TaskTriggerService`; the rest were pinned by tests.
 
 ## Alternatives
 

@@ -1137,6 +1137,7 @@ Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the overrid
 | [HELPERS-05](helpers.md#helpers-05--the-humans-override-is-final-u-5) | 💰 | Active |  |  |
 | [HELPERS-06](helpers.md#helpers-06--the-daily-cap-pauses-the-helper-and-continue-allows-a-few-more-u-7) | 💰 | Active |  |  |
 | [HELPERS-07](helpers.md#helpers-07--a-failure-leaves-the-task-as-saved-and-says-why-u-8-u-10) |  | Active |  |  |
+| [HELPERS-08](helpers.md#helpers-08--the-wake-up-is-huddles-and-it-leaves-your-mentions-alone-helpers-in-the-feed-56) | 💰 | Active |  |  |
 
 
 ## feed
@@ -1159,6 +1160,9 @@ Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-it
 | [FEED-12](feed.md#feed-12--a-restart-resolves-a-form-notification) |  | Active |  | not yet run by a person |
 | [FEED-13](feed.md#feed-13--turning-the-feed-off-hides-the-bell-and-the-link) |  | Active |  | not yet run by a person |
 | [FEED-14](feed.md#feed-14--no-message-text-appears-anywhere-in-the-feed) |  | Active |  | not yet run by a person |
+| [FEED-15](feed.md#feed-15--a-helpers-gate-change-is-a-notification-with-its-reason-and-the-wake-up-is-huddles) | 💰 | Active |  | not yet run by a person |
+| [FEED-16](feed.md#feed-16--a-helper-that-keeps-failing-reaches-the-feed-and-turning-it-off-clears-it) |  | Active |  | not yet run by a person |
+| [FEED-17](feed.md#feed-17--a-helper-at-its-cap-reaches-the-feed-once-and-continue-clears-it) | 💰 | Active |  | not yet run by a person |
 
 ---
 

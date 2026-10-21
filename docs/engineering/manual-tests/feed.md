@@ -2,7 +2,7 @@
 
 Prove, in a real browser, that the Feed shows the Human what Teammates and Huddle did and what waits on the Human: that the Notifications bell in the Top Bar counts unseen Notifications and opening its panel marks them seen; that the panel opens on Needs you and switches Category; that the dismiss cross hides a Notification from the bell and not from the Feed; that a Task handed to the Human, a gated Task in Needs You and a Mention each appear and then resolve when the Human acts; that the Feed Tab has its header, cards, expansion, avatar filter, new-items pill and unseen bar; that a restart resolves a Form Notification; that `Team:Feed:Enabled=false` removes the bell and the link; and that no Message text appears anywhere. The automated suite proves the store, the writer, the producers' rules and the components in bUnit; this page proves what only a browser shows: where the bell and the panel sit, the hover-revealed cross, the page layout, scrolling and the restart. The design is [the Feed spec](../../Huddle.Feed-Specifications.md) and [ADR-0063](../../adr/0063-the-feed-is-a-stored-history-that-each-domain-component-posts-to.md).
 
-**14 tests** · 12 free, 2 paid 💰 · about 2.4 hours. Written 2026-10-20; **not yet run by a person**.
+**17 tests** · 13 free, 4 paid 💰 · about 3.1 hours. Written 2026-10-20 (FEED-15 to FEED-17 are Helpers in the Feed); **not yet run by a person**.
 
 Read [the manual test script](../manual-tests.md) first, then [Common procedures](common.md), which defines the terminals, procedures and oracles this page names. Both are assumed below.
 
@@ -356,3 +356,76 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 - Steps 1 and 2 find no match: not in a summary, a meta line, a pill, a tooltip or an expansion.
 - At step 3 every copied file prints `False`. The sentinel may still appear in the Transcript files, which are not the Feed.
+
+### FEED-15 — A Helper's gate change is a Notification with its reason, and the wake-up is Huddle's
+
+**Paid 💰** · about 15 min · one Haiku call and one short Turn
+
+*Proves Helpers in the Feed spec §5.2 and §5.6: the `task-gate-on` item a Helper causes is a Notification with the reason, the Helper mark and the Gates Category, it resolves when you turn the gate off, and the wake-up Message is posted by Huddle and leaves an unanswered Mention in Needs you.*
+
+**Before you start**
+
+- Setup is done for the paid lane, with the real Claude adapter ([Helpers setup](helpers.md#setup)) and `Keeper` in the Team `Growth`. **Settings › Helpers** shows Needs Human **On**.
+- In the `Keeper` Room make `Keeper` Mention you: send `Ask me which colour, then wait.` and let it reply with `@<Human>`. The Room is now in the **Needs you** card with a Mention.
+
+**Steps**
+
+1. In the `Keeper` Room send `Create a Task in Growth: Email the pricing sheet to Acme.` Wait 40 seconds.
+2. Look at the bell, then open the Feed Tab on `Gates`.
+3. Read the top card: the avatar, the summary, the pill and, after expanding it, the preview.
+4. Open the `Keeper` Room and read the line after the Task change.
+5. Look at the **Needs you** card and the Feed Tab on `Needs you`.
+6. Open the Task and switch `Requires your acceptance` off. Save. Look at the Feed Tab.
+
+**Pass if — all of these**
+
+- At step 2 the bell shows a count and the card sits under `Gates` as well as under `Needs you`.
+- At step 3 the avatar is the Helper mark (a head outline), not a Teammate's picture; the summary reads `Needs Human (Helper) turned on Requires your acceptance for` with a chip for the Task, followed by a reason in the same sentence; the pill reads `Waiting for you`; the status line reads `Asked <hh:mm> · you can turn it off on the Task`; and the expanded Task preview ends with a line `Turned on by the Needs Human Helper: …`.
+- At step 4 the wake-up is a muted one-line row, not a bubble, and it is not written under your Name.
+- At step 5 the Room is still in **Needs you** with its Mention, and its Mention Notification is still unresolved.
+- At step 6 the card is dimmed with a `Done` pill and has left the `Needs you` count; it is still listed under `All` and `Gates`.
+
+### FEED-16 — A Helper that keeps failing reaches the Feed, and turning it off clears it
+
+**Free** · about 12 min
+
+*Proves Helpers in the Feed spec §5.3: one `helper-failing` item at the third failure in a row, in the `Helpers` Category, linking to the card, resolved when the Helper is turned off.*
+
+**Before you start**
+
+- Setup is done. On **Settings › Helpers** save the Needs Human **Adapter** as one that is not installed (as HELPERS-07 does). The Feed Tab shows no `Helpers` items.
+
+**Steps**
+
+1. Ask a Teammate to create three Tasks, one after another, each a minute apart. Wait 30 seconds after the third.
+2. Look at the bell, then open the Feed Tab on `Helpers`.
+3. Read the card, expand it, and press `Open Helper settings`.
+4. On the Needs Human card switch **On** off and press **Save**. Return to the Feed Tab.
+
+**Pass if — all of these**
+
+- After the first and second Task the `Helpers` count is 0. After the third it is 1, and a fourth Task adds no second item.
+- At step 3 the card's actor is `Huddle`; the summary reads `Needs Human failed 3 times in a row` with the Helper's name as a chip, then the last error; the status line reads `Since <hh:mm> · Tasks are not being judged`; the badge is an alert mark. The expanded preview shows `Status Off`/`On`, what the Helper runs on, today's calls, and the last error with its time. `Open Helper settings` opens **Settings › Helpers** and scrolls the Needs Human card into view.
+- At step 4 the card is dimmed with a `Done` pill and has left the `Needs you` count.
+
+### FEED-17 — A Helper at its cap reaches the Feed once, and Continue clears it
+
+**Paid 💰** · about 12 min · one Haiku call
+
+*Proves Helpers in the Feed spec §5.3: one `helper-paused` item per pause, however many saves are skipped, resolved by Continue.*
+
+**Before you start**
+
+- Setup is done for the real adapter. On the Needs Human card set **Daily cap** to `1`, press **Save**, and note `0 of 1 calls today`.
+
+**Steps**
+
+1. Ask a Teammate to create a Task. Wait 30 seconds: the card shows `1 of 1 calls today`.
+2. Ask a Teammate to create two more Tasks, a minute apart. Wait 30 seconds.
+3. Open the Feed Tab on `Helpers`. Read the card.
+4. On the Needs Human card press **Continue (+10 today)**. Return to the Feed Tab.
+
+**Pass if — all of these**
+
+- At step 3 there is exactly one item, by `Huddle`, reading `paused Needs Human: its daily cap of 1 calls is reached` with the explanation that Teammates' Tasks are not judged until you continue or the day ends, and the status line `Paused <hh:mm> · Continue is on the Helper's card`. The card shows `2 skipped while paused`.
+- At step 4 the item is dimmed with a `Done` pill and has left the `Needs you` count.

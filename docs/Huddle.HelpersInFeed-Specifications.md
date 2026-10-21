@@ -1,6 +1,6 @@
 # Huddle.HelpersInFeed — Design Specification
 
-**Date:** 2026-10-20 · **Status:** Designed, not built · **Decision record:**
+**Date:** 2026-10-20 · **Status:** Built 2026-10-20 on `feat/helpers-in-feed`; see Deviations at the end · **Decision record:**
 [ADR-0065](adr/0065-huddle-posts-as-itself.md); builds on
 [ADR-0063](adr/0063-the-feed-is-a-stored-history-that-each-domain-component-posts-to.md) (the Feed),
 [ADR-0064](adr/0064-a-helper-judges-an-event-and-the-app-applies-its-verdict.md) (Helpers),
@@ -368,3 +368,21 @@ Each task is one commit: a failing test, the code, a green `dotnet build Huddle.
 | HF-10 | `KnownIds.Huddle`, `ChatService.PostAsHuddleAsync`, `SenderDisplay`, and the fixes HF-9 listed | §9 Huddle sender row |
 | HF-11 | `TaskTriggerService` posts a Helper's wake-up as Huddle | §9 Huddle sender row, end to end |
 | HF-12 | Docs: Feed and Helpers specs, wireframes, User Guide, manual tests | `Check-All.ps1` |
+
+---
+
+## Deviations from this design
+
+What differs between the text above and the code as built. The code is right where they disagree.
+
+| # | Spec | As built | Why |
+| --- | --- | --- | --- |
+| B-1 | §5.1: an explicit `TaskActorKind.OutsideHuddle` arm so a new `TaskActorKind` fails the build (CS8509) | `TaskFeedRules.ActorOf` has the explicit arms **and** a closing `_ => throw`; `TaskFeedRulesTests.For_EachActorKind_PostsItsOwnFeedActorKind` walks `Enum.GetValues<TaskActorKind>()` | A switch over an enum without a `_` arm is CS8524 for the unnamed values, an error here, so the compiler can't be the guard; the test is |
+| B-2 | §5.3: `HelperFeed` takes `IFeedPublisher`, `HelperStatusStore`, `HelperBudget`, `TimeProvider` | Takes `IFeedPublisher`, `HelperStatusStore`, `HelperBudget`, `HelperRegistry`, `HelperSettingsResolver`, `ILogger`; no clock. `HelperFeed.Reconcile(FeedStore)` seeds the open sets, run once by `HelperFeedStartup` (registered with the Feed) | The reconciler needs a Helper's effective settings and the registry; nothing reads the time |
+| B-3 | §5.3: payloads carry a `HelperId` | The payloads carry the id as a `string` | A `readonly record struct` in a JSON payload would need a converter for no gain |
+| B-4 | §5.3: `HelperStatusStore.RecordFailure` returns the new status | Same, written with `RETURNING` so the count is the one this write produced. The dispatcher assigns it **before** calling `?.Ran`, because a null-conditional call skips its arguments | A first version put the call in the argument and recorded no failure when no `HelperFeed` was given |
+| B-5 | §5.5: the Helper preview shows "50 of 50 calls, 12 Tasks not judged" | `FeedHelperPreview` reuses `HelpersCopy`: `50 of 50 calls today · 12 skipped while paused`, plus a "Runs on" line and the last run and last error with their times | One wording for the Helpers card and the Feed |
+| B-6 | §5.6: "every other step is the same" for `PostAsHuddleAsync` | Two steps differ: no Budget spend or reset and no dropped Question or form (HF-9 finding 1) | `PostCoreAsync` read "not an Agent" as "the Human" |
+| B-7 | §5.6 listed `SenderDisplay` as the place that draws a sender | `MessageList.razor` draws it; `SenderDisplay` only renames the Human. A Huddle wake-up is the muted system row and any other Huddle Message wears `.huddle-mark` | HF-9 finding 3 |
+| B-8 | §5.4: the pill and pause icon | A `helper-paused` card wears the gauge badge, but its pill is the ordinary "Waiting for you"; only `room-budget` draws the pause icon in the pill | Not worth a second rule |
+| B-9 | The Helpers anchor "and scroll" | `HelpersPanel` scrolls once, after the first render, with the existing `teamScroll.intoView` | Same helper as the Prompts and Packs highlights |
