@@ -825,6 +825,11 @@ judged again.
 
 ## 12. Hooks for slice 3
 
+> [!NOTE]
+> Slice 3 is designed in [Huddle.HelpersInFeed-Specifications.md](Huddle.HelpersInFeed-Specifications.md).
+> It keeps the cap and failure hooks below, and replaces the separate Verdict item with the
+> `task-gate-on` item `TaskService` already posts.
+
 The Feed's own design is ADR-0063 and its spec. These are the places Helper code will call
 `IFeedPublisher.Post` and `Resolve` once it exists; this slice leaves them as plain method calls
 on the card's status path, so each hook is one added line.

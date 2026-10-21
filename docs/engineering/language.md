@@ -661,6 +661,14 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   `Needs Human (Helper)` with its reason in the Change log. It never turns the gate
   off, and never judges a Task again once the Human has turned that Task's gate off.
 
+**Huddle (as sender)**
+: The sender of a Message Huddle itself writes, such as a Helper's wake-up to the
+  assignee: `KnownIds.Huddle`, neither the Human nor an Agent, with no `User` row
+  and no Membership. Its Messages answer no Mention, clear nothing from Needs You
+  and reset no Budget. See
+  [ADR-0065](../adr/0065-huddle-posts-as-itself.md).
+: *Avoid*: system, bot, the app.
+
 ## Library
 
 **Library**
