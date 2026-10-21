@@ -362,6 +362,20 @@ public sealed class ReadRecordsToolTests
         Assert.Equal("2026-10-08 10:00 Rae: hello\n2026-10-08 11:00 " + human + ": thanks", result);
     }
 
+    /// <summary>A Message Huddle wrote itself is not a participant, so it does not make an otherwise Team-only Room a cross-Team Room.</summary>
+    [Fact]
+    public async Task Invoke_RoomWithTeamAndHuddle_IsRead()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        await scene.Chat.AppendAsync(RoomId, new ChatMessage("a", Now.AddHours(-2), "u1", "Rae", "hello"), ct);
+        await scene.Chat.AppendAsync(RoomId, new ChatMessage("b", Now.AddHours(-1), KnownIds.Huddle, "Huddle", "@Rae Task GRO-1 changed"), ct);
+
+        string result = await scene.Tool("Rae").InvokeAsync(Args(room: RoomId), ct);
+
+        Assert.Equal("2026-10-08 10:00 Rae: hello\n2026-10-08 11:00 Huddle: @Rae Task GRO-1 changed", result);
+    }
+
     /// <summary>Creates a real Room in the directory, scoped to <paramref name="roomTeam"/> or root when <see langword="null"/>.</summary>
     /// <param name="scene">The scene whose directory holds the Room.</param>
     /// <param name="roomTeam">The Team the Room is scoped to, or <see langword="null"/> for a root Room.</param>

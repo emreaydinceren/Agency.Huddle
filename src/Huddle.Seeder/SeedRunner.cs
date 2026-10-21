@@ -29,6 +29,7 @@ internal static class SeedRunner
         SeedIo.WriteText(SeedIo.Resolve(dataDir, "Teammates/" + LayoutMarker), string.Empty);
 
         DatabaseResult ids = await DatabaseSeeder.SeedAsync(plan, dataDir, ct).ConfigureAwait(false);
+        FeedSeeder.Write(plan, dataDir, ids, TimeProvider.System);
 
         WriteFolders(plan, dataDir);
         WriteTeammates(plan, dataDir);

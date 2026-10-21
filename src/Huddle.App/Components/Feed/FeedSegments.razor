@@ -1,6 +1,6 @@
 @*
     The words and reference chips of a Feed item's summary (Feed spec 6.12), after the actor's Name: text, bold names, and the Task, Room
-    and Document chips. The Feed row and the Feed card both draw their summary through it, so a chip looks and opens the same in both. A chip
+    Document and Helper chips. The Feed row and the Feed card both draw their summary through it, so a chip looks and opens the same in both. A chip
     opens its own target and stops the click, so the row or card around it does not also open its target.
 *@
 @using Agency.Huddle.App.Feed
@@ -28,6 +28,7 @@
         FeedSegmentKind.Task => this.TaskChip(segment),
         FeedSegmentKind.Room => this.LinkChip("feed-chip-room", "/rooms/" + segment.TargetId, segment.Text, Icons.Material.Filled.ChatBubbleOutline),
         FeedSegmentKind.Document => this.DocumentChip(segment),
+        FeedSegmentKind.Helper => this.LinkChip("feed-chip-helper", FeedTarget.HelperAddress(segment.TargetId ?? string.Empty), segment.Text, Icons.Material.Outlined.Psychology),
         _ => @<text>@segment.Text</text>,
     };
 

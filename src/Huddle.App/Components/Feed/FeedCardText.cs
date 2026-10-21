@@ -62,7 +62,8 @@ internal static class FeedCardText
         FeedSourceType.TaskNeedsYou => new("check", Icons.Material.Filled.Check),
         FeedSourceType.DocumentChanged => new("document", Icons.Material.Filled.Description),
         FeedSourceType.TaskAssignedToYou => new("person", Icons.Material.Filled.Person),
-        FeedSourceType.RoomBudget => new("gauge", Icons.Material.Filled.Speed),
+        FeedSourceType.RoomBudget or FeedSourceType.HelperPaused => new("gauge", Icons.Material.Filled.Speed),
+        FeedSourceType.HelperFailing => new("alert", Icons.Material.Outlined.ErrorOutline),
         FeedSourceType.TaskGateOn or FeedSourceType.GateDecisionDue => new("lock", Icons.Material.Filled.Lock),
         FeedSourceType.RoomMention => new("mention", Icons.Material.Filled.AlternateEmail),
         FeedSourceType.RoomQuestion => new("question", Icons.Material.Filled.QuestionMark),
@@ -76,12 +77,13 @@ internal static class FeedCardText
 
     /// <summary>The context word of the meta line: where the item belongs.</summary>
     /// <param name="kind">What the item is about.</param>
-    /// <returns>"Tasks", "Rooms" or "Library"; empty when the item is unreadable.</returns>
+    /// <returns>"Tasks", "Rooms", "Library" or "Helpers"; empty when the item is unreadable.</returns>
     public static string ContextWord(FeedTargetKind kind) => kind switch
     {
         FeedTargetKind.Task => "Tasks",
         FeedTargetKind.Room => "Rooms",
         FeedTargetKind.Document => "Library",
+        FeedTargetKind.Helper => "Helpers",
         _ => string.Empty,
     };
 }

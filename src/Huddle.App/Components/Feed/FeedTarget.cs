@@ -4,8 +4,8 @@ using Agency.Huddle.App.Library;
 namespace Agency.Huddle.App.Components.Feed;
 
 /// <summary>What a Feed item is about, and the address that opens it (Feed spec §6.12, §6.13).</summary>
-/// <param name="Kind">Whether it is a Task, a Room or a Library document.</param>
-/// <param name="Id">The Task id, the Room id or the document's absolute path.</param>
+/// <param name="Kind">Whether it is a Task, a Room, a Library document or a Helper.</param>
+/// <param name="Id">The Task id, the Room id, the document's absolute path or the Helper id.</param>
 internal sealed record FeedTarget(FeedTargetKind Kind, string Id)
 {
     /// <summary>The target an item's payload names.</summary>
@@ -28,6 +28,8 @@ internal sealed record FeedTarget(FeedTargetKind Kind, string Id)
             RoomJoinedPayload p => new(FeedTargetKind.Room, p.RoomId),
             RoomArchivedPayload p => new(FeedTargetKind.Room, p.RoomId),
             DocumentChangedPayload p => new(FeedTargetKind.Document, p.Path),
+            HelperPausedPayload p => new(FeedTargetKind.Helper, p.HelperId),
+            HelperFailingPayload p => new(FeedTargetKind.Helper, p.HelperId),
             _ => new(FeedTargetKind.None, string.Empty),
         };
     }
@@ -41,6 +43,16 @@ internal sealed record FeedTarget(FeedTargetKind Kind, string Id)
             ? LibraryLinkQuery.BuildPageUri(path)
             : null;
 
+    /// <summary>The address of a Helper's card on Settings > Helpers.</summary>
+    /// <param name="helperId">The Helper's id, such as <c>NeedsHuman</c>.</param>
+    /// <returns>The address, with the anchor the card carries.</returns>
+    public static string HelperAddress(string helperId) => "/settings/helpers#" + HelperAnchor(helperId);
+
+    /// <summary>The element id a Helper's card carries on Settings > Helpers, which the address above names.</summary>
+    /// <param name="helperId">The Helper's id, such as <c>NeedsHuman</c>.</param>
+    /// <returns>The id, such as <c>helper-NeedsHuman</c>.</returns>
+    public static string HelperAnchor(string helperId) => "helper-" + helperId;
+
     /// <summary>The address that opens this target.</summary>
     /// <param name="resolver">Resolves a document's path.</param>
     /// <returns>The address, or <see langword="null"/> when there is none.</returns>
@@ -49,6 +61,7 @@ internal sealed record FeedTarget(FeedTargetKind Kind, string Id)
         FeedTargetKind.Task => "/tasks/item/" + this.Id,
         FeedTargetKind.Room => "/rooms/" + this.Id,
         FeedTargetKind.Document => DocumentAddress(resolver, this.Id),
+        FeedTargetKind.Helper => HelperAddress(this.Id),
         _ => null,
     };
 }

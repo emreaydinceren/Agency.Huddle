@@ -21,6 +21,7 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
     private readonly IOptions<TeamOptions> options;
     private readonly ILogger<HelperDispatcher> logger;
     private readonly TimeProvider clock;
+    private readonly HelperFeed? feed;
     private readonly SemaphoreSlim concurrency;
     private readonly CancellationTokenSource stopping = new();
     private bool stopped;
@@ -34,13 +35,15 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
     /// <param name="options">The bound options: <c>Acp.Enabled</c> and <c>HelperConcurrency</c>.</param>
     /// <param name="logger">Records each failure.</param>
     /// <param name="timeProvider">The clock; <see cref="TimeProvider.System"/> when <see langword="null"/>.</param>
+    /// <param name="feed">Tells the Feed when a Helper pauses or keeps failing; <see langword="null"/> reports nothing.</param>
     public HelperDispatcher(
         IEnumerable<IHelperInvoker> invokers,
         HelperSettingsResolver settings,
         HelperStatusStore status,
         IOptions<TeamOptions> options,
         ILogger<HelperDispatcher> logger,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        HelperFeed? feed = null)
     {
         ArgumentNullException.ThrowIfNull(invokers);
         foreach (IHelperInvoker invoker in invokers)
@@ -53,6 +56,7 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
         this.options = options;
         this.logger = logger;
         this.clock = timeProvider ?? TimeProvider.System;
+        this.feed = feed;
         this.concurrency = new SemaphoreSlim(Math.Max(1, options.Value.HelperConcurrency));
     }
 
@@ -283,9 +287,14 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
             {
                 case HelperRunKind.Applied:
                     this.status.RecordSuccess(helper.Id, at, report.Summary ?? "Done");
+                    this.feed?.Ran(helper, HelperRunKind.Applied, this.status.Get(helper.Id));
                     break;
                 case HelperRunKind.Failed:
-                    this.status.RecordFailure(helper.Id, at, report.Error ?? "The Helper failed.");
+                    HelperStatus failed = this.status.RecordFailure(helper.Id, at, report.Error ?? "The Helper failed.");
+                    this.feed?.Ran(helper, HelperRunKind.Failed, failed);
+                    break;
+                case HelperRunKind.OverBudget:
+                    this.feed?.Paused(helper, effective);
                     break;
                 default:
                     break;
@@ -304,7 +313,12 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
     {
         try
         {
-            this.status.RecordFailure(id, this.clock.GetUtcNow(), message);
+            HelperStatus failed = this.status.RecordFailure(id, this.clock.GetUtcNow(), message);
+            if (this.feed is not null && this.invokers.TryGetValue(id.Value, out IHelperInvoker? invoker))
+            {
+                this.feed.Ran(invoker.Helper, HelperRunKind.Failed, failed);
+            }
+
             this.StatusChanged?.Invoke();
         }
         catch (Exception ex)

@@ -240,7 +240,7 @@ pins the pairing and is unit-tested for every value.
 | Source type | Wire name | Posted by | Notify | Target | Payload |
 | --- | --- | --- | --- | --- | --- |
 | `TaskCreated` | `task-created` | `TaskService` | No | Task id | `TaskCreatedPayload(Id, Title, Team, Assignee?)` |
-| `TaskGateOn` | `task-gate-on` | `TaskService` | No | Task id | `TaskGatePayload(Id, Title, Team, Action?)` |
+| `TaskGateOn` | `task-gate-on` | `TaskService` | No; Yes when a Helper turned the gate on (slice 3) | Task id | `TaskGatePayload(Id, Title, Team, Action?, Reason?)` |
 | `TaskNeedsYou` | `task-needs-you` | `TaskService` | Yes | Task id | `TaskNeedsYouPayload(Id, Title, Team, ProofMet, ProofTotal)` |
 | `TaskAssignedToYou` | `task-assigned-to-you` | `TaskService` | Yes | Task id | `TaskAssignedPayload(Id, Title, Team, PreviousAssignee?)` |
 | `RequestAwaitsYou` | `request-awaits-you` | `TaskService` | Yes | Task id | `RequestAwaitsPayload(Id, Title, Team, FromTeam, Kind)` |
@@ -253,6 +253,12 @@ pins the pairing and is unit-tested for every value.
 | `RoomJoined` | `room-joined` | `ChatService` | No | Room id | `RoomJoinedPayload(RoomId, RoomName, Team?, Member)` |
 | `RoomArchived` | `room-archived` | `ChatService` | No | Room id | `RoomArchivedPayload(RoomId, RoomName, Team?)` |
 | `DocumentChanged` | `document-changed` | `DocHistoryStore` | No | Library absolute path | `DocumentChangedPayload(Path, RootName, RelativePath, Kind, Summary)` |
+| `HelperPaused` | `helper-paused` | `HelperFeed` | Yes | `helper:<id>` | `HelperPausedPayload(HelperId, Name, DailyCap, Granted)` |
+| `HelperFailing` | `helper-failing` | `HelperFeed` | Yes | `helper:<id>` | `HelperFailingPayload(HelperId, Name, Failures, LastError)` |
+
+The last two rows and the `Reason` of `task-gate-on` are slice 3 ([Helpers in the Feed](Huddle.HelpersInFeed-Specifications.md)).
+A Helper's `task-gate-on` carries the actor kind `helper` and is resolved when the Human turns the gate off or decides, the Task waits in Needs You, or it
+closes; the two Helper items carry no Team, so with a Team chosen the Helpers count is 0, as for Documents.
 
 `Team` in a payload is the Team the target belongs to: a Task's `TaskLocation.Team`, a Room's
 Scope (`Room.Team`, null for the root). Documents carry no Team in v1 (§10 OD-4). Members and
@@ -527,7 +533,7 @@ remembers its filter (ADR-0045: a Tab is a remembered URL). An unknown `category
 All.
 
 **Opening it.** A `NavTabLink` "Feed" (`Icons.Material.Outlined.DynamicFeed`, `aria-label` and
-tooltip "Feed") first in the Activity bar's bottom toolbar (`S5b`), above Archived chats: it opens a
+tooltip "Feed") first in the Activity bar's top toolbar (`S5a`), above the Sidebar view buttons (moved there by the owner, 2026-10-20): it opens a
 Tab, like Settings, rather than switching the Sidebar view. Also the panel's "See all activity".
 
 **The header** (owner wireframe, 2026-10-20; codes `F1`–`F3` in
@@ -551,11 +557,11 @@ Tab, like Settings, rather than switching the Sidebar view. Also the panel's "Se
 - **The filter bar**, one row: the **Category** control at the left and the **Team select** at the
   right; the Teammate chip, when set, sits just left of the Team select.
 
-**Category** is a `HuddleSegmentedControl<FeedCategory>` with six segments (`ItemCount="6"`), each a
+**Category** is a `HuddleSegmentedControl<FeedCategory>` with seven segments (`ItemCount="7"`), each a
 label and its count from `FeedStore.Counts`. Selecting one navigates the Tab to
 `?category=<value>`, keeping `teammate` and `team`. Every Feed item is in All, in exactly one of
-Tasks, Gates, Rooms or Documents, and in Needs you only while it is an unresolved Notification, so
-Needs you overlaps the other four and the counts are not meant to add up:
+Tasks, Gates, Rooms, Documents or Helpers, and in Needs you only while it is an unresolved Notification, so
+Needs you overlaps the other five and the counts are not meant to add up:
 
 | Segment | `FeedCategory` | `category=` | Source types |
 | --- | --- | --- | --- |
@@ -565,8 +571,9 @@ Needs you overlaps the other four and the counts are not meant to add up:
 | Documents | `Documents` | `documents` | `document-changed` |
 | Rooms | `Rooms` | `rooms` | `room-mention`, `room-question`, `room-form`, `room-budget`, `room-created`, `room-joined`, `room-archived` |
 | Gates | `Gates` | `gates` | `task-gate-on`, `task-needs-you`, `gate-decision-due` |
+| Helpers | `Helpers` | `helpers` | `helper-paused`, `helper-failing` |
 
-A new source type must be added to exactly one of the four type segments in the same change
+A new source type must be added to exactly one of the five type segments in the same change
 (a unit test walks `FeedSourceType` and fails on an unassigned value). The counts cover the
 items the store still holds (the retention window, §6.11) under the current Teammate and Team
 filters, and are re-read on `FeedEvents.ItemsAdded` and on a resolve.
@@ -725,7 +732,9 @@ between cards.
 - **Age and chevron**, right-aligned: "16 min", "2 h", "1 d" (`HumanDate.Full` in the tooltip), and
   under it a chevron button with `aria-expanded` and the `aria-label` "Show details".
 
-Clicking the card body (not a chip, not the chevron) opens the target in a Tab, as before.
+Clicking the card's empty space (not a chip, not a button) expands or collapses the card, as the chevron does, and Enter on the focused body does the same
+(owner, 2026-10-20: "clicking empty space should expand the card"). The body is a `role="button"` tab stop with `aria-expanded` on every card. The target
+opens from the expanded card's Open button and from each chip.
 
 **Expanded card.** The chevron expands the card in place; one card is expanded at a time, and
 `Escape` collapses it. Under the collapsed part, after an Edge line:
@@ -766,7 +775,7 @@ Clicking the card body (not a chip, not the chevron) opens the target in a Tab, 
 | Source type | Summary (chips in braces) | Status line (Notifications only) |
 | --- | --- | --- |
 | `task-created` | `created {Task}` · `in <Team>` | — |
-| `task-gate-on` | `turned on Requires your acceptance for {Task}`; with an Action, `set the Action "<action>" on {Task}` | — |
+| `task-gate-on` | `turned on Requires your acceptance for {Task}`; with an Action, `set the Action "<action>" on {Task}`; by a Helper, followed by `· <reason>` | by a Helper: `Asked <hh:mm> · you can turn it off on the Task`; otherwise — |
 | `task-needs-you` | `stopped to wait for your approval on {Task}` · `in <Team>` | `Asked <hh:mm> · proof <m>/<n> · waiting for you` |
 | `task-assigned-to-you` | `assigned you {Task}` | `Asked <hh:mm> · waiting for you` |
 | `request-awaits-you` | `finished the Request {Task} from <FromTeam>` · `only you can confirm it` | `Asked <hh:mm> · waiting for you` |
@@ -779,6 +788,8 @@ Clicking the card body (not a chip, not the chevron) opens the target in a Tab, 
 | `room-joined` | `<member> joined {Room}` | — |
 | `room-archived` | `archived {Room}` | — |
 | `document-changed` | `created`, `edited`, `reviewed` or `objected to` `{Document}` · `<summary>` when there is one | — |
+| `helper-paused` | `paused {Helper}: its daily cap of <n> calls is reached` · `Teammates' Tasks are not judged until you continue or the day ends` (actor: Huddle) | `Paused <hh:mm> · Continue is on the Helper's card` |
+| `helper-failing` | `{Helper} failed <n> times in a row` · `<last error>` (actor: Huddle) | `Since <hh:mm> · Tasks are not being judged` |
 | Unreadable item | `Something happened` | — |
 
 A resolved Notification's status line keeps its first fact and ends `· done <hh:mm>` (from
@@ -793,14 +804,14 @@ A summary starting in lower case follows the actor's Name. Other copy:
 | Button | `Notifications` (tooltip and `aria-label`; `Notifications, <n> new` with a count) |
 | Panel title | `Notifications` |
 | Panel link | `See all activity` |
-| Panel Categories | The six Category labels with counts; opens on `Needs you` |
+| Panel Categories | The seven Category labels with counts; opens on `Needs you` |
 | Panel empty | Needs you: `Nothing needs you` · `Asks from your Teammates appear here.`; All: `Nothing yet` · `What your Teammates do appears here.` |
 | Activity bar link | `Feed` |
 | Page title | `Feed` |
 | Page subtitle | `What Teammates and Huddle did, newest first. Each line links to the Task, Room or document it's about.` |
 | Live chip | `Live` |
 | Read-only note | `Read-only — the Feed never changes the work and never shows message text.` |
-| Category segments | `All`, `Needs you`, `Tasks`, `Documents`, `Rooms`, `Gates`, each followed by its count |
+| Category segments | `All`, `Needs you`, `Tasks`, `Documents`, `Rooms`, `Gates`, `Helpers`, each followed by its count |
 | Team select | `All teams`, then each Team Name; `aria-label` `Team` |
 | Filter chip | `Teammate: <Name>` |
 | Day heading | `Today <Ddd, Mmm d>`, `Yesterday <Ddd, Mmm d>`, `<Weekday> <Mmm d>`, `<Mmm d>` |
@@ -862,7 +873,7 @@ Settled with the owner: D-1 to D-9. Made in this specification and open to revie
 | D-12 | "Only the Human can confirm a Request" means: Done, unconfirmed, and no member of the requesting Team covers `verify`, so `confirm_request` has nobody to call it | Notify on every Request reaching Done (the requesting QA's job, not the Human's) |
 | D-13 | `GateDecisionDue` only for a process-gate refusal of an Agent on an ordinary Task (`CanOverride: true`) | Also Human-gate refusals (nothing for the Human to override there) |
 | D-14 | Notifications live in the Right sidebar through a second mode of `RightSidebarService`, reusing `SidebarPanelFrame` | A Subject that every page publishes; a separate drawer (a second right-hand surface) |
-| D-15 | The Feed link sits in the Activity bar's bottom toolbar and opens a Tab | A sixth Sidebar view with nothing to list |
+| D-15 | The Feed link sits at the top of the Activity bar's top toolbar (it began in the bottom toolbar) and opens a Tab | A sixth Sidebar view with nothing to list |
 | D-16 | The table lives in `team.db`, as `cadence_state` does (ADR-0042) | A `feed.db` of its own |
 | D-17 | New terms: **Feed**, **Feed item**, **Notification**, **Activity**, **Feed publisher** | "Post" as a noun (avoided for Message); "event" (the C# word) |
 | D-18 | The actor's kind and a version ride in the payload envelope; the Team filter uses `json_extract` | Extra columns beyond the owner's list |

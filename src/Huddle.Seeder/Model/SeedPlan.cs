@@ -48,6 +48,9 @@ internal sealed record SeedPlan
     /// <summary>The Sprints written to <c>sprints.md</c>; empty writes no file.</summary>
     public IReadOnlyList<SeedSprint> Sprints { get; init; } = [];
 
+    /// <summary>The Feed items; empty stores none.</summary>
+    public IReadOnlyList<SeedFeedItem> Feed { get; init; } = [];
+
     /// <summary>The run date every offset is measured from.</summary>
     public required DateOnly Today { get; init; }
 }

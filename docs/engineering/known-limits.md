@@ -1,13 +1,20 @@
 # Known limits
 
 What is absent on purpose. Read it before "fixing" something that looks missing
-and before filing a bug: most entries below are decisions, four are known flakes,
+and before filing a bug: most entries below are decisions, five are known flakes,
 and one is a known bug left in place deliberately. Do not treat any of them as
 oversights or quietly add them.
 
 Two entries have since been planned and one has since been built; each one says
 so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 
+- **A pipe client can receive a Message whose sender is not in the delivery's `members` list.** A Message Huddle wrote itself
+  (the wake-up after a Helper's change, [ADR-0065](../adr/0065-huddle-posts-as-itself.md)) carries the sender id `huddle`,
+  which is never a Room Member. The protocol version is unchanged, and a client that looks the sender up in `members` must
+  handle a miss, as it already must for a sender who has left the Room.
+- **`DebouncedFileWatcherTests.Burst_OfWrites_ProducesOneSettledCallbackAfterTheBurstEnds` can fail once under the full parallel
+  suite** (it saw a second callback on 2026-10-20 and passed three runs alone). It is timing-sensitive on a loaded machine and
+  already skips when it sees a stall of a whole debounce window; a failure there with no change in `Watching/` is this, not a regression.
 - **A document's History is what its editors reported.** An Agent adds to it by calling `log_change`, and nothing checks
   that the document changed or that every change was logged: only the tool's description asks an Agent to call it.
   Edits made outside Huddle are not recorded, and a Teammate renamed later keeps its old Name on earlier entries

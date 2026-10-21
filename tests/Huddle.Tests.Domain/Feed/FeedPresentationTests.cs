@@ -102,6 +102,59 @@ public sealed class FeedPresentationTests
         Assert.Null(FeedSummary.StatusOf(Item(FeedSourceType.TaskCreated, new TaskCreatedPayload("G-1", "T", "G", null)), Utc));
     }
 
+    /// <summary>A Helper's gate-on shows its reason after the dot, a Teammate's still shows the Team; a Helper's pause and failing items read as the §7 sentences with a Helper chip.</summary>
+    [Fact]
+    public void Of_HelperItems_ReadAsTheSpecSentences()
+    {
+        FeedSummaryLine helperGate = FeedSummary.Of(Item(FeedSourceType.TaskGateOn, new TaskGatePayload("GRO-41", "Email the pricing sheet", "Growth", null, "Sends a document outside the Team"), true));
+        FeedSummaryLine teammateGate = FeedSummary.Of(Item(FeedSourceType.TaskGateOn, new TaskGatePayload("GRO-41", "T", "Growth", null)));
+        FeedSummaryLine paused = FeedSummary.Of(Item(FeedSourceType.HelperPaused, new HelperPausedPayload("NeedsHuman", "Needs Human", 50, 0), true));
+        FeedSummaryLine failing = FeedSummary.Of(Item(FeedSourceType.HelperFailing, new HelperFailingPayload("NeedsHuman", "Needs Human", 3, "The adapter isn't signed in"), true));
+
+        Assert.Equal("turned on Requires your acceptance for Email the pricing sheet", Flatten(helperGate));
+        Assert.Equal("Sends a document outside the Team", helperGate.Context);
+        Assert.Equal("in Growth", teammateGate.Context);
+        Assert.Equal("paused Needs Human: its daily cap of 50 calls is reached", Flatten(paused));
+        Assert.Equal("Teammates' Tasks are not judged until you continue or the day ends", paused.Context);
+        Assert.Equal(new FeedSegment(FeedSegmentKind.Helper, "Needs Human", "NeedsHuman"), paused.Segments[1]);
+        Assert.Equal("Needs Human failed 3 times in a row", Flatten(failing));
+        Assert.Equal("The adapter isn't signed in", failing.Context);
+        Assert.Equal(new FeedSegment(FeedSegmentKind.Helper, "Needs Human", "NeedsHuman"), failing.Segments[0]);
+    }
+
+    /// <summary>The Helper items' status lines follow §7, and a Helper's gate-on tells the Human where to turn it off.</summary>
+    [Fact]
+    public void StatusOf_HelperItems_FollowTheSpec()
+    {
+        DateTimeOffset at = new(2026, 10, 20, 16, 0, 0, TimeSpan.Zero);
+        DateTimeOffset resolved = new(2026, 10, 20, 16, 20, 0, TimeSpan.Zero);
+
+        Assert.Equal("Asked 16:00 · you can turn it off on the Task", FeedSummary.StatusOf(Item(FeedSourceType.TaskGateOn, new TaskGatePayload("G-1", "T", "G", null, "r"), true, at), Utc)?.Text);
+        Assert.Equal("Paused 16:00 · Continue is on the Helper's card", FeedSummary.StatusOf(Item(FeedSourceType.HelperPaused, new HelperPausedPayload("H", "H", 50, 0), true, at), Utc)?.Text);
+        Assert.Equal("Since 16:00 · Tasks are not being judged", FeedSummary.StatusOf(Item(FeedSourceType.HelperFailing, new HelperFailingPayload("H", "H", 3, "x"), true, at), Utc)?.Text);
+        Assert.Equal("Paused 16:00 · done 16:20", FeedSummary.StatusOf(Item(FeedSourceType.HelperPaused, new HelperPausedPayload("H", "H", 50, 0), true, at, resolved), Utc)?.Text);
+        Assert.Null(FeedSummary.StatusOf(Item(FeedSourceType.TaskGateOn, new TaskGatePayload("G-1", "T", "G", null)), Utc));
+    }
+
+    /// <summary>The Helper items wear a gauge (paused) and an alert (failing) badge, say "Helpers", and open the Helper's settings anchor.</summary>
+    [Fact]
+    public void HelperItems_BadgeContextWordAndTarget()
+    {
+        FeedItem paused = Item(FeedSourceType.HelperPaused, new HelperPausedPayload("NeedsHuman", "Needs Human", 50, 0), true);
+        FeedItem failing = Item(FeedSourceType.HelperFailing, new HelperFailingPayload("NeedsHuman", "Needs Human", 3, "x"), true);
+
+        FeedTarget target = FeedTarget.Of(paused);
+
+        Assert.Equal("gauge", FeedCardText.BadgeOf(FeedSourceType.HelperPaused).Name);
+        Assert.Equal("alert", FeedCardText.BadgeOf(FeedSourceType.HelperFailing).Name);
+        Assert.Equal(new FeedTarget(FeedTargetKind.Helper, "NeedsHuman"), target);
+        Assert.Equal(target, FeedTarget.Of(failing));
+        Assert.Equal("Helpers", FeedCardText.ContextWord(FeedTargetKind.Helper));
+        Assert.Equal("Helpers", FeedSummary.NounOf(FeedSourceType.HelperPaused));
+        Assert.Equal("/settings/helpers#helper-NeedsHuman", FeedTarget.HelperAddress("NeedsHuman"));
+        Assert.Null(FeedSummary.TeamOf(paused.Payload));
+    }
+
     /// <summary>Ages are compact on a row and spelled on a card.</summary>
     [Fact]
     public void Age_RowAndCard()

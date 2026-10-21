@@ -26,7 +26,7 @@
                 <MudIcon Icon="@this.Badge.Icon" Size="Size.Small" />
             </span>
         </div>
-        <div class="feed-card-main" role="@(this.Address is null ? null : "link")" tabindex="@(this.Address is null ? null : "0")" @onclick="this.OpenTarget" @onkeydown="this.OnBodyKeyDown">
+        <div class="feed-card-main" role="button" tabindex="0" aria-expanded="@(this.Expanded ? "true" : "false")" @onclick="this.OnToggle" @onkeydown="this.OnBodyKeyDown">
             <div class="feed-card-summary feed-clamp-3">
                 @if (!this.Line.OmitActor)
                 {
@@ -135,6 +135,9 @@
                 case FeedTargetKind.Document:
                     <FeedDocumentPreview Path="@this.target.Id" />
                     break;
+                case FeedTargetKind.Helper:
+                    <FeedHelperPreview HelperId="@this.target.Id" />
+                    break;
             }
 
             <FeedRelated Item="this.Group.Lead" ExtraTargets="this.ExtraTargets" />
@@ -225,6 +228,7 @@
     {
         FeedTargetKind.Task => "Open Task",
         FeedTargetKind.Room => "Open Room",
+        FeedTargetKind.Helper => "Open Helper settings",
         _ => "Open document",
     };
 
@@ -239,6 +243,7 @@
                 FeedTargetKind.Task => "Task" + suffix,
                 FeedTargetKind.Room => "Room" + suffix,
                 FeedTargetKind.Document => "Document · Library",
+                FeedTargetKind.Helper => "Helper · Settings",
                 _ => string.Empty,
             };
         }
@@ -338,9 +343,17 @@
         builder.AddAttribute(4, "class", "feed-card-mark");
         builder.AddAttribute(5, "aria-hidden", "true");
         builder.OpenComponent<MudIcon>(6);
-        builder.AddComponentParameter(7, nameof(MudIcon.Icon), actor.Kind == FeedActorKind.Huddle ? Icons.Material.Filled.ToggleOn : Icons.Material.Filled.EditNote);
+        builder.AddComponentParameter(7, nameof(MudIcon.Icon), MarkIcon(actor.Kind));
         builder.CloseComponent();
         builder.CloseElement();
+    };
+
+    /// <summary>The icon of an actor with no avatar: Huddle's switch, a Helper's mark, or the pencil of an edit made outside Huddle.</summary>
+    private static string MarkIcon(FeedActorKind kind) => kind switch
+    {
+        FeedActorKind.Huddle => Icons.Material.Filled.ToggleOn,
+        FeedActorKind.Helper => Icons.Material.Outlined.Psychology,
+        _ => Icons.Material.Filled.EditNote,
     };
 
     private void ToggleMembers() => this.showMembers = !this.showMembers;
@@ -357,14 +370,9 @@
         }
     }
 
-    /// <summary>Enter on the focused body does what a click does; a link is activated by Enter alone.</summary>
-    private void OnBodyKeyDown(KeyboardEventArgs args)
-    {
-        if (string.Equals(args.Key, "Enter", StringComparison.Ordinal))
-        {
-            this.OpenTarget();
-        }
-    }
+    /// <summary>Enter on the focused body does what a click does: it expands or collapses the card. Opening the target is the "Open" button's job, and each chip opens its own.</summary>
+    private Task OnBodyKeyDown(KeyboardEventArgs args) =>
+        string.Equals(args.Key, "Enter", StringComparison.Ordinal) ? this.OnToggle.InvokeAsync() : Task.CompletedTask;
 
     private void ReviewInNeedsYou()
     {

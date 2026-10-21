@@ -51,14 +51,18 @@
        subscriptions when the Human switches away and back. *@
     <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Width="@this.DrawerWidth" Elevation="0" ClipMode="DrawerClipMode.Always" Class="shell-nav">
         <ActivityBar Selected="this.sidebarView" SelectedChanged="this.OnSidebarViewChanged">
-            <Bottom>
-                <MudNavMenu Class="nav-settings">
-                    @if (this.FeedOptions.Value.Feed.Enabled)
-                    {
+            <Top>
+                @if (this.FeedOptions.Value.Feed.Enabled)
+                {
+                    <MudNavMenu Class="nav-settings">
                         <MudTooltip Text="Feed" Placement="Placement.Right">
                             <NavTabLink Href="/feed" TabTitle="Feed" Icon="@Icons.Material.Outlined.DynamicFeed" aria-label="Feed" />
                         </MudTooltip>
-                    }
+                    </MudNavMenu>
+                }
+            </Top>
+            <Bottom>
+                <MudNavMenu Class="nav-settings">
                     <ArchivedChats />
                     <MudTooltip Text="Settings" Placement="Placement.Right">
                         <NavTabLink Href="/settings" TabTitle="Settings" Icon="@Icons.Material.Filled.Settings" aria-label="Settings" />

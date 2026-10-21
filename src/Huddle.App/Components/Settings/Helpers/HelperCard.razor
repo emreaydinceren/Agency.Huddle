@@ -15,11 +15,12 @@
 @inject HelperBudget Budget
 @inject HelperStatusStore StatusStore
 @inject HelperDispatcher Dispatcher
+@inject HelperFeed HelperFeed
 @inject TimeProvider Clock
 
 @if (this.helper is not null)
 {
-    <MudPaper Outlined="true" Class="pa-3 mb-4 helper-card" data-helper="@this.helper.Id.Value">
+    <MudPaper Outlined="true" Class="pa-3 mb-4 helper-card" data-helper="@this.helper.Id.Value" id="@Agency.Huddle.App.Components.Feed.FeedTarget.HelperAnchor(this.helper.Id.Value)">
         <div class="helper-card-header d-flex align-center gap-2 mb-1">
             <MudText Typo="Typo.subtitle1" HtmlTag="h2">@this.helper.DisplayName</MudText>
             <StatusChip Color="@this.Chip.Color" Icon="@this.Chip.Icon" Class="helper-card-chip">@this.Chip.Text</StatusChip>
@@ -210,6 +211,7 @@
 
         this.SettingsStore.Save(this.helper.Id, new HelperSettingsRow(this.enabled, this.adapter, this.model, this.effort, this.dailyCap));
         this.LoadDraft();
+        this.ReportIfOff();
     }
 
     private void OnReset()
@@ -221,6 +223,16 @@
 
         this.SettingsStore.Delete(this.helper.Id);
         this.LoadDraft();
+        this.ReportIfOff();
+    }
+
+    /// <summary>Tells the Feed a Helper that is now off has nothing left to watch, so its pause and failing items are done.</summary>
+    private void ReportIfOff()
+    {
+        if (this.helper is not null && !this.baseline.Enabled)
+        {
+            this.HelperFeed.TurnedOff(this.helper.Id);
+        }
     }
 
     private void OnContinue()
@@ -231,6 +243,7 @@
         }
 
         this.Budget.Grant(this.helper.Id, this.baseline.ContinueGrant);
+        this.HelperFeed.Continued(this.helper.Id);
         this.LoadActivity();
     }
 }

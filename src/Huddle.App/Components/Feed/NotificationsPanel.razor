@@ -1,6 +1,6 @@
 @*
     The Right sidebar's Notifications panel (Feed spec 6.8, D-21). It shows the Feed, not only Notifications: a compact Category control with
-    the six Categories and their counts, opening on Needs you, then the rows of the chosen Category (FeedList, the Feed Tab's own rows),
+    the seven Categories and their counts, opening on Needs you, then the rows of the chosen Category (FeedList, the Feed Tab's own rows),
     "Show more", and a last row that opens the Feed Tab on the same Category. Opening the panel is what marks the Notifications it draws as
     seen: only the ones drawn, never one parked behind the "new items" pill, and only in Needs you and All, because a seen mark covers
     every Notification up to an id. The x on a row dismisses its Notification: in Needs you the row goes at once, in All it stays because
@@ -57,7 +57,7 @@
 @code {
     private FeedPager? pager;
     private FeedCategory category = FeedCategory.NeedsYou;
-    private FeedCounts counts = new(0, 0, 0, 0, 0, 0);
+    private FeedCounts counts = new(0, 0, 0, 0, 0, 0, 0);
     private FeedList? list;
     private ElementReference categoryGroup;
     private long markedUpTo;

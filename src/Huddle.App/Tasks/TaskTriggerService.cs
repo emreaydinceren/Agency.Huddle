@@ -934,7 +934,23 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
                 text = text + "\n" + sentence;
             }
 
-            await this.chat.PostAsync(room.Id, senderId, text, ct: ct).ConfigureAwait(false);
+            if (string.Equals(senderId, KnownIds.Huddle, StringComparison.Ordinal))
+            {
+                // A Huddle post is exempt from the Room's Budget, but the assignee's reply is not: into a spent Room the wake would read
+                // Woken while the reply is refused, so it is recorded as an Agent's refused wake is and not posted.
+                if (this.chat.GetBudget(room.Id).Exhausted)
+                {
+                    LogBlocked(this.logger, id, WakeBlock.BudgetPaused);
+                    return WakeOutcome.BudgetSpent;
+                }
+
+                _ = await this.chat.PostAsHuddleAsync(room.Id, text, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                await this.chat.PostAsync(room.Id, senderId, text, ct: ct).ConfigureAwait(false);
+            }
+
             if (isAgent)
             {
                 this.ownPosts.Record(senderId, room.Id, text);
@@ -973,12 +989,20 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     private void RecordOutcome(TaskId id, string assigneeName, Room? room, WakeOutcome outcome) =>
         this.activity.Record(new WakeRecord(id, assigneeName, room?.Id, room?.Name, outcome, this.clock.GetUtcNow()));
 
-    /// <summary>The actor as a Room Member (Spec §10.4): the Human for a Human or outside-Huddle change; the Agent's own user otherwise.</summary>
+    /// <summary>
+    /// The sender of the wake (Spec §10.4): Huddle for a Helper's change (ADR-0065), since a Helper is not the Human and a Message from
+    /// the Human would answer the Human's own Mentions; the Human for a Human or outside-Huddle change; the Agent's own user otherwise.
+    /// </summary>
     /// <param name="actor">Who made the change.</param>
     /// <param name="ct">The service lifetime.</param>
     /// <returns>The sender's user id, or <see langword="null"/> when an Agent actor has no user row.</returns>
     private async Task<string?> ResolveSenderIdAsync(TaskActor actor, CancellationToken ct)
     {
+        if (actor.Kind == TaskActorKind.Helper)
+        {
+            return KnownIds.Huddle;
+        }
+
         if (actor.Kind != TaskActorKind.Agent)
         {
             return KnownIds.Human;
@@ -1002,7 +1026,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     /// <item><description>No Room found: <see cref="ChatService.CreateRoomForAsync(IReadOnlyList{string}, CancellationToken)"/> creates one for the last step's S without the Human (it adds the Human itself, and one Agent gives the direct Room).</description></item>
     /// </list>
     /// Steps 2-4 run in the Task's Team Scope (found and created scoped to <see cref="TaskLocation.Team"/>); a Team the
-    /// catalog does not know stays at the root. Every set tried contains the sender, so <see cref="ChatService.PostAsync"/>'s membership check
+    /// catalog does not know stays at the root. Every set tried contains the sender (Huddle, which takes no seat, aside), so <see cref="ChatService.PostAsync"/>'s membership check
     /// passes. Runs inside the fire gate, which is what keeps two racing fires from creating two Rooms.
     /// </summary>
     /// <param name="task">The latest Task.</param>
@@ -1025,7 +1049,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         }
 
         AddOnce(memberSet, assignee.Id);
-        if (!memberSet.Contains(senderId, StringComparer.Ordinal))
+
+        // Huddle takes no seat in any Room (ADR-0065), so there is no set it must belong to; every other sender must.
+        if (!string.Equals(senderId, KnownIds.Huddle, StringComparison.Ordinal) && !memberSet.Contains(senderId, StringComparer.Ordinal))
         {
             memberSet = [KnownIds.Human, senderId];
             AddOnce(memberSet, assignee.Id);
@@ -1074,7 +1100,8 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         }
 
         IReadOnlyList<User> members = await this.directory.GetRoomMembersAsync(originId, ct).ConfigureAwait(false);
-        bool senderIsMember = members.Any(m => string.Equals(m.Id, senderId, StringComparison.Ordinal));
+        bool senderIsMember = string.Equals(senderId, KnownIds.Huddle, StringComparison.Ordinal)
+            || members.Any(m => string.Equals(m.Id, senderId, StringComparison.Ordinal));
         bool assigneeIsMember = members.Any(m => string.Equals(m.Id, assignee.Id, StringComparison.Ordinal));
         return senderIsMember && assigneeIsMember ? origin : null;
     }

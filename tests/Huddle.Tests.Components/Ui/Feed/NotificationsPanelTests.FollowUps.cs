@@ -99,6 +99,6 @@ public sealed partial class NotificationsPanelTests
         cut.WaitForAssertion(() => Assert.Equal("All", ChosenWord(cut)));
 
         await cut.Find("[role='radiogroup']").KeyDownAsync(new KeyboardEventArgs { Key = "ArrowLeft" });
-        cut.WaitForAssertion(() => Assert.Equal("Gates", ChosenWord(cut)));
+        cut.WaitForAssertion(() => Assert.Equal("Helpers", ChosenWord(cut)));
     }
 }

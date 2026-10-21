@@ -17,4 +17,7 @@ internal enum FeedSegmentKind
 
     /// <summary>A Library document reference chip.</summary>
     Document,
+
+    /// <summary>A Helper reference chip, which opens its card on Settings > Helpers.</summary>
+    Helper,
 }

@@ -44,6 +44,8 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.RoomJoined, "room-joined"),
             (FeedSourceType.RoomArchived, "room-archived"),
             (FeedSourceType.DocumentChanged, "document-changed"),
+            (FeedSourceType.HelperPaused, "helper-paused"),
+            (FeedSourceType.HelperFailing, "helper-failing"),
         ];
 
         Assert.Equal(AllTypes.Length, expected.Length);
@@ -127,6 +129,31 @@ public sealed class FeedPayloadsTests
         Assert.IsType<TaskCreatedPayload>(complete.Payload);
     }
 
+    /// <summary>The Helper actor kind is written as <c>helper</c>, and a row written before the kind existed still reads as it did.</summary>
+    [Fact]
+    public void ActorKind_Helper_IsWrittenAsHelper()
+    {
+        string json = FeedPayloads.Serialize(FeedActorKind.Helper, FeedTestSupport.SamplePayload(FeedSourceType.TaskGateOn));
+
+        Assert.Contains("\"actorKind\":\"helper\"", json, StringComparison.Ordinal);
+        Assert.Equal(FeedActorKind.Helper, FeedPayloads.Read(json, FeedSourceType.TaskGateOn).ActorKind);
+        Assert.Equal(FeedActorKind.Agent, FeedPayloads.Read("{\"v\":1,\"actorKind\":\"agent\",\"data\":{}}", FeedSourceType.TaskGateOn).ActorKind);
+    }
+
+    /// <summary>A gate-on row stored before the Reason field existed reads with a null Reason, and one with a Reason keeps it.</summary>
+    [Fact]
+    public void Read_TaskGateRow_WithoutReason_ReadsNullReason()
+    {
+        const string Old = "{\"v\":1,\"actorKind\":\"agent\",\"data\":{\"id\":\"GRO-1\",\"title\":\"T\",\"team\":\"Growth\",\"action\":null}}";
+        string withReason = FeedPayloads.Serialize(FeedActorKind.Helper, new TaskGatePayload("GRO-1", "T", "Growth", null, "Sends a document outside the Team"));
+
+        TaskGatePayload old = Assert.IsType<TaskGatePayload>(FeedPayloads.Read(Old, FeedSourceType.TaskGateOn).Payload);
+        TaskGatePayload fresh = Assert.IsType<TaskGatePayload>(FeedPayloads.Read(withReason, FeedSourceType.TaskGateOn).Payload);
+
+        Assert.Null(old.Reason);
+        Assert.Equal("Sends a document outside the Team", fresh.Reason);
+    }
+
     /// <summary>Every actor kind has its own wire name and survives the envelope.</summary>
     [Fact]
     public void ActorKind_EveryKind_RoundTrips()
@@ -138,11 +165,11 @@ public sealed class FeedPayloadsTests
         }
     }
 
-    /// <summary>Every source type is in exactly one of Tasks, Gates, Rooms or Documents, and All and Needs you list no types.</summary>
+    /// <summary>Every source type is in exactly one of Tasks, Gates, Rooms, Documents or Helpers, and All and Needs you list no types.</summary>
     [Fact]
     public void Categories_EveryType_IsInExactlyOneTypeSegment()
     {
-        FeedCategory[] segments = [FeedCategory.Tasks, FeedCategory.Gates, FeedCategory.Rooms, FeedCategory.Documents];
+        FeedCategory[] segments = [FeedCategory.Tasks, FeedCategory.Gates, FeedCategory.Rooms, FeedCategory.Documents, FeedCategory.Helpers];
         foreach (FeedSourceType type in AllTypes)
         {
             int hits = segments.Count(segment => FeedCategories.SourceTypes(segment).Contains(type));
@@ -169,6 +196,8 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.RoomBudget, FeedCategory.Rooms),
             (FeedSourceType.RoomArchived, FeedCategory.Rooms),
             (FeedSourceType.DocumentChanged, FeedCategory.Documents),
+            (FeedSourceType.HelperPaused, FeedCategory.Helpers),
+            (FeedSourceType.HelperFailing, FeedCategory.Helpers),
         ];
 
         Assert.All(expected, row => Assert.Equal(row.Category, FeedCategories.Of(row.Type)));
@@ -185,6 +214,7 @@ public sealed class FeedPayloadsTests
             ("documents", FeedCategory.Documents),
             ("rooms", FeedCategory.Rooms),
             ("gates", FeedCategory.Gates),
+            ("helpers", FeedCategory.Helpers),
             ("bogus", FeedCategory.All),
             (null, FeedCategory.All),
         ];

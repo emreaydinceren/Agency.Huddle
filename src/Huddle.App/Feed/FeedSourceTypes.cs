@@ -24,6 +24,8 @@ internal static class FeedSourceTypes
         FeedSourceType.RoomJoined => "room-joined",
         FeedSourceType.RoomArchived => "room-archived",
         FeedSourceType.DocumentChanged => "document-changed",
+        FeedSourceType.HelperPaused => "helper-paused",
+        FeedSourceType.HelperFailing => "helper-failing",
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 

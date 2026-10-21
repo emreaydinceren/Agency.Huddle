@@ -791,7 +791,7 @@ judged again.
 
 | # | Question | Recommendation |
 | --- | --- | --- |
-| OD-1 | The Helper's wake is posted as the Human, which resets the Room Budget and the assignee's token Budget. Acceptable? | **Accept for this slice.** It happens at most once per Task and at most the daily cap a day. If the Feed (slice 3) gives Huddle a sender that is neither the Human nor an Agent, move the wake to it |
+| OD-1 | The Helper's wake is posted as the Human, which resets the Room Budget and the assignee's token Budget. Acceptable? | **Closed by slice 3 (2026-10-20).** The wake is posted by Huddle, a sender that is neither the Human nor an Agent, so it resets neither Budget and answers no Mention of the Human ([ADR-0065](adr/0065-huddle-posts-as-itself.md)) |
 | OD-2 | The default Model is an exact id from `claude-agent-acp`'s catalog. When an adapter update renames it, the Helper fails with "doesn't offer the model". Match a family ("haiku") instead? | **Exact id, visible failure.** A family match could pick a different price tier without telling anyone. Task HL-0 records the id |
 | OD-3 | An adapter's built-in read-only tools may run without a permission request. Switch them off through `_meta` too? | **Spike in HL-0** whether `claude-agent-acp` honours a tool allow-list in `_meta.claudeCode.options`. If it does, send an empty list. If not, the empty working folder and the replaced system prompt are the defence |
 | OD-4 | Overrides made between the Human gate shipping (2026-10-19) and this slice are not in the store | **Do nothing.** The window is a day or two. Seeding from Change logs would need a one-off scan of every Task |
@@ -826,9 +826,9 @@ judged again.
 ## 12. Hooks for slice 3
 
 > [!NOTE]
-> Slice 3 is designed in [Huddle.HelpersInFeed-Specifications.md](Huddle.HelpersInFeed-Specifications.md).
-> It keeps the cap and failure hooks below, and replaces the separate Verdict item with the
-> `task-gate-on` item `TaskService` already posts.
+> Slice 3 is built ([Huddle.HelpersInFeed-Specifications.md](Huddle.HelpersInFeed-Specifications.md)).
+> `HelperFeed` posts the cap and failure items below; the separate Verdict item became the
+> `task-gate-on` item `TaskService` already posts, now a Notification with the Helper's reason.
 
 The Feed's own design is ADR-0063 and its spec. These are the places Helper code will call
 `IFeedPublisher.Post` and `Resolve` once it exists; this slice leaves them as plain method calls

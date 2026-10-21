@@ -23,10 +23,11 @@
         }
         var continues = previousMessage is not null
             && MessageDisplay.ContinuesGroup(previousMessage.SenderId, previousMessage.Timestamp, message.SenderId, message.Timestamp);
-        @if (this.HumanIds.Contains(message.SenderId))
+        bool fromHuddle = string.Equals(message.SenderId, KnownIds.Huddle, StringComparison.Ordinal);
+        @if (this.HumanIds.Contains(message.SenderId) || fromHuddle)
         {
-            @* A Task wake-up is posted as the Human but is not something they typed, so it is a slim,
-               muted system row. The agent-facing "Call get_task ..." line is dropped from view. *@
+            @* A Task wake-up is posted by the Human's edit, or by Huddle after a Helper's, but is not something the Human typed,
+               so it is a slim, muted system row. The agent-facing "Call get_task ..." line is dropped from view. *@
             @if (MessageDisplay.TryParseTaskWake(message.Text, out var wake))
             {
                 <details class="system-row" data-message-id="@message.Id" tabindex="-1">
@@ -49,33 +50,41 @@
                 continue;
             }
 
-            @* The Human's own Message needs no avatar or name to say who wrote it: its side of the
-               transcript says that, as in any chat app. Consecutive ones are tighter, and the time
-               stays in the tooltip. The avatar, gutter and meta line are rendered but hidden in app.css;
-               a style pack that sets the Human's Message as an ordinary row (Nordic, ADR-0057) shows them. *@
-            var humanName = SenderDisplay.NameOf(message, this.HumanName);
-            <div class="@(continues ? "message-row human grouped" : "message-row human")" title="@time" data-message-id="@message.Id" tabindex="-1">
-                @if (continues)
-                {
-                    <span class="message-gutter"></span>
-                }
-                else
-                {
-                    <ProfileAvatar Name="@humanName" Avatar="this.Avatars.Get(humanName)" Size="Size.Small" Class="avatar-transcript" />
-                    <div class="message-meta">
-                        <span class="message-sender">@humanName</span>
-                        <span class="message-time">@time</span>
-                    </div>
-                }
-                <div class="message-bubble message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver, this.Mentions))</div>
-                <MessageReferences Message="@message" />
-            </div>
-            continue;
+            @if (!fromHuddle)
+            {
+                @* The Human's own Message needs no avatar or name to say who wrote it: its side of the
+                   transcript says that, as in any chat app. Consecutive ones are tighter, and the time
+                   stays in the tooltip. The avatar, gutter and meta line are rendered but hidden in app.css;
+                   a style pack that sets the Human's Message as an ordinary row (Nordic, ADR-0057) shows them. *@
+                var humanName = SenderDisplay.NameOf(message, this.HumanName);
+                <div class="@(continues ? "message-row human grouped" : "message-row human")" title="@time" data-message-id="@message.Id" tabindex="-1">
+                    @if (continues)
+                    {
+                        <span class="message-gutter"></span>
+                    }
+                    else
+                    {
+                        <ProfileAvatar Name="@humanName" Avatar="this.Avatars.Get(humanName)" Size="Size.Small" Class="avatar-transcript" />
+                        <div class="message-meta">
+                            <span class="message-sender">@humanName</span>
+                            <span class="message-time">@time</span>
+                        </div>
+                    }
+                    <div class="message-bubble message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver, this.Mentions))</div>
+                    <MessageReferences Message="@message" />
+                </div>
+                continue;
+            }
         }
         <div class="@(continues ? "message-row grouped" : "message-row")" data-message-id="@message.Id" tabindex="-1">
             @if (continues)
             {
                 <span class="message-gutter" title="@time"></span>
+            }
+            else if (fromHuddle)
+            {
+                @* A Message Huddle wrote itself (ADR-0065) has no Teammate to draw: it wears Huddle's mark, as it does in the Feed. *@
+                <span class="huddle-mark" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.ToggleOn" Size="Size.Small" /></span>
             }
             else
             {

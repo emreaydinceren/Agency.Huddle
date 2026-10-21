@@ -2,7 +2,7 @@
 
 Prove, in a real browser, that the Needs Human Helper turns the Human gate on for a Task a Teammate wrote that leaves the team, leaves a harmless Task alone, never judges a Task the Human turned the gate off on, pauses at its daily cap and asks before it spends more, and fails without touching the Task; and that Settings › Helpers shows and saves all of that. The automated suite proves the dispatcher, the budget, the trigger, the Helper's apply step and the card with a fake process in place of the adapter (no test may reach the real runner, [Rules](../rules.md)); this page proves what only the real adapter and a browser show: that a Haiku call returns JSON the Helper can read, what the card prints, and that a restart loses nothing. The design is [the Helpers spec](../../Huddle.Helpers-Specifications.md); its use cases U-1 to U-12 map to the tests below, and the decision record is [ADR-0064](../../adr/0064-a-helper-judges-an-event-and-the-app-applies-its-verdict.md).
 
-**7 tests** · 3 free · 4 paid 💰 · about 1.2 hours. Written 2026-10-20; **not yet run by a person**. The real adapter was driven by the HL-0 spike on 2026-10-20 (Haiku at low effort: one call cost $0.0024 with the toolless session settings) and by the opt-in automated lane `TEAM_E2E_HELPERS=1 dotnet test tests/Huddle.Tests.Agents -- --filter-class "*HelperLiveTests"` (seven calls: a parseable Verdict with no tool call and under two cents, and the right answer for one outward and one internal Task; it passed on 2026-10-20). None of the browser tests below has been run end to end.
+**8 tests** · 3 free · 5 paid 💰 · about 1.4 hours. Written 2026-10-20; **not yet run by a person**. The real adapter was driven by the HL-0 spike on 2026-10-20 (Haiku at low effort: one call cost $0.0024 with the toolless session settings) and by the opt-in automated lane `TEAM_E2E_HELPERS=1 dotnet test tests/Huddle.Tests.Agents -- --filter-class "*HelperLiveTests"` (seven calls: a parseable Verdict with no tool call and under two cents, and the right answer for one outward and one internal Task; it passed on 2026-10-20). None of the browser tests below has been run end to end.
 
 Read [the manual test script](../manual-tests.md) first, then [Common procedures](common.md), which defines the terminals, procedures and oracles this page names. Both are assumed below.
 
@@ -174,6 +174,27 @@ Run [`P-BUILD`](common.md#p-build). The paid tests need the **real** Claude adap
 
 - At step 2 the Task is exactly as Leo saved it: the gate is off and the Change log has only Leo's entries.
 - The card shows a Warning `Last error <time> · The Adapter 'nope' is not configured. Pick another on this card.` (or the installed-Adapter wording of your setup), and the count of calls today did not move.
+
+### HELPERS-08 — The wake-up is Huddle's, and it leaves your Mentions alone (Helpers in the Feed §5.6)
+
+**Paid 💰** · about 10 min · one Haiku call and one short Turn
+
+*Proves ADR-0065: the wake-up after a Helper turns the gate on is written by Huddle, not by you, so it does not answer a Mention of you.*
+
+**Before you start**
+
+- Setup is done. In Leo's Room have Leo Mention you and wait (`Ask me which colour, then wait.`). The Room is in the **Needs you** card.
+
+**Steps**
+
+1. Ask Leo to create a Task that leaves the team, `Send the signed contract to Acme`. Wait 40 seconds.
+2. Open the Room the Task came from and read the line the Helper's change caused.
+3. Look at the **Needs you** card, then at the Room's Budget bar.
+
+**Pass if — all of these**
+
+- At step 2 the line is a muted one-line row `<ID> changed by Needs Human (Helper) · human gate on …`, and hovering or opening it shows no avatar or name of yours; Leo answers it as a Teammate would.
+- At step 3 the Room is still in **Needs you** with its Mention, and the Budget bar did not reset (the count of Leo's Messages since you last spoke did not fall to 0 because of the wake-up).
 
 ---
 

@@ -59,6 +59,9 @@ public sealed class FeedItemRowTests
             (Item(FeedSourceType.RoomJoined, new RoomJoinedPayload("r1", "Backend", null, "Kai")), "Kai joined Backend", null),
             (Item(FeedSourceType.RoomArchived, new RoomArchivedPayload("r1", "Backend", null)), "Nova archived Backend", null),
             (Item(FeedSourceType.DocumentChanged, new DocumentChangedPayload(Path.Combine(root, "plan.md"), "Notes", "plan.md", "edited", "Reworded the intro")), "Nova edited plan.md · Reworded the intro", null),
+            (Item(FeedSourceType.TaskGateOn, new TaskGatePayload("GRO-1", "T", "Growth", null, "Sends a document outside the Team"), notify: true, actor: new FeedActor(FeedActorKind.Helper, "Needs Human (Helper)")), "Needs Human (Helper) turned on Requires your acceptance for #GRO-1 T · Sends a document outside the Team", "Asked 12:00 · you can turn it off on the Task"),
+            (Item(FeedSourceType.HelperPaused, new HelperPausedPayload("NeedsHuman", "Needs Human", 50, 0), notify: true, actor: huddle), "Huddle paused Needs Human: its daily cap of 50 calls is reached · Teammates' Tasks are not judged until you continue or the day ends", "Paused 12:00 · Continue is on the Helper's card"),
+            (Item(FeedSourceType.HelperFailing, new HelperFailingPayload("NeedsHuman", "Needs Human", 3, "The adapter isn't signed in"), notify: true, actor: huddle), "Huddle Needs Human failed 3 times in a row · The adapter isn't signed in", "Since 12:00 · Tasks are not being judged"),
         ];
 
         foreach ((FeedItem item, string summary, string? status) in rows)
@@ -255,5 +258,25 @@ public sealed class FeedItemRowTests
         await cut.InvokeAsync(() => cut.Find(".feed-row-time").ClickAsync());
 
         Assert.Equal("http://localhost/rooms/r1", ctx.Services.GetRequiredService<NavigationManager>().Uri);
+    }
+
+    /// <summary>A Helper's row wears the Helper mark instead of a Teammate's avatar, its chip links to the Helper's card, and the row opens it.</summary>
+    [Fact]
+    public async Task Row_HelperItem_DrawsTheMarkAndOpensTheHelperCard()
+    {
+        using LibraryFileServiceFixture library = LibraryFileServiceFixture.Build();
+        await using MudBunitContext ctx = FeedTestData.NewContext(library);
+        NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
+        FeedItem failing = Item(FeedSourceType.HelperFailing, new HelperFailingPayload("NeedsHuman", "Needs Human", 3, "x"), notify: true, actor: new FeedActor(FeedActorKind.Helper, "Needs Human (Helper)"));
+
+        IRenderedComponent<FeedItemRow> cut = this.Render(ctx, [failing]);
+
+        Assert.Empty(cut.FindAll(".mud-avatar"));
+        Assert.NotNull(cut.Find(".feed-row-mark .mud-icon-root"));
+        Assert.Equal("/settings/helpers#helper-NeedsHuman", cut.Find(".feed-chip-helper a").GetAttribute("href"));
+
+        cut.Find(".feed-row").Click();
+
+        Assert.Equal("settings/helpers#helper-NeedsHuman", navigation.ToBaseRelativePath(navigation.Uri));
     }
 }

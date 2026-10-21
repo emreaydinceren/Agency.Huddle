@@ -1,8 +1,10 @@
 using Agency.Huddle.App.Components.Feed;
 using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.Feed;
+using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.Tests.Tasks;
 using AngleSharp.Dom;
 using Bunit;
 using Microsoft.AspNetCore.Components;
@@ -73,6 +75,8 @@ public sealed class FeedCardTests
     [InlineData(FeedSourceType.RoomJoined, "joined")]
     [InlineData(FeedSourceType.RoomArchived, "archived")]
     [InlineData(FeedSourceType.RequestAwaitsYou, "request")]
+    [InlineData(FeedSourceType.HelperPaused, "gauge")]
+    [InlineData(FeedSourceType.HelperFailing, "alert")]
     public async Task Card_KindBadge_NamesTheKind(FeedSourceType type, string badge)
     {
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
@@ -96,6 +100,8 @@ public sealed class FeedCardTests
         FeedSourceType.RoomJoined => new RoomJoinedPayload("room-1", "Backend", "Growth", "Kai"),
         FeedSourceType.RoomArchived => new RoomArchivedPayload("room-1", "Backend", "Growth"),
         FeedSourceType.DocumentChanged => new DocumentChangedPayload("C:/none/plan.md", "Notes", "plan.md", "edited", "Tightened"),
+        FeedSourceType.HelperPaused => new HelperPausedPayload("NeedsHuman", "Needs Human", 50, 0),
+        FeedSourceType.HelperFailing => new HelperFailingPayload("NeedsHuman", "Needs Human", 3, "The adapter isn't signed in"),
         _ => new RoomWaitPayload("room-1", "Backend", "Growth"),
     };
 
@@ -475,9 +481,9 @@ public sealed class FeedCardTests
         Assert.Equal(LibraryLinkQuery.BuildPageUri(path).TrimStart('/'), Where(navigation));
     }
 
-    /// <summary>Clicking the card body opens the target; the chevron does not.</summary>
+    /// <summary>Clicking the card's empty space expands it, as the chevron does, and opens nothing; the Open button and the chips open the target.</summary>
     [Fact]
-    public async Task Card_BodyClick_OpensTarget_ChevronDoesNot()
+    public async Task Card_BodyClick_Expands_AndOpensNothing()
     {
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         await using MudBunitContext ctx = host.NewContext();
@@ -488,10 +494,10 @@ public sealed class FeedCardTests
 
         card.Find("button[aria-label='Show details']").Click();
         Assert.Equal(1, toggled);
-        Assert.Equal(before, navigation.Uri);
         card.Find(".feed-card-main").Click();
 
-        Assert.Equal("tasks/item/GRO-1", Where(navigation));
+        Assert.Equal(2, toggled);
+        Assert.Equal(before, navigation.Uri);
     }
 
     /// <summary>Expanding and clicking through a card writes nothing: no queued command, no new Feed row and the Task file is unchanged.</summary>
@@ -513,5 +519,113 @@ public sealed class FeedCardTests
         Assert.False(host.Feed.Queue.Reader.TryRead(out _));
         Assert.Equal(rows, host.Feed.Store.Page(new FeedQuery(null, 50, null, null)).Count);
         Assert.Equal(taskText, await File.ReadAllTextAsync(task.Path, Xunit.TestContext.Current.CancellationToken));
+    }
+
+    private static FeedItem HelperItem(FeedSourceType type, FeedPayload payload) =>
+        FeedTestData.Item(type, payload, notify: true, actor: FeedActor.Huddle) with { TargetKey = "helper:NeedsHuman" };
+
+    /// <summary>A Helper's own gate-on item wears the Helper mark, not a Teammate's avatar, and its name is the Task actor's.</summary>
+    [Fact]
+    public async Task Card_HelperActor_DrawsTheHelperMark()
+    {
+        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        await using MudBunitContext ctx = host.NewContext();
+        FeedItem item = FeedTestData.Item(
+            FeedSourceType.TaskGateOn,
+            new TaskGatePayload("GRO-1", "Email the pricing sheet", "Growth", null, "Sends a document outside the Team"),
+            notify: true,
+            actor: new FeedActor(FeedActorKind.Helper, "Needs Human (Helper)"));
+
+        IRenderedComponent<FeedCard> card = Render(ctx, item);
+
+        Assert.Empty(card.FindAll(".mud-avatar"));
+        Assert.Empty(card.FindAll(".feed-card-avatar-button"));
+        Assert.NotNull(card.Find(".feed-card-mark .mud-icon-root"));
+        Assert.Equal("Needs Human (Helper)", card.Find(".feed-card-actor").TextContent.Trim());
+        Assert.Equal("Sends a document outside the Team", card.Find(".feed-card-purpose").TextContent.Trim());
+    }
+
+    /// <summary>A Helper item names the Helper in a chip that opens its card.</summary>
+    [Fact]
+    public async Task Card_HelperPaused_ChipOpensTheHelperCard()
+    {
+        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        await using MudBunitContext ctx = host.NewContext();
+        IRenderedComponent<FeedCard> card = Render(ctx, HelperItem(FeedSourceType.HelperPaused, PayloadFor(FeedSourceType.HelperPaused)));
+
+        Assert.Equal("Huddle", card.Find(".feed-card-actor").TextContent.Trim());
+        Assert.Equal("Needs Human", Words(card.Find(".feed-chip-helper").TextContent));
+        Assert.Equal("Helpers", Words(card.Find(".feed-meta-context").TextContent));
+
+        Assert.Equal("/settings/helpers#helper-NeedsHuman", card.Find(".feed-chip-helper a").GetAttribute("href"));
+    }
+
+    /// <summary>An expanded Helper item previews the Helper read-only: state, what it runs on, today's usage, the last result and the last error.</summary>
+    [Fact]
+    public async Task Preview_Helper_ShowsStateUsageLastResultAndError()
+    {
+        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        HelperId id = host.Helper.Id;
+        for (int i = 0; i < 50; i++)
+        {
+            _ = host.HelperBudget.TryReserve(id, 50);
+        }
+
+        _ = host.HelperBudget.TryReserve(id, 50);
+        host.HelperStatuses.RecordSuccess(id, FeedTestData.Now.AddMinutes(-90), "Turned the gate on for GRO-41");
+        _ = host.HelperStatuses.RecordFailure(id, FeedTestData.Now.AddMinutes(-10), "The adapter isn't signed in");
+        await using MudBunitContext ctx = host.NewContext();
+        NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
+
+        IRenderedComponent<FeedCard> card = Render(ctx, HelperItem(FeedSourceType.HelperPaused, PayloadFor(FeedSourceType.HelperPaused)), expanded: true);
+
+        Assert.Equal("Helper · Settings", Words(card.Find(".feed-card-caption").TextContent));
+        Assert.Equal("Scripted", Words(card.Find(".feed-helper-preview .feed-preview-title").TextContent));
+        Assert.Equal("On", Words(card.Find(".feed-helper-state").TextContent));
+        Assert.Equal("50 of 50 calls today · 1 skipped while paused", Words(card.Find(".feed-helper-usage").TextContent));
+        Assert.Equal("10:30 · Turned the gate on for GRO-41", Words(card.Find(".feed-helper-last-run").TextContent));
+        Assert.Equal("11:50 · The adapter isn't signed in", Words(card.Find(".feed-helper-last-error").TextContent));
+        Assert.Equal("Open Helper settings", Words(card.Find(".feed-btn-open").TextContent));
+
+        card.Find(".feed-btn-open").Click();
+
+        Assert.Equal("settings/helpers#helper-NeedsHuman", Where(navigation));
+    }
+
+    /// <summary>A Helper that is not registered any more says so instead of previewing it.</summary>
+    [Fact]
+    public async Task Preview_Helper_Unregistered_SaysItIsGone()
+    {
+        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        await using MudBunitContext ctx = host.NewContext();
+        FeedItem item = HelperItem(FeedSourceType.HelperFailing, new HelperFailingPayload("Retired", "Retired", 3, "x"));
+
+        IRenderedComponent<FeedCard> card = Render(ctx, item, expanded: true);
+
+        Assert.Equal("This Helper is no longer available", Words(card.Find(".feed-preview-deleted").TextContent));
+    }
+
+    /// <summary>A Task the Needs Human Helper gated shows the Helper's own line under the gate sentence; a Task a person gated does not.</summary>
+    [Fact]
+    public async Task Preview_Task_HelperGatedTask_ShowsTheHelpersLine()
+    {
+        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        _ = host.Tasks.SeedOnDisk(TestTasks.Make(
+            id: "GRO-1",
+            title: "Draft the pricing page",
+            status: TaskState.InProgress,
+            assignee: "Nova",
+            location: new TaskLocation("Growth", null, false),
+            changeLog: [TestTasks.Entry("2026-10-20T11:00:00Z", "Scripted (Helper)", "human gate on (reason: Sends a document outside the Team)")]) with { HumanGate = true });
+        _ = host.SeedTask("GRO-2", gated: true);
+        await using MudBunitContext ctx = host.NewContext();
+
+        IRenderedComponent<FeedCard> helperGated = Render(ctx, FeedTestData.Item(FeedSourceType.TaskGateOn, new TaskGatePayload("GRO-1", "Draft the pricing page", "Growth", null, "Sends a document outside the Team"), notify: true) with { TargetKey = "GRO-1" }, expanded: true);
+        IRenderedComponent<FeedCard> personGated = Render(ctx, FeedTestData.Item(FeedSourceType.TaskGateOn, new TaskGatePayload("GRO-2", "Draft the pricing page", "Growth", null)) with { TargetKey = "GRO-2" }, expanded: true);
+
+        Assert.Equal(
+            "Turned on by the Scripted Helper: Sends a document outside the Team. If you turn it off, the Helper won't ask about this Task again.",
+            Words(helperGated.Find(".feed-preview-helper-line").TextContent));
+        Assert.Empty(personGated.FindAll(".feed-preview-helper-line"));
     }
 }

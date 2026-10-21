@@ -31,7 +31,7 @@ public sealed partial class NotificationsPanelTests
     [GeneratedRegex(@"\s+")]
     private static partial Regex Whitespace();
 
-    /// <summary>The panel has the six Categories with their counts, and opens on Needs you.</summary>
+    /// <summary>The panel has the seven Categories with their counts, and opens on Needs you.</summary>
     [Fact]
     public async Task Categories_ShowTheirCounts_AndOpenOnNeedsYou()
     {
@@ -44,7 +44,7 @@ public sealed partial class NotificationsPanelTests
 
         IRenderedComponent<NotificationsPanel> cut = Render(ctx);
 
-        Assert.Equal(["All 3", "Needs you 2", "Tasks 1", "Documents 0", "Rooms 0", "Gates 2"], ChipLabels(cut));
+        Assert.Equal(["All 3", "Needs you 2", "Tasks 1", "Documents 0", "Rooms 0", "Gates 2", "Helpers 0"], ChipLabels(cut));
         IElement selected = Assert.Single(cut.FindAll(".mud-chip[aria-checked='true']"));
         Assert.StartsWith("Needs you", Whitespace().Replace(selected.TextContent, " ").Trim(), StringComparison.Ordinal);
         Assert.Equal(2, cut.FindAll(".feed-row").Count);

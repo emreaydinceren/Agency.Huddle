@@ -84,6 +84,7 @@
 }
 
 .feed-badge-gates,
+.feed-badge-helpers,
 .feed-badge-needsyou {
     color: var(--mud-palette-warning-text);
     background-color: var(--mud-palette-warning);

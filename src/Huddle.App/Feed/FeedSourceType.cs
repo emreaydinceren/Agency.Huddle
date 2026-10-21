@@ -47,4 +47,10 @@ public enum FeedSourceType
 
     /// <summary>A Library document changed.</summary>
     DocumentChanged,
+
+    /// <summary>A Helper stopped judging because its daily cap was reached.</summary>
+    HelperPaused,
+
+    /// <summary>A Helper failed several times in a row.</summary>
+    HelperFailing,
 }

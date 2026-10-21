@@ -1081,7 +1081,7 @@ internal sealed class TaskService : IDisposable
             return (new TaskResult.Conflict(this.store.Get(current.Id) ?? current, []), null);
         }
 
-        TaskChange change = new(current, written, diff, actor, entry);
+        TaskChange change = new(current, written, diff, actor, entry, Reason: resolvedPatch.Reason);
         return (new TaskResult.Saved(written, change), change);
     }
 

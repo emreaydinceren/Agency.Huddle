@@ -18,6 +18,7 @@ internal sealed class TaskFeedStartup(
     /// <summary>The Notification types that have a resolution rule.</summary>
     private static readonly FeedSourceType[] ResolvableTypes =
     [
+        FeedSourceType.TaskGateOn,
         FeedSourceType.TaskNeedsYou,
         FeedSourceType.TaskAssignedToYou,
         FeedSourceType.RequestAwaitsYou,

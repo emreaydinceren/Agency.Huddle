@@ -29,6 +29,8 @@ internal static class FeedPayloads
         FeedSourceType.RoomJoined => typeof(RoomJoinedPayload),
         FeedSourceType.RoomArchived => typeof(RoomArchivedPayload),
         FeedSourceType.DocumentChanged => typeof(DocumentChangedPayload),
+        FeedSourceType.HelperPaused => typeof(HelperPausedPayload),
+        FeedSourceType.HelperFailing => typeof(HelperFailingPayload),
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 
@@ -108,6 +110,7 @@ internal static class FeedPayloads
         FeedActorKind.Agent => "agent",
         FeedActorKind.Huddle => "huddle",
         FeedActorKind.OutsideHuddle => "outside-huddle",
+        FeedActorKind.Helper => "helper",
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 
@@ -117,6 +120,7 @@ internal static class FeedPayloads
         "agent" => FeedActorKind.Agent,
         "huddle" => FeedActorKind.Huddle,
         "outside-huddle" => FeedActorKind.OutsideHuddle,
+        "helper" => FeedActorKind.Helper,
         _ => null,
     };
 

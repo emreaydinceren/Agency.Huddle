@@ -34,13 +34,23 @@ internal static class TaskFeedRules
             posts.Add(new(FeedSourceType.TaskCreated, id, actor, false, new TaskCreatedPayload(id, after.Title, team, after.Assignee)));
         }
 
-        if (after.IsGated && before?.IsGated != true && !byHuman)
-        {
-            posts.Add(new(FeedSourceType.TaskGateOn, id, actor, false, new TaskGatePayload(id, after.Title, team, after.Action)));
-        }
-
         bool waits = Waits(after);
         bool waited = before is not null && Waits(before);
+        if (after.IsGated && before?.IsGated != true && !byHuman)
+        {
+            bool byHelper = change.Actor.Kind == TaskActorKind.Helper;
+
+            // When the same change makes the Task wait in Needs You, that Notification carries the ask (one ask per Task at a time),
+            // so the gate-on stays Activity with its reason rather than a Notification born resolved.
+            bool notify = byHelper && !(waits && !waited);
+            posts.Add(new(FeedSourceType.TaskGateOn, id, actor, notify, new TaskGatePayload(id, after.Title, team, after.Action, byHelper ? change.Reason : null)));
+        }
+
+        if (before is not null && GateAskEnded(change, waits && before.IsGated, waited))
+        {
+            resolutions.Add(new(id, FeedSourceType.TaskGateOn));
+        }
+
         if (waits && !waited && !byHuman)
         {
             Proof proof = proofOf(after);
@@ -61,6 +71,19 @@ internal static class TaskFeedRules
 
         return new FeedEffects(posts, resolutions);
     }
+
+    /// <summary>
+    /// Whether this change ends the question a Helper's gate-on Notification asks the Human: the gate went off, the Human decided,
+    /// the Task started waiting in Needs You (that Notification supersedes this one), or the Task closed.
+    /// </summary>
+    /// <param name="change">The change.</param>
+    /// <param name="waits">Whether the Task now waits in Needs You.</param>
+    /// <param name="waited">Whether it waited before.</param>
+    private static bool GateAskEnded(TaskChange change, bool waits, bool waited) =>
+        (change.Before?.IsGated == true && !change.After.IsGated)
+        || change.Decision is not null
+        || (waits && !waited)
+        || change.After.Location.Closed;
 
     /// <summary>Adds the Notifications about a Task assigned to the Human and about a Request only the Human can confirm.</summary>
     /// <param name="change">The change.</param>
@@ -119,6 +142,7 @@ internal static class TaskFeedRules
             FeedSourceType.TaskNeedsYou => Waits(task),
             FeedSourceType.TaskAssignedToYou => TaskQuery.NeedsYou(task, humanName),
             FeedSourceType.RequestAwaitsYou => AwaitsConfirmation(task, teamHasConfirmer, out _),
+            FeedSourceType.TaskGateOn => task.IsGated && !task.Location.Closed && !Waits(task) && !DecidedSinceGateOn(task),
             FeedSourceType.GateDecisionDue => !task.Location.Closed
                 && payload is GateDecisionPayload gate
                 && string.Equals(task.Status.ToWire(), gate.FromStatus, StringComparison.Ordinal),
@@ -133,9 +157,34 @@ internal static class TaskFeedRules
         {
             TaskActorKind.Human => FeedActorKind.Human,
             TaskActorKind.Agent => FeedActorKind.Agent,
-            _ => FeedActorKind.OutsideHuddle,
+            TaskActorKind.Helper => FeedActorKind.Helper,
+            TaskActorKind.OutsideHuddle => FeedActorKind.OutsideHuddle,
+            _ => throw new ArgumentOutOfRangeException(nameof(actor)),
         },
         actor.Name);
+
+    /// <summary>Whether the Human accepted, asked for changes or declined after the Task's latest "human gate on" entry.</summary>
+    /// <param name="task">The Task.</param>
+    private static bool DecidedSinceGateOn(TaskItem task)
+    {
+        for (int i = task.ChangeLog.Count - 1; i >= 0; i--)
+        {
+            string summary = task.ChangeLog[i].Summary;
+            if (summary.Contains("human gate on", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (summary.StartsWith("accepted ", StringComparison.Ordinal)
+                || summary.StartsWith("changes requested: ", StringComparison.Ordinal)
+                || summary.StartsWith("declined: ", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /// <summary>The rule <c>NeedsYouTaskSource</c> lists by: gated, in Needs You, acceptance not valid.</summary>
     /// <param name="task">The Task.</param>

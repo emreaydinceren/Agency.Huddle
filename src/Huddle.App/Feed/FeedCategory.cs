@@ -20,4 +20,7 @@ internal enum FeedCategory
 
     /// <summary>Gate activity.</summary>
     Gates,
+
+    /// <summary>A Helper paused or failing.</summary>
+    Helpers,
 }

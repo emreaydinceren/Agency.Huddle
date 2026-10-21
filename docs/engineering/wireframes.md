@@ -130,8 +130,8 @@ this.
 | `S3` | Workspace | `MudMainContent` `.main-column` | Also holds the invisible `TabSync`, `TabPersistence` and `LibraryLinkRouter` |
 | `S4` | Right sidebar | `RightSidebar` (`MudDrawer`, end, persistent, 280px) | Drawn dashed: shown only while toggled open from `S1c`; starts closed in each circuit. In Notifications mode (opened by `NotificationsButton`) it draws one `SidebarPanelFrame` titled "Notifications" around `NotificationsPanel` (Figure 13, `F4`); otherwise it draws the panels the Panel catalog picks for the focused pane's Subject, sorted by `Order`. Each panel sits in a `SidebarPanelFrame`: a 32px header button with the icon, the title (13px/600), the count the panel reports (12px Quiet ink; none until it does) and a chevron that collapses the body, remembered per viewer; an Edge line separates one panel from the next. Rows are 32px and one line in Ink (the Outline's are 28px): a Task row is its ID (12px Quiet ink), the title and the state dot; a member row is a 24px avatar with the presence badge on its rim, then the name; the Outline heading in view wears the Selected treatment. The v1 panels: for a Room, Members, Tasks in this chat and Documents in this chat; for a Markdown document, Outline, Linked documents and Recent edits (the newest five entries of its History, with **See all** scrolling to `L3i`). It follows focus to the other pane or another Tab. When no panel applies, it shows an `EmptyState` with the single sentence "Nothing to show for this page." The Task drawer opens beside the Right sidebar |
 | `S5` | Activity bar | `ActivityBar` (`nav.activity-bar`), 48px | Always shown, at the left edge of the left `MudDrawer`, like VS Code's Activity Bar. Two toolbars: one aligned to the top, one to the bottom |
-| `S5a` | Top toolbar | `.activity-bar-top`, one `MudIconButton` per view | Chats, Teams, Teammates, Tasks and Library, with their entity icons; Tasks and Library are left out when their feature is off. Each button is a 40px tile with the inset rounded shape (0.75 of the base radius). The selected button is pressed (`aria-pressed`) and wears the Accent tint (14%, 20% hovered) with the accent icon. Clicking another button switches the Sidebar (`S2`) to that view; clicking the pressed one collapses the Sidebar. Each button has a tooltip and an `aria-label`, and names `S2` in `aria-controls` |
-| `S5b` | Bottom toolbar | `.activity-bar-bottom`, `MudNavMenu` `.nav-settings` | Feed, Archived chats and Settings: three icon-only 48px links, each with an `aria-label` and a tooltip (OP-4). Feed is a `NavTabLink` with the `DynamicFeed` icon to `/feed`; it opens a Tab (Figure 13) and is not drawn while `Team:Feed:Enabled` is false. Settings opens a Tab, so its link wears the active treatment on `/settings` |
+| `S5a` | Top toolbar | `.activity-bar-top`, the Feed link then one `MudIconButton` per view | Feed (a `NavTabLink` with the `DynamicFeed` icon to `/feed`, first; it opens a Tab (Figure 13) and is not drawn while `Team:Feed:Enabled` is false), then Chats, Teams, Teammates, Tasks and Library, with their entity icons; Tasks and Library are left out when their feature is off. Each button is a 40px tile with the inset rounded shape (0.75 of the base radius). The selected button is pressed (`aria-pressed`) and wears the Accent tint (14%, 20% hovered) with the accent icon. Clicking another button switches the Sidebar (`S2`) to that view; clicking the pressed one collapses the Sidebar. Each button has a tooltip and an `aria-label`, and names `S2` in `aria-controls` |
+| `S5b` | Bottom toolbar | `.activity-bar-bottom`, `MudNavMenu` `.nav-settings` | Archived chats and Settings: two icon-only 48px links, each with an `aria-label` and a tooltip (OP-4). Settings opens a Tab, so its link wears the active treatment on `/settings` |
 
 `W1`, `W3` and `W6` appear here only to show where Figure 2 plugs in.
 
@@ -501,7 +501,7 @@ Figure 12's narrow inset as `S4`.
 ## Figure 13: The Feed page
 
 `FeedPage.razor`, route `/feed` (Tab title "Feed"); built to the
-[Feed spec §6.9](../Huddle.Feed-Specifications.md#69-the-feed-tab) (2026-10-20, slice 1). Drawn from the owner's header and row wireframes (2026-10-20).
+[Feed spec §6.9](../Huddle.Feed-Specifications.md#69-the-feed-tab) (2026-10-20, slice 1; the Helpers segment is slice 3, [Helpers in the Feed](../Huddle.HelpersInFeed-Specifications.md)). Drawn from the owner's header and row wireframes (2026-10-20).
 
 ![Figure 13a: the Feed Tab header, with the Live chip, the read-only note, the Category control with counts and the Team select](../images/wireframes/13a-feed-header.svg)
 
@@ -510,7 +510,7 @@ Figure 12's narrow inset as `S4`.
 ![Figure 13c: Feed Tab cards, collapsed with the unseen bar, kind badge, meta line and status pills, and one expanded to a Task preview, related items and navigation buttons](../images/wireframes/13c-feed-cards.svg)
 
 Opened
-from the Activity bar's "Feed" link (`S5b`) and the Notifications panel's "See all activity".
+from the Activity bar's "Feed" link (`S5a`) and the Notifications panel's "See all activity".
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
@@ -519,7 +519,7 @@ from the Activity bar's "Feed" link (`S5b`) and the Notifications panel's "See a
 | `F2a` | Live chip | A small Success-tinted chip in `TitleTrailing` | A filled dot and "Live": new items arrive on their own. One state in v1 |
 | `F2b` | Read-only note | Caption line, Quiet ink, leading `Visibility` icon | "Read-only — the Feed never changes the work and never shows message text." |
 | `F3` | Filter bar | `div`, one row | `F3a` at the left; `F3c` then `F3b` at the right |
-| `F3a` | Category | `HuddleSegmentedControl<FeedCategory>`, six segments | All, Needs you, Tasks, Documents, Rooms, Gates, each with its count. Needs you overlaps the others, so the counts don't add up. Sets `?category=` |
+| `F3a` | Category | `HuddleSegmentedControl<FeedCategory>`, seven segments | All, Needs you, Tasks, Documents, Rooms, Gates, Helpers, each with its count. Needs you overlaps the others, so the counts don't add up. Sets `?category=` |
 | `F3b` | Team select | `MudSelect`, Dense, Outlined, the `Groups` icon | "All teams", then each Team. Sets `?team=` |
 | `F3c` | Teammate chip | `TaskFilterChip` | Drawn dashed: only when an avatar was clicked. "Teammate: Nova ×" |
 | `F4` | Item list (panel) | `NotificationsPanel` over `FeedList`: `F8` day groups of `F9` rows, newest first | The Right sidebar's Feed panel (spec §6.8), with a wrapping Category chip set that opens on Needs you. The Feed Tab draws `F12` cards instead |
@@ -532,9 +532,9 @@ from the Activity bar's "Feed" link (`S5b`) and the Notifications panel's "See a
 | `F9b` | Summary | 13px, wraps to at most 3 lines, then "…" | Actor Name in 600, the summary with reference chips (Task: state icon, `#id`, truncated title; Room: chat icon and Name, "A ↔ B" for two Members; Document: monospace path), trailing context in Quiet ink after " · ". Never a 4th line |
 | `F9c` | Status line | 12px Quiet ink, one line | Drawn dashed: Notifications only. An Accent dot while waiting ("Asked 14:31 · waiting for you"), a Success ✓ once resolved ("… · done 12:52") |
 | `F9d` | Age | Right-aligned on the first line | "19m", "1h", "3d"; Accent with a dot while the Notification waits, else Quiet. Tooltip: the full date |
-| `F10` | Feed card | `FeedCard`, outlined, 8px radius | One item (or one drawn group) in the Feed Tab. Clicking the body opens the target |
+| `F10` | Feed card | `FeedCard`, outlined, 8px radius | One item (or one drawn group) in the Feed Tab. Clicking its empty space expands it; the Open button and the chips open the target |
 | `F10a` | Unseen bar | 3px Accent bar on the left edge | Drawn dashed: items newer than the Tab's seen mark, any kind. The age is Accent while it shows |
-| `F10b` | Avatar with kind badge | 40px `TeammateAvatar`, 16px round badge at bottom right | The badge names the kind (check, document, person, gauge, lock, @, ?, form, plus) |
+| `F10b` | Avatar with kind badge | 40px `TeammateAvatar`, 16px round badge at bottom right | The badge names the kind (check, document, person, gauge, lock, @, ?, form, plus, alert). A Helper's item wears the Helper mark (`Psychology` in the outlined tile) in place of the avatar, and Huddle's items the Huddle mark |
 | `F10c` | Summary | 14px, wraps to at most 3 lines | Name in 600, verb, reference chips, a trailing purpose in 600 ("for you to publish") |
 | `F10d` | Meta line | 12px Quiet ink, " • " between parts | Relation ("assigned by you", "Library"), Room chip, Team chip (two-letter monogram tile and Name) |
 | `F10e` | Status pills | Outlined pills, one line | Drawn dashed: Notifications only. "Waiting for you · 20 min" (Warning), "Assigned to you · due Tue 13 Oct" (Info), "Done · 13:25" once resolved. The "Post by 11:30" deadline pill of the wireframe is not built: a Task's due date has no time |

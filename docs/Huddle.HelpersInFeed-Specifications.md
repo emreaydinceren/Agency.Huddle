@@ -1,6 +1,6 @@
 # Huddle.HelpersInFeed — Design Specification
 
-**Date:** 2026-10-20 · **Status:** Designed, not built · **Decision record:**
+**Date:** 2026-10-20 · **Status:** Built 2026-10-20 on `feat/helpers-in-feed`; see Deviations at the end · **Decision record:**
 [ADR-0065](adr/0065-huddle-posts-as-itself.md); builds on
 [ADR-0063](adr/0063-the-feed-is-a-stored-history-that-each-domain-component-posts-to.md) (the Feed),
 [ADR-0064](adr/0064-a-helper-judges-an-event-and-the-app-applies-its-verdict.md) (Helpers),
@@ -226,8 +226,9 @@ its `room-mention` Notification.
   `User` row and it is never a Room Member.
 - `ChatService.PostAsHuddleAsync(string roomId, string text, CancellationToken ct)`: the one way to
   post as Huddle. It goes through `PostCoreAsync` with the membership check skipped **for this sender
-  only**; every other sender still needs to be a Member. Every other step is the same (the Room's
-  post lock, the reference snapshot, the Transcript, `RoomEvents`).
+  only**; every other sender still needs to be a Member. The Room's post lock, the reference snapshot,
+  the Transcript and `RoomEvents` are the same. Two steps are **not** the same (HF-9 finding 1): the Room
+  Budget is left alone and the Room's waiting Questions and forms are left alone.
 - `TaskTriggerService` posts a wake-up whose actor is a Helper with `PostAsHuddleAsync`, Mentioning
   the assignee as today. The Room choice (`ChooseRoomAsync`) no longer needs the Human as a
   Member for these.
@@ -238,13 +239,46 @@ its `room-mention` Notification.
     it does not reset the Room's Budget or the assignee's token Budget (Helpers spec §10 OD-1 is
     closed by this).
   - The Helper's wake-up still uses none of the Task's Teammate wake budget (slice 2's rule).
-- **What must be checked first** (Task HF-9, a spike before the change): every reader of
-  `ChatMessage.SenderId` and `SenderName` that assumes a Member or a `User`. Known ones:
-  `SenderDisplay` (draws "Huddle" with the Huddle mark), `ReplyGate.Decide` (it must still deliver a
-  Mention from a non-Member), Transcript Catch-up and prompt rendering (the sender's Name),
-  `ReadRecordsTool`, Global Search's Message provider, and the wire types in `Huddle.Contracts`
-  ([traps.md](engineering/traps.md)). The spike writes its findings into this section before HF-10
-  starts.
+- **HF-9 findings** (the spike over every reader of `ChatMessage.SenderId` and `SenderName`, run on
+  `main` at `a9a0b274`; 57 occurrences in `src`). The ones that assume a Member, a `User` or "not an
+  Agent means the Human" and so need a change in HF-10 or HF-11:
+  1. **`ChatService.PostCoreAsync`** reads "not an Agent" as "the Human": `SpendBudget` resets the
+     Room's Budget for any non-Agent sender and `DropWaitingCards` drops the Room's Questions and
+     forms for one. A Huddle post would do both. HF-10 gives the core an explicit sender kind (Human,
+     Agent or Huddle) so a Huddle post spends nothing, resets nothing and drops nothing.
+  2. **`NeedsYouTracker.OnMessagePosted`** sends every non-Human post down the branch that can set
+     a Mention or Budget reason. HF-10 returns early for the Huddle sender: Needs You neither clears
+     nor sets on a Huddle post (`NeedsYouRule` and `NeedsYouStartupScan` compare with `KnownIds.Human`
+     only and need no change).
+  3. **`MessageList.razor`** draws a Task wake-up as the muted system row only inside its Human
+     branch, so a Huddle wake-up would fall into the Teammate branch with an initials avatar and the
+     agent-facing "Call get_task" line. HF-10 draws a Huddle-posted wake-up as the same system row and
+     any other Huddle Message as an ordinary row with the Huddle mark (`ToggleOn`, as the Feed
+     draws Huddle) and the name "Huddle".
+  4. **`ReadRecordsTool`** refuses an unscoped Room that holds a sender who is neither a Team member
+     nor the Human ("participants outside Team"). A Huddle Message is not a participant, so HF-10
+     exempts `KnownIds.Huddle` beside the Human.
+  5. **`TaskTriggerService`**: `ResolveSenderIdAsync` returns the Human for every non-Agent;
+     `ChooseRoomAsync` and `FindUsableOriginAsync` require the sender to be a Member and add the
+     sender to the fallback member set. HF-11 resolves a Helper's actor to `KnownIds.Huddle` and, for that
+     sender, accepts the origin Room without a sender seat and leaves `KnownIds.Huddle` out of every
+     member set.
+
+  Readers that need **no change**, each pinned by a test in HF-10: `MessagePostedEvent.IsRecipient`
+  and `AgentGateway.DeliverAsync` (every Agent but the sender receives it), `ReplyGate.Decide` (it
+  takes only numbers and a Mention flag, never the sender), `RoomReplyResolver` and `Chat.razor` (a
+  sender with no Member is not Human, so no Room note is drawn), `PersonaRunner.SenderIsHuman` (no
+  Member means not Human: no command, no Budget reset), `SenderDisplay` (it rewrites only the Human's
+  Name), Transcript Catch-up, prompt rendering, `read_transcript` and Global Search's Message provider
+  (they print `SenderName`, "Huddle"), and `RedeliveryFacts` (Continue re-delivers a Huddle Message
+  like any other). `PostAsync` with the sender id `huddle` keeps failing `NotMember`, so no pipe
+  client, tool or card can post as Huddle: the only callers of `PostAsync` pass an Agent's own id or
+  the Human's.
+
+  **Wire.** `ChatMessage.SenderId` and `SenderName` are strings in `Huddle.Contracts`: no type, no
+  property and no protocol version changes. A pipe client receives a Message whose sender is absent from
+  that delivery's `members` list, as it already can when a sender has left the Room; it must not assume
+  the sender is listed.
 
 ## 6. Interface and wireframes
 
@@ -334,3 +368,21 @@ Each task is one commit: a failing test, the code, a green `dotnet build Huddle.
 | HF-10 | `KnownIds.Huddle`, `ChatService.PostAsHuddleAsync`, `SenderDisplay`, and the fixes HF-9 listed | §9 Huddle sender row |
 | HF-11 | `TaskTriggerService` posts a Helper's wake-up as Huddle | §9 Huddle sender row, end to end |
 | HF-12 | Docs: Feed and Helpers specs, wireframes, User Guide, manual tests | `Check-All.ps1` |
+
+---
+
+## Deviations from this design
+
+What differs between the text above and the code as built. The code is right where they disagree.
+
+| # | Spec | As built | Why |
+| --- | --- | --- | --- |
+| B-1 | §5.1: an explicit `TaskActorKind.OutsideHuddle` arm so a new `TaskActorKind` fails the build (CS8509) | `TaskFeedRules.ActorOf` has the explicit arms **and** a closing `_ => throw`; `TaskFeedRulesTests.For_EachActorKind_PostsItsOwnFeedActorKind` walks `Enum.GetValues<TaskActorKind>()` | A switch over an enum without a `_` arm is CS8524 for the unnamed values, an error here, so the compiler can't be the guard; the test is |
+| B-2 | §5.3: `HelperFeed` takes `IFeedPublisher`, `HelperStatusStore`, `HelperBudget`, `TimeProvider` | Takes `IFeedPublisher`, `HelperStatusStore`, `HelperBudget`, `HelperRegistry`, `HelperSettingsResolver`, `ILogger`; no clock. `HelperFeed.Reconcile(FeedStore)` seeds the open sets, run once by `HelperFeedStartup` (registered with the Feed) | The reconciler needs a Helper's effective settings and the registry; nothing reads the time |
+| B-3 | §5.3: payloads carry a `HelperId` | The payloads carry the id as a `string` | A `readonly record struct` in a JSON payload would need a converter for no gain |
+| B-4 | §5.3: `HelperStatusStore.RecordFailure` returns the new status | Same, written with `RETURNING` so the count is the one this write produced. The dispatcher assigns it **before** calling `?.Ran`, because a null-conditional call skips its arguments | A first version put the call in the argument and recorded no failure when no `HelperFeed` was given |
+| B-5 | §5.5: the Helper preview shows "50 of 50 calls, 12 Tasks not judged" | `FeedHelperPreview` reuses `HelpersCopy`: `50 of 50 calls today · 12 skipped while paused`, plus a "Runs on" line and the last run and last error with their times | One wording for the Helpers card and the Feed |
+| B-6 | §5.6: "every other step is the same" for `PostAsHuddleAsync` | Two steps differ: no Budget spend or reset and no dropped Question or form (HF-9 finding 1) | `PostCoreAsync` read "not an Agent" as "the Human" |
+| B-7 | §5.6 listed `SenderDisplay` as the place that draws a sender | `MessageList.razor` draws it; `SenderDisplay` only renames the Human. A Huddle wake-up is the muted system row and any other Huddle Message wears `.huddle-mark` | HF-9 finding 3 |
+| B-8 | §5.4: the pill and pause icon | A `helper-paused` card wears the gauge badge, but its pill is the ordinary "Waiting for you"; only `room-budget` draws the pause icon in the pill | Not worth a second rule |
+| B-9 | The Helpers anchor "and scroll" | `HelpersPanel` scrolls once, after the first render, with the existing `teamScroll.intoView` | Same helper as the Prompts and Packs highlights |

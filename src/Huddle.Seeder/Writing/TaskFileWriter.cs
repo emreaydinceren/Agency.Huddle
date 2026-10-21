@@ -79,6 +79,17 @@ internal static class TaskFileWriter
         return log;
     }
 
+    private static void AppendRequest(StringBuilder text, SeedTaskRequest request)
+    {
+        text.Append("request: ").Append(request.Kind).Append('\n');
+        text.Append("from_team: ").Append(Scalar(request.FromTeam)).Append('\n');
+        text.Append("requester: ").Append(Scalar(request.Requester)).Append('\n');
+        text.Append("triage: ").Append(Scalar(request.Triage)).Append('\n');
+        text.Append("decline_reason: ").Append(Scalar(request.DeclineReason)).Append('\n');
+        text.Append("confirmed_by: ").Append(Scalar(request.ConfirmedBy)).Append('\n');
+    }
+
+
     /// <summary>Renders the whole Task file: front matter, description and Change log.</summary>
     /// <param name="task">The Task.</param>
     /// <param name="today">The run date the offsets are measured from.</param>
@@ -115,14 +126,14 @@ internal static class TaskFileWriter
         AppendIfPresent(text, "start_date", task.StartOffset is { } start ? Date(today, start) : null);
         AppendIfPresent(text, "due_date", task.DueOffset is { } due ? Date(today, due) : null);
         AppendIfPresent(text, "sprint", task.Sprint);
+        if (task.HumanGate)
+        {
+            text.Append("human_gate: true\n");
+        }
+
         if (task.Request is { } request)
         {
-            text.Append("request: ").Append(request.Kind).Append('\n');
-            text.Append("from_team: ").Append(Scalar(request.FromTeam)).Append('\n');
-            text.Append("requester: ").Append(Scalar(request.Requester)).Append('\n');
-            text.Append("triage: ").Append(Scalar(request.Triage)).Append('\n');
-            text.Append("decline_reason: ").Append(Scalar(request.DeclineReason)).Append('\n');
-            text.Append("confirmed_by: ").Append(Scalar(request.ConfirmedBy)).Append('\n');
+            AppendRequest(text, request);
         }
 
         text.Append("---\n");

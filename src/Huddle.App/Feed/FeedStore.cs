@@ -159,7 +159,7 @@ internal sealed class FeedStore
     /// <summary>The number on each Category segment under the Teammate and Team filters, in one query.</summary>
     /// <param name="teammate">Only items by this actor, or <see langword="null"/>.</param>
     /// <param name="team">Only items about this Team, or <see langword="null"/>.</param>
-    /// <returns>The six counts.</returns>
+    /// <returns>The seven counts.</returns>
     public FeedCounts Counts(string? teammate, string? team)
     {
         using SqliteConnection connection = this.OpenConnection();
@@ -177,7 +177,7 @@ internal sealed class FeedStore
 
         using SqliteDataReader reader = command.ExecuteReader();
         _ = reader.Read();
-        return new FeedCounts(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetInt32(3), reader.GetInt32(4), reader.GetInt32(5));
+        return new FeedCounts(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetInt32(3), reader.GetInt32(4), reader.GetInt32(5), reader.GetInt32(6));
     }
 
     /// <summary>Applies a batch of commands in order, in one transaction. Called only by <see cref="FeedWriter"/>.</summary>
