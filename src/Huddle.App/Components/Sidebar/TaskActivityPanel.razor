@@ -31,7 +31,7 @@
             <div class="sidebar-row task-activity-row task-activity-woken">
                 <MudLink Typo="Typo.body2" Color="Color.Inherit" Underline="Underline.None" Class="sidebar-row-text" Href="@($"/rooms/{roomId}")"
                          title="@($"Woken in Room {roomName}")">@($"Woken in Room {roomName}")</MudLink>
-                <span class="sidebar-row-meta">@TaskDates.Human(lastWake.At, this.Clock)</span>
+                <span class="sidebar-row-meta">@TaskDates.HumanMoment(lastWake.At, this.Clock)</span>
             </div>
         }
 

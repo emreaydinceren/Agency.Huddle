@@ -1825,11 +1825,10 @@ else if (this.loaded is { } task)
         return Task.CompletedTask;
     }
 
-    /// <summary>A Change log entry's date, in the Human's local time through the injected <see cref="TimeProvider"/> (J51) - never <see cref="DateTimeOffset.ToLocalTime"/>'s machine time zone, so a test can pin a fixed <see cref="TimeProvider.LocalTimeZone"/> and get a deterministic string.</summary>
+    /// <summary>A Change log entry's day and time ("Today 1:15 PM"), in the Human's local time through the injected <see cref="TimeProvider"/> (J51) - never <see cref="DateTimeOffset.ToLocalTime"/>'s machine time zone, so a test can pin a fixed <see cref="TimeProvider.LocalTimeZone"/> and get a deterministic string.</summary>
     /// <param name="at">The entry's UTC instant.</param>
-    /// <param name="clock">Supplies <see cref="TimeProvider.LocalTimeZone"/>.</param>
-    internal static string FormatChangeLogDate(DateTimeOffset at, TimeProvider clock) =>
-        TimeZoneInfo.ConvertTime(at, clock.LocalTimeZone).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+    /// <param name="clock">Supplies <see cref="TimeProvider.LocalTimeZone"/> and today.</param>
+    internal static string FormatChangeLogDate(DateTimeOffset at, TimeProvider clock) => TaskDates.HumanMoment(at, clock);
 
     /// <summary>The Save button's label for <paramref name="preview"/> (Spec §13.6's table): "Save &amp; notify {name}" only for an Awake or Asleep assignee, plain "Save" otherwise.</summary>
     /// <param name="preview">The wake preview for the Human's pending edit.</param>
