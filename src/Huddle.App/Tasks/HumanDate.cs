@@ -42,6 +42,18 @@ internal static class HumanDate
             : Format(date, today);
     }
 
+    /// <summary>
+    /// The form for a moment that has already happened, as the activity log says it: the same as
+    /// <see cref="Format(DateOnly, DateOnly)"/>, except that a date two to six days back reads as its abbreviated weekday ("Mon"),
+    /// where <see cref="Format(DateOnly, DateOnly)"/> reads weekdays only for days ahead.
+    /// </summary>
+    /// <param name="date">The date to show.</param>
+    /// <param name="today">The local date that counts as today.</param>
+    public static string FormatPast(DateOnly date, DateOnly today) =>
+        (date.DayNumber - today.DayNumber) is >= -6 and <= -2
+            ? date.ToString("ddd", CultureInfo.InvariantCulture)
+            : Format(date, today);
+
     /// <summary>The full form for a tooltip, such as <c>Tue, Oct 27, 2026</c>.</summary>
     /// <param name="date">The date to show.</param>
     public static string Full(DateOnly date) => date.ToString("ddd, MMM d, yyyy", CultureInfo.InvariantCulture);

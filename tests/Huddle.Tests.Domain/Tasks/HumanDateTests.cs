@@ -1,5 +1,6 @@
 using System.Globalization;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.Tests.Acp.Fakes;
 
 namespace Agency.Huddle.Tests.Tasks;
 
@@ -26,6 +27,44 @@ public sealed class HumanDateTests
         { -2, "Oct 14" },
         { -16, "Sep 30" },
     };
+
+    /// <summary>The offset from today, and the text a past moment's day shows as.</summary>
+    /// <returns>One row per boundary of the past format.</returns>
+    public static TheoryData<int, string> PastOffsets() => new()
+    {
+        { 0, "Today" },
+        { -1, "Yesterday" },
+        { -2, "Wed" },
+        { -6, "Sat" },
+        { -7, "Oct 9" },
+        { 1, "Tomorrow" },
+    };
+
+    /// <summary>A moment that has happened reads as a weekday for two to six days back, not a date.</summary>
+    /// <param name="offsetDays">Days from today.</param>
+    /// <param name="expected">The expected text.</param>
+    [Theory]
+    [MemberData(nameof(PastOffsets))]
+    public void FormatPast_RelativeToToday_ReadsWeekdaysBack(int offsetDays, string expected)
+    {
+        string text = HumanDate.FormatPast(Today.AddDays(offsetDays), Today);
+
+        Assert.Equal(expected, text);
+    }
+
+    /// <summary>The activity log shows the local day and a 12-hour time, such as <c>Today 1:15 PM</c>.</summary>
+    [Fact]
+    public void HumanMoment_LocalDayAndTime_ReadsLikeTheActivityLog()
+    {
+        TimeZoneInfo zone = TimeZoneInfo.CreateCustomTimeZone("Fixed+02", TimeSpan.FromHours(2), "Fixed+02", "Fixed+02");
+        ManualTimeProvider clock = new(new DateTimeOffset(2026, 10, 16, 11, 30, 0, TimeSpan.Zero), zone);
+
+        string today = TaskDates.HumanMoment(new DateTimeOffset(2026, 10, 16, 11, 15, 0, TimeSpan.Zero), clock);
+        string earlier = TaskDates.HumanMoment(new DateTimeOffset(2026, 10, 12, 14, 20, 0, TimeSpan.Zero), clock);
+
+        Assert.Equal("Today 1:15 PM", today);
+        Assert.Equal("Mon 4:20 PM", earlier);
+    }
 
     /// <summary>Each boundary around today formats as the settled rule says.</summary>
     /// <param name="offsetDays">Days from today.</param>
