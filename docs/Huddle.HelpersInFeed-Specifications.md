@@ -226,8 +226,9 @@ its `room-mention` Notification.
   `User` row and it is never a Room Member.
 - `ChatService.PostAsHuddleAsync(string roomId, string text, CancellationToken ct)`: the one way to
   post as Huddle. It goes through `PostCoreAsync` with the membership check skipped **for this sender
-  only**; every other sender still needs to be a Member. Every other step is the same (the Room's
-  post lock, the reference snapshot, the Transcript, `RoomEvents`).
+  only**; every other sender still needs to be a Member. The Room's post lock, the reference snapshot,
+  the Transcript and `RoomEvents` are the same. Two steps are **not** the same (HF-9 finding 1): the Room
+  Budget is left alone and the Room's waiting Questions and forms are left alone.
 - `TaskTriggerService` posts a wake-up whose actor is a Helper with `PostAsHuddleAsync`, Mentioning
   the assignee as today. The Room choice (`ChooseRoomAsync`) no longer needs the Human as a
   Member for these.
@@ -238,13 +239,46 @@ its `room-mention` Notification.
     it does not reset the Room's Budget or the assignee's token Budget (Helpers spec §10 OD-1 is
     closed by this).
   - The Helper's wake-up still uses none of the Task's Teammate wake budget (slice 2's rule).
-- **What must be checked first** (Task HF-9, a spike before the change): every reader of
-  `ChatMessage.SenderId` and `SenderName` that assumes a Member or a `User`. Known ones:
-  `SenderDisplay` (draws "Huddle" with the Huddle mark), `ReplyGate.Decide` (it must still deliver a
-  Mention from a non-Member), Transcript Catch-up and prompt rendering (the sender's Name),
-  `ReadRecordsTool`, Global Search's Message provider, and the wire types in `Huddle.Contracts`
-  ([traps.md](engineering/traps.md)). The spike writes its findings into this section before HF-10
-  starts.
+- **HF-9 findings** (the spike over every reader of `ChatMessage.SenderId` and `SenderName`, run on
+  `main` at `a9a0b274`; 57 occurrences in `src`). The ones that assume a Member, a `User` or "not an
+  Agent means the Human" and so need a change in HF-10 or HF-11:
+  1. **`ChatService.PostCoreAsync`** reads "not an Agent" as "the Human": `SpendBudget` resets the
+     Room's Budget for any non-Agent sender and `DropWaitingCards` drops the Room's Questions and
+     forms for one. A Huddle post would do both. HF-10 gives the core an explicit sender kind (Human,
+     Agent or Huddle) so a Huddle post spends nothing, resets nothing and drops nothing.
+  2. **`NeedsYouTracker.OnMessagePosted`** sends every non-Human post down the branch that can set
+     a Mention or Budget reason. HF-10 returns early for the Huddle sender: Needs You neither clears
+     nor sets on a Huddle post (`NeedsYouRule` and `NeedsYouStartupScan` compare with `KnownIds.Human`
+     only and need no change).
+  3. **`MessageList.razor`** draws a Task wake-up as the muted system row only inside its Human
+     branch, so a Huddle wake-up would fall into the Teammate branch with an initials avatar and the
+     agent-facing "Call get_task" line. HF-10 draws a Huddle-posted wake-up as the same system row and
+     any other Huddle Message as an ordinary row with the Huddle mark (`ToggleOn`, as the Feed
+     draws Huddle) and the name "Huddle".
+  4. **`ReadRecordsTool`** refuses an unscoped Room that holds a sender who is neither a Team member
+     nor the Human ("participants outside Team"). A Huddle Message is not a participant, so HF-10
+     exempts `KnownIds.Huddle` beside the Human.
+  5. **`TaskTriggerService`**: `ResolveSenderIdAsync` returns the Human for every non-Agent;
+     `ChooseRoomAsync` and `FindUsableOriginAsync` require the sender to be a Member and add the
+     sender to the fallback member set. HF-11 resolves a Helper's actor to `KnownIds.Huddle` and, for that
+     sender, accepts the origin Room without a sender seat and leaves `KnownIds.Huddle` out of every
+     member set.
+
+  Readers that need **no change**, each pinned by a test in HF-10: `MessagePostedEvent.IsRecipient`
+  and `AgentGateway.DeliverAsync` (every Agent but the sender receives it), `ReplyGate.Decide` (it
+  takes only numbers and a Mention flag, never the sender), `RoomReplyResolver` and `Chat.razor` (a
+  sender with no Member is not Human, so no Room note is drawn), `PersonaRunner.SenderIsHuman` (no
+  Member means not Human: no command, no Budget reset), `SenderDisplay` (it rewrites only the Human's
+  Name), Transcript Catch-up, prompt rendering, `read_transcript` and Global Search's Message provider
+  (they print `SenderName`, "Huddle"), and `RedeliveryFacts` (Continue re-delivers a Huddle Message
+  like any other). `PostAsync` with the sender id `huddle` keeps failing `NotMember`, so no pipe
+  client, tool or card can post as Huddle: the only callers of `PostAsync` pass an Agent's own id or
+  the Human's.
+
+  **Wire.** `ChatMessage.SenderId` and `SenderName` are strings in `Huddle.Contracts`: no type, no
+  property and no protocol version changes. A pipe client receives a Message whose sender is absent from
+  that delivery's `members` list, as it already can when a sender has left the Room; it must not assume
+  the sender is listed.
 
 ## 6. Interface and wireframes
 
