@@ -16,6 +16,7 @@
 }
 
 .feed-day-date {
+    font-weight: 450;
     color: var(--mud-palette-text-secondary);
 }
 
@@ -23,7 +24,34 @@
     flex: 1 1 auto;
     align-self: center;
     height: 1px;
-    background-color: var(--ink-edge);
+    background-color: var(--hu-feed-day-rule);
+}
+
+/* Cobalt Soft and Nordic both declare labels: upper, so the day word is a small caps label. */
+:root:has([data-hu-labels="upper"]) .feed-day-word {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 650;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* Nordic's day heading is a Literata title with a line beneath it, not an inline rule. */
+:root:has([data-hu-reading="book"]) .feed-day-word {
+    font-family: var(--font-read);
+    font-size: clamp(20px, 1.05rem + 0.5vw, 24px);
+    line-height: 1.25;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: -0.012em;
+    color: var(--mud-palette-text-primary);
+}
+
+:root:has([data-hu-surface="paper"]) .feed-day-heading {
+    flex-wrap: wrap;
+    gap: 2px 12px;
+    padding: 0 2px 8px;
+    margin: 32px 0 12px;
+    border-bottom: 1px solid var(--hu-line-control);
 }
 
 /* Sticks to the top centre of the scroller, so it stays in view while the Human reads further down. */

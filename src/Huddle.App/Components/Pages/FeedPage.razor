@@ -39,14 +39,14 @@
 
         <div class="feed-readonly">
             <MudIcon Icon="@Icons.Material.Outlined.Visibility" Size="Size.Small" />
-            <MudText Typo="Typo.caption" Class="feed-readonly-text">Read-only — the Feed never changes the work and never shows message text.</MudText>
+            <MudText Typo="Typo.caption" Class="feed-readonly-text"><strong>Read-only</strong> — the Feed never changes the work and never shows message text.</MudText>
         </div>
 
         <div class="feed-filter-bar">
             <HuddleSegmentedControl T="FeedCategory" Value="@this.category" ValueChanged="this.OnCategoryChosen" Class="feed-category-control" ItemCount="7">
                 @foreach (FeedCategory entry in FeedCategories.Order)
                 {
-                    <MudToggleItem Value="@entry" Text="@this.SegmentText(entry)" />
+                    <MudToggleItem Value="@entry">@FeedCategories.Label(entry) <span class="@("feed-count" + (entry == FeedCategory.NeedsYou ? " feed-count-needsyou" : string.Empty))">@FeedCategories.CountOf(this.counts, entry)</span></MudToggleItem>
                 }
             </HuddleSegmentedControl>
 
@@ -57,7 +57,7 @@
                 }
 
                 <MudSelect T="string" Value="@(this.team ?? string.Empty)" ValueChanged="this.OnTeamChosen" Dense="true" Variant="Variant.Outlined"
-                           Margin="Margin.Dense" Class="feed-team-select" aria-label="Team">
+                           Margin="Margin.Dense" Class="@("feed-team-select" + (this.team is null ? string.Empty : " feed-team-select-set"))" aria-label="Team">
                     <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
                     @foreach (string teamName in this.TeamNames)
                     {
@@ -79,6 +79,10 @@
         @if (this.Pager.HasMore)
         {
             <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="feed-show-more" OnClick="this.ShowMore">Show more</MudButton>
+        }
+        else if (this.Pager.Items.Count > 0)
+        {
+            <p class="feed-end">Older entries stay in the Feed. It remembers that you were asked, when, and how it was handled, even after a restart.</p>
         }
     }
 </MudContainer>
@@ -250,9 +254,6 @@
 
     private static string? Value(Dictionary<string, Microsoft.Extensions.Primitives.StringValues> query, string name) =>
         query.TryGetValue(name, out Microsoft.Extensions.Primitives.StringValues values) && values.Count > 0 ? values[0] : null;
-
-    private string SegmentText(FeedCategory entry) =>
-        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{FeedCategories.Label(entry)} {FeedCategories.CountOf(this.counts, entry)}");
 
     private static string BuildUrl(FeedCategory category, string? teammate, string? team)
     {

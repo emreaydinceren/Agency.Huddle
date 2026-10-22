@@ -8,12 +8,12 @@ using Agency.Huddle.Tests.Acp.Tools;
 using static Agency.Huddle.Tests.Ui.Tasks.TaskDetailFieldsTestSupport;
 
 /// <summary>
-/// Pins DS-9, the Task detail form as four headed groups of label | value properties: the group headings, a visible
+/// Pins DS-9, the Task detail form as two headed groups beside a strip of label | value properties: the group headings, a visible
 /// label on every property, and the grid class the app.css container query hangs on.
 /// </summary>
 public sealed class TaskDetailFormLayoutTests
 {
-    /// <summary>The form is four Group labels (12px/600, Quiet ink), in order: Status and priority, People, Planning, Dates (audit B4i).</summary>
+    /// <summary>The form is two Group labels (12px/600, Quiet ink), in order: Planning, Dates - Status and Priority are in the strip under the header (audit B4i).</summary>
     [Fact]
     public async Task Form_HasTheFourGroupHeadingsInOrder()
     {
@@ -24,7 +24,7 @@ public sealed class TaskDetailFormLayoutTests
 
         string[] headings = [.. cut.FindAll(".task-detail-group > .group-label").Select(h => h.TextContent.Trim())];
 
-        Assert.Equal(["Status and priority", "People", "Planning", "Dates"], headings);
+        Assert.Equal(["Planning", "Dates"], headings);
         Assert.Empty(cut.FindAll(".task-detail-group > .group-heading"));
     }
 
@@ -38,7 +38,7 @@ public sealed class TaskDetailFormLayoutTests
         var cut = RenderDetail(ctx, task.Id);
 
         Assert.Single(cut.FindAll(".task-detail-groups"));
-        Assert.Equal(4, cut.FindAll(".task-detail-group .task-detail-props").Count);
+        Assert.Equal(2, cut.FindAll(".task-detail-group .task-detail-props").Count);
         Assert.All(cut.FindAll(".task-detail-prop"), prop =>
         {
             Assert.Single(prop.QuerySelectorAll(".task-detail-prop-label"));
@@ -85,12 +85,12 @@ public sealed class TaskDetailFormLayoutTests
     }
 
     /// <summary>The visible label of the property row that holds <paramref name="control"/>.</summary>
-    /// <param name="control">A control somewhere inside a <c>.task-detail-prop</c>.</param>
+    /// <param name="control">A control somewhere inside a <c>.task-detail-prop</c> or a strip item.</param>
     private static string RowLabel(IElement control)
     {
-        IElement? row = control.Closest(".task-detail-prop");
+        IElement? row = control.Closest(".task-detail-prop, .task-detail-strip-item");
         Assert.NotNull(row);
-        IElement? label = row.QuerySelector(".task-detail-prop-label");
+        IElement? label = row.QuerySelector(".task-detail-prop-label, .task-detail-strip-label");
         Assert.NotNull(label);
         return label.TextContent.Trim();
     }

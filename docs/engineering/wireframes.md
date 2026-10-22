@@ -532,7 +532,7 @@ from the Activity bar's "Feed" link (`S5a`) and the Notifications panel's "See a
 | `F9b` | Summary | 13px, wraps to at most 3 lines, then "…" | Actor Name in 600, the summary with reference chips (Task: state icon, `#id`, truncated title; Room: chat icon and Name, "A ↔ B" for two Members; Document: monospace path), trailing context in Quiet ink after " · ". Never a 4th line |
 | `F9c` | Status line | 12px Quiet ink, one line | Drawn dashed: Notifications only. An Accent dot while waiting ("Asked 14:31 · waiting for you"), a Success ✓ once resolved ("… · done 12:52") |
 | `F9d` | Age | Right-aligned on the first line | "19m", "1h", "3d"; Accent with a dot while the Notification waits, else Quiet. Tooltip: the full date |
-| `F10` | Feed card | `FeedCard`, outlined, 8px radius | One item (or one drawn group) in the Feed Tab. Clicking its empty space expands it; the Open button and the chips open the target |
+| `F10` | Feed card | `FeedCard`, outlined, corner radius from the `feed.card.radius` token (8px in Lumen and Fluent, 12px in Nordic and Cobalt Soft) | One item (or one drawn group) in the Feed Tab. Clicking its empty space expands it; the Open button and the chips open the target |
 | `F10a` | Unseen bar | 3px Accent bar on the left edge | Drawn dashed: items newer than the Tab's seen mark, any kind. The age is Accent while it shows |
 | `F10b` | Avatar with kind badge | 40px `TeammateAvatar`, 16px round badge at bottom right | The badge names the kind (check, document, person, gauge, lock, @, ?, form, plus, alert). A Helper's item wears the Helper mark (`Psychology` in the outlined tile) in place of the avatar, and Huddle's items the Huddle mark |
 | `F10c` | Summary | 14px, wraps to at most 3 lines | Name in 600, verb, reference chips, a trailing purpose in 600 ("for you to publish") |
@@ -545,6 +545,7 @@ from the Activity bar's "Feed" link (`S5a`) and the Notifications panel's "See a
 | `F11c` | In the Feed | Caption and up to 5 `F9` rows | Items about the same target, and for a Task its origin Room and linked files; the card's own item tagged "This item" |
 | `F11d` | Navigation buttons | `MudButton`s: filled, outlined, text | Open Task (or Open Room, Open document), Review in Needs you (only for an unresolved gated Task in Needs You), Open Room. None changes anything |
 | `F12` | Card list | `FeedList` in card mode: `F8` day headings over `F10` `FeedCard`s | The Feed Tab body. The Right sidebar panel draws `F9` rows instead |
+| `F13` | End note | `p.feed-end` in `FeedPage`, after `F5` | A centred closing note under the last card: "Older entries stay in the Feed. It remembers that you were asked, when, and how it was handled, even after a restart." Drawn only while no further page exists and the list is not empty (not on `F6`), and only in Themes whose `reading` trait is `book` (Nordic Paper), where it is italic Literata, 13.5px, Quiet ink, 52ch wide. It carries no role and no message text |
 
 ## Using the codes
 

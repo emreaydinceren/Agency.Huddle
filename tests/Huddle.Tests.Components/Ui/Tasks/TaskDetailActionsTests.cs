@@ -199,12 +199,12 @@ public sealed class TaskDetailActionsTests
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
 
-        Assert.Equal("Change log (1)", cut.Find(".task-detail-changelog .mud-expand-panel-text").TextContent.Trim());
+        Assert.Equal("Change log (1)", cut.Find(".task-detail-changelog-heading").TextContent.Trim());
 
-        await cut.InvokeAsync(() => cut.Find(".task-detail-changelog .mud-expand-panel-header").ClickAsync());
 
         Assert.Single(cut.FindAll(".task-detail-changelog-entry"));
-        Assert.Equal($"{harness.Options.Value.HumanName}: created", cut.TextOf(".task-detail-changelog-entry"));
+        Assert.Equal(harness.Options.Value.HumanName, cut.TextOf(".task-detail-changelog-actor"));
+        Assert.Equal("created", cut.TextOf(".task-detail-changelog-summary"));
         Assert.All(cut.FindComponents<MudTimelineItem>(), item => Assert.Equal(Size.Small, item.Instance.Size));
     }
 
@@ -220,12 +220,11 @@ public sealed class TaskDetailActionsTests
         await cut.InvokeAsync(() => cut.FindButton("Save").ClickAsync());
         cut.WaitForAssertion(() => Assert.DoesNotContain("Unsaved edits", cut.Markup, StringComparison.Ordinal));
 
-        await cut.InvokeAsync(() => cut.Find(".task-detail-changelog .mud-expand-panel-header").ClickAsync());
 
         string human = harness.Options.Value.HumanName;
         Assert.Equal(
             [$"{human}: priority: Medium → Urgent", $"{human}: created"],
-            cut.FindAll(".task-detail-changelog-entry").Select(e => e.TextContent.Trim()).ToList());
+            cut.FindAll(".task-detail-changelog-row").Select(row => $"{row.QuerySelector(".task-detail-changelog-actor")?.TextContent.Trim()}: {row.QuerySelector(".task-detail-changelog-summary")?.TextContent.Trim()}").ToList());
     }
 
     /// <summary>
@@ -248,7 +247,6 @@ public sealed class TaskDetailActionsTests
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
 
-        await cut.InvokeAsync(() => cut.Find(".task-detail-changelog .mud-expand-panel-header").ClickAsync());
 
         Assert.Equal("Today 12:30 PM", cut.Find(".task-detail-changelog-date").TextContent.Trim());
     }
@@ -270,13 +268,13 @@ public sealed class TaskDetailActionsTests
     }
 
     /// <summary>
-    /// Expanded is a two-column layout (Spec §13.6, J-follow-up review): Priority, Status and Assignee
-    /// are inside <c>.task-detail-col-fields</c>, and the Description editor plus Origin are inside
+    /// Expanded is a two-column layout (Spec §13.6, J-follow-up review): Priority, Status, Assignee, Team, Project and Sprint
+    /// are inside the full-width strip, <c>.task-detail-col-strip</c>, Parent is inside <c>.task-detail-col-fields</c> (the right column), and the Description editor plus Origin are inside
     /// <c>.task-detail-col-side</c> - asserted by DOM containment (<see cref="INode.Contains"/>), the
     /// facts file's own pattern for "is this element inside that one".
     /// </summary>
     [Fact]
-    public async Task Expanded_TwoColumnLayout_FieldsLeft_DescriptionAndOriginRight()
+    public async Task Expanded_TwoColumnLayout_TitleAndDescriptionLeft_FieldsRight()
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         TaskItem task = harness.Service.Create(
@@ -290,9 +288,14 @@ public sealed class TaskDetailActionsTests
         IElement fieldsColumn = cut.Find(".task-detail-col-fields");
         IElement sideColumn = cut.Find(".task-detail-col-side");
 
-        Assert.True(fieldsColumn.Contains(cut.Find(".task-detail-priority")));
-        Assert.True(fieldsColumn.Contains(cut.Find(".task-detail-status")));
-        Assert.True(fieldsColumn.Contains(cut.Find(".task-detail-assignee")));
+        IElement stripColumn = cut.Find(".task-detail-col-strip");
+        Assert.True(stripColumn.Contains(cut.Find(".task-detail-priority")));
+        Assert.True(stripColumn.Contains(cut.Find(".task-detail-status")));
+        Assert.True(stripColumn.Contains(cut.Find(".task-detail-team")));
+        Assert.True(stripColumn.Contains(cut.Find(".task-detail-project")));
+        Assert.True(stripColumn.Contains(cut.Find(".task-detail-sprint-field")));
+        Assert.True(fieldsColumn.Contains(cut.Find(".task-detail-parent")));
+        Assert.True(stripColumn.Contains(cut.Find(".task-detail-assignee")));
         Assert.True(sideColumn.Contains(cut.Find(".task-detail-description")));
         Assert.True(sideColumn.Contains(cut.Find(".task-detail-origin")));
         Assert.False(sideColumn.Contains(cut.Find(".task-detail-priority")));

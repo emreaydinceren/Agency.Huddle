@@ -36,6 +36,7 @@ internal static partial class SkinLoader
         ("surface", typeof(SurfaceStyle)),
         ("marks", typeof(MarkStyle)),
         ("reading", typeof(ReadingStyle)),
+        ("ids", typeof(IdStyle)),
     ];
 
     private static readonly IReadOnlyDictionary<string, PropertyInfo> PaletteProperties = typeof(Palette)
@@ -689,7 +690,8 @@ internal static partial class SkinLoader
             Trait(draft, "nav", NavStyle.Tint),
             Trait(draft, "surface", SurfaceStyle.Flat),
             Trait(draft, "marks", MarkStyle.Plain),
-            Trait(draft, "reading", ReadingStyle.Plain));
+            Trait(draft, "reading", ReadingStyle.Plain),
+            Trait(draft, "ids", IdStyle.Plain));
 
         return new Skin(
             draft.Id,
@@ -748,6 +750,7 @@ internal static partial class SkinLoader
         {
             PaletteDark palette = new();
             ApplyPalette(palette, draft.Palette);
+            ApplyReadableContrastText(palette, draft.Palette);
             theme = ThemeDefaults.CreateDark(palette);
         }
 
@@ -786,6 +789,31 @@ internal static partial class SkinLoader
         }
 
         return theme;
+    }
+
+    /// <summary>
+    /// Gives the warning, info and secondary hues the glyph colour that reads on them. A dark Theme's hues are bright, so
+    /// MudBlazor's white default fails the 3:1 floor for graphics on the Feed's kind badges; a skin that sets the key
+    /// itself keeps its own value.
+    /// </summary>
+    /// <param name="palette">The dark palette being built.</param>
+    /// <param name="values">The palette keys the skin set.</param>
+    private static void ApplyReadableContrastText(PaletteDark palette, Dictionary<string, string> values)
+    {
+        if (!values.ContainsKey("warningContrastText"))
+        {
+            palette.WarningContrastText = ContrastColour.ReadableForeground(palette.Warning);
+        }
+
+        if (!values.ContainsKey("infoContrastText"))
+        {
+            palette.InfoContrastText = ContrastColour.ReadableForeground(palette.Info);
+        }
+
+        if (!values.ContainsKey("secondaryContrastText"))
+        {
+            palette.SecondaryContrastText = ContrastColour.ReadableForeground(palette.Secondary);
+        }
     }
 
     private static void ApplyPalette(Palette palette, Dictionary<string, string> values)

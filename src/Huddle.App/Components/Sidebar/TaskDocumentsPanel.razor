@@ -104,7 +104,7 @@ else if (this.loaded)
     /// that is a whole code span (<c>`/data/Uploads/a.md`</c>), in the order they appear.
     /// </summary>
     /// <param name="description">The saved Description.</param>
-    private static IEnumerable<string> PathsIn(string description)
+    internal static IEnumerable<string> PathsIn(string description)
     {
         List<(int Index, string Path)> paths = [.. LibraryPathPatterns.Find(description).Select(static match => (match.Index, match.Path))];
         foreach (System.Text.RegularExpressions.Match span in CodeSpan.Matches(description))

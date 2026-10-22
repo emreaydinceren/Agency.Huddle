@@ -56,7 +56,7 @@
     <div class="task-board-columns" style="@this.GridStyle">
         @foreach ((BoardColumn column, int i) in this.model.VisibleColumns.Select((column, index) => (column, index)))
         {
-            <div class="@(this.IsRail(i) ? "task-board-column-header task-board-column-header-rail" : "task-board-column-header")">
+            <div class="@((this.IsRail(i) ? "task-board-column-header task-board-column-header-rail" : "task-board-column-header") + NeedsYouClass(column))">
                 <span class="@StateDotClass(column)" aria-hidden="true"></span>
                 @if (this.renamingColumn == i)
                 {
@@ -112,7 +112,7 @@
                         @for (int i = 0; i < lane.Cells.Count; i++)
                         {
                             BoardCell cell = lane.Cells[i];
-                            <div class="@(this.IsRail(i) ? "task-board-column task-board-column-rail" : "task-board-column")">
+                            <div class="@((this.IsRail(i) ? "task-board-column task-board-column-rail" : "task-board-column") + NeedsYouClass(cell.Column))">
                                 @if (this.IsRail(i))
                                 {
                                     @* An empty terminal column: its name, running down the 40px rail. The header above holds the count. *@
@@ -387,6 +387,10 @@
 
     /// <summary>The class of the 8px state dot that opens a column header: the colour of the column's first state (the same mapping as a Task link's dot), plus a dashed hollow modifier for Backlog so it differs from To Do now that both are Default.</summary>
     /// <param name="column">The column.</param>
+    /// <summary>The extra class of the Needs You column: the one whose first state is Needs You, which the Themes draw as a gate.</summary>
+    private static string NeedsYouClass(BoardColumn column) =>
+        column.States.Count > 0 && column.States[0] == TaskState.NeedsYou ? " needs-you" : string.Empty;
+
     private static string StateDotClass(BoardColumn column) =>
         column.States.Count > 0 ? TaskStateDot.ClassFor(column.States[0]) : "task-state-dot task-state-dot-default";
 

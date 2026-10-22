@@ -972,7 +972,7 @@ See
   seventeen Visual Studio Code ports shipped until 2026-10-17 — see
   [ADR-0058](../adr/0058-a-theme-is-a-palette-a-skin-and-traits.md) and
   [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)
-  (superseded). A Theme is a **skin**: a palette, `--hu-*` tokens, nine traits, faces, radius,
+  (superseded). A Theme is a **skin**: a palette, `--hu-*` tokens, ten traits, faces, radius,
   typography and shadows. A Human's own accent is a per-Theme **customization**, not a Theme.
   A Theme also carries a **`ThemeGroup`** — Light or Dark — which is the picker list it
   appears in. Today it always equals its Mode, but it is a separate field.

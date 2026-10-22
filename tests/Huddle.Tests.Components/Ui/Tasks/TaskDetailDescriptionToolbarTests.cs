@@ -18,7 +18,7 @@ public sealed class TaskDetailDescriptionToolbarTests
     private static TaskItem CreateTask(TaskToolHarness harness) =>
         Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Described", "Platform", null, Description: "Some text."), TaskActors.Human(harness.Options.Value))).Task;
 
-    /// <summary>In Edit the Description has the toolbar with six buttons and no <c>[[ ]]</c> button, ahead of the field.</summary>
+    /// <summary>In Edit the Description has the toolbar with six buttons and no <c>[[ ]]</c> button, in one row with Edit | Preview, ahead of the field.</summary>
     [Fact]
     public async Task Edit_ShowsTheToolbarWithoutTheWikilinkButton()
     {
@@ -40,7 +40,9 @@ public sealed class TaskDetailDescriptionToolbarTests
             cut.FindAll(".task-detail-description-editor [data-md-command]").Select(static b => b.GetAttribute("data-md-command") ?? string.Empty));
         Assert.Empty(cut.FindAll(".task-detail-description-editor .markdown-toolbar-wikilink"));
         AngleSharp.Dom.IElement editor = cut.Find(".task-detail-description-editor");
-        Assert.Equal("markdown-toolbar", editor.FirstElementChild?.ClassName?.Split(' ')[0]);
+        Assert.Equal("task-detail-description-bar", editor.FirstElementChild?.ClassName?.Split(' ')[0]);
+        Assert.NotNull(editor.QuerySelector(".task-detail-description-bar > .markdown-toolbar"));
+        Assert.NotNull(editor.QuerySelector(".task-detail-description-bar .task-detail-description-toggle"));
         Assert.NotNull(editor.QuerySelector("textarea"));
     }
 

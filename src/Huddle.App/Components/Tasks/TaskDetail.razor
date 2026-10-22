@@ -153,23 +153,9 @@ else if (this.loaded is { } task)
 
     IReadOnlyList<GateId> teamGates = this.Gates?.EnabledGates(effective.Location.Team) ?? [];
 
-    RenderFragment fieldsContent = @<text>
-            @if (teamGates.Count > 0)
-            {
-                <div class="task-detail-gates">@("Gates: " + string.Join(", ", teamGates.Select(ProcessDocument.ToId)))</div>
-            }
-            <div class="task-detail-title-row">
-                @if (this.titleEditing)
+    RenderFragment titleIcons = @<text>
+                @if (!this.titleEditing)
                 {
-                    @* The inline edit keeps the title's size (16px/600) and replaces it: in the drawer the header's own copy is hidden while a saved Task's
-                       title is edited, and a draft opens here with the field focused (design-system "Drawer anatomy"; audit B4j, B4p). *@
-                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Title" ValueChanged="this.OnTitleChanged"
-                                  Class="task-detail-title" aria-label="Title" Placeholder="@(this.createMode ? "Task title" : null)" AutoFocus="true" Immediate="true" />
-                }
-                else
-                {
-                    @* The page header shows the saved title as its h1; this row shows the Task's name, with the pencil that edits it. *@
-                    <span class="task-detail-title-display">@effective.Title</span>
                     <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="Edit title" OnClick="this.BeginEditTitle" />
                     @if (!this.createMode)
                     {
@@ -202,7 +188,40 @@ else if (this.loaded is { } task)
                         </ExtraItems>
                     </TaskActionsMenu>
                 }
-            </div>
+        </text>;
+
+    @* Two columns put the title and the Description on the left and the grouped fields on the right; one column stacks them in this order. *@
+    RenderFragment titleEditor = @<text>
+            @* The inline edit keeps the title's size (16px/600) and replaces it: in the drawer the header's own copy is hidden while a saved Task's
+               title is edited, and a draft opens here with the field focused (design-system "Drawer anatomy"; audit B4j, B4p). *@
+            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Title" ValueChanged="this.OnTitleChanged"
+                          Class="task-detail-title" aria-label="Title" Placeholder="@(this.createMode ? "Task title" : null)" AutoFocus="true" Immediate="true" />
+        </text>;
+
+    RenderFragment titleContent = @<text>
+            @if (teamGates.Count > 0)
+            {
+                <div class="task-detail-gates">@("Gates: " + string.Join(", ", teamGates.Select(ProcessDocument.ToId)))</div>
+            }
+            @if (this.Header is null || this.createMode)
+            {
+                <div class="task-detail-title-row">
+                @if (this.titleEditing)
+                {
+                    @titleEditor
+                }
+                    else
+                    {
+                        @* The page header shows the saved title as its h1; this row shows the Task's name, with the pencil that edits it. *@
+                        <span class="task-detail-title-display">@effective.Title</span>
+                    }
+
+                    @if (this.Header is null)
+                    {
+                        @titleIcons
+                    }
+                </div>
+            }
             @if (!this.createMode && RequestFields.TryRead(task, out RequestFields? request) && request is not null)
             {
                 <div class="task-detail-request">
@@ -225,78 +244,16 @@ else if (this.loaded is { } task)
                     }
                 </div>
             }
+        </text>;
 
-            @* The form is four headed groups (Status and priority, People, Planning, Dates); each property is a label
-               on the left and its value on the right once the drawer is 400px wide, stacked below that (a container
-               query in app.css). MudBlazor's own floating labels stay in the DOM as the accessible name. *@
-            <div class="task-detail-groups">
-                <section class="task-detail-group" aria-labelledby="task-detail-heading-status">
-                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label" id="task-detail-heading-status">Status and priority</MudText>
-                    <div class="task-detail-props">
-                        <div class="task-detail-prop">
-                            <span class="task-detail-prop-label" aria-hidden="true">Status</span>
-                            <div class="task-detail-prop-value">
-                                @* The Board's second cue: the state dot beside the Status, the glyph in the Priority's adornment (audit B4r). *@
-                                <div class="task-detail-status-field">
-                                    <TaskStateDot State="effective.Status" />
-                                    <MudSelect T="TaskState" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Status" ValueChanged="this.OnStatusChanged"
-                                               Label="Status" Class="task-detail-status">
-                                        @foreach (TaskState state in TaskStates.All)
-                                        {
-                                            <MudSelectItem T="TaskState" Value="state">@state.ToWire()</MudSelectItem>
-                                        }
-                                    </MudSelect>
-                                </div>
-                            </div>
-                        </div>
+    @* The strip under the header: Assigned to, Status and Priority side by side (Status's Duplicate of or Reason after it), and, on the edit page, the title's
+       own actions at the right end. *@
+    RenderFragment stripContent = @<text>
+            <div class="task-detail-strip">
 
-                        @if (effective.Status == TaskState.Duplicate)
-                        {
-                            <div class="task-detail-prop">
-                                <span class="task-detail-prop-label" aria-hidden="true">Duplicate of</span>
-                                <div class="task-detail-prop-value">
-                                    <TaskPicker Value="effective.DuplicateOf" ValueChanged="this.OnDuplicateOfChanged" Excluding="effective.Id"
-                                                Label="Duplicate of" Placeholder="None" Class="task-detail-duplicate-of" />
-                                </div>
-                            </div>
-                        }
-                        else if (effective.Status is TaskState.Cancelled or TaskState.Rejected)
-                        {
-                            <div class="task-detail-prop">
-                                <span class="task-detail-prop-label" aria-hidden="true">Reason</span>
-                                <div class="task-detail-prop-value">
-                                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@(this.pending.Reason ?? string.Empty)" ValueChanged="this.OnReasonChanged"
-                                                  Label="Reason (optional)" Placeholder="Optional" Class="task-detail-reason" />
-                                </div>
-                            </div>
-                        }
-
-                        <div class="task-detail-prop">
-                            <span class="task-detail-prop-label" aria-hidden="true">Priority</span>
-                            <div class="task-detail-prop-value">
-                                <MudSelect T="TaskPriority" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Priority" ValueChanged="this.OnPriorityChanged" Class="task-detail-priority"
-                                           Label="Priority" AdornmentIcon="@TaskColors.Icon(effective.Priority)" Adornment="Adornment.Start">
-                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.Low">@TaskPriority.Low.ToWire()</MudSelectItem>
-                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.Medium">@TaskPriority.Medium.ToWire()</MudSelectItem>
-                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.High">@TaskPriority.High.ToWire()</MudSelectItem>
-                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.Urgent">@TaskPriority.Urgent.ToWire()</MudSelectItem>
-                                </MudSelect>
-                            </div>
-                        </div>
-
-                        @if (notice is not null)
-                        {
-                            <div class="task-detail-wake-notice">@notice</div>
-                        }
-                    </div>
-                </section>
-
-                <section class="task-detail-group" aria-labelledby="task-detail-heading-people">
-                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label" id="task-detail-heading-people">People</MudText>
-                    <div class="task-detail-props">
-                        <div class="task-detail-prop">
-                            <span class="task-detail-prop-label" aria-hidden="true">Assignee</span>
-                            <div class="task-detail-prop-value">
+            <div class="task-detail-strip-item">
+                <MudTooltip Text="Assigned to"><span class="task-detail-strip-label"><MudIcon Icon="@Icons.Material.Outlined.Person" Size="Size.Small" aria-label="Assigned to" /></span></MudTooltip>
+                <div class="task-detail-prop-value task-detail-assignee-value">
                                 <MudAutocomplete T="AssigneeOption" Variant="Variant.Outlined" Margin="Margin.Dense" Strict="true" SearchFunc="this.SearchAssignees" ToStringFunc="@(o => o?.Name)"
                                                   Value="@(effective.Assignee is { } assigneeName ? new AssigneeOption(assigneeName, string.Empty, null) : null)"
                                                   ValueChanged="this.OnAssigneeChanged" Class="task-detail-assignee" Label="Assignee" Placeholder="Unassigned">
@@ -313,17 +270,40 @@ else if (this.loaded is { } task)
                                 {
                                     <MudLink Href="@($"/rooms/{wokenRoomId}")" Class="task-detail-woken-link">@($"Woken in Room {wokenRoomName}")</MudLink>
                                 }
+                </div>
+            </div>
+                        <div class="task-detail-strip-item">
+                            <span class="task-detail-strip-label" aria-hidden="true">Status</span>
+                            <div class="task-detail-prop-value">
+                                @* The Board's second cue: the state dot beside the Status, the glyph in the Priority's adornment (audit B4r). *@
+                                <div class="task-detail-status-field">
+                                    <TaskStateDot State="effective.Status" />
+                                    <MudSelect T="TaskState" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Status" ValueChanged="this.OnStatusChanged"
+                                               Label="Status" Class="task-detail-status">
+                                        @foreach (TaskState state in TaskStates.All)
+                                        {
+                                            <MudSelectItem T="TaskState" Value="state">@state.ToWire()</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </section>
 
-                <section class="task-detail-group" aria-labelledby="task-detail-heading-planning">
-                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label" id="task-detail-heading-planning">Planning</MudText>
-                    <div class="task-detail-props">
-                        @* Team and Project are two rows, each with its own visible label (UX-R09). *@
-                        <div class="task-detail-prop">
-                            <span class="task-detail-prop-label" aria-hidden="true">Team</span>
+                        <div class="task-detail-strip-item">
+                            <span class="task-detail-strip-label" aria-hidden="true">Priority</span>
+                            <div class="task-detail-prop-value">
+                                <MudSelect T="TaskPriority" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Priority" ValueChanged="this.OnPriorityChanged" Class="task-detail-priority"
+                                           Label="Priority" AdornmentIcon="@TaskColors.Icon(effective.Priority)" Adornment="Adornment.Start">
+                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.Low">@TaskPriority.Low.ToWire()</MudSelectItem>
+                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.Medium">@TaskPriority.Medium.ToWire()</MudSelectItem>
+                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.High">@TaskPriority.High.ToWire()</MudSelectItem>
+                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.Urgent">@TaskPriority.Urgent.ToWire()</MudSelectItem>
+                                </MudSelect>
+                            </div>
+                        </div>
+
+                        <div class="task-detail-strip-item">
+                            <span class="task-detail-strip-label" aria-hidden="true">Team</span>
                             <div class="task-detail-prop-value">
                                 <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team"
                                            Label="Team" aria-label="Team">
@@ -334,16 +314,16 @@ else if (this.loaded is { } task)
                                 </MudSelect>
                             </div>
                         </div>
-                        <div class="task-detail-prop">
-                            <span class="task-detail-prop-label" aria-hidden="true">Project</span>
+                        <div class="task-detail-strip-item">
+                            <span class="task-detail-strip-label" aria-hidden="true">Project</span>
                             <div class="task-detail-prop-value">
                                 <MudAutocomplete T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Location.Project" ValueChanged="this.OnProjectChanged"
                                                   CoerceValue="true" SearchFunc="this.SearchProjects" Class="task-detail-project" Label="Project" Placeholder="None" aria-label="Project" />
                             </div>
                         </div>
 
-                        <div class="task-detail-prop">
-                            <span class="task-detail-prop-label" aria-hidden="true">Sprint</span>
+                        <div class="task-detail-strip-item">
+                            <span class="task-detail-strip-label" aria-hidden="true">Sprint</span>
                             <div class="task-detail-prop-value">
                                 <div class="task-detail-sprint">
                                     <MudAutocomplete T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@this.SprintFieldText(task)" ValueChanged="this.OnSprintChanged" Immediate="true"
@@ -361,6 +341,42 @@ else if (this.loaded is { } task)
                             </div>
                         </div>
 
+                        @if (effective.Status == TaskState.Duplicate)
+                        {
+                            <div class="task-detail-strip-item">
+                                <span class="task-detail-strip-label" aria-hidden="true">Duplicate of</span>
+                                <div class="task-detail-prop-value">
+                                    <TaskPicker Value="effective.DuplicateOf" ValueChanged="this.OnDuplicateOfChanged" Excluding="effective.Id"
+                                                Label="Duplicate of" Placeholder="None" Class="task-detail-duplicate-of" />
+                                </div>
+                            </div>
+                        }
+                        else if (effective.Status is TaskState.Cancelled or TaskState.Rejected)
+                        {
+                            <div class="task-detail-strip-item">
+                                <span class="task-detail-strip-label" aria-hidden="true">Reason</span>
+                                <div class="task-detail-prop-value">
+                                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@(this.pending.Reason ?? string.Empty)" ValueChanged="this.OnReasonChanged"
+                                                  Label="Reason (optional)" Placeholder="Optional" Class="task-detail-reason" />
+                                </div>
+                            </div>
+                        }
+
+                        @if (notice is not null)
+                        {
+                            <div class="task-detail-strip-notice task-detail-wake-notice">@notice</div>
+                        }
+            </div>
+        </text>;
+
+    RenderFragment groupsContent = @<text>
+            @* The form is four headed groups (Status and priority, People, Planning, Dates); each property is a label
+               on the left and its value on the right once the drawer is 400px wide, stacked below that (a container
+               query in app.css). MudBlazor's own floating labels stay in the DOM as the accessible name. *@
+            <div class="task-detail-groups">
+                <section class="task-detail-group" aria-labelledby="task-detail-heading-planning">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label" id="task-detail-heading-planning">Planning</MudText>
+                    <div class="task-detail-props">
                         <div class="task-detail-prop">
                             <span class="task-detail-prop-label" aria-hidden="true">Parent</span>
                             <div class="task-detail-prop-value">
@@ -437,28 +453,6 @@ else if (this.loaded is { } task)
                    (kept in the DOM, visually hidden) overlaps nothing (audit B4n). *@
                 <div class="task-detail-description-header">
                     <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label" id="task-detail-heading-description">Description</MudText>
-                    @if (this.Options.Value.Library.Enabled)
-                    {
-                        <MudTooltip Text="Link a Library file">
-                            <MudIconButton Icon="@Icons.Material.Outlined.Link" Size="Size.Small" aria-label="Link a Library file"
-                                           Class="task-detail-link-file" OnClick="this.LinkLibraryFileAsync" />
-                        </MudTooltip>
-                        <MudFileUpload @ref="this.attachPicker" T="IReadOnlyList<IBrowserFile>" MaximumFileCount="AttachPickLimit"
-                                       FilesChanged="this.OnFilesPickedAsync" Disabled="@(this.createMode || this.uploading)">
-                            <CustomContent Context="fileUpload">
-                                <MudTooltip Text="@(this.createMode ? "Save the Task first to attach files." : "Attach a file from this computer")">
-                                    <MudIconButton Icon="@Icons.Material.Outlined.AttachFile" Size="Size.Small" aria-label="Attach a file"
-                                                   Class="task-detail-attach-file" Disabled="@(this.createMode || this.uploading)"
-                                                   OnClick="@(() => fileUpload.OpenFilePickerAsync())" />
-                                </MudTooltip>
-                            </CustomContent>
-                        </MudFileUpload>
-                    }
-                    <HuddleSegmentedControl T="DescriptionViewMode" Value="this.descriptionMode" ValueChanged="this.OnDescriptionModeChanged"
-                                     Class="task-detail-description-toggle" ItemCount="2">
-                        <MudToggleItem Value="DescriptionViewMode.Edit" Text="Edit" />
-                        <MudToggleItem Value="DescriptionViewMode.Preview" Text="Preview" />
-                    </HuddleSegmentedControl>
                 </div>
 
                 @if (this.uploading)
@@ -470,53 +464,138 @@ else if (this.loaded is { } task)
                 {
                     @* The Library's Markdown toolbar (L3g) above the field, without the [[ ]] button: markdown-textarea.js wires it to the field's
                        textarea once rendered (read view spec D-7). The wrapper is what the script searches inside. *@
-                    <div class="task-detail-description-editor" @ref="this.descriptionEditor">
-                        <MarkdownToolbar ShowWikilink="false" />
+                    <div class="task-detail-description-editor task-detail-description-box" @ref="this.descriptionEditor">
+                        <div class="task-detail-description-bar">
+                            <MarkdownToolbar ShowWikilink="false" />
+                            @this.DescriptionToggle
+                        </div>
                         <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Description" ValueChanged="this.OnDescriptionChanged"
                                       Lines="10" Sizing="InputSizing.Auto" MaxLines="30" Label="Description" Placeholder="Add a description…" Class="task-detail-description task-detail-description-field long-text-field" />
                     </div>
                 }
                 else
                 {
-                    <div class="task-detail-description-preview">@((MarkupString)MarkdownRenderer.ToHtml(effective.Description, this.Store, this.Options.Value.Library.Enabled ? this.LibraryResolver : null))</div>
+                    <div class="task-detail-description-box">
+                        <div class="task-detail-description-bar">@this.DescriptionToggle</div>
+                        <div class="task-detail-description-preview">@((MarkupString)MarkdownRenderer.ToHtml(effective.Description, this.Store, this.Options.Value.Library.Enabled ? this.LibraryResolver : null))</div>
+                    </div>
                 }
             </div>
 
+            @* The Human gate sits under the Description and above the Library section: the switch, the proof it needs and the decision. *@
+        @if (!this.createMode)
+        {
+            <TaskHumanGate HumanGate="@effective.HumanGate" HumanGateChanged="this.OnHumanGateChanged"
+                           Action="@effective.Action" ActionChanged="this.OnActionChanged"
+                           Assignee="@effective.Assignee" HumanName="@this.Human.Name" ChangeLog="@task.ChangeLog" />
+            @if (this.proof.Total > 0)
+            {
+                <TaskProofList Task="@task" Proof="@this.proof" HumanName="@this.Human.Name" />
+            }
+
+            @if (task.IsGated && task.Status is TaskState.Review or TaskState.NeedsYou)
+            {
+                <TaskDecisionCard Task="@task" Proof="@this.proof" Blocked="@this.HasPending" OnReload="this.OnDecisionReload" />
+            }
+        }
+
+            @if (this.Options.Value.Library.Enabled)
+            {
+                @* The Library section: the files the Description links, as [[wiki-style]] links, and Link note, which opens the same picker as the
+                   link icon above. A link to a file that is gone stays in Quiet ink. *@
+                <div class="task-detail-library">
+                    <span class="task-detail-library-label">Library</span>
+                    <div class="task-detail-library-links">
+                        @foreach (LibraryRow row in this.LibraryRows(effective.Description))
+                        {
+                            @if (row.Exists)
+                            {
+                                <MudLink Href="@row.Href" Underline="Underline.None" Class="task-detail-library-link" title="@row.Folder"><span aria-hidden="true">[[</span>@row.Name<span aria-hidden="true">]]</span></MudLink>
+                            }
+                            else
+                            {
+                                <span class="task-detail-library-link task-detail-library-missing" title="Not found"><span aria-hidden="true">[[</span>@row.Name<span aria-hidden="true">]]</span></span>
+                            }
+                        }
+                        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Link" Class="task-detail-library-add task-detail-link-file"
+                                   aria-label="Link a Library file" OnClick="this.LinkLibraryFileAsync">Link note</MudButton>
+                    </div>
+                </div>
+                @* Files: the same row style as Library, holding Add File, which uploads a file from this computer into the Task's folder. *@
+                <div class="task-detail-library task-detail-files">
+                    <span class="task-detail-library-label">Files</span>
+                    <div class="task-detail-library-links">
+                        <MudFileUpload @ref="this.attachPicker" T="IReadOnlyList<IBrowserFile>" MaximumFileCount="AttachPickLimit"
+                                       FilesChanged="this.OnFilesPickedAsync" Disabled="@(this.createMode || this.uploading)">
+                            <CustomContent Context="fileUpload">
+                                <MudTooltip Text="@(this.createMode ? "Save the Task first to attach files." : "Attach a file from this computer")">
+                                    <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.AttachFile" aria-label="Attach a file"
+                                               Class="task-detail-library-add task-detail-attach-file" Disabled="@(this.createMode || this.uploading)"
+                                               OnClick="@(() => fileUpload.OpenFilePickerAsync())">Add File</MudButton>
+                                </MudTooltip>
+                            </CustomContent>
+                        </MudFileUpload>
+                    </div>
+                </div>
+            }
+
             @if (effective.OriginRoomId is { } originRoomId)
             {
-                <span class="task-detail-origin">
-                    @if (this.originRoomName is not null)
-                    {
-                        <MudLink Href="@($"/rooms/{originRoomId}")">@this.originRoomName</MudLink>
-                    }
-                    else
-                    {
-                        @:(Room no longer exists)
-                    }
-                </span>
+                @* The Room the Task came from, in the same labelled row style as Library and Files. *@
+                <div class="task-detail-library task-detail-room">
+                    <span class="task-detail-library-label">Room</span>
+                    <div class="task-detail-library-links">
+                        <span class="task-detail-origin">
+                            @if (this.originRoomName is not null)
+                            {
+                                <MudLink Href="@($"/rooms/{originRoomId}")">@this.originRoomName</MudLink>
+                            }
+                            else
+                            {
+                                @:(Room no longer exists)
+                            }
+                        </span>
+                    </div>
+                </div>
             }
         </text>;
 
-    <MudGrid Class="task-detail-grid">
-        <MudItem xs="12" md="7" Class="task-detail-col-fields">@fieldsContent</MudItem>
-        <MudItem xs="12" md="5" Class="task-detail-col-side">@sideContent</MudItem>
-    </MudGrid>
+    RenderFragment logContent = @<text>
+            @if (!this.createMode)
+            {
+                @* The Change log closes the left column. Each row is an avatar joined to the next by a line (none above the first or below the last),
+                   the actor in bold, what changed, and when. *@
+                <section class="task-detail-changelog">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label task-detail-changelog-heading">Change log (@task.ChangeLog.Count)</MudText>
+                        <ol class="task-detail-changelog-list">
+                            @foreach (ChangeLogEntry entry in task.ChangeLog.Reverse())
+                            {
+                                <li class="task-detail-changelog-row">
+                                    <span class="task-detail-changelog-avatar" aria-hidden="true"><TeammateAvatar Name="@entry.Actor" Size="Size.Small" /></span>
+                                    <span class="task-detail-changelog-entry"><strong class="task-detail-changelog-actor">@entry.Actor</strong>@if (string.Equals(entry.Actor, this.Human.Name, StringComparison.Ordinal))
+                                        {
+                                            <span class="task-detail-changelog-pill">you</span>
+                                        } <span class="task-detail-changelog-summary">@entry.Summary</span></span>
+                                    <span class="task-detail-changelog-date">@TaskDetail.FormatChangeLogDate(entry.At, this.Clock)</span>
+                                </li>
+                            }
+                        </ol>
+                </section>
+            }
+        </text>;
 
-    @if (!this.createMode)
+    @if (this.Header is not null)
     {
-        <TaskHumanGate HumanGate="@effective.HumanGate" HumanGateChanged="this.OnHumanGateChanged"
-                       Action="@effective.Action" ActionChanged="this.OnActionChanged"
-                       Assignee="@effective.Assignee" HumanName="@this.Human.Name" ChangeLog="@task.ChangeLog" />
-        @if (this.proof.Total > 0)
-        {
-            <TaskProofList Task="@task" Proof="@this.proof" HumanName="@this.Human.Name" />
-        }
-
-        @if (task.IsGated && task.Status is TaskState.Review or TaskState.NeedsYou)
-        {
-            <TaskDecisionCard Task="@task" Proof="@this.proof" Blocked="@this.HasPending" OnReload="this.OnDecisionReload" />
-        }
+        @this.Header(new TaskDetailHeaderParts(this.titleEditing && !this.createMode ? titleEditor : null, titleIcons))
     }
+
+    <MudGrid Class="task-detail-grid">
+        <MudItem xs="12" md="7" Class="task-detail-col-title">@titleContent</MudItem>
+        <MudItem xs="12" Class="task-detail-col-strip">@stripContent</MudItem>
+        <MudItem xs="12" md="5" Class="task-detail-col-fields">@groupsContent</MudItem>
+        <MudItem xs="12" md="7" Class="task-detail-col-side">@sideContent</MudItem>
+        <MudItem xs="12" md="7" Class="task-detail-col-log">@logContent</MudItem>
+    </MudGrid>
 
     @* Cancel, then the one filled primary action (Save, always here, never in the alert above). In the Tasks drawer the host draws
        them in the drawer's sticky footer instead (ExternalFooter, audit B4k). The rare actions - Make a copy and Close/Reopen -
@@ -533,23 +612,7 @@ else if (this.loaded is { } task)
 
     @if (!this.createMode)
     {
-        <MudExpansionPanels Class="task-detail-changelog" Elevation="0">
-            <MudExpansionPanel Text="@($"Change log ({task.ChangeLog.Count})")">
-                <MudTimeline TimelinePosition="TimelinePosition.Start">
-                    @foreach (ChangeLogEntry entry in task.ChangeLog.Reverse())
-                    {
-                        <MudTimelineItem Size="Size.Small">
-                            <ItemOpposite>
-                                <span class="task-detail-changelog-date">@TaskDetail.FormatChangeLogDate(entry.At, this.Clock)</span>
-                            </ItemOpposite>
-                            <ItemContent>
-                                <span class="task-detail-changelog-entry">@($"{entry.Actor}: {entry.Summary}")</span>
-                            </ItemContent>
-                        </MudTimelineItem>
-                    }
-                </MudTimeline>
-            </MudExpansionPanel>
-        </MudExpansionPanels>
+        @* The Change log now closes the left column, above the footer meta (see sideContent). *@
 
         @* Footer meta: when the Task was created, last changed and closed, at the bottom of the form. *@
         <div class="task-detail-footer-meta">
@@ -588,6 +651,45 @@ else if (this.loaded is { } task)
     private string? saveError;
     private IReadOnlyList<string> saveProblems = [];
     private bool titleEditing;
+
+    /// <summary>One Library file the Description links: its name without the extension, its folder, its Library page address and whether it still exists.</summary>
+    private sealed record LibraryRow(string Name, string Folder, string Href, bool Exists);
+
+    /// <summary>The Library files <paramref name="description"/> links, found the way the Description preview and the Linked documents panel find them, once each.</summary>
+    /// <param name="description">The Description as it stands, saved or pending.</param>
+    /// <returns>One row per distinct file, in the order the Description names them.</returns>
+    private List<LibraryRow> LibraryRows(string description)
+    {
+        List<LibraryRow> rows = [];
+        HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
+        List<string> paths = [.. Agency.Huddle.App.Components.Sidebar.TaskDocumentsPanel.PathsIn(description)];
+        foreach (string path in paths)
+        {
+            // A path with a space in a folder name is also matched up to the space; the longer path is the file, so the stub is no row.
+            if (paths.Any(other => other.Length > path.Length && other.StartsWith(path, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            if (this.LibraryResolver.ResolvePath(path) is { } reference && seen.Add(reference.RootId + "/" + reference.RelativePath))
+            {
+                int slash = reference.RelativePath.LastIndexOf('/');
+                string file = slash >= 0 ? reference.RelativePath[(slash + 1)..] : reference.RelativePath;
+                string name = System.IO.Path.GetFileNameWithoutExtension(file);
+                string folder = slash >= 0 ? reference.RelativePath[..slash] : reference.RootId;
+                rows.Add(new LibraryRow(name.Length > 0 ? name : file, folder, LibraryLinkQuery.BuildPageUri(reference.RootId, reference.RelativePath), reference.Exists));
+            }
+        }
+
+        return rows;
+    }
+
+    /// <summary>Edit | Preview, drawn at the right end of the Description card's toolbar row in both modes.</summary>
+    private RenderFragment DescriptionToggle => @<HuddleSegmentedControl T="DescriptionViewMode" Value="this.descriptionMode" ValueChanged="this.OnDescriptionModeChanged"
+                                                                           Class="task-detail-description-toggle" ItemCount="2">
+        <MudToggleItem Value="DescriptionViewMode.Edit" Text="Edit" />
+        <MudToggleItem Value="DescriptionViewMode.Preview" Text="Preview" />
+    </HuddleSegmentedControl>;
     private TaskActionsMenu? actionsMenu;
     private (bool Visible, string Label, bool Disabled) notifiedFooter;
     private DescriptionViewMode descriptionMode = DescriptionViewMode.Edit;
@@ -623,6 +725,13 @@ else if (this.loaded is { } task)
     /// </summary>
     [Parameter]
     public bool ExternalFooter { get; set; }
+
+    /// <summary>
+    /// The host's own header (the Task edit page's), drawn above the form with the title's pieces: the title field while a saved Task's title is edited, and the pencil,
+    /// Copy id and actions menu for the end of the title's line. When set, this component draws no title row for a saved Task; a new Task keeps its title field in the form, under the header's "New task". Null (the default) keeps the title row, as the Tasks drawer has it.
+    /// </summary>
+    [Parameter]
+    public RenderFragment<TaskDetailHeaderParts>? Header { get; set; }
 
     /// <summary>Raised after a render in which <see cref="FooterVisible"/>, <see cref="FooterSaveLabel"/> or <see cref="FooterSaveDisabled"/> changed, so a host that draws the footer re-renders it.</summary>
     [Parameter]

@@ -134,7 +134,7 @@ internal static partial class UiConventionScanner
 
     /// <summary>
     /// CV11: in a stylesheet, a <c>border-radius</c> that is not <c>0</c>, <c>50%</c>, <c>999px</c> or built from
-    /// <c>var(--mud-default-borderradius)</c>; a literal <c>font-size</c>; a <c>padding</c>, <c>margin</c> or
+    /// <c>var(--mud-default-borderradius)</c> or a skin radius token such as <c>var(--hu-feed-card-radius)</c>; a literal <c>font-size</c>; a <c>padding</c>, <c>margin</c> or
     /// <c>gap</c> (including side variants) with any non-zero rem value, or a px value whose magnitude is over 2 and
     /// off the spacing scale (<see cref="SpacingScale"/>); a <c>z-index</c> above 2;
     /// each <c>!important</c>.
@@ -163,6 +163,7 @@ internal static partial class UiConventionScanner
         if (string.Equals(property, "border-radius", StringComparison.Ordinal))
         {
             return !value.Contains("var(--mud-default-borderradius)", StringComparison.Ordinal)
+                && !HuRadiusToken().IsMatch(value)
                 && value.Split(' ', StringSplitOptions.RemoveEmptyEntries).Any(static token => token is not ("0" or "0px" or "50%" or "999px"));
         }
 
@@ -320,6 +321,9 @@ internal static partial class UiConventionScanner
 
     [GeneratedRegex(@"\b(?:Task|ValueTask|void)(?:<[^>\s]*>)?\s+DispatchAsync\s*\(", RegexOptions.CultureInvariant)]
     private static partial Regex DispatchAsyncDeclaration();
+
+    [GeneratedRegex(@"var\(--hu-[a-z-]*radius\)", RegexOptions.CultureInvariant)]
+    private static partial Regex HuRadiusToken();
 
     [GeneratedRegex(@"(?<![\w-])(?<prop>border-radius|font-size|z-index|(?:padding|margin)(?:-(?:top|right|bottom|left|inline|block)(?:-(?:start|end))?)?|gap|row-gap|column-gap)\s*:\s*(?<value>[^;{}]*)", RegexOptions.CultureInvariant)]
     private static partial Regex CssDeclaration();
