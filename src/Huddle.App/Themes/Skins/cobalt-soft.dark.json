@@ -38,6 +38,16 @@
     "overlayDark": "rgba(0,0,0,0.62)"
   },
   "tokens": {
+    "detail.decision.background": "#172036",
+    "gate.background": "mix(palette.secondary 15%, palette.surface)",
+    "gate.line": "mix(palette.secondary 50%, palette.surface)",
+    "board.background": "#172036",
+    "board.column.background": "#111829",
+    "list.group.background": "#172036",
+    "chip.set.line": "mix(palette.primary 50%, palette.surface)",
+    "feed.card.open.line": "#54608b",
+    "feed.unseen.background": "ref(tone.primary.soft)",
+    "feed.detail.background": "#172036",
     "accent.ink": "mix(palette.primary 50%, palette.textPrimary)",
     "selected.background": "mix(palette.primary 20%, palette.surface)",
     "selected.background.hover": "mix(palette.primary 30%, palette.surface)",

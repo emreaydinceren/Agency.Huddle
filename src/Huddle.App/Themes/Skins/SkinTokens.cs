@@ -24,7 +24,134 @@ internal static class SkinTokens
         AddStateTokens(tokens);
         AddToneTokens(tokens);
         AddSurfaceTokens(tokens);
+        AddFeedTokens(tokens);
+        AddControlTokens(tokens);
+        AddDetailTokens(tokens);
+        AddEditTokens(tokens);
+        AddTaskListTokens(tokens);
+        AddEditorTokens(tokens);
         return tokens;
+    }
+
+    /// <summary>Registers the Feed Tab tokens. Each default is the Feed's look before Themes differed, so a skin lists only what it changes.</summary>
+    /// <param name="tokens">The registry being built.</param>
+    private static void AddFeedTokens(List<Token> tokens)
+    {
+        Add(tokens, "feed.summary.ink", "palette.textPrimary", "A Feed card's summary sentence.");
+        Add(tokens, "feed.day.rule", "ref(ink.rule)", "The rule after a Feed day heading.");
+        Add(tokens, "feed.live.background", "mix(palette.success 6%, palette.surface)", "The Live chip's fill.");
+        Add(tokens, "feed.live.line", "transparent", "The Live chip's outline.");
+        Add(tokens, "feed.live.ink", "palette.success", "The Live chip's text.");
+        Add(tokens, "feed.note.background", "transparent", "The Feed's read-only note fill.");
+        Add(tokens, "feed.note.line", "transparent", "The Feed's read-only note outline.");
+        Add(tokens, "feed.card.radius", "8px", "A Feed card's corner radius.");
+        Add(tokens, "feed.card.hover.shadow", "ref(shadow.card)", "A Feed card's shadow while hovered.");
+        Add(tokens, "feed.card.open.shadow", "ref(shadow.card.hover)", "An open Feed card's shadow.");
+        Add(tokens, "feed.card.hover.line", "ref(line.control)", "A Feed card's border while hovered.");
+        Add(tokens, "feed.card.hover.fill", "ref(ground.raised)", "A Feed card's fill while hovered.");
+        Add(tokens, "feed.card.open.line", "ref(line.control)", "An open Feed card's border.");
+        Add(tokens, "feed.card.kindbar", "0px", "The width of the kind bar on a Feed card's left edge.");
+        Add(tokens, "feed.card.kindbar.ink", "palette.primary", "The kind bar's colour for an item with no kind.");
+        Add(tokens, "feed.detail.background", "transparent", "The expanded panel of a Feed card.");
+        Add(tokens, "feed.unseen.background", "transparent", "The fill of an unseen Feed item.");
+        Add(tokens, "feed.unseen.dot", "palette.primary", "The dot before an unseen item's age.");
+        Add(tokens, "feed.unseen.weight", "400", "The summary weight of an unseen Feed item.");
+        Add(tokens, "feed.unseen.bar", "palette.primary", "The accent bar of an unseen Feed item.");
+    }
+
+    /// <summary>Registers the segmented control and select tokens the Feed's filter bar reads.</summary>
+    /// <param name="tokens">The registry being built.</param>
+    private static void AddControlTokens(List<Token> tokens)
+    {
+        Add(tokens, "control.track", "ref(ink.wash)", "The track behind a segmented control.");
+        Add(tokens, "control.ink", "ref(text.subtle)", "An unselected segmented-control label.");
+        Add(tokens, "control.selected.ink", "palette.textPrimary", "The selected segmented-control label.");
+        Add(tokens, "control.selected.line", "ref(line.region)", "The outline of the selected segment's pill.");
+        Add(tokens, "control.set.background", "ref(tone.info.soft)", "A filter select's fill once a value is chosen.");
+        Add(tokens, "control.set.line", "ref(tone.info.ink)", "A filter select's border once a value is chosen.");
+        Add(tokens, "control.set.ink", "ref(tone.info.ink)", "A filter select's text once a value is chosen.");
+    }
+
+    /// <summary>Registers the Task detail panel tokens (the read-only right drawer). Each default is the panel's look before Themes differed.</summary>
+    /// <param name="tokens">The registry being built.</param>
+    private static void AddDetailTokens(List<Token> tokens)
+    {
+        Add(tokens, "detail.background", "ref(ground.sidebar)", "The Task detail panel's ground.");
+        Add(tokens, "detail.blur", "0px", "The blur behind the Task detail panel (a glass Theme sets it).");
+        Add(tokens, "detail.edge", "transparent", "The start-edge line of the Task detail panel.");
+        Add(tokens, "detail.decision.background", "transparent", "The band or card behind a Task's Decision card.");
+        Add(tokens, "detail.decision.line", "transparent", "The top line of the Decision card's band.");
+        Add(tokens, "detail.accent.from", "transparent", "The start colour of a 3px accent bar on a panel header or gate.");
+        Add(tokens, "detail.accent.to", "transparent", "The end colour of that accent bar.");
+        Add(tokens, "detail.head.line", "transparent", "The hairline under the Task detail header.");
+        Add(tokens, "detail.row.line", "ref(ink.edge)", "The hairline between property rows.");
+        Add(tokens, "detail.section.line", "transparent", "The hairline above a Task detail section.");
+        Add(tokens, "detail.timeline.dot", "ref(ink.field)", "A dot of the Change log timeline.");
+    }
+
+    /// <summary>Registers the Task edit page tokens: header, fields, field groups and the gate frame.</summary>
+    /// <param name="tokens">The registry being built.</param>
+    private static void AddEditTokens(List<Token> tokens)
+    {
+        Add(tokens, "edit.header.background", "ref(ground.raised)", "The Task edit page's sticky header.");
+        Add(tokens, "edit.header.blur", "0px", "The blur behind the Task edit page's header.");
+        Add(tokens, "field.line", "ref(ink.field)", "The border of a text or select field.");
+        Add(tokens, "field.line.bottom", "ref(field.line)", "The bottom border of a field.");
+        Add(tokens, "field.shadow", "none", "The resting shadow under a field.");
+        Add(tokens, "control.radius", "mud(default-borderradius)", "The corner of a field or button.");
+        Add(tokens, "form.group.background", "transparent", "The surface of a field group.");
+        Add(tokens, "form.group.line", "transparent", "The border of a field group.");
+        Add(tokens, "form.group.shadow", "none", "The shadow of a field group.");
+        Add(tokens, "form.group.radius", "0px", "The corner of a field group.");
+        Add(tokens, "form.group.padding", "0px", "The padding inside a field group.");
+        Add(tokens, "form.group.head.line", "transparent", "The rule under a field group's label.");
+        Add(tokens, "gate.background", "transparent", "The surface of the Human gate and the Decision card on the edit page.");
+        Add(tokens, "gate.line", "transparent", "Their border.");
+        Add(tokens, "gate.halo", "none", "Their outer ring.");
+        Add(tokens, "gate.radius", "0px", "Their corner.");
+        Add(tokens, "gate.padding", "0px", "Their inner padding.");
+    }
+
+    /// <summary>Registers the Tasks page tokens: the toolbar chips, the List rows and the Kanban board.</summary>
+    /// <param name="tokens">The registry being built.</param>
+    private static void AddTaskListTokens(List<Token> tokens)
+    {
+        Add(tokens, "chip.set.background", "transparent", "A toolbar filter chip's fill once it is set.");
+        Add(tokens, "chip.set.line", "palette.primary", "A set filter chip's border.");
+        Add(tokens, "chip.set.ink", "palette.textPrimary", "A set filter chip's text.");
+        Add(tokens, "toolbar.line", "transparent", "The rule under the Tasks toolbar row.");
+        Add(tokens, "button.filled.shadow", "none", "The shadow of a filled button.");
+        Add(tokens, "list.row.line", "ref(line.region)", "The line under a List row.");
+        Add(tokens, "list.row.hover", "ref(hover)", "A List row's fill while hovered.");
+        Add(tokens, "list.group.background", "ref(ground.page)", "A List group row's fill.");
+        Add(tokens, "list.selected.bar", "transparent", "The 3px edge bar on the selected List row.");
+        Add(tokens, "list.needs.background", "transparent", "The fill of a List row in Needs You.");
+        Add(tokens, "list.needs.bar", "transparent", "The edge bar of a List row in Needs You.");
+        Add(tokens, "list.blocked.bar", "transparent", "The edge bar of a blocked List row.");
+        Add(tokens, "list.title.weight", "400", "The weight of a Task title in a List row.");
+        Add(tokens, "board.background", "transparent", "The ground behind the Board's columns.");
+        Add(tokens, "board.column.background", "ref(ground.sunk)", "A Board column's surface.");
+        Add(tokens, "board.column.line", "ref(line.region)", "A Board column's border.");
+        Add(tokens, "board.count.background", "transparent", "The pill behind a column count.");
+        Add(tokens, "board.count.line", "transparent", "The border of that pill.");
+        Add(tokens, "board.needs.background", "transparent", "The Needs You column's surface.");
+        Add(tokens, "board.needs.line", "ref(board.column.line)", "The Needs You column's border.");
+        Add(tokens, "board.needs.halo", "0 0 0 0 transparent", "The Needs You column's outer ring.");
+        Add(tokens, "board.needs.bar", "transparent", "The Needs You column's top edge bar.");
+        Add(tokens, "board.card.hover.line", "ref(line.control)", "A Board card's border while hovered.");
+        Add(tokens, "board.card.hover.shadow", "ref(shadow.card.hover)", "A Board card's shadow while hovered.");
+    }
+
+    /// <summary>Registers the Description editor tokens: the card, its toolbar rule and the writing surface.</summary>
+    /// <param name="tokens">The registry being built.</param>
+    private static void AddEditorTokens(List<Token> tokens)
+    {
+        Add(tokens, "editor.radius", "mud(default-borderradius)", "The corner of the Description editor's card.");
+        Add(tokens, "editor.shadow", "none", "The resting shadow of the Description editor's card.");
+        Add(tokens, "editor.toolbar.line", "transparent", "The rule under the Description editor's toolbar, and the dividers in it.");
+        Add(tokens, "editor.text.size", "mud(typography-body2-size)", "The font size of the Description's writing surface.");
+        Add(tokens, "editor.text.leading", "1.75", "The line height of the Description's writing surface.");
+        Add(tokens, "editor.text.ink", "palette.textPrimary", "The text colour of the Description's writing surface.");
     }
 
     /// <summary>Registers one token whose default is <paramref name="value"/> in both modes.</summary>

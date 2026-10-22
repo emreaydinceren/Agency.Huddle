@@ -76,6 +76,97 @@
 
     /* The cut-out ring around a presence badge on an avatar. A region sets it to the ground behind the avatar. */
     --hu-ring: var(--mud-palette-surface);
+
+    /* The Feed Tab and its filter bar: each default is the look the Feed had before Themes differed. */
+    --hu-feed-summary-ink: var(--mud-palette-text-primary);
+    --hu-feed-day-rule: var(--hu-ink-rule);
+    --hu-feed-live-background: color-mix(in srgb, var(--mud-palette-success) 6%, var(--mud-palette-surface));
+    --hu-feed-live-line: transparent;
+    --hu-feed-live-ink: var(--mud-palette-success);
+    --hu-feed-note-background: transparent;
+    --hu-feed-note-line: transparent;
+    --hu-feed-card-radius: 8px;
+    --hu-feed-card-hover-shadow: var(--hu-shadow-card);
+    --hu-feed-card-open-shadow: var(--hu-shadow-card-hover);
+    --hu-feed-card-hover-line: var(--hu-line-control);
+    --hu-feed-card-hover-fill: var(--hu-ground-raised);
+    --hu-feed-card-open-line: var(--hu-line-control);
+    --hu-feed-card-kindbar: 0px;
+    --hu-feed-card-kindbar-ink: var(--mud-palette-primary);
+    --hu-feed-detail-background: transparent;
+    --hu-feed-unseen-background: transparent;
+    --hu-feed-unseen-dot: var(--mud-palette-primary);
+    --hu-feed-unseen-weight: 400;
+    --hu-feed-unseen-bar: var(--mud-palette-primary);
+    --hu-control-track: var(--hu-ink-wash);
+    --hu-control-ink: var(--hu-text-subtle);
+    --hu-control-selected-ink: var(--mud-palette-text-primary);
+    --hu-control-selected-line: var(--hu-line-region);
+    --hu-control-set-background: var(--hu-tone-info-soft);
+    --hu-control-set-line: var(--hu-tone-info-ink);
+    --hu-control-set-ink: var(--hu-tone-info-ink);
+
+    /* The Task pages (detail panel, edit page, Tasks List and Board): each default is the look they had before Themes differed. */
+    --hu-detail-background: var(--hu-ground-sidebar);
+    --hu-detail-blur: 0px;
+    --hu-detail-edge: transparent;
+    --hu-detail-decision-background: transparent;
+    --hu-detail-decision-line: transparent;
+    --hu-detail-accent-from: transparent;
+    --hu-detail-accent-to: transparent;
+    --hu-detail-head-line: transparent;
+    --hu-detail-row-line: var(--hu-ink-edge);
+    --hu-detail-section-line: transparent;
+    --hu-detail-timeline-dot: var(--hu-ink-field);
+    --hu-edit-header-background: var(--hu-ground-raised);
+    --hu-edit-header-blur: 0px;
+    --hu-field-line: var(--hu-ink-field);
+    --hu-field-line-bottom: var(--hu-field-line);
+    --hu-field-shadow: none;
+    --hu-control-radius: var(--mud-default-borderradius);
+    --hu-form-group-background: transparent;
+    --hu-form-group-line: transparent;
+    --hu-form-group-shadow: none;
+    --hu-form-group-radius: 0px;
+    --hu-form-group-padding: 0px;
+    --hu-form-group-head-line: transparent;
+    --hu-gate-background: transparent;
+    --hu-gate-line: transparent;
+    --hu-gate-halo: none;
+    --hu-gate-radius: 0px;
+    --hu-gate-padding: 0px;
+    --hu-chip-set-background: transparent;
+    --hu-chip-set-line: var(--mud-palette-primary);
+    --hu-chip-set-ink: var(--mud-palette-text-primary);
+    --hu-toolbar-line: transparent;
+    --hu-button-filled-shadow: none;
+    --hu-list-row-line: var(--hu-line-region);
+    --hu-list-row-hover: var(--hu-hover);
+    --hu-list-group-background: var(--hu-ground-page);
+    --hu-list-selected-bar: transparent;
+    --hu-list-needs-background: transparent;
+    --hu-list-needs-bar: transparent;
+    --hu-list-blocked-bar: transparent;
+    --hu-list-title-weight: 400;
+    --hu-board-background: transparent;
+    --hu-board-column-background: var(--hu-ground-sunk);
+    --hu-board-column-line: var(--hu-line-region);
+    --hu-board-count-background: transparent;
+    --hu-board-count-line: transparent;
+    --hu-board-needs-background: transparent;
+    --hu-board-needs-line: var(--hu-board-column-line);
+    --hu-board-needs-halo: 0 0 0 0 transparent;
+    --hu-board-needs-bar: transparent;
+    --hu-board-card-hover-line: var(--hu-line-control);
+    --hu-board-card-hover-shadow: var(--hu-shadow-card-hover);
+
+    /* The Description editor of the Task edit page. */
+    --hu-editor-radius: var(--mud-default-borderradius);
+    --hu-editor-shadow: none;
+    --hu-editor-toolbar-line: transparent;
+    --hu-editor-text-size: var(--mud-typography-body2-size);
+    --hu-editor-text-leading: 1.75;
+    --hu-editor-text-ink: var(--mud-palette-text-primary);
 }
 
 /* ---- The ink ladder (audit round 3, A1) ------------------------------------------------------

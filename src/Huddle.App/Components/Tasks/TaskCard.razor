@@ -164,6 +164,11 @@
         get
         {
             string root = this.IsOverdue ? "task-card task-overdue" : "task-card";
+            if (this.Task.BlockedBy.Count > 0)
+            {
+                root += " task-card-blocked";
+            }
+
             return this.Selected ? string.Join(' ', root, "task-card-selected") : root;
         }
     }

@@ -228,6 +228,7 @@ public sealed class UiConventionScannerTests
             .m { padding-right: 48px; margin: 0rem; }
             .n { gap: 0.5rem; }
             .o { margin-inline: -1rem; }
+            .p { border-radius: var(--hu-feed-card-radius); }
             """;
 
         RuleCount result = UiConventionScanner.Cv11(CssPath, source);

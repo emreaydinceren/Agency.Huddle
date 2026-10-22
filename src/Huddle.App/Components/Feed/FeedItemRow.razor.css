@@ -68,8 +68,13 @@
     overflow: hidden;
 }
 
+.feed-row-summary {
+    color: var(--hu-feed-summary-ink);
+}
+
 .feed-row-actor {
     font-weight: 600;
+    color: var(--mud-palette-text-primary);
 }
 
 .feed-row-context {

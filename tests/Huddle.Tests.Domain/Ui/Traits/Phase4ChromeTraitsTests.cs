@@ -58,8 +58,8 @@ public sealed partial class Phase4ChromeTraitsTests
     }
 
     /// <summary>
-    /// <c>surface=hairline</c> shows the room-kind chip and Tasks-need-you pill, draws cards, lanes and dialogs on the
-    /// region line with no resting shadow at the plain radius plus 2px, and lets floating layers use the panel shadow
+    /// <c>surface=hairline</c> shows the room-kind chip and Tasks-need-you pill, draws cards and dialogs on the
+    /// region line with no resting shadow at the plain radius plus 2px (a Board lane reads the board.column tokens), and lets floating layers use the panel shadow
     /// in place of a border.
     /// </summary>
     [Fact]
@@ -67,7 +67,6 @@ public sealed partial class Phase4ChromeTraitsTests
     {
         string kind = Body("surface", "hairline", ".room-kind-chip");
         string pill = Body("surface", "hairline", ".tasks-need-you-pill");
-        string lane = Body("surface", "hairline", ".task-board-column");
         string card = Body("surface", "hairline", ".task-card");
         string agent = Body("surface", "hairline", ".mud-paper.agent-card");
         string dialog = Body("surface", "hairline", ".mud-dialog");
@@ -80,9 +79,6 @@ public sealed partial class Phase4ChromeTraitsTests
         Assert.Contains("border: 1px solid var(--hu-line-control);", kind, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("border-radius: 999px;", pill, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("var(--hu-tone-warning-line)", pill, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
-        Assert.Contains("border: 1px solid var(--hu-line-region);", lane, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
-        Assert.Contains("background: var(--hu-ground-sunk);", lane, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
-        Assert.Contains("border-radius: calc(var(--mud-default-borderradius) + 2px);", lane, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("box-shadow: none;", card, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("border: 1px solid var(--hu-line-region);", card, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("box-shadow: none;", agent, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup

@@ -23,11 +23,11 @@ public sealed class AppCssTokensDTests
         Assert.Contains(declaration, Declarations(selector));
     }
 
-    /// <summary>The Task List's group row is painted <c>--hu-ground-page</c>.</summary>
+    /// <summary>The Task List's group row is painted <c>--hu-list-group-background</c>, which defaults to the page ground.</summary>
     [Fact]
-    public void TaskGroupRow_ReadsGroundPage()
+    public void TaskGroupRow_ReadsListGroupBackground()
     {
-        Assert.Contains("background-color: var(--hu-ground-page);", Declarations(".mud-data-grid.task-list-grid .mud-table-cell.mud-datagrid-group"));
+        Assert.Contains("background-color: var(--hu-list-group-background);", Declarations(".mud-data-grid.task-list-grid .mud-table-cell.mud-datagrid-group"));
     }
 
     /// <summary>Cards and panels that are raised over the page read <c>--hu-ground-raised</c>.</summary>

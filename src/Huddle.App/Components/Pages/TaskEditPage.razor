@@ -47,38 +47,41 @@ else
     <PageSubjectSource Value="@this.Subject" />
     <FocusedPageTitle Title="@this.BaseTitle" />
     <MudContainer MaxWidth="MaxWidth.Large" Class="pa-4 task-edit-page">
-        @* K2: the page header, sticky to the top of the page container. *@
-        <div class="task-edit-page-header">
-            @if (this.Eyebrow is { } eyebrow)
-            {
-                <div class="task-edit-page-eyebrow">@eyebrow</div>
-            }
-
-            <PageHeader Title="@this.PageTitle" SetPageTitle="false" Chrome="true">
-                <Actions>
-                    @if (this.editing is { } id)
-                    {
-                        <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-edit-page-view" OnClick="this.ViewTask">View task</MudButton>
-                        <MudTooltip Text="Copy id">
-                            <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" aria-label="@($"Copy task id {id}")"
-                                           Class="task-edit-page-copy-id" OnClick="@(() => this.CopyIdAsync(id))" />
-                        </MudTooltip>
-                    }
-
-                    @* K2a: always shown, because a page has no other way out. Save is the header's one filled button. *@
-                    <div class="task-edit-page-actions">
-                        <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-detail-cancel" OnClick="this.CancelAsync">Cancel</MudButton>
-                        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="task-detail-save" OnClick="this.SaveAsync"
-                                   Disabled="@this.SaveDisabled">@(this.detail?.FooterSaveLabel ?? "Save")</MudButton>
-                    </div>
-                </Actions>
-            </PageHeader>
-        </div>
-
-        @* K3: the editor. The container query of D-6 lives on this div. Keyed, so a new Task that has just been saved loads as the saved Task. *@
+        @* K2: the page header, sticky to the top of the page container. The editor draws it, so the title field (while the title is edited) and the
+           title's pencil, Copy id and actions menu sit on the title's own line. K3: the editor. The container query of D-6 lives on this div. Keyed, so a
+           new Task that has just been saved loads as the saved Task. *@
         <div class="task-edit-page-editor">
             <TaskDetail @ref="this.detail" @key="this.DetailKey" Id="this.editing" Draft="this.draft" ExternalFooter="true"
-                        OnClose="this.CloseTab" OnCreated="this.OnCreated" HasPendingChanged="this.OnHasPendingChanged" FooterStateChanged="this.OnFooterStateChanged" />
+                        OnClose="this.CloseTab" OnCreated="this.OnCreated" HasPendingChanged="this.OnHasPendingChanged" FooterStateChanged="this.OnFooterStateChanged">
+                <Header Context="title">
+                    <div class="task-edit-page-header">
+                        @if (this.Eyebrow is { } eyebrow)
+                        {
+                            <div class="task-edit-page-eyebrow">@eyebrow</div>
+                        }
+
+                        <PageHeader Title="@this.PageTitle" SetPageTitle="false" Chrome="true" TitleEditor="@title.TitleEditor" TitleTrailing="@title.Trailing">
+                            <Actions>
+                                @if (this.editing is { } id)
+                                {
+                                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-edit-page-view" OnClick="this.ViewTask">View task</MudButton>
+                                    <MudTooltip Text="Copy id">
+                                        <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" aria-label="@($"Copy task id {id}")"
+                                                       Class="task-edit-page-copy-id" OnClick="@(() => this.CopyIdAsync(id))" />
+                                    </MudTooltip>
+                                }
+
+                                @* K2a: always shown, because a page has no other way out. Save is the header's one filled button. *@
+                                <div class="task-edit-page-actions">
+                                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-detail-cancel" OnClick="this.CancelAsync">Cancel</MudButton>
+                                    <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="task-detail-save" OnClick="this.SaveAsync"
+                                               Disabled="@this.SaveDisabled">@(this.detail?.FooterSaveLabel ?? "Save")</MudButton>
+                                </div>
+                            </Actions>
+                        </PageHeader>
+                    </div>
+                </Header>
+            </TaskDetail>
         </div>
     </MudContainer>
 }

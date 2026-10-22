@@ -48,7 +48,7 @@ internal sealed record ThemeDescriptor(
     /// </summary>
     public string StyleBlock { get; } = RenderStyleBlock(Skin);
 
-    /// <summary>The skin's nine traits as the <c>data-hu-*</c> attributes of the layout's Theme marker, built once.</summary>
+    /// <summary>The skin's ten traits as the <c>data-hu-*</c> attributes of the layout's Theme marker, built once.</summary>
     public IReadOnlyDictionary<string, object> TraitAttributes { get; } = Skin.Traits.ToMarkerAttributes();
 
     /// <summary>Builds the descriptor a skin implies: its theme, mode, and the picker group that mode selects.</summary>

@@ -520,7 +520,7 @@
     /// <summary>Whether <paramref name="task"/> is overdue: it has a due date in the past and isn't in a terminal state.</summary>
     private bool IsOverdue(TaskItem task) => TaskDates.IsOverdue(task, this.Clock);
 
-    /// <summary>The CSS class for a row: <c>task-overdue</c> when overdue, nothing otherwise. The row index is unused; the shape is fixed by RowClassFunc.</summary>
+    /// <summary>The CSS class for a row: <c>task-overdue</c> when overdue, <c>task-needs</c> in Needs You, <c>task-blocked</c> when blocked by another Task. The row index is unused; the shape is fixed by RowClassFunc.</summary>
     private string RowClass(TaskItem task, int _)
     {
         List<string> classes = [];
@@ -532,6 +532,16 @@
         if (this.IsSelected(task))
         {
             classes.Add("task-row-selected");
+        }
+
+        if (task.Status == TaskState.NeedsYou)
+        {
+            classes.Add("task-needs");
+        }
+
+        if (task.BlockedBy.Count > 0)
+        {
+            classes.Add("task-blocked");
         }
 
         return string.Join(' ', classes);

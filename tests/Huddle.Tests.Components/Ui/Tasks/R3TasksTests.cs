@@ -90,7 +90,7 @@ public sealed class R3TasksTests
         string css = CssText.AppCss();
         string wash = CssText.RuleBody(css, ".mud-data-grid.task-list-grid .mud-table-cell.mud-datagrid-group");
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("background-color: var(--hu-ground-page);", wash, StringComparison.Ordinal);
+        Assert.Contains("background-color: var(--hu-list-group-background);", wash, StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("font-weight: 600;", CssText.RuleBody(css, ".task-group-label"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
@@ -511,9 +511,9 @@ public sealed class R3TasksTests
         string css = CssText.AppCss();
         string field = CssText.RuleBody(css, ".task-detail-title .mud-input-slot,\n.task-detail-title .mud-input > input.mud-input-root.mud-input-root-outlined");
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("font-size: var(--mud-typography-h6-size);", field, StringComparison.Ordinal);
+        Assert.Contains("font-size: var(--mud-typography-h5-size);", field, StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("font-weight: var(--mud-typography-h6-weight);", field, StringComparison.Ordinal);
+        Assert.Contains("font-weight: var(--mud-typography-h5-weight);", field, StringComparison.Ordinal);
     }
 
     // ---- B4i, B4l, B4m, B4n, B4o, B4q, B4r: the drawer's form ----
@@ -528,9 +528,9 @@ public sealed class R3TasksTests
 
         IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id);
 
-        Assert.Equal(["Status and priority", "People", "Planning", "Dates", "Description"], cut.FindAll(".task-detail h3.group-label").Select(h => h.TextContent.Trim()));
+        Assert.Equal(["Planning", "Dates", "Description", "Change log (1)"], cut.FindAll(".task-detail h3.group-label").Select(h => h.TextContent.Trim()));
         Assert.Empty(cut.FindAll(".task-detail .group-heading"));
-        Assert.NotNull(cut.Find(".task-detail-description-header .task-detail-description-toggle"));
+        Assert.NotNull(cut.Find(".task-detail-description-box .task-detail-description-bar .task-detail-description-toggle"));
     }
 
     /// <summary>The Description field is a long-text field (line height 1.55, audit B4m) with its floating label kept in the DOM and visually hidden.</summary>
@@ -550,9 +550,9 @@ public sealed class R3TasksTests
         Assert.Contains("clip-path: inset(50%);", CssText.RuleBody(CssText.AppCss(), ".task-detail-description-field .mud-input-label"), StringComparison.Ordinal);
     }
 
-    /// <summary>The change log is a panel at elevation 0 with an Edge line, not a shadowed card (audit B4l).</summary>
+    /// <summary>The change log is always open: a heading with the entry count over the list, with no expansion panel to toggle.</summary>
     [Fact]
-    public async Task ChangeLog_IsElevationZero_WithAnEdgeLine()
+    public async Task ChangeLog_IsAlwaysOpen_WithoutAnExpansionPanel()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, "Alpha");
@@ -560,12 +560,9 @@ public sealed class R3TasksTests
 
         IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id);
 
-        Assert.Equal(0, cut.FindComponent<MudExpansionPanels>().Instance.Elevation);
-        string rule = CssText.RuleBody(CssText.AppCss(), ".task-detail-changelog.mud-expansion-panels .mud-expand-panel");
-        // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("box-shadow: none;", rule, StringComparison.Ordinal);
-        // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("border: 1px solid var(--ink-edge);", rule, StringComparison.Ordinal);
+        Assert.Empty(cut.FindComponents<MudExpansionPanels>());
+        Assert.StartsWith("Change log (", cut.Find(".task-detail-changelog-heading").TextContent.Trim(), StringComparison.Ordinal);
+        Assert.NotEmpty(cut.FindAll(".task-detail-changelog-row"));
     }
 
     /// <summary>An empty optional field shows a Quiet-ink hint instead of a blank box (audit B4o).</summary>

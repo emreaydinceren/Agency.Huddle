@@ -227,7 +227,7 @@ public sealed class AppearanceRenderingTests
     }
 
     /// <summary>
-    /// Selecting Nordic Light renders the Theme marker with its id and Nordic's nine <c>data-hu-*</c> trait values, and
+    /// Selecting Nordic Light renders the Theme marker with its id and Nordic's ten <c>data-hu-*</c> trait values, and
     /// the <c>hu-skin</c> block carries the reading face <c>--font-read</c> with "Literata"; no pack stylesheet is linked.
     /// </summary>
     [Fact]
@@ -321,9 +321,9 @@ public sealed class AppearanceRenderingTests
         Assert.DoesNotContain("&#", css, StringComparison.Ordinal);
     }
 
-    /// <summary>The marker carries the nine structural traits as <c>data-hu-*</c> attributes, at Lumen Light's, the default Theme's.</summary>
+    /// <summary>The marker carries the ten structural traits as <c>data-hu-*</c> attributes, at Lumen Light's, the default Theme's.</summary>
     [Fact]
-    public async Task AppShell_MarkerCarriesNineTraitAttributes()
+    public async Task AppShell_MarkerCarriesTenTraitAttributes()
     {
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
@@ -346,6 +346,7 @@ public sealed class AppearanceRenderingTests
             ["data-hu-surface"] = "hairline",
             ["data-hu-marks"] = "chip",
             ["data-hu-reading"] = "plain",
+            ["data-hu-ids"] = "mono",
         };
         Assert.Equal(expected.Count, marker.Attributes.Count(static attribute => attribute.Name.StartsWith("data-hu-", StringComparison.Ordinal)));
         foreach (KeyValuePair<string, string> pair in expected)

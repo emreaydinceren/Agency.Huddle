@@ -11,7 +11,7 @@ that ADR, [ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md) and
 
 A **Theme** is one JSON **skin** file per Theme and mode, embedded in `Huddle.App` and loaded by
 `SkinLoader`. A skin holds a MudBlazor **palette**, **tokens** (named design decisions that become `--hu-*`
-custom properties), nine **traits** (structural variants that become `data-hu-*` attributes), the
+custom properties), ten **traits** (structural variants that become `data-hu-*` attributes), the
 **faces**, **radius**, **typography** and **shadows**. The shipped Themes are Lumen (the default),
 Fluent, Nordic and Cobalt Soft, each light and dark: eight files. There is no per-Theme stylesheet, no
 C# Theme class and no run-time importer.
@@ -69,7 +69,7 @@ A skin file looks like this (abridged from `lumen.dark.json`):
 | `include` | A light partner whose non-palette content a dark file inherits. |
 | `palette` | MudBlazor `Palette` colours by camelCase property name (`textPrimary`, `linesDefault`, `primary` …). `SkinLoader.PaletteKeys` lists them. |
 | `tokens` | Dotted token key to a [skin expression](#the-token-registry-and-expression-grammar). |
-| `traits` | The nine trait choices, by name. |
+| `traits` | The ten trait choices, by name. |
 | `faces` | `ui`, `read` and `mono` font stacks. |
 | `radius` | The corner radius (`8px`). |
 | `typography` | `letterSpacing` and `lineHeight`. |
@@ -80,7 +80,7 @@ A skin file looks like this (abridged from `lumen.dark.json`):
 ## The token registry and expression grammar
 
 `SkinTokens` registers every token once, with a light and a dark default written as an expression over the
-palette: 59 tokens, such as `ground.page`, `current.background`, `line.region` and `shadow.card`. Each one becomes a
+palette: 138 tokens, such as `ground.page`, `current.background`, `line.region` and `shadow.card`. Each one becomes a
 `--hu-*` custom property in one `<style id="hu-skin">` block that `MainLayout` writes as a `MarkupString` (a text
 child would be HTML-encoded on prerender). `app.css` reads these tokens and the MudBlazor palette variables and holds
 no colour literal. The `--ink-*` ladder remains, as aliases of `--hu-ink-*`.
@@ -98,6 +98,10 @@ A value is a literal (a colour, length or number) or one of these terms:
 `SkinExpression` rewrites each term to `var()` or `color-mix()` and refuses everything else at load, markup
 characters and hand-written `var()` included, so a skin cannot put a stray declaration into the stylesheet. A
 `ref()` chain that loops back on itself is also refused.
+
+The Task pages (the detail panel, the edit page, the Tasks List and Board) read 52 more (`detail.*`, `edit.*`, `field.*`, `form.group.*`, `gate.*`, `chip.set.*`, `list.*`, `board.*`, `toolbar.line`, `button.filled.shadow`, `control.radius`), and the `ids` trait sets a Task id in the mono face.
+
+The Feed Tab and its filter bar read 27 of them (`feed.*` and `control.*`: card radius, hover and open lines and shadows, the unseen fill, dot, weight and bar, the Cobalt kind bar and detail panel, the Live chip, the read-only note, and the segmented control and select states). Each defaults to the Feed's plain look, so a skin lists only what it changes; `SkinTokens` has the full list and descriptions.
 
 A token is added to the registry only when two Themes genuinely differ there. A difference that only one Theme wants,
 at some sites, is a [trait](#traits), not a split token.
@@ -118,6 +122,7 @@ layout renders it as a `data-hu-<trait>` attribute on `.theme-marker`.
 | `surface` | `flat`, `paper`, `hairline` |
 | `marks` | `plain`, `chip` |
 | `reading` | `plain`, `book` |
+| `ids` | `plain`, `mono` |
 
 `SkinLoader.TraitValues` is the live list. The enums are in `src/Huddle.App/Themes/Skins/Traits/`.
 

@@ -14,6 +14,7 @@ namespace Agency.Huddle.App.Themes.Skins;
 /// <param name="Surface">How cards and panels are surfaced.</param>
 /// <param name="Marks">How inline marks are drawn.</param>
 /// <param name="Reading">How long-form reading views are set.</param>
+/// <param name="Ids">How a Task id is set.</param>
 internal sealed record SkinTraits(
     MessageLayout Message = MessageLayout.Bubble,
     SendStyle Send = SendStyle.Icon,
@@ -23,10 +24,11 @@ internal sealed record SkinTraits(
     NavStyle Nav = NavStyle.Tint,
     SurfaceStyle Surface = SurfaceStyle.Flat,
     MarkStyle Marks = MarkStyle.Plain,
-    ReadingStyle Reading = ReadingStyle.Plain)
+    ReadingStyle Reading = ReadingStyle.Plain,
+    IdStyle Ids = IdStyle.Plain)
 {
     /// <summary>
-    /// The nine traits as the <c>data-hu-*</c> attributes the layout's Theme marker carries: the attribute name is
+    /// The ten traits as the <c>data-hu-*</c> attributes the layout's Theme marker carries: the attribute name is
     /// <c>data-hu-</c> plus the trait's lower-case name, the value its kebab-case value name.
     /// </summary>
     /// <returns>Attribute name to value, in trait declaration order.</returns>
@@ -43,6 +45,7 @@ internal sealed record SkinTraits(
             ["data-hu-surface"] = SkinLoader.Kebab(this.Surface.ToString()),
             ["data-hu-marks"] = SkinLoader.Kebab(this.Marks.ToString()),
             ["data-hu-reading"] = SkinLoader.Kebab(this.Reading.ToString()),
+            ["data-hu-ids"] = SkinLoader.Kebab(this.Ids.ToString()),
 #pragma warning restore HAA0102
         };
 }

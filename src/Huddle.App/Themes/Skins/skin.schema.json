@@ -581,6 +581,346 @@
         "ring": {
           "type": "string",
           "description": "The cut-out ring around a presence badge on an avatar."
+        },
+        "feed.summary.ink": {
+          "type": "string",
+          "description": "A Feed card\u0027s summary sentence."
+        },
+        "feed.day.rule": {
+          "type": "string",
+          "description": "The rule after a Feed day heading."
+        },
+        "feed.live.background": {
+          "type": "string",
+          "description": "The Live chip\u0027s fill."
+        },
+        "feed.live.line": {
+          "type": "string",
+          "description": "The Live chip\u0027s outline."
+        },
+        "feed.live.ink": {
+          "type": "string",
+          "description": "The Live chip\u0027s text."
+        },
+        "feed.note.background": {
+          "type": "string",
+          "description": "The Feed\u0027s read-only note fill."
+        },
+        "feed.note.line": {
+          "type": "string",
+          "description": "The Feed\u0027s read-only note outline."
+        },
+        "feed.card.radius": {
+          "type": "string",
+          "description": "A Feed card\u0027s corner radius."
+        },
+        "feed.card.hover.shadow": {
+          "type": "string",
+          "description": "A Feed card\u0027s shadow while hovered."
+        },
+        "feed.card.open.shadow": {
+          "type": "string",
+          "description": "An open Feed card\u0027s shadow."
+        },
+        "feed.card.hover.line": {
+          "type": "string",
+          "description": "A Feed card\u0027s border while hovered."
+        },
+        "feed.card.hover.fill": {
+          "type": "string",
+          "description": "A Feed card\u0027s fill while hovered."
+        },
+        "feed.card.open.line": {
+          "type": "string",
+          "description": "An open Feed card\u0027s border."
+        },
+        "feed.card.kindbar": {
+          "type": "string",
+          "description": "The width of the kind bar on a Feed card\u0027s left edge."
+        },
+        "feed.card.kindbar.ink": {
+          "type": "string",
+          "description": "The kind bar\u0027s colour for an item with no kind."
+        },
+        "feed.detail.background": {
+          "type": "string",
+          "description": "The expanded panel of a Feed card."
+        },
+        "feed.unseen.background": {
+          "type": "string",
+          "description": "The fill of an unseen Feed item."
+        },
+        "feed.unseen.dot": {
+          "type": "string",
+          "description": "The dot before an unseen item\u0027s age."
+        },
+        "feed.unseen.weight": {
+          "type": "string",
+          "description": "The summary weight of an unseen Feed item."
+        },
+        "feed.unseen.bar": {
+          "type": "string",
+          "description": "The accent bar of an unseen Feed item."
+        },
+        "control.track": {
+          "type": "string",
+          "description": "The track behind a segmented control."
+        },
+        "control.ink": {
+          "type": "string",
+          "description": "An unselected segmented-control label."
+        },
+        "control.selected.ink": {
+          "type": "string",
+          "description": "The selected segmented-control label."
+        },
+        "control.selected.line": {
+          "type": "string",
+          "description": "The outline of the selected segment\u0027s pill."
+        },
+        "control.set.background": {
+          "type": "string",
+          "description": "A filter select\u0027s fill once a value is chosen."
+        },
+        "control.set.line": {
+          "type": "string",
+          "description": "A filter select\u0027s border once a value is chosen."
+        },
+        "control.set.ink": {
+          "type": "string",
+          "description": "A filter select\u0027s text once a value is chosen."
+        },
+        "detail.background": {
+          "type": "string",
+          "description": "The Task detail panel\u0027s ground."
+        },
+        "detail.blur": {
+          "type": "string",
+          "description": "The blur behind the Task detail panel (a glass Theme sets it)."
+        },
+        "detail.edge": {
+          "type": "string",
+          "description": "The start-edge line of the Task detail panel."
+        },
+        "detail.decision.background": {
+          "type": "string",
+          "description": "The band or card behind a Task\u0027s Decision card."
+        },
+        "detail.decision.line": {
+          "type": "string",
+          "description": "The top line of the Decision card\u0027s band."
+        },
+        "detail.accent.from": {
+          "type": "string",
+          "description": "The start colour of a 3px accent bar on a panel header or gate."
+        },
+        "detail.accent.to": {
+          "type": "string",
+          "description": "The end colour of that accent bar."
+        },
+        "detail.head.line": {
+          "type": "string",
+          "description": "The hairline under the Task detail header."
+        },
+        "detail.row.line": {
+          "type": "string",
+          "description": "The hairline between property rows."
+        },
+        "detail.section.line": {
+          "type": "string",
+          "description": "The hairline above a Task detail section."
+        },
+        "detail.timeline.dot": {
+          "type": "string",
+          "description": "A dot of the Change log timeline."
+        },
+        "edit.header.background": {
+          "type": "string",
+          "description": "The Task edit page\u0027s sticky header."
+        },
+        "edit.header.blur": {
+          "type": "string",
+          "description": "The blur behind the Task edit page\u0027s header."
+        },
+        "field.line": {
+          "type": "string",
+          "description": "The border of a text or select field."
+        },
+        "field.line.bottom": {
+          "type": "string",
+          "description": "The bottom border of a field."
+        },
+        "field.shadow": {
+          "type": "string",
+          "description": "The resting shadow under a field."
+        },
+        "control.radius": {
+          "type": "string",
+          "description": "The corner of a field or button."
+        },
+        "form.group.background": {
+          "type": "string",
+          "description": "The surface of a field group."
+        },
+        "form.group.line": {
+          "type": "string",
+          "description": "The border of a field group."
+        },
+        "form.group.shadow": {
+          "type": "string",
+          "description": "The shadow of a field group."
+        },
+        "form.group.radius": {
+          "type": "string",
+          "description": "The corner of a field group."
+        },
+        "form.group.padding": {
+          "type": "string",
+          "description": "The padding inside a field group."
+        },
+        "form.group.head.line": {
+          "type": "string",
+          "description": "The rule under a field group\u0027s label."
+        },
+        "gate.background": {
+          "type": "string",
+          "description": "The surface of the Human gate and the Decision card on the edit page."
+        },
+        "gate.line": {
+          "type": "string",
+          "description": "Their border."
+        },
+        "gate.halo": {
+          "type": "string",
+          "description": "Their outer ring."
+        },
+        "gate.radius": {
+          "type": "string",
+          "description": "Their corner."
+        },
+        "gate.padding": {
+          "type": "string",
+          "description": "Their inner padding."
+        },
+        "chip.set.background": {
+          "type": "string",
+          "description": "A toolbar filter chip\u0027s fill once it is set."
+        },
+        "chip.set.line": {
+          "type": "string",
+          "description": "A set filter chip\u0027s border."
+        },
+        "chip.set.ink": {
+          "type": "string",
+          "description": "A set filter chip\u0027s text."
+        },
+        "toolbar.line": {
+          "type": "string",
+          "description": "The rule under the Tasks toolbar row."
+        },
+        "button.filled.shadow": {
+          "type": "string",
+          "description": "The shadow of a filled button."
+        },
+        "list.row.line": {
+          "type": "string",
+          "description": "The line under a List row."
+        },
+        "list.row.hover": {
+          "type": "string",
+          "description": "A List row\u0027s fill while hovered."
+        },
+        "list.group.background": {
+          "type": "string",
+          "description": "A List group row\u0027s fill."
+        },
+        "list.selected.bar": {
+          "type": "string",
+          "description": "The 3px edge bar on the selected List row."
+        },
+        "list.needs.background": {
+          "type": "string",
+          "description": "The fill of a List row in Needs You."
+        },
+        "list.needs.bar": {
+          "type": "string",
+          "description": "The edge bar of a List row in Needs You."
+        },
+        "list.blocked.bar": {
+          "type": "string",
+          "description": "The edge bar of a blocked List row."
+        },
+        "list.title.weight": {
+          "type": "string",
+          "description": "The weight of a Task title in a List row."
+        },
+        "board.background": {
+          "type": "string",
+          "description": "The ground behind the Board\u0027s columns."
+        },
+        "board.column.background": {
+          "type": "string",
+          "description": "A Board column\u0027s surface."
+        },
+        "board.column.line": {
+          "type": "string",
+          "description": "A Board column\u0027s border."
+        },
+        "board.count.background": {
+          "type": "string",
+          "description": "The pill behind a column count."
+        },
+        "board.count.line": {
+          "type": "string",
+          "description": "The border of that pill."
+        },
+        "board.needs.background": {
+          "type": "string",
+          "description": "The Needs You column\u0027s surface."
+        },
+        "board.needs.line": {
+          "type": "string",
+          "description": "The Needs You column\u0027s border."
+        },
+        "board.needs.halo": {
+          "type": "string",
+          "description": "The Needs You column\u0027s outer ring."
+        },
+        "board.needs.bar": {
+          "type": "string",
+          "description": "The Needs You column\u0027s top edge bar."
+        },
+        "board.card.hover.line": {
+          "type": "string",
+          "description": "A Board card\u0027s border while hovered."
+        },
+        "board.card.hover.shadow": {
+          "type": "string",
+          "description": "A Board card\u0027s shadow while hovered."
+        },
+        "editor.radius": {
+          "type": "string",
+          "description": "The corner of the Description editor\u0027s card."
+        },
+        "editor.shadow": {
+          "type": "string",
+          "description": "The resting shadow of the Description editor\u0027s card."
+        },
+        "editor.toolbar.line": {
+          "type": "string",
+          "description": "The rule under the Description editor\u0027s toolbar, and the dividers in it."
+        },
+        "editor.text.size": {
+          "type": "string",
+          "description": "The font size of the Description\u0027s writing surface."
+        },
+        "editor.text.leading": {
+          "type": "string",
+          "description": "The line height of the Description\u0027s writing surface."
+        },
+        "editor.text.ink": {
+          "type": "string",
+          "description": "The text colour of the Description\u0027s writing surface."
         }
       }
     },
@@ -645,6 +985,12 @@
           "enum": [
             "plain",
             "book"
+          ]
+        },
+        "ids": {
+          "enum": [
+            "plain",
+            "mono"
           ]
         }
       }

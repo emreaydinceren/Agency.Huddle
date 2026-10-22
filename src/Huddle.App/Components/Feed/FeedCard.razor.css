@@ -5,10 +5,82 @@
     padding: 12px 12px 12px 16px;
     overflow: hidden;
     border: 1px solid var(--ink-edge);
-    border-radius: calc(var(--mud-default-borderradius) * 2);
+    border-radius: var(--hu-feed-card-radius);
     font-size: var(--mud-typography-body2-size);
     line-height: 1.4;
     background-color: var(--mud-palette-surface);
+    box-shadow: var(--hu-shadow-card);
+    transition: box-shadow 0.15s ease;
+}
+
+/* The kind bar of Cobalt Soft: 3px in the kind's colour, the same one as the avatar badge. Zero wide in the other Themes. */
+.feed-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 12px;
+    bottom: 12px;
+    width: var(--hu-feed-card-kindbar);
+    border-radius: 0 var(--mud-default-borderradius) var(--mud-default-borderradius) 0;
+    background: var(--feed-kind, var(--hu-feed-card-kindbar-ink));
+}
+
+.feed-kind-tasks {
+    --feed-kind: var(--mud-palette-primary);
+}
+
+.feed-kind-gates,
+.feed-kind-helpers,
+.feed-kind-needsyou {
+    --feed-kind: var(--mud-palette-warning);
+}
+
+.feed-kind-documents {
+    --feed-kind: var(--mud-palette-info);
+}
+
+.feed-kind-rooms {
+    --feed-kind: var(--mud-palette-secondary);
+}
+
+.feed-card:hover {
+    border-color: var(--hu-feed-card-hover-line);
+    background-color: var(--hu-feed-card-hover-fill);
+    box-shadow: var(--hu-feed-card-hover-shadow);
+}
+
+.feed-card-expanded,
+.feed-card-expanded:hover {
+    border-color: var(--hu-feed-card-open-line);
+    box-shadow: var(--hu-feed-card-open-shadow);
+}
+
+/* An unseen item's fill is laid over the card colour, so the default (transparent) leaves the card as it is. */
+.feed-card-unseen {
+    background-image: linear-gradient(var(--hu-feed-unseen-background), var(--hu-feed-unseen-background));
+}
+
+.feed-card-unseen .feed-card-summary {
+    font-weight: var(--hu-feed-unseen-weight);
+}
+
+/* Nordic: an item that waits on you has a cloudberry edge; a handled one is dimmed and flat. */
+:root:has([data-hu-surface="paper"]) .feed-card-waiting {
+    box-shadow: var(--hu-shadow-card), inset 3px 0 0 var(--hu-needs);
+}
+
+:root:has([data-hu-surface="paper"]) .feed-card-waiting .feed-card-age {
+    color: var(--hu-tone-warning-ink);
+    font-weight: 600;
+}
+
+:root:has([data-hu-surface="paper"]) .feed-card-resolved {
+    background-color: color-mix(in srgb, var(--mud-palette-surface) 60%, var(--hu-ink-strip));
+    box-shadow: none;
+}
+
+:root:has([data-hu-surface="paper"]) .feed-card-resolved .feed-card-summary {
+    color: var(--hu-text-subtle);
 }
 
 .feed-card-bar {
@@ -17,7 +89,7 @@
     bottom: 0;
     left: 0;
     width: 3px;
-    background-color: var(--mud-palette-primary);
+    background-color: var(--hu-feed-unseen-bar);
 }
 
 .feed-card-resolved .feed-card-avatar,
@@ -119,9 +191,25 @@
     overflow: hidden;
 }
 
+.feed-card-summary {
+    color: var(--hu-feed-summary-ink);
+}
+
 .feed-card-actor,
 .feed-card-purpose {
     font-weight: 600;
+    color: var(--mud-palette-text-primary);
+}
+
+/* Nordic Paper reads in serif: the summary in Literata, the reference chips in the UI face. */
+:root:has([data-hu-reading="book"]) .feed-card-summary {
+    font-family: var(--font-read);
+    font-size: var(--mud-typography-body1-size);
+    line-height: 1.55;
+}
+
+:root:has([data-hu-reading="book"]) .feed-card-summary ::deep .feed-chip {
+    font-family: var(--mud-typography-default-family);
 }
 
 .feed-card-more {
@@ -201,17 +289,21 @@
 }
 
 .feed-pill-waiting {
-    color: var(--mud-palette-warning-darken, var(--mud-palette-warning));
+    background: var(--hu-tone-warning-soft);
+    border-color: var(--hu-tone-warning-line);
+    color: var(--hu-tone-warning-ink);
 }
 
 .feed-pill-assigned {
-    color: var(--mud-palette-info-darken, var(--mud-palette-info));
+    background: var(--hu-tone-info-soft);
+    border-color: var(--hu-selected-background-hover);
+    color: var(--hu-tone-info-ink);
 }
 
 .feed-pill-done {
+    background: var(--hu-tone-success-soft);
     border-color: transparent;
-    padding-left: 0;
-    color: var(--mud-palette-text-secondary);
+    color: var(--hu-tone-success-ink);
 }
 
 .feed-card-side {
@@ -223,12 +315,25 @@
 
 .feed-card-age {
     font-size: var(--mud-typography-caption-size);
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
     color: var(--mud-palette-text-secondary);
 }
 
 .feed-card-age-unseen {
-    color: var(--mud-palette-primary);
+    color: var(--hu-accent-ink);
+    font-weight: 600;
+}
+
+.feed-card-age-unseen::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 4px;
+    border-radius: 50%;
+    vertical-align: middle;
+    background: var(--hu-feed-unseen-dot);
 }
 
 .feed-card-chevron {
@@ -249,10 +354,30 @@
     margin-top: 8px;
 }
 
+/* The expanded area. Cobalt Soft tints it; its top edge is the separator, flush with the card's sides. */
+.feed-card-details {
+    margin: 12px -12px -12px -16px;
+    padding: 0 12px 12px 16px;
+    background: var(--hu-feed-detail-background);
+    border-radius: 0 0 calc(var(--hu-feed-card-radius) - 1px) calc(var(--hu-feed-card-radius) - 1px);
+}
+
 .feed-card-edge {
-    margin: 12px 0;
+    margin: 0 -12px 12px -16px;
     border: 0;
     border-top: 1px solid var(--ink-edge);
+}
+
+:root:has([data-hu-surface="paper"]) .feed-card-edge {
+    border-top-style: dashed;
+    border-color: var(--hu-line-control);
+}
+
+:root:has([data-hu-reading="book"]) .feed-card ::deep .feed-preview-title {
+    font-family: var(--font-read);
+    font-size: var(--mud-typography-h6-size);
+    font-weight: 600;
+    letter-spacing: -0.01em;
 }
 
 .feed-card-caption {

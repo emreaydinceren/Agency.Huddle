@@ -80,7 +80,7 @@ public sealed class FluentSkinTests
         Assert.Equal("ref(accent.ink)", dark.Tokens["tone.info.ink"]);
         Assert.Equal("#115ea3", dark.Tokens["send.bg"]);
         Assert.Equal("palette.primary", light.Tokens["send.bg"]);
-        Assert.Equal("inset 0 -1px 0 0 palette.primary", dark.Tokens["field.focus.shadow"]);
+        Assert.Equal("inset 0 -2px 0 0 palette.primary", dark.Tokens["field.focus.shadow"]);
         Assert.Equal(light.Tokens["shadow.card"], light.Tokens["shadow.card.hover"]);
     }
 }
