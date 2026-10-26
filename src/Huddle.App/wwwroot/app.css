@@ -1548,6 +1548,16 @@ a.team-ref,
     min-width: 0;
 }
 
+/* The rows inside a folder (Needs you, All, a Team) are one level in, so their marks sit under the folder's name (Left menu). */
+.sidebar-views .room-list .room-folder .mud-collapse-container {
+    --nav-level: 1;
+}
+
+/* The Needs you folder already says it, so its rows carry no pill and the names keep the room. */
+.room-folder-needs-you .needs-you-pill {
+    display: none;
+}
+
 /* A Team folder is a section header with no gap above it: the folders stack as one list. */
 .sidebar-views .room-list .room-folder.mud-nav-group > .mud-nav-link {
     margin-top: 0;
@@ -1594,7 +1604,7 @@ a.team-ref,
     align-items: center;
     height: var(--nav-row-height);
     padding-block: 0;
-    padding-inline: calc(var(--nav-inset) + var(--nav-pad) + var(--nav-step)) var(--nav-end);
+    padding-inline: calc(var(--nav-inset) + var(--nav-pad) + var(--nav-step) + var(--nav-level, 0) * var(--nav-step)) var(--nav-end);
 }
 
 .flex-1-truncate {
