@@ -1553,9 +1553,9 @@ a.team-ref,
     min-width: 0;
 }
 
-/* The rows inside a folder (Needs you, All, a Team) step in half a level (16px, not the 32px of a Team's rows in the Teams view). */
+/* The rows inside a folder (Needs you, All, a Team) step in a quarter level (8px, not the 32px of a Team's rows in the Teams view): their mark sits just right of the folder's icon, as a child's does under its header in VS Code's tree. */
 .sidebar-views .room-list .room-folder .mud-collapse-container {
-    --nav-level: 0.5;
+    --nav-level: 0.25;
 }
 
 /* The Needs you folder already says it, so its rows carry no pill and the names keep the room. */
