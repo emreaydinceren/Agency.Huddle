@@ -24,6 +24,7 @@ using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Ui.Teams;
 using Agency.Huddle.Tests.Css;
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.Tests.NeedsYou;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -84,15 +85,15 @@ public sealed class SidebarDensityTests
         Assert.Equal("3 members", business.QuerySelector(".sidebar-row-meta")?.GetAttribute("title"));
     }
 
-    /// <summary>The first section is the defined term "Rooms" (language.md), not "Chats".</summary>
+    /// <summary>The Chats view draws no "Rooms" section header: its first folder is "All".</summary>
     [Fact]
-    public async Task FirstSection_IsTitledRooms()
+    public async Task FirstFolder_IsTitledAll_NotRooms()
     {
         await using MudBunitContext ctx = SidebarDensityTests.NewContext(out _, new FakeTeamCatalog());
 
         IRenderedComponent<ContainerFragment> cut = SidebarDensityTests.Render<RoomList>(ctx);
 
-        Assert.Equal("Rooms", cut.Find(".mud-nav-group .mud-nav-link-text").TextContent.Trim());
+        Assert.Equal("All", cut.Find(".mud-nav-group .mud-nav-link-text").TextContent.Trim());
     }
 
     /// <summary>The Chats view's only group is the Rooms group, so it starts open (audit B3a), whatever the current page.</summary>
@@ -147,26 +148,21 @@ public sealed class SidebarDensityTests
         Assert.Empty(cut.FindAll(".sidebar-show-all"));
     }
 
-    /// <summary>More than eight Rooms show eight and "Show all (N)"; clicking it shows every row and offers "Show fewer".</summary>
+    /// <summary>The All list never folds: more than eight Rooms are all listed and there is no "Show all" row.</summary>
     [Fact]
-    public async Task Rooms_OverTheLimit_FoldBehindShowAllN()
+    public async Task Rooms_OverTheLimit_AreAllListed_WithNoShowAll()
     {
         await using MudBunitContext ctx = SidebarDensityTests.NewContext(out ScriptedRoomsDirectory script, new FakeTeamCatalog());
         SidebarDensityTests.AddRooms(script, 11);
         IRenderedComponent<ContainerFragment> cut = SidebarDensityTests.Render<RoomList>(ctx);
 
-        cut.WaitForAssertion(() => Assert.Equal(Limit, cut.FindAll("a[href^='/rooms/']").Count));
-        Assert.Equal("Show all (11)", cut.Find(".sidebar-show-all").TextContent.Trim());
-
-        await cut.InvokeAsync(() => cut.Find(".sidebar-show-all .mud-nav-link").ClickAsync());
-
         cut.WaitForAssertion(() => Assert.Equal(11, cut.FindAll("a[href^='/rooms/']").Count));
-        Assert.Equal("Show fewer", cut.Find(".sidebar-show-all").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".sidebar-show-all"));
     }
 
-    /// <summary>The current Room is never folded away: when it is beyond the eighth row it is shown after them.</summary>
+    /// <summary>The current Room is listed once even when it would have been beyond the old eight-row limit.</summary>
     [Fact]
-    public async Task Rooms_ActiveRoomBeyondTheLimit_StaysVisible()
+    public async Task Rooms_ActiveRoomBeyondTheOldLimit_IsListedOnce()
     {
         await using MudBunitContext ctx = SidebarDensityTests.NewContext(out ScriptedRoomsDirectory script, new FakeTeamCatalog());
         SidebarDensityTests.AddRooms(script, 11);
@@ -175,7 +171,7 @@ public sealed class SidebarDensityTests
         IRenderedComponent<ContainerFragment> cut = SidebarDensityTests.Render<RoomList>(ctx);
 
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a[href='/rooms/room-10']")));
-        Assert.Equal(Limit + 1, cut.FindAll("a[href^='/rooms/']").Count);
+        Assert.Equal(11, cut.FindAll("a[href^='/rooms/']").Count);
     }
 
     /// <summary>The Teams view's only group is the Teams group, so it starts open (audit B3a), away from the Teams and on a Team's page alike.</summary>
@@ -306,6 +302,7 @@ public sealed class SidebarDensityTests
         ctx.Services.AddSingleton(rooms);
         ctx.Services.AddSingleton<TempDataDir>();
         ctx.Services.AddSingleton(new RoomEvents(NullLogger<RoomEvents>.Instance));
+        ctx.Services.AddNeedsYouTracker();
         ctx.Services.AddSingleton<ChatService>(sp =>
         {
             TempDataDir dir = sp.GetRequiredService<TempDataDir>();

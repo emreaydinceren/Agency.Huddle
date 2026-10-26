@@ -14,11 +14,15 @@
     what is only ever a yes/no choice, and here there is no dialog to stack on at all - just a row.
 *@
 
+@using System.Text.Json
+@using Agency.Huddle.App.NeedsYou
 @implements IDisposable
 @inject ITeamDirectory TeamDirectory
 @inject ITeamCatalog Catalog
 @inject RoomEvents Events
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject NeedsYouTracker Tracker
 
 <div class="room-list">
     @if (this.error is not null)
@@ -27,32 +31,132 @@
         <MudAlert Severity="Severity.Error" Dense="true" role="alert">@this.error</MudAlert>
     }
 
+    @* "Group by: All | Team" - the same segmented control as the Tasks toolbar's List | Kanban. The choice is remembered per browser. *@
+    <div class="room-list-grouping">
+        <span class="room-list-grouping-label">Group by:</span>
+        <HuddleSegmentedControl T="RoomGrouping" Value="this.grouping" ValueChanged="this.OnGroupingChangedAsync"
+                                Class="room-list-grouping-control" ItemCount="2">
+            <MudToggleItem Value="RoomGrouping.All">All</MudToggleItem>
+            <MudToggleItem Value="RoomGrouping.Team">Team</MudToggleItem>
+        </HuddleSegmentedControl>
+    </div>
+
     <MudNavMenu>
-        <MudNavGroup Title="Rooms" Icon="@Icons.Material.Filled.Chat" @bind-Expanded="this.expanded">
-            @if (this.rooms.Count == 0)
+        @if (this.grouping == RoomGrouping.Team && this.groups.Count > 0)
+        {
+            @* One folder per Team: a MudNavGroup, open or closed by its header. *@
+            @foreach (RoomGroup group in this.groups)
             {
-                <EmptyState Title="No rooms yet" Text="Start an agent to create one." />
-            }
-            else
-            {
-                @foreach (var room in SidebarRows.Visible(this.rooms, this.showAll, this.IsActiveRoom))
-                {
-                    <RoomNavRow @key="room.Id" Room="room" OnError="this.OnRowError"
-                                TeamLabel="@(room.Team)" />
-                }
-                <ShowAllRow Total="this.rooms.Count" Expanded="this.showAll" OnToggle="this.ToggleShowAll" />
+                string groupKey = group.Team ?? string.Empty;
+                <MudNavGroup @key="groupKey" Class="room-folder" Title="@(group.Team ?? "No team")" Icon="@Icons.Material.Outlined.Folder"
+                             Expanded="this.IsFolderOpen(groupKey)" ExpandedChanged="@(open => this.SetFolderOpenAsync(groupKey, open))">
+                    @foreach (var room in SidebarRows.Visible(group.Rooms, this.showAllGroups.Contains(groupKey), this.IsActiveRoom))
+                    {
+                        <RoomNavRow @key="room.Id" Room="room" OnError="this.OnRowError" />
+                    }
+                    <ShowAllRow Total="group.Rooms.Count" Expanded="this.showAllGroups.Contains(groupKey)" OnToggle="@(() => this.ToggleShowAllGroup(groupKey))" />
+                </MudNavGroup>
             }
             <NewChat />
-        </MudNavGroup>
+        }
+        else
+        {
+            @* All: the chats waiting on the Human in a "Needs you" folder on top, the rest in an "All" folder; every chat is listed, with no "Show all". *@
+            @if (this.WaitingRooms.Count > 0)
+            {
+                <MudNavGroup Class="room-folder room-folder-needs-you" Title="Needs you" Icon="@Icons.Material.Outlined.NotificationsActive"
+                             Expanded="this.IsFolderOpen(NeedsYouFolder)" ExpandedChanged="@(open => this.SetFolderOpenAsync(NeedsYouFolder, open))">
+                    @foreach (var room in this.WaitingRooms)
+                    {
+                        <RoomNavRow @key="room.Id" Room="room" OnError="this.OnRowError" TeamLabel="@(room.Team)" />
+                    }
+                </MudNavGroup>
+            }
+            <MudNavGroup Class="room-folder" Title="All" Icon="@Icons.Material.Outlined.Folder"
+                         Expanded="this.IsFolderOpen(AllFolder)" ExpandedChanged="@(open => this.SetFolderOpenAsync(AllFolder, open))">
+                @if (this.rooms.Count == 0)
+                {
+                    <EmptyState Title="No rooms yet" Text="Start an agent to create one." />
+                }
+                else
+                {
+                    @foreach (var room in this.RestRooms)
+                    {
+                        <RoomNavRow @key="room.Id" Room="room" OnError="this.OnRowError" TeamLabel="@(room.Team)" />
+                    }
+                }
+                <NewChat />
+            </MudNavGroup>
+        }
     </MudNavMenu>
 </div>
 
 @code {
-    /// <summary>Open from the start: the Chats view holds this one group beside the Needs you card, and a view whose only content is one group opens it (audit B3a).</summary>
-    private bool expanded = true;
-    private bool showAll;
     private IReadOnlyList<Room> rooms = [];
     private string? error;
+
+    /// <summary>Folder keys of the All grouping; a control character keeps them apart from every Team name.</summary>
+    private const string NeedsYouFolder = "\u0001needs-you";
+    private const string AllFolder = "\u0001all";
+
+    /// <summary>The ids of the Rooms waiting on the Human, as the tracker holds them.</summary>
+    private HashSet<string> waitingIds = new(StringComparer.Ordinal);
+
+    /// <summary>The listed Rooms that wait on the Human, in the list's own order.</summary>
+    private List<Room> WaitingRooms => [.. this.rooms.Where(room => this.waitingIds.Contains(room.Id))];
+
+    /// <summary>The listed Rooms that do not wait on the Human, in the list's own order.</summary>
+    private List<Room> RestRooms => [.. this.rooms.Where(room => !this.waitingIds.Contains(room.Id))];
+
+    private const string GroupingKey = "roomList:grouping";
+    private const string FoldersKey = "roomList:closedFolders";
+
+    private RoomGrouping grouping = RoomGrouping.All;
+
+    /// <summary>Every unarchived Room, whatever its Team, grouped by Team for <see cref="RoomGrouping.Team"/>.</summary>
+    private IReadOnlyList<RoomGroup> groups = [];
+
+    /// <summary>Team keys (empty for no Team) whose group the Human opened with "Show all".</summary>
+    private readonly HashSet<string> showAllGroups = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Team keys (empty for no Team) whose folder the Human closed; every folder starts open.</summary>
+    private readonly HashSet<string> closedFolders = new(StringComparer.OrdinalIgnoreCase);
+
+    private bool IsFolderOpen(string groupKey) => !this.closedFolders.Contains(groupKey);
+
+    /// <summary>Opens or closes a Team's folder and remembers the closed ones.</summary>
+    /// <param name="groupKey">The Team's name, or empty for the Rooms of no Team.</param>
+    /// <param name="open">Whether the folder is now open.</param>
+    private async Task SetFolderOpenAsync(string groupKey, bool open)
+    {
+        _ = open ? this.closedFolders.Remove(groupKey) : this.closedFolders.Add(groupKey);
+        try
+        {
+            await this.JS.InvokeVoidAsync("huddleStorage.set", FoldersKey, JsonSerializer.Serialize(this.closedFolders.Order(StringComparer.Ordinal)));
+        }
+        catch (JSException)
+        {
+            // Storage may be blocked: the choice still holds for this session, it is just not remembered.
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit went away before the write finished; nothing to remember it for.
+        }
+    }
+
+    /// <summary>Opens the folder holding the current page's Room, so the page the Human is on is never folded away.</summary>
+    private void RevealActiveRoom()
+    {
+        foreach (RoomGroup group in this.groups.Where(group => group.Rooms.Any(this.IsActiveRoom)))
+        {
+            this.closedFolders.Remove(group.Team ?? string.Empty);
+        }
+
+        if (this.rooms.FirstOrDefault(this.IsActiveRoom) is { } active)
+        {
+            this.closedFolders.Remove(this.waitingIds.Contains(active.Id) ? NeedsYouFolder : AllFolder);
+        }
+    }
 
     /// <summary>The Room id of the current page, or <see langword="null"/> outside <c>/rooms/{id}</c>.</summary>
     private string? activeRoomId;
@@ -62,10 +166,11 @@
     {
         this.Events.RoomsChanged += this.OnRoomsChanged;
         this.Catalog.Changed += this.OnRoomsChanged;
+        this.Tracker.Changed += this.OnRoomsChanged;
         this.Navigation.LocationChanged += this.OnLocationChanged;
         this.activeRoomId = SidebarRows.RoomId(SidebarRows.CurrentPath(this.Navigation));
         await this.LoadAsync();
-        this.expanded |= this.HasActiveRoom;
+        this.RevealActiveRoom();
     }
 
     /// <summary>Unsubscribes from the Room events, the catalog and navigation.</summary>
@@ -73,15 +178,78 @@
     {
         this.Events.RoomsChanged -= this.OnRoomsChanged;
         this.Catalog.Changed -= this.OnRoomsChanged;
+        this.Tracker.Changed -= this.OnRoomsChanged;
         this.Navigation.LocationChanged -= this.OnLocationChanged;
     }
 
-    /// <summary>Whether the current page is one of the Rooms this group lists.</summary>
-    private bool HasActiveRoom => this.activeRoomId is not null && this.rooms.Any(this.IsActiveRoom);
-
     private bool IsActiveRoom(Room room) => string.Equals(room.Id, this.activeRoomId, StringComparison.OrdinalIgnoreCase);
 
-    private void ToggleShowAll() => this.showAll = !this.showAll;
+    private void ToggleShowAllGroup(string groupKey)
+    {
+        if (!this.showAllGroups.Remove(groupKey))
+        {
+            this.showAllGroups.Add(groupKey);
+        }
+    }
+
+    /// <summary>Reads the remembered grouping and closed folders once, after the first render; a blocked or stale value leaves <see cref="RoomGrouping.All"/> and every folder open.</summary>
+    /// <param name="firstRender">Whether this is the component's first render.</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            string? stored = await this.JS.InvokeAsync<string?>("huddleStorage.get", GroupingKey);
+            if (Enum.TryParse(stored, out RoomGrouping remembered) && remembered != this.grouping)
+            {
+                this.grouping = remembered;
+            }
+
+            string? closed = await this.JS.InvokeAsync<string?>("huddleStorage.get", FoldersKey);
+            if (closed is not null && JsonSerializer.Deserialize<string?[]>(closed) is { } names)
+            {
+                this.closedFolders.UnionWith(names.OfType<string>());
+                this.RevealActiveRoom();
+            }
+
+            this.StateHasChanged();
+        }
+        catch (JSException)
+        {
+            // Storage may be blocked (private mode, policy): the list stays on All with every folder open.
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit went away before the read finished; nothing to render.
+        }
+        catch (JsonException)
+        {
+            // Stored text may be stale or hand-edited and not a JSON array of strings: every folder stays open.
+        }
+    }
+
+    /// <summary>Switches the grouping and remembers the choice.</summary>
+    /// <param name="value">The grouping the Human picked.</param>
+    private async Task OnGroupingChangedAsync(RoomGrouping value)
+    {
+        this.grouping = value;
+        try
+        {
+            await this.JS.InvokeVoidAsync("huddleStorage.set", GroupingKey, value.ToString());
+        }
+        catch (JSException)
+        {
+            // Storage may be blocked: the choice still holds for this session, it is just not remembered.
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit went away before the write finished; nothing to remember it for.
+        }
+    }
 
     /// <summary>Opens the group when navigation lands on one of its Rooms; it never closes it.</summary>
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
@@ -89,7 +257,7 @@
         _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.activeRoomId = SidebarRows.RoomId(SidebarRows.CurrentPath(this.Navigation));
-            this.expanded |= this.HasActiveRoom;
+            this.RevealActiveRoom();
             this.StateHasChanged();
             return Task.CompletedTask;
         });
@@ -113,6 +281,8 @@
     {
         var all = await this.TeamDirectory.GetRoomsAsync();
         this.rooms = [.. all.Where(room => !room.Archived && (room.Team is null || this.Catalog.Find(room.Team) is null))];
+        this.groups = RoomGroups.ByTeam([.. all.Where(static room => !room.Archived)]);
+        this.waitingIds = new HashSet<string>(this.Tracker.Snapshot().Select(static entry => entry.RoomId), StringComparer.Ordinal);
     }
 
     private void OnRowError(string? message)

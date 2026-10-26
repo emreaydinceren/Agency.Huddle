@@ -12,6 +12,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.Tests.NeedsYou;
 
 /// <summary>
 /// Renders <see cref="ArchivedChatsDialog"/> through the real <c>IDialogService</c> (the same door
@@ -250,6 +251,7 @@ public sealed class ArchivedChatsDialogTests
         ctx.Services.AddSingleton(chat);
         ctx.Services.AddSingleton<Agency.Huddle.App.Teams.ITeamCatalog>(chat.TeamCatalog ?? new Agency.Huddle.Tests.Teams.FakeTeamCatalog());
         ctx.Services.AddSingleton(events);
+        ctx.Services.AddNeedsYouTracker();
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
         ctx.Services.AddSingleton(new AvatarStore(dir?.Options() ?? TestOptions.Create(), NullLogger<AvatarStore>.Instance));

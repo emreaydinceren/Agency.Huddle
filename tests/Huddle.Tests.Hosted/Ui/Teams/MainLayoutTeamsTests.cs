@@ -17,13 +17,13 @@ public sealed class MainLayoutTeamsTests
 
         string html = await client.GetStringAsync("/", ct);
 
-        int rooms = html.IndexOf(">Rooms<", StringComparison.Ordinal);
+        int rooms = html.IndexOf("room-list-grouping", StringComparison.Ordinal);
         int teams = html.IndexOf("teams-nav", StringComparison.Ordinal);
         int teammates = html.IndexOf("href=\"/teammates\"", StringComparison.Ordinal);
         int tasks = html.IndexOf("task-view-nav", StringComparison.Ordinal);
         int library = html.IndexOf("library-nav", StringComparison.Ordinal);
 
-        Assert.True(rooms >= 0, "the Rooms group title is missing from the drawer");
+        Assert.True(rooms >= 0, "the Rooms list's 'Group by' line is missing from the drawer");
         Assert.True(teams >= 0, "the 'teams-nav' marker is missing from the drawer");
         Assert.True(teammates >= 0, "the Teammates link is missing from the drawer");
         Assert.True(tasks >= 0, "the 'task-view-nav' marker is missing from the drawer");

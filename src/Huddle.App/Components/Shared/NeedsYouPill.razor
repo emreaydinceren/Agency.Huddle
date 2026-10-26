@@ -1,0 +1,57 @@
+@*
+    The "Needs you" pill on a Room's row in a sidebar list: drawn while NeedsYouTracker holds the Room (a Mention,
+    Question, Form or spent Budget, and not dismissed), so a waiting chat is marked where it sits in the list (a Team
+    folder included) as well as in the Needs you card. It reads the tracker and changes nothing; the card owns Dismiss.
+    The tracker is a singleton, so the subscription is dropped in Dispose (rules.md).
+*@
+@implements IDisposable
+@using Agency.Huddle.App.NeedsYou
+@inject NeedsYouTracker Tracker
+
+@if (this.waiting)
+{
+    <span class="needs-you-pill" title="This chat is waiting on you">Needs you</span>
+}
+
+@code {
+    private bool waiting;
+
+    /// <summary>The id of the Room whose row this pill sits on.</summary>
+    [Parameter, EditorRequired]
+    public required string RoomId { get; set; }
+
+    /// <summary>Subscribes to the tracker and reads the Room's state.</summary>
+    protected override void OnInitialized()
+    {
+        this.Tracker.Changed += this.OnTrackerChanged;
+    }
+
+    /// <summary>Re-reads the Room's state when the Room of the row changes.</summary>
+    protected override void OnParametersSet()
+    {
+        this.waiting = this.IsWaiting();
+    }
+
+    /// <summary>Unsubscribes from the tracker.</summary>
+    public void Dispose()
+    {
+        this.Tracker.Changed -= this.OnTrackerChanged;
+    }
+
+    private bool IsWaiting() => this.Tracker.Snapshot().Any(entry => string.Equals(entry.RoomId, this.RoomId, StringComparison.Ordinal));
+
+    private void OnTrackerChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            bool now = this.IsWaiting();
+            if (now != this.waiting)
+            {
+                this.waiting = now;
+                this.StateHasChanged();
+            }
+
+            return Task.CompletedTask;
+        });
+    }
+}

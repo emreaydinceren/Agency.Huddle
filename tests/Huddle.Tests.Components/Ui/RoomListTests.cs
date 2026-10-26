@@ -12,6 +12,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.Tests.NeedsYou;
 
 /// <summary>
 /// Renders the sidebar's <see cref="RoomList"/> through <see cref="MudBunitContext.RenderWithPopovers"/> -
@@ -179,9 +180,9 @@ public sealed class RoomListTests
         Assert.True((await directory.GetRoomAsync(room.Id, ct))?.Archived);
     }
 
-    /// <summary>Rooms are grouped under a collapsible "Rooms" MudNavGroup, and individual room links carry no icons.</summary>
+    /// <summary>The All list is one "All" folder with no "Rooms" header or "Needs you" folder while nothing waits, and individual room links carry no icons.</summary>
     [Fact]
-    public async Task Rooms_AreGroupedUnderCollapsibleRoomsNavGroup_WithoutIndividualIcons()
+    public async Task Rooms_AreListedWithoutAHeader_AndWithoutIndividualIcons()
     {
         var ct = Xunit.TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
@@ -195,8 +196,8 @@ public sealed class RoomListTests
         await using var ctx = NewContext(directory, chat, events);
         var cut = RenderRoomList(ctx);
 
-        var groupHeader = cut.Find(".mud-nav-group .mud-nav-link-text");
-        Assert.Equal("Rooms", groupHeader.TextContent.Trim());
+        Assert.Equal(["All"], cut.FindAll(".room-folder > .mud-nav-link .mud-nav-link-text").Select(header => header.TextContent.Trim()));
+        Assert.Empty(cut.FindAll(".sidebar-show-all"));
 
         var roomLink = cut.Find(".hover-reveal-link");
         Assert.Equal(room.Name, NameText(roomLink));
@@ -204,9 +205,9 @@ public sealed class RoomListTests
         Assert.Single(roomLink.QuerySelectorAll(".mud-avatar"));
     }
 
-    /// <summary>When there are no rooms, the collapsible "Rooms" group is still present and displays the empty state inside it.</summary>
+    /// <summary>When there are no rooms, the list shows the empty state.</summary>
     [Fact]
-    public async Task Rooms_WhenEmpty_RendersRoomsNavGroupWithEmptyState()
+    public async Task Rooms_WhenEmpty_RendersTheEmptyState()
     {
         var ct = Xunit.TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
@@ -217,8 +218,6 @@ public sealed class RoomListTests
         await using var ctx = NewContext(directory, chat, events);
         var cut = RenderRoomList(ctx);
 
-        var groupHeader = cut.Find(".mud-nav-group .mud-nav-link-text");
-        Assert.Equal("Rooms", groupHeader.TextContent.Trim());
         Assert.Contains("No rooms yet", cut.Find(".mud-nav-group").TextContent, StringComparison.Ordinal);
     }
 
@@ -375,6 +374,162 @@ public sealed class RoomListTests
         Assert.Equal($"Delete \"{room.Name}\"?", cut.Find(".room-list-confirm-host").GetAttribute("title"));
     }
 
+    /// <summary>The Chats view offers "Group by: All | Team", with All selected until the Human picks Team.</summary>
+    [Fact]
+    public async Task GroupBy_OffersAllAndTeam_WithAllSelected()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
+
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = RenderRoomList(ctx);
+
+        Assert.Equal("Group by:", cut.Find(".room-list-grouping-label").TextContent.Trim());
+        Assert.Equal(["All", "Team"], cut.FindAll(".room-list-grouping-control .mud-toggle-item").Select(item => item.TextContent.Trim()));
+        Assert.Equal(["All"], cut.FindAll(".room-folder > .mud-nav-link .mud-nav-link-text").Select(header => header.TextContent.Trim()));
+    }
+
+    /// <summary>Picking Team lists every Room under its Team's heading, the Rooms of no Team first, and remembers the choice.</summary>
+    [Fact]
+    public async Task GroupBy_Team_ListsEveryRoomUnderItsTeamHeading_AndRemembersTheChoice()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, agent.Id], "Marketing", teamRoom: true, ct);
+        var rootRoom = await directory.CreateRoomAsync("Lunch plans", [KnownIds.Human, agent.Id], ct);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events, teams: KnownTeam("Marketing")).Chat;
+
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = RenderRoomList(ctx);
+        await cut.InvokeAsync(() => cut.FindAll(".room-list-grouping-control .mud-toggle-item").First(item => item.TextContent.Trim() == "Team").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal(["No team", "Marketing"], cut.FindAll(".room-folder > .mud-nav-link .mud-nav-link-text").Select(header => header.TextContent.Trim())));
+        Assert.Equal([rootRoom.Name, teamRoom.Name], cut.FindAll(".hover-reveal-link a").Select(NameText));
+        Assert.Contains(ctx.JSInterop.Invocations, call => call.Identifier == "huddleStorage.set" && call.Arguments.Count == 2 && Equals(call.Arguments[1], "Team"));
+    }
+
+    /// <summary>A Room waiting on the Human wears the "Needs you" pill on its row, and loses it when the wait ends.</summary>
+    [Fact]
+    public async Task Row_WaitingOnTheHuman_ShowsTheNeedsYouPill()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = RenderRoomList(ctx);
+        Assert.Empty(cut.FindAll(".needs-you-pill"));
+        var tracker = ctx.Services.GetRequiredService<Agency.Huddle.App.NeedsYou.NeedsYouTracker>();
+
+        tracker.Seed(room.Id, DateTimeOffset.UtcNow, "coo");
+
+        cut.WaitForAssertion(() => Assert.Equal("Needs you", Assert.Single(cut.FindAll(".needs-you-pill")).TextContent.Trim()));
+        tracker.Dismiss(room.Id);
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".needs-you-pill")));
+    }
+
+    /// <summary>In All, the chats waiting on the Human sit in a "Needs you" folder above the "All" folder, and a long list shows every chat with no "Show all" row.</summary>
+    [Fact]
+    public async Task GroupBy_All_PutsWaitingRoomsInANeedsYouFolderAboveTheRest_AndNeverFolds()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        List<Room> made = [];
+        for (int i = 0; i < 10; i++)
+        {
+            made.Add(await directory.CreateRoomAsync($"Chat {i}", [KnownIds.Human, agent.Id], ct));
+        }
+
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = RenderRoomList(ctx);
+        Assert.Equal(["All"], cut.FindAll(".room-folder > .mud-nav-link .mud-nav-link-text").Select(header => header.TextContent.Trim()));
+
+        ctx.Services.GetRequiredService<Agency.Huddle.App.NeedsYou.NeedsYouTracker>().Seed(made[7].Id, DateTimeOffset.UtcNow, "coo");
+
+        cut.WaitForAssertion(() => Assert.Equal(["Needs you", "All"], cut.FindAll(".room-folder > .mud-nav-link .mud-nav-link-text").Select(header => header.TextContent.Trim())));
+        var folders = cut.FindAll(".room-folder");
+        Assert.Equal([made[7].Name], folders[0].QuerySelectorAll(".sidebar-row-label").Select(label => label.TextContent.Trim()));
+        Assert.Equal(9, folders[1].QuerySelectorAll(".hover-reveal-link a").Length);
+        Assert.Empty(cut.FindAll(".sidebar-show-all"));
+    }
+
+    /// <summary>A Team's heading is a folder: clicking it closes it, hiding its Rooms, and the closed set is remembered.</summary>
+    [Fact]
+    public async Task GroupBy_Team_ClickingAFolder_ClosesIt()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var rootRoom = await directory.CreateRoomAsync("Lunch plans", [KnownIds.Human, agent.Id], ct);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
+
+        await using var ctx = NewContext(directory, chat, events);
+        ctx.JSInterop.Setup<string?>("huddleStorage.get", "roomList:grouping").SetResult("Team");
+        var cut = RenderRoomList(ctx);
+        cut.WaitForAssertion(() => Assert.Contains(rootRoom.Name, cut.Markup, StringComparison.Ordinal));
+        await cut.InvokeAsync(() => cut.Find(".room-folder > .mud-nav-link").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Contains(ctx.JSInterop.Invocations, call => call.Identifier == "huddleStorage.set" && call.Arguments.Count == 2 && Equals(call.Arguments[0], "roomList:closedFolders") && Equals(call.Arguments[1], "[\"\"]")));
+    }
+
+    /// <summary>A remembered Team grouping is applied when the list first renders.</summary>
+    [Fact]
+    public async Task GroupBy_RememberedTeam_IsAppliedOnFirstRender()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        _ = await directory.CreateRoomAsync("Lunch plans", [KnownIds.Human, agent.Id], ct);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
+
+        await using var ctx = NewContext(directory, chat, events);
+        ctx.JSInterop.Setup<string?>("huddleStorage.get", "roomList:grouping").SetResult("Team");
+        var cut = RenderRoomList(ctx);
+
+        cut.WaitForAssertion(() => Assert.Equal(["No team"], cut.FindAll(".room-folder > .mud-nav-link .mud-nav-link-text").Select(header => header.TextContent.Trim())));
+    }
+
+    /// <summary>Groups put the Rooms of no Team first, then the Teams by name ignoring case, each with its Team Room first; an empty Team makes no group.</summary>
+    [Fact]
+    public void RoomGroups_ByTeam_OrdersGroupsAndRooms()
+    {
+        DateTimeOffset start = new(2026, 10, 1, 0, 0, 0, TimeSpan.Zero);
+        Room later = new("a", "Later", start.AddDays(2));
+        Room earlier = new("b", "Earlier", start);
+        Room sales = new("c", "Sales chat", start) { Team = "sales" };
+        Room marketing = new("d", "Plan", start.AddDays(1)) { Team = "Marketing" };
+        Room marketingTeamRoom = new("e", "Marketing", start.AddDays(3)) { Team = "Marketing", IsTeamRoom = true };
+
+        var groups = RoomGroups.ByTeam([later, sales, marketing, earlier, marketingTeamRoom]);
+
+        Assert.Equal([null, "Marketing", "sales"], groups.Select(group => group.Team));
+        Assert.Equal(["b", "a"], groups[0].Rooms.Select(room => room.Id));
+        Assert.Equal(["e", "d"], groups[1].Rooms.Select(room => room.Id));
+    }
+
     private static Agency.Huddle.Tests.Teams.FakeTeamCatalog KnownTeam(string name) =>
         new() { Teams = [new Agency.Huddle.App.Teams.TeamSummary(name, [], ["coo"], true)] };
 
@@ -415,6 +570,7 @@ public sealed class RoomListTests
         ctx.Services.AddSingleton(chat);
         ctx.Services.AddSingleton<Agency.Huddle.App.Teams.ITeamCatalog>(chat.TeamCatalog ??new Agency.Huddle.Tests.Teams.FakeTeamCatalog());
         ctx.Services.AddSingleton(events);
+        ctx.Services.AddNeedsYouTracker();
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
         ctx.Services.AddSingleton(new AvatarStore(dir?.Options() ?? TestOptions.Create(), NullLogger<AvatarStore>.Instance));

@@ -11,6 +11,7 @@ using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Tests.Css;
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.Tests.NeedsYou;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -170,6 +171,7 @@ public sealed class SidebarConsistencyTests
         ctx.Services.AddSingleton(chat);
         ctx.Services.AddSingleton<Agency.Huddle.App.Teams.ITeamCatalog>(new Agency.Huddle.Tests.Teams.FakeTeamCatalog());
         ctx.Services.AddSingleton(events);
+        ctx.Services.AddNeedsYouTracker();
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
         ctx.Services.AddSingleton(new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance));
