@@ -1724,6 +1724,15 @@ a.team-ref,
     font-weight: 400;
 }
 
+/* An Agent's context fill on its newest group's meta line, pushed to the line's end. Same quiet ink as the time. */
+.message-context {
+    margin-left: auto;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
 .message-body {
     font-family: var(--mud-typography-body1-family);
     font-size: var(--mud-typography-body1-size);

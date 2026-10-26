@@ -248,6 +248,7 @@ public sealed class MessageListJumpTests
         ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IOptions<TeamOptions>>());
         ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Services.ContextFill>());
         return ctx;
     }
 }

@@ -87,6 +87,7 @@ public sealed class MessageDisplayTests
         ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IOptions<TeamOptions>>());
         ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Services.ContextFill>());
         ChatMessage wake = new("m-1", DateTimeOffset.UtcNow, "human-1", "You", WakeText);
 
         var cut = ctx.Render<MessageList>(parameters => parameters
@@ -109,6 +110,7 @@ public sealed class MessageDisplayTests
         ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IOptions<TeamOptions>>());
         ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Services.ContextFill>());
         ChatMessage wake = new("m-1", DateTimeOffset.UtcNow, KnownIds.Huddle, "Huddle", WakeText);
 
         var cut = ctx.Render<MessageList>(parameters => parameters
@@ -131,6 +133,7 @@ public sealed class MessageDisplayTests
         ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IOptions<TeamOptions>>());
         ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Services.ContextFill>());
         ChatMessage note = new("m-1", DateTimeOffset.UtcNow, KnownIds.Huddle, "Huddle", "Something Huddle noticed.");
 
         var cut = ctx.Render<MessageList>(parameters => parameters

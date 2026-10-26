@@ -176,7 +176,7 @@ list, notices, cards, composer.
 | `C4b` | System row | `.system-row` | A slim, expandable row such as "Task woke Nova" |
 | `C5` | Agent message row | `.message-row` | A 32px avatar (`.avatar-transcript`, in a `.message-gutter` of the same width) beside plain text. There is no card |
 | `C5a` | Avatar | `ProfileAvatar` around `TeammateAvatar` | 32px. Image, then label, then monogram. A click opens the profile popover (`O9`) |
-| `C5b` | Message meta | `.message-meta` | Name 13px/600 and the time 12px TextSecondary, 8px after the name |
+| `C5b` | Message meta | `.message-meta` | Name 13px/600 and the time 12px TextSecondary, 8px after the name. On the meta line heading each Agent's newest group only, its context fill (`.message-context`) sits at the line's right end in the same 12px TextSecondary: the whole percent, or "<1%". The tooltip gives the token counts and says "in this Room", or "shared across all of {Name}'s Rooms" for a shared-mode session. Nothing is shown until a reading exists, and never on the Human's or Huddle's Messages. The same reading as the Members panel row (`S4m`) |
 | `C5c` | Message body | `.message-content > .message-body` | Plain 14px rendered Markdown with no bordered card (`.message-card` is gone), at most 75ch wide, plus `MessageReferences`. A file in a message is its name as a `.ref-link`, with the relative path in the tooltip. Task links have a dotted underline in accent text and an 8px status dot |
 | `C6` | Human message bubble | `.message-bubble` | Right-aligned, accent-tinted, 12px radius, max `min(75%, 75ch + 32px)` |
 | `C7` | Draft | `.message-row.streaming` | A reply still arriving |

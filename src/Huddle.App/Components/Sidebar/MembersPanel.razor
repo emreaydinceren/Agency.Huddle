@@ -4,7 +4,6 @@
 @using Agency.Huddle.App.Services
 @using Agency.Huddle.App.Sidebar
 @using Agency.Huddle.Contracts
-@using System.Globalization
 @implements IDisposable
 @inject ITeamDirectory TeamDirectory
 @inject IAgentGateway Gateway
@@ -41,7 +40,7 @@
                         @if (member.Kind == UserKind.Agent)
                         {
                             ContextFillReading? reading = this.ReadingOf(member);
-                            <span class="sidebar-row-meta members-context" title="@ContextTooltip(reading, member)">@ContextLabel(reading)</span>
+                            <span class="sidebar-row-meta members-context" title="@ContextFillText.Tooltip(reading, member.Name)">@ContextFillText.Label(reading)</span>
                         }
                     </div>
                     @if (member.Kind == UserKind.Agent && this.ReadingOf(member)?.Percent is { } percent)
@@ -160,32 +159,6 @@
     /// <param name="member">The Agent user.</param>
     private ContextFillReading? ReadingOf(User member) =>
         this.roomId is { } id ? this.ContextFill.Get(member.Id, id) : null;
-
-    /// <summary>The meter's text: the whole percent, "&lt;1%" for a tiny non-zero fill, or an em dash when unknown.</summary>
-    /// <param name="reading">The reading, or null when none was reported.</param>
-    private static string ContextLabel(ContextFillReading? reading) => reading?.Percent switch
-    {
-        null => "—",
-        0 when reading.Used > 0 => "<1%",
-        { } percent => string.Create(CultureInfo.InvariantCulture, $"{percent}%"),
-    };
-
-    /// <summary>The meter's tooltip: the token counts and whether the reading is this Room's or shared.</summary>
-    /// <param name="reading">The reading, or null when none was reported.</param>
-    /// <param name="member">The Agent user.</param>
-    private static string ContextTooltip(ContextFillReading? reading, User member)
-    {
-        if (reading is null || reading.Percent is null)
-        {
-            return "No context usage reported yet";
-        }
-
-        string used = reading.Used.ToString("N0", CultureInfo.InvariantCulture);
-        string size = reading.Size.ToString("N0", CultureInfo.InvariantCulture);
-        return reading.Shared
-            ? $"{used} of {size} tokens used, shared across all of {member.Name}'s Rooms"
-            : $"{used} of {size} tokens used in this Room";
-    }
 
     /// <summary>The bar's colour for a fill: Primary until the Warning band, then Warning, then Error.</summary>
     /// <param name="percent">The fill as a whole percent.</param>

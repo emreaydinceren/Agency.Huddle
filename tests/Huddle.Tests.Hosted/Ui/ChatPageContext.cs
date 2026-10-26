@@ -41,6 +41,7 @@ internal static class ChatPageContext
         ctx.Services.AddSingleton(source.GetRequiredService<RoomFollows>());
         ctx.Services.AddSingleton(source.GetRequiredService<PersonaStore>());
         ctx.Services.AddSingleton(source.GetRequiredService<AvatarStore>());
+        ctx.Services.AddSingleton(source.GetRequiredService<ContextFill>());
         ctx.Services.AddSingleton(source.GetRequiredService<Agency.Huddle.App.Profile.IHumanIdentity>());
         ctx.Services.AddSingleton(source.GetRequiredService<IMentionAliasSource>());
         ctx.Services.AddSingleton(source.GetRequiredService<ProposalStore>());
