@@ -1537,6 +1537,11 @@ a.team-ref,
     margin-bottom: 4px;
 }
 
+/* Below the Needs you card the line sits 16px clear of it, like a section after a section; a hidden card does not count (see .sidebar-view above). */
+.sidebar-view > :not([hidden]) ~ .room-list .room-list-grouping {
+    margin-top: 16px;
+}
+
 .room-list-grouping-label {
     flex: 0 0 auto;
     font-size: var(--mud-typography-caption-size);
