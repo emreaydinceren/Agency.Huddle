@@ -19,6 +19,7 @@ using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.Tests.NeedsYou;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
 
@@ -940,6 +941,7 @@ public sealed class TeamsNavTests
         ctx.Services.AddSingleton(rooms);
         ctx.Services.AddSingleton<TempDataDir>();
         ctx.Services.AddSingleton(new RoomEvents(NullLogger<RoomEvents>.Instance));
+        ctx.Services.AddNeedsYouTracker();
         ctx.Services.AddSingleton<ChatService>(sp =>
         {
             TempDataDir dir = sp.GetRequiredService<TempDataDir>();

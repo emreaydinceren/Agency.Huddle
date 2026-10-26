@@ -49,6 +49,7 @@
             {
                 <span class="room-team-label">(@this.TeamLabel)</span>
             }
+            <NeedsYouPill RoomId="@this.Room.Id" />
         </NavTabLink>
         <MudMenu @ref="this.menu" Class="hover-reveal-menu" Dense="true">
             @* ActivatorContent replaces MudMenu's own built-in activator entirely, so

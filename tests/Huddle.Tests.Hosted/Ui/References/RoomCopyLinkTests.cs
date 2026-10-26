@@ -18,6 +18,7 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Components.Teams;
 using Agency.Huddle.Tests.Ui.Teams;
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.Tests.NeedsYou;
 
 namespace Agency.Huddle.Tests.Ui.References;
 
@@ -220,6 +221,7 @@ public sealed class RoomCopyLinkTests
         ctx.Services.AddSingleton<ITeamCatalog>(catalog);
         ctx.Services.AddSingleton<ITeamFolders>(new FakeTeamFolders());
         ctx.Services.AddSingleton(events);
+        ctx.Services.AddNeedsYouTracker();
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
         ctx.Services.AddSingleton(new AvatarStore(TestOptions.Create(), NullLogger<AvatarStore>.Instance));
@@ -277,6 +279,7 @@ public sealed class RoomCopyLinkTests
         ctx.Services.AddSingleton(chat);
         ctx.Services.AddSingleton<Agency.Huddle.App.Teams.ITeamCatalog>(chat.TeamCatalog ?? new Agency.Huddle.Tests.Teams.FakeTeamCatalog());
         ctx.Services.AddSingleton(events);
+        ctx.Services.AddNeedsYouTracker();
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
         ctx.Services.AddSingleton(new AvatarStore(TestOptions.Create(), NullLogger<AvatarStore>.Instance));

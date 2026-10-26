@@ -105,7 +105,7 @@ give the page more room. The sidebar opens on **Chats**.
 
 | Activity bar button | What the sidebar shows |
 | --- | --- |
-| **Chats** | **Needs you**, a card drawn only while a Room is waiting on you (see [Needs you](#needs-you)), then **Rooms**: your root Rooms, plus **New chat**. A Team's chats are not listed here; see [Team chats](#team-chats). |
+| **Chats** | **Needs you**, a card drawn only while a Room is waiting on you (see [Needs you](#needs-you)), then **Group by: All | Team**. **All** lists your root Rooms in two folders: **Needs you** on top, holding the chats waiting on you, and **All** with the rest, plus **New chat**. It never folds the list behind "Show all". A Team's chats are not listed under **All**; see [Team chats](#team-chats). Pick **Team** to list every chat in a folder per Team ("No team" first); click a folder to close or open it. The choice and the closed folders are remembered. A chat that is waiting on you also wears a **Needs you** pill in the list. |
 | **Teams** | One row per Team. Expand it to see its Team Room, its chats and its Projects. **Build a team** sits at the bottom. The More (⋮) menu on a Team row has **New chat** and **New project**. |
 | **Teammates** | A link to the page listing every Teammate, grouped by Team. |
 | **Tasks** | Your saved Views of Tasks: **All Tasks**, **My Tasks**, any you saved, and **New view**. Not shown when Tasks are turned off. |

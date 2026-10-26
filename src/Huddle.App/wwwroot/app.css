@@ -1528,6 +1528,62 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
+/* The Chats view's "Group by: All | Team" line: the label, then the segmented control, on the rows' left line (the pill's inset plus its padding). */
+.room-list-grouping {
+    display: flex;
+    align-items: center;
+    gap: var(--nav-gap);
+    padding-inline: calc(var(--nav-inset) + var(--nav-pad)) var(--nav-end);
+    margin-bottom: 4px;
+}
+
+.room-list-grouping-label {
+    flex: 0 0 auto;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.room-list-grouping .room-list-grouping-control {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* A Team folder is a section header with no gap above it: the folders stack as one list. */
+.sidebar-views .room-list .room-folder.mud-nav-group > .mud-nav-link {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+/* The "Needs you" pill on a waiting chat's row: a small tinted capsule after the name, never shrinking so the name takes the ellipsis. */
+.needs-you-pill {
+    flex: 0 0 auto;
+    margin-inline-start: 8px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    line-height: 16px;
+    color: var(--mud-palette-text-primary);
+    background: color-mix(in srgb, var(--mud-palette-warning) 28%, transparent);
+}
+
+/* On a row that wears the pill the link text is a flex line: the name takes the ellipsis, and the pill and any avatar keep their size. */
+.sidebar-views .mud-nav-link-text:has(> .needs-you-pill) {
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-views .mud-nav-link-text:has(> .needs-you-pill) > .sidebar-row-label {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-views .mud-nav-link-text:has(> .needs-you-pill) > :not(.sidebar-row-label) {
+    flex: 0 0 auto;
+}
+
 /* The sidebar's inline Delete? confirm: one 32px line whose prompt starts on the rows' text line, Cancel then Delete (audit B10 "Inline confirm"). */
 .room-list-confirm-host {
     flex: 1 1 auto;
