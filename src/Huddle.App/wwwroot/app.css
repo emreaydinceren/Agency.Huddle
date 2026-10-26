@@ -1553,9 +1553,9 @@ a.team-ref,
     min-width: 0;
 }
 
-/* The rows inside a folder (Needs you, All, a Team) are one level in, so their marks sit under the folder's name (Left menu). */
+/* The rows inside a folder (Needs you, All, a Team) step in half a level (16px, not the 32px of a Team's rows in the Teams view). */
 .sidebar-views .room-list .room-folder .mud-collapse-container {
-    --nav-level: 1;
+    --nav-level: 0.5;
 }
 
 /* The Needs you folder already says it, so its rows carry no pill and the names keep the room. */
