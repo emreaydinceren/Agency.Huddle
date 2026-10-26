@@ -163,6 +163,156 @@ public sealed class MembersPanelTests
         Assert.Equal(2, panelCtx.Count);
     }
 
+    /// <summary>The store's subscribers on <c>Changed</c>, or null when there are none (a field-like event's backing field).</summary>
+    private static Delegate? ChangedHandlers(ContextFill fill) =>
+        (Delegate?)typeof(ContextFill).GetField("Changed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(fill);
+
+    private static async Task<User> AgentAsync(ProfileFixture fixture, string name, CancellationToken ct) =>
+        await fixture.Directory.FindUserByNameAsync(name, ct) ?? throw new InvalidOperationException(name + " was not created.");
+
+    /// <summary>An Agent with a reading shows its whole percent and one bar carrying the same value.</summary>
+    [Fact]
+    public async Task ContextMeter_AgentWithReading_ShowsPercentAndBar()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        Room room = await NewRoomAsync(fixture, ct, "Ada");
+        User agent = await AgentAsync(fixture, "Ada", ct);
+        fixture.ContextFill.Report(agent.Id, room.Id, 124_999, 200_000);
+        await using MudBunitContext ctx = NewContext(fixture, new RoomEvents(NullLogger<RoomEvents>.Instance));
+
+        IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = RenderPanel(ctx, new SidebarPanelContext(), new RoomSubject(room.Id));
+
+        cut.WaitForAssertion(() => Assert.Equal("62%", cut.Find(Row + " .members-context").TextContent.Trim()));
+        Assert.Equal("124,999 of 200,000 tokens used in this Room", cut.Find(".members-context").GetAttribute("title"));
+        Assert.Single(cut.FindAll(".members-context-bar"));
+        Assert.Equal("62", cut.Find(".members-context-bar").GetAttribute("aria-valuenow"));
+    }
+
+    /// <summary>An Agent with no reading reads an em dash and has no bar; a Human row has neither element.</summary>
+    [Fact]
+    public async Task ContextMeter_NoReading_ShowsDashAndNoBar_HumanHasNeither()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        Room room = await NewRoomAsync(fixture, ct, "Ada");
+        await using MudBunitContext ctx = NewContext(fixture, new RoomEvents(NullLogger<RoomEvents>.Instance));
+
+        IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = RenderPanel(ctx, new SidebarPanelContext(), new RoomSubject(room.Id));
+
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(Row).Count));
+        Assert.Equal("—", cut.Find(".members-context").TextContent.Trim());
+        Assert.Equal("No context usage reported yet", cut.Find(".members-context").GetAttribute("title"));
+        Assert.Empty(cut.FindAll(".members-context-bar"));
+        Assert.Single(cut.FindAll(".members-context"));
+        Assert.Empty(cut.FindAll(Row)[1].QuerySelectorAll(".members-context, .members-context-bar"));
+    }
+
+    /// <summary>A Human's row never shows a meter, even if a reading were somehow reported under the Human's id.</summary>
+    [Fact]
+    public async Task ContextMeter_HumanRow_NeverShowsAMeter()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        Room room = await NewRoomAsync(fixture, ct, "Ada");
+        User human = await fixture.Directory.GetHumanAsync(ct);
+        fixture.ContextFill.Report(human.Id, room.Id, 100_000, 200_000);
+        await using MudBunitContext ctx = NewContext(fixture, new RoomEvents(NullLogger<RoomEvents>.Instance));
+
+        IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = RenderPanel(ctx, new SidebarPanelContext(), new RoomSubject(room.Id));
+
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(Row).Count));
+        Assert.Empty(cut.FindAll(Row)[1].QuerySelectorAll(".members-context, .members-context-bar"));
+        Assert.Empty(cut.FindAll(".members-context-bar"));
+    }
+
+    /// <summary>A tiny non-zero fill reads "&lt;1%" rather than a misleading 0%.</summary>
+    [Fact]
+    public async Task ContextMeter_TinyFill_ReadsLessThanOnePercent()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        Room room = await NewRoomAsync(fixture, ct, "Ada");
+        User agent = await AgentAsync(fixture, "Ada", ct);
+        fixture.ContextFill.Report(agent.Id, room.Id, 500, 200_000);
+        await using MudBunitContext ctx = NewContext(fixture, new RoomEvents(NullLogger<RoomEvents>.Instance));
+
+        IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = RenderPanel(ctx, new SidebarPanelContext(), new RoomSubject(room.Id));
+
+        cut.WaitForAssertion(() => Assert.Equal("<1%", cut.Find(".members-context").TextContent.Trim()));
+    }
+
+    /// <summary>A reading reported after the first render redraws the row.</summary>
+    [Fact]
+    public async Task ContextMeter_ReportAfterRender_Redraws()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        Room room = await NewRoomAsync(fixture, ct, "Ada");
+        User agent = await AgentAsync(fixture, "Ada", ct);
+        await using MudBunitContext ctx = NewContext(fixture, new RoomEvents(NullLogger<RoomEvents>.Instance));
+        IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = RenderPanel(ctx, new SidebarPanelContext(), new RoomSubject(room.Id));
+        cut.WaitForAssertion(() => Assert.Equal("—", cut.Find(".members-context").TextContent.Trim()));
+
+        fixture.ContextFill.Report(agent.Id, room.Id, 100_000, 200_000);
+
+        cut.WaitForAssertion(() => Assert.Equal("50%", cut.Find(".members-context").TextContent.Trim()));
+        Assert.Single(cut.FindAll(".members-context-bar"));
+    }
+
+    /// <summary>The bar is Primary below 75%, Warning from 75% and Error from 90%.</summary>
+    /// <param name="used">Tokens used, out of 200,000.</param>
+    /// <param name="colourClass">The MudBlazor colour class the bar must carry.</param>
+    [Theory]
+    [InlineData(100_000, "mud-progress-linear-color-primary")]
+    [InlineData(160_000, "mud-progress-linear-color-warning")]
+    [InlineData(190_000, "mud-progress-linear-color-error")]
+    public async Task ContextMeter_BarColourFollowsTheBand(long used, string colourClass)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        Room room = await NewRoomAsync(fixture, ct, "Ada");
+        User agent = await AgentAsync(fixture, "Ada", ct);
+        fixture.ContextFill.Report(agent.Id, room.Id, used, 200_000);
+        await using MudBunitContext ctx = NewContext(fixture, new RoomEvents(NullLogger<RoomEvents>.Instance));
+
+        IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = RenderPanel(ctx, new SidebarPanelContext(), new RoomSubject(room.Id));
+
+        cut.WaitForAssertion(() => Assert.Contains(colourClass, cut.Find(".members-context-bar").ClassList));
+    }
+
+    /// <summary>A shared-mode reading says in its tooltip that it spans every Room of the Agent.</summary>
+    [Fact]
+    public async Task ContextMeter_SharedReading_TooltipSaysShared()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        Room room = await NewRoomAsync(fixture, ct, "Ada");
+        User agent = await AgentAsync(fixture, "Ada", ct);
+        fixture.ContextFill.Report(agent.Id, null, 124_000, 200_000);
+        await using MudBunitContext ctx = NewContext(fixture, new RoomEvents(NullLogger<RoomEvents>.Instance));
+
+        IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = RenderPanel(ctx, new SidebarPanelContext(), new RoomSubject(room.Id));
+
+        cut.WaitForAssertion(() => Assert.Equal("124,000 of 200,000 tokens used, shared across all of Ada's Rooms", cut.Find(".members-context").GetAttribute("title")));
+    }
+
+    /// <summary>After the panel is disposed, it no longer listens to the store (nothing is left on its Changed event).</summary>
+    [Fact]
+    public async Task ContextMeter_Disposed_Unsubscribes()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        Room room = await NewRoomAsync(fixture, ct, "Ada");
+        await using MudBunitContext ctx = NewContext(fixture, new RoomEvents(NullLogger<RoomEvents>.Instance));
+        IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = RenderPanel(ctx, new SidebarPanelContext(), new RoomSubject(room.Id));
+        cut.WaitForAssertion(() => Assert.Equal("—", cut.Find(".members-context").TextContent.Trim()));
+        Assert.NotNull(ChangedHandlers(fixture.ContextFill));
+        await ctx.DisposeComponentsOnDispatcherAsync();
+
+        Assert.Null(ChangedHandlers(fixture.ContextFill));
+    }
+
     private static async Task<int?> WaitForCountAsync(SidebarPanelContext panelCtx, int expected)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;

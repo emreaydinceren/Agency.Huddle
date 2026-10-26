@@ -760,7 +760,7 @@ public sealed class BuildTeamTests
         await PickRemoveAsync(cut, "Bo", ".menu-item-destructive");
 
         _ = cut.InvokeAsync(() => { _ = cut.Find("button.build-team-approve-button").ClickAsync(); });
-        Assert.Equal("Delete 1 Teammate?", cut.Find(".mud-dialog-title").TextContent.Trim());
+        cut.WaitForAssertion(() => Assert.Equal("Delete 1 Teammate?", cut.Find(".mud-dialog-title").TextContent.Trim()));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog button").Single(button => string.Equals(button.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Null(fixture.Personas.Get("Bo"));

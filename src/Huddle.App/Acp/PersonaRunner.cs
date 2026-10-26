@@ -97,6 +97,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     private readonly RoomSessionStore? roomSessions;
     private readonly OwnPosts? ownPosts;
     private readonly TurnActivity? turnActivity;
+    private readonly ContextFill? contextFill;
     private readonly LibraryDocumentCollector? libraryDocs;
     private readonly ReferenceExpander? references;
     private readonly bool readsFiles;
@@ -150,7 +151,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         PersonaSpend? spend = null,
         PersonaCommands? commands = null,
         IElicitationBridge? elicitationBridge = null,
-        ReferenceExpander? references = null)
+        ReferenceExpander? references = null,
+        ContextFill? contextFill = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(options);
@@ -170,6 +172,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.roomSessions = roomSessions;
         this.ownPosts = ownPosts;
         this.turnActivity = turnActivity;
+        this.contextFill = contextFill;
         this.libraryDocs = libraryDocs;
         this.references = references;
         this.readsFiles = readsFiles;
@@ -455,6 +458,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.roomFollows.ClearAgent(welcome.AgentId);
         this.ownPosts?.ClearAgent(welcome.AgentId);
         this.turnActivity?.ClearAgent(welcome.AgentId);
+        this.contextFill?.ClearAgent(welcome.AgentId);
 
         // D16 P0-3: seeded before the Greeting block below (which also labels its Room) and before
         // the read loop starts, so RoomLabels.Distinguish always has this runner's full set of known
@@ -515,7 +519,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             this.libraryDocs,
             this.readsFiles,
             this.elicitationBridge,
-            this.references);
+            this.references,
+            this.contextFill);
     }
 
     /// <summary>Queues the Greeting for a Chief of Staff with an empty Human Room, at most once per runner lifetime.</summary>
@@ -591,6 +596,13 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
 
             // A stopped Teammate offers nothing; the next runner relearns the list from its Adapter.
             this.commands?.Forget(this.persona.Name);
+
+            // A stopped Agent has no context. After the pool is disposed, so a last usage update
+            // cannot bring an entry back.
+            if (this.agentId is { } stoppedAgentId)
+            {
+                this.contextFill?.ClearAgent(stoppedAgentId);
+            }
         }
     }
 

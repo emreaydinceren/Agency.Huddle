@@ -2,12 +2,14 @@
 @using Agency.Huddle.App.Components.References
 @using Agency.Huddle.App.Library
 @using Microsoft.Extensions.Options
+@implements IDisposable
 @inject IJSRuntime JS
 @inject AvatarStore Avatars
 @inject ITaskReferenceResolver Tasks
 @inject IOptions<TeamOptions> Options
 @inject TimeProvider Clock
 @inject ILibraryReferenceResolver LibraryResolver
+@inject ContextFill ContextFill
 
 <div class="message-list" @ref="this.container">
     @for (var messageIndex = 0; messageIndex < this.Messages.Count; messageIndex++)
@@ -96,6 +98,10 @@
                     <div class="message-meta">
                         <span class="message-sender">@message.SenderName</span>
                         <span class="message-time">@time</span>
+                        @if (this.ContextReadingAt(messageIndex, message) is { } reading)
+                        {
+                            <span class="message-context" title="@ContextFillText.Tooltip(reading, message.SenderName)">@ContextFillText.Label(reading)</span>
+                        }
                     </div>
                 }
                 <div class="message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver, this.Mentions))</div>
@@ -249,7 +255,14 @@
     [Parameter]
     public EventCallback OnJumped { get; set; }
 
+    /// <summary>The Room this list shows, which keys each Agent's context reading; <see langword="null"/> shows no context fill.</summary>
+    [Parameter]
+    public string? RoomId { get; set; }
+
     private ElementReference container;
+
+    /// <summary>The index of the row that heads each Agent's newest group, the one meta line that carries its context fill.</summary>
+    private IReadOnlySet<int> contextHeaders = new HashSet<int>();
     private int lastRenderedSignature;
 
     /// <summary>The target already jumped to, so a re-render with the same <see cref="TargetMessageId"/> does not jump again.</summary>
@@ -284,8 +297,62 @@
         }
     }
 
+    /// <inheritdoc />
+    protected override void OnInitialized() => this.ContextFill.Changed += this.OnContextFillChanged;
+
+    /// <summary>Stops listening to the context store, a singleton that outlives this list.</summary>
+    public void Dispose() => this.ContextFill.Changed -= this.OnContextFillChanged;
+
+    /// <summary>
+    /// The index of the row that heads each Agent's newest group of Messages. Only a group's first row
+    /// draws the meta line, so the newest Message's context fill sits on its group's header. A Human's
+    /// and Huddle's own Messages are skipped: they have no context window.
+    /// </summary>
+    /// <param name="messages">The Messages in Transcript order.</param>
+    /// <param name="humanIds">The ids of the Room's Human Members.</param>
+    /// <returns>One row index per Agent that has posted.</returns>
+    internal static IReadOnlySet<int> LatestAgentHeaders(IReadOnlyList<ChatMessage> messages, IReadOnlyCollection<string> humanIds)
+    {
+        Dictionary<string, int> headerBySender = new(StringComparer.Ordinal);
+        for (var index = 0; index < messages.Count; index++)
+        {
+            ChatMessage message = messages[index];
+            if (humanIds.Contains(message.SenderId) || string.Equals(message.SenderId, KnownIds.Huddle, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            ChatMessage? previous = index > 0 ? messages[index - 1] : null;
+            bool continues = previous is not null
+                && MessageDisplay.ContinuesGroup(previous.SenderId, previous.Timestamp, message.SenderId, message.Timestamp);
+            if (!continues)
+            {
+                headerBySender[message.SenderId] = index;
+            }
+        }
+
+        return headerBySender.Values.ToHashSet();
+    }
+
+    /// <summary>The context reading to show on row <paramref name="index"/>'s meta line, or <see langword="null"/> when that row shows none.</summary>
+    /// <param name="index">The row's index in <see cref="Messages"/>.</param>
+    /// <param name="message">The row's Message.</param>
+    private ContextFillReading? ContextReadingAt(int index, ChatMessage message) =>
+        this.RoomId is { } roomId && this.contextHeaders.Contains(index)
+            && this.ContextFill.Get(message.SenderId, roomId) is { Percent: not null } reading
+            ? reading
+            : null;
+
+    private void OnContextFillChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
     protected override void OnParametersSet()
     {
+        this.contextHeaders = MessageList.LatestAgentHeaders(this.Messages, this.HumanIds);
+
         if (this.TargetMessageId is null)
         {
             this.handledTarget = null;

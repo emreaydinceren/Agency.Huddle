@@ -64,6 +64,10 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     // reasoning as ownPosts just above.
     private readonly TurnActivity? turnActivity;
 
+    // Context meter: the latest context-window fill of this session, shown in the Members panel.
+    // Null for a caller that predates it, the same "absent means off" reasoning as turnActivity.
+    private readonly ContextFill? contextFill;
+
     // Spec §6.14: collects the Library documents mentioned in a Turn's Message and Catch-up. Null
     // means the Library is off (PersonaSupervisor is the only place that gate is applied) or this
     // caller predates it.
@@ -155,6 +159,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <param name="readsFiles">Whether the resolved Adapter Profile can read files (FC §6.11's Library counterpart): <see langword="false"/> inlines a kept document's own text instead of just its path.</param>
     /// <param name="elicitationBridge">Shows the Human the questions the agent asks through this session (E-3). <see langword="null"/> answers every one as cancelled, like every caller that predates it.</param>
     /// <param name="references">Builds the Referenced items header for a Message Turn (spec section 9.1). <see langword="null"/> adds no header, like every caller that predates it.</param>
+    /// <param name="contextFill">Records how full this session's context window is, for the Members panel's context meter. <see langword="null"/> disables it, like every caller that predates it.</param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -176,7 +181,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         LibraryDocumentCollector? libraryDocs = null,
         bool readsFiles = true,
         IElicitationBridge? elicitationBridge = null,
-        ReferenceExpander? references = null)
+        ReferenceExpander? references = null,
+        ContextFill? contextFill = null)
     {
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
@@ -204,6 +210,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         this.ownPosts = ownPosts;
         this.agentId = agentId;
         this.turnActivity = turnActivity;
+        this.contextFill = contextFill;
         this.libraryDocs = libraryDocs;
         this.references = references;
         this.readsFiles = readsFiles;
@@ -437,6 +444,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
                 return;
             }
 
+            // The context reading is deliberately kept: the session is still resumable and its context still exists.
             this.state = RoomSessionState.Closed;
             closing = this.session;
             readerCts = this.eventReaderCts;
@@ -593,6 +601,13 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             this.resumedOnLastOpen = resumed;
             this.resumedAfterMessageId = resumedAfterId;
             this.usageBaselinePending = resumed;
+
+            // A fresh open starts an empty context, so a reading left by an earlier session must
+            // not show; a resume keeps it, because that context still exists.
+            if (!resumed && this.agentId is { } freshAgentId)
+            {
+                this.contextFill?.Forget(freshAgentId, this.RoomId);
+            }
 
             // D23 correction 17 / D24 correction 23: reported on every open, not only the one
             // StartAsync makes at start-up, so a per-Room Persona with no Human Room still gets
@@ -1769,6 +1784,13 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <param name="usage">The usage update.</param>
     private void CountUsage(UsageUpdated usage)
     {
+        // The context meter shows the latest gauge reading, every update, the resume baseline
+        // included: that one is the restored context, which is what the meter should show.
+        if (this.agentId is { } id)
+        {
+            this.contextFill?.Report(id, this.RoomId, usage.Used, usage.Size);
+        }
+
         // Used is how full the context window is, not a running bill - Huddle.Console
         // renders it as "{Used}/{Size}" - so it FALLS when the session compacts. Summing
         // Used itself would re-count the whole window on every update; summing only the

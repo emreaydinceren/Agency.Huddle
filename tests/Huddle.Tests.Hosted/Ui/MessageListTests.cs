@@ -189,6 +189,9 @@ public sealed class MessageListTests
         // MessageList now injects ILibraryReferenceResolver (Task 9.4) to decide whether to link
         // absolute paths - needed even though most of these tests never resolve one.
         ctx.Services.AddSingleton(library ?? new FakeLibraryNoteResolver());
+
+        // MessageList shows each Agent's context fill on its newest Message.
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ContextFill>());
         return ctx;
     }
 
@@ -589,4 +592,92 @@ public sealed class MessageListTests
         var libraryAnchor = cut.Find("a.library-ref");
         Assert.Equal("?library=teams/Marketing/plan.md", libraryAnchor.GetAttribute("href"));
     }
+
+    /// <summary>
+    /// Each Agent's newest group is headed once: a grouped follow-up keeps its group's header, a later
+    /// group moves it, and the Human's and Huddle's own Messages never get one.
+    /// </summary>
+    [Fact]
+    public void LatestAgentHeaders_OnePerAgent_AtItsNewestGroup()
+    {
+        IReadOnlyList<ChatMessage> messages =
+        [
+            MessageListTests.At(0, "agent-a", "Ada"),
+            MessageListTests.At(10, "agent-a", "Ada"),
+            MessageListTests.At(20, KnownIds.Human, "You"),
+            MessageListTests.At(30, "agent-a", "Ada"),
+            MessageListTests.At(40, "agent-a", "Ada"),
+            MessageListTests.At(50, "agent-b", "Bo"),
+            MessageListTests.At(60, KnownIds.Huddle, "Huddle"),
+        ];
+
+        IReadOnlySet<int> headers = MessageList.LatestAgentHeaders(messages, [KnownIds.Human]);
+
+        Assert.Equal([3, 5], headers.Order());
+    }
+
+    /// <summary>The context fill shows on the meta line of the Agent's newest group only, in its own quiet span, with the token counts as its tooltip.</summary>
+    [Fact]
+    public async Task ContextFill_ShowsOnTheAgentsNewestMessageOnly()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        factory.Services.GetRequiredService<ContextFill>().Report("agent-a", "room-1", 24_000, 200_000);
+        IReadOnlyList<ChatMessage> messages =
+        [
+            MessageListTests.At(0, "agent-a", "Ada"),
+            MessageListTests.At(20, KnownIds.Human, "You"),
+            MessageListTests.At(30, "agent-a", "Ada"),
+        ];
+
+        var cut = ctx.Render<MessageList>(parameters => parameters
+            .Add(p => p.Messages, messages)
+            .Add(p => p.HumanIds, [KnownIds.Human])
+            .Add(p => p.RoomId, "room-1"));
+
+        var context = Assert.Single(cut.FindAll(".message-context"));
+        Assert.Equal("12%", context.TextContent.Trim());
+        Assert.Equal("24,000 of 200,000 tokens used in this Room", context.GetAttribute("title"));
+        Assert.Equal("m-30", context.Closest(".message-row")?.GetAttribute("data-message-id"));
+    }
+
+    /// <summary>An Agent with no reading, or a list given no Room, shows no context fill at all: never a dash in the transcript.</summary>
+    [Fact]
+    public async Task ContextFill_NoReadingOrNoRoom_ShowsNothing()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        factory.Services.GetRequiredService<ContextFill>().Report("agent-a", "room-1", 24_000, 200_000);
+        IReadOnlyList<ChatMessage> messages = [MessageListTests.At(0, "agent-a", "Ada"), MessageListTests.At(30, "agent-b", "Bo")];
+
+        var withRoom = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Messages, messages).Add(p => p.RoomId, "room-1"));
+        var withoutRoom = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Messages, messages));
+
+        Assert.Single(withRoom.FindAll(".message-context"));
+        Assert.Empty(withoutRoom.FindAll(".message-context"));
+    }
+
+    /// <summary>A reading that arrives after the first render redraws the meta line, as it does during a Turn.</summary>
+    [Fact]
+    public async Task ContextFill_ReportAfterRender_Redraws()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        ContextFill fill = factory.Services.GetRequiredService<ContextFill>();
+        var cut = ctx.Render<MessageList>(parameters => parameters
+            .Add(p => p.Messages, [MessageListTests.At(0, "agent-a", "Ada")])
+            .Add(p => p.RoomId, "room-1"));
+        Assert.Empty(cut.FindAll(".message-context"));
+
+        fill.Report("agent-a", "room-1", 2_659, 200_000);
+
+        cut.WaitForAssertion(() => Assert.Equal("1%", cut.Find(".message-context").TextContent.Trim()));
+    }
+
+    /// <summary>Builds a Message <paramref name="seconds"/> after the epoch, with an id that names that offset.</summary>
+    /// <param name="seconds">Seconds after the epoch; ten apart keeps one sender's Messages in one group.</param>
+    /// <param name="senderId">The Message's <see cref="ChatMessage.SenderId"/>.</param>
+    /// <param name="senderName">The Message's <see cref="ChatMessage.SenderName"/>.</param>
+    private static ChatMessage At(int seconds, string senderId, string senderName) =>
+        new(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"m-{seconds}"), DateTimeOffset.UnixEpoch.AddSeconds(seconds), senderId, senderName, "hi");
 }

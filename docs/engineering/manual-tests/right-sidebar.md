@@ -2,7 +2,7 @@
 
 Prove, in a real browser, what no bUnit test can: that the Right sidebar lays out at 90% zoom, that a Room and a Markdown document each show their panels, that an Outline heading scrolls the document in every mode, and that a collapsed panel stays collapsed after a reload. The automated suite proves the panel rules, the catalog and each panel's behaviour against fakes.
 
-**8 tests** · 8 free · about 0.7 hours. Written 2026-10-16; **not yet run by a person**.
+**9 tests** · 8 free, 1 paid 💰 · about 0.9 hours. Written 2026-10-16; **not yet run by a person**.
 
 Read [the manual test script](../manual-tests.md) first, then [Common procedures](common.md), which defines the terminals, procedures and oracles this page names. Both are assumed below.
 
@@ -189,3 +189,35 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 - At step 1 the Right sidebar shows `Members`, `Tasks in this chat` and `Documents in this chat`.
 - At step 2 it shows `Outline` and `Linked documents`, and no Room panels.
 - At step 3 it shows the Room panels again.
+
+### RSIDE-09 — An Agent's context bar appears, grows during a Turn and falls after /compact
+
+**Paid** 💰 · about 20 min
+
+*Proves the Members panel's context meter on a real Adapter: an Agent that has not spoken in the Room reads "—", its percentage and bar appear and grow while it works, and the bar falls after a compaction.*
+
+**Before you start**
+
+- Paid lane (`P-LAUNCH-PAID`, which sets `Team:Acp:Enabled=true`). Two paid Teammates, `Scratch` and `Sidekick`, are Online and both are Members of one group Room.
+- The Right sidebar is open on that Room, with `Members` showing.
+
+**Steps**
+
+1. Read the `Scratch` and `Sidekick` rows in `Members`.
+2. Send `@Scratch list the files in your work folder and describe each one` and watch the `Scratch` row until the reply posts.
+3. Read both rows again.
+4. Send `@Scratch /compact` and wait for the outcome Message.
+5. Read the `Scratch` row. Hover its percentage.
+
+**Pass if — all of these**
+
+- At step 1 both rows read `—` and neither has a bar.
+- During step 2 the `Scratch` row gains a percentage and a bar, and the token count in its tooltip rises while the Turn runs (a short Turn can stay within one whole percent).
+- At step 3 `Sidekick` still reads `—` with no bar.
+- At step 5 the `Scratch` percentage is lower than it was at step 3, and its tooltip reads `... tokens used in this Room`.
+
+**If it fails**
+
+- Step 2 never shows a bar -> the Adapter sent no usage, or `RoomSession.CountUsage` did not report it; check the Adapter's profile first.
+- Step 3 shows a bar on `Sidekick` -> a reading is keyed by the wrong Agent id.
+- Step 5 is unchanged or higher -> the meter is summing or ignoring the fall.

@@ -78,6 +78,9 @@ internal sealed class ProfileFixture : IDisposable
     /// <summary>Reported health.</summary>
     public PersonaHealth Health { get; }
 
+    /// <summary>How full each Agent's context window is, as the Members panel's context meter reads it.</summary>
+    public ContextFill ContextFill { get; } = new();
+
     /// <summary>The service under test.</summary>
     public TeammateProfiles Profiles { get; }
 
@@ -120,6 +123,7 @@ internal sealed class ProfileFixture : IDisposable
         ctx.Services.AddSingleton<IAgentGateway>(this.Gateway);
         ctx.Services.AddSingleton(this.Personas);
         ctx.Services.AddSingleton(this.Health);
+        ctx.Services.AddSingleton(this.ContextFill);
         ctx.Services.AddSingleton(this.Chat);
         ctx.Services.AddSingleton(this.Avatars);
         ctx.Services.AddScoped<TeammateCardOpener>();

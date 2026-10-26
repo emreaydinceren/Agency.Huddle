@@ -54,6 +54,9 @@ internal static class ServicePresets
         // even though these tests never customise one.
         typeof(AvatarStore),
 
+        // MessageList shows each Agent's context fill on its newest Message, and redraws when it changes.
+        typeof(ContextFill),
+
         // The Room's Mention pills and the Human's own row read the Human and the aliases (ADR-0057's markup).
         typeof(IHumanIdentity),
         typeof(IMentionAliasSource),

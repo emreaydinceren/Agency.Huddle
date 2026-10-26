@@ -10,11 +10,14 @@
 @inject PersonaHealth Health
 @inject AvatarStore Avatars
 @inject RoomEvents RoomEvents
+@inject ContextFill ContextFill
 
 @*
     The Members panel (Spec Members): every member of the open Room, Agents first and then Humans, each by name.
     A row is a ProfileAvatar (so a click opens the profile popover) and the name; an Agent's avatar also wears its
     presence badge on the rim, resolved from pipe liveness and then reported health, as TeamRoster draws it.
+    An Agent's row also carries a context meter: the percentage of its context window in use in this Room and a thin
+    bar that takes the Warning and Error bands; a Human's row has neither.
 *@
 
 @if (this.members is { } list)
@@ -31,7 +34,21 @@
                 <PresenceAnchor Cue="@(member.Kind == UserKind.Agent ? PresenceCue.From(this.StateOf(member)) : null)">
                     <ProfileAvatar Name="@member.Name" Avatar="this.Avatars.Get(member.Name)" Size="Size.Small" Team="@this.team" />
                 </PresenceAnchor>
-                <span class="sidebar-row-text members-name" title="@member.Name">@member.Name</span>
+                <div class="members-body">
+                    <div class="members-line">
+                        <span class="sidebar-row-text members-name" title="@member.Name">@member.Name</span>
+                        @if (member.Kind == UserKind.Agent)
+                        {
+                            ContextFillReading? reading = this.ReadingOf(member);
+                            <span class="sidebar-row-meta members-context" title="@ContextFillText.Tooltip(reading, member.Name)">@ContextFillText.Label(reading)</span>
+                        }
+                    </div>
+                    @if (member.Kind == UserKind.Agent && this.ReadingOf(member)?.Percent is { } percent)
+                    {
+                        <MudProgressLinear Value="percent" Color="@ContextColour(percent)" Size="Size.Small" Class="members-context-bar"
+                                           aria-label="@($"{member.Name}'s context: {percent}% used")" />
+                    }
+                </div>
             </div>
         }
     }
@@ -42,6 +59,7 @@
     private IReadOnlyList<User>? members;
     private string? team;
     private string? loadedKey;
+    private string? roomId;
 
     /// <summary>What the page is showing; only a <see cref="RoomSubject"/> is drawn.</summary>
     [Parameter, EditorRequired]
@@ -62,6 +80,7 @@
         this.Health.Changed += this.OnLiveChanged;
         this.Gateway.PresenceChanged += this.OnLiveChanged;
         this.Avatars.AvatarsChanged += this.OnLiveChanged;
+        this.ContextFill.Changed += this.OnLiveChanged;
     }
 
     /// <inheritdoc />
@@ -71,6 +90,7 @@
         {
             this.members = null;
             this.loadedKey = null;
+            this.roomId = null;
             this.Panel?.SetCount(null);
             return;
         }
@@ -81,6 +101,7 @@
         }
 
         this.loadedKey = this.Subject.Key;
+        this.roomId = room.RoomId;
         await this.LoadAsync(room);
     }
 
@@ -91,6 +112,7 @@
         this.Health.Changed -= this.OnLiveChanged;
         this.Gateway.PresenceChanged -= this.OnLiveChanged;
         this.Avatars.AvatarsChanged -= this.OnLiveChanged;
+        this.ContextFill.Changed -= this.OnLiveChanged;
         this.loadCts?.Cancel();
         this.loadCts?.Dispose();
     }
@@ -132,6 +154,20 @@
     /// <param name="member">The Agent user.</param>
     private PersonaState StateOf(User member) =>
         PersonaStatusResolver.Resolve(this.Gateway.IsOnline(member.Id), this.Health.Get(member.Name)).State;
+
+    /// <summary>The context reading for an Agent in the open Room, read at render time.</summary>
+    /// <param name="member">The Agent user.</param>
+    private ContextFillReading? ReadingOf(User member) =>
+        this.roomId is { } id ? this.ContextFill.Get(member.Id, id) : null;
+
+    /// <summary>The bar's colour for a fill: Primary until the Warning band, then Warning, then Error.</summary>
+    /// <param name="percent">The fill as a whole percent.</param>
+    private static Color ContextColour(int percent) => ContextFillBand.Of(percent) switch
+    {
+        ContextFillBandKind.Error => Color.Error,
+        ContextFillBandKind.Warning => Color.Warning,
+        _ => Color.Primary,
+    };
 
     private void OnRoomsChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
     {
