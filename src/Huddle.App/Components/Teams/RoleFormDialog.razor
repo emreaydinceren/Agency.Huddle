@@ -24,7 +24,7 @@
                           Value="this.description" ValueChanged="this.OnDescriptionChanged" MaxLength="200" Class="custom-role-description" />
             <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Instructions (optional)" Immediate="true" Lines="6"
                           HelperText="What a Teammate in this role is told to do."
-                          Value="this.instructions" ValueChanged="this.OnInstructionsChanged" Class="custom-role-instructions long-text-field" />
+                          Value="this.instructions" ValueChanged="this.OnInstructionsChanged" Class="custom-role-instructions long-text-field markdown-field" />
             <MudSelect T="string" Label="Skills (optional)" MultiSelection="true" SelectedValues="@this.skills" SelectedValuesChanged="this.OnSkillsChanged"
                        Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Skills this Huddle has or can copy; a Teammate in this role carries them." Class="custom-role-skills">
                 @foreach (Skill skill in this.InstalledSkills.All)

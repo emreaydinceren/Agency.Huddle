@@ -145,6 +145,16 @@ button:focus-visible {
     line-height: var(--mud-typography-body1-lineheight);
 }
 
+/* A field whose text is Markdown source (a Task Description, a Persona, a Role's instructions, a prompt) is code while
+   it is being edited, so it is monospace at 13px like the Library editor. Pair it with long-text-field; the selectors
+   match that rule's and come after it, so the family and size win. */
+.markdown-field .mud-input,
+.markdown-field .mud-input .mud-input-slot,
+.markdown-field .mud-input > textarea.mud-input-root {
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-body2-size);
+}
+
 /* An image avatar fills its circle and is cropped to it. TeammateAvatar renders a bare <img> and MudBlazor
    sizes only its own MudImage, so without this a 256 px picture sat at full size inside a 56 px avatar. */
 .mud-avatar img {
