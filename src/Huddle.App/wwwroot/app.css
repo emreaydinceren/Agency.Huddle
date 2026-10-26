@@ -6219,6 +6219,28 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     color: var(--mud-palette-text-secondary);
 }
 
+/* A Members row's body: the name line, and under it an Agent's context bar (how full its context window is in this Room).
+   The name keeps its ellipsis beside the percentage because the line, not the row, is the flex container that shrinks. */
+.members-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 2px;
+}
+
+.members-line {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+}
+
+.members-context-bar.mud-progress-linear {
+    height: 3px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+}
+
 /* "Show all (N)" under a list longer than 8 rows (13px like "New chat", audit B3c): a quiet text action whose label starts on the
    text line, with a muted arrow in the leading slot. */
 .sidebar-show-all .mud-nav-link-text {

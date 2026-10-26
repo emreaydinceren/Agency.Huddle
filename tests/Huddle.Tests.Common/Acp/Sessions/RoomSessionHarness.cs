@@ -33,6 +33,9 @@ internal sealed record RoomSessionHarnessOptions
     /// <summary>The Turn activity tracker, or <see langword="null"/> for none.</summary>
     public TurnActivity? TurnActivity { get; init; }
 
+    /// <summary>The context-fill store, or <see langword="null"/> for none.</summary>
+    public ContextFill? ContextFill { get; init; }
+
     /// <summary>The library document collector, or <see langword="null"/> for none.</summary>
     public LibraryDocumentCollector? LibraryDocs { get; init; }
 
@@ -93,6 +96,7 @@ internal sealed class RoomSessionHarness : IAsyncDisposable
             persona: settings.Persona,
             agentId: settings.AgentId,
             turnActivity: settings.TurnActivity,
+            contextFill: settings.ContextFill,
             libraryDocs: settings.LibraryDocs,
             readsFiles: settings.ReadsFiles);
         return new RoomSessionHarness(session, runCts);

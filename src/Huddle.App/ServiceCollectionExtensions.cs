@@ -220,6 +220,10 @@ public static class ServiceCollectionExtensions
         // the Tasks UI's "AI reacting" badge. A leaf singleton, same shape as OwnPosts just above.
         services.AddSingleton<TurnActivity>();
 
+        // How full each Agent's context window is in each Room, fed by RoomSession and read by the
+        // Members panel's context meter. A leaf singleton, same shape as TurnActivity just above.
+        services.AddSingleton<ContextFill>();
+
         return services;
     }
 
