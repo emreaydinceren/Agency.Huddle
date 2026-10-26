@@ -47,6 +47,12 @@ internal static class Eventually
                 TimeSpan remaining = limit - Stopwatch.GetElapsedTime(start);
                 if (remaining <= TimeSpan.Zero)
                 {
+                    // The deadline can pass between the check above and this one; the last poll is still owed.
+                    if (condition())
+                    {
+                        return;
+                    }
+
                     Assert.Fail(Message(conditionText, "timeout", describe?.Invoke()));
                 }
 

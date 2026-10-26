@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Feed;
 
@@ -162,7 +161,9 @@ public sealed class FeedWriterTests
         FeedTestSupport.Exec(harness.DataDir, "ALTER TABLE feed_events RENAME TO feed_events_away;");
 
         harness.Queue.Post(FeedTestSupport.TaskCreated("LOST-1"));
-        await FeedHarness.WaitUntilAsync(() => harness.Logger.CountAtLeast(LogLevel.Warning) >= 1, ct);
+        // Wait for the writer's own warning: the clean-up loop also warns while the table is away, and restoring the
+        // table on that one lets the batch land after all.
+        await FeedHarness.WaitUntilAsync(() => harness.Logger.Messages.Any(static message => message.Contains("refused a batch", StringComparison.Ordinal)), ct);
         FeedTestSupport.Exec(harness.DataDir, "ALTER TABLE feed_events_away RENAME TO feed_events;");
         await harness.DrainAsync(ct);
         await harness.Writer.StopAsync(ct);
