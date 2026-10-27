@@ -1,5 +1,6 @@
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Helpers;
+using Microsoft.Data.Sqlite;
 
 namespace Agency.Huddle.Tests.Helpers;
 
@@ -26,6 +27,33 @@ public sealed class HelperStatusStoreTests
         Assert.Null(status.LastResult);
         Assert.Null(status.LastError);
         Assert.Equal(0, status.ConsecutiveFailures);
+    }
+
+    /// <summary>
+    /// A failure recorded while another connection is reading <c>team.db</c> waits for that reader instead of failing with
+    /// <c>database is locked</c>, which the Dispatcher would otherwise store as the Helper's own error.
+    /// </summary>
+    [Fact]
+    public async Task RecordFailure_WhileAnotherConnectionReads_WaitsForItAndStoresTheError()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        HelperStatusStore store = new(dir.Options());
+        store.RecordSuccess(NeedsHuman, T1, "Turned the gate on");
+        using SqliteConnection reader = new($"Data Source={Path.Combine(dir.Path, "team.db")}");
+        reader.Open();
+        using SqliteCommand select = reader.CreateCommand();
+        select.CommandText = "SELECT last_result FROM helper_status;";
+        using SqliteDataReader rows = select.ExecuteReader();
+        Assert.True(rows.Read());
+
+        Task<HelperStatus> failing = Task.Run(() => store.RecordFailure(NeedsHuman, T2, "Timed out after 60 s"), ct);
+        await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
+        rows.Dispose();
+        HelperStatus status = await failing;
+
+        Assert.Equal("Timed out after 60 s", status.LastError);
+        Assert.Equal(1, status.ConsecutiveFailures);
     }
 
     /// <summary>A success records the result and resets the failure count but keeps the earlier error.</summary>
