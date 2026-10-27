@@ -120,7 +120,7 @@
     private readonly HashSet<string> showAllGroups = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Team keys (empty for no Team) whose folder the Human closed; every folder starts open.</summary>
-    private readonly HashSet<string> closedFolders = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> closedFolders = new(StringComparer.OrdinalIgnoreCase) { RoomGroups.ArchiveTeam };
 
     private bool IsFolderOpen(string groupKey) => !this.closedFolders.Contains(groupKey);
 
@@ -213,6 +213,9 @@
             if (closed is not null && JsonSerializer.Deserialize<string?[]>(closed) is { } names)
             {
                 this.closedFolders.UnionWith(names.OfType<string>());
+
+                // The Archive folder is never remembered open: it starts collapsed on every load.
+                this.closedFolders.Add(RoomGroups.ArchiveTeam);
                 this.RevealActiveRoom();
             }
 

@@ -1,0 +1,78 @@
+@*
+    The drag handle on the left drawer's content-facing edge: the mouse drags it and the arrow keys move it, as the Task
+    detail drawer's handle does (ResizableEndDrawer). huddleResize.attachSidebar (app.js) sets the layout's
+    --mud-drawer-width-left on every pointermove, so a drag never round-trips to the server; only the width it commits
+    on release does, through WidthChanged, so MainLayout's Width follows and the next render agrees with what the
+    Human sees. The width is the Sidebar's own (the Activity bar's 49px is not part of it) and is remembered under
+    StorageKey.
+*@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<div @ref="this.handle" class="sidebar-resize-handle" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize sidebar"
+     aria-valuemin="@MinWidthPx" aria-valuemax="@MaxWidthPx" aria-valuenow="@this.Width" hidden="@this.Hidden"></div>
+
+@code {
+    /// <summary>The narrowest Sidebar, in pixels: room for a row's avatar, a short name and its pills.</summary>
+    public const int MinWidthPx = 200;
+
+    /// <summary>The widest Sidebar, in pixels: short of crowding the workspace on a laptop screen.</summary>
+    public const int MaxWidthPx = 480;
+
+    /// <summary>The Sidebar's width before any drag was remembered.</summary>
+    public const int DefaultWidthPx = 240;
+
+    /// <summary>The Activity bar's 48px plus the drawer's 1px edge, which the drawer adds to the Sidebar's own width.</summary>
+    public const int ActivityBarPx = 49;
+
+    private ElementReference handle;
+    private DotNetObjectReference<SidebarResizeHandle>? self;
+
+    /// <summary>The <c>localStorage</c> key the dragged width is remembered under.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string StorageKey { get; set; } = string.Empty;
+
+    /// <summary>The Sidebar's current width in pixels, mirrored into the handle's <c>aria-valuenow</c>.</summary>
+    [Parameter]
+    public int Width { get; set; } = DefaultWidthPx;
+
+    /// <summary>Whether the handle is hidden: true while the Sidebar is collapsed to the Activity bar.</summary>
+    [Parameter]
+    public bool Hidden { get; set; }
+
+    /// <summary>Raised with the new width in pixels when a drag ends, a key moves the handle, or a remembered width is restored.</summary>
+    [Parameter]
+    public EventCallback<int> WidthChanged { get; set; }
+
+    /// <summary>Wires the drag and keyboard handlers once, and restores the remembered width.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        this.self = DotNetObjectReference.Create(this);
+        try
+        {
+            await this.JS.InvokeVoidAsync("huddleResize.attachSidebar", this.handle, this.self, this.StorageKey, MinWidthPx, MaxWidthPx, DefaultWidthPx, ActivityBarPx);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit went away before the handlers were wired; there is nothing left to resize.
+        }
+    }
+
+    /// <summary>Called from the browser with the width a drag or key press settled on.</summary>
+    /// <param name="width">The Sidebar's width in pixels.</param>
+    [JSInvokable]
+    public Task OnWidthCommittedAsync(int width) => this.WidthChanged.InvokeAsync(width);
+
+    /// <summary>Releases the reference the browser calls back through.</summary>
+    public ValueTask DisposeAsync()
+    {
+        this.self?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+}

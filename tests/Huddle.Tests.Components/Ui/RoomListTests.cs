@@ -530,6 +530,20 @@ public sealed class RoomListTests
         Assert.Equal(["e", "d"], groups[1].Rooms.Select(room => room.Id));
     }
 
+    /// <summary>The Archive Team's group is listed after every other Team, whatever its name would sort to.</summary>
+    [Fact]
+    public void RoomGroups_ByTeam_PutsArchiveLast()
+    {
+        DateTimeOffset start = new(2026, 10, 1, 0, 0, 0, TimeSpan.Zero);
+        Room archive = new("a", "Old", start) { Team = "Archive" };
+        Room growth = new("b", "Growth chat", start) { Team = "Growth" };
+        Room support = new("c", "Support chat", start) { Team = "Support" };
+
+        var groups = RoomGroups.ByTeam([archive, growth, support]);
+
+        Assert.Equal(["Growth", "Support", "Archive"], groups.Select(group => group.Team));
+    }
+
     private static Agency.Huddle.Tests.Teams.FakeTeamCatalog KnownTeam(string name) =>
         new() { Teams = [new Agency.Huddle.App.Teams.TeamSummary(name, [], ["coo"], true)] };
 
