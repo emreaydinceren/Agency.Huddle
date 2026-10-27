@@ -18,12 +18,14 @@
 <MudDrawer Open="@this.Sidebar.IsOpen"
            Anchor="Anchor.End"
            Variant="DrawerVariant.Persistent"
-           Width="280px"
+           Width="@this.WidthCss"
            Elevation="0"
            ClipMode="DrawerClipMode.Always"
            Class="right-sidebar"
            id="@ElementId"
            aria-label="Right sidebar">
+    <SidebarResizeHandle Side="right" StorageKey="@WidthKey" Width="this.width" WidthChanged="this.OnWidthChanged"
+                         MinPx="@MinWidthPx" MaxPx="@MaxWidthPx" DefaultPx="@DefaultWidthPx" BarPx="0" Hidden="@(!this.Sidebar.IsOpen)" />
     @if (this.Sidebar.IsOpen && this.Sidebar.Mode == RightSidebarMode.Notifications)
     {
         <SidebarPanelFrame PanelId="notifications" Title="Notifications" Icon="@Icons.Material.Outlined.Notifications">
@@ -54,6 +56,26 @@
 @code {
     /// <summary>The drawer's element id, which the toggle names in <c>aria-controls</c>.</summary>
     public const string ElementId = "right-sidebar";
+
+    /// <summary>The <c>localStorage</c> key the dragged width is remembered under.</summary>
+    private const string WidthKey = "shell:rightSidebarWidth";
+
+    /// <summary>The narrowest the Right sidebar can be dragged, in pixels.</summary>
+    private const int MinWidthPx = 240;
+
+    /// <summary>The widest the Right sidebar can be dragged, in pixels: short of crowding the workspace.</summary>
+    private const int MaxWidthPx = 560;
+
+    /// <summary>The width before any drag was remembered, in pixels.</summary>
+    private const int DefaultWidthPx = 280;
+
+    private int width = DefaultWidthPx;
+
+    private string WidthCss => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{this.width}px");
+
+    /// <summary>Adopts the width the handle settled on, so the drawer's <c>Width</c> matches what the Human dragged to.</summary>
+    /// <param name="newWidth">The width in pixels.</param>
+    private void OnWidthChanged(int newWidth) => this.width = newWidth;
 
     /// <summary>Redraws when the sidebar opens or closes, a page changes its blocks, or focus moves to another Tab.</summary>
     protected override void OnInitialized()

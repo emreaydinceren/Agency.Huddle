@@ -634,6 +634,8 @@ public static class ServiceCollectionExtensions
             static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.OutlinePanel), static options => options.Library.Enabled));
         services.AddSidebarPanel(new Sidebar.SidebarPanel("linked-documents", "Linked documents", MudBlazor.Icons.Material.Filled.Link, 20,
             static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.LinkedDocumentsPanel), static options => options.Library.Enabled));
+        services.AddSidebarPanel(new Sidebar.SidebarPanel("backlinks", "Backlinks", MudBlazor.Icons.Material.Filled.CallReceived, 25,
+            static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.BacklinksPanel), static options => options.Library.Enabled));
         services.AddSidebarPanel(new Sidebar.SidebarPanel("recent-edits", "Recent edits", MudBlazor.Icons.Material.Filled.History, 30,
             static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.RecentEditsPanel), static options => options.Library.Enabled && options.DocHistory.Enabled));
         services.AddTaskEditSidebarPanels();

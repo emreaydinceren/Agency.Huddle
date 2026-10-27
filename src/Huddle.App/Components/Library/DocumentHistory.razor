@@ -12,44 +12,40 @@
 @inject DocHistoryStore Store
 @inject TimeProvider Clock
 
-<section id="@ElementId" class="doc-history" aria-label="History">
-    <div class="doc-history-title" role="heading" aria-level="2">History</div>
+<section id="@ElementId" class="@(this.Embedded ? "doc-history doc-history-embedded" : "doc-history")" aria-label="History">
+    @if (!this.Embedded)
+    {
+        <div class="doc-history-title" role="heading" aria-level="2">History</div>
+    }
+
     @if (this.Entries.Count == 0)
     {
         <p class="doc-history-empty mud-text-secondary">No changes logged yet.</p>
     }
     else
     {
-        int remaining = this.shown;
-        @foreach (DocHistoryDay day in this.days)
-        {
-            if (remaining <= 0)
+        @* One unbroken line down the left; each entry carries its own day and time under the text. *@
+        <MudTimeline TimelinePosition="TimelinePosition.Start" Modifiers="false" Class="doc-history-timeline">
+            @foreach ((string dayLabel, DocHistoryEntry entry) in this.VisibleEntries())
             {
-                break;
-            }
-
-            <div class="doc-history-day">
-                <div class="doc-history-day-label" role="heading" aria-level="3">@day.Label</div>
-                @foreach (DocHistoryEntry entry in day.Entries.Take(remaining))
-                {
-                    <div class="doc-history-entry">
-                        <span class="doc-history-time" title="@this.FullTime(entry.At)">@this.ClockTime(entry.At)</span>
-                        <div class="doc-history-body">
-                            <div class="doc-history-head">
-                                <DocHistoryActor Name="@entry.Actor" Kind="entry.ActorKind" />
-                                <span class="doc-history-chip">@(entry.ActorKind == DocActorKind.Human ? "you" : "Teammate")</span>
-                                <span class="doc-history-kind">@DocHistoryView.KindLabel(entry)</span>
-                            </div>
-                            @if (entry.Summary.Length > 0)
-                            {
-                                <div class="doc-history-summary">@((MarkupString)MarkdownRenderer.ToHtml(entry.Summary, this.Tasks, this.NoteResolver, this.Path))</div>
-                            }
+                <MudTimelineItem Size="Size.Small" Class="doc-history-entry">
+                    <div class="doc-history-body">
+                        <div class="doc-history-head">
+                            <DocHistoryActor Name="@entry.Actor" Kind="entry.ActorKind" />
+                            <span class="doc-history-chip">@(entry.ActorKind == DocActorKind.Human ? "you" : "Teammate")</span>
+                            <span class="doc-history-kind">@DocHistoryView.KindLabel(entry)</span>
+                        </div>
+                        @if (entry.Summary.Length > 0)
+                        {
+                            <div class="doc-history-summary">@((MarkupString)MarkdownRenderer.ToHtml(entry.Summary, this.Tasks, this.NoteResolver, this.Path))</div>
+                        }
+                        <div class="doc-history-when" title="@this.FullTime(entry.At)">
+                            <span class="doc-history-day-label">@dayLabel</span>, <span class="doc-history-time">@this.ClockTime(entry.At)</span>
                         </div>
                     </div>
-                }
-            </div>
-            remaining -= day.Entries.Count;
-        }
+                </MudTimelineItem>
+            }
+        </MudTimeline>
 
         @if (this.total > this.shown)
         {
@@ -67,6 +63,10 @@
     private IReadOnlyList<DocHistoryDay> days = [];
     private int total;
     private int shown = PageSize;
+
+    /// <summary>Whether the History sits in the Right sidebar's panel, whose frame already carries the title and the page's measure.</summary>
+    [Parameter]
+    public bool Embedded { get; set; }
 
     /// <summary>The document.</summary>
     [Parameter, EditorRequired]
@@ -86,6 +86,12 @@
     }
 
     private void ShowOlder() => this.shown += PageSize;
+
+    /// <summary>The newest <see cref="shown"/> entries across all days, each with its day's label. Materialized, so the timeline's deferred content never sees a changed count.</summary>
+    private List<(string DayLabel, DocHistoryEntry Entry)> VisibleEntries() =>
+        [.. this.days
+            .SelectMany(static day => day.Entries.Select(entry => (day.Label, entry)))
+            .Take(this.shown)];
 
     private string ClockTime(DateTimeOffset at) =>
         TimeZoneInfo.ConvertTime(at, this.Clock.LocalTimeZone).ToString("HH:mm", CultureInfo.InvariantCulture);

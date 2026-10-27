@@ -741,16 +741,22 @@ window.huddleResize = {
   // width from "--mud-drawer-width-left" on .mud-layout, so a drag sets that variable live; the settled width is then
   // reported to .NET, whose render writes the same value (and so replaces this inline one). barPx is the part of the
   // drawer that is not Sidebar. Anchor.Start puts the drawer on the left, so dragging right (or ArrowRight) grows it.
-  attachSidebar(handle, dotnet, storageKey, minPx, maxPx, defaultPx, barPx) {
+  // side is "left" (the default) or "right": the Right sidebar's handle sits on its left edge, so dragging left grows it
+  // and it also publishes --right-sidebar-width on <html>, which the Task drawer's rules use to stay clear of it.
+  attachSidebar(handle, dotnet, storageKey, minPx, maxPx, defaultPx, barPx, side = "left") {
     const layout = handle.closest(".mud-layout");
     if (!layout) {
       return;
     }
 
+    const dir = side === "right" ? -1 : 1;
     const clamp = (px) => Math.min(maxPx, Math.max(minPx, Math.round(px)));
     const apply = (px) => {
       const width = clamp(px);
-      layout.style.setProperty("--mud-drawer-width-left", (width + barPx) + "px");
+      layout.style.setProperty("--mud-drawer-width-" + side, (width + barPx) + "px");
+      if (side === "right") {
+        document.documentElement.style.setProperty("--right-sidebar-width", width + "px");
+      }
       handle.setAttribute("aria-valuenow", String(width));
       return width;
     };
@@ -773,8 +779,8 @@ window.huddleResize = {
       const step = e.shiftKey ? 64 : 16;
       let next;
       switch (e.key) {
-        case "ArrowRight": next = currentWidth() + step; break;
-        case "ArrowLeft": next = currentWidth() - step; break;
+        case "ArrowRight": next = currentWidth() + (dir * step); break;
+        case "ArrowLeft": next = currentWidth() - (dir * step); break;
         case "Home": next = minPx; break;
         case "End": next = maxPx; break;
         default: return;
@@ -803,7 +809,7 @@ window.huddleResize = {
         return;
       }
       const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
-      lastWidth = apply(startWidth + ((e.clientX - startX) / zoom));
+      lastWidth = apply(startWidth + (dir * (e.clientX - startX) / zoom));
     });
 
     const endDrag = (e) => {

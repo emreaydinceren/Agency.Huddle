@@ -54,15 +54,15 @@ public sealed class R3SharedComponentsTests
         Assert.Contains("mud-drawer-clipped-always", cut.Find(".resizable-drawer").ClassList);
     }
 
-    /// <summary>The drawer and its scrim keep the Right sidebar's 280px clear while the sidebar is open, and the scrim starts under the Top bar.</summary>
+    /// <summary>The drawer and its scrim keep the Right sidebar's width (280px until it is dragged) clear while the sidebar is open, and the scrim starts under the Top bar.</summary>
     [Fact]
     public void AppCss_DrawerOpensBesideTheRightSidebar()
     {
         string css = CssText.AppCss();
 
         const string sidebarOpen = ":root:has(.mud-drawer.right-sidebar.mud-drawer--open) ";
-        Assert.Contains("right: 280px;", CssText.RuleBody(css, sidebarOpen + ".mud-drawer.resizable-drawer.mud-drawer-temporary.mud-drawer-pos-right.mud-drawer--open"), StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("right: 280px;", CssText.RuleBody(css, sidebarOpen + ".mud-overlay.mud-overlay-drawer"), StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("right: var(--right-sidebar-width, 280px);", CssText.RuleBody(css, sidebarOpen + ".mud-drawer.resizable-drawer.mud-drawer-temporary.mud-drawer-pos-right.mud-drawer--open"), StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("right: var(--right-sidebar-width, 280px);", CssText.RuleBody(css, sidebarOpen + ".mud-overlay.mud-overlay-drawer"), StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("top: var(--mud-appbar-height);", CssText.RuleBody(css, ".mud-overlay.mud-overlay-drawer"), StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 

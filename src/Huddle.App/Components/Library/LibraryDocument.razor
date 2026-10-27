@@ -12,6 +12,7 @@
 @using Agency.Huddle.App.FileChanges
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Sidebar
+@using Agency.Huddle.App.Tabs
 @inject LibraryFileService FileService
 @inject ITaskReferenceResolver Tasks
 @inject ILibraryNoteResolver NoteResolver
@@ -22,6 +23,7 @@
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
 @inject DocHistoryStore HistoryStore
+@inject IServiceProvider Services
 
 <div class="library-document" @ref="this.rootElement">
     <PageSubjectSource Value="@this.Subject" />
@@ -62,7 +64,7 @@
     {
         @if (this.ShowsHistory())
         {
-            <DocumentByline Path="@this.Path" OnOpenHistory="@this.ScrollToHistoryAsync" />
+            <DocumentByline Path="@this.Path" OnOpenHistory="@this.OpenHistoryPanel" />
         }
         @if (this.freshnessNoticeVisible)
         {
@@ -112,14 +114,6 @@
         else if (this.content.Kind == LibraryFileKind.Markdown)
         {
             @this.RenderMarkdown(this.content.Text ?? string.Empty)
-            @if (this.backlinksRows is not null)
-            {
-                <BacklinksPanel Backlinks="@this.backlinksRows" IsAvailable="@this.backlinkIndexAvailable" OnNavigate="@this.OnNavigate" />
-            }
-            @if (this.ShowsHistory())
-            {
-                <DocumentHistory Path="@this.Path" />
-            }
         }
         else if (this.content.Kind == LibraryFileKind.Image)
         {
@@ -211,8 +205,6 @@
     private string? previewText;
     private LibraryEditor? editorRef;
     private ElementReference rootElement;
-    private IReadOnlyList<LibraryBacklinkRow>? backlinksRows;
-    private bool backlinkIndexAvailable;
     private bool freshnessNoticeVisible;
     private DotNetObjectReference<LibraryDocument>? selfReference;
 
@@ -225,12 +217,6 @@
     /// <param name="command">The command sent to this page's Tab.</param>
     private async Task OnPageCommandAsync(PageCommand command)
     {
-        if (command is ScrollToHistory)
-        {
-            await this.ScrollToHistoryAsync();
-            return;
-        }
-
         if (command is not ScrollToHeading scroll)
         {
             return;
@@ -249,13 +235,21 @@
     private bool ShowsHistory() =>
         this.HistoryStore.Enabled && this.content?.Kind == LibraryFileKind.Markdown;
 
-    /// <summary>Scrolls the History at the bottom into view. Only Read mode shows it, so any other mode ignores the request (DocHistory spec §6.8).</summary>
-    private async Task ScrollToHistoryAsync()
+    /// <summary>Opens the Right sidebar on its Subject panels, where the History is, if it is not already there (DocHistory spec §6.8). The sidebar is optional: a host without one ignores the request.</summary>
+    private void OpenHistoryPanel()
     {
-        if (this.mode == LibraryMode.Read && this.ShowsHistory())
+        RightSidebarService? sidebar = this.Services.GetService<RightSidebarService>();
+        if (sidebar is null || (sidebar.IsOpen && sidebar.Mode == RightSidebarMode.Subject))
         {
-            await this.JS.InvokeAsync<bool>("huddleLibrary.scrollToHeading", this.rootElement, DocumentHistory.ElementId);
+            return;
         }
+
+        if (sidebar.IsOpen)
+        {
+            sidebar.Toggle();
+        }
+
+        sidebar.Toggle();
     }
 
     /// <inheritdoc />
@@ -318,35 +312,6 @@
         {
             this.definitionName = identity.Name;
         }
-
-        this.BuildBacklinks();
-    }
-
-    /// <summary>Builds the backlinks list from the WikiLinkIndex, resolving each back-link path through the resolver.</summary>
-    private void BuildBacklinks()
-    {
-        this.backlinksRows = null;
-        this.backlinkIndexAvailable = false;
-
-        if (this.content?.Kind != LibraryFileKind.Markdown)
-        {
-            return;
-        }
-
-        this.backlinkIndexAvailable = this.WikiLinks.IsAvailable(this.Path.Root.Id);
-
-        var backlinks = this.WikiLinks.Backlinks(this.Path);
-        var rows = new List<LibraryBacklinkRow>();
-
-        foreach (var backlink in backlinks)
-        {
-            if (this.PathResolver.TryResolve(this.Path.Root.Id, backlink.NotePath, out LibraryPath? resolvedPath, out _))
-            {
-                rows.Add(new LibraryBacklinkRow(resolvedPath, backlink.Line, backlink.LineText));
-            }
-        }
-
-        this.backlinksRows = rows;
     }
 
     /// <summary>Switches between Read, Edit and Split (Spec §6.7's mode toggle); no unsaved-edit guard - the toggle only changes how the SAME loaded text is shown.</summary>
@@ -543,7 +508,6 @@
         this.previewText = this.content.Text;
         this.dirty = false;
         this.freshnessNoticeVisible = false;
-        this.BuildBacklinks();
     }
 
     /// <summary>The freshness notice's Reload button: re-reads the file and clears the dirty marker,

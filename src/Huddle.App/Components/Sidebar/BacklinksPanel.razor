@@ -1,0 +1,211 @@
+@*
+    The Right sidebar's Backlinks panel (Spec §6.5): the notes that link to the open note, each as an icon, the
+    note's name and the line that holds the link, with the [[wikilink]] picked out. Reloads on a new
+    DocumentSubject and when WikiLinkIndex reports its root changed.
+*@
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Sidebar
+@using MudBlazor
+@implements IDisposable
+@inject LibraryPathResolver PathResolver
+@inject WikiLinkIndex WikiLinks
+
+@if (this.rows.Count > 0)
+{
+    @foreach (BacklinkRow row in this.rows)
+    {
+        <div class="sidebar-row backlink-item">
+            <MudIcon Icon="@Icons.Material.Outlined.Description" Size="Size.Small" Class="backlink-item-icon" />
+            <div class="backlink-item-body">
+                <MudLink Typo="Typo.body2" Underline="Underline.None" Class="backlink-item-title" Href="@row.Href" title="@row.Path">@row.Title</MudLink>
+                <div class="backlink-item-snippet">
+                    @foreach ((string text, bool isLink) in SplitSnippet(row.LineText))
+                    {
+                        if (isLink)
+                        {
+                            <span class="backlink-item-ref">@text</span>
+                        }
+                        else
+                        {
+                            @text
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    }
+}
+else if (this.unavailable)
+{
+    <MudText Typo="Typo.body2" Class="mud-text-secondary">Backlinks aren't available for this folder: it has too many files.</MudText>
+}
+else if (this.loaded)
+{
+    <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">No notes link here.</MudText>
+}
+
+@code {
+    private sealed record BacklinkRow(string Title, string Path, string Href, string LineText);
+
+    private List<BacklinkRow> rows = [];
+    private bool unavailable;
+    private bool loaded;
+    private string? shownKey;
+    private bool subscribed;
+    private CancellationTokenSource? cts;
+
+    /// <summary>What the page shows; only a document has backlinks.</summary>
+    [Parameter, EditorRequired]
+    public required PageSubject Subject { get; set; }
+
+    /// <summary>The Tab this panel belongs to.</summary>
+    [Parameter, EditorRequired]
+    public required string TabId { get; set; }
+
+    /// <summary>The frame's context, for the header count.</summary>
+    [CascadingParameter]
+    public SidebarPanelContext? Panel { get; set; }
+
+    /// <summary>Starts listening for index changes.</summary>
+    protected override void OnInitialized()
+    {
+        this.WikiLinks.Invalidated += this.OnInvalidated;
+        this.subscribed = true;
+    }
+
+    /// <summary>Loads the backlinks when the Subject is new.</summary>
+    protected override void OnParametersSet()
+    {
+        if (this.Subject is not DocumentSubject doc)
+        {
+            this.CancelLoad();
+            this.shownKey = null;
+            this.rows = [];
+            this.unavailable = false;
+            this.loaded = false;
+            this.Panel?.SetCount(null);
+            return;
+        }
+
+        if (string.Equals(this.shownKey, doc.Key, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.shownKey = doc.Key;
+        _ = this.LoadAsync(doc);
+    }
+
+    /// <summary>Splits a line into plain runs and <c>[[wikilink]]</c> runs, in order, so the links can be picked out.</summary>
+    /// <param name="line">The line that holds the link.</param>
+    /// <returns>The runs, each with whether it is a wikilink.</returns>
+    private static List<(string Text, bool IsLink)> SplitSnippet(string line)
+    {
+        List<(string Text, bool IsLink)> runs = [];
+        int position = 0;
+        while (position < line.Length)
+        {
+            int open = line.IndexOf("[[", position, StringComparison.Ordinal);
+            int close = open < 0 ? -1 : line.IndexOf("]]", open + 2, StringComparison.Ordinal);
+            if (close < 0)
+            {
+                runs.Add((line[position..], false));
+                break;
+            }
+
+            if (open > position)
+            {
+                runs.Add((line[position..open], false));
+            }
+
+            runs.Add((line[open..(close + 2)], true));
+            position = close + 2;
+        }
+
+        return runs;
+    }
+
+    private void OnInvalidated(string changedRootId)
+    {
+        if (this.Subject is DocumentSubject doc && string.Equals(changedRootId, doc.Path.Root.Id, StringComparison.Ordinal))
+        {
+            _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+            {
+                if (this.Subject is DocumentSubject current)
+                {
+                    return this.LoadAsync(current);
+                }
+
+                return Task.CompletedTask;
+            });
+        }
+    }
+
+    private void CancelLoad()
+    {
+        this.cts?.Cancel();
+        this.cts?.Dispose();
+        this.cts = null;
+    }
+
+    private async Task LoadAsync(DocumentSubject doc)
+    {
+        this.CancelLoad();
+        CancellationTokenSource source = new();
+        this.cts = source;
+        CancellationToken ct = source.Token;
+        string key = doc.Key;
+
+        List<BacklinkRow> loadedRows = [];
+        bool available = true;
+        try
+        {
+            available = await Task.Run(() =>
+            {
+                if (!this.WikiLinks.IsAvailable(doc.Path.Root.Id))
+                {
+                    return false;
+                }
+
+                foreach (LibraryBacklink backlink in this.WikiLinks.Backlinks(doc.Path))
+                {
+                    if (this.PathResolver.TryResolve(doc.Path.Root.Id, backlink.NotePath, out LibraryPath? note, out _))
+                    {
+                        string title = Path.GetFileNameWithoutExtension(note.RelativePath);
+                        loadedRows.Add(new BacklinkRow(title, note.RelativePath, LibraryLinkQuery.BuildPageUri(note), backlink.LineText.Trim()));
+                    }
+                }
+
+                return true;
+            }, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer load or a dispose superseded this one; its result is not wanted.
+            return;
+        }
+
+        if (ct.IsCancellationRequested || !string.Equals(this.Subject.Key, key, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.rows = available ? loadedRows : [];
+        this.unavailable = !available;
+        this.loaded = true;
+        this.Panel?.SetCount(available ? loadedRows.Count : null);
+        this.StateHasChanged();
+    }
+
+    /// <summary>Stops listening and abandons any load in flight.</summary>
+    public void Dispose()
+    {
+        if (this.subscribed)
+        {
+            this.WikiLinks.Invalidated -= this.OnInvalidated;
+            this.subscribed = false;
+        }
+
+        this.CancelLoad();
+    }
+}

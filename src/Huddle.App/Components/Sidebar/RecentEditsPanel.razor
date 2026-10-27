@@ -1,41 +1,21 @@
 @*
-    The Right sidebar's Recent edits panel (DocHistory spec §6.8): the newest five entries of the open Markdown
-    document. "See all" asks the page to scroll to the History at the bottom.
+    The Right sidebar's Recent edits panel (DocHistory spec §6.8): the open Markdown document's whole History, drawn by the
+    same DocumentHistory component the document once carried under its text - one timeline, newest first, fifty at a time.
 *@
 @namespace Agency.Huddle.App.Components.Sidebar
-@using System.Globalization
 @using Agency.Huddle.App.Components.Library
 @using Agency.Huddle.App.DocHistory
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Sidebar
 @inherits DocHistoryComponentBase
-@inject PageCommandBus Bus
 @inject DocHistoryStore Store
-@inject TimeProvider Clock
 
-@if (this.rows.Count > 0)
+@if (this.Subject is DocumentSubject document)
 {
-    @foreach (DocHistoryEntry entry in this.rows)
-    {
-        <div class="sidebar-row recent-edit-row">
-            <DocHistoryActor Name="@entry.Actor" Kind="entry.ActorKind" />
-            <span class="sidebar-row-text" title="@entry.Summary">@(entry.Summary.Length > 0 ? entry.Summary : "Saved")</span>
-            <span class="recent-edit-time mud-text-secondary">@DocHistoryView.RelativeTime(entry.At, this.Clock.GetUtcNow(), this.Clock.LocalTimeZone)</span>
-        </div>
-    }
-
-    <MudButton Size="Size.Small" Class="recent-edits-see-all" OnClick="this.SeeAllAsync">See all</MudButton>
-}
-else if (this.Subject is DocumentSubject)
-{
-    <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">No edits logged.</MudText>
+    <DocumentHistory Path="@document.Path" Embedded="true" />
 }
 
 @code {
-    private const int MaxRows = 5;
-
-    private IReadOnlyList<DocHistoryEntry> rows = [];
-
     /// <summary>What the page shows; only a document has a history.</summary>
     [Parameter, EditorRequired]
     public required PageSubject Subject { get; set; }
@@ -55,11 +35,6 @@ else if (this.Subject is DocumentSubject)
     protected override LibraryPath? HistoryPath => (this.Subject as DocumentSubject)?.Path;
 
     /// <inheritdoc />
-    protected override void OnEntriesLoaded()
-    {
-        this.rows = DocHistoryView.Recent(this.Entries, MaxRows, this.Store.HumanSaveGroupWindow);
+    protected override void OnEntriesLoaded() =>
         this.Panel?.SetCount(this.Entries.Count > 0 ? this.Entries.Count : null);
-    }
-
-    private Task SeeAllAsync() => this.Bus.SendAsync(this.TabId, new ScrollToHistory());
 }
