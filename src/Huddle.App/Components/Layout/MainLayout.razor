@@ -90,6 +90,7 @@
                 <LibraryNavLink />
             </div>
         </div>
+        <SidebarResizeHandle StorageKey="@SidebarWidthKey" Width="this.sidebarWidth" WidthChanged="this.OnSidebarWidthChanged" Hidden="@(this.sidebarView is null)" />
     </MudDrawer>
     <MudMainContent Class="main-column">
         <TabSync />
@@ -115,8 +116,23 @@
     /// <summary>The area the focused pane's page was last in (see <see cref="SidebarViews.AreaOf(string?)"/>), so the Sidebar follows a change of area and not every navigation.</summary>
     private string? followedArea;
 
-    /// <summary>The Activity bar's 48px and the drawer's 1px edge, plus the Sidebar's 240px while a view is selected.</summary>
-    private string DrawerWidth => this.sidebarView is null ? "49px" : "289px";
+    /// <summary>The <c>localStorage</c> key the dragged Sidebar width is remembered under.</summary>
+    private const string SidebarWidthKey = "shell:sidebarWidth";
+
+    /// <summary>The Sidebar's own width in pixels: 240 until the Human drags it.</summary>
+    private int sidebarWidth = SidebarResizeHandle.DefaultWidthPx;
+
+    /// <summary>The Activity bar's 48px and the drawer's 1px edge, plus the Sidebar's width while a view is selected.</summary>
+    private string DrawerWidth => string.Create(
+        System.Globalization.CultureInfo.InvariantCulture,
+        $"{SidebarResizeHandle.ActivityBarPx + (this.sidebarView is null ? 0 : this.sidebarWidth)}px");
+
+    /// <summary>Adopts the width the handle settled on, so the drawer's <c>Width</c> matches what the Human dragged to.</summary>
+    /// <param name="width">The Sidebar's width in pixels.</param>
+    private void OnSidebarWidthChanged(int width)
+    {
+        this.sidebarWidth = width;
+    }
 
     /// <summary>Shows the view the Activity bar selected, or collapses the Sidebar when it reports none.</summary>
     /// <param name="view">The view to show, or <see langword="null"/> to collapse.</param>

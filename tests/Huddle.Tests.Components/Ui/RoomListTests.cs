@@ -489,7 +489,7 @@ public sealed class RoomListTests
         cut.WaitForAssertion(() => Assert.Contains(rootRoom.Name, cut.Markup, StringComparison.Ordinal));
         await cut.InvokeAsync(() => cut.Find(".room-folder > .mud-nav-link").ClickAsync());
 
-        cut.WaitForAssertion(() => Assert.Contains(ctx.JSInterop.Invocations, call => call.Identifier == "huddleStorage.set" && call.Arguments.Count == 2 && Equals(call.Arguments[0], "roomList:closedFolders") && Equals(call.Arguments[1], "[\"\"]")));
+        cut.WaitForAssertion(() => Assert.Contains(ctx.JSInterop.Invocations, call => call.Identifier == "huddleStorage.set" && call.Arguments.Count == 2 && Equals(call.Arguments[0], "roomList:closedFolders") && Equals(call.Arguments[1], "[\"\",\"Archive\"]")));
     }
 
     /// <summary>A remembered Team grouping is applied when the list first renders.</summary>
@@ -528,6 +528,20 @@ public sealed class RoomListTests
         Assert.Equal([null, "Marketing", "sales"], groups.Select(group => group.Team));
         Assert.Equal(["b", "a"], groups[0].Rooms.Select(room => room.Id));
         Assert.Equal(["e", "d"], groups[1].Rooms.Select(room => room.Id));
+    }
+
+    /// <summary>The Archive Team's group is listed after every other Team, whatever its name would sort to.</summary>
+    [Fact]
+    public void RoomGroups_ByTeam_PutsArchiveLast()
+    {
+        DateTimeOffset start = new(2026, 10, 1, 0, 0, 0, TimeSpan.Zero);
+        Room archive = new("a", "Old", start) { Team = "Archive" };
+        Room growth = new("b", "Growth chat", start) { Team = "Growth" };
+        Room support = new("c", "Support chat", start) { Team = "Support" };
+
+        var groups = RoomGroups.ByTeam([archive, growth, support]);
+
+        Assert.Equal(["Growth", "Support", "Archive"], groups.Select(group => group.Team));
     }
 
     private static Agency.Huddle.Tests.Teams.FakeTeamCatalog KnownTeam(string name) =>

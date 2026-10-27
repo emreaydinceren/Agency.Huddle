@@ -1187,6 +1187,46 @@ a.team-ref,
     display: none;
 }
 
+/* A strip straddling the Sidebar's right (workspace-facing) edge, the mirror of .resizable-drawer-handle: the 8px width is
+   the pointer target and the 3px line (::before) is what reads as draggable once it is hovered or focused. It is hidden
+   while the Sidebar is collapsed. While a drag runs the cursor stays ew-resize over whatever the pointer crosses, and
+   text is not selected. */
+.sidebar-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -4px;
+    z-index: 2;
+    width: 8px;
+    height: 100%;
+    cursor: ew-resize;
+    touch-action: none;
+}
+
+.sidebar-resize-handle::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 3px;
+    width: 2px;
+    height: 100%;
+    background-color: transparent;
+}
+
+.sidebar-resize-handle:hover::before,
+.sidebar-resize-handle:active::before,
+.sidebar-resize-handle:focus-visible::before {
+    background-color: var(--mud-palette-primary);
+}
+
+.sidebar-resize-handle:focus-visible {
+    outline: none;
+}
+
+body.sidebar-resizing {
+    cursor: ew-resize;
+    user-select: none;
+}
+
 /* ---- The Right sidebar (S4) -------------------------------------------------------------------
    A persistent MudDrawer anchored at the end, so its hairline is on the side facing the workspace:
    the .mud-drawer rule above draws the left sidebar's edge on the end side. Global for the same reason

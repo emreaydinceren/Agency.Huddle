@@ -52,10 +52,14 @@
     text-overflow: ellipsis;
 }
 
-/* A preview Tab is not yet kept: the secondary text colour says so (never italic, never weight); keeping it
-   returns the body colour. */
+/* A preview Tab is not yet kept: an italic title in the secondary text colour says so (never weight); keeping it
+   returns the upright body style. */
 .tab-item.preview {
     color: var(--mud-palette-text-secondary);
+}
+
+.tab-item.preview .tab-title {
+    font-style: italic;
 }
 
 .tab-close {

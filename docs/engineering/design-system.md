@@ -266,7 +266,7 @@ and one dark Theme, and the top bar's `ThemeModeToggle` switches between them
 | --- | --- |
 | UI face | By default Inter, then Helvetica Neue, then `sans-serif`; loaded from Google Fonts in `App.razor`. A skin sets its own faces: Nordic uses IBM Plex Sans, with Literata as its reading face (`--font-read`) and IBM Plex Mono for code |
 | Monospace | `--font-mono`: `ui-monospace`, Cascadia Mono, Consolas, Courier New |
-| Case | Sentence case everywhere. `Typo.button` is `text-transform: none`; tab rails must be too (UX-009). A Tab title is never italic: a preview Tab is weight 400 and the others 500 |
+| Case | Sentence case everywhere. `Typo.button` is `text-transform: none`; tab rails must be too (UX-009). A Tab title is upright unless the Tab is a preview, which is italic: a preview Tab is weight 400 and the others 500 |
 | Scale | Set in rendered px, once, in `ThemeDefaults.WithSharedTypography`. The page is not zoomed ([ADR-0056](../adr/0056-the-ui-renders-at-100-percent-with-a-px-type-scale.md)) |
 
 Set up once in [`ThemeDefaults.cs`](../../src/Huddle.App/Themes/ThemeDefaults.cs). A
@@ -674,8 +674,8 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
 ### The tab strip, tab rail and breadcrumb
 
 - **Tab strip.** A Tab title is 13px at weight 400, and 500 when active. A preview Tab is
-  marked by `TextSecondary` colour, never by weight or italic; keeping it returns the body
-  colour. Titles ellipsise, and the `title` attribute carries the full title. A Tab is a
+  marked by `TextSecondary` colour and an italic title, never by weight; keeping it returns the
+  body colour and upright text. Titles ellipsise, and the `title` attribute carries the full title. A Tab is a
   fixed 14rem, so its hover toolbar leaves the start of the title visible. The strip is the
   Strip rung (Ink 4% over Ground), and the active Tab is Ground with a 2px accent top edge, so
   it opens into the page below. Every unpinned Tab shows its close button, at 60% until hovered

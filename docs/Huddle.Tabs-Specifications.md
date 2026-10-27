@@ -5,7 +5,7 @@ Status: version 1 **built 2026-10-10** on `feat/tabs` ([ADR-0045](adr/0045-a-tab
 ## 1. The idea
 
 Everything the Human opens from the left menu opens in a **Tab**, as in VS Code. A click opens a
-**preview Tab** (its title in `TextSecondary`, never italic or lighter in weight); it is replaced by the next preview. A double-click, or
+**preview Tab** (its title in `TextSecondary` and italic, never lighter in weight); it is replaced by the next preview. A double-click, or
 working in the Tab, makes it **permanent** (its title takes the body colour). The Library is one page and so one Tab.
 
 Version 2 adds a split: two Tabs side by side, a Tab menu, and pinned Tabs (section 9). Stacked groups
@@ -16,7 +16,7 @@ and more than two groups are still to come; the model and the persisted format a
 | Term | Meaning |
 | --- | --- |
 | Tab | One open page: a key, a URL, a title, an icon and a preview flag. |
-| Preview Tab | A Tab not yet made permanent. At most one exists per group. Its title is marked by `TextSecondary` colour, not by italics or weight; titles are 13px at weight 400 and the active one 500. |
+| Preview Tab | A Tab not yet made permanent. At most one exists per group. Its title is marked by `TextSecondary` colour and an italic title, not by weight; titles are 13px at weight 400 and the active one 500. |
 | Permanent Tab | A Tab the Human kept. Never replaced by opening something else. |
 | Tab key | What makes two URLs the same Tab (section 3). Opening an item whose key is open activates it. |
 | Group | An ordered row of Tabs with one active, drawn as one pane. Version 1 has exactly one; version 2 allows up to `TabService.MaxGroups` (2). Exactly one group has focus. |

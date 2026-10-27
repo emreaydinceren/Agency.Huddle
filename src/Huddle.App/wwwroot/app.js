@@ -736,6 +736,89 @@ window.huddleResize = {
     handle.addEventListener("pointerup", endDrag);
     handle.addEventListener("pointercancel", endDrag);
   },
+
+  // Drag-to-resize for the left drawer's Sidebar (the Activity bar is fixed). MudBlazor's layout reads the drawer's
+  // width from "--mud-drawer-width-left" on .mud-layout, so a drag sets that variable live; the settled width is then
+  // reported to .NET, whose render writes the same value (and so replaces this inline one). barPx is the part of the
+  // drawer that is not Sidebar. Anchor.Start puts the drawer on the left, so dragging right (or ArrowRight) grows it.
+  attachSidebar(handle, dotnet, storageKey, minPx, maxPx, defaultPx, barPx) {
+    const layout = handle.closest(".mud-layout");
+    if (!layout) {
+      return;
+    }
+
+    const clamp = (px) => Math.min(maxPx, Math.max(minPx, Math.round(px)));
+    const apply = (px) => {
+      const width = clamp(px);
+      layout.style.setProperty("--mud-drawer-width-left", (width + barPx) + "px");
+      handle.setAttribute("aria-valuenow", String(width));
+      return width;
+    };
+    const commit = (px) => {
+      const width = apply(px);
+      window.huddleStorage.set(storageKey, String(width));
+      return dotnet.invokeMethodAsync("OnWidthCommittedAsync", width);
+    };
+    const currentWidth = () => {
+      const drawer = handle.closest(".mud-drawer");
+      return (drawer ? drawer.offsetWidth : defaultPx + barPx) - barPx;
+    };
+
+    const stored = parseInt(window.huddleStorage.get(storageKey) ?? "", 10);
+    if (Number.isFinite(stored) && clamp(stored) !== defaultPx) {
+      commit(stored);
+    }
+
+    handle.addEventListener("keydown", (e) => {
+      const step = e.shiftKey ? 64 : 16;
+      let next;
+      switch (e.key) {
+        case "ArrowRight": next = currentWidth() + step; break;
+        case "ArrowLeft": next = currentWidth() - step; break;
+        case "Home": next = minPx; break;
+        case "End": next = maxPx; break;
+        default: return;
+      }
+      e.preventDefault();
+      commit(next);
+    });
+
+    let dragging = false;
+    let startX = 0;
+    let startWidth = 0;
+    let lastWidth = 0;
+
+    handle.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      startX = e.clientX;
+      startWidth = currentWidth();
+      lastWidth = startWidth;
+      handle.setPointerCapture(e.pointerId);
+      document.body.classList.add("sidebar-resizing");
+      e.preventDefault();
+    });
+
+    handle.addEventListener("pointermove", (e) => {
+      if (!dragging) {
+        return;
+      }
+      const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+      lastWidth = apply(startWidth + ((e.clientX - startX) / zoom));
+    });
+
+    const endDrag = (e) => {
+      if (!dragging) {
+        return;
+      }
+      dragging = false;
+      handle.releasePointerCapture(e.pointerId);
+      document.body.classList.remove("sidebar-resizing");
+      commit(lastWidth);
+    };
+
+    handle.addEventListener("pointerup", endDrag);
+    handle.addEventListener("pointercancel", endDrag);
+  },
 };
 
 window.huddleClipboard = {

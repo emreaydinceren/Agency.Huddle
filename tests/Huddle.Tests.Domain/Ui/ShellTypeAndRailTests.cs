@@ -18,15 +18,15 @@ public sealed class ShellTypeAndRailTests
         Assert.Matches(@"\.tab-item\.active\s*\{[^}]*font-weight:\s*500;", css);
     }
 
-    /// <summary>A preview Tab takes the secondary text colour and no italic or weight marks it; a kept Tab keeps the body colour.</summary>
+    /// <summary>A preview Tab takes the secondary text colour and an italic title, never a lighter weight; a kept Tab keeps the upright body style.</summary>
     [Fact]
-    public void TabStrip_PreviewIsSecondaryColour_NotWeightOrItalic()
+    public void TabStrip_PreviewIsSecondaryColourAndItalic_NotWeight()
     {
         string css = ShellTypeAndRailTests.TabStripCss();
 
         Assert.Matches(@"\.tab-item\.preview\s*\{[^}]*color:\s*var\(--mud-palette-text-secondary\);", css);
-        Assert.DoesNotContain(".tab-item.preview .tab-title", css, StringComparison.Ordinal);
-        Assert.DoesNotContain("font-style: italic", css, StringComparison.Ordinal);
+        Assert.Matches(@"\.tab-item\.preview\s+\.tab-title\s*\{[^}]*font-style:\s*italic;", css);
+        Assert.DoesNotMatch(@"\.tab-item\.preview[^{]*\{[^}]*font-weight:", css);
     }
 
     /// <summary>A long Tab title truncates with an ellipsis, and the whole Tab carries the full title as its tooltip.</summary>
