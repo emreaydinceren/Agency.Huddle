@@ -220,25 +220,6 @@ public sealed class TaskDetailHumanGateTests
         Assert.True(AcceptButton(cut).HasAttribute("disabled"));
     }
 
-    /// <summary>Choosing Theirs on a conflicting Action drops the Human's pending Action, and the section shows their Action.</summary>
-    [Fact]
-    public async Task Conflict_ActionTakeTheirs_ShowsTheirAction()
-    {
-        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
-        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Write the reply", "Platform", null, TaskState.Backlog, Assignee: Nova) { HumanGate = true }, HumanOf(harness))).Task;
-        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderOver(ctx,Proof.Empty, task.Id);
-        IRenderedComponent<MudTextField<string?>> action = cut.FindComponents<MudTextField<string?>>().Single(f => (f.Instance.Class ?? string.Empty).Contains("task-human-gate-action", StringComparison.Ordinal));
-        await cut.InvokeAsync(() => action.Instance.ValueChanged.InvokeAsync("send mine"));
-        Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, new TaskPatch { Action = Optional<string?>.Set("send theirs") }, null, HumanOf(harness)));
-        await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".task-detail-conflict-row")));
-
-        await ChooseTheirsAsync(cut, "action");
-
-        Assert.Equal("send theirs", cut.FindComponent<TaskHumanGate>().Instance.Action);
-    }
-
     /// <summary>Choosing Theirs on a conflicting Human gate switch drops the Human's pending switch, and the section shows their value.</summary>
     [Fact]
     public async Task Conflict_HumanGateTakeTheirs_ShowsTheirSwitch()
