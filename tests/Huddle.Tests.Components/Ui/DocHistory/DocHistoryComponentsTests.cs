@@ -113,7 +113,7 @@ public sealed class DocHistoryComponentsTests
 
         IRenderedComponent<DocumentHistory> cut = ctx.Render<DocumentHistory>(p => p.Add(c => c.Path, Document("findings.md")));
 
-        Assert.Equal(["Today", "Yesterday"], cut.FindAll(".doc-history-day-label").Select(static label => label.TextContent.Trim()));
+        Assert.Equal(["Today", "Today", "Yesterday"], cut.FindAll(".doc-history-day-label").Select(static label => label.TextContent.Trim()));
         Assert.Equal(["Saved", "Edited", "Objected"], cut.FindAll(".doc-history-kind").Select(static kind => kind.TextContent.Trim()));
         Assert.Equal(["you", "Teammate", "Teammate"], cut.FindAll(".doc-history-chip").Select(static chip => chip.TextContent.Trim()));
         Assert.Contains(longSummary, cut.Markup, StringComparison.Ordinal);
@@ -145,17 +145,16 @@ public sealed class DocHistoryComponentsTests
         }
 
         IRenderedComponent<DocumentHistory> cut = ctx.Render<DocumentHistory>(p => p.Add(c => c.Path, Document("findings.md")));
-        int first = cut.FindAll(".doc-history-entry").Count;
+        cut.WaitForAssertion(() => Assert.Equal(50, cut.FindAll(".doc-history-entry").Count));
         await cut.Find(".doc-history-older").ClickAsync(new());
 
-        Assert.Equal(50, first);
-        Assert.Equal(60, cut.FindAll(".doc-history-entry").Count);
+        cut.WaitForAssertion(() => Assert.Equal(60, cut.FindAll(".doc-history-entry").Count));
         Assert.Empty(cut.FindAll(".doc-history-older"));
     }
 
-    /// <summary>The panel lists the newest five entries, newest first, with "Saved" for a bare Human save.</summary>
+    /// <summary>The panel draws the whole History as the document once did: every entry, newest first, with "Saved" for a bare Human save, under no heading of its own.</summary>
     [Fact]
-    public async Task Panel_ListsTheNewestFive()
+    public async Task Panel_ShowsTheWholeHistory()
     {
         using Harness harness = new();
         await using MudBunitContext ctx = harness.NewContext();
@@ -169,7 +168,10 @@ public sealed class DocHistoryComponentsTests
 
         IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = RenderPanel(ctx, panelCtx, Document("findings.md"));
 
-        Assert.Equal(["Saved", "change 5", "change 4", "change 3", "change 2"], cut.FindAll(".recent-edit-row .sidebar-row-text").Select(static row => row.TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal(7, cut.FindAll(".doc-history-entry").Count));
+        Assert.Equal("Saved", cut.FindAll(".doc-history-kind")[0].TextContent.Trim());
+        Assert.Equal("change 5", cut.FindAll(".doc-history-summary")[0].TextContent.Trim());
+        Assert.Empty(cut.FindAll(".doc-history-title"));
         Assert.Equal(7, panelCtx.Count);
     }
 
@@ -182,27 +184,7 @@ public sealed class DocHistoryComponentsTests
 
         IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = RenderPanel(ctx, new SidebarPanelContext(), Document("findings.md"));
 
-        Assert.Equal("No edits logged.", cut.Find("[role=status]").TextContent.Trim());
-    }
-
-    /// <summary>"See all" sends ScrollToHistory to the panel's Tab.</summary>
-    [Fact]
-    public async Task Panel_SeeAll_SendsScrollToHistory()
-    {
-        using Harness harness = new();
-        await using MudBunitContext ctx = harness.NewContext();
-        harness.Store.Append(Document("findings.md"), At(9, 0, "Mira", DocChangeKind.Created, "Drafted"));
-        List<PageCommand> received = [];
-        using IDisposable subscription = ctx.Services.GetRequiredService<PageCommandBus>().Subscribe(TabId, command =>
-        {
-            received.Add(command);
-            return Task.CompletedTask;
-        });
-        IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = RenderPanel(ctx, new SidebarPanelContext(), Document("findings.md"));
-
-        await cut.Find(".recent-edits-see-all").ClickAsync(new());
-
-        Assert.IsType<ScrollToHistory>(Assert.Single(received));
+        Assert.Equal("No changes logged yet.", cut.Find(".doc-history-empty").TextContent.Trim());
     }
 
     /// <summary>Renders the panel for <paramref name="path"/> inside a context the frame would give it.</summary>

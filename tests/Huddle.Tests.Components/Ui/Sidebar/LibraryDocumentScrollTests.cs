@@ -86,50 +86,9 @@ public sealed class LibraryDocumentScrollTests : IDisposable
         Assert.DoesNotContain(ctx.JSInterop.Invocations, i => string.Equals(i.Identifier, LibraryDocumentScrollTests.ScrollCall, StringComparison.Ordinal));
     }
 
-    /// <summary>The ScrollToHistory command scrolls the History into view in Read mode: the element id goes to the JS helper.</summary>
+    /// <summary>Clicking the byline's time opens the Right sidebar on its Subject panels, where the History is; the document itself carries no History under its text.</summary>
     [Fact]
-    public async Task Read_ScrollToHistory_ScrollsTheHistory()
-    {
-        LibraryPath path = this.NewDoc();
-        await using MudBunitContext ctx = this.NewContext();
-        ctx.JSInterop.Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
-        IRenderedComponent<ContainerFragment> cut = LibraryDocumentScrollTests.RenderDoc(ctx, path);
-        // The toolbar renders before the file loads, and ScrollToHistory is ignored until it has: wait for the rendered body.
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-rendered")));
-
-        await cut.InvokeAsync(() => ctx.Services.GetRequiredService<PageCommandBus>().SendAsync(LibraryDocumentScrollTests.TabId, new ScrollToHistory()));
-
-        JSRuntimeInvocation call = Assert.Single(ctx.JSInterop.Invocations[LibraryDocumentScrollTests.ScrollCall]);
-        Assert.Equal("doc-history", call.Arguments[1]);
-    }
-
-    /// <summary>In Edit mode the History is not shown, so the ScrollToHistory command is ignored.</summary>
-    [Fact]
-    public async Task Edit_ScrollToHistory_IsIgnored()
-    {
-        LibraryPath path = this.NewDoc();
-        await using MudBunitContext ctx = this.NewContext();
-        BunitJSModuleInterop module = ctx.JSInterop.SetupModule(LibraryDocumentScrollTests.ModulePath);
-        BunitJSModuleInterop handle = module.SetupModule("create", _ => true);
-        handle.Setup<string>("getText", _ => true).SetResult("# A");
-        handle.SetupVoid("setText", _ => true).SetVoidResult();
-        handle.SetupVoid("dispose", _ => true).SetVoidResult();
-        ctx.JSInterop.Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
-        IRenderedComponent<ContainerFragment> cut = LibraryDocumentScrollTests.RenderDoc(ctx, path);
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<MudToggleGroup<LibraryMode>>()));
-        MudToggleGroup<LibraryMode> toggle = cut.FindComponent<MudToggleGroup<LibraryMode>>().Instance;
-        await cut.InvokeAsync(() => toggle.ValueChanged.InvokeAsync(LibraryMode.Edit));
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<LibraryEditor>()));
-
-        await cut.InvokeAsync(() => ctx.Services.GetRequiredService<PageCommandBus>().SendAsync(LibraryDocumentScrollTests.TabId, new ScrollToHistory()));
-
-        Assert.DoesNotContain(ctx.JSInterop.Invocations, i => string.Equals(i.Identifier, LibraryDocumentScrollTests.ScrollCall, StringComparison.Ordinal));
-        Assert.Empty(cut.FindAll(".doc-history"));
-    }
-
-    /// <summary>Clicking the byline's time scrolls the History into view.</summary>
-    [Fact]
-    public async Task Byline_Click_ScrollsTheHistory()
+    public async Task Byline_Click_OpensTheRightSidebar()
     {
         LibraryPath path = this.NewDoc();
         await using MudBunitContext ctx = this.NewContext();
@@ -137,19 +96,22 @@ public sealed class LibraryDocumentScrollTests : IDisposable
         store.Append(path, new DocHistoryEntry(DateTimeOffset.UtcNow, "Emre", DocActorKind.Human, DocChangeKind.Edited, string.Empty));
         ctx.Services.AddSingleton(store);
         ctx.Services.AddSingleton(new Agency.Huddle.App.Avatars.AvatarStore(this.library.BoundOptions, NullLogger<Agency.Huddle.App.Avatars.AvatarStore>.Instance));
+        RightSidebarService sidebar = new();
+        ctx.Services.AddSingleton(sidebar);
         ctx.JSInterop.Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
         IRenderedComponent<ContainerFragment> cut = LibraryDocumentScrollTests.RenderDoc(ctx, path);
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".doc-byline-time")));
 
         await cut.Find(".doc-byline-time").ClickAsync(new());
 
-        JSRuntimeInvocation call = Assert.Single(ctx.JSInterop.Invocations[LibraryDocumentScrollTests.ScrollCall]);
-        Assert.Equal("doc-history", call.Arguments[1]);
+        Assert.True(sidebar.IsOpen);
+        Assert.Equal(RightSidebarMode.Subject, sidebar.Mode);
+        Assert.Empty(cut.FindAll(".doc-history"));
     }
 
-    /// <summary>With History switched off the document shows neither the byline nor the History, and ScrollToHistory does nothing.</summary>
+    /// <summary>With History switched off the document shows neither the byline nor the History.</summary>
     [Fact]
-    public async Task HistoryDisabled_ShowsNeitherAndIgnoresScroll()
+    public async Task HistoryDisabled_ShowsNeitherByline()
     {
         LibraryPath path = this.NewDoc();
         await using MudBunitContext ctx = this.NewContext();
@@ -157,15 +119,11 @@ public sealed class LibraryDocumentScrollTests : IDisposable
         DocHistoryStore store = new(Microsoft.Extensions.Options.Options.Create(off), NullLogger<DocHistoryStore>.Instance);
         store.Append(path, new DocHistoryEntry(DateTimeOffset.UtcNow, "Mira", DocActorKind.Agent, DocChangeKind.Created, "Drafted"));
         ctx.Services.AddSingleton(store);
-        ctx.JSInterop.Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
         IRenderedComponent<ContainerFragment> cut = LibraryDocumentScrollTests.RenderDoc(ctx, path);
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-toolbar")));
 
-        await cut.InvokeAsync(() => ctx.Services.GetRequiredService<PageCommandBus>().SendAsync(LibraryDocumentScrollTests.TabId, new ScrollToHistory()));
-
         Assert.Empty(cut.FindAll(".doc-byline"));
         Assert.Empty(cut.FindAll(".doc-history"));
-        Assert.DoesNotContain(ctx.JSInterop.Invocations, i => string.Equals(i.Identifier, LibraryDocumentScrollTests.ScrollCall, StringComparison.Ordinal));
     }
 
     private static IRenderedComponent<ContainerFragment> RenderDoc(MudBunitContext ctx, LibraryPath path) =>

@@ -308,7 +308,7 @@ public sealed class LibraryCopyAndFreshnessTests : IDisposable
         LibraryDocument document = cut.FindComponent<LibraryDocument>().Instance;
         await cut.InvokeAsync(() => document.RefreshAsync());
 
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".backlinks-panel-row")));
+        cut.WaitForAssertion(() => Assert.NotEmpty(this.fixture.LibraryFixture.Index.Backlinks(path)));
     }
 
     /// <summary>(corrections-B6 item 21) A refresh on a file that no longer exists shows the "moved or

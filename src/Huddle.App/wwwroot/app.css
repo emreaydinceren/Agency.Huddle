@@ -1222,6 +1222,12 @@ a.team-ref,
     outline: none;
 }
 
+/* The Right sidebar's handle sits on its left (workspace-facing) edge instead. */
+.sidebar-resize-handle.sidebar-resize-handle-start {
+    right: auto;
+    left: -4px;
+}
+
 body.sidebar-resizing {
     cursor: ew-resize;
     user-select: none;
@@ -4143,17 +4149,18 @@ body.sidebar-resizing {
 /* The drawer never covers the Right sidebar (audit B11 "With a drawer"): while the sidebar is open its 280px is
    kept clear, so the drawer opens beside it, and the scrim stops at the sidebar's edge and under the Top bar, so
    the sidebar and its toggle stay visible and pressable. ClipMode Always already starts the drawer under the Top bar.
-   :root:has() reads the sidebar's open state from MudBlazor's own class; 280px is the sidebar's Width in RightSidebar.razor. */
+   :root:has() reads the sidebar's open state from MudBlazor's own class; --right-sidebar-width is the width the Human
+   dragged it to (huddleResize.attachSidebar publishes it on <html>), 280px until then (RightSidebar.razor's default). */
 .mud-overlay.mud-overlay-drawer {
     top: var(--mud-appbar-height);
 }
 
 :root:has(.mud-drawer.right-sidebar.mud-drawer--open) .mud-drawer.resizable-drawer.mud-drawer-temporary.mud-drawer-pos-right.mud-drawer--open {
-    right: 280px;
+    right: var(--right-sidebar-width, 280px);
 }
 
 :root:has(.mud-drawer.right-sidebar.mud-drawer--open) .mud-overlay.mud-overlay-drawer {
-    right: 280px;
+    right: var(--right-sidebar-width, 280px);
 }
 
 /* The content scrolls and the footer sticks to the bottom of what shows. */
@@ -4981,15 +4988,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     margin-inline: 0;
 }
 
-/* The "Linked from N notes" panel is the width of the text column above it, its label 13px/500. */
-.library-backlinks {
-    box-sizing: border-box;
-    max-width: calc(calc(var(--mud-typography-body1-size) * 8 / 7 * 35) + 32px);
-    margin: 16px 0 0;
-    padding-inline: 16px;
-}
-
-/* Document history (DocHistory spec §6.7, §6.8, §6.10): the byline under the toolbar, the History under the backlinks. */
+/* Document history (DocHistory spec §6.7, §6.8, §6.10): the byline under the toolbar, the History under the note. */
 .doc-byline {
     display: flex;
     flex-wrap: wrap;
@@ -5033,27 +5032,48 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     padding-inline: 16px;
 }
 
+.doc-history.doc-history-embedded {
+    max-width: none;
+    margin: 0;
+    padding-inline: 0;
+}
+
 .doc-history-title {
     margin: 0 0 8px;
     font-size: var(--mud-typography-body2-size);
     font-weight: 500;
 }
 
-.doc-history-day-label {
-    margin: 16px 0 4px;
+.doc-history-when {
+    margin-top: 2px;
     font-size: var(--mud-typography-caption-size);
-    font-weight: 500;
     color: var(--mud-palette-text-secondary);
 }
 
-.doc-history-entry {
-    display: flex;
-    gap: 12px;
-    padding: 8px 0;
+/* MudBlazor's vertical timeline reserves a 96px divider with its line 47px in. Here the dots sit on the panel's left
+   edge, level with the text above, in a 24px divider (line centred on it) with an 8px gap before the entry. */
+.doc-history-timeline.mud-timeline-vertical {
+    padding: 0;
+}
+
+.doc-history-timeline.mud-timeline-vertical.mud-timeline-position-start::before {
+    left: 11px;
+}
+
+.doc-history-timeline.mud-timeline-vertical .mud-timeline-item {
+    padding-bottom: 16px;
+}
+
+.doc-history-timeline.mud-timeline-vertical .mud-timeline-item .mud-timeline-item-divider {
+    min-width: 24px;
+}
+
+.doc-history-timeline.mud-timeline-vertical.mud-timeline-position-start .mud-timeline-item-content {
+    max-width: calc(100% - 24px);
+    padding-left: 8px;
 }
 
 .doc-history-time {
-    flex: 0 0 3rem;
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }
@@ -5087,14 +5107,49 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     margin: 0;
 }
 
-.recent-edit-row .recent-edit-time {
-    flex: 0 0 auto;
-    font-size: var(--mud-typography-caption-size);
+/* The Backlinks panel in the Right sidebar: an icon, the note's name and the line that links, the [[wikilink]] in accent ink. */
+.backlink-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
 }
 
-.library-backlinks .mud-expand-panel-header .mud-expand-panel-text {
-    font-size: var(--mud-typography-body2-size);
-    font-weight: 500;
+.backlink-item-icon {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.backlink-item-body {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.backlink-item-title {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--mud-palette-primary);
+}
+
+.backlink-item-snippet {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    margin-top: 2px;
+    font-size: var(--mud-typography-caption-size);
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.backlink-item-ref {
+    padding: 0 2px;
+    border-radius: var(--mud-default-borderradius);
+    color: var(--mud-palette-primary);
+    background: var(--hu-tone-primary-tint);
 }
 
 /* The Read | Edit | Split labels are control text, 13px. */
@@ -5175,6 +5230,33 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 .library-rendered blockquote,
 .library-rendered table {
     margin: 0 0 16px;
+}
+
+/* Markdown tables: cells get room to breathe (the browser default is 1px), a hairline grid between rows and
+   columns, and header labels that stay on one line. The table is as wide as its content, capped at the page; the cells draw the outer
+   edge too, so the border always hugs the grid. */
+.library-rendered table {
+    max-width: 100%;
+    border-collapse: collapse;
+    border: 0;
+}
+
+.library-rendered td {
+    overflow-wrap: anywhere;
+}
+
+.library-rendered th,
+.library-rendered td {
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+    border: 1px solid var(--ink-edge);
+}
+
+.library-rendered th {
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
 }
 
 /* The leading YAML frontmatter as a Properties block (LibraryProperties.razor): a hairline card of key/value
@@ -9002,18 +9084,20 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     padding: 0;
 }
 
+:root:has([data-hu-reading="book"]) .library-rendered th,
+:root:has([data-hu-reading="book"]) .library-rendered td {
+    border-color: var(--hu-line-region);
+}
+
 :root:has([data-hu-reading="book"]) .library-rendered table {
-    border: 1px solid var(--hu-line-region);
-    border-radius: var(--mud-default-borderradius);
     font-family: var(--mud-typography-default-family);
     font-size: var(--mud-typography-body2-size);
 }
 
 :root:has([data-hu-reading="book"]) .library-rendered th {
     background: var(--hu-ground-sunk);
-    color: var(--mud-palette-text-secondary);
+    color: var(--mud-palette-text-primary);
     font-weight: 600;
-    font-size: var(--mud-typography-caption-size);
 }
 
 /* -- reading=book: wiki links inside serif prose switch back to the UI face (11) ------------------------------- */
@@ -9053,12 +9137,6 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     color: var(--hu-accent-ink);
     font-weight: 500;
     background: none;
-}
-
-:root:has([data-hu-reading="book"]) .library-backlinks .mud-paper {
-    background: var(--hu-ground-raised);
-    border: 1px solid var(--hu-line-region);
-    border-radius: var(--mud-default-borderradius);
 }
 
 /* -- reading=book: the Teammate read face, serif group headings, hero name and a mono persona (13) --------------- */

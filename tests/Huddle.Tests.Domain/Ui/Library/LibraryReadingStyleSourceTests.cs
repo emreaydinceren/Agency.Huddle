@@ -22,17 +22,13 @@ public sealed class LibraryReadingStyleSourceTests
         Assert.Contains("height: 14px;", CssText.RuleBody(css, ".library-tree-orphan .mud-icon-root", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
-    /// <summary>The backlinks panel takes the reader's measure, and its label is 13px at weight 500.</summary>
+    /// <summary>The rendered note takes the reader's measure.</summary>
     [Fact]
-    public void AppCss_BacklinksPanel_MatchesTheTextColumn()
+    public void AppCss_RenderedNote_TakesTheReaderMeasure()
     {
         string css = CssText.AppCss();
-        string label = CssText.RuleBody(css, ".library-backlinks .mud-expand-panel-header .mud-expand-panel-text", RuleMatch.Last);
 
         Assert.Contains(Measure, CssText.RuleBody(css, ".library-rendered", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
-        Assert.Contains(Measure, CssText.RuleBody(css, ".library-backlinks", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
-        Assert.Contains("font-size: var(--mud-typography-body2-size);", label, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
-        Assert.Contains("font-weight: 500;", label, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
     /// <summary>The Read, Edit and Split labels are 13px.</summary>

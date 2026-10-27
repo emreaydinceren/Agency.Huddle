@@ -111,6 +111,25 @@ public sealed class LibraryTreeTests : IDisposable
             cut.FindAll("span.library-tree-node-name").Select(e => e.TextContent.Trim()));
     }
 
+    /// <summary>Clicking a folder's name toggles it open and closed; the chevron is not the only way.</summary>
+    [Fact]
+    public async Task Click_FolderName_TogglesExpansion()
+    {
+        string notesPath = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(notesPath, "a.md"), "hello");
+        LibraryPath notesScope = this.fixture.LibraryFixture.Resolve(notesPath, string.Empty);
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [notesScope]);
+
+        await cut.InvokeAsync(() => cut.Find("span.library-tree-node-name").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
+        Assert.Equal("Collapse", cut.Find("div.mud-treeview-item-arrow button").GetAttribute("aria-label"));
+
+        await cut.InvokeAsync(() => cut.Find("span.library-tree-node-name").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal("Expand", cut.Find("div.mud-treeview-item-arrow button").GetAttribute("aria-label")));
+    }
+
     /// <summary>A file's context menu is New note, New folder, Copy path, Rename, Move&#8230;, Delete, in that order (UX-R31), with an icon on each and a divider ahead of Copy path, Rename and Delete (the destructive item last).</summary>
     [Fact]
     public async Task Menu_OnFile_HasTheSettledActions()

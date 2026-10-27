@@ -35,7 +35,7 @@
 @inject TaskStore Tasks
 
 <MudTreeView T="LibraryPath" Items="@this.topItems" Comparer="LibraryPathComparer.Instance"
-             ServerData="@this.LoadChildrenAsync"
+             ServerData="@this.LoadChildrenAsync" ExpandOnClick="true"
              SelectedValue="@this.SelectedPath" SelectedValueChanged="@this.OnSelectedValueChangedAsync"
              Class="@(this.dragged is null ? "library-tree" : "library-tree library-tree-dragging")">
     <ItemTemplate Context="item">

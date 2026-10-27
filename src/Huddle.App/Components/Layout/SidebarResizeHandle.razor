@@ -9,8 +9,8 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JS
 
-<div @ref="this.handle" class="sidebar-resize-handle" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize sidebar"
-     aria-valuemin="@MinWidthPx" aria-valuemax="@MaxWidthPx" aria-valuenow="@this.Width" hidden="@this.Hidden"></div>
+<div @ref="this.handle" class="@(this.Side == "right" ? "sidebar-resize-handle sidebar-resize-handle-start" : "sidebar-resize-handle")" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize sidebar"
+     aria-valuemin="@this.MinPx" aria-valuemax="@this.MaxPx" aria-valuenow="@this.Width" hidden="@this.Hidden"></div>
 
 @code {
     /// <summary>The narrowest Sidebar, in pixels: room for a row's avatar, a short name and its pills.</summary>
@@ -33,7 +33,27 @@
     [EditorRequired]
     public string StorageKey { get; set; } = string.Empty;
 
-    /// <summary>The Sidebar's current width in pixels, mirrored into the handle's <c>aria-valuenow</c>.</summary>
+    /// <summary>Which drawer the handle belongs to: <c>left</c> (the Sidebar, the default) or <c>right</c> (the Right sidebar, dragged from its left edge).</summary>
+    [Parameter]
+    public string Side { get; set; } = "left";
+
+    /// <summary>The narrowest width, in pixels. Defaults to <see cref="MinWidthPx"/>.</summary>
+    [Parameter]
+    public int MinPx { get; set; } = MinWidthPx;
+
+    /// <summary>The widest width, in pixels. Defaults to <see cref="MaxWidthPx"/>.</summary>
+    [Parameter]
+    public int MaxPx { get; set; } = MaxWidthPx;
+
+    /// <summary>The width before any drag was remembered, in pixels. Defaults to <see cref="DefaultWidthPx"/>.</summary>
+    [Parameter]
+    public int DefaultPx { get; set; } = DefaultWidthPx;
+
+    /// <summary>The part of the drawer that is not the resizable width, in pixels. Defaults to <see cref="ActivityBarPx"/>.</summary>
+    [Parameter]
+    public int BarPx { get; set; } = ActivityBarPx;
+
+    /// <summary>The current width in pixels, mirrored into the handle's <c>aria-valuenow</c>.</summary>
     [Parameter]
     public int Width { get; set; } = DefaultWidthPx;
 
@@ -56,7 +76,7 @@
         this.self = DotNetObjectReference.Create(this);
         try
         {
-            await this.JS.InvokeVoidAsync("huddleResize.attachSidebar", this.handle, this.self, this.StorageKey, MinWidthPx, MaxWidthPx, DefaultWidthPx, ActivityBarPx);
+            await this.JS.InvokeVoidAsync("huddleResize.attachSidebar", this.handle, this.self, this.StorageKey, this.MinPx, this.MaxPx, this.DefaultPx, this.BarPx, this.Side);
         }
         catch (JSDisconnectedException)
         {
