@@ -69,22 +69,42 @@ internal sealed class HelperStatusStore
     /// <param name="at">When it failed.</param>
     /// <param name="error">What went wrong, in words for the card.</param>
     /// <returns>The status the store now holds, so the caller sees the failure count this write produced.</returns>
+    /// <remarks>
+    /// The write and the read-back share one transaction, and the write is a plain <c>ExecuteNonQuery</c>. An <c>INSERT … RETURNING</c>
+    /// read through a reader commits when the reader is disposed, and a lock held by a concurrent reader then fails that dispose at once
+    /// with <c>database is locked</c> instead of waiting; <see cref="SqliteTransaction.Commit"/> waits for it.
+    /// </remarks>
     public HelperStatus RecordFailure(HelperId id, DateTimeOffset at, string error)
     {
         using SqliteConnection connection = this.OpenConnection();
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = """
-            INSERT INTO helper_status(helper_id, last_error, last_error_at, consecutive_failures) VALUES($id, $error, $at, 1)
-            ON CONFLICT(helper_id) DO UPDATE SET last_error = excluded.last_error,
-                last_error_at = excluded.last_error_at, consecutive_failures = consecutive_failures + 1
-            RETURNING last_run_at, last_result, last_error, last_error_at, consecutive_failures;
-            """;
-        command.Parameters.AddWithValue("$id", id.Value);
-        command.Parameters.AddWithValue("$at", Format(at));
-        command.Parameters.AddWithValue("$error", error);
-        using SqliteDataReader reader = command.ExecuteReader();
-        _ = reader.Read();
-        return ReadStatus(reader);
+        using SqliteTransaction transaction = connection.BeginTransaction();
+        using (SqliteCommand write = connection.CreateCommand())
+        {
+            write.Transaction = transaction;
+            write.CommandText = """
+                INSERT INTO helper_status(helper_id, last_error, last_error_at, consecutive_failures) VALUES($id, $error, $at, 1)
+                ON CONFLICT(helper_id) DO UPDATE SET last_error = excluded.last_error,
+                    last_error_at = excluded.last_error_at, consecutive_failures = consecutive_failures + 1;
+                """;
+            write.Parameters.AddWithValue("$id", id.Value);
+            write.Parameters.AddWithValue("$at", Format(at));
+            write.Parameters.AddWithValue("$error", error);
+            write.ExecuteNonQuery();
+        }
+
+        HelperStatus stored;
+        using (SqliteCommand read = connection.CreateCommand())
+        {
+            read.Transaction = transaction;
+            read.CommandText = "SELECT last_run_at, last_result, last_error, last_error_at, consecutive_failures FROM helper_status WHERE helper_id = $id;";
+            read.Parameters.AddWithValue("$id", id.Value);
+            using SqliteDataReader reader = read.ExecuteReader();
+            _ = reader.Read();
+            stored = ReadStatus(reader);
+        }
+
+        transaction.Commit();
+        return stored;
     }
 
     /// <summary>The five status columns, in the order every query selects them.</summary>
