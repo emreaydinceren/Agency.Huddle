@@ -37,7 +37,9 @@ Also copy any `.png` to `$vault\report.png` and any `.pptx` to `$vault\deck.pptx
 - Name `Vault`, Path `C:\seeds\huddle\uat\vault`.
 - Name `Docs`, Path `<repo>\docs`. L0 only reads from it; no test edits it.
 
-Each pinned root appears in the table with a **Remove** button and in the sidebar's **Library** group, which links to the full `/library` page for that root. The built-in **Teams** and **Teammates** roots have a **Hide** switch instead of **Remove**.
+Each pinned root appears in the table with a **Remove** button. The built-in **Teams** and **Teammates** roots have a **Hide** switch instead of **Remove**.
+
+**Open the Library**, as the steps below say, means: click the **Library** button (the book icon) in the Activity bar, then the one **Library** row in the Sidebar. The Sidebar lists no roots. The `Library` tab opens on `/library` with the tree on the left, one top node per root: **Teams**, **Teammates**, **Uploads**, **Skill Sources**, **Vault** and **Docs**. A test picks its root by expanding that node in the tree.
 
 ---
 
@@ -92,7 +94,7 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 
 1. In `T-B`, create the file: `New-Item -ItemType Directory -Force C:\seeds\huddle\uat\data\Teammates\Ada\work\memory | Out-Null; Set-Content C:\seeds\huddle\uat\data\Teammates\Ada\work\memory\launch-date.md "Launch: 1 Oct"`.
 2. Open Ada's Room and send `hello`. Wait for the reply. This is the baseline Turn; the reply may list the file as `added`.
-3. In the sidebar's **Library** group click **Teammates**. Open `Ada`, then `work`, then `memory`, then `launch-date.md`.
+3. Open the Library and expand the **Teammates** root in the tree. Open `Ada`, then `work`, then `memory`, then `launch-date.md`.
 4. Switch the mode toggle to **Edit**, change `1 Oct` to `15 Oct`, and press Ctrl+S. (The file is not Ada's definition, so no confirmation dialog appears.)
 5. In `T-B`, check the bytes: `Get-Content -Raw C:\seeds\huddle\uat\data\Teammates\Ada\work\memory\launch-date.md`. The text is exactly `Launch: 15 Oct` plus the original line ending, with no BOM and no other change.
 6. Back in Ada's Room send `anything new?`. Wait for the reply.
@@ -123,7 +125,7 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 
 **Steps**
 
-1. In the sidebar's **Library** group click **Teams**.
+1. Open the Library and expand the **Teams** root in the tree.
 2. Right-click the `Marketing` node in the tree.
 3. In the menu, click **New Project**.
 4. In the dialog titled **New project**, type `Launch Q4` in **Name** and confirm.
@@ -156,7 +158,7 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 
 **Steps**
 
-1. In the sidebar's **Library** group click **Teammates**, then open `Ada`, then `Ada.md`.
+1. Open the Library and expand the **Teammates** root in the tree, then open `Ada`, then `Ada.md`.
 2. Switch the mode toggle to **Edit**.
 3. In the frontmatter (the block between the `---` lines at the top) add the line `teams: [Sales]`. If a `teams:` line exists, change it.
 4. Press Ctrl+S. A dialog titled **Save this definition?** says `Saving restarts Ada and clears its conversation memory.`. Click **Save**.
@@ -188,7 +190,7 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 
 **Steps**
 
-1. In the sidebar's **Library** group click **Vault**.
+1. Open the Library and expand the **Vault** root in the tree.
 2. Expand `specs`. Right-click `auth.md` and click **Rename**.
 3. Read the dialog. The name field is prefilled `auth.md`. A line reads `<X> links in <Y> notes point here and will be updated.` and the primary button reads **Rename and update**.
 4. Replace the name with `login.md` and click **Rename and update**.
@@ -221,7 +223,7 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 
 **Steps**
 
-1. In the sidebar's **Library** group click **Teammates**, then open `Ada` and `Ada.md`.
+1. Open the Library and expand the **Teammates** root in the tree, then open `Ada` and `Ada.md`.
 2. Read the banner above the document. It says `This is Ada's definition.`
 3. Switch the mode toggle to **Edit**.
 4. Add a space at the end of the Persona body (below the second `---`).
@@ -255,11 +257,11 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 
 **Steps**
 
-1. In the sidebar's **Library** group click **Teams**.
+1. Open the Library and expand the **Teams** root in the tree.
 2. Right-click the `Marketing` node (a Team folder).
 3. Read the menu. Note which items are greyed out and what small text sits under them.
 4. Press Escape. Right-click `Launch Q4` (a Project folder) and read the menu again.
-5. In the sidebar click **Teammates**, right-click the `Ada` folder, and read the menu.
+5. In the tree, expand the **Teammates** root, right-click the `Ada` folder, and read the menu.
 6. Hover the `Marketing` node for two seconds and check for a tooltip.
 
 **Pass if — all of these**
@@ -323,7 +325,7 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 
 **Steps**
 
-1. In the sidebar's **Library** group click **Vault**.
+1. Open the Library and expand the **Vault** root in the tree.
 2. Right-click `draft-old.md` and click **Delete**.
 3. A dialog titled `Delete draft-old.md?` says `It goes to the Recycle Bin.`. Check its buttons, then click **Cancel**. The file stays.
 4. Delete it again and click **Delete**.
@@ -431,7 +433,7 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 
 **Steps**
 
-1. In the sidebar's **Library** group click **Vault**, then click `report.png`.
+1. Open the Library and expand the **Vault** root in the tree, then click `report.png`.
 2. Is the image previewed in the document view?
 3. Right-click the image, choose Inspect (or F12 → Elements) and read the `src` of the `<img class="library-document-image">`.
 4. Click `data.json`. Is the JSON shown with syntax highlighting? Click into it and type a character.
@@ -532,7 +534,7 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 
 **Steps**
 
-1. Click the `Vault` row in the sidebar's **Library** group. The `Library` tab opens on `/library` with the tree beside the document area.
+1. Open the Library. The `Library` tab opens on `/library` with the tree beside the document area. Expand the **Vault** root.
 2. Drag the divider between the tree and the document to a clearly different width. Note it.
 3. Click another tab (for example Ada's Room), then click the `Library` tab again. Confirm the divider is where you left it.
 4. Reload the browser tab (F5) on `/library` and confirm the width again.
@@ -614,7 +616,7 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 4. Run `P-LAUNCH-FREE` again.
 5. In `T-A` look for a line starting `Teammate layout migration` (`O-LOG`).
 6. In `T-B`, list the layout: `Get-ChildItem -Recurse <data>\Teammates | Select-Object FullName`.
-7. Open **Teammates** in the sidebar and then the Library's **Teammates** root.
+7. Open **Teammates** in the sidebar, then open the Library and expand the **Teammates** root in the tree.
 
 **Pass if — all of these**
 
@@ -644,7 +646,7 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 **Steps**
 
 1. In **Settings → Library**, add a root: **Name** `Obsidian`, **Path** the vault's folder, then **Add**.
-2. In the sidebar's **Library** group click **Obsidian**. Confirm the vault's folders and notes appear.
+2. Open the Library and expand the **Obsidian** root in the tree. Confirm the vault's folders and notes appear.
 3. Pick a note you can safely edit. In `T-B` copy it aside: `Copy-Item <note> $env:TEMP\note-before.md`.
 4. Open the note in the Library, read it, then switch to **Edit**.
 5. Add one word at the end of a line and press Ctrl+S.
