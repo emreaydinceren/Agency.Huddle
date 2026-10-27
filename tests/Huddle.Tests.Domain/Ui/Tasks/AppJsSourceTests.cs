@@ -195,8 +195,8 @@ public sealed class AppJsSourceTests
     {
         string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.js"));
         int start = text.IndexOf("attachDrawer(", StringComparison.Ordinal);
-        int end = text.IndexOf("window.huddleClipboard", start, StringComparison.Ordinal);
-        Assert.True(start >= 0 && end > start, "Expected attachDrawer followed by window.huddleClipboard.");
+        int end = text.IndexOf("attachSidebar(", start, StringComparison.Ordinal);
+        Assert.True(start >= 0 && end > start, "Expected attachDrawer followed by attachSidebar.");
         string block = text[start..end];
 
         Assert.DoesNotContain("getBoundingClientRect().width", block, StringComparison.Ordinal);

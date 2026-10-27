@@ -489,7 +489,7 @@ public sealed class RoomListTests
         cut.WaitForAssertion(() => Assert.Contains(rootRoom.Name, cut.Markup, StringComparison.Ordinal));
         await cut.InvokeAsync(() => cut.Find(".room-folder > .mud-nav-link").ClickAsync());
 
-        cut.WaitForAssertion(() => Assert.Contains(ctx.JSInterop.Invocations, call => call.Identifier == "huddleStorage.set" && call.Arguments.Count == 2 && Equals(call.Arguments[0], "roomList:closedFolders") && Equals(call.Arguments[1], "[\"\"]")));
+        cut.WaitForAssertion(() => Assert.Contains(ctx.JSInterop.Invocations, call => call.Identifier == "huddleStorage.set" && call.Arguments.Count == 2 && Equals(call.Arguments[0], "roomList:closedFolders") && Equals(call.Arguments[1], "[\"\",\"Archive\"]")));
     }
 
     /// <summary>A remembered Team grouping is applied when the list first renders.</summary>
