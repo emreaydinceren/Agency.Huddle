@@ -59,19 +59,17 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Steps**
 
-1. Open `T2`. In the field `What will happen` read the placeholder, then type `send the reply to Acme` and save.
+1. Have Ada set the Action of `T2` to `send the reply to Acme` (the Task panel has no field for it). Open `T2`.
 2. Look at the switch `Requires your acceptance` and hover the lock icon.
-3. Read the explanation under it.
-4. Have Ada move `T2` to Needs you. Open the card and press `Accept`.
-5. Open Ada's Room.
+3. Have Ada move `T2` to Needs you. Open the card and press `Accept`.
+4. Open Ada's Room.
 
 **Pass if — all of these**
 
-- The placeholder at step 1 reads `Nothing leaves the team`.
+- The Human gate section shows no `What will happen` field.
 - At step 2 the switch is on and cannot be turned off; the lock's tooltip reads `This Task names an Action that leaves the team.`
-- At step 3 the explanation ends `Accepting lets Ada send the reply to Acme.`
-- After step 4 the card reads `Accepted by <Human>. Ada can now send the reply to Acme.` and the Task is not yet Done.
-- At step 5 Ada has been woken with a Message that carries the decision, and when she moves `T2` to Done it is Done.
+- After step 3 the card reads `Accepted by <Human>. Ada can now send the reply to Acme.` and the Task is not yet Done.
+- At step 4 Ada has been woken with a Message that carries the decision, and when she moves `T2` to Done it is Done.
 
 ### HUMANGATE-03 — Proof 3/4: Accept is locked, Request changes works, Ask posts a Mention (U-3)
 

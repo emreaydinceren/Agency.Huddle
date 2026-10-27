@@ -1,7 +1,7 @@
 @*
     Spec §6.8: the "Human gate" section of the Task panel. It never saves: it raises
-    HumanGateChanged and ActionChanged and the Task panel buffers them with its other edits.
-    With ReadOnly (the Task read view, T15f) the switch and the Action field are text and nothing is raised.
+    HumanGateChanged and the Task panel buffers it with its other edits. The Action is shown, never edited here.
+    With ReadOnly (the Task read view, T15f) the switch and the Action are text and nothing is raised.
 *@
 
 @inject IServiceProvider Services
@@ -32,17 +32,7 @@
                 </MudTooltip>
             }
         </div>
-        <MudTextField T="string" Value="@this.Action" ValueChanged="@this.ActionChanged" Lines="1"
-                      Label="@HumanGateCopy.ActionLabel" Placeholder="@HumanGateCopy.ActionPlaceholder"
-                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="task-human-gate-action" />
     }
-    <div class="task-human-gate-helper">@HumanGateCopy.Helper(this.AssigneeName)</div>
-    <div class="task-human-gate-done-rule">
-        <span>@HumanGateCopy.DoneRuleLabel</span>
-        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Icon="@Icons.Material.Filled.Lock"
-                 Text="@HumanGateCopy.DoneRuleChip(this.HumanName)" />
-    </div>
-    <div class="task-human-gate-explanation">@this.ExplanationText</div>
     @if (this.HelperNote is { } note)
     {
         <div class="task-human-gate-helper-note">@note</div>
@@ -66,10 +56,6 @@
     [Parameter]
     public string? Action { get; set; }
 
-    /// <summary>Raised with the new Action text when the Human edits the field.</summary>
-    [Parameter]
-    public EventCallback<string?> ActionChanged { get; set; }
-
     /// <summary>The assignee's display name, or null when the Task is unassigned.</summary>
     [Parameter]
     public string? Assignee { get; set; }
@@ -90,12 +76,4 @@
 
     /// <summary>Whether an Action is set, which locks the gate on.</summary>
     private bool HasAction => !string.IsNullOrWhiteSpace(this.Action);
-
-    /// <summary>The assignee as the copy names them.</summary>
-    private string AssigneeName => string.IsNullOrWhiteSpace(this.Assignee) ? HumanGateCopy.UnassignedAssignee : this.Assignee;
-
-    /// <summary>The explanation sentence group for the current Action.</summary>
-    private string ExplanationText => string.IsNullOrWhiteSpace(this.Action)
-        ? HumanGateCopy.ExplanationNoAction
-        : HumanGateCopy.Explanation(this.AssigneeName, this.Action.Trim());
 }

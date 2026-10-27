@@ -486,7 +486,7 @@ else if (this.loaded is { } task)
         @if (!this.createMode)
         {
             <TaskHumanGate HumanGate="@effective.HumanGate" HumanGateChanged="this.OnHumanGateChanged"
-                           Action="@effective.Action" ActionChanged="this.OnActionChanged"
+                           Action="@effective.Action"
                            Assignee="@effective.Assignee" HumanName="@this.Human.Name" ChangeLog="@task.ChangeLog" />
             @if (this.proof.Total > 0)
             {
@@ -1082,11 +1082,6 @@ else if (this.loaded is { } task)
     /// <summary>Records the Human gate switch as a pending edit; nothing is saved.</summary>
     /// <param name="value">The switch's new value.</param>
     private void OnHumanGateChanged(bool value) => this.SetPending(this.pending with { HumanGate = Optional<bool>.Set(value) });
-
-    /// <summary>Records the Action text as a pending edit; a blank text clears the Action. Nothing is saved.</summary>
-    /// <param name="value">The Action text.</param>
-    private void OnActionChanged(string? value) =>
-        this.SetPending(this.pending with { Action = Optional<string?>.Set(string.IsNullOrWhiteSpace(value) ? null : value) });
 
     /// <summary>The decision card reported a version conflict: re-read the Task and its Proof (never the panel's own Conflict state, Spec corrections P10 item 9).</summary>
     private void OnDecisionReload()

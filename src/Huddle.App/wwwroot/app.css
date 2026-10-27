@@ -5554,16 +5554,13 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 .task-human-gate-header,
-.task-human-gate-switch,
-.task-human-gate-done-rule {
+.task-human-gate-switch {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.task-human-gate-subheading,
-.task-human-gate-helper,
-.task-human-gate-explanation {
+.task-human-gate-subheading {
     color: var(--mud-palette-text-secondary);
 }
 

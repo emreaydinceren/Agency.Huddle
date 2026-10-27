@@ -10,8 +10,8 @@ using TaskHumanGateComponent = Agency.Huddle.App.Components.Tasks.TaskHumanGate;
 
 /// <summary>
 /// Pins T9.3 (Spec §6.8, corrections P9b): the "Human gate" section of the Task panel,
-/// <c>TaskHumanGate</c>. It never saves; it raises <c>HumanGateChanged</c> and <c>ActionChanged</c>
-/// and the Task panel buffers them.
+/// <c>TaskHumanGate</c>. It never saves; it raises <c>HumanGateChanged</c>
+/// and the Task panel buffers it.
 /// </summary>
 public sealed class TaskHumanGateTests
 {
@@ -78,34 +78,15 @@ public sealed class TaskHumanGateTests
         Assert.Equal([false], raised);
     }
 
-    /// <summary>The What will happen field carries its label and the "Nothing leaves the team" placeholder, and shows the Action.</summary>
+    /// <summary>The editable section has no What will happen field: the Action is not edited here.</summary>
     [Fact]
-    public async Task ActionField_HasLabelPlaceholderAndValue()
+    public async Task Section_HasNoActionField()
     {
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = Render(ctx, true, SomeAction, "Ruth", "Emre");
 
-        IRenderedComponent<MudTextField<string>> field = cut.FindComponent<MudTextField<string>>();
-        Assert.Equal(HumanGateCopy.ActionLabel, field.Instance.Label);
-        Assert.Equal("What will happen", HumanGateCopy.ActionLabel);
-        Assert.Equal(HumanGateCopy.ActionPlaceholder, field.Instance.Placeholder);
-        Assert.Equal("Nothing leaves the team", HumanGateCopy.ActionPlaceholder);
-        Assert.Equal(1, field.Instance.Lines);
-        Assert.Equal(SomeAction, cut.Find("input.mud-input-slot").GetAttribute("value"));
-    }
-
-    /// <summary>Typing in the What will happen field raises ActionChanged with the new text.</summary>
-    [Fact]
-    public async Task ActionField_Typed_RaisesActionChanged()
-    {
-        await using MudBunitContext ctx = new();
-        List<string?> raised = [];
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, false, null, "Ruth", "Emre", onAction: raised.Add);
-
-        IRenderedComponent<MudTextField<string>> field = cut.FindComponent<MudTextField<string>>();
-        await cut.InvokeAsync(() => field.Instance.ValueChanged.InvokeAsync(SomeAction));
-
-        Assert.Equal([SomeAction], raised);
+        Assert.Empty(cut.FindComponents<MudTextField<string>>());
+        Assert.Empty(cut.FindAll("input.mud-input-slot"));
     }
 
     /// <summary>The header chip, its line, the helper line naming the assignee and the Done rule chip naming the Human, verbatim.</summary>
@@ -120,54 +101,9 @@ public sealed class TaskHumanGateTests
         Assert.Contains(HumanGateCopy.Subheading, text, StringComparison.Ordinal); // contains-ok: whole sentence inside the section's text; the exact string is pinned by the Assert.Equal beside it.
         Assert.Equal("Human gate", HumanGateCopy.Heading);
         Assert.Equal("You decide whether this is done", HumanGateCopy.Subheading);
-        Assert.Contains(HumanGateCopy.Helper("Ruth"), text, StringComparison.Ordinal); // contains-ok: whole sentence inside the section's text; the exact string is pinned by the Assert.Equal beside it.
-        Assert.Equal("Ruth can move it to Needs you once every line has Proof. Teammates can't mark it Done.", HumanGateCopy.Helper("Ruth"));
-        Assert.Contains(HumanGateCopy.DoneRuleLabel, text, StringComparison.Ordinal); // contains-ok: whole sentence inside the section's text; the exact string is pinned by the Assert.Equal beside it.
-        Assert.Equal("Can move to Done", HumanGateCopy.DoneRuleLabel);
-        Assert.Contains(
-            cut.FindComponents<MudChip<string>>(),
-            c => string.Equals(c.Find(".mud-chip").TextContent.Trim(), HumanGateCopy.DoneRuleChip("Emre"), StringComparison.Ordinal));
-        Assert.Equal("Emre only", HumanGateCopy.DoneRuleChip("Emre"));
-    }
-
-    /// <summary>Without an Action the explanation says nothing is sent or published (Spec §6.8, verbatim).</summary>
-    [Fact]
-    public async Task Explanation_NoAction_SaysNothingIsSent()
-    {
-        await using MudBunitContext ctx = new();
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, true, null, "Ruth", "Emre");
-
-        string text = cut.Find(".task-human-gate").TextContent;
-        const string expected = "Teammates draft, check and track: you decide. Accepting marks it Done; nothing is sent or published. Done also needs the team's Proof to be complete.";
-        Assert.Equal(expected, HumanGateCopy.ExplanationNoAction);
-        Assert.Contains(HumanGateCopy.ExplanationNoAction, text, StringComparison.Ordinal); // contains-ok: whole sentence inside the section's text; the exact string is pinned by the Assert.Equal beside it.
-    }
-
-    /// <summary>With an Action the second sentence becomes "Accepting lets &lt;assignee&gt; &lt;action&gt;."</summary>
-    [Fact]
-    public async Task Explanation_WithAction_NamesTheAssigneeAndTheAction()
-    {
-        await using MudBunitContext ctx = new();
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, true, SomeAction, "Ruth", "Emre");
-
-        string text = cut.Find(".task-human-gate").TextContent;
-        const string expected = "Teammates draft, check and track: you decide. Accepting lets Ruth send the press release to the list. Done also needs the team's Proof to be complete.";
-        Assert.Equal(expected, HumanGateCopy.Explanation("Ruth", SomeAction));
-        Assert.Contains(HumanGateCopy.Explanation("Ruth", SomeAction), text, StringComparison.Ordinal); // contains-ok: whole sentence inside the section's text; the exact string is pinned by the Assert.Equal beside it.
-        Assert.DoesNotContain("nothing is sent or published", text, StringComparison.Ordinal);
-    }
-
-    /// <summary>An unassigned Task reads "the assignee" in the helper line and in the Action explanation.</summary>
-    [Fact]
-    public async Task Unassigned_ReadsTheAssignee()
-    {
-        await using MudBunitContext ctx = new();
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, true, SomeAction, null, "Emre");
-
-        string text = cut.Find(".task-human-gate").TextContent;
-        Assert.Equal("the assignee", HumanGateCopy.UnassignedAssignee);
-        Assert.Contains("the assignee can move it to Needs you once every line has Proof. Teammates can't mark it Done.", text, StringComparison.Ordinal); // contains-ok: whole sentence inside the section's text; the exact string is pinned by the literal itself.
-        Assert.Contains("Accepting lets the assignee send the press release to the list.", text, StringComparison.Ordinal); // contains-ok: whole sentence inside the section's text; the exact string is pinned by the literal itself.
+        Assert.DoesNotContain("Teammates draft, check and track", text, StringComparison.Ordinal);
+        Assert.DoesNotContain(HumanGateCopy.DoneRuleLabel, text, StringComparison.Ordinal);
+        Assert.Empty(cut.FindAll(".task-human-gate-helper, .task-human-gate-done-rule, .task-human-gate-explanation"));
     }
 
     /// <summary>Renders <see cref="TaskHumanGateComponent"/> with the given parameters and optional callbacks.</summary>
@@ -177,15 +113,13 @@ public sealed class TaskHumanGateTests
     /// <param name="assignee">The assignee's name, or null when unassigned.</param>
     /// <param name="human">The Human's display name.</param>
     /// <param name="onGate">Receives each HumanGateChanged value.</param>
-    /// <param name="onAction">Receives each ActionChanged value.</param>
     private static IRenderedComponent<ContainerFragment> Render(
         MudBunitContext ctx,
         bool gated,
         string? action,
         string? assignee,
         string human,
-        Action<bool>? onGate = null,
-        Action<string?>? onAction = null)
+        Action<bool>? onGate = null)
     {
         return ctx.RenderWithPopovers(builder =>
         {
@@ -195,7 +129,6 @@ public sealed class TaskHumanGateTests
             builder.AddAttribute(3, "Assignee", assignee);
             builder.AddAttribute(4, "HumanName", human);
             builder.AddAttribute(5, "HumanGateChanged", EventCallback.Factory.Create<bool>(ctx, v => onGate?.Invoke(v)));
-            builder.AddAttribute(6, "ActionChanged", EventCallback.Factory.Create<string?>(ctx, v => onAction?.Invoke(v)));
             builder.CloseComponent();
         });
     }
