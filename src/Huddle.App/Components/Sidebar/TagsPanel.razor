@@ -1,0 +1,322 @@
+@*
+    The Right sidebar's Tags panel (Spec §6.17): the open note's tags as chips, then every tag in the Library Root as a tree
+    on "/" with a note count. A chip or a tree row drills in to the notes that carry the tag (a child counts), with a Back
+    control; the drill-in is panel state, so no tag text goes into a URL. Tag text comes from files, so it is rendered as
+    Razor text only. Reloads on a new DocumentSubject and when WikiLinkIndex reports its root changed; Refresh rebuilds the
+    root, because a tag added outside Huddle is not seen until then.
+*@
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Sidebar
+@using MudBlazor
+@implements IDisposable
+@inject LibraryPathResolver PathResolver
+@inject WikiLinkIndex WikiLinks
+@inject LibraryTagIndex Tags
+
+@if (this.selectedTag is not null)
+{
+    <div class="sidebar-row tags-result-header">
+        <MudTooltip Text="Back to tags">
+            <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" aria-label="Back to tags" OnClick="@this.Back" />
+        </MudTooltip>
+        <MudText Typo="Typo.subtitle2">#@this.selectedTag</MudText>
+    </div>
+
+    @foreach (NoteRow row in this.resultRows)
+    {
+        <div class="sidebar-row backlink-item">
+            <MudIcon Icon="@Icons.Material.Outlined.Description" Size="Size.Small" Class="backlink-item-icon" />
+            <div class="backlink-item-body">
+                <MudLink Typo="Typo.body2" Underline="Underline.None" Class="backlink-item-title" Href="@row.Href" title="@row.Path">@row.Title</MudLink>
+                <div class="backlink-item-snippet">@row.Folder</div>
+            </div>
+        </div>
+    }
+
+    @if (this.resultsReady && this.resultRows.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">No notes carry this tag.</MudText>
+    }
+}
+else if (this.unavailable)
+{
+    <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">Tags aren't available for this folder: it has too many files.</MudText>
+}
+else if (this.loaded)
+{
+    <div class="sidebar-row tags-header">
+        <MudText Typo="Typo.overline">This note</MudText>
+        <MudTooltip Text="Refresh tags">
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" aria-label="Refresh tags" OnClick="@this.Refresh" />
+        </MudTooltip>
+    </div>
+
+    @if (this.ownTags.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">This note has no tags.</MudText>
+    }
+    else
+    {
+        <div class="tags-chips">
+            @foreach (string tag in this.ownTags)
+            {
+                string chosen = tag;
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="tag-chip" OnClick="@(() => this.Open(chosen))">@tag</MudChip>
+            }
+        </div>
+    }
+
+    <MudText Typo="Typo.overline">All tags in this folder</MudText>
+    @if (this.topItems.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">No tags in this folder.</MudText>
+    }
+    else
+    {
+        <MudTreeView T="LibraryTag" Items="@this.topItems" ServerData="@this.LoadChildren" Class="tags-tree">
+            <ItemTemplate Context="item">
+                @if (item.Value is LibraryTag node)
+                {
+                    <MudTreeViewItem T="LibraryTag" Value="@node" @bind-Items="item.Children" @bind-Expanded="item.Expanded" CanExpand="@item.Expandable">
+                        <BodyContent>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Class="tags-tree-row" aria-label="@($"{node.Text}, {node.NoteCount} notes")"
+                                       OnClick="@(() => this.Open(node.Text))">@LeafName(node.Text) (@node.NoteCount)</MudButton>
+                        </BodyContent>
+                    </MudTreeViewItem>
+                }
+            </ItemTemplate>
+        </MudTreeView>
+    }
+}
+
+@code {
+    private sealed record NoteRow(string Title, string Folder, string Path, string Href);
+
+    private IReadOnlyList<string> ownTags = [];
+    private List<NoteRow> resultRows = [];
+    private List<TreeItemData<LibraryTag>> topItems = [];
+    private Dictionary<string, List<LibraryTag>> childrenByParent = new(StringComparer.OrdinalIgnoreCase);
+    private string? selectedTag;
+    private bool unavailable;
+    private bool loaded;
+    private bool resultsReady;
+    private string? shownKey;
+    private bool subscribed;
+    private CancellationTokenSource? cts;
+
+    /// <summary>What the page shows; only a document has tags.</summary>
+    [Parameter, EditorRequired]
+    public required PageSubject Subject { get; set; }
+
+    /// <summary>The Tab this panel belongs to.</summary>
+    [Parameter, EditorRequired]
+    public required string TabId { get; set; }
+
+    /// <summary>The frame's context, for the header count.</summary>
+    [CascadingParameter]
+    public SidebarPanelContext? Panel { get; set; }
+
+    /// <summary>Starts listening for index changes.</summary>
+    protected override void OnInitialized()
+    {
+        this.WikiLinks.Invalidated += this.OnInvalidated;
+        this.subscribed = true;
+    }
+
+    /// <summary>Loads the tags when the Subject is new.</summary>
+    protected override void OnParametersSet()
+    {
+        if (this.Subject is not DocumentSubject doc)
+        {
+            this.CancelLoad();
+            this.shownKey = null;
+            this.selectedTag = null;
+            this.ownTags = [];
+            this.resultRows = [];
+            this.topItems = [];
+            this.unavailable = false;
+            this.loaded = false;
+            this.Panel?.SetCount(null);
+            return;
+        }
+
+        if (string.Equals(this.shownKey, doc.Key, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.shownKey = doc.Key;
+        this.selectedTag = null;
+        _ = this.LoadAsync(doc);
+    }
+
+    private static string LeafName(string tag) => tag[(tag.LastIndexOf('/') + 1)..];
+
+    private void Open(string tag)
+    {
+        this.selectedTag = tag;
+        this.resultsReady = false;
+        this.resultRows = [];
+        if (this.Subject is DocumentSubject doc)
+        {
+            _ = this.LoadAsync(doc);
+        }
+    }
+
+    private void Back()
+    {
+        this.selectedTag = null;
+        this.resultsReady = false;
+        this.resultRows = [];
+    }
+
+    private void Refresh()
+    {
+        if (this.Subject is DocumentSubject doc)
+        {
+            this.WikiLinks.Invalidate(doc.Path.Root.Id);
+        }
+    }
+
+    private Task<IReadOnlyCollection<TreeItemData<LibraryTag>>> LoadChildren(LibraryTag parent)
+    {
+        IReadOnlyCollection<TreeItemData<LibraryTag>> children = this.childrenByParent.TryGetValue(parent.Text, out List<LibraryTag>? found)
+            ? this.ToItems(found)
+            : [];
+        return Task.FromResult(children);
+    }
+
+    private List<TreeItemData<LibraryTag>> ToItems(List<LibraryTag> tags)
+    {
+        List<TreeItemData<LibraryTag>> items = [];
+        foreach (LibraryTag tag in tags)
+        {
+            items.Add(new TreeItemData<LibraryTag>
+            {
+                Value = tag,
+                Text = LeafName(tag.Text),
+                Expandable = this.childrenByParent.ContainsKey(tag.Text),
+            });
+        }
+
+        return items;
+    }
+
+    private void OnInvalidated(string changedRootId)
+    {
+        if (this.Subject is DocumentSubject doc && string.Equals(changedRootId, doc.Path.Root.Id, StringComparison.Ordinal))
+        {
+            _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+            {
+                return this.Subject is DocumentSubject current ? this.LoadAsync(current) : Task.CompletedTask;
+            });
+        }
+    }
+
+    private void CancelLoad()
+    {
+        this.cts?.Cancel();
+        this.cts?.Dispose();
+        this.cts = null;
+    }
+
+    private async Task LoadAsync(DocumentSubject doc)
+    {
+        this.CancelLoad();
+        CancellationTokenSource source = new();
+        this.cts = source;
+        CancellationToken ct = source.Token;
+        string key = doc.Key;
+        string? tag = this.selectedTag;
+
+        IReadOnlyList<string> own = [];
+        IReadOnlyList<LibraryTag> all = [];
+        List<NoteRow> results = [];
+        bool available;
+        try
+        {
+            available = await Task.Run(() =>
+            {
+                if (!this.Tags.IsAvailable(doc.Path.Root.Id))
+                {
+                    return false;
+                }
+
+                own = this.Tags.TagsOf(doc.Path);
+                all = this.Tags.AllTags(doc.Path.Root.Id);
+                if (tag is not null)
+                {
+                    results = this.ResultRows(doc, tag);
+                }
+
+                return true;
+            }, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer load or a dispose superseded this one; its result is not wanted.
+            return;
+        }
+
+        if (ct.IsCancellationRequested || !string.Equals(this.Subject.Key, key, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.ownTags = available ? own : [];
+        this.resultRows = results;
+        this.resultsReady = tag is not null && string.Equals(tag, this.selectedTag, StringComparison.Ordinal);
+        this.unavailable = !available;
+        this.loaded = true;
+        this.BuildTree(all);
+        this.Panel?.SetCount(available ? this.ownTags.Count : null);
+        this.StateHasChanged();
+    }
+
+    private List<NoteRow> ResultRows(DocumentSubject doc, string tag)
+    {
+        List<NoteRow> rows = [];
+        foreach (string notePath in this.Tags.NotesWith(doc.Path.Root.Id, tag))
+        {
+            if (this.PathResolver.TryResolve(doc.Path.Root.Id, notePath, out LibraryPath? note, out _))
+            {
+                int slash = note.RelativePath.LastIndexOf('/');
+                string folder = slash < 0 ? string.Empty : note.RelativePath[..slash];
+                rows.Add(new NoteRow(Path.GetFileNameWithoutExtension(note.RelativePath), folder, note.RelativePath, LibraryLinkQuery.BuildPageUri(note)));
+            }
+        }
+
+        return rows;
+    }
+
+    private void BuildTree(IReadOnlyList<LibraryTag> all)
+    {
+        this.childrenByParent = new Dictionary<string, List<LibraryTag>>(StringComparer.OrdinalIgnoreCase);
+        foreach (LibraryTag tag in all)
+        {
+            int slash = tag.Text.LastIndexOf('/');
+            string parent = slash < 0 ? string.Empty : tag.Text[..slash];
+            if (!this.childrenByParent.TryGetValue(parent, out List<LibraryTag>? siblings))
+            {
+                siblings = [];
+                this.childrenByParent[parent] = siblings;
+            }
+
+            siblings.Add(tag);
+        }
+
+        this.topItems = this.childrenByParent.TryGetValue(string.Empty, out List<LibraryTag>? top) ? this.ToItems(top) : [];
+    }
+
+    /// <summary>Stops listening and abandons any load in flight.</summary>
+    public void Dispose()
+    {
+        if (this.subscribed)
+        {
+            this.WikiLinks.Invalidated -= this.OnInvalidated;
+            this.subscribed = false;
+        }
+
+        this.CancelLoad();
+    }
+}

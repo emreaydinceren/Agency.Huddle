@@ -37,7 +37,9 @@ Wikilinks are added the same way Task ids were: a pass over the parsed document'
 
 **Obsidian syntax other than wikilinks shows as written.** Callouts (`> [!note]`), embeds
 (`![[x]]`), `==highlight==`, `%%comments%%` and `#tags` render as plain Markdown would render
-them. They are never stripped, so the file stays correct in Obsidian.
+them. They are never stripped, so the file stays correct in Obsidian. (Amended 2026-10-28: `#tags`
+are also indexed and listed, still never written; see
+[ADR-0067](0067-a-library-note-has-tags-read-from-its-text-like-obsidian.md).)
 
 **Renaming or moving a note is the one multi-file write.** Every `[[link]]` in the same Library
 Root that resolves to the old path is rewritten to the new one, as Obsidian does. The confirm

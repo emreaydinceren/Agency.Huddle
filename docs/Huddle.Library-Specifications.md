@@ -5,9 +5,10 @@
 [ADR-0028](adr/0028-the-library-edits-markdown-as-source-and-never-rewrites-it.md) (editing),
 [ADR-0029](adr/0029-between-the-human-and-an-agent-the-last-write-wins.md) (concurrency),
 [ADR-0030](adr/0030-a-team-folder-is-its-library-and-holds-its-tasks.md) (Team folders),
-[ADR-0031](adr/0031-teammates-and-teams-are-sibling-folders.md) (`Teammates/` beside `Teams/`) ·
+[ADR-0031](adr/0031-teammates-and-teams-are-sibling-folders.md) (`Teammates/` beside `Teams/`),
+[ADR-0067](adr/0067-a-library-note-has-tags-read-from-its-text-like-obsidian.md) (tags, §6.17, built 2026-10-28) ·
 **Vocabulary:** [language.md](engineering/language.md) (**Library**, **Library Root**,
-**Team folder**, **Project**, **Teammate folder**, **Work Dir**, **Watched Folder**) ·
+**Team folder**, **Project**, **Teammate folder**, **Work Dir**, **Watched Folder**, **Library tag**) ·
 **Depends on:** [Tasks](Huddle.Tasks-Specifications.md) accepting ADR-0030
 
 > **Superseded 2026-10-10 (docked pane):** the docked Library Pane described in §6.9 and below was retired when Tabs arrived. The `/library` page is the only Library surface and is one Tab; a `?library=` link opens that Tab on the file through `LibraryLinkRouter`. See [Huddle.Tabs-Specifications.md](Huddle.Tabs-Specifications.md) §6.
@@ -100,7 +101,9 @@ rename, move, recycle), wikilinks, backlinks, link rewriting on rename, chat →
 any conversation (§6.14), Team folders, the `Teammates/` layout (§6.15), the pane (left or right, collapsible, pop-out) and the Settings panel for pinned
 roots.
 
-**Not in v1** (§12): a quick switcher, full-text search, tags, rendering callouts, embeds,
+**Built after v1:** tags (§6.17, [ADR-0067](adr/0067-a-library-note-has-tags-read-from-its-text-like-obsidian.md)).
+
+**Not in v1** (§12): a quick switcher, full-text search, rendering callouts, embeds,
 highlights and comments, conflict detection, a live file watcher, editing non-Markdown files,
 drag and drop, and a graph view.
 
@@ -117,6 +120,7 @@ drag and drop, and a graph view.
 | **Project** | A direct sub-folder of a Team folder; the same Project Tasks files into |
 | **Teammate folder** | `{DataDir}/Teammates/<Name>/`: the Teammate's definition and its `work/` Work Dir |
 | **Pinned root** | A Library Root the Human added in configuration or Settings |
+| **Library tag** | A label on a note, written `#tag` in its body or in its frontmatter `tags` list; Obsidian's tag. Never a Mention or a Task reference (the glossary avoids *tag* for those), and not a Task's `tags` field |
 | **Library Path** | A resolved (root id, relative path, full path) value. The only way code reaches a file |
 
 These go into [language.md](engineering/language.md) under a new *Library* section.
@@ -151,6 +155,8 @@ These go into [language.md](engineering/language.md) under a new *Library* secti
 | `TextFileCodec.cs` | Detects and restores encoding, BOM and line ending | §6.4 |
 | `WikiLinkIndex.cs`, `WikiLink.cs` | Parse, resolve, backlinks, rename rewrite | §6.5 |
 | `LibraryReferenceResolver.cs` | `ILibraryReferenceResolver` for rendering | §6.6 |
+| `LibraryTagIndex.cs`, `LibraryTag.cs`, `NoteTagReader.cs` | Read a note's tags, index them per root, answer by tag | §6.17 |
+| `Components/Sidebar/TagsPanel.razor` | The Right sidebar's Tags panel | §6.17 |
 | `TeamFolderProvisioner.cs` | Creates Team and Project folders | §6.2 |
 | `RecycleBin.cs` | `IRecycleBin` and its Windows implementation | §6.4 |
 | `Acp/TeammatePaths.cs` | Definition file, Teammate folder and Work Dir for a Name: the one place that joins them | §6.15 |
@@ -657,6 +663,225 @@ the Team's. Which of these a Team page shows is its designer's call, not this co
 opening a `LibraryExplorer` with them. It needs only a store and a sidebar entry, and no change
 to the component. It's deferred (§12).
 
+### 6.17 Tags
+
+*Decided in [ADR-0067](adr/0067-a-library-note-has-tags-read-from-its-text-like-obsidian.md) and built
+2026-10-28. The rules marked **(V)** are still unchecked against a real Obsidian vault (LB-M2).* The goal is to match Obsidian's tags so a vault pinned as a Library Root
+reads the same here. Huddle only **reads** tags; no file is changed.
+
+**What is documented and what is not.** The [Obsidian tags page](https://obsidian.md/help/tags)
+documents the allowed characters, the digit rule, nesting, case-insensitivity and the `tags`
+list. Obsidian's Properties page documents the singular `tag` as deprecated in 1.4 and dropped as
+a default property in 1.9. Every rule marked **(V)** below is on neither page and comes from the
+Human's account of Obsidian's behaviour. Each must be checked against a real vault before it is
+built, and a disagreement changes the rule and its test.
+
+**Where a note's tags come from.** The union of two, with a tag written more than one way counted
+once:
+
+1. Inline `#tag` in the body.
+2. The frontmatter `tags` key, read by `NoteTagReader`.
+
+The singular `tag` key is not read (D-31). Every candidate from either source goes through one
+**normalise** step (below), so the two sources cannot apply different rules.
+
+**The frontmatter boundary.** One helper, `NoteFrontmatter.Split(text)`, decides what is
+frontmatter. It is used by the tag pass, by `NoteTagReader` and by `LibraryDocument` (which
+today splits with `PersonaFrontmatter`, so this changes it), so the Properties block and the index
+always agree on where the block is. The block starts with a first line of exactly `---` (after an
+optional BOM) and ends at the next line that is exactly `---` or `...`. A block that never closes
+is **not** frontmatter, and its text is scanned as body like any other. The other Properties rows
+are still parsed from the extracted block by `PersonaFrontmatter`.
+
+**Inline syntax.**
+
+| Rule | Detail |
+| --- | --- |
+| Start **(V)** | `#` starts a tag unless the character before it is a letter, a digit, `&` or `#`. Line start, whitespace and other punctuation allow one: `(#tag)`, `**#tag**`, `,#tag`, `[#tag]`. `word#tag`, `&#x2014;` and the second `#` of `##tag` do not start one |
+| Characters | After the `#`: letters of any script, combining marks, digits, `_`, `-`, `/`, and Unicode symbols and emoji. The tag ends at the first whitespace, control character, or ASCII punctuation or symbol other than `_ - /`. The ASCII terminators are `! " # $ % & ' ( ) * + , . : ; < = > ? @ [ \ ] ^ ` { \| } ~`, so `#c++` is `c` and `#a=b` is `a`. Unicode punctuation (for example `。`, `…`, `«`) also ends it **(V)** |
+| Invisible characters **(V)** | Bidi controls (U+200E, U+200F, U+202A–202E, U+2066–2069) and U+200B, U+FEFF are removed from the tag. U+200D and U+200C are kept, so emoji and script sequences survive |
+| Slashes **(V)** | A trailing `/` is dropped (`#work/` is `work`). A leading `/` is not a tag (`#/a`). A doubled `//` ends the tag (`#a//b` is `a`) |
+| Not all digits | After the slash rule, the tag must contain a character that is neither a digit nor `/`. `#1984` and `#2026/1` are not tags; `#y1984` and `#2026/a` are. `2026` is still a valid parent row of `2026/a` |
+| Length | At most 100 UTF-16 code units, measured after the invisible characters are removed and the trailing `/` is dropped. A longer tag is not a tag |
+| Escape **(V)** | `\#tag` is not a tag |
+| Wikilinks **(V)** | A `#` inside `[[…]]` or `![[…]]` is a heading anchor, never a tag |
+| Heading **(V)** | `## Plan #x` has the tag `x`. `#Title` with no space is a tag; `# Title` is a heading |
+| Comments **(V)** | Text inside `%% … %%` and `<!-- … -->` is skipped |
+| Code | Skipped inside code spans, fenced code blocks and indented code blocks |
+| Links | A link's destination and an autolink are skipped; a link's label text counts |
+| Task ids | A tag whose whole text or first segment is a valid Task id (`#PLAT-0042`, `#PLAT-0042/notes`) is not a tag (D-32), whichever source it came from |
+| Known false positives | `<a href="#x">` (HTML is literal text here) and a scheme-less `example.com/#a` count as the tags `x` and `a`. Accepted; a real vault will say if Obsidian agrees |
+
+**How the inline pass works.** It copies `WikiLinkParser`, which is a scan of the raw text and
+not a walk of the Markdig tree. The skip ranges have different sources, because Markdig cannot
+supply most of them (the shared pipeline has `DisableHtml()` and no frontmatter extension):
+
+| Skipped text | Where its range comes from |
+| --- | --- |
+| Code spans, code blocks, link destinations, autolinks | Markdig, parsed over the **body only**. The helper `WikiLinkParser` uses for code ranges is made shared |
+| The frontmatter block | `NoteFrontmatter.Split`; Markdig is never given it, so a ```` ``` ```` or an indented line in the block cannot open a code block that hides body tags |
+| Wikilinks and embeds | `WikiLinkParser`'s own match ranges |
+| `%% … %%` and `<!-- … -->` | A raw scan of the text |
+
+The code-range part is therefore shared with the wikilink pass; the tag pass adds the others. The
+start rule is judged on the raw character before the `#` (a backslash before it is an escape),
+because Markdig splits literal text at `[`, `*`, `_`, `\` and line breaks, so a literal's own
+first character says nothing about what came before.
+
+**Frontmatter syntax, by `NoteTagReader`.** It reads only the key `tags`, written at column 0 and
+compared exactly (a key spelled `Tags` is an ordinary row, not tags). It accepts:
+
+| Form | Example | Result |
+| --- | --- | --- |
+| Block list | `tags:` then `- a` lines, the `-` at column 0 or indented with spaces | one value per item |
+| Flow list | `tags: [a, "b"]` | one value per item, split on commas outside quotes |
+| Comma string **(V)** | `tags: a, b` | one value per piece |
+| Single scalar | `tags: a` | one value |
+
+A block list ends at the first non-blank line that is neither a `-` item nor a comment.
+
+Rules for a value:
+
+- Surrounding `'` or `"` quotes are removed and the quoted text is one value, never split on a
+  comma inside the quotes. A leading `#` inside the quotes is dropped: `"#a"` is `a`.
+- An unquoted value that starts with `#`, or an unquoted ` #` that follows a value, starts a YAML
+  comment. `tags: #a` is empty, `- #a` is a skipped null item, and `[#a]` is invalid (see below).
+- The whole value is the tag, so it is **skipped** and not truncated when it contains a character
+  that would end an inline tag (`a.b`, `c++`, `b c`). Its siblings still count. Otherwise it follows
+  the normalise step.
+
+The frontmatter tags are **none** when the `tags` entry is malformed: an unclosed `[` or quote, or
+a tab in the leading whitespace of any line of the block. Huddle does not validate the other keys,
+so a note that real YAML would reject because of another key still gets its `tags` read. The
+inline tags still count, and nothing is reported or rewritten (E-11). A repeated `tags` key uses
+the last one. `tags` given as a map or a number gives no tags.
+
+**Normalise.** Every inline or frontmatter candidate passes through the same steps, in order:
+remove invisible characters, drop a trailing `/` and everything after a `//`, reject a leading
+`/`, require a non-digit-non-slash character, apply the length cap, then reject a valid Task id.
+A tag is then compared by its text without the leading `#`, case-insensitively
+(`StringComparer.OrdinalIgnoreCase`; no Unicode normalisation, so `café` in NFC and NFD are two
+tags). A Task id is upper-case only, so `#plat-0042` is a tag, and it shares a case-insensitive
+key with `#PLAT-0042`, which is not; the excluded one is simply absent.
+
+**One reader for the index and the Properties block.** `LibraryProperties` takes a new optional
+`Tags` parameter, filled by `LibraryDocument` from `NoteTagReader`, and draws the `tags` row from
+it as chips. When the reader returns nothing for the entry (a malformed block, `- #a`, `"b c"`),
+the row shows the raw value as plain text, never as chips, so a skipped value is visible but
+never presented as a tag. Its other rows are unchanged, and it no longer needs `ChipText`'s
+`TrimStart('#')` for the `tags` row.
+
+**Display casing.** Obsidian shows the casing from the tag's creation time, which Huddle has no
+way to know. The house rule is: walk the notes in ordinal order of their root-relative paths, and
+within a note take the frontmatter tags in source order and then the body tags in source order.
+The first spelling met for a tag wins, and a parent segment takes the first spelling met in any
+tag that contains it. Renaming a note can therefore change a display casing; this is accepted.
+
+**Nesting and counts.** `work/active` is a child of `work`. A query for `work` returns notes
+tagged `work` or any tag under it. A query for `work/active` does not return a note tagged only
+`work`. A tag's **count** is the number of distinct notes in its subtree, so a note tagged both
+`work` and `work/active` counts once under `work`. A parent with no notes of its own, because
+only `work/active` exists, still has a row, a count and a link.
+
+```csharp
+/// <summary>One tag in a Library Root: its full display path (for example "work/active") and how many distinct notes carry it or a child.</summary>
+internal sealed record LibraryTag(string Text, int NoteCount);
+```
+
+**`LibraryTagIndex`.** There is one index, not two. Tags are collected in the build of
+`WikiLinkIndex` (`TryAddFile`, from the text `TryReadNote` already read) and stored in that root's
+cached `RootIndex`. `RootIndex` is a private nested record, so `WikiLinkIndex` gains two internal
+accessors: the raw tags of one note, and the raw tags of every note in a root, both in source
+order. `LibraryTagIndex` builds the aggregates (display casing, subtree counts) from those on
+first use and drops them when `WikiLinkIndex.Invalidated` fires for the root. A note is never read
+a second time, the generation and race handling are the link index's, and every existing caller
+that invalidates `WikiLinkIndex` invalidates the tags too.
+
+| Member | Returns |
+| --- | --- |
+| `IsAvailable(rootId)` | `false` above `MaxIndexedFiles`, as the link index |
+| `TagsOf(LibraryPath note)` | The note's own tags, de-duplicated, in the root's display casing, frontmatter first then body, in source order. Implied parents are not included. Its length is the panel's `SetCount` |
+| `AllTags(rootId)` | Every tag and every implied parent in the root, as `LibraryTag`, sorted by the case-insensitive full path (`OrdinalIgnoreCase`, then ordinal on the display text). No note paths |
+| `NotesWith(rootId, tag)` | Root-relative paths of the notes carrying the tag or a child, in ordinal path order. `tag` may have a leading `#` and a trailing `/`, and any casing |
+
+A note the link index skips (over `MaxEditableBytes`, unreadable, or in an unsupported encoding)
+has no tags (E-16).
+
+**When the tags go stale.** The index is dropped by a Library write in the root and by a roots
+change. The focus check in `LibraryDocument` invalidates only when the *open file's* length or
+time changed on disk, so a tag added in Obsidian, or by an Agent writing another note outside the
+Library, does not show up on its own (E-17). The Tags panel has a **Refresh** icon button that
+calls `WikiLinkIndex.Invalidate` for the root. That rebuilds the whole root's index, so Backlinks
+and Linked documents refresh too. There is no refresh-on-expand: the sidebar host does not tell a
+panel when it is expanded.
+
+**The surface** is a **Tags** panel in the Right sidebar. It is registered like the others in
+`ServiceCollectionExtensions`: id `tags`, title *Tags*, icon `Icons.Material.Filled.Tag`, order 27
+(between Backlinks at 25 and Recent edits at 30), shown for a `DocumentSubject` of kind Markdown,
+enabled by `Library:Enabled`. `Panel.SetCount` is `TagsOf` for the open note. The panel is
+`Components/Sidebar/TagsPanel.razor`, built like `BacklinksPanel`, and like it loads through
+`Task.Run` so a rebuild stays off the circuit:
+
+1. **This note.** The open note's tags as `.tag-chip` chips (the look `LibraryProperties` uses).
+   Each chip shows the note list for that tag.
+2. **All tags in this Library Root.** A collapsible tree on `/` (`MudTreeView`, as the file
+   tree), children loaded when a node is expanded, each row a name and a count. A row shows the
+   note list for that tag. A scope narrows the file tree, not the tags (D-34), so a Project page
+   still shows the whole root's tags.
+
+A chip or row switches the panel to a **result list** with a Back control. The drill-in is panel
+state, so no tag text goes into a URL. Each note is its name and folder in the Backlinks row
+layout, linking to the note with the same `Href` helper `BacklinksPanel` uses. The panel reloads
+on a new `DocumentSubject` and on `WikiLinkIndex.Invalidated`.
+
+When the index is not available the panel says *Tags aren't available for this folder: it has too
+many files.* A note with no tags shows *This note has no tags.*, as Backlinks shows *No notes link
+here.*, and the root tree still shows. A root with no tags shows *No tags in this folder.*
+
+The tree is keyboard-operable the way `MudTreeView` is, every row has an accessible name that
+includes its count, and the Refresh button has a Tooltip, as every `MudIconButton` has (§8).
+
+Tags are edited as text in the CodeMirror editor. Typing `#` does not open a completion list in
+v1, and the editor does not colour tags (§12).
+
+**Rendering is unchanged for the body.** A `#tag` in a rendered note is still plain text (ADR-0028,
+D-10). The Properties block already draws frontmatter `tags` as chips; this section changes where
+it gets them and where it finds the block.
+
+**Security.** Tag text comes from files, including files an Agent wrote. It is rendered as Razor
+text only, never as a `MarkupString`; it is capped at 100 characters; and bidi controls are
+removed from it (above). These are in §9.
+
+**Agents.** Agents do not see the tag index in v1 (§12). They can already read `#tag` and `tags:`
+in the files they open.
+
+**Tests this section needs** (write each red first):
+
+| Area | Cases |
+| --- | --- |
+| Inline start | `#a`, `(#a)`, `**#a**`, `,#a`, `[#a]`, line start, `word#a` (no), `&#x2014;` (no), `##a` (no), a URL anchor after a scheme (no), `<a href="#x">` (the known false positive) |
+| Inline characters | `#a/b`, `#a-b_c`, a non-Latin tag, a combining-mark tag (`#हिंदी`), an emoji tag, `#a.` and `#a,` end at the punctuation, `#c++` is `c`, `#a=b` is `a`, a Unicode-punctuation end, a bidi control (removed), ZWJ kept |
+| Length | 100 and 101 UTF-16 units; a 101-unit tag that is 100 after a trailing `/` is dropped; a tag with a removed invisible character is measured after |
+| Digits | `#1984` (no), `#y1984`, `#2026/a`, `#2026/1` (no), `#2026/` (no); `NotesWith("2026")` returns the `2026/a` note |
+| Slashes | `#work/` is `work`, `#/a` (no), `#a//b` is `a` |
+| Exclusions | `\#a`, `[[Note #a]]`, `![[x#a]]`, a code span, a fence, an indented block, `%% #a %%`, `<!-- #a -->`, a link destination, an autolink, a link label (counts), `## Plan #a` (counts), `#Title` (counts), `# Title` (no) |
+| Frontmatter in the way | A ```` ``` ```` or a 4-space-indented line inside the frontmatter does not hide a body tag |
+| Task ids | `#PLAT-0042` (no), `#PLAT-0042/notes` (no), `tags: [PLAT-0042]` (no), `#PLAT-0042x` (a tag), `#plat-0042` (a tag) |
+| Frontmatter forms | block list (column 0 and indented), flow list, comma string, single scalar, quoted `"#a"` (is `a`), quoted `"a, b"` (one value, skipped), unquoted `tags: #a` (none), `- #a` (skipped), `[#a]` (none), `a.b` and `c++` (skipped, siblings kept), `tags: [1984]` (skipped), a repeated key, the singular `tag` (ignored), `Tags:` (not read) |
+| Frontmatter boundary | BOM before `---`, CRLF, a `...` closer, `---` not on line 1 (not frontmatter), never closed (body is scanned), a tab in the indent (frontmatter tags none, inline kept), `tags` as a map |
+| Merge | the same tag from body and frontmatter counts once; `#Inbox` and `#inbox` are one |
+| Display casing | frontmatter before body, then ordinal path order across notes; a parent's casing; a rename flipping the casing |
+| Nesting and counts | `work` returns `work/active`; `work/active` does not return `work`; a parent with no own notes; a note tagged `work` and `work/active` counts once under `work`; `AllTags` order with `Beta` and `alpha` |
+| Index | lazy build, one read per file, invalidation by a write and by a roots change, `MaxIndexedFiles` unavailable, a note over `MaxEditableBytes` has none, the in-flight-build race (fix card 8.4's shape), the aggregate cache dropped on `Invalidated` |
+| Byte-exact | indexing writes nothing, and a save of a note with tags is unchanged |
+| Properties | the `tags` row and the index agree on `- #a`, `- "#a"`, `a, b`, a `...` closer and a malformed block; the fallback row shows the raw value, never chips |
+| Panel | this-note chips, tree counts, an empty note, an empty root, an unavailable root, drill-in and Back, Refresh rebuilds, reload on a new note, loading off the circuit, a hostile tag (`<script>`, `"><img>`) is escaped |
+
+**Open points.** Every **(V)** rule above. The Unicode-punctuation end, the invisible-character
+list, the 100-character cap, the false positives and the whole-tag handling of Task ids are
+Huddle's choices where Obsidian is silent; they are marked in the code and the tests so a vault
+check can change them in one place.
+
 ---
 
 ## 7. Configuration
@@ -671,7 +896,7 @@ All under `Team:`.
 | `Library:Enabled` | `true` | `false` hides the pane, the page, the sidebar link and chat links |
 | `Library:Roots` | `[]` | Pinned roots: `[{ "Name": "Huddle docs", "Path": "E:\\Repos\\Huddle\\docs" }]` |
 | `Library:MaxEditableBytes` | `2097152` | Above this, a text file opens read-only |
-| `Library:MaxIndexedFiles` | `5000` | Above this, a root's wikilink index is not built and backlinks say so |
+| `Library:MaxIndexedFiles` | `5000` | Above this, a root's wikilink index is not built; backlinks and tags say so |
 | `Library:MaxReferencedDocuments` | `10` | The most Library documents listed in one Turn's prompt; the rest are counted |
 | `Library:MaxInlineBytes` | `16384` | Per document, the most text inlined for an Adapter without file tools |
 | `Library:MaxUploadBytes` | `26214400` | Largest file attached in the chat (25 MiB), enforced while streaming. Uploads, §6.6 of the [ChatUploads spec](Huddle.ChatUploads-Specifications.md) |
@@ -696,6 +921,7 @@ are added to that page's *Facts already checked*.
 | Where the document is | [Breadcrumbs](https://mudblazor.com/components/breadcrumbs) | — | Root name, then each folder; a click selects that folder in the tree |
 | Read, Edit, Split | [Toggle Group](https://mudblazor.com/components/togglegroup) `MudToggleGroup<LibraryMode>` | — | `Value`/`ValueChanged`, single choice |
 | Explain each icon button | [Tooltip](https://mudblazor.com/components/tooltip) | `Chat.razor` | Every `MudIconButton` |
+| The Tags panel's tag tree and chips | [Tree View](https://mudblazor.com/components/treeview) `MudTreeView`, [Chip](https://mudblazor.com/components/chip) `MudChip` | `LibraryTree`, `LibraryProperties` | §6.17. Refresh is a `MudIconButton` with a Tooltip |
 | *Path copied* | [Snackbar](https://mudblazor.com/components/snackbar) `ISnackbar` | `SkillsPanel.razor` | `key: "library-copy"` so repeated copies collapse |
 | Confirm Delete, a Persona save, unsaved edits on switch | [Message Box](https://mudblazor.com/components/messagebox) `ShowMessageBoxAsync` | `SkillsPanel.razor` | |
 | Rename, move (with the link count), New note/folder/Project | [Dialog](https://mudblazor.com/components/dialog#passing-data) via `IDialogService` | `ArchivedChatsDialog.razor` | Pass a snapshot: an open dialog's parameters are frozen ([mudblazor.md](engineering/mudblazor.md) traps). The name field validates against §6.4's rules |
@@ -731,6 +957,7 @@ are added to that page's *Facts already checked*.
    each request.
 5. **The Open action is server-side and ungated,** as today. It is acceptable only because Huddle
    runs on the Human's own machine ([rules.md](engineering/rules.md)).
+6. **Tag text is untrusted.** It comes from files an Agent may have written. It is rendered as Razor text only, never as a `MarkupString`, never placed in a URL, capped at 100 characters and stripped of bidi controls (§6.17).
 
 ---
 
@@ -748,6 +975,17 @@ are added to that page's *Facts already checked*.
 | E-8 | Recycle Bin unavailable (a network drive, or a non-Windows host) | Delete is refused with the reason. There is no silent permanent delete |
 | E-9 | A Team label contains a character invalid in a folder name | No Team folder is created; the Teammates page shows the existing Tasks warning |
 | E-10 | An Agent writes a file into a folder the tree has expanded | Appears on the next focus refresh |
+| E-11 | The `tags` entry is malformed (an unclosed `[` or quote, a tab in the block's indentation), or `tags` holds a map or a number | Its frontmatter tags are none. Its inline tags still count. Nothing is reported or rewritten. Other keys are not validated |
+| E-12 | `tags: #project` unquoted, `- #project`, `[#project]` | A YAML comment, a skipped null item and an invalid flow list: no frontmatter tag, as in Obsidian. `"#project"` quoted is the tag `project`. The Properties row shows the raw value as plain text |
+| E-13 | The same tag in the body and the frontmatter, or in two casings | One tag per note. Display casing: frontmatter before body, then notes in ordinal path order |
+| E-14 | `#1984`, `word#tag`, `&#x2014;`, `##tag`, a heading `# Title`, a tag in a code span, fence or comment, `\#tag`, a `#` in a wikilink, `#PLAT-0042` | Not a tag |
+| E-15 | A root over `MaxIndexedFiles` | The tag index is unavailable, exactly as the link index is. The panel says so |
+| E-16 | A note over `MaxEditableBytes`, unreadable, or in an unsupported encoding | The link index skips it, so it has no tags. Nothing is reported |
+| E-17 | A tag is added in Obsidian, or an Agent writes a note outside the Library | Not shown until Refresh is pressed or a Huddle write drops the root's index |
+| E-18 | A tag is 101 UTF-16 units or more after normalising | Not a tag |
+| E-19 | A tag text contains markup or a quote | Rendered as Razor text only |
+| E-20 | A frontmatter block closed with `...`, or one that never closes | `...` closes it. A block that never closes is body, and its `#` lines can be tags |
+| E-21 | `<a href="#x">` or a scheme-less `example.com/#a` | Counted as the tags `x` and `a`. A known false positive |
 
 ---
 
@@ -781,6 +1019,15 @@ are added to that page's *Facts already checked*.
 | D-24 | **One `LibraryExplorer` component, scoped by a `Scopes` input; the pane is just one host** | A pane-only Library; a separate tree per page | Project, Team and Teammate pages, and V2 pinned views, reuse it unchanged |
 | D-25 | **A scope is a `LibraryLocation` (root id + folder), resolved by the one boundary** | An absolute folder path parameter | A host can't widen what the Library can reach (ADR-0027) |
 | D-26 | **Scope narrows the tree, not the links** | Resolve wikilinks and backlinks inside the scope only | A Project note linking a Team note must keep working |
+| D-27 | **Tags come from the body and the frontmatter `tags` list, merged into one set** (ADR-0067) | Frontmatter only; inline only | A vault is mostly inline tags; Obsidian's Properties editor and Agents write the frontmatter list |
+| D-28 | **Tags are matched case-insensitively and nest on `/`; display casing is a house rule** | Case-sensitive; flat; Obsidian's creation-time casing | Obsidian merges `#Inbox` and `#inbox` and a parent includes its children. Huddle has no creation time, so frontmatter-then-body, then ordinal path order |
+| D-29 | **Tags are read, never written: no tag rename, no chip editor** | A rename-tag command; a YAML round-trip editor | Both write files the Human did not open or reformat the frontmatter (ADR-0028) |
+| D-30 | **`NoteTagReader` reads the `tags` key, `NoteFrontmatter.Split` decides where the block is, and `LibraryProperties` draws its `tags` row from the reader** | `PersonaFrontmatter` for the key; leave Properties alone | `PersonaFrontmatter` loses quoting, does not treat `#` as a comment, does not split a comma string and does not accept a `...` closer. Two readers or two boundaries would draw different chips from the index |
+| D-31 | **The singular `tag` key is not read** | Read it as Obsidian once did | Obsidian's Properties page: deprecated in 1.4, dropped as a default property in 1.9 |
+| D-32 | **A tag whose whole text or first segment is a valid Task id is not a tag, from either source** | Count `#PLAT-0042` as Obsidian does | An id is a Task's name, and the renderer may link it. The same `TaskId` parse decides both, so the two cannot drift |
+| D-33 | **Tags are collected in `WikiLinkIndex`'s build; `LibraryTagIndex` is a thin reader that builds the aggregates** | A second index with its own walk | One read per note, one race fix, and every caller that invalidates the link index invalidates the tags |
+| D-34 | **The Tags panel lists the whole Library Root, whatever the explorer's scope** | Tags inside the scope only | Scope narrows the tree, not the links (D-26); the same holds for tags |
+| D-35 | **The tag pass parses only the body, and a frontmatter block that never closes is body** | Parse the whole text | Markdig would let a stray ```` ``` ```` in the frontmatter hide body tags |
 
 ---
 
@@ -789,7 +1036,7 @@ are added to that page's *Facts already checked*.
 | Item | Note |
 | --- | --- |
 | Quick switcher (Ctrl+P) and full-text search | The index from §6.5 already lists every note |
-| Tags (`#tag`) as a filter | Parse is cheap; the UI is not |
+| Tag search syntax (`tag:#a AND NOT tag:#b`), a "rename tag" command, tags in the explorer tree, a chip editor for the frontmatter `tags` | Tags themselves are built (§6.17). Rename is a multi-file write; the others need search or a YAML round-trip |
 | Rendering callouts, embeds, `==highlight==`, `%%comments%%` | Each is a vetted Markdig renderer; see D-10 |
 | Conflict detection on save | ADR-0029's upgrade path |
 | A live file watcher | Focus refresh is enough for v1 |
@@ -840,5 +1087,12 @@ solution after each (`dotnet build Huddle.slnx`, then `dotnet test Huddle.slnx -
 | LB-T11 | L3 | Unit | `RoomSession` prompt tests: the Library documents block's position (after File Changes, before Catch-up), dedupe and cap, paths outside roots ignored, inline text only when `ReadsFiles` is false, truncation line; prompt goldens and `PromptDefaultsTests` for the four keys | §6.14 |
 | LB-I13 | L3 | Impl | The block in `RoomSession`, the four `turn.library*` keys, the `LibraryPathResolver` lookup from an absolute path | §6.14 |
 | LB-I14 | L4 | Impl | The Copy button on the document header and the node menu, using `window.huddleClipboard` | §6.14 |
+| LB-T20 | L6 | Unit | `NoteTagReaderTests` and `NoteFrontmatterTests`: every inline, boundary and frontmatter row of the §6.17 test table, with a **(V)** marker on the rows to verify against a vault | §6.17 |
+| LB-I20 | L6 | Impl | `NoteFrontmatter.Split`; `NoteTagReader` with the one normalise step and the Task-id exclusion through `TaskId.TryParse`; the code-range helper in `WikiLinkParser` made shared, and Markdig run over the body only | §6.17 |
+| LB-T21 | L6 | Functional | Tag collection in `WikiLinkIndex` on a temp root: merge, display casing, nesting and counts, skipped notes, `MaxIndexedFiles`, invalidation, the in-flight-build race, nothing written | §6.17 |
+| LB-I21 | L6 | Impl | Tags stored in `RootIndex`; two internal accessors on `WikiLinkIndex`; `LibraryTagIndex` building the aggregates and dropping them on `Invalidated` | §6.17 |
+| LB-T22 | L6 | Component | bUnit for `LibraryProperties` (the `tags` row agrees with the index) and `TagsPanel` (chips, tree, drill-in and Back, Refresh, expand drops the index, empty and unavailable states, a hostile tag is escaped) | §6.17 |
+| LB-I22 | L6 | Impl | `TagsPanel` (loading through `Task.Run`, with Refresh), its registration, the `Tags` parameter on `LibraryProperties`, the `LibraryDocument` wiring that fills it and switches its frontmatter split to `NoteFrontmatter.Split`, `wireframes.md` and `UXDesignGuidelines.md` | §6.17 |
+| LB-M2 | L6 | Manual | Open a real Obsidian vault as a pinned root and check every **(V)** rule against what Obsidian shows in its Tags view | §6.17 |
 | LB-M1 | L5 | Manual | Walk use cases L0–L13 in the running app, including a real Obsidian vault as a pinned root opened in Obsidian afterwards | §2 |
 | LB-D1 | L5 | Docs | `language.md` Library section; `Huddle.EngineeringGuide.md` map row and configuration rows; roadmap item; ADRs 0027–0030 to *accepted* | §4 |

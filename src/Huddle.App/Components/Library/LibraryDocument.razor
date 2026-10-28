@@ -148,13 +148,18 @@
     /// <param name="text">The document's raw Markdown, frontmatter included.</param>
     private RenderFragment RenderMarkdown(string text) => builder =>
     {
-        (IReadOnlyList<PersonaFrontmatterField> fields, string body) = PersonaFrontmatter.Parse(text);
+        (string? block, int bodyStart) = NoteFrontmatter.Split(text);
+        IReadOnlyList<PersonaFrontmatterField> fields = block is null
+            ? []
+            : PersonaFrontmatter.Parse($"---\n{block}\n---\n").Fields;
+        string body = text[bodyStart..].TrimStart('\r', '\n');
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "class", "library-rendered");
-        if (fields.Count > 0)
+        if (fields.Count > 0 && block is not null)
         {
             builder.OpenComponent<LibraryProperties>(2);
             builder.AddComponentParameter(3, nameof(LibraryProperties.Fields), fields);
+            builder.AddComponentParameter(4, nameof(LibraryProperties.Tags), NoteTagReader.Read(block).Distinct(StringComparer.OrdinalIgnoreCase).ToList());
             builder.CloseComponent();
         }
 

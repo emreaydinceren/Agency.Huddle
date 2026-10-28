@@ -4,6 +4,7 @@
     item, so tags read as tags rather than as a semicolon-joined line; a chip never shows a leading "#".
 *@
 @using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Library
 
 <section class="library-properties" aria-label="Properties">
     <MudText Typo="Typo.overline" Class="library-properties-title">Properties</MudText>
@@ -13,7 +14,22 @@
             <div class="library-properties-row">
                 <dt class="library-properties-key">@field.Key</dt>
                 <dd class="library-properties-value">
-                    @if (field.Items.Count > 0)
+                    @if (this.Tags is not null && string.Equals(field.Key, "tags", StringComparison.Ordinal))
+                    {
+                        @* The tags row draws what the tag index reads (Spec §6.17); a value it skipped shows as plain text, never as a chip. *@
+                        @if (this.Tags.Count > 0)
+                        {
+                            @foreach (string tag in this.Tags)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="tag-chip library-properties-chip">@tag</MudChip>
+                            }
+                        }
+                        else
+                        {
+                            @field.Value
+                        }
+                    }
+                    else if (field.Items.Count > 0)
                     {
                         @foreach (string item in field.Items)
                         {
@@ -34,6 +50,10 @@
     /// <summary>The frontmatter fields to show, in file order.</summary>
     [Parameter, EditorRequired]
     public IReadOnlyList<PersonaFrontmatterField> Fields { get; set; } = [];
+
+    /// <summary>The tags <see cref="NoteTagReader"/> read from the block, drawn as the <c>tags</c> row's chips; <see langword="null"/> keeps the generic list-chip drawing.</summary>
+    [Parameter]
+    public IReadOnlyList<string>? Tags { get; set; }
 
     /// <summary>A list item as a chip draws it: without the leading <c>#</c> a tag is often written with.</summary>
     /// <param name="item">The list item as parsed.</param>

@@ -695,6 +695,12 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 **Pinned root**
 : A Library Root the Human added in configuration or Settings.
 
+**Library tag**
+: A label on a Library note, written `#tag` in its body or in its frontmatter `tags`
+  list, matched without case and nested on `/` (`work/active` is under `work`), as in
+  Obsidian. Huddle reads it and never writes it. Not a Task's `tags` field, and never a
+  Mention or a reference. *Avoid*: hashtag.
+
 ## Tasks
 
 See

@@ -70,6 +70,22 @@ public sealed class LibraryDocumentReadTests : IDisposable
         Assert.Equal(["growth", "email", "Lena", "Omar"], cut.FindAll(".library-properties-chip").Select(chip => chip.TextContent.Trim()));
     }
 
+    /// <summary>A frontmatter block closed with <c>...</c> is Properties, its <c>tags</c> draw as chips, a repeat in another casing is one chip, and the body renders below it.</summary>
+    [Fact]
+    public async Task Markdown_ReadMode_DotsCloserBlockIsPropertiesWithDistinctTagChips()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "dots.md"), "---\r\ntitle: x\r\ntags: [a, A, b]\r\n...\r\n# Intro\r\n\r\nText.");
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "dots.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
+
+        cut.WaitForAssertion(() => Assert.Equal("Intro", cut.Find(".library-rendered h1").TextContent.Trim()));
+        Assert.Equal(["title", "tags"], cut.FindAll(".library-properties dt").Select(dt => dt.TextContent.Trim()));
+        Assert.Equal(["a", "b"], cut.FindAll(".library-properties-chip").Select(chip => chip.TextContent.Trim()));
+    }
+
     /// <summary>The toolbar names a nested file by its full system path, the same line for every host, and draws no breadcrumbs.</summary>
     [Fact]
     public async Task Header_ShowsTheFullSystemPath()
