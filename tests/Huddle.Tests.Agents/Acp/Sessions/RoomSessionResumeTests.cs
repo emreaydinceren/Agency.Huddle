@@ -390,6 +390,53 @@ public sealed class RoomSessionResumeTests
         Assert.Null(roomSessions.Get("nova", "stale-room-id"));
     }
 
+    /// <summary>A restarted runner shows the context reading stored for a Room it would still resume, before any session opens.</summary>
+    [Fact]
+    public async Task Start_SeedsTheContextMeterFromAResumableEntry()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var roomSessions = fixture.Services.GetRequiredService<RoomSessionStore>();
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
+        var logger = fixture.Services.GetRequiredService<ILogger<PersonaRunner>>();
+        var persona = TestPersonas.Nova;
+        ContextFill fill = new();
+
+        FakeAgentHostFactory first = new() { SessionPerRoom = true };
+        string roomId;
+        string agentId;
+        await using (PersonaRunner firstRunner = new(persona, options, first, new FakePromptSource(), new RoomFollows(), logger, roomSessions: roomSessions, contextFill: fill))
+        {
+            await firstRunner.StartAsync(ct);
+            var user = await directory.FindUserByNameAsync("nova", ct);
+            Assert.NotNull(user);
+            var room = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, user.Id, ct);
+            Assert.NotNull(room);
+            roomId = room.Id;
+            agentId = user.Id;
+        }
+
+        roomSessions.Put(
+            "nova", roomId, new RoomSessionEntry("s1", "claude", persona.Model, persona.Effort, null, DateTimeOffset.UtcNow, persona.WorkMode, ContextUsed: 42_000, ContextSize: 200_000));
+        FakeAgentHostFactory second = new() { SessionPerRoom = true };
+        second.OnHostStarted = host =>
+        {
+            host.CanResume = true;
+            host.ResumeHandler = _ => second.Session;
+        };
+
+        await using PersonaRunner secondRunner = new(persona, options, second, new FakePromptSource(), new RoomFollows(), logger, roomSessions: roomSessions, contextFill: fill);
+        await secondRunner.StartAsync(ct);
+
+        ContextFillReading? reading = fill.Get(agentId, roomId);
+        Assert.NotNull(reading);
+        Assert.Equal(42_000, reading.Used);
+        Assert.Equal(200_000, reading.Size);
+    }
+
     /// <summary>Finding P-15: in shared mode the store is never touched - no file appears under <c>room-sessions/</c>, even after a Turn runs.</summary>
     [Fact]
     public async Task SharedMode_StoreUntouched()

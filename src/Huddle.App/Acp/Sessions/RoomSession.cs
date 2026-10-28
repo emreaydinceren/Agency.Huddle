@@ -647,10 +647,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             var entry = this.roomSessionStore.Get(this.owner.PersonaName, roomId);
             if (entry is not null
                 && this.host.CanResume
-                && string.Equals(entry.AdapterId, this.host.Profile.Id, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(entry.Model, this.persona.Model, StringComparison.Ordinal)
-                && string.Equals(entry.Effort, this.persona.Effort, StringComparison.Ordinal)
-                && string.Equals(entry.WorkMode, this.persona.WorkMode, StringComparison.Ordinal))
+                && entry.Matches(this.host.Profile.Id, this.persona))
             {
                 var resumedSession = await this.host.ResumeAsync(entry.SessionId, cancellationToken).ConfigureAwait(false);
                 if (resumedSession is not null)
@@ -1515,10 +1512,16 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             && !ct.IsCancellationRequested && (run.PromptReturned || run.Turn.SawActivity))
         {
             var lastMessageId = run.ReplyPosted ? run.MessageId : run.Item.TriggerMessageId;
+
+            // The meter's latest reading rides along, so a restart can show it again before this
+            // Room's session reopens. Read after the Turn's usage updates, which precede its outcome.
+            ContextFillReading? context = this.agentId is { } id ? this.contextFill?.Get(id, storeRoomId) : null;
             this.roomSessionStore.Put(
                 this.owner.PersonaName,
                 storeRoomId,
-                new RoomSessionEntry(run.ActiveSession.SessionId, this.host.Profile.Id, this.persona.Model, this.persona.Effort, lastMessageId, this.time.GetUtcNow(), this.persona.WorkMode));
+                new RoomSessionEntry(
+                    run.ActiveSession.SessionId, this.host.Profile.Id, this.persona.Model, this.persona.Effort, lastMessageId, this.time.GetUtcNow(), this.persona.WorkMode,
+                    context?.Used, context?.Size ?? 0));
         }
     }
 
