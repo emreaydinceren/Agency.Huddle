@@ -37,7 +37,6 @@
     "overlayDark": "rgba(0,0,0,0.6)"
   },
   "tokens": {
-    "detail.timeline.dot": "palette.textDisabled",
     "ground.rail": "palette.drawerBackground",
     "tone.primary.soft": "mix(palette.primary 14%, palette.background)",
     "tone.primary.tint": "mix(palette.primary 7%, palette.background)",

@@ -86,7 +86,6 @@ internal static class SkinTokens
         Add(tokens, "detail.head.line", "transparent", "The hairline under the Task detail header.");
         Add(tokens, "detail.row.line", "ref(ink.edge)", "The hairline between property rows.");
         Add(tokens, "detail.section.line", "transparent", "The hairline above a Task detail section.");
-        Add(tokens, "detail.timeline.dot", "ref(ink.field)", "A dot of the Change log timeline.");
     }
 
     /// <summary>Registers the Task edit page tokens: header, fields, field groups and the gate frame.</summary>
