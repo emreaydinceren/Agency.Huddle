@@ -21,7 +21,15 @@ payload=$(</dev/stdin)
 path=${BASH_REMATCH[1]}
 path=${path//\\\\/\\}
 
-[[ -n $path && -f $path ]] || exit 0
+[[ -n $path ]] || exit 0
+
+# The Write tool has been seen to report success and leave no file behind; a later script
+# then overwrote the missing spec with an empty one. Say so while the agent can still act.
+if [[ ! -f $path ]]; then
+    printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"Write reported success but %s does not exist on disk. Write it again (or use PowerShell Set-Content) and confirm with ls before relying on it."}}\n' \
+        "${path##*[\\/]}"
+    exit 0
+fi
 
 case "${path,,}" in
     *.sh) exit 0 ;;  # bash rejects CRLF scripts; they stay LF
