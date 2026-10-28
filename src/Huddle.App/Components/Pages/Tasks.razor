@@ -19,7 +19,8 @@
     menus; /tasks/new creates a View under a default name and opens it. An invalid View route
     (corrections-B7 §13.2 item 4) shows its ViewValidator reason, never the "no longer exists"
     wording that only ever meant "no such id at all".
-    The detail drawer (T7) is read-only: it hosts TaskReadView for an existing Task. Editing, a new Task and a copy all open the edit page
+    A Task's details are read-only and live in the Right sidebar (S4), not in a drawer of the page's own: opening a row or card publishes a
+    TaskDetailSubject, whose panel draws TaskReadView, and opens the sidebar. Editing, a new Task and a copy all open the edit page
     (TaskEditPage) in a Tab of its own (docs/Huddle.TaskReadView-Specifications.md); WakeToasts (renders nothing itself) and the page-header
     AiReactingChip - watching every Task in the current effective View, not narrowed by the search box - are corrections-B5 D14 item 12.
 *@
@@ -44,9 +45,11 @@
 @inject IDialogService DialogService
 @inject NavigationManager Navigation
 @inject TabService Tabs
+@inject RightSidebarService Sidebar
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
     <WakeToasts OnOpenTask="this.OnOpenTaskAsync" />
+    <PageSubjectSource Value="@this.Subject" />
     @if (!this.Options.Value.Tasks.Enabled)
     {
         @* corrections-B4 D11 item 13: Tasks turned off shows only this notice. *@
@@ -161,11 +164,11 @@
         IReadOnlyList<TaskItem> tasks = this.FilteredTasks(this.search);
         @if (this.effectiveView.Kind == ViewKind.List)
         {
-            <TaskListView View="this.effectiveView" ViewChanged="this.OnEffectiveViewChangedAsync" Tasks="tasks" Search="@this.search" SelectedId="@(this.detailOpen ? this.selectedTaskId : null)" OnOpenTask="this.OnOpenTaskAsync" OnCopyId="this.OnCopyIdAsync" OnCopyLink="this.OnCopyLinkAsync" RoomNames="this.roomNames" />
+            <TaskListView View="this.effectiveView" ViewChanged="this.OnEffectiveViewChangedAsync" Tasks="tasks" Search="@this.search" SelectedId="@this.SelectedId" OnOpenTask="this.OnOpenTaskAsync" OnCopyId="this.OnCopyIdAsync" OnCopyLink="this.OnCopyLinkAsync" RoomNames="this.roomNames" />
         }
         else
         {
-            <TaskBoard View="this.effectiveView" Tasks="tasks" Search="@this.search" SelectedId="@(this.detailOpen ? this.selectedTaskId : null)" OnOpenTask="this.OnOpenTaskAsync"
+            <TaskBoard View="this.effectiveView" Tasks="tasks" Search="@this.search" SelectedId="@this.SelectedId" OnOpenTask="this.OnOpenTaskAsync"
                        ViewChanged="this.OnEffectiveViewChangedAsync" OnCopyId="this.OnCopyIdAsync" OnCopyLink="this.OnCopyLinkAsync" RoomNames="this.roomNames" />
         }
 
@@ -198,18 +201,6 @@
             @* Spec §13.13.3 step 1: an item-route id that is invalid or names no Task, over the last View. *@
             <MudAlert Severity="Severity.Warning" role="status" Class="tasks-item-not-found-alert">@this.itemNotFoundText</MudAlert>
         }
-
-        <ResizableEndDrawer Open="this.detailOpen" OpenChanged="this.OnDrawerOpenChangedAsync" StorageKey="taskDetailPanelWidth"
-                            ContentKey="@(this.selectedTaskId?.ToString() ?? "none")" Title="@this.DetailTitle" Eyebrow="@this.DetailEyebrow"
-                            Class="tasks-detail-drawer">
-            <ChildContent>
-                @if (this.selectedTaskId is { } readId)
-                {
-                    @* T15: an existing Task is read here and edited in its own Tab (docs/Huddle.TaskReadView-Specifications.md, D-1, D-2). *@
-                    <TaskReadView @key="readId" Id="readId" OnClose="this.OnDetailClosed" OnEdit="this.OnReadViewEdit" />
-                }
-            </ChildContent>
-        </ResizableEndDrawer>
     }
 
 </MudContainer>
@@ -228,7 +219,6 @@
     private bool viewNotFound;
     private InvalidView? invalidView;
     private string? itemNotFoundText;
-    private bool detailOpen;
     private TaskId? selectedTaskId;
     private MudMenu? viewMenu;
 
@@ -239,6 +229,7 @@
         this.Events.TaskChanged += this.OnTaskChanged;
         this.Views.ViewsChanged += this.OnViewsChanged;
         this.Sprints.SprintsChanged += this.OnSprintsChanged;
+        this.Sidebar.Changed += this.OnSidebarChanged;
     }
 
     /// <summary>Unsubscribes from all three hubs (rules.md: every component subscribing to a singleton hub must unsubscribe in Dispose).</summary>
@@ -248,6 +239,7 @@
         this.Events.TaskChanged -= this.OnTaskChanged;
         this.Views.ViewsChanged -= this.OnViewsChanged;
         this.Sprints.SprintsChanged -= this.OnSprintsChanged;
+        this.Sidebar.Changed -= this.OnSidebarChanged;
         this.Tabs.SetTrail(this.TabKey, null);
     }
 
@@ -310,7 +302,7 @@
     }
 
     /// <summary>
-    /// Spec §13.13.3: parses <see cref="TaskIdText"/> and opens the named Task's panel, or - if the text
+    /// Spec §13.13.3: parses <see cref="TaskIdText"/> and opens the named Task in the Right sidebar, or - if the text
     /// is invalid or names no Task - sets <see cref="itemNotFoundText"/> to the exact wording instead.
     /// </summary>
     private void ResolveItemRoute()
@@ -325,18 +317,17 @@
         {
             this.itemNotFoundText = $"No task {text}.";
             this.selectedTaskId = null;
-            this.detailOpen = false;
             return;
         }
 
         this.itemNotFoundText = null;
-        if (this.detailOpen && this.selectedTaskId == parsed)
+        if (this.selectedTaskId == parsed)
         {
             return;
         }
 
         this.selectedTaskId = parsed;
-        this.detailOpen = true;
+        this.Sidebar.ShowSubject();
     }
 
     /// <summary>Whether the current URL is the literal <c>/tasks/new</c> route, which carries no <see cref="ViewId"/> of its own to tell it apart from the bare <c>/tasks</c> route.</summary>
@@ -480,16 +471,12 @@
         return Task.CompletedTask;
     }
 
-    /// <summary>Opens the detail drawer's <see cref="TaskReadView"/> for the clicked row/card - a no-op when it is already showing that Task.</summary>
+    /// <summary>Selects the clicked row/card and opens the Right sidebar on it, where <see cref="TaskReadView"/> shows its details - also when that Task is already selected but the sidebar was closed.</summary>
     /// <param name="id">The clicked Task's id.</param>
     private Task OnOpenTaskAsync(TaskId id)
     {
-        if (!this.detailOpen || this.selectedTaskId != id)
-        {
-            this.selectedTaskId = id;
-            this.detailOpen = true;
-        }
-
+        this.selectedTaskId = id;
+        this.Sidebar.ShowSubject();
         return Task.CompletedTask;
     }
 
@@ -501,46 +488,22 @@
         return this.OnNewTaskAsync(NewTaskDefaults.For(this.effectiveView));
     }
 
-    /// <summary>"+ New task" (the header button, Spec §13.3): opens a new Task in the edit page's Tab with <paramref name="defaults"/>, and closes the drawer.</summary>
+    /// <summary>"+ New task" (the header button, Spec §13.3): opens a new Task in the edit page's Tab with <paramref name="defaults"/>.</summary>
     /// <param name="defaults">The Team/Project the effective View's filter names, when it names exactly one.</param>
     private Task OnNewTaskAsync(NewTaskDefaults defaults)
     {
-        this.detailOpen = false;
         TaskTabs.OpenNew(this.Tabs, this.Navigation, defaults.Team, defaults.Project);
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Edit in the read view (B3): the drawer closes first, and the read view then navigates to the edit page's Tab. The URL is left to that
-    /// navigation: an item route's usual replace with the View's path would race it.
-    /// </summary>
-    private void OnReadViewEdit() => this.detailOpen = false;
+    /// <summary>The Subject the Right sidebar reads: the selected Task, or nothing when none is selected or it has been deleted.</summary>
+    private TaskDetailSubject? Subject => this.selectedTaskId is { } id && this.Store.Get(id) is not null ? new TaskDetailSubject(id) : null;
 
-    /// <summary>Closes the detail drawer: the "This Task was deleted" alert's Close button.</summary>
-    private void OnDetailClosed() => this.OnDetailOpenChanged(false);
+    /// <summary>The row or card to mark as open: the selected Task, while the Right sidebar is showing it.</summary>
+    private TaskId? SelectedId => this.Sidebar is { IsOpen: true, Mode: RightSidebarMode.Subject } ? this.selectedTaskId : null;
 
-    /// <summary>The drawer's own close request (the close button, Escape or the backdrop): nothing in a read view can be lost, so it just closes.</summary>
-    /// <param name="open">The drawer's requested Open state.</param>
-    private Task OnDrawerOpenChangedAsync(bool open)
-    {
-        this.OnDetailOpenChanged(open);
-        return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Reflects the drawer closing (the close button, backdrop, Escape, or the deleted-Task alert's Close). On the item route (Spec §13.13.3 step 4),
-    /// closing also replaces the URL with <c>/tasks/{effectiveView.Id}</c>, so Back does not reopen the
-    /// panel; the ordinary <c>/tasks</c>/<c>/tasks/{ViewId}</c> routes never change the URL on close.
-    /// </summary>
-    /// <param name="open">The drawer's new Open state.</param>
-    private void OnDetailOpenChanged(bool open)
-    {
-        this.detailOpen = open;
-        if (!open && this.TaskIdText is not null)
-        {
-            this.Navigation.NavigateTo($"/tasks/{this.effectiveView.Id}", replace: true);
-        }
-    }
+    /// <summary>The sidebar opened or closed: redraws so the open Task's row is marked, or not.</summary>
+    private void OnSidebarChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 
     /// <summary>
     /// The document title (audit E2): the Tab's title, so the browser's tab and the Tab strip agree. A Task's item route is "Task {id}", as
@@ -561,19 +524,6 @@
         bool showsView = this.Options.Value.Tasks.Enabled && this.TaskIdText is null && !this.viewNotFound;
         this.Tabs.SetTrail(this.TabKey, showsView ? [new TrailCrumb("Tasks", "/tasks", "tasks"), new TrailCrumb(this.effectiveView.Name, null, string.Empty)] : null);
     }
-
-    /// <summary>
-    /// The detail drawer's title: the Task's own name ("Upgrade every service to .NET 10"), never its type, so
-    /// the drawer says what is open (design-system "Drawer anatomy"). The id and its Team or Project are the
-    /// line above it (<see cref="DetailEyebrow"/>).
-    /// </summary>
-    private string DetailTitle => this.selectedTaskId is { } id && this.Store.Get(id) is { } task ? task.Title : "Task";
-
-    /// <summary>The line above the drawer's title: the id, then the Project or, with none, the Team ("PLAT-0013 · Platform"). Null for a Task that is gone.</summary>
-    private string? DetailEyebrow =>
-        this.selectedTaskId is { } id && this.Store.Get(id) is { } task
-            ? $"{id} · {task.Location.Project ?? task.Location.Team}"
-            : null;
 
     /// <summary>The ids of every Task in the current effective View (Spec §10.8), unnarrowed by the search box, for <see cref="AiReactingChip.Watched"/>.</summary>
     private IReadOnlyList<TaskId> WatchedTaskIds => this.FilteredTasks(null).Select(t => t.Id).ToList();

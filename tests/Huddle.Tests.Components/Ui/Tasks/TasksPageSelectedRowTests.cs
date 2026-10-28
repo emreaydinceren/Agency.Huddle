@@ -5,6 +5,8 @@ namespace Agency.Huddle.Tests.Ui.Tasks;
 using AngleSharp.Dom;
 using Bunit;
 using Bunit.Rendering;
+using Microsoft.Extensions.DependencyInjection;
+using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.Tests.Acp.Tools;
@@ -58,9 +60,9 @@ public sealed class TasksPageSelectedRowTests
         Assert.Equal(["mud-table-row", "task-row-selected"], FindTaskRow(cut, "Bravo").ClassList);
     }
 
-    /// <summary>Closing the panel (the drawer's close button; Cancel is a footer action that shows only while there are changes) clears the mark from every row.</summary>
+    /// <summary>Closing the Right sidebar that shows the Task clears the mark from every row.</summary>
     [Fact]
-    public async Task ListRow_ClosingThePanel_ClearsTheMark()
+    public async Task ListRow_ClosingTheSidebar_ClearsTheMark()
     {
         using TaskToolHarness harness = new();
         _ = CreateTask(harness, "Alpha");
@@ -71,13 +73,13 @@ public sealed class TasksPageSelectedRowTests
         await ClickTaskRowAsync(cut, "Alpha");
         Assert.Single(cut.FindAll("tr.task-row-selected"));
 
-        await cut.InvokeAsync(() => cut.Find(".resizable-drawer-header button[aria-label='Close']").ClickAsync());
+        await cut.InvokeAsync(ctx.Services.GetRequiredService<RightSidebarService>().Toggle);
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("tr.task-row-selected")));
         Assert.Empty(cut.FindAll(".task-list-title[aria-current]"));
     }
 
-    /// <summary>On the Board, the card of the open Task is marked selected and the others are not; closing the panel clears it.</summary>
+    /// <summary>On the Board, the card of the open Task is marked selected and the others are not; closing the Right sidebar clears it.</summary>
     [Fact]
     public async Task BoardCard_OpenTask_IsTheOnlySelectedCard()
     {
@@ -100,7 +102,7 @@ public sealed class TasksPageSelectedRowTests
         Assert.Equal(["task-card", "task-card-selected"], selected.ClassList);
         Assert.Equal("true", Assert.Single(cut.FindAll(".task-card-open[aria-current]")).GetAttribute("aria-current"));
 
-        await cut.InvokeAsync(() => cut.Find(".resizable-drawer-header button[aria-label='Close']").ClickAsync());
+        await cut.InvokeAsync(ctx.Services.GetRequiredService<RightSidebarService>().Toggle);
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".task-card-selected")));
     }

@@ -2346,7 +2346,7 @@ body.sidebar-resizing {
 
 /* ---- Task read view (T15) and Task edit page (K): docs/Huddle.TaskReadView-Specifications.md ---- */
 
-/* The read view is a text body in the detail drawer; its width, not the window's, decides one pair per row or two. */
+/* The read view is a text body in the Right sidebar; its width, not the window's, decides one pair per row or two. */
 .task-read-view {
     container-type: inline-size;
     container-name: task-read-view;
@@ -7420,22 +7420,19 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
    Every value is a skin token whose default is the look these surfaces had before Themes differed, so a skin lists only
    what it changes (Huddle-Tasks-Theming.md). The Theme-only structure sits under the traits it belongs to, further down. */
 
-/* A. The Task detail panel (T7, T15): ground, edge, shadow and glass, set once for every Theme. */
-.tasks-detail-drawer.mud-drawer {
+/* A. The Task details in the Right sidebar (S4, T15): the header's ground, edge and glass, set once for every Theme. */
+.task-read-view-header {
+    position: relative;
+    padding: 12px;
     background: var(--hu-detail-background);
-    border-inline-start: 1px solid var(--hu-detail-edge);
-    box-shadow: var(--hu-shadow-panel);
+    border: 1px solid var(--hu-detail-edge);
+    border-bottom-color: var(--hu-detail-head-line);
+    border-radius: var(--mud-default-borderradius);
     backdrop-filter: blur(var(--hu-detail-blur)) saturate(150%);
 }
 
-.tasks-detail-drawer .resizable-drawer-header {
-    position: relative;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--hu-detail-head-line);
-}
-
 /* Cobalt Soft's 3px gradient across the top of the header; both ends are transparent in every other Theme. */
-.tasks-detail-drawer .resizable-drawer-header::before {
+.task-read-view-header::before {
     content: "";
     position: absolute;
     inset: 0 0 auto 0;
@@ -7443,16 +7440,26 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     background: linear-gradient(135deg, var(--hu-detail-accent-from), var(--hu-detail-accent-to));
 }
 
-.tasks-detail-drawer .task-read-view-description,
-.tasks-detail-drawer .task-human-gate,
-.tasks-detail-drawer .task-decision-card,
-.tasks-detail-drawer .task-detail-history {
+.task-read-view-eyebrow {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
+.task-read-view-title {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.task-read-view .task-read-view-description,
+.task-read-view .task-human-gate,
+.task-read-view .task-decision-card,
+.task-read-view .task-detail-history {
     padding-top: 12px;
     border-top: 1px solid var(--hu-detail-section-line);
 }
 
-/* The decision band bleeds to the drawer's edges (its body has 16px of padding); the edit page frames the same card instead. */
-.tasks-detail-drawer .task-decision-card {
+/* The decision band bleeds to the sidebar's edges (its content has 16px of padding); the edit page frames the same card instead. */
+.task-read-view .task-decision-card {
     position: relative;
     margin-inline: -16px;
     padding-inline: 16px;
@@ -7460,7 +7467,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     border-top: 1px solid var(--hu-detail-decision-line);
 }
 
-.tasks-detail-drawer .task-decision-card::before {
+.task-read-view .task-decision-card::before {
     content: "";
     position: absolute;
     inset: 0 0 auto 0;
@@ -7468,7 +7475,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     background: linear-gradient(135deg, var(--hu-detail-accent-from), var(--hu-detail-accent-to));
 }
 
-.tasks-detail-drawer .task-decision-buttons .mud-button {
+.task-read-view .task-decision-buttons .mud-button {
     flex: 1;
 }
 
@@ -7939,7 +7946,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     border-top: 1px dashed var(--hu-gate-line);
 }
 
-:root:has([data-hu-surface="paper"]) .tasks-detail-drawer .task-decision-card {
+:root:has([data-hu-surface="paper"]) .task-read-view .task-decision-card {
     margin-inline: 0;
     border: 1px solid var(--hu-tone-warning-line);
     border-radius: var(--mud-default-borderradius);
@@ -8713,8 +8720,8 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     color: var(--mud-palette-text-secondary);
 }
 
-/* -- surface=paper: Task drawer, a sheet on the ground, not paper (12.4) ----------------------------------------- */
-:root:has([data-hu-surface="paper"]) .resizable-drawer.mud-drawer:not(.tasks-detail-drawer) {
+/* -- surface=paper: end drawers, a sheet on the ground, not paper (12.4) ----------------------------------------- */
+:root:has([data-hu-surface="paper"]) .resizable-drawer.mud-drawer {
     background: var(--hu-ground-page);
     border-inline-start: 1px solid var(--hu-line-control);
     box-shadow: var(--hu-shadow-panel);

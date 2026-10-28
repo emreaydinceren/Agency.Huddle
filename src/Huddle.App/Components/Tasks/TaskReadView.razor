@@ -43,6 +43,15 @@
 }
 else if (this.loaded is { } task)
 {
+    @* The header the drawer used to draw: the id and its Project or Team above the Task's title. Only where the host has no header of its own. *@
+    @if (this.ShowHeader)
+    {
+        <div class="task-read-view-header">
+            <div class="task-read-view-eyebrow">@($"{task.Id} · {task.Location.Project ?? task.Location.Team}")</div>
+            <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="task-read-view-title">@task.Title</MudText>
+        </div>
+    }
+
     @* T15a: the action row. The Closed chip sits at its left; Edit is the only button, outlined, so the decision card's Accept stays the one filled primary. *@
     <div class="task-read-view-actions">
         @if (task.Location.Closed)
@@ -310,7 +319,11 @@ else if (this.loaded is { } task)
     [Parameter, EditorRequired]
     public TaskId Id { get; set; }
 
-    /// <summary>Raised by the Close button of the "This Task was deleted" alert: the host closes the drawer.</summary>
+    /// <summary>Whether to draw the Task's id line and title above the action row; the Right sidebar's Task panel has no header of its own.</summary>
+    [Parameter]
+    public bool ShowHeader { get; set; }
+
+    /// <summary>Raised by the Close button of the "This Task was deleted" alert: the host closes what holds the view.</summary>
     [Parameter]
     public EventCallback OnClose { get; set; }
 

@@ -42,6 +42,46 @@ public sealed class TaskPanelsTests
             builder.CloseComponent();
         });
 
+    /// <summary>The Task panel draws the Task's read view with its id line and title, since the Right sidebar has no header of its own for it, and no form control.</summary>
+    [Fact]
+    public async Task Detail_DrawsTheReadViewWithItsIdLineAndTitle()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness, "Legal review of price claims");
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> cut = ctx.Render(builder =>
+        {
+            builder.OpenComponent<TaskDetailPanel>(0);
+            builder.AddComponentParameter(1, "Subject", new TaskDetailSubject(task.Id));
+            builder.AddComponentParameter(2, "TabId", "t1");
+            builder.CloseComponent();
+        });
+
+        Assert.Equal($"{task.Id} · Platform", cut.Find(".task-read-view-eyebrow").TextContent.Trim());
+        Assert.Equal("Legal review of price claims", cut.Find(".task-read-view-title").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".task-read-view input, .task-read-view textarea, .task-read-view select"));
+    }
+
+    /// <summary>The Task panel renders nothing for a Subject that is not a selected Task.</summary>
+    [Fact]
+    public async Task Detail_AnotherSubject_RendersNothing()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness, "Anything");
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> cut = ctx.Render(builder =>
+        {
+            builder.OpenComponent<TaskDetailPanel>(0);
+            builder.AddComponentParameter(1, "Subject", new TaskSubject(task.Id));
+            builder.AddComponentParameter(2, "TabId", "t1");
+            builder.CloseComponent();
+        });
+
+        Assert.Empty(cut.FindAll(".task-read-view"));
+    }
+
     /// <summary>Blocked by lists each blocker with its id, title and state, and counts the ones still open.</summary>
     [Fact]
     public async Task Blockers_ListsEachBlocker_AndCountsTheOpenOnes()

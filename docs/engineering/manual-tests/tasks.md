@@ -366,9 +366,9 @@ and editing the same field from two sources shows both versions and blocks Save 
   disk first.
 
 > [!NOTE]
-> A saved Task is read in the drawer and edited on its own page: choose **Edit** in the drawer and the Task opens in an
-> "Edit {id}" Tab with **Cancel** and **Save** in the page header. Where this test says "the panel", use that page.
-> **+ New task** still opens an editable form in the drawer.
+> A saved Task is read in the Right sidebar and edited on its own page: choose **Edit** in the sidebar's Task panel and the Task
+> opens in an "Edit {id}" Tab with **Cancel** and **Save** in the page header. Where this test says "the panel", use that page.
+> **+ New task** opens the same edit page, on a new Task.
 
 **Steps**
 
@@ -630,7 +630,7 @@ link.*
 
 **Steps**
 
-1. On `localhost:5100`, open the Task and click the copy icon in the icons row just under the drawer header.
+1. On `localhost:5100`, open the Task and click the copy icon in the icons row just under the Task's title in the Right sidebar.
 2. Paste the clipboard contents somewhere visible (a Message composer, a text editor) and confirm
    it is exactly the Task's plain id, nothing more.
 3. In the Task panel's icons row (just under the header), open the **More actions** (⋮) menu — not a card's menu —
@@ -939,39 +939,39 @@ any other field (D-S8).*
 - `Rae` never calls `update_task` -> record as a model-behaviour finding per
   [§0.6](../manual-tests.md#06-not-a-defect), unless the tool was unavailable.
 
-### TASKS-20 — Escape closes the Task drawer, Edit opens the edit page in its own Tab, and a new Task opens at the top
+### TASKS-20 — The Task opens in the Right sidebar, Edit opens the edit page in its own Tab, and a new Task opens at the top
 
 **Free** · about 5 min
 
-*Proves the drawer's Escape key (with the unsaved-changes prompt on a new Task), that Edit on the item
-route opens the edit page in its own Tab, and that the drawer body does not carry a previous Task's
-scroll position into the next one.*
+*Proves that opening a Task opens the Right sidebar on it, that Edit opens the edit page in its own Tab (with
+the unsaved-changes prompt on its close), and that the sidebar does not carry a previous Task's scroll
+position into the next one.*
 
 **Before you start**
 
-- `E-FREE` app running, at least one Task with a long description (enough to scroll the drawer).
+- `E-FREE` app running, at least one Task with a long description (enough to scroll the sidebar).
 
 **Steps**
 
-1. Open a Task from `/tasks` so the drawer opens and press **Esc**. Then open it again and click
-   **Edit**, change the Priority, and close its Tab with the **×**.
-2. Open `/tasks/item/<id>` for a Task directly and click **Edit**. The drawer has no Expand button.
-3. Open the long Task, scroll the drawer to the bottom, then click another Task in the List.
+1. Open a Task from `/tasks`: the Right sidebar opens on it. Close the sidebar with its top-bar button and click the
+   same Task again: it opens again. Then click **Edit**, change the Priority, and close its Tab with the **×**.
+2. Open `/tasks/item/<id>` for a Task directly: the Right sidebar opens on it. Click **Edit**.
+3. Open the long Task, scroll the sidebar to the bottom, then click another Task in the List.
 
 **Pass if — all of these**
 
-- Step 1: **Esc** closes the read-only drawer with no question; closing the edit Tab with an unsaved
-  change asks **Discard changes?** and the Tab stays open until you answer.
-- Step 2: a permanent "Edit {id}" Tab opens with the Task's editor; the drawer closes; clicking **Edit**
-  again on that Task goes back to the same Tab.
+- Step 1: the sidebar opens on the Task each time you click it, and no second panel covers the page; closing
+  the edit Tab with an unsaved change asks **Discard changes?** and the Tab stays open until you answer.
+- Step 2: a permanent "Edit {id}" Tab opens with the Task's editor; clicking **Edit** again on that Task
+  goes back to the same Tab.
 - Step 3: the next Task's read view starts at its top.
 
 **Fail if — any of these**
-- **Esc** does nothing, or discards the edit without asking -> `ResizableEndDrawer`'s key handler or
-  the page's close guard is not wired.
+- Clicking the Task with the sidebar closed leaves it closed -> `Tasks.OnOpenTaskAsync` is not calling
+  `RightSidebarService.ShowSubject`. Closing the edit Tab discards the edit without asking -> the page's close guard is not wired.
 - **Edit** opens a preview Tab, a second Tab, or none -> `TaskReadView.EditAsync` or the Tab key
   `task-edit:{id}` has regressed.
-- The next Task's read view is scrolled down -> the drawer body is not keyed by `ContentKey`.
+- The next Task's read view is scrolled down -> `TaskDetailPanel` is not keyed by the Task's id.
 
 ---
 

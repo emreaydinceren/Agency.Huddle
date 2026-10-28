@@ -9,7 +9,10 @@ using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
+using Agency.Huddle.App.Components.Sidebar;
 using Agency.Huddle.App.Components.Tasks;
+using Agency.Huddle.App.Sidebar;
+using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.Tests.Acp.Tools;
@@ -423,9 +426,9 @@ public sealed partial class TaskBoardColumnMenuTests
         });
     }
 
-    /// <summary>corrections-B7 12.4 item 8 and 14.5.i item 4: a Board View renders <see cref="TaskBoard"/> in the page, and opening a card puts the <see cref="TaskReadView"/> in the detail drawer for that Task (read view spec D-1).</summary>
+    /// <summary>corrections-B7 12.4 item 8 and 14.5.i item 4: a Board View renders <see cref="TaskBoard"/> in the page, and opening a card publishes that Task to the Right sidebar, which opens on its details (read view spec D-1).</summary>
     [Fact]
-    public async Task Page_BoardView_CardOpenOpensTheDetailDrawer()
+    public async Task Page_BoardView_CardOpenOpensTheTaskInTheRightSidebar()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -437,7 +440,8 @@ public sealed partial class TaskBoardColumnMenuTests
         Assert.Empty(cut.FindComponents<TaskListView>());
         await cut.InvokeAsync(() => cut.Find($"button[aria-label='Open {task.Id}']").ClickAsync());
 
-        Assert.Equal(task.Id, cut.FindComponent<TaskReadView>().Instance.Id);
+        Assert.Equal(new TaskDetailSubject(task.Id), cut.FindComponent<PageSubjectSource>().Instance.Value);
+        Assert.True(ctx.Services.GetRequiredService<RightSidebarService>().IsOpen);
     }
 
     /// <summary>Plan 12.4.t: hiding a column from the header updates the Board's hidden-count chip.</summary>

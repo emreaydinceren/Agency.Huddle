@@ -273,9 +273,9 @@ Settled on 2026-10-16:
 | Room header strip | Stays. Members adds the full list; it does not replace the glance |
 | Outline source | Follows unsaved edits through `DocumentSubject.Text` in Split mode. Read and Edit show the loaded or saved text, because the editor sends text only on save and mode switch |
 | Feature switches | Outline, Linked documents and Documents in this chat need `Library.Enabled`; Tasks in this chat needs `Tasks.Enabled`; Members needs neither |
-| Subjects | `RoomSubject` and `DocumentSubject` only. `TaskSubject` and the others wait for a panel that needs them |
+| Subjects | `RoomSubject` and `DocumentSubject` only. `TaskSubject` and the others wait for a panel that needs them. Since built: `TaskSubject` (the Task edit page, D-8 of the Task read view spec) and `TaskDetailSubject` (a Task selected on the Tasks page, whose one panel is the read view) |
 | Page commands | Built, because Outline needs `ScrollToHeading` |
-| Open state | Unchanged: starts closed in every circuit |
+| Open state | Open by default, and remembered per viewer in local storage (`shell:rightSidebarOpen`): closing it with the Top bar button keeps it closed on the next visit. Opening or closing the Notifications view is not remembered |
 
 ## Open questions
 

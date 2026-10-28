@@ -134,6 +134,34 @@ public sealed class SidebarPanelRegistrationTests
         Assert.Equal(new TaskSubject(id).Key, new TaskSubject(id, HasBlockers: true).Key);
     }
 
+    /// <summary>A Task selected on the Tasks page gets the Task panel alone, and a Task open for editing does not get it, so the edit page never shows its Task twice.</summary>
+    [Fact]
+    public void TaskDetail_IsOfferedForTheTasksPagesSubjectAlone()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildProvider(dataDir, new Dictionary<string, string?>());
+        SidebarPanelCatalog catalog = provider.GetRequiredService<SidebarPanelCatalog>();
+        _ = TaskId.TryParse("PLAT-0013", out TaskId id);
+
+        List<string> selected = catalog.For(new TaskDetailSubject(id)).Select(static panel => panel.Id).ToList();
+        List<string> editing = catalog.For(new TaskSubject(id)).Select(static panel => panel.Id).ToList();
+
+        Assert.Equal(["task-detail"], selected);
+        Assert.DoesNotContain("task-detail", editing);
+    }
+
+    /// <summary>With Tasks turned off the Task panel is not offered.</summary>
+    [Fact]
+    public void TaskDetail_TasksDisabled_IsNotOffered()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildProvider(dataDir, new Dictionary<string, string?> { ["Team:Tasks:Enabled"] = "false" });
+        SidebarPanelCatalog catalog = provider.GetRequiredService<SidebarPanelCatalog>();
+        _ = TaskId.TryParse("PLAT-0013", out TaskId id);
+
+        Assert.Empty(catalog.For(new TaskDetailSubject(id)));
+    }
+
     /// <summary>Builds the real container with the Team data directory and the given feature switches.</summary>
     /// <param name="dataDir">The temporary data directory the Team services write to.</param>
     /// <param name="switches">Configuration values layered over the data directory.</param>

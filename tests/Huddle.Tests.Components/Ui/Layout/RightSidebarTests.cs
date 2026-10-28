@@ -16,6 +16,46 @@ public sealed class RightSidebarTests
 {
     private static IElement ToggleButton(IRenderedComponent<RightSidebarToggle> toggle) => toggle.Find("button.right-sidebar-toggle");
 
+    /// <summary>With nothing remembered the sidebar opens by itself, and the viewer's choice is written to local storage when they close it.</summary>
+    [Fact]
+    public async Task NothingRemembered_OpensByDefault_AndRemembersAClose()
+    {
+        await using MudBunitContext ctx = UiTestHost.Create(services => services.AddSingleton(new SidebarPanelCatalog([], TestOptions.Create()))).WithTabs().WithRoutes("/sidebar");
+        ctx.RememberSidebarOpen(null);
+        _ = ctx.Render<TabHost>();
+        IRenderedComponent<RightSidebar> sidebar = ctx.Render<RightSidebar>();
+        RightSidebarService service = ctx.Services.GetRequiredService<RightSidebarService>();
+
+        sidebar.WaitForAssertion(() => Assert.True(service.IsOpen));
+        await sidebar.InvokeAsync(service.Toggle);
+
+        sidebar.WaitForAssertion(() => Assert.Contains(ctx.JSInterop.Invocations["huddleStorage.set"], static call => call.Arguments is ["shell:rightSidebarOpen", "false"]));
+    }
+
+    /// <summary>A sidebar the viewer left closed stays closed.</summary>
+    [Fact]
+    public async Task RememberedClosed_StaysClosed()
+    {
+        await using MudBunitContext ctx = UiTestHost.Create(services => services.AddSingleton(new SidebarPanelCatalog([], TestOptions.Create()))).WithTabs().WithRoutes("/sidebar");
+        ctx.RememberSidebarOpen(false);
+        _ = ctx.Render<TabHost>();
+        _ = ctx.Render<RightSidebar>();
+
+        Assert.False(ctx.Services.GetRequiredService<RightSidebarService>().IsOpen);
+    }
+
+    /// <summary>A sidebar the viewer left open opens again.</summary>
+    [Fact]
+    public async Task RememberedOpen_OpensAgain()
+    {
+        await using MudBunitContext ctx = UiTestHost.Create(services => services.AddSingleton(new SidebarPanelCatalog([], TestOptions.Create()))).WithTabs().WithRoutes("/sidebar");
+        ctx.RememberSidebarOpen(true);
+        _ = ctx.Render<TabHost>();
+        IRenderedComponent<RightSidebar> sidebar = ctx.Render<RightSidebar>();
+
+        sidebar.WaitForAssertion(() => Assert.True(ctx.Services.GetRequiredService<RightSidebarService>().IsOpen));
+    }
+
     /// <summary>The sidebar starts closed; the toggle opens it and says so, then closes it again.</summary>
     [Fact]
     public async Task Toggle_OpensAndClosesTheSidebar()

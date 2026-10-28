@@ -260,8 +260,8 @@ The search box sits in the top bar, above the sidebar and every page.
 ### The Right sidebar
 
 The button at the right end of the top bar opens and closes the **Right sidebar**, a panel on
-the window's right edge that shows things about the page you are looking at. It starts closed
-each time you open the app. With two panes open, it follows the pane you last clicked.
+the window's right edge that shows things about the page you are looking at. It is open the
+first time, and after that stays as you left it. With two panes open, it follows the pane you last clicked.
 
 It holds one or more panels, depending on the page:
 
@@ -269,6 +269,7 @@ It holds one or more panels, depending on the page:
 | --- | --- |
 | A chat Room | **Members**, **Tasks in this chat**, **Documents in this chat** |
 | A Markdown note in the Library | **Outline**, **Linked documents** |
+| A Task you opened on the Tasks page | **Task**: its details, read-only, with **Edit** (the sidebar opens by itself when you open a Task) |
 | A Task in its edit page | **Activity**, **Blocked by**, **Blocks**, **Linked documents** (the last three only when they have something to show) |
 | Any other page | None. The sidebar says `Nothing to show for this page.` |
 
