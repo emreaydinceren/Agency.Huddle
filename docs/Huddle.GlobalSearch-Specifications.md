@@ -36,7 +36,7 @@ One point, OP-2, is **assumed** and awaits the owner's confirmation.
 1. Goal · 2. Non-goals · 3. Vocabulary · 4. What exists today · 5. The shell: the Top Bar ·
 6. The dropdown · 7. The search pipeline · 8. Providers · 9. Opening a hit, and the Room jump ·
 10. Configuration · 11. Accessibility · 12. Testing · 13. Decisions · 14. Version 2 ·
-15. Open points · 16. Blast radius · 17. Delivery plan
+15. Open points · 16. Blast radius · 17. Delivery plan · 18. The Agent search tool
 
 ---
 
@@ -985,3 +985,33 @@ already delivered (PR #162).
 
 More than half of the remaining work is Haiku's: 8 of 15 deliverables, 16 of 30 size points and 33
 of 59 tasks. Only OP-2 is an assumption; every other open point is decided (§15).
+
+---
+
+## 18. The Agent search tool
+
+Global Search is also offered to Agents as the `search` App Tool (`src/Huddle.App/Acp/Tools/SearchTool.cs`).
+It is read-only, offered to every Persona, and not Skill-granted. The decision on what an Agent may read is
+[ADR-0066](adr/0066-an-agents-search-reads-its-own-rooms-unless-it-asks-for-all.md).
+
+| Argument | Meaning |
+| --- | --- |
+| `query` | Required. The exact phrase, ignoring case, at least 3 characters (the parser's rule). A `team:`, `lib:`, `task:` or `room:` prefix is read as a filter. Only an empty `teams` or `teammates` search browses. |
+| `filter` | `all` (default), `teams`, `teammates`, `library`, `tasks` or `rooms`. |
+| `scope` | `mine` (default) or `all`. Rooms only. |
+| `limit` | Hits per group: 5 under `all`, 20 under one filter, at most 50. |
+
+How it differs from the Human's box:
+
+- It calls the providers directly, both passes at once, with no debounce and none of the orchestrator's events,
+  and ranks each batch with `SearchResultRanker`. A provider that throws empties its own group and says
+  `Couldn't search <Group>.`
+- **Room scope.** `mine` is the Rooms the caller is a Member of plus every Room whose Team is one of the
+  caller's Teams. The tool computes that set first and passes it as `SearchQuery.RoomIds`, which the Rooms
+  provider applies before it opens any Transcript. `null` means every Room. `scope: "all"` sends `null` and is
+  logged with the caller and the phrase. The other four providers are not scoped.
+- **Output.** Plain text in the dropdown's group order, one line per hit, with ids and no UI link: Room id,
+  match count, newest Message id, sender and time; Library `rootId:path` and snippet; Task id, status,
+  assignee and Team. It is capped at 12,000 characters, then `... truncated`.
+- **Discovery.** The description is the prompt `tool.search.description`; `get_help` lists it with the other
+  tools. The system prompt names no search tool of its own.

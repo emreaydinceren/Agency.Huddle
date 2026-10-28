@@ -1,8 +1,8 @@
 # App Tools a real model calls (progressive discovery)
 
-Prove that the in-process App Tools are registered, discoverable and obeyed by a REAL model, and that the progressive-discovery design holds: the system prompt names only the help tool, and the help tool names the rest. A default Persona is offered 17 tools (`DotAcpAgentHostFactory.cs:169-225`, `SkillGrants.cs:78-99`): the seven chat tools this area exercises (`mcp__team__get_help`, `mcp__team__list_agents`, `mcp__team__create_room`, `mcp__team__invite_agent`, `mcp__team__post_message`, `mcp__team__follow_room`, `mcp__team__unfollow_room`), plus `ask_human` (always), seven Task tools (`create_task`, `get_task`, `list_tasks`, `update_task`, `close_task`, `reopen_task`, `add_evidence`; offered while `Tasks.Enabled` is true, its default) and `watch_folder` / `unwatch_folder` (File Changes on and the Adapter reads files). The other ten catalog tools are offered only through a Skill. Wherever a test below says "the seven", it means the seven chat tools, as a subset of that list. The automated suite answers every one of these questions with a fake agent, so none of it is evidence here. The failures this area exists to catch are silent: a tool server that never receives traffic while the tile says Online; a model that recites the tool names from the system prompt and never calls a tool; a mis-resolved room id that comes back as ordinary prose and changes nothing on screen; a budget refusal that the model retries or routes around; a follow that outlives the reason it was set, or that quietly buys a Turn past the Budget. Tests APPTOOLS-01 to APPTOOLS-03 are free and cost no tokens. Everything from APPTOOLS-04 onward starts a real adapter, so it bills the user's Claude subscription (APPTOOLS-04 only for the Chief of Staff's Greeting Turn); each says how much. A test that sends no new Turn (APPTOOLS-09, -20, -21) is Free, as is APPTOOLS-28, which runs on the mock adapter.
+Prove that the in-process App Tools are registered, discoverable and obeyed by a REAL model, and that the progressive-discovery design holds: the system prompt names only the help tool, and the help tool names the rest. A default Persona is offered 18 tools (`DotAcpAgentHostFactory.cs:169-225`, `SkillGrants.cs:78-99`): the seven chat tools this area exercises (`mcp__team__get_help`, `mcp__team__list_agents`, `mcp__team__create_room`, `mcp__team__invite_agent`, `mcp__team__post_message`, `mcp__team__follow_room`, `mcp__team__unfollow_room`), plus `ask_human` and the read-only `search` (both always), seven Task tools (`create_task`, `get_task`, `list_tasks`, `update_task`, `close_task`, `reopen_task`, `add_evidence`; offered while `Tasks.Enabled` is true, its default) and `watch_folder` / `unwatch_folder` (File Changes on and the Adapter reads files). The other ten catalog tools are offered only through a Skill. Wherever a test below says "the seven", it means the seven chat tools, as a subset of that list. The automated suite answers every one of these questions with a fake agent, so none of it is evidence here. The failures this area exists to catch are silent: a tool server that never receives traffic while the tile says Online; a model that recites the tool names from the system prompt and never calls a tool; a mis-resolved room id that comes back as ordinary prose and changes nothing on screen; a budget refusal that the model retries or routes around; a follow that outlives the reason it was set, or that quietly buys a Turn past the Budget. Tests APPTOOLS-01 to APPTOOLS-03 are free and cost no tokens. Everything from APPTOOLS-04 onward starts a real adapter, so it bills the user's Claude subscription (APPTOOLS-04 only for the Chief of Staff's Greeting Turn); each says how much. A test that sends no new Turn (APPTOOLS-09, -20, -21) is Free, as is APPTOOLS-28, which runs on the mock adapter.
 
-**28 tests** · 7 free, 21 paid 💰 · about 4.3 hours.
+**32 tests** · 7 free, 25 paid 💰 · about 4.9 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -1302,6 +1302,146 @@ If Nova's reply reports `Created room '<name>' (id <id>), but could not post the
 **Inconclusive if**
 
 The echo does not carry the appended system prompt, only the Message text. That is not verified for the mock adapter: if the reply shows no system-prompt text at all, record the check as unobservable manually (the automated prefix tests remain the evidence) rather than passing it.
+
+### APPTOOLS-29 — search finds only an Agent's own Rooms until it asks for all (ADR-0066)
+
+**💰 Spends money** · about 10 min
+
+*An Agent's `search` reads the Rooms it is a Member of and its Teams' Rooms by default, and every Room only when it passes `scope: "all"`. Unit tests pin the filter against real stores; only a real model shows that it reads the description, tries the default first and widens on purpose.*
+
+**Before you start**
+
+- `Nova` **Online**, Haiku/low, in a `P-LAUNCH-PAID` launch at Trace (`${env:Logging__LogLevel__Agency.Huddle} = "Trace"`). Nova is in no Team named `Design`.
+- A second Room that Nova is not a Member of, scoped to `Design` or a root Room, with one Message containing the phrase `zebra-ledger-7`. Nova's own room holds no such phrase.
+- COST: two short turns on Haiku at effort low. Run this test BEFORE any other test that makes Nova pass `scope: "all"` in the same Room: a session remembers having widened and then passes `scope: "all"` unprompted (seen 2026-10-28), which hides the default.
+
+**Steps**
+
+1. In the room named `Nova`, type exactly `Use the search tool to find where we talked about zebra-ledger-7. Tell me which Room it was in, or say you found nothing.` and press Enter. Wait for the reply.
+2. Run `O-TOOLCALLS` for `Nova` and confirm a `search` call. Its `arguments` field is empty for this tool, so read what the model sent from the Adapter's session file, `~\.claude\projects\<work dir path with every separator turned into a dash>\*.jsonl`: the `tool_use` block named `mcp__team__search` holds the `input`. Note whether it passed `scope`. A `ToolSearch` call just before it is the model loading the deferred tool, not a second search.
+3. In the console, find the `App tool server replied to tools/call:` line for that call and read its text (needs Trace). The first line must be the `Rooms searched:` header.
+4. If Nova answered "nothing" or asked to widen, type `Search every Room for it.` and wait.
+5. In the console, find the newest `Agent Nova searched every Room for 'zebra-ledger-7'.` line.
+
+**Pass if — all of these**
+
+- The first search, with no `scope` or `scope: "mine"`, returns `Rooms searched: yours and your Teams' only.` and no hit for the other Room. A hit on Nova's own Room is expected, because the question you typed contains the phrase.
+- After the widening, Nova names the other Room, the `scope` in the `tool_use` input is `all`, and the log line in step 5 is present.
+- The log line is absent for the first search.
+
+**Fail if — any of these**
+
+- The first, default search names the other Room -> the Room list is not being applied.
+- Nova names the other Room without a `scope: "all"` call -> it read the Room some other way; note how.
+- The `scope: "all"` search leaves no log line.
+
+**Inconclusive if**
+
+Nova never calls `search`; ask again naming the tool. If Nova widens on the first call by itself, the default was not tested; remove the hint of other Rooms from the question and repeat.
+
+### APPTOOLS-30 — the default search also reads a Room scoped to the Agent's own Team that it is not a Member of (ADR-0066)
+
+**💰 Spends money** · about 8 min
+
+*The default scope is two sets joined: the Rooms the Agent is a Member of, and every Room whose Team is one of the Agent's Teams. APPTOOLS-29 proves the outside is closed; only this test proves the Team half of the inside is open, because the unit tests build the Team by hand and a real model has to be the one who finds the Room without widening.*
+
+**Before you start**
+
+- `Nova` **Online**, Haiku/low, in a `P-LAUNCH-PAID` launch at Trace, and a member of the Team `Design` (put `Design` on the `teams:` line of Nova's card and wait for her to be **Online** again). `Jarvis` is also in `Design`.
+- A Team chat in `Design` that holds Jarvis and you but NOT Nova: on the **Design** row choose `⋯` then **New chat**, tick **Jarvis** and leave **Nova** unticked (TEAMCHATS-03 shows the panel), then post `The quokka-ledger-9 vendor list is final.` in it. Confirm in the Room's member list that Nova is absent.
+- A NEW one-to-one with Nova (**New chat**, Nova only), so her session has not yet passed `scope: "all"` in an earlier test. Use the new Room for the steps below.
+- COST: one short turn on Haiku at effort low.
+
+**Steps**
+
+1. In the new Room, type exactly `Use the search tool to find where we talked about quokka-ledger-9. Tell me which Room it was in and who said it, or say you found nothing.` and press Enter. Wait for the reply.
+2. Read the model's `tool_use` input for `mcp__team__search` as in APPTOOLS-29 step 2. Confirm it carries no `scope` (or `"mine"`).
+3. In the console, read the `App tool server replied to tools/call:` text for that call.
+4. In the console, look for `Agent Nova searched every Room for 'quokka-ledger-9'.`
+
+**Pass if — all of these**
+
+- The `tool_use` input has no `scope: "all"`.
+- The reply text starts `Rooms searched: yours and your Teams' only.` and lists the Team chat by id and name with `1 match` and the sender `You`. Nova's own Room may also be listed, because the question contains the phrase.
+- Nova names the Team chat and says the line was posted by you.
+- The `searched every Room` line is absent for this call.
+
+**Fail if — any of these**
+
+- The reply is the `Rooms searched: yours and your Teams' only.` header with no Team chat -> a Room scoped to the Agent's Team is being dropped from the default list (the Team clause of `RoomsInScopeAsync` or a Team name comparison).
+- The Team chat is listed but the `tool_use` input has `scope: "all"` and the log line is present -> the model widened by itself, so the default was not what found it; see Inconclusive.
+- The Team chat is listed under `Rooms searched: every Room.` without a `scope` in the input -> the tool widens without being asked.
+
+**Inconclusive if**
+
+The model passes `scope: "all"` on its own: the session had already widened in an earlier turn. Open another new one-to-one and repeat, and do not hint at other Rooms in the question. If Nova is not in `Design`, no Team clause is under test: fix the card and repeat.
+
+### APPTOOLS-31 — a Task id and a Library path from search are usable by the next tool call
+
+**💰 Spends money** · about 8 min
+
+*A search hit is only useful if the identifier in it is the one the next tool wants. The Task line starts with the Task id and the Library line is `<root>:<path>`; a model reads them as text, and only a real model shows that the id survives the round trip into `get_task` and that the Rooms header, which belongs to the Rooms group alone, is not demanded of a Tasks or Library search.*
+
+**Before you start**
+
+- `Nova` **Online**, Haiku/low, in a `P-LAUNCH-PAID` launch at Trace, in the Team `Design`.
+- One Task in `Design`, assigned to Jarvis, titled `Order the narwhal-ledger-5 banners`, status To Do (create it on the Team's Tasks page; note its id, for example `DESI-0001`).
+- One Library document under the Team `Design`'s notes whose text contains `The pelican-ledger-3 checklist is owned by Design.` Nova's own folders hold neither phrase.
+- COST: one turn on Haiku at effort low with three tool calls (two searches and `get_task`).
+
+**Steps**
+
+1. In a Room with Nova, type exactly `Use the search tool to find the Task about narwhal-ledger-5 and the Library file about pelican-ledger-3. Then call get_task with the Task id you found, and tell me that Task's assignee and status and the Library file path.` and press Enter. Wait for the reply.
+2. Read the model's `tool_use` inputs as in APPTOOLS-29 step 2. Note the `filter` of each `search` call and the `taskId` of the `get_task` call.
+3. In the console, read the `App tool server replied to tools/call:` text of each call.
+
+**Pass if — all of these**
+
+- A `search` reply contains a line `<Task id> | To Do | Jarvis | Design | Order the narwhal-ledger-5 banners` under `Tasks:`.
+- A `search` reply contains a line `<root>:<path>` for the document, followed by an indented snippet holding the phrase, under `Library:`.
+- `get_task` is called with exactly the id from the Tasks line, and its reply names the same title.
+- Nova's answer states the assignee Jarvis, the status To Do and the Library path as the search printed it.
+- A search with `filter: "tasks"` or `"library"` does not print a `Rooms searched:` header, and the `searched every Room` log line is absent.
+
+**Fail if — any of these**
+
+- The Tasks or Library group is empty or says `No results for` while the Task and the document exist -> a provider is not reached from the tool.
+- `get_task` is refused for the id the search printed -> the printed id is not the Task's id.
+- Nova's answer differs from the replies (wrong assignee or an invented path) -> the model did not use the tool output; record what it said.
+
+**Inconclusive if**
+
+The model answers without calling `get_task`, or answers from Nova's own files: ask again naming both tools. A reply that is `Couldn't search Tasks.` is a provider failure, not an inconclusive: record it as a Fail against the Tasks provider.
+
+### APPTOOLS-32 — get_help lists the search tool while the system prompt names none
+
+**💰 Spends money** · about 5 min
+
+*Progressive discovery says the system prompt names only the help tool and `get_help` names the rest. A model reaches `search` by reading the catalog, and the only way to see it end to end is to read what `get_help` returns. There is no free way to show this: the mock adapter never calls an App Tool and its echoed prompt carries no tool catalog.*
+
+**Before you start**
+
+- `Nova` **Online**, Haiku/low, in a `P-LAUNCH-PAID` launch at Trace.
+- COST: one short turn on Haiku at effort low.
+
+**Steps**
+
+1. In a Room with Nova, type exactly `Call mcp__team__get_help and tell me whether its tools list includes a search tool, quoting that entry.` and press Enter. Wait for the reply.
+2. In the console, find the newest `App tool server replied to tools/call:` line whose text starts with the Get-help introduction and decode its TOOLS section (newlines appear as `\n`).
+
+**Pass if — all of these**
+
+- The TOOLS section contains an entry named `mcp__team__search` (the name carries the prefix, as every entry does) followed by its description, which says what it searches and states that Rooms default to those the caller is a Member of or scoped to one of its Teams, and that `scope` `all` is logged.
+- Nova quotes that entry.
+
+**Fail if — any of these**
+
+- The TOOLS section has no `search` entry while the tool answers calls -> the model can only find it by guessing the name.
+- The entry's description does not mention that Rooms default to the Agent's own Rooms -> the model is not told the rule that APPTOOLS-29 relies on.
+
+**Inconclusive if**
+
+`O-TOOLCALLS` has no `get_help` line for the turn: Nova answered from the system prompt. Ask again naming the tool. Without Trace there is no payload to read.
 
 ---
 

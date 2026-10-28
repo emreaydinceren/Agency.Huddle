@@ -42,7 +42,9 @@ internal sealed class RoomSearchProvider(ITeamDirectory directory, IChatStore ch
 
         string? human = (await directory.GetUserAsync(KnownIds.Human, ct).ConfigureAwait(false))?.Name;
         IReadOnlyList<Room> rooms = await directory.GetRoomsAsync(ct).ConfigureAwait(false);
-        List<Room> inPass = rooms.Where(room => room.Archived == (query.Scope == SearchScope.Archived)).ToList();
+        List<Room> inPass = rooms
+            .Where(room => room.Archived == (query.Scope == SearchScope.Archived) && (query.RoomIds is null || query.RoomIds.Contains(room.Id)))
+            .ToList();
         List<SearchHit> hits = [];
         int failures = 0;
         foreach (Room room in inPass)
@@ -87,7 +89,7 @@ internal sealed class RoomSearchProvider(ITeamDirectory directory, IChatStore ch
         IReadOnlyList<Room> rooms = await directory.GetRoomsAsync(ct).ConfigureAwait(false);
         bool archived = query.Scope == SearchScope.Archived;
         List<SearchHit> hits = [];
-        foreach (Room room in rooms.Where(room => room.Archived == archived).OrderByDescending(room => room.Created))
+        foreach (Room room in rooms.Where(room => room.Archived == archived && (query.RoomIds is null || query.RoomIds.Contains(room.Id))).OrderByDescending(room => room.Created))
         {
             ct.ThrowIfCancellationRequested();
             MatchTier? tier = query.Text.Length == 0 ? MatchTier.ExactName : SearchMatch.Tier(room.Name, query.Text);

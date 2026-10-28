@@ -3771,6 +3771,38 @@ File: [`docs/engineering/manual-tests/app-tools.md`](app-tools.md#apptools-28--a
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+### APPTOOLS-29 — search finds only an Agent's own Rooms until it asks for all (ADR-0066)
+
+File: [`docs/engineering/manual-tests/app-tools.md`](app-tools.md#apptools-29--search-finds-only-an-agents-own-rooms-until-it-asks-for-all-adr-0066)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-10-28 | Pass | `75d43fb9` + uncommitted `feat/agent-search-tool` | | Isolated `uat` seed under `C:\seeds\huddle\paid-search`, Release build, Trace, claude-agent-acp, Ada (Team `Design`) and Bo on Haiku (session `message.model` all `claude-haiku-4-5-20251001`; Haiku offers no effort levels, so Effort stayed `Agent default`). Other Room: Bo's one-to-one with `Remember the zebra-ledger-7 invoice is due on Friday.` Turn 1: after a `ToolSearch` load, the model sent `mcp__team__search {"query":"zebra-ledger-7"}` (no scope); reply began `Rooms searched: yours and your Teams' only. Pass scope "all" to search every Room.` and listed only Ada's own Room (1 match, the question itself); Ada said she found nothing. No `searched every Room` line. Turn 2 `Search every Room for it.`: `{"query":"zebra-ledger-7","scope":"all"}`, header `Rooms searched: every Room.`, Bo's Room listed with the message, Ada named Bo's Room; console `Agent Ada searched every Room for 'zebra-ledger-7'.` appeared once. O-TOOLCALLS `arguments` is empty for this tool, so the input came from the Adapter session file. Two turns. |
+
+### APPTOOLS-30 — the default search also reads a Room scoped to the Agent's own Team that it is not a Member of (ADR-0066)
+
+File: [`docs/engineering/manual-tests/app-tools.md`](app-tools.md#apptools-30--the-default-search-also-reads-a-room-scoped-to-the-agents-own-team-that-it-is-not-a-member-of-adr-0066)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-10-28 | Pass | `75d43fb9` + uncommitted `feat/agent-search-tool` | | Same lane. Team chat `Bo, vendor chat` scoped to `Design`, members the Human and Bo (Ada absent), message `The quokka-ledger-9 vendor list is final.` The first attempt in Ada's old Room is not evidence: that session had already passed `scope:"all"` and did so again (the Inconclusive case, recorded in the test). In a fresh one-to-one with Ada: `{"query":"quokka-ledger-9"}` (no scope), header `yours and your Teams' only`, the Team chat listed (`1 match`, sender You) beside Ada's own Rooms; Ada named `Bo, vendor chat`. No `searched every Room` line for that call (only the two earlier calls logged). Fixture note: the Team chat and its `room_teams` row were created by a direct write to `team.db` (the New chat panel was not driven), so the Team chat's creation path is not part of this result. One turn. |
+
+### APPTOOLS-31 — a Task id and a Library path from search are usable by the next tool call
+
+File: [`docs/engineering/manual-tests/app-tools.md`](app-tools.md#apptools-31--a-task-id-and-a-library-path-from-search-are-usable-by-the-next-tool-call)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-10-28 | Pass | `75d43fb9` + uncommitted `feat/agent-search-tool` | | Same lane, one turn, Haiku. Task `DESI-0001` (`Order the narwhal-ledger-5 banners`, assignee Bo here, not Jarvis as the test says; the test text was written for Jarvis and is a fixture choice) and `Teams\Design\launch-plan.md` written by hand into the data folder. Calls: `search {"query":"narwhal-ledger-5","filter":"tasks"}` replied `Tasks:\n- DESI-0001 \| To Do \| Bo \| Design \| Order the narwhal-ledger-5 banners`; `search {"query":"pelican-ledger-3","filter":"library"}` replied `Library:\n- teams:Design/launch-plan.md\n    The pelican-ledger-3 checklist is owned by Design.`; `get_task {"taskId":"DESI-0001"}` replied `DESI-0001 \| To Do \| Medium \| Bo \| Design \| Order the narwhal-ledger-5 banners`. No `Rooms searched` header on either filtered call. Ada's answer: DESI-0001, Bo, To Do, `teams:Design/launch-plan.md`. |
+
+### APPTOOLS-32 — get_help lists the search tool while the system prompt names none
+
+File: [`docs/engineering/manual-tests/app-tools.md`](app-tools.md#apptools-32--get_help-lists-the-search-tool-while-the-system-prompt-names-none)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-10-28 | Pass | `75d43fb9` + uncommitted `feat/agent-search-tool` | | Same lane, one turn, Haiku. O-TOOLCALLS has `mcp__team__get_help` for the turn. The decoded reply (12,446 characters) holds the TOOLS entry `mcp__team__search` with the full description including `By default Rooms are limited to those you are a Member of and those scoped to one of your Teams. Pass scope 'all' only when you genuinely need another Room's history ... every such search is logged`. Ada quoted the entry. The free mock adapter cannot show this (it never calls an App Tool), so there is no free variant. |
+
 ## Persona lifecycle: supervisor, work dirs, health and restarts
 
 ### PERSONALIFECYCLE-01 — With ACP disabled every teammate reads Offline with an empty tooltip and no Room raises an alert

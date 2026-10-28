@@ -196,6 +196,62 @@ public sealed class RoomSearchProviderTests
         Assert.Empty(result.Hits);
     }
 
+    /// <summary>A query with <see cref="SearchQuery.RoomIds"/> set finds only the listed Rooms, and never opens the Transcript of another.</summary>
+    [Fact]
+    public async Task RoomIds_RestrictTheRooms_AndTheirTranscriptsAreNeverRead()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        FileChatStore chats = Chats(harness);
+        Room listed = await harness.Directory.CreateRoomAsync("Listed", [], ct);
+        Room other = await harness.Directory.CreateRoomAsync("Other", [], ct);
+        await chats.AppendAsync(listed.Id, Message("m1", "Nova", "deploy now", T0), ct);
+        await chats.AppendAsync(other.Id, Message("m2", "Nova", "deploy later", T0), ct);
+        CountingChatStore counting = new(chats);
+        RoomSearchProvider provider = Provider(harness, counting);
+        SearchQuery query = new("deploy", SearchFilter.Rooms, null, SearchScope.Active, SearchLimits.SingleFilterCap, SearchPurpose.Box, new HashSet<string>(StringComparer.Ordinal) { listed.Id });
+
+        SearchResult result = await provider.SearchAsync(query, ct);
+
+        RoomHit hit = Assert.IsType<RoomHit>(Assert.Single(result.Hits));
+        Assert.Equal(listed.Id, hit.RoomId);
+        Assert.Equal([listed.Id], counting.RoomsRead);
+    }
+
+    /// <summary>A query with no <see cref="SearchQuery.RoomIds"/> still searches every Room, as the Human's box does.</summary>
+    [Fact]
+    public async Task NoRoomIds_SearchesEveryRoom()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        FileChatStore chats = Chats(harness);
+        Room first = await harness.Directory.CreateRoomAsync("First", [], ct);
+        Room second = await harness.Directory.CreateRoomAsync("Second", [], ct);
+        await chats.AppendAsync(first.Id, Message("m1", "Nova", "deploy now", T0), ct);
+        await chats.AppendAsync(second.Id, Message("m2", "Nova", "deploy later", T0), ct);
+        RoomSearchProvider provider = Provider(harness, chats);
+
+        SearchResult result = await provider.SearchAsync(Query("deploy"), ct);
+
+        Assert.Equal(2, result.Hits.Count);
+    }
+
+    /// <summary>A Transcript store that records which Rooms were read.</summary>
+    private sealed class CountingChatStore(IChatStore inner) : ChatStoreDecorator(inner)
+    {
+        private readonly List<string> roomsRead = [];
+
+        /// <summary>The Rooms whose Transcript was read, in order.</summary>
+        public IReadOnlyList<string> RoomsRead => this.roomsRead;
+
+        /// <summary>Reads through the real store and records the Room.</summary>
+        public override Task<IReadOnlyList<ChatMessage>> ReadAllAsync(string roomId, CancellationToken ct = default)
+        {
+            this.roomsRead.Add(roomId);
+            return base.ReadAllAsync(roomId, ct);
+        }
+    }
+
     private static FileChatStore Chats(TaskToolHarness harness)
     {
         return harness.Options.CreateChatStore();

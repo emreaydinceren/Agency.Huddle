@@ -359,6 +359,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         IReadOnlyList<IAppTool> chatTools =
         [
             ActivatorUtilities.CreateInstance<ListAgentsTool>(this.serviceProvider),
+            ActivatorUtilities.CreateInstance<SearchTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<CreateRoomTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<InviteAgentTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<PostMessageTool>(this.serviceProvider, agentId),

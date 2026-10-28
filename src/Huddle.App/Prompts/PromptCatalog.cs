@@ -1024,6 +1024,20 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.search.description",
+            Label: "search description",
+            HelperText:
+                "The job description a model reads for the search tool. Takes no placeholders. It must say " +
+                "that Rooms default to the caller's own and its Teams' Rooms, and when to pass scope 'all'.",
+            Default:
+                """
+                Finds Teams, Teammates, Library files, Tasks and Rooms by an exact phrase, ignoring case. 'query' is required and needs at least 3 characters. 'filter' limits the search to one of: all (the default), teams, teammates, library, tasks, rooms. 'limit' is the most hits per group (5 for all, 20 for one filter, at most 50). Closed Tasks and Archived Rooms are listed in their own groups. Room hits give the Room id, the number of matching Messages, and the newest match with its Message id, sender and time. Library hits give the root id and path, with a snippet when the file's text matched. By default Rooms are limited to those you are a Member of and those scoped to one of your Teams. Pass scope 'all' only when you genuinely need another Room's history, for example to find a decision made elsewhere; every such search is logged, and what you find there is not for quoting into other Rooms without need. Output is capped at 12000 characters.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
     ];
 
     /// <summary>Builds one contiguous slice of the catalog, from <c>tool.listTeams.description</c> to <c>tool.confirmRequest.description</c>.</summary>
