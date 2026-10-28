@@ -3,6 +3,7 @@ namespace Agency.Huddle.Tests.Ui.Tasks;
 using Bunit;
 using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor;
 using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Tasks;
@@ -217,5 +218,21 @@ public sealed class TaskReadViewTests
         IRenderedComponent<ContainerFragment> cut = Render(ctx, task.Id);
 
         Assert.Equal("no longer needed", cut.Find(".task-read-view-reason dd").TextContent.Trim());
+    }
+
+    /// <summary>The History is always open under its own heading with the entry count: no expansion panel to open before the entries show.</summary>
+    [Fact]
+    public async Task History_IsAlwaysOpen_WithoutAnExpansionPanel()
+    {
+        using TaskToolHarness harness = new();
+        TaskActor human = TaskActors.Human(harness.Options.Value);
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Show me", "Platform", null), human)).Task;
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, task.Id);
+
+        Assert.Empty(cut.FindComponents<MudExpansionPanels>());
+        Assert.StartsWith("History (", cut.Find(".task-detail-history-heading").TextContent.Trim(), StringComparison.Ordinal);
+        Assert.NotEmpty(cut.FindAll(".task-detail-history-row"));
     }
 }

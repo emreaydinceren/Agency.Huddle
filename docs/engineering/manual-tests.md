@@ -213,7 +213,7 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [App Tools](manual-tests/app-tools.md): the Tools a real model calls through progressive discovery.
 - [Appearance and Themes](manual-tests/appearance-theme.md): the Appearance tab, the Theme list and the accent colour.
 - [Avatar library](manual-tests/avatar-library.md): choosing a face from the library, its picker and filters.
-- [Document history](manual-tests/doc-history.md): the byline, the History and the Recent edits panel, and how often Agents log.
+- [Document history](manual-tests/doc-history.md): the byline, the History and the History panel, and how often Agents log.
 - [Human gate](manual-tests/human-gate.md): the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page for gated Tasks.
 - [Helpers](manual-tests/helpers.md): the Helpers tab, Save and Reset, the Needs Human judgement on a Teammate's Task, the Human's override, the daily cap with Continue, and a failing Adapter.
 - [File Changes, Watched Folders and Memory](manual-tests/file-changes.md): the paid File Changes checks.

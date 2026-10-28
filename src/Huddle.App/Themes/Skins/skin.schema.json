@@ -730,10 +730,6 @@
           "type": "string",
           "description": "The hairline above a Task detail section."
         },
-        "detail.timeline.dot": {
-          "type": "string",
-          "description": "A dot of the Change log timeline."
-        },
         "edit.header.background": {
           "type": "string",
           "description": "The Task edit page\u0027s sticky header."

@@ -413,7 +413,7 @@ public sealed class SeedRefreshTests
 
     /// <summary>
     /// Every seeded History line is the line <see cref="DocHistoryStore"/> would write, in the file the store reads for that
-    /// document; the History covers every kind and both authors, has a document longer than Recent edits shows, and groups two
+    /// document; the History covers every kind and both authors, has a document longer than the History panel shows, and groups two
     /// Human saves into one row.
     /// </summary>
     [Fact]

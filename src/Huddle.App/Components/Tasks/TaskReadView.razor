@@ -280,24 +280,11 @@ else if (this.loaded is { } task)
         <TaskDecisionCard Task="@task" Proof="@this.proof" Blocked="false" OnReload="this.OnDecisionReload" />
     }
 
-    @* T15g: the Change log and the footer meta, as TaskDetail ends. *@
-    <MudExpansionPanels Class="task-detail-changelog" Elevation="0">
-        <MudExpansionPanel Text="@($"Change log ({task.ChangeLog.Count})")">
-            <MudTimeline TimelinePosition="TimelinePosition.Start">
-                @foreach (ChangeLogEntry entry in task.ChangeLog.Reverse())
-                {
-                    <MudTimelineItem Size="Size.Small">
-                        <ItemOpposite>
-                            <span class="task-detail-changelog-date">@TaskDetail.FormatChangeLogDate(entry.At, this.Clock)</span>
-                        </ItemOpposite>
-                        <ItemContent>
-                            <span class="task-detail-changelog-entry">@($"{entry.Actor}: {entry.Summary}")</span>
-                        </ItemContent>
-                    </MudTimelineItem>
-                }
-            </MudTimeline>
-        </MudExpansionPanel>
-    </MudExpansionPanels>
+    @* T15g: the History and the footer meta, as TaskDetail ends. *@
+    <section class="task-detail-history">
+        <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label task-detail-history-heading">History (@task.ChangeLog.Count)</MudText>
+        <TaskHistory Entries="@task.ChangeLog" HumanName="@this.Human.Name" />
+    </section>
 
     <div class="task-detail-footer-meta">
         <span class="task-detail-created" title="@TaskDates.Tooltip(task.Created, this.Clock)">@($"Created {TaskDates.Human(task.Created, this.Clock)}")</span>

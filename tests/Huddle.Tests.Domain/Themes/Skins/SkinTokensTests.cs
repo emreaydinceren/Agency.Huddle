@@ -199,7 +199,6 @@ public sealed class SkinTokensTests
         Add("detail.head.line", "transparent");
         Add("detail.row.line", "var(--hu-ink-edge)");
         Add("detail.section.line", "transparent");
-        Add("detail.timeline.dot", "var(--hu-ink-field)");
         Add("edit.header.background", "var(--hu-ground-raised)");
         Add("edit.header.blur", "0px");
         Add("field.line", "var(--hu-ink-field)");

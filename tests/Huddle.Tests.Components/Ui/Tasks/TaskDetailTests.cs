@@ -204,7 +204,7 @@ public sealed class TaskDetailTests
         IRenderedComponent<MudSelect<TaskPriority>> prioritySelect = cut.FindComponents<MudSelect<TaskPriority>>().Single();
         await cut.InvokeAsync(() => prioritySelect.Instance.ValueChanged.InvokeAsync(TaskPriority.Urgent));
 
-        string logBefore = cut.Find(".task-detail-changelog-heading").TextContent.Trim();
+        string logBefore = cut.Find(".task-detail-history-heading").TextContent.Trim();
         TaskResult outsideEdit = harness.Service.Update(
             task.Id,
             new TaskPatch { Title = "Retitled by someone else" },
@@ -212,7 +212,7 @@ public sealed class TaskDetailTests
             TaskActors.Human(harness.Options.Value));
         Assert.IsType<TaskResult.Saved>(outsideEdit);
 
-        cut.WaitForAssertion(() => Assert.NotEqual(logBefore, cut.Find(".task-detail-changelog-heading").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.NotEqual(logBefore, cut.Find(".task-detail-history-heading").TextContent.Trim()));
         Assert.Equal(TaskPriority.Urgent, cut.FindComponents<MudSelect<TaskPriority>>().Single().Instance.GetState(x => x.Value));
     }
 

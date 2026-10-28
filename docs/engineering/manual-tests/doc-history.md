@@ -1,6 +1,6 @@
 # Document history
 
-Prove a Markdown document's History end to end in a real browser: that the Human's saves and Agents' `log_change` calls reach the byline, the Recent edits panel and the History at the bottom of the document; that a rename or move carries the History with it; that the Stop hook which reminds an Agent to log is installed in its Work Dir and stays out of the way of a Turn that touches no document; and how often real Agents actually log their edits. The automated suite proves the store, the tool, the view functions and the three components in bUnit, and a paid probe measures the same bet (`TEAM_E2E_DOCHISTORY=1`, `tests/Huddle.Tests.Agents/Live/DocHistory/`): on 2026-10-19, Haiku at low Effort logged 5 of 5 on every scenario with the Stop hook in place. This page proves what only a browser shows. The design is [the DocHistory spec](../../Huddle.DocHistory-Specifications.md) and [ADR-0060](../../adr/0060-a-documents-history-is-what-its-editors-report.md).
+Prove a Markdown document's History end to end in a real browser: that the Human's saves and Agents' `log_change` calls reach the byline, the History panel and the History at the bottom of the document; that a rename or move carries the History with it; that the Stop hook which reminds an Agent to log is installed in its Work Dir and stays out of the way of a Turn that touches no document; and how often real Agents actually log their edits. The automated suite proves the store, the tool, the view functions and the three components in bUnit, and a paid probe measures the same bet (`TEAM_E2E_DOCHISTORY=1`, `tests/Huddle.Tests.Agents/Live/DocHistory/`): on 2026-10-19, Haiku at low Effort logged 5 of 5 on every scenario with the Stop hook in place. This page proves what only a browser shows. The design is [the DocHistory spec](../../Huddle.DocHistory-Specifications.md) and [ADR-0060](../../adr/0060-a-documents-history-is-what-its-editors-report.md).
 
 **8 tests** · 4 free, 4 paid 💰 · about 1.6 hours. Written 2026-10-18, the Stop hook tests added 2026-10-19; **not yet run by a person.**
 
@@ -21,7 +21,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Paid 💰** · about 12 min · two short Turns
 
-*Proves the round trip from an Agent's `log_change` call to the byline and the Recent edits panel.*
+*Proves the round trip from an Agent's `log_change` call to the byline and the History panel.*
 
 **Before you start**
 
@@ -32,7 +32,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 1. In a Room with `Keeper`, send `@Keeper Create notes.md in the Vault folder with one paragraph about this week.`
 2. Open `notes.md` in the Library.
 3. In the same Room send `@Keeper Add a second paragraph to notes.md.`
-4. Look at the byline under the toolbar and at the Recent edits panel.
+4. Look at the byline under the toolbar and at the History panel.
 
 **Pass if — all of these**
 

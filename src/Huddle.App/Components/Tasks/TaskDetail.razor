@@ -7,7 +7,7 @@
     Team/Project, Parent, Origin, and Created/Updated/Closed. 14.3.i added the conflict UI (Spec §13.7).
     14.4.i (this dispatch) adds: Expand (guarded by ConfirmDiscardAsync's "Discard changes?" message
     box, corrections-B5 D14 item 7), Cancel, Make a copy, Close/Reopen (one Update then Close,
-    corrections-B5 D14 item 9), the Change log (reversed, Size.Small, local time via the injected
+    corrections-B5 D14 item 9), the History (reversed, Size.Small, local time via the injected
     TimeProvider, corrections-B5 D14 item 10), MudExitPrompt, create mode's Save via
     TaskService.Create with refusals shown (corrections-B7 "14.4" item 2), the Description Preview's
     Task-id links (item 3), and the Budget banner's role="status" (item 4). 15.2.i (this dispatch) adds
@@ -563,23 +563,10 @@ else if (this.loaded is { } task)
     RenderFragment logContent = @<text>
             @if (!this.createMode)
             {
-                @* The Change log closes the left column. Each row is an avatar joined to the next by a line (none above the first or below the last),
-                   the actor in bold, what changed, and when. *@
-                <section class="task-detail-changelog">
-                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label task-detail-changelog-heading">Change log (@task.ChangeLog.Count)</MudText>
-                        <ol class="task-detail-changelog-list">
-                            @foreach (ChangeLogEntry entry in task.ChangeLog.Reverse())
-                            {
-                                <li class="task-detail-changelog-row">
-                                    <span class="task-detail-changelog-avatar" aria-hidden="true"><TeammateAvatar Name="@entry.Actor" Size="Size.Small" /></span>
-                                    <span class="task-detail-changelog-entry"><strong class="task-detail-changelog-actor">@entry.Actor</strong>@if (string.Equals(entry.Actor, this.Human.Name, StringComparison.Ordinal))
-                                        {
-                                            <span class="task-detail-changelog-pill">you</span>
-                                        } <span class="task-detail-changelog-summary">@entry.Summary</span></span>
-                                    <span class="task-detail-changelog-date">@TaskDetail.FormatChangeLogDate(entry.At, this.Clock)</span>
-                                </li>
-                            }
-                        </ol>
+                @* The History closes the left column, drawn by TaskHistory like a document's History panel. *@
+                <section class="task-detail-history">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label task-detail-history-heading">History (@task.ChangeLog.Count)</MudText>
+                    <TaskHistory Entries="@task.ChangeLog" HumanName="@this.Human.Name" />
                 </section>
             }
         </text>;
@@ -612,7 +599,7 @@ else if (this.loaded is { } task)
 
     @if (!this.createMode)
     {
-        @* The Change log now closes the left column, above the footer meta (see sideContent). *@
+        @* The History now closes the left column, above the footer meta (see sideContent). *@
 
         @* Footer meta: when the Task was created, last changed and closed, at the bottom of the form. *@
         <div class="task-detail-footer-meta">
@@ -1815,7 +1802,7 @@ else if (this.loaded is { } task)
 
         bool? confirmed = await this.Dialogs.ShowMessageBoxAsync(
             "Move anyway?",
-            $"This skips the {ProcessDocument.ToId(refusal.Gate)} gate and is logged in the Change log.",
+            $"This skips the {ProcessDocument.ToId(refusal.Gate)} gate and is logged in the History.",
             yesText: "Move anyway",
             cancelText: "Cancel");
         if (confirmed == true)
@@ -1932,7 +1919,7 @@ else if (this.loaded is { } task)
     /// <summary>A Change log entry's day and time ("Today 1:15 PM"), in the Human's local time through the injected <see cref="TimeProvider"/> (J51) - never <see cref="DateTimeOffset.ToLocalTime"/>'s machine time zone, so a test can pin a fixed <see cref="TimeProvider.LocalTimeZone"/> and get a deterministic string.</summary>
     /// <param name="at">The entry's UTC instant.</param>
     /// <param name="clock">Supplies <see cref="TimeProvider.LocalTimeZone"/> and today.</param>
-    internal static string FormatChangeLogDate(DateTimeOffset at, TimeProvider clock) => TaskDates.HumanMoment(at, clock);
+    internal static string FormatHistoryDate(DateTimeOffset at, TimeProvider clock) => TaskDates.HumanMoment(at, clock);
 
     /// <summary>The Save button's label for <paramref name="preview"/> (Spec §13.6's table): "Save &amp; notify {name}" only for an Awake or Asleep assignee, plain "Save" otherwise.</summary>
     /// <param name="preview">The wake preview for the Human's pending edit.</param>

@@ -54,7 +54,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 29 | [Team chats: the Team Room, Team chats in the sidebar, the Members-tab Message, archiving and Task wakes and digests](team-chats.md) | 11 | — | 1.1h |
 | 30 | [Chat uploads: the paperclip, paste and drop, the chips, the Message's path lines, the Uploads root and Room delete](uploads.md) | 8 | 0 | 1.0h |
 | 31 | [Skill Packs: SKILLS.md, the AI tool, updates, the move and shared folders](skill-packs.md) | 7 | 1 | 2.5h |
-| 32 | [Document history: the byline, the History, the Recent edits panel and the Stop hook](doc-history.md) | 8 | 4 | 1.6h |
+| 32 | [Document history: the byline, the History, the History panel and the Stop hook](doc-history.md) | 8 | 4 | 1.6h |
 | 33 | [Human gate: the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page](human-gate.md) | 9 | — | 1.3h |
 | 34 | [Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the override, the daily cap and a failing Adapter](helpers.md) | 8 | 5 | 1.4h |
 | 35 | [Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart](feed.md) | 17 | 4 | 3.1h |
