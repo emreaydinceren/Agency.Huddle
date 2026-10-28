@@ -481,6 +481,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         if (this.roomSessions is not null && startedHost.Profile.SessionPerRoom)
         {
             this.roomSessions.Prune(this.persona.Name, welcome.Rooms.Select(room => room.Id).ToList());
+            this.SeedContextFill(startedHost, welcome);
         }
         else if (this.roomSessions is not null)
         {
@@ -489,6 +490,30 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             // start is what makes a later switch back to per-Room start fresh rather than resuming
             // against a session, Model, Effort or Work Mode that no longer matches.
             this.roomSessions.ForgetAll(this.persona.Name);
+        }
+    }
+
+    /// <summary>
+    /// Shows each Room's last stored context reading again after a restart. Only an entry the Persona would
+    /// still resume qualifies, because a fresh open starts an empty context; a resume that then fails opens
+    /// fresh, and that open forgets the seeded reading.
+    /// </summary>
+    /// <param name="startedHost">The started host, whose profile id the stored entries must match.</param>
+    /// <param name="welcome">The server's Welcome.</param>
+    private void SeedContextFill(IPersonaHost startedHost, Welcome welcome)
+    {
+        if (this.contextFill is null || this.roomSessions is null)
+        {
+            return;
+        }
+
+        foreach (var room in welcome.Rooms)
+        {
+            RoomSessionEntry? entry = this.roomSessions.Get(this.persona.Name, room.Id);
+            if (entry is { ContextUsed: { } used } && startedHost.CanResume && entry.Matches(startedHost.Profile.Id, this.persona))
+            {
+                this.contextFill.Report(welcome.AgentId, room.Id, used, entry.ContextSize);
+            }
         }
     }
 

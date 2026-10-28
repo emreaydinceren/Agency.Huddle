@@ -188,6 +188,43 @@ public sealed class RoomSessionContextFillTests
         Assert.Equal(0, owner.TokensAdded);
     }
 
+    /// <summary>At Turn end the latest reading is stored beside the session id, so a restart can show it again.</summary>
+    [Fact]
+    public async Task TurnEnd_StoresTheReadingInTheSessionEntry()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        RoomSessionStore store = new(dataDir.Options(), NullLogger<RoomSessionStore>.Instance);
+        FakeAgentSession session = new();
+        session.EnqueueReplyWithUsage([100, 250], "done");
+        FakePersonaHost host = new(session, ClaudeProfile());
+        FakeRoomSessionOwner owner = new();
+        ContextFill fill = new();
+        await using RoomSessionHarness harness = CreateResumingRoomSession(owner, host, store, fill);
+        harness.Room.Enqueue(new QueuedWork(1, Item("hello")));
+
+        await Eventually.UntilAsync(() => store.Get("nova", "room-1") is not null, ct, timeout: TestBudgets.Standard);
+
+        RoomSessionEntry? entry = store.Get("nova", "room-1");
+        Assert.NotNull(entry);
+        Assert.Equal(250, entry.ContextUsed);
+        Assert.Equal(WindowSize, entry.ContextSize);
+    }
+
+    /// <summary>A Room Session file written before the meter existed has no reading and still loads: <c>ContextUsed</c> is null.</summary>
+    [Fact]
+    public void StoreEntry_WithoutAReading_LoadsAsNull()
+    {
+        using TempDataDir dataDir = new();
+        RoomSessionStore store = new(dataDir.Options(), NullLogger<RoomSessionStore>.Instance);
+        store.Put("nova", "room-1", new RoomSessionEntry("s1", "claude", "m1", "e1", "msg-abc", DateTimeOffset.UtcNow));
+
+        RoomSessionEntry? entry = store.Get("nova", "room-1");
+
+        Assert.NotNull(entry);
+        Assert.Null(entry.ContextUsed);
+    }
+
     /// <summary>Reporting the meter leaves the token Budget alone: only the rises count, as before.</summary>
     [Fact]
     public async Task TokenBudget_IsUnchangedByTheMeter()
