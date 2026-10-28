@@ -2,7 +2,7 @@
 
 Prove, in a real browser, what no bUnit test can: that the Right sidebar lays out at 90% zoom, that a Room and a Markdown document each show their panels, that an Outline heading scrolls the document in every mode, and that a collapsed panel stays collapsed after a reload. The automated suite proves the panel rules, the catalog and each panel's behaviour against fakes.
 
-**9 tests** · 8 free, 1 paid 💰 · about 0.9 hours. Written 2026-10-16; **not yet run by a person**.
+**10 tests** · 9 free, 1 paid 💰 · about 1.0 hours. Written 2026-10-16; **not yet run by a person**.
 
 Read [the manual test script](../manual-tests.md) first, then [Common procedures](common.md), which defines the terminals, procedures and oracles this page names. Both are assumed below.
 
@@ -221,3 +221,37 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 - Step 2 never shows a bar -> the Adapter sent no usage, or `RoomSession.CountUsage` did not report it; check the Adapter's profile first.
 - Step 3 shows a bar on `Sidekick` -> a reading is keyed by the wrong Agent id.
 - Step 5 is unchanged or higher -> the meter is summing or ignoring the fall.
+
+### RSIDE-10 — The Backlinks panel lists the open Tasks that link to a document
+
+**Free** · about 6 min
+
+*Proves a Task appears among a document's backlinks by an attached file and by a `[[wikilink]]`, and leaves them when it is closed.*
+
+**Before you start**
+
+- `Plan.md` and `Notes.md` are in a Team's folder, as set up in step 3, and `Notes.md` links to `Plan.md` with `[[Plan]]`.
+- A Task `Draft the plan` in that Team, open.
+
+**Steps**
+
+1. Open `Plan.md` in Read mode and read the `Backlinks` panel.
+2. Open the Task, edit its Description to hold the line `[[Plan]]`, and save. Read the panel again.
+3. Replace that line with the full path of `Plan.md` alone in a code span (attach the file with the `@` picker), and save. Read the panel.
+4. Close the Task. Read the panel.
+5. Reopen the Task. Read the panel.
+6. Click the Task row.
+
+**Pass if — all of these**
+
+- At step 1 the panel lists `Notes` only, and its count is 1.
+- At step 2 it also lists `Draft the plan`, after `Notes`, with the line `[[Plan]]` and a state dot; the count is 2.
+- At step 3 it still lists `Draft the plan` once, now with the file's path as its line.
+- At step 4 `Draft the plan` is gone and the count is 1.
+- At step 5 it is back.
+- At step 6 the Task opens.
+
+**If it fails**
+
+- Step 2 never lists the Task -> `TaskBacklinkSource` did not resolve the link from the Task's file; check that `[[Plan]]` resolves in the Team.
+- Step 4 still lists it -> the panel did not hear `TaskStore.IndexChanged`, or the closed Task was not skipped.

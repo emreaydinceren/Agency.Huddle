@@ -1876,7 +1876,8 @@ their watched folders.
 
 Write `[[Note name]]`, `[[folder/Note]]`, `[[Note|shown text]]` or
 `[[Note#Heading]]`. Links resolve within the same root, in the style of
-Obsidian. Each note shows its **Backlinks**, the notes that link to it. A link to
+Obsidian. Each note shows its **Backlinks**, the notes that link to it, then the open
+Tasks that link to it, by a file attached to the Task or a `[[link]]` in its description. A link to
 a missing note offers to create it. The notes a note links *to*, and its headings, are
 listed in the [Right sidebar](#the-right-sidebar) while the note is open.
 

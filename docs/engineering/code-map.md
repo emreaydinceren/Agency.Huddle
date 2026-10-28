@@ -415,6 +415,7 @@ The Library — the explorer, viewer and editor, Spec §6. Paths are relative to
 | `Library/LibraryUpload.cs` | The record `LibraryFileService.CreateFromStreamAsync` returns: the saved path, its kind and its size (spec §6.2). |
 | `Uploads/ChatUploadService.cs` | Saves one attached file for a Room: picks the Room's folder from its Scope, streams the bytes under the size cap and removes a refused partial file (spec §6.4). |
 | `Uploads/TaskUploadFolders.cs`, `Uploads/TaskUploadService.cs` | A Task's upload folder, `uploads:/Tasks/<ID>`, and the service that saves one attached file there through the chat upload's byte writer (TaskAttachments spec §6.1, §6.2). |
+| `Tasks/ITaskBacklinkSource.cs`, `TaskBacklinkSource.cs`, `TaskBacklink.cs` | The open Tasks that link to a Library document, for the Backlinks panel: an attached path line or a `[[wikilink]]` in the description. `WikiLinkIndex` skips `_tasks/`, so it cannot see them. |
 | `Tasks/TaskAttachmentText.cs` | Appends a file's path as a code-span line to a Task description, once, with a blank line only after prose (TaskAttachments spec §6.4). |
 | `Components/Library/LibraryFilePickerDialog.razor` | Picks one Library file by name search or by browsing; a folder only opens (TaskAttachments spec §6.3). |
 | `Uploads/PendingUploads.cs` | The composer's chips: one `PendingUpload` per attachment, with its state (uploading, done, refused) (spec §6.4). |

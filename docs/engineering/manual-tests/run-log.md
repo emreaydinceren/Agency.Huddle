@@ -5365,6 +5365,13 @@ File: [`docs/engineering/manual-tests/right-sidebar.md`](right-sidebar.md#rside-
 | --- | --- | --- | --- | --- |
 | 2026-10-25 | Pass | `7144f483` + uncommitted `feat/context-meter` |  | Isolated `uat` seed, Ada and Bo on Haiku for `Scratch` and `Sidekick`, claude-agent-acp. Step 1: both `—`. Step 2: Ada's tooltip went 24,129 → 25,971 of 200,000 during the Turn (bar 12%). Step 3: Bo `—`. Step 5: 1%, 2,659 tokens "in this Room", matching "Compacted my conversation: 26,057 → 2,659 tokens". Step 2's Pass-if was reworded from "the percentage rises" to "the token count in its tooltip rises", because a short Turn stays within 12%. Also checked: a 50-character name ellipsises beside the percentage in the 280px drawer and the row stays 32px. The bar renders 4px, not the 3px in `app.css`. |
 
+### RSIDE-10 — The Backlinks panel lists the open Tasks that link to a document
+
+File: [`docs/engineering/manual-tests/right-sidebar.md`](right-sidebar.md#rside-10--the-backlinks-panel-lists-the-open-tasks-that-link-to-a-document)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ## References in a Message: the @ picker, Copy link and the Referenced items header
 
 ### ATTAG-01 — The picker opens on an at sign at a word start (AT-M1)

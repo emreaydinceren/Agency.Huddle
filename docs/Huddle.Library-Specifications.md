@@ -297,6 +297,14 @@ using the Markdig parse rather than a regex over raw text.
 **Backlinks.** For the open note, every note in the same root whose resolved links point at it,
 each with the line that holds the link.
 
+The list then adds the **open Tasks** that link to the note, one row per Task for the first line that links, each
+with its state dot and a link to the Task. `WikiLinkIndex` cannot see them, because it skips the Teams root's
+underscore folders and a Task lives in `_tasks/`, so `TaskBacklinkSource` reads the Task store instead. A Task links by
+a line that holds the note's absolute path alone in a code span (how a Task attaches a file), or by a `[[wikilink]]`
+in its description that resolves to the note, measured from the Task's own file, so only a note in the Teams root can
+be linked this way. A closed Task, one under `_closed/`, is left out and comes back if it is reopened. A root too large
+to index (`Library:MaxIndexedFiles`) still lists its Tasks, beside the notice that notes are not available.
+
 **Rename or move rewrite.** Before confirming, the index reports every link that resolves to the
 old path. On confirm:
 

@@ -49,7 +49,7 @@ internal static class TaskAttachmentText
 
     /// <summary>Whether <paramref name="line"/> is exactly one code span holding a Library path.</summary>
     /// <param name="line">The line.</param>
-    private static bool IsPathLine(string line)
+    internal static bool IsPathLine(string line)
     {
         string trimmed = line.Trim();
         return trimmed.Length > 2

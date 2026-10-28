@@ -1082,6 +1082,7 @@ Right sidebar: the panels by Subject, Outline scrolling, collapse and focus — 
 | [RSIDE-07](right-sidebar.md#rside-07--a-collapsed-panel-stays-collapsed-after-a-reload) |  | Active |  |  |
 | [RSIDE-08](right-sidebar.md#rside-08--two-panes-follow-focus) |  | Active |  |  |
 | [RSIDE-09](right-sidebar.md#rside-09--an-agents-context-bar-appears-grows-during-a-turn-and-falls-after-compact) | 💰 | Pass |  |  |
+| [RSIDE-10](right-sidebar.md#rside-10--the-backlinks-panel-lists-the-open-tasks-that-link-to-a-document) |  | Active |  |  |
 
 ## needs-you
 
