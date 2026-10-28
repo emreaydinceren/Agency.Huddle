@@ -13,7 +13,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Tools;
 
 /// <summary>
-/// Pins Spec §13.6's buttons, Expand, Make a copy, Close/Reopen and the Change log, RED-only (14.4.t):
+/// Pins Spec §13.6's buttons, Expand, Make a copy, Close/Reopen and the History, RED-only (14.4.t):
 /// Expand closes the Panel and opens <c>TaskDetailDialog</c> with only the id, guarded by
 /// <c>ConfirmDiscardAsync</c>'s "Discard changes?" message box when edits are pending (corrections-B5
 /// D14 item 7); Cancel discards and closes unconditionally, with no confirmation, since the whole point
@@ -21,7 +21,7 @@ using Agency.Huddle.Tests.Acp.Tools;
 /// a new dialog in create mode from the Panel's own <em>effective</em> (pending-included) fields and
 /// writes nothing until that copy is itself saved (Spec §13.6); Close task saves any pending edit and
 /// closes as one <c>Update</c> then <c>Close</c>, stopping instead of closing on a <c>Conflict</c> or
-/// <c>Refused</c> (corrections-B5 D14 item 9); a Closed Task shows Reopen; the Change log is a collapsed
+/// <c>Refused</c> (corrections-B5 D14 item 9); a Closed Task shows Reopen; the History is a
 /// <c>MudTimeline</c>, newest first (corrections-B5 D14 item 10); <c>MudExitPrompt</c> is enabled only
 /// while edits are pending; create mode's Save calls <see cref="TaskService.Create"/> and shows refusals
 /// exactly (corrections-B7 "14.4" item 2); the Budget banner carries <c>role="status"</c> (corrections-B7
@@ -185,32 +185,29 @@ public sealed class TaskDetailActionsTests
     }
 
     /// <summary>
-    /// The Change log's header names the entry count (Spec §13.6); expanding it (corrections-B5 D14
-    /// item 10, "expand the panel before asserting") then shows one entry per Change log record, each
-    /// a <c>Size.Small</c> <see cref="MudTimelineItem"/>. MudBlazor 9.10's <c>MudExpansionPanel</c>
-    /// keeps its content in the DOM even while collapsed (only <c>MudCollapse</c>'s own CSS hides it),
-    /// so this doesn't assert absence beforehand - only what's true after expanding.
+    /// The History's header names the entry count (Spec §13.6) and the History is always open: one entry per
+    /// Change log record, each a <c>Size.Small</c> <see cref="MudTimelineItem"/>, with nothing to expand first.
     /// </summary>
     [Fact]
-    public async Task ChangeLog_CollapsedByDefault_HeaderNamesTheCount_ExpandingRevealsEntries()
+    public async Task History_HeaderNamesTheCount_ListsEntriesWithoutExpanding()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
 
-        Assert.Equal("Change log (1)", cut.Find(".task-detail-changelog-heading").TextContent.Trim());
+        Assert.Equal("History (1)", cut.Find(".task-detail-history-heading").TextContent.Trim());
 
 
-        Assert.Single(cut.FindAll(".task-detail-changelog-entry"));
-        Assert.Equal(harness.Options.Value.HumanName, cut.TextOf(".task-detail-changelog-actor"));
-        Assert.Equal("created", cut.TextOf(".task-detail-changelog-summary"));
+        Assert.Single(cut.FindAll(".task-detail-history-entry"));
+        Assert.Equal(harness.Options.Value.HumanName, cut.TextOf(".task-detail-history-actor"));
+        Assert.Equal("created", cut.TextOf(".task-detail-history-summary"));
         Assert.All(cut.FindComponents<MudTimelineItem>(), item => Assert.Equal(Size.Small, item.Instance.Size));
     }
 
-    /// <summary>The Change log lists every entry newest first, as a whole ordered list (R6: never by membership) - one save adds a second, newer entry ahead of "created".</summary>
+    /// <summary>The History lists every entry newest first, as a whole ordered list (R6: never by membership) - one save adds a second, newer entry ahead of "created".</summary>
     [Fact]
-    public async Task ChangeLog_ListsEveryEntry_NewestFirst()
+    public async Task History_ListsEveryEntry_NewestFirst()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, title: "Original", priority: TaskPriority.Medium);
@@ -224,11 +221,11 @@ public sealed class TaskDetailActionsTests
         string human = harness.Options.Value.HumanName;
         Assert.Equal(
             [$"{human}: priority: Medium → Urgent", $"{human}: created"],
-            cut.FindAll(".task-detail-changelog-row").Select(row => $"{row.QuerySelector(".task-detail-changelog-actor")?.TextContent.Trim()}: {row.QuerySelector(".task-detail-changelog-summary")?.TextContent.Trim()}").ToList());
+            cut.FindAll(".task-detail-history-row").Select(row => $"{row.QuerySelector(".task-detail-history-actor")?.TextContent.Trim()}: {row.QuerySelector(".task-detail-history-summary")?.TextContent.Trim()}").ToList());
     }
 
     /// <summary>
-    /// A Change log entry's date renders as the Human's local time through the injected
+    /// A History entry's date renders as the Human's local time through the injected
     /// <see cref="TimeProvider"/> (J51), formatted <c>yyyy-MM-dd HH:mm</c> invariant - not
     /// <see cref="DateTimeOffset.ToLocalTime"/>'s machine time zone, so a fixed
     /// <see cref="TimeProvider.LocalTimeZone"/> in a test (a <see cref="ManualTimeProvider"/> built with
@@ -238,7 +235,7 @@ public sealed class TaskDetailActionsTests
     /// itself would use, so a bug in that conversion can't cancel out in both places.
     /// </summary>
     [Fact]
-    public async Task ChangeLog_EntryDate_FormatsAsHumanLocalTimeViaInjectedClock()
+    public async Task History_EntryDate_FormatsAsHumanLocalTimeViaInjectedClock()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(
@@ -248,7 +245,7 @@ public sealed class TaskDetailActionsTests
         var cut = RenderPanel(ctx, task.Id);
 
 
-        Assert.Equal("Today 12:30 PM", cut.Find(".task-detail-changelog-date").TextContent.Trim());
+        Assert.Equal("Today 12:30 PM", cut.Find(".task-detail-history-date").TextContent.Trim());
     }
 
     /// <summary><c>MudExitPrompt</c> is disabled with nothing pending, and enabled once an edit is made (Spec §13.6 "Leaving with unsaved edits").</summary>
@@ -542,7 +539,7 @@ public sealed class TaskDetailActionsTests
     }
 
     /// <summary>
-    /// The fixed instant <see cref="ChangeLog_EntryDate_FormatsAsHumanLocalTimeViaInjectedClock"/>
+    /// The fixed instant <see cref="History_EntryDate_FormatsAsHumanLocalTimeViaInjectedClock"/>
     /// gives its <see cref="ManualTimeProvider"/>, so the Task it creates carries a known,
     /// deterministic <see cref="ChangeLogEntry.At"/>.
     /// </summary>

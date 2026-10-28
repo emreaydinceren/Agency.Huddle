@@ -16,7 +16,7 @@ using static Agency.Huddle.Tests.DocHistory.DocHistoryTestPaths;
 
 namespace Agency.Huddle.Tests.Ui.DocHistory;
 
-/// <summary>Pins what a Human sees of a document's history: the byline, the History at the bottom and the Recent edits panel (DocHistory spec §6.7, §6.8, §6.10).</summary>
+/// <summary>Pins what a Human sees of a document's history: the byline, the History at the bottom and the History panel (DocHistory spec §6.7, §6.8, §6.10).</summary>
 public sealed class DocHistoryComponentsTests
 {
     private const string TabId = "t1";

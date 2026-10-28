@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Components;
 namespace Agency.Huddle.App.Components.Library;
 
 /// <summary>
-/// What the byline, the History and the Recent edits panel share (DocHistory spec §6.7, §6.8, §6.10): the entries of
+/// What the byline, the History and the History panel share (DocHistory spec §6.7, §6.8, §6.10): the entries of
 /// one document, read again when the document changes and when <see cref="DocHistoryStore.Changed"/> reports an
 /// entry for it, so a new entry appears without a reload.
 /// </summary>

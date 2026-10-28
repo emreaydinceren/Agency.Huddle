@@ -10,12 +10,12 @@ This is the design for a Markdown document's **history** in the Library: a list 
 or objected to the document, when, and in one line, what they did. Agents add to it by calling a new App Tool,
 `log_change`. Huddle adds an entry when the Human saves. The Library shows the history in three places: a **byline**
 under the document's title, a **History** section at the bottom of the document with every entry in full, and a
-compact **Recent edits** panel in the right sidebar.
+compact **History** panel in the right sidebar.
 
 ```text
 Written by Miriam · edited by Mira · reviewed by Ruth · objections by Quinn · today 11:02
 
-RECENT EDITS
+HISTORY
   Mira    Rewrote answer paragraph, downgraded F1 to moderate     Today 11:02
   Ruth    Verified 41 citations, fixed 2 page numbers              Today 10:48
   Mira    Added sensitivity figures to F2                          Today 10:30
@@ -318,7 +318,7 @@ panel, so a new entry appears without a reload.
 
 It shows more than the panel does:
 
-| | Recent edits panel | History |
+| | History panel | History |
 | --- | --- | --- |
 | Entries | The newest 5 | All, `DocHistoryView.ByDay`, 50 at a time with **Show older** |
 | Summary | One line, cut with an ellipsis | In full, wrapping |

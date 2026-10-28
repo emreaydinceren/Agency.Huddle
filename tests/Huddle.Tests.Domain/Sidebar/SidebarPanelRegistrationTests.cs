@@ -24,7 +24,7 @@ public sealed class SidebarPanelRegistrationTests
         Assert.Equal(expected, ids);
     }
 
-    /// <summary>A Markdown document gets the Outline, Linked documents, Backlinks and Recent edits panels.</summary>
+    /// <summary>A Markdown document gets the Outline, Linked documents, Backlinks and History panels.</summary>
     [Fact]
     public void MarkdownDocument_GetsOutlineLinkedBacklinksAndRecentEdits()
     {

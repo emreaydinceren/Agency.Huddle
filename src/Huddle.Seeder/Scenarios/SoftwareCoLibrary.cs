@@ -58,7 +58,7 @@ internal static class SoftwareCoLibrary
 
     /// <summary>
     /// Document History: a long History on the handbook (every kind, two Human saves inside the grouping window and more rows than
-    /// Recent edits shows), an objection on the pricing brief, a review on the incident, a Teammate's private draft and a note the
+    /// the History panel shows), an objection on the pricing brief, a review on the incident, a Teammate's private draft and a note the
     /// Human created. Every other note has no History, so "No edits logged." stays testable.
     /// </summary>
     internal static IReadOnlyList<SeedDocEdit> DocHistory { get; } =

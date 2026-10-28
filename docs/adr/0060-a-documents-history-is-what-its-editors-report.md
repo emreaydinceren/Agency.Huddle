@@ -58,6 +58,6 @@ minute. And "Ruth fact-checked this" or "Quinn objects" changes no byte at all, 
   edit; nothing else in the prompts does. An Agent that skips it is invisible.
 - **The bet is measured before it is built.** A paid probe drives a real Adapter through seven scenarios, five runs
   each, and must reach its pass rates before `log_change` is implemented (the spec's §10, *Live tests*).
-- **The byline and the Recent edits panel read only the history.** Neither looks at the file.
+- **The byline and the History panel read only the history.** Neither looks at the file.
 - **Deferred:** telling the Human how many Teammates have been notified of an edit, letting Agents read the history,
   and rejoining history after a rename outside Huddle.

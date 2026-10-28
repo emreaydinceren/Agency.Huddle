@@ -146,7 +146,7 @@ the per-area tables below.
 | [Needs You: the sidebar card of Rooms waiting on the Human](needs-you.md) | [below](#needs-you) |
 | [Right sidebar: the panels by Subject, Outline, collapse and focus](right-sidebar.md) | [below](#right-sidebar) |
 | [References in a Message: the @ picker, Copy link and the Referenced items header](at-tagging.md) | [below](#at-tagging) |
-| [Document history: the byline, the History and the Recent edits panel](doc-history.md) | [below](#doc-history) |
+| [Document history: the byline, the History and the History panel](doc-history.md) | [below](#doc-history) |
 | [Human gate: the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page](human-gate.md) | [below](#human-gate) |
 | [Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the override, the daily cap and a failing Adapter](helpers.md) | [below](#helpers) |
 | [Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart](feed.md) | [below](#feed) |
@@ -1097,7 +1097,7 @@ Needs You: the sidebar card of Rooms waiting on the Human — [area file](needs-
 
 ## doc-history
 
-Document history: the byline, the History and the Recent edits panel — [area file](doc-history.md)
+Document history: the byline, the History and the History panel — [area file](doc-history.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |

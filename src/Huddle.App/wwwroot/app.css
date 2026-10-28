@@ -2497,7 +2497,7 @@ body.sidebar-resizing {
     max-width: 100%;
 }
 
-/* One column: the strip, the Description right under it, then the fields, and the Change log closes the column. */
+/* One column: the strip, the Description right under it, then the fields, and the History closes the column. */
 .task-edit-page-editor .task-detail-grid > .task-detail-col-strip {
     order: 1;
 }
@@ -7177,8 +7177,8 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     min-width: 0;
 }
 
-/* The change log is always open: a Group label over the list, no panel and no expand glyph. */
-.task-detail-changelog-heading {
+/* The History is always open: a Group label over the list, no panel and no expand glyph. */
+.task-detail-history-heading {
     margin-bottom: 8px;
 }
 
@@ -7446,7 +7446,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 .tasks-detail-drawer .task-read-view-description,
 .tasks-detail-drawer .task-human-gate,
 .tasks-detail-drawer .task-decision-card,
-.tasks-detail-drawer .task-detail-changelog {
+.tasks-detail-drawer .task-detail-history {
     padding-top: 12px;
     border-top: 1px solid var(--hu-detail-section-line);
 }
@@ -7470,65 +7470,6 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 
 .tasks-detail-drawer .task-decision-buttons .mud-button {
     flex: 1;
-}
-
-/* The Change log: a flat list. The avatar column carries a line down to the next row's avatar, so the line runs between entries and
-   stops at the first and the last. */
-.task-detail-changelog-list {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.task-detail-changelog-row {
-    position: relative;
-    display: grid;
-    grid-template-columns: 24px minmax(0, 1fr) auto;
-    column-gap: 12px;
-    align-items: start;
-    padding: 8px 0;
-}
-
-.task-detail-changelog-row:not(:last-child)::after {
-    content: "";
-    position: absolute;
-    inset-inline-start: 12px;
-    top: 32px;
-    bottom: -8px;
-    width: 1px;
-    background: var(--hu-detail-timeline-dot);
-}
-
-.task-detail-changelog-avatar {
-    display: inline-flex;
-}
-
-.task-detail-changelog-entry {
-    min-width: 0;
-    font-size: var(--mud-typography-body2-size);
-    line-height: 1.45;
-    color: var(--mud-palette-text-primary);
-}
-
-.task-detail-changelog-actor {
-    margin-inline-end: 4px;
-    font-weight: 600;
-}
-
-.task-detail-changelog-pill {
-    margin-inline: 4px;
-    padding: 0 4px;
-    border: 1px solid var(--hu-line-region);
-    border-radius: var(--mud-default-borderradius);
-    font-size: var(--mud-typography-caption-size);
-    color: var(--hu-text-subtle);
-}
-
-.task-detail-changelog-date {
-    font-size: var(--mud-typography-caption-size);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-    color: var(--mud-palette-text-secondary);
 }
 
 /* B. The Task edit page (K): header, fields, field groups, the gate frame. */
@@ -7594,8 +7535,8 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     border-top: 1px solid var(--hu-line-region);
 }
 
-/* The Change log is the last rows of the left column: the same hairline above it as between the rows over it. */
-.task-edit-page .task-detail-changelog {
+/* The History is the last rows of the left column: the same hairline above it as between the rows over it. */
+.task-edit-page .task-detail-history {
     margin-top: 12px;
     padding-top: 12px;
     border-top: 1px solid var(--hu-line-region);
