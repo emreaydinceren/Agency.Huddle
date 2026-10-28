@@ -172,6 +172,7 @@ order decides per Token, independently.
 | `Tools/PostMessageTool.cs` | Speak into a Room other than the current one. Without this an agent-created Room stays silent. After a successful post it calls `OwnPosts.Record` (RS §6.7), so the target Room's next Turn carries it as *You, from another Room: …* — the only way that Room Session learns of a post its own Turn did not make. |
 | `Tools/TaskToolText.cs` | Shared text and argument-parsing helpers every Task App Tool reuses (Spec §11.1): rendering a Task as one line, resolving an id or actor, phrasing the notify clause, and turning a `TaskService` exception into refusal text. |
 | `Tools/CreateTaskTool.cs` | Creates a Task (Spec §11.2): validates arguments in the spec's order, then hands the rest to `TaskService.Create` and reports who will be notified. |
+| `Tools/SearchTool.cs` | Global Search for Agents (Search spec §18, ADR-0066): calls the five providers directly, Rooms limited to the caller's Member and Team Rooms unless `scope: "all"`, output capped at 12,000 characters. |
 | `Tools/GetTaskTool.cs` | Reads one Task's full text (Spec §11.3), including its Change log on request; the one read-only Task tool, so it takes no caller identity. |
 | `Tools/ListTasksTool.cs` | Lists Tasks matching a filter, sorted the same way Views are (Spec §11.4), through the same pure `TaskQuery` helpers the Tasks page uses. |
 | `Tools/UpdateTaskTool.cs` | Changes one or more fields of an existing Task (Spec §11.5) through `TaskService.Update`, always with `baseVersion: null` since a tool call tracks no draft version. |
@@ -465,7 +466,7 @@ Global Search — the search box in the Top Bar, its dropdown and the providers 
 
 | Path | Responsibility |
 | --- | --- |
-| `Search/SearchQuery.cs` | The parsed query: its filter, the trimmed text and whether it is long enough to search. |
+| `Search/SearchQuery.cs` | The parsed query: its filter, the trimmed text and whether it is long enough to search; an optional list of the only Rooms the Rooms provider may open. |
 | `Search/SearchQueryParser.cs` | Reads a leading prefix (`team:`, `teammate:`, `lib:`, `task:`, `room:`) from the text. Pure. |
 | `Search/SearchFilter.cs` | The filters: All, Teams, Teammates, Library, Tasks and Rooms. |
 | `Search/SearchScope.cs` | The Active or Archived pass of one search. |

@@ -763,6 +763,10 @@ App Tools a real model calls (progressive discovery) — [area file](app-tools.m
 | [APPTOOLS-26](app-tools.md#apptools-26--create_room-with-seed-posts-the-opening-message-as-part-of-creation) | 💰 | Active |  |  |
 | [APPTOOLS-27](app-tools.md#apptools-27--get_help-carries-a-tasks-section-while-the-task-tools-are-offered) | 💰 | Active |  |  |
 | [APPTOOLS-28](app-tools.md#apptools-28--a-prefix-less-adapter-is-told-tool-names-bare-adr-0014) |  | Active |  |  |
+| [APPTOOLS-29](app-tools.md#apptools-29--search-finds-only-an-agents-own-rooms-until-it-asks-for-all-adr-0066) | 💰 | Pass |  | 2026-10-28, uncommitted `feat/agent-search-tool`. Default search sent `{"query":"zebra-ledger-7"}`, header `yours and your Teams' only`, no hit for Bo's Room, no log line. After "Search every Room" it sent `scope:"all"`, found Bo's Room, and the `searched every Room` line appeared once. Haiku |
+| [APPTOOLS-30](app-tools.md#apptools-30--the-default-search-also-reads-a-room-scoped-to-the-agents-own-team-that-it-is-not-a-member-of-adr-0066) | 💰 | Pass |  | 2026-10-28, uncommitted `feat/agent-search-tool`. Fresh one-to-one, Ada in Team `Design`, Team chat of Bo and the Human without her. Input `{"query":"quokka-ledger-9"}` (no scope), header `yours and your Teams' only`, Team chat listed, no log line. Haiku |
+| [APPTOOLS-31](app-tools.md#apptools-31--a-task-id-and-a-library-path-from-search-are-usable-by-the-next-tool-call) | 💰 | Pass |  | 2026-10-28, uncommitted `feat/agent-search-tool`. `filter:"tasks"` returned `DESI-0001 \| To Do \| Bo \| Design \| ...`, `filter:"library"` returned `teams:Design/launch-plan.md` with snippet, `get_task` was called with `DESI-0001`. No Rooms header. Haiku |
+| [APPTOOLS-32](app-tools.md#apptools-32--get_help-lists-the-search-tool-while-the-system-prompt-names-none) | 💰 | Pass |  | 2026-10-28, uncommitted `feat/agent-search-tool`. The decoded `get_help` TOOLS section holds `mcp__team__search` with the Rooms-default sentence and the `scope 'all'` logging sentence; Ada quoted it. Haiku |
 
 ## persona-lifecycle
 
