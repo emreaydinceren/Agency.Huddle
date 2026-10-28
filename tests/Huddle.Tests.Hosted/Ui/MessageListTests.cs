@@ -2,6 +2,7 @@ using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
+using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
@@ -128,6 +129,34 @@ public sealed class MessageListTests
         Assert.Equal("EC", cut.Find(".mud-avatar").TextContent.Trim());
     }
 
+    /// <summary>A Message from a Teammate shows that Teammate's title between its name and the time.</summary>
+    [Fact]
+    public async Task MessageList_Message_FromTeammate_ShowsTheTitleBesideTheName()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        PersonaEntry persona = factory.Services.GetRequiredService<PersonaStore>().Entries[0];
+        await using var ctx = MessageListTests.NewContext(factory);
+        var message = MessageListTests.MessageFrom(persona.Name);
+
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Messages, [message]));
+
+        Assert.Equal(persona.Title, cut.Find(".message-meta .message-title").TextContent.Trim());
+        Assert.Equal(["message-sender", "message-title", "message-time"], cut.FindAll(".message-meta > span").Select(span => span.ClassList[0]).ToArray());
+    }
+
+    /// <summary>A Message from a sender that is no Persona shows no title.</summary>
+    [Fact]
+    public async Task MessageList_Message_FromSenderWithNoPersona_ShowsNoTitle()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        var message = MessageListTests.MessageFrom("Jordan Lee");
+
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Messages, [message]));
+
+        Assert.Empty(cut.FindAll(".message-title"));
+    }
+
     /// <summary>A Message from a sender with no stored avatar shows the monogram of the sender name.</summary>
     [Fact]
     public async Task MessageList_Message_FromSenderWithNoStoredAvatar_ShowsTheMonogram()
@@ -192,6 +221,9 @@ public sealed class MessageListTests
 
         // MessageList shows each Agent's context fill on its newest Message.
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<ContextFill>());
+
+        // MessageList shows a Teammate's title beside its name, read from the Persona.
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaStore>());
         return ctx;
     }
 
