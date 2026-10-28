@@ -1,16 +1,20 @@
 @*
     The Right sidebar's Backlinks panel (Spec §6.5): the notes that link to the open note, each as an icon, the
-    note's name and the line that holds the link, with the [[wikilink]] picked out. Reloads on a new
-    DocumentSubject and when WikiLinkIndex reports its root changed.
+    note's name and the line that holds the link, with the [[wikilink]] picked out, then the open Tasks that link
+    to it (an attached path or a [[wikilink]] in the description), each with its state dot. Reloads on a new
+    DocumentSubject, when WikiLinkIndex reports its root changed and when the Task list changes.
 *@
+@using Agency.Huddle.App.Components.Tasks
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Sidebar
+@using Agency.Huddle.App.Tasks
 @using MudBlazor
 @implements IDisposable
 @inject LibraryPathResolver PathResolver
 @inject WikiLinkIndex WikiLinks
+@inject ITaskBacklinkSource TaskLinks
 
-@if (this.rows.Count > 0)
+@if (this.rows.Count > 0 || this.taskRows.Count > 0)
 {
     @foreach (BacklinkRow row in this.rows)
     {
@@ -34,20 +38,47 @@
             </div>
         </div>
     }
+
+    @foreach (TaskBacklink task in this.taskRows)
+    {
+        <div class="sidebar-row backlink-item backlink-task-item">
+            <MudIcon Icon="@Icons.Material.Outlined.TaskAlt" Size="Size.Small" Class="backlink-item-icon" />
+            <div class="backlink-item-body">
+                <MudLink Typo="Typo.body2" Underline="Underline.None" Class="backlink-item-title" title="@($"{task.Id} {task.Title}")"
+                         Href="@($"/tasks/item/{Uri.EscapeDataString(task.Id.ToString())}")">@task.Title</MudLink>
+                <div class="backlink-item-snippet">
+                    @foreach ((string text, bool isLink) in SplitSnippet(task.LineText))
+                    {
+                        if (isLink)
+                        {
+                            <span class="backlink-item-ref">@text</span>
+                        }
+                        else
+                        {
+                            @text
+                        }
+                    }
+                </div>
+            </div>
+            <span class="@TaskStateDot.ClassFor(task.State)" role="img" aria-label="@task.State.ToWire()" title="@task.State.ToWire()"></span>
+        </div>
+    }
 }
-else if (this.unavailable)
+
+@if (this.unavailable)
 {
-    <MudText Typo="Typo.body2" Class="mud-text-secondary">Backlinks aren't available for this folder: it has too many files.</MudText>
+    <MudText Typo="Typo.body2" Class="mud-text-secondary">Backlinks from notes aren't available for this folder: it has too many files.</MudText>
 }
-else if (this.loaded)
+else if (this.loaded && this.rows.Count == 0 && this.taskRows.Count == 0)
 {
-    <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">No notes link here.</MudText>
+    <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">Nothing links here.</MudText>
 }
 
 @code {
     private sealed record BacklinkRow(string Title, string Path, string Href, string LineText);
 
     private List<BacklinkRow> rows = [];
+    private IReadOnlyList<TaskBacklink> taskRows = [];
     private bool unavailable;
     private bool loaded;
     private string? shownKey;
@@ -70,6 +101,7 @@ else if (this.loaded)
     protected override void OnInitialized()
     {
         this.WikiLinks.Invalidated += this.OnInvalidated;
+        this.TaskLinks.Changed += this.OnTasksChanged;
         this.subscribed = true;
     }
 
@@ -81,6 +113,7 @@ else if (this.loaded)
             this.CancelLoad();
             this.shownKey = null;
             this.rows = [];
+            this.taskRows = [];
             this.unavailable = false;
             this.loaded = false;
             this.Panel?.SetCount(null);
@@ -129,16 +162,29 @@ else if (this.loaded)
     {
         if (this.Subject is DocumentSubject doc && string.Equals(changedRootId, doc.Path.Root.Id, StringComparison.Ordinal))
         {
-            _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
-            {
-                if (this.Subject is DocumentSubject current)
-                {
-                    return this.LoadAsync(current);
-                }
-
-                return Task.CompletedTask;
-            });
+            this.Reload();
         }
+    }
+
+    private void OnTasksChanged()
+    {
+        if (this.Subject is DocumentSubject)
+        {
+            this.Reload();
+        }
+    }
+
+    private void Reload()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            if (this.Subject is DocumentSubject current)
+            {
+                return this.LoadAsync(current);
+            }
+
+            return Task.CompletedTask;
+        });
     }
 
     private void CancelLoad()
@@ -157,11 +203,13 @@ else if (this.loaded)
         string key = doc.Key;
 
         List<BacklinkRow> loadedRows = [];
+        IReadOnlyList<TaskBacklink> loadedTasks = [];
         bool available = true;
         try
         {
             available = await Task.Run(() =>
             {
+                loadedTasks = this.TaskLinks.For(doc.Path);
                 if (!this.WikiLinks.IsAvailable(doc.Path.Root.Id))
                 {
                     return false;
@@ -191,9 +239,11 @@ else if (this.loaded)
         }
 
         this.rows = available ? loadedRows : [];
+        this.taskRows = loadedTasks;
         this.unavailable = !available;
         this.loaded = true;
-        this.Panel?.SetCount(available ? loadedRows.Count : null);
+        int total = this.rows.Count + this.taskRows.Count;
+        this.Panel?.SetCount(available || total > 0 ? total : null);
         this.StateHasChanged();
     }
 
@@ -203,6 +253,7 @@ else if (this.loaded)
         if (this.subscribed)
         {
             this.WikiLinks.Invalidated -= this.OnInvalidated;
+            this.TaskLinks.Changed -= this.OnTasksChanged;
             this.subscribed = false;
         }
 

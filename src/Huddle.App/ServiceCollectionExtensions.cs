@@ -528,6 +528,10 @@ public static class ServiceCollectionExtensions
         // constructor dependency once the rewrite hooks land (8.5.i-a).
         services.AddSingleton<WikiLinkIndex>();
 
+        // The open Tasks that link to a document, for the Backlinks panel: WikiLinkIndex skips the Teams
+        // root's underscore folders, so a Task never reaches it.
+        services.AddSingleton<Tasks.ITaskBacklinkSource, Tasks.TaskBacklinkSource>();
+
         // The real resolver behind ILibraryReferenceResolver/ILibraryNoteResolver (Task 9.3.i):
         // one singleton, forwarded to both interfaces with the same idiom as ITaskReferenceResolver
         // above, so MarkdownRenderer and Library note rendering share one instance.

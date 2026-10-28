@@ -268,7 +268,7 @@ Settled on 2026-10-16:
 | Question | Decision |
 | --- | --- |
 | Which panels | Outline, Linked documents, Tasks in this chat, Documents in this chat, Members |
-| Backlinks | Stay in `BacklinksPanel` inside `LibraryDocument`. Moving them is a later change |
+| Backlinks | Moved to the Right sidebar as `BacklinksPanel`. It lists the notes that link to the open note, then the open Tasks that link to it (Library spec §6.5), and reloads on `WikiLinkIndex.Invalidated` and on a Task list change |
 | Relative links | Wikilinks only. Relative `[text](other.md)` links are a later `WikiLinkIndex` change |
 | Room header strip | Stays. Members adds the full list; it does not replace the glance |
 | Outline source | Follows unsaved edits through `DocumentSubject.Text` in Split mode. Read and Edit show the loaded or saved text, because the editor sends text only on save and mode switch |
