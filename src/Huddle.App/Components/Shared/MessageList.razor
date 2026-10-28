@@ -1,3 +1,4 @@
+@using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Components.References
 @using Agency.Huddle.App.Library
@@ -10,6 +11,7 @@
 @inject TimeProvider Clock
 @inject ILibraryReferenceResolver LibraryResolver
 @inject ContextFill ContextFill
+@inject PersonaStore Personas
 
 <div class="message-list" @ref="this.container">
     @for (var messageIndex = 0; messageIndex < this.Messages.Count; messageIndex++)
@@ -97,6 +99,10 @@
                 {
                     <div class="message-meta">
                         <span class="message-sender">@message.SenderName</span>
+                        @if (this.TitleOf(message.SenderName) is { } title)
+                        {
+                            <span class="message-title">@title</span>
+                        }
                         <span class="message-time">@time</span>
                         @if (this.ContextReadingAt(messageIndex, message) is { } reading)
                         {
@@ -121,6 +127,10 @@
             <div class="message-content">
                 <div class="message-meta">
                     <span class="message-sender">@draft.SenderName</span>
+                    @if (this.TitleOf(draft.SenderName) is { } draftTitle)
+                    {
+                        <span class="message-title">@draftTitle</span>
+                    }
                     <MudTooltip Text="Stop">
                         <MudIconButton Icon="@Icons.Material.Filled.StopCircle" Size="Size.Small"
                                        Class="draft-stop" aria-label="Stop"
@@ -342,6 +352,11 @@
             && this.ContextFill.Get(message.SenderId, roomId) is { Percent: not null } reading
             ? reading
             : null;
+
+    /// <summary>The Teammate's title to show beside <paramref name="senderName"/>, or <see langword="null"/> for a sender with no Persona, such as Huddle.</summary>
+    /// <param name="senderName">The Message's sender Name.</param>
+    private string? TitleOf(string senderName) =>
+        this.Personas.Entries.FirstOrDefault(entry => string.Equals(entry.Name, senderName, StringComparison.OrdinalIgnoreCase))?.Title;
 
     private void OnContextFillChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
     {

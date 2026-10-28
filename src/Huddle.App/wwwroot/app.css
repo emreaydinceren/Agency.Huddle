@@ -1851,6 +1851,16 @@ body.sidebar-resizing {
     font-weight: 400;
 }
 
+/* The Teammate's title, quiet beside the name: same caption ink as the time, and it gives way before the name does. */
+.message-title {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 400;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* An Agent's context fill on its newest group's meta line, pushed to the line's end. Same quiet ink as the time. */
 .message-context {
     margin-left: auto;
