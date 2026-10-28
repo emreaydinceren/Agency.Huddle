@@ -8,6 +8,13 @@ edit page too (`/tasks/item/new/edit?team&project`, `/tasks/item/{id}/copy`; Tab
 pages' Tasks tab opens a card on the Tasks page and its New task in the edit page, and `TaskDetailDialog`, the drawer form and Expand are gone.
 The scope table, D-1 and B10 below describe the first build; where they say the drawer or a dialog edits a Task, read "the edit page".
 
+**Right sidebar, not a drawer (2026-10-28):** the Tasks page no longer has a detail drawer. Opening a row or card selects the Task, publishes a
+`TaskDetailSubject` (key `task-detail:{id}`) and opens the Right sidebar, whose one panel for it, `task-detail` (`TaskDetailPanel`), draws
+`TaskReadView` with `ShowHeader` (the eyebrow and title the drawer's header held). The edit page keeps its own `TaskSubject` and its four panels,
+and does not get the Task panel, so a Task is never drawn twice. Where this page says "the drawer", "`T7`" or "closes the drawer", read "the Task
+panel in the Right sidebar"; Escape, the drawer's own close button and `ContentKey` went with the drawer, and the sidebar's toggle closes it.
+`ResizableEndDrawer` is no longer used by a page.
+
 **Where the build differs from this design:**
 
 - `TaskSubject` also carries `HasBlockers` and `IsBlocking`. Its `Key` is still `task:{id}`, so the panels stay mounted; the flags are what let

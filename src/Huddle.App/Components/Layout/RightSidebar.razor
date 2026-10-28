@@ -3,7 +3,7 @@
     and closed by RightSidebarToggle (S1c). It is the panel host (Spec D-3, D-5, D-7): while open, it
     draws the catalog's panels for the active Tab's Subject, each in a SidebarPanelFrame keyed by panel
     id and Subject Key, so a new snapshot of the same Subject updates a panel and a new Subject remounts
-    it. With no Subject, or no panel that applies, it draws the EmptyState with the one sentence the User Guide uses. Closed, it mounts
+    it. Whether it is open is remembered per viewer in local storage and is open when nothing was remembered. With no Subject, or no panel that applies, it draws the EmptyState with the one sentence the User Guide uses. Closed, it mounts
     nothing, so panels are disposed.
 *@
 @using Agency.Huddle.App.Components.Feed
@@ -14,6 +14,7 @@
 @inject RightSidebarService Sidebar
 @inject TabService Tabs
 @inject SidebarPanelCatalog Catalog
+@inject IJSRuntime Js
 
 <MudDrawer Open="@this.Sidebar.IsOpen"
            Anchor="Anchor.End"
@@ -69,7 +70,12 @@
     /// <summary>The width before any drag was remembered, in pixels.</summary>
     private const int DefaultWidthPx = 280;
 
+    /// <summary>The <c>localStorage</c> key the open state is remembered under: "true" or "false".</summary>
+    private const string OpenKey = "shell:rightSidebarOpen";
+
     private int width = DefaultWidthPx;
+    private RightSidebarMode lastMode;
+    private bool lastOpen;
 
     private string WidthCss => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{this.width}px");
 
@@ -91,8 +97,66 @@
         this.Tabs.Changed -= this.OnChanged;
     }
 
+    /// <summary>On first render, restores the remembered open state: open unless the viewer last closed it. Storage that cannot be read leaves it open.</summary>
+    /// <param name="firstRender">Whether this is the first render.</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        string? remembered = null;
+        try
+        {
+            remembered = await this.Js.InvokeAsync<string?>("huddleStorage.get", OpenKey);
+        }
+        catch (JSException)
+        {
+            // Storage is unavailable: the default applies.
+        }
+        catch (InvalidOperationException)
+        {
+            // Prerendering has no JS: the default applies.
+        }
+
+        if (!string.Equals(remembered, "false", StringComparison.Ordinal))
+        {
+            this.Sidebar.ShowSubject();
+        }
+    }
+
+    /// <summary>Remembers a change the Human made to the Subject view's open state. Notifications are a passing view, so opening or closing them is not remembered.</summary>
+    private async Task RememberAsync()
+    {
+        bool open = this.Sidebar.IsOpen;
+        RightSidebarMode mode = this.Sidebar.Mode;
+        bool fromNotifications = this.lastMode == RightSidebarMode.Notifications;
+        bool changed = open != this.lastOpen;
+        this.lastOpen = open;
+        this.lastMode = mode;
+        if (!changed || mode != RightSidebarMode.Subject || fromNotifications)
+        {
+            return;
+        }
+
+        try
+        {
+            await this.Js.InvokeVoidAsync("huddleStorage.set", OpenKey, open ? "true" : "false");
+        }
+        catch (JSException)
+        {
+            // Storage is unavailable: the choice is not kept.
+        }
+        catch (InvalidOperationException)
+        {
+            // Prerendering has no JS: the choice is not kept.
+        }
+    }
+
     private void OnChanged()
     {
+        _ = this.RememberAsync();
         _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.StateHasChanged();

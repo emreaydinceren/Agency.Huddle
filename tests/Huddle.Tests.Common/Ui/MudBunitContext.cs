@@ -88,7 +88,16 @@ internal sealed class MudBunitContext : BunitContext
         this.Services.AddSingleton<RightSidebarService>();
         this.Services.AddSingleton<PageCommandBus>();
         this.JSInterop.Mode = JSRuntimeMode.Loose;
+
+        // The Right sidebar opens by itself unless the viewer last closed it. Tests start from "closed" so each opens it on purpose;
+        // a test of the remembered state replaces this answer.
+        this.RememberSidebarOpen(false);
     }
+
+    /// <summary>Sets what local storage answers when the Right sidebar asks whether the viewer left it open; <see langword="null"/> is nothing remembered.</summary>
+    /// <param name="open">The remembered state, or <see langword="null"/> for none.</param>
+    public void RememberSidebarOpen(bool? open) =>
+        this.JSInterop.Setup<string?>("huddleStorage.get", "shell:rightSidebarOpen").SetResult(open?.ToString().ToLowerInvariant());
 
     /// <summary>
     /// Disposes every rendered component, as <see cref="BunitContext.DisposeComponentsAsync"/> does, but from

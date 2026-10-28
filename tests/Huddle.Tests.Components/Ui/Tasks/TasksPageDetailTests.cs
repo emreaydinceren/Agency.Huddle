@@ -3,26 +3,28 @@ namespace Agency.Huddle.Tests.Ui.Tasks;
 using AngleSharp.Dom;
 using Bunit;
 using Bunit.Rendering;
-using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
-using Agency.Huddle.App.Components.Shared;
+using Agency.Huddle.App.Components.Sidebar;
 using Agency.Huddle.App.Components.Tasks;
+using Agency.Huddle.App.Sidebar;
+using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.Tests.Acp.Tools;
 using TasksPage = Agency.Huddle.App.Components.Pages.Tasks;
 
 /// <summary>
-/// Pins what the Tasks page's detail drawer does: it hosts the read-only <see cref="TaskReadView"/> for an opened row or card (and nothing editable),
-/// Escape closes it, its <c>ContentKey</c> is the Task's id, "+ New task" opens the edit page's new-Task Tab with the View's Team and Project and leaves
-/// the drawer closed; and the page also hosts <see cref="WakeToasts"/> and <see cref="AiReactingChip"/>, the latter watching every Task in the
+/// Pins how the Tasks page shows a Task's details: opening a row or card publishes that Task to the Right sidebar and opens it there (the page has no
+/// drawer of its own), "+ New task" opens the edit page's new-Task Tab with the View's Team and Project and
+/// selects nothing; and the page also hosts <see cref="WakeToasts"/> and <see cref="AiReactingChip"/>, the latter watching every Task in the
 /// current effective View, unnarrowed by the search box.
 /// </summary>
 public sealed class TasksPageDetailTests
 {
-    /// <summary>Clicking a List row opens the drawer's <see cref="TaskReadView"/> for that row's Task, and no editor (read view spec D-1).</summary>
+    /// <summary>Clicking a List row publishes that row's Task to the Right sidebar and opens it, and the page holds no read view or editor itself (read view spec D-1).</summary>
     [Fact]
-    public async Task RowOpen_ClickingATask_ShowsTheReadViewForThatId()
+    public async Task RowOpen_ClickingATask_PublishesTheTaskAndOpensTheRightSidebar()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, "Alpha");
@@ -32,30 +34,51 @@ public sealed class TasksPageDetailTests
 
         await ClickTaskRowAsync(cut, "Alpha");
 
-        Assert.Equal(task.Id, cut.FindComponent<TaskReadView>().Instance.Id);
+        Assert.Equal(new TaskDetailSubject(task.Id), cut.FindComponent<PageSubjectSource>().Instance.Value);
+        Assert.True(ctx.Services.GetRequiredService<RightSidebarService>().IsOpen);
+        Assert.Empty(cut.FindComponents<TaskReadView>());
         Assert.Empty(cut.FindComponents<TaskDetail>());
     }
 
-    /// <summary>Clicking the already-open Task again is a no-op: no "Discard changes?" prompt, and the same <see cref="TaskReadView"/> instance stays mounted.</summary>
+    /// <summary>Clicking the already-selected Task again after the Right sidebar was closed opens it again, on the same Task.</summary>
     [Fact]
-    public async Task RowOpen_ClickingTheAlreadyOpenTask_DoesNotPromptOrRecreateTheDetail()
+    public async Task RowOpen_ClickingTheSelectedTaskWithTheSidebarClosed_OpensItAgain()
     {
         using TaskToolHarness harness = new();
-        _ = CreateTask(harness, "Alpha");
+        TaskItem task = CreateTask(harness, "Alpha");
 
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        RightSidebarService sidebar = ctx.Services.GetRequiredService<RightSidebarService>();
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
+        await ClickTaskRowAsync(cut, "Alpha");
+        sidebar.Toggle();
+        Assert.False(sidebar.IsOpen);
 
         await ClickTaskRowAsync(cut, "Alpha");
-        TaskReadView firstInstance = cut.FindComponent<TaskReadView>().Instance;
 
-        await ClickTaskRowAsync(cut, "Alpha");
-
-        Assert.Empty(cut.FindAll(".mud-dialog-actions button"));
-        Assert.Same(firstInstance, cut.FindComponent<TaskReadView>().Instance);
+        Assert.True(sidebar.IsOpen);
+        Assert.Equal(new TaskDetailSubject(task.Id), cut.FindComponent<PageSubjectSource>().Instance.Value);
     }
 
-    /// <summary>"+ New task" opens the edit page's new-Task Tab and leaves the drawer closed; with no single-Team filter there is no Team or Project to start in.</summary>
+    /// <summary>The open Task's row is marked while the Right sidebar shows it, and not once the sidebar is closed.</summary>
+    [Fact]
+    public async Task RowOpen_TheSelectedRowIsMarkedOnlyWhileTheSidebarIsOpen()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness, "Alpha");
+
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        RightSidebarService sidebar = ctx.Services.GetRequiredService<RightSidebarService>();
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
+        await ClickTaskRowAsync(cut, "Alpha");
+        Assert.Equal(task.Id, cut.FindComponent<TaskListView>().Instance.SelectedId);
+
+        await cut.InvokeAsync(sidebar.Toggle);
+
+        cut.WaitForAssertion(() => Assert.Null(cut.FindComponent<TaskListView>().Instance.SelectedId));
+    }
+
+    /// <summary>"+ New task" opens the edit page's new-Task Tab and selects nothing; with no single-Team filter there is no Team or Project to start in.</summary>
     [Fact]
     public async Task NewTaskHeaderButton_NoSingleTeamFilter_OpensTheNewTaskTabWithNoDefaults()
     {
@@ -68,7 +91,7 @@ public sealed class TasksPageDetailTests
         Agency.Huddle.App.Tabs.Tab tab = Assert.Single(harness.Tabs.Tabs, static t => string.Equals(t.Key, "task-new-edit", StringComparison.Ordinal));
         Assert.Equal("/tasks/item/new/edit", tab.Url);
         Assert.False(tab.IsPreview);
-        Assert.False(cut.FindComponent<ResizableEndDrawer>().Instance.Open);
+        Assert.Null(cut.FindComponent<PageSubjectSource>().Instance.Value);
     }
 
     /// <summary>"+ New task" starts the new Task in the Team and Project the effective View's filter names, when it names exactly one of each (Spec §13.3).</summary>
@@ -92,39 +115,6 @@ public sealed class TasksPageDetailTests
         Agency.Huddle.App.Tabs.Tab tab = Assert.Single(harness.Tabs.Tabs, static t => string.Equals(t.Key, "task-new-edit", StringComparison.Ordinal));
         Assert.Equal("/tasks/item/new/edit?team=Platform&project=Alpha", tab.Url);
     }
-
-    /// <summary>Escape on the open drawer with nothing pending closes it (theming plan 7.5).</summary>
-    [Fact]
-    public async Task Escape_NothingPending_ClosesTheDrawer()
-    {
-        using TaskToolHarness harness = new();
-        _ = CreateTask(harness, "Alpha");
-        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
-        await ClickTaskRowAsync(cut, "Alpha");
-        Assert.True(cut.FindComponent<ResizableEndDrawer>().Instance.Open);
-
-        await PressEscapeAsync(cut);
-
-        Assert.False(cut.FindComponent<ResizableEndDrawer>().Instance.Open);
-    }
-
-    /// <summary>The drawer's <c>ContentKey</c> is the open Task's id, so each Task gets a fresh body (theming plan 7.7).</summary>
-    [Fact]
-    public async Task DrawerContentKey_IsTheTaskId()
-    {
-        using TaskToolHarness harness = new();
-        TaskItem task = CreateTask(harness, "Alpha");
-        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
-        await ClickTaskRowAsync(cut, "Alpha");
-
-        Assert.Equal(task.Id.ToString(), cut.FindComponent<ResizableEndDrawer>().Instance.ContentKey);
-    }
-
-    /// <summary>Presses Escape on the detail drawer's body, as the browser delivers it from a focused element inside.</summary>
-    private static Task PressEscapeAsync(IRenderedComponent<ContainerFragment> cut) =>
-        cut.InvokeAsync(() => cut.Find(".tasks-detail-drawer .resizable-drawer-body").KeyDownAsync(new KeyboardEventArgs { Key = "Escape" }));
 
     /// <summary>The page hosts <see cref="WakeToasts"/> (renders nothing itself) and a page-header <see cref="AiReactingChip"/>.</summary>
     [Fact]

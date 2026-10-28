@@ -32,6 +32,19 @@ internal sealed class RightSidebarService
         this.Changed?.Invoke();
     }
 
+    /// <summary>Opens the sidebar on the active Tab's Subject, whatever it showed before: a page calls this when the Human asks for something the sidebar draws, such as a Task's details. Does nothing when it already shows a Subject.</summary>
+    public void ShowSubject()
+    {
+        if (this.IsOpen && this.Mode == RightSidebarMode.Subject)
+        {
+            return;
+        }
+
+        this.IsOpen = true;
+        this.Mode = RightSidebarMode.Subject;
+        this.Changed?.Invoke();
+    }
+
     /// <summary>
     /// The Notifications button: opens the sidebar in <see cref="RightSidebarMode.Notifications"/> mode when it is closed or showing
     /// a Subject, and closes it when it is already showing Notifications.

@@ -3,11 +3,13 @@ namespace Agency.Huddle.Tests.Ui.Tasks;
 using Agency.Huddle.Tests.Factories;
 using Bunit;
 using Bunit.Rendering;
-using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
+using Agency.Huddle.App.Components.Sidebar;
 using Agency.Huddle.App.Components.Tasks;
+using Agency.Huddle.App.Sidebar;
+using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.Tests.Acp.Tools;
@@ -39,9 +41,9 @@ using TasksPage = Agency.Huddle.App.Components.Pages.Tasks;
 /// </summary>
 public sealed class TaskRouteAndCopyTests
 {
-    /// <summary>Spec §13.13.3 step 2: the item route loads the last-opened View (here, none saved, so All Tasks) and opens the named Task's panel on top of it.</summary>
+    /// <summary>Spec §13.13.3 step 2: the item route loads the last-opened View (here, none saved, so All Tasks) and shows the named Task in the Right sidebar beside it.</summary>
     [Fact]
-    public async Task TasksPage_ItemRoute_ExistingTask_OpensDetailPanelOverLastView()
+    public async Task TasksPage_ItemRoute_ExistingTask_OpensTheTaskInTheRightSidebarOverLastView()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, title: "Ship the thing");
@@ -56,7 +58,8 @@ public sealed class TaskRouteAndCopyTests
         });
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".tasks-header .task-toolbar-header")));
-        Assert.Equal(task.Id, cut.FindComponent<TaskReadView>().Instance.Id);
+        Assert.Equal(new TaskDetailSubject(task.Id), cut.FindComponent<PageSubjectSource>().Instance.Value);
+        Assert.True(ctx.Services.GetRequiredService<RightSidebarService>().IsOpen);
     }
 
     /// <summary>Spec §13.13.3 step 1: an id that parses but names no Task shows the exact wording with <c>role="status"</c>.</summary>
@@ -97,30 +100,6 @@ public sealed class TaskRouteAndCopyTests
         var alert = cut.Find(".tasks-item-not-found-alert");
         Assert.Equal("No task not-an-id.", alert.TextContent.Trim());
         Assert.Equal("status", alert.GetAttribute("role"));
-    }
-
-    /// <summary>Spec §13.13.3 step 4: closing the panel the item route opened replaces the URL with <c>/tasks/{viewId}</c>, so Back does not reopen it (corrections-B6 "D15.2" item 5).</summary>
-    [Fact]
-    public async Task TasksPage_ItemRouteClosingDrawer_ReplacesUrlToTheEffectiveView()
-    {
-        using TaskToolHarness harness = new();
-        TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", "huddle.tasks.lastView").SetResult(null);
-        BunitNavigationManager navigation = (BunitNavigationManager)ctx.Services.GetRequiredService<NavigationManager>();
-
-        var cut = ctx.RenderWithPopovers(builder =>
-        {
-            builder.OpenComponent<TasksPage>(0);
-            builder.AddAttribute(1, nameof(TasksPage.TaskIdText), task.Id.ToString());
-            builder.CloseComponent();
-        });
-        var drawer = cut.FindComponent<MudDrawer>();
-
-        await cut.InvokeAsync(() => drawer.Instance.OpenChanged.InvokeAsync(false));
-
-        NavigationHistory last = Assert.Single(navigation.History, h => h.Uri.EndsWith($"/tasks/{ViewStore.AllTasksId}", StringComparison.Ordinal));
-        Assert.True(last.Options.ReplaceHistoryEntry);
     }
 
     /// <summary>Spec §13.13.3 step 3: a Closed Task's panel shows a <i>Closed</i> chip in the header.</summary>

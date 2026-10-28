@@ -8,7 +8,9 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
+using Agency.Huddle.App.Components.Sidebar;
 using Agency.Huddle.App.Components.Tasks;
+using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
@@ -481,9 +483,9 @@ public sealed class R3TasksTests
 
     // ---- B4k, B4j, B4p: the drawer's footer, title edit and draft ----
 
-    /// <summary>An existing Task's drawer is the read view: no footer, no Cancel or Save, and no form control at all (read view spec D-1). A draft keeps the footer, pinned below.</summary>
+    /// <summary>Opening an existing Task shows it in the Right sidebar, so the page itself holds no footer, no Cancel or Save and no form control (read view spec D-1).</summary>
     [Fact]
-    public async Task Drawer_ExistingTask_HasNoFooterAndNoEditor()
+    public async Task Page_ExistingTask_HasNoFooterAndNoEditor()
     {
         using TaskToolHarness harness = new();
         _ = CreateTask(harness, "Alpha");
@@ -491,10 +493,10 @@ public sealed class R3TasksTests
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
         await ClickTaskRowAsync(cut, "Alpha");
 
-        Assert.NotEmpty(cut.FindAll(".task-read-view"));
+        Assert.IsType<TaskDetailSubject>(cut.FindComponent<PageSubjectSource>().Instance.Value);
         Assert.Empty(cut.FindAll(".resizable-drawer-footer"));
         Assert.Empty(cut.FindAll(".task-detail-save"));
-        Assert.Empty(cut.FindAll(".task-read-view input, .task-read-view textarea, .task-read-view select"));
+        Assert.Empty(cut.FindAll(".task-read-view"));
     }
 
     /// <summary>The read view has no title edit (the title is edited on the edit page), and the inline title field keeps the title's size (audit B4j).</summary>
@@ -502,11 +504,17 @@ public sealed class R3TasksTests
     public async Task ReadView_HasNoTitleEdit_AndTheTitleFieldKeepsTheTitleSize()
     {
         using TaskToolHarness harness = new();
-        _ = CreateTask(harness, "Alpha");
+        TaskItem task = CreateTask(harness, "Alpha");
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
-        await ClickTaskRowAsync(cut, "Alpha");
+        IRenderedComponent<ContainerFragment> cut = ctx.Render(builder =>
+        {
+            builder.OpenComponent<TaskDetailPanel>(0);
+            builder.AddComponentParameter(1, "Subject", new TaskDetailSubject(task.Id));
+            builder.AddComponentParameter(2, "TabId", "t1");
+            builder.CloseComponent();
+        });
 
+        Assert.NotEmpty(cut.FindAll(".task-read-view"));
         Assert.Empty(cut.FindAll("button[aria-label='Edit title']"));
         string css = CssText.AppCss();
         string field = CssText.RuleBody(css, ".task-detail-title .mud-input-slot,\n.task-detail-title .mud-input > input.mud-input-root.mud-input-root-outlined");

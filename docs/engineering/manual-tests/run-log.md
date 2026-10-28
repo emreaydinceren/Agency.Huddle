@@ -4198,7 +4198,7 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-19--an-agent-giv
 
 ### TASKS-20 — Escape closes the Task drawer, Expand opens the dialog over the view, and a new Task opens at the top
 
-File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-20--escape-closes-the-task-drawer-edit-opens-the-edit-page-in-its-own-tab-and-a-new-task-opens-at-the-top)
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-20--the-task-opens-in-the-right-sidebar-edit-opens-the-edit-page-in-its-own-tab-and-a-new-task-opens-at-the-top)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
