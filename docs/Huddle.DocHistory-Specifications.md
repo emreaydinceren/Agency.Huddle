@@ -322,7 +322,7 @@ It shows more than the panel does:
 | --- | --- | --- |
 | Entries | The newest 5 | All, `DocHistoryView.ByDay`, 50 at a time with **Show older** |
 | Summary | One line, cut with an ellipsis | In full, wrapping |
-| Kind | Not shown | A label: Created, Edited, Reviewed, Objected, or Saved for an empty Human summary |
+| Kind | Not shown | A tinted `StatusChip` with a leading icon: Created, Edited, Reviewed, Objected, or Saved for an empty Human summary (colours in `DocHistoryKindStyle`) |
 | Actor | Avatar and Name | Avatar, Name, and a **you** or **Teammate** chip |
 | Time | Relative | Clock time under a day heading, the full date and time in a tooltip |
 

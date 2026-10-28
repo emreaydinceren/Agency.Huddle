@@ -5101,8 +5101,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     font-size: var(--mud-typography-body2-size);
 }
 
-.doc-history-chip,
-.doc-history-kind {
+.doc-history-chip {
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }

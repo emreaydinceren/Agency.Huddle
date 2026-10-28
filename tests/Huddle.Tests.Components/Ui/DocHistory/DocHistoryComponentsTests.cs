@@ -119,6 +119,39 @@ public sealed class DocHistoryComponentsTests
         Assert.Contains(longSummary, cut.Markup, StringComparison.Ordinal);
     }
 
+    /// <summary>Each History entry's kind is a tinted status chip with a leading icon, Objected in the Warning family and Edited and Saved in Default.</summary>
+    [Fact]
+    public async Task History_KindLabels_AreTintedStatusChips()
+    {
+        using Harness harness = new();
+        await using MudBunitContext ctx = harness.NewContext();
+        harness.Store.Append(Document("findings.md"), new DocHistoryEntry(new DateTimeOffset(2026, 10, 17, 16, 20, 0, TimeSpan.Zero), "Quinn", DocActorKind.Agent, DocChangeKind.Objected, "Disagree with the sample size"));
+        harness.Store.Append(Document("findings.md"), At(9, 0, "Mira", DocChangeKind.Edited, "Rewrote the intro"));
+        harness.Store.Append(Document("findings.md"), At(11, 2, "Emre", DocChangeKind.Edited, actorKind: DocActorKind.Human));
+
+        IRenderedComponent<DocumentHistory> cut = ctx.Render<DocumentHistory>(p => p.Add(c => c.Path, Document("findings.md")));
+
+        Assert.Equal(3, cut.FindAll(".doc-history-kind.status-chip").Count);
+        Assert.Single(cut.FindAll(".doc-history-kind.status-chip-warning"));
+        Assert.Equal(2, cut.FindAll(".doc-history-kind.status-chip-default").Count);
+        Assert.Equal(3, cut.FindAll(".doc-history-kind svg").Count);
+    }
+
+    /// <summary>Every kind maps to its colour family, a bare Human save to Default whatever its kind.</summary>
+    [Theory]
+    [InlineData(DocChangeKind.Created, "Hello", DocActorKind.Agent, MudBlazor.Color.Info)]
+    [InlineData(DocChangeKind.Edited, "Hello", DocActorKind.Agent, MudBlazor.Color.Default)]
+    [InlineData(DocChangeKind.Reviewed, "Hello", DocActorKind.Agent, MudBlazor.Color.Success)]
+    [InlineData(DocChangeKind.Objected, "Hello", DocActorKind.Agent, MudBlazor.Color.Warning)]
+    [InlineData(DocChangeKind.Edited, "", DocActorKind.Human, MudBlazor.Color.Default)]
+    public void KindStyle_MapsEachKindToItsColour(DocChangeKind kind, string summary, DocActorKind actorKind, MudBlazor.Color expected)
+    {
+        DocHistoryEntry entry = new(Now, "Mira", actorKind, kind, summary);
+
+        Assert.Equal(expected, DocHistoryKindStyle.ColorFor(entry));
+        Assert.NotEmpty(DocHistoryKindStyle.IconFor(entry));
+    }
+
     /// <summary>A summary is rendered as Markdown but model text cannot inject markup.</summary>
     [Fact]
     public async Task History_Summary_IsMarkdownWithoutRawHtml()
