@@ -527,6 +527,7 @@ public static class ServiceCollectionExtensions
         // Registered right before LibraryFileService (Task 8.4.i), which will take it as a
         // constructor dependency once the rewrite hooks land (8.5.i-a).
         services.AddSingleton<WikiLinkIndex>();
+        services.AddSingleton<LibraryTagIndex>();
 
         // The open Tasks that link to a document, for the Backlinks panel: WikiLinkIndex skips the Teams
         // root's underscore folders, so a Task never reaches it.
@@ -640,6 +641,8 @@ public static class ServiceCollectionExtensions
             static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.LinkedDocumentsPanel), static options => options.Library.Enabled));
         services.AddSidebarPanel(new Sidebar.SidebarPanel("backlinks", "Backlinks", MudBlazor.Icons.Material.Filled.CallReceived, 25,
             static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.BacklinksPanel), static options => options.Library.Enabled));
+        services.AddSidebarPanel(new Sidebar.SidebarPanel("tags", "Tags", MudBlazor.Icons.Material.Filled.Tag, 27,
+            static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.TagsPanel), static options => options.Library.Enabled));
         services.AddSidebarPanel(new Sidebar.SidebarPanel("recent-edits", "History", MudBlazor.Icons.Material.Filled.History, 30,
             static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.RecentEditsPanel), static options => options.Library.Enabled && options.DocHistory.Enabled));
         services.AddTaskEditSidebarPanels();

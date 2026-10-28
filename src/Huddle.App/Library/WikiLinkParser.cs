@@ -85,8 +85,30 @@ internal static partial class WikiLinkParser
         return links;
     }
 
+    /// <summary>Parses <paramref name="markdown"/> with the same pipeline the wikilink pass uses, so the tag pass reads code ranges from an identical tree.</summary>
+    /// <param name="markdown">The raw Markdown text.</param>
+    internal static MarkdownDocument ParseDocument(string markdown)
+    {
+        ArgumentNullException.ThrowIfNull(markdown);
+        return Markdig.Markdown.Parse(markdown, WikiLinkParser.Pipeline);
+    }
+
+    /// <summary>The source ranges (end-exclusive) of every wikilink and embed in <paramref name="markdown"/> outside <paramref name="excluded"/>, for the tag pass to skip.</summary>
+    /// <param name="markdown">The raw Markdown text.</param>
+    /// <param name="excluded">Code ranges from <see cref="CollectExcludedRanges"/>.</param>
+    internal static List<(int Start, int EndExclusive)> LinkRanges(string markdown, List<(int Start, int EndExclusive)> excluded)
+    {
+        List<(int Start, int EndExclusive)> ranges = [];
+        foreach (WikiLink link in WikiLinkParser.ParseMatches(markdown, excluded))
+        {
+            ranges.Add((link.Start, link.Start + link.Length));
+        }
+
+        return ranges;
+    }
+
     /// <summary>The excluded source ranges (end-exclusive): every <see cref="CodeInline"/>, <see cref="FencedCodeBlock"/> and indented <see cref="CodeBlock"/>.</summary>
-    private static List<(int Start, int EndExclusive)> CollectExcludedRanges(MarkdownDocument document)
+    internal static List<(int Start, int EndExclusive)> CollectExcludedRanges(MarkdownDocument document)
     {
         List<(int, int)> ranges = [];
         foreach (CodeBlock codeBlock in document.Descendants<CodeBlock>())

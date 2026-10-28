@@ -1,4 +1,3 @@
-using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Services;
 using Markdig;
 using Markdig.Syntax;
@@ -78,8 +77,9 @@ internal static class MarkdownOutline
     /// <returns>The headings in document order.</returns>
     internal static IReadOnlyList<OutlineHeading> Headings(string markdown)
     {
-        (_, string body) = PersonaFrontmatter.Parse(markdown);
-        int bodyOffset = markdown.EndsWith(body, StringComparison.Ordinal) ? markdown.Length - body.Length : 0;
+        (_, int bodyStart) = NoteFrontmatter.Split(markdown);
+        string body = markdown[bodyStart..].TrimStart('\r', '\n');
+        int bodyOffset = markdown.Length - body.Length;
         int frontmatterLines = MarkdownOutline.CountNewlines(markdown.AsSpan(0, bodyOffset));
 
         MarkdownDocument document = Markdig.Markdown.Parse(body, MarkdownOutline.Pipeline);
