@@ -132,17 +132,17 @@ public sealed class AvatarStoreTests
         Assert.Equal("☕", store.Get("Jarvis").Label);
     }
 
-    /// <summary>A label of seven text elements read from the file is trimmed to three, the same tolerance an unknown theme id gets.</summary>
+    /// <summary>A label of eight text elements read from the file is trimmed to six, the same tolerance an unknown theme id gets.</summary>
     [Fact]
-    public void Get_WithALabelOfSevenTextElements_TrimsToThree()
+    public void Get_WithALabelOfEightTextElements_TrimsToSix()
     {
         using var dataDir = new TempDataDir();
         var path = Path.Combine(dataDir.Path, "avatars.json");
-        File.WriteAllText(path, "{\"Jarvis\":{\"label\":\"1234567\"}}");
+        File.WriteAllText(path, "{\"Jarvis\":{\"label\":\"12345678\"}}");
 
         using var store = new AvatarStore(dataDir.Options(), NullLogger<AvatarStore>.Instance);
 
-        Assert.Equal("123", store.Get("Jarvis").Label);
+        Assert.Equal("123456", store.Get("Jarvis").Label);
     }
 
     /// <summary><see cref="AvatarStore.WriteImage"/> returns an opaque file name, never the Agent's Name, and creates the file on disk.</summary>

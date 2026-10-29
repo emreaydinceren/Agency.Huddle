@@ -324,18 +324,89 @@ public sealed class AgentAvatarTests
         Assert.Contains("mud-avatar-filled-primary", root.ClassList);
     }
 
-    /// <summary>A label of seven text elements renders only its first three - <see cref="Avatar.TrimLabel(string?)"/>, applied again at render time.</summary>
+    /// <summary>A label of eight text elements renders only its first six - <see cref="Avatar.TrimLabel(string?)"/>, applied again at render time.</summary>
     [Fact]
-    public async Task Render_LabelOfSevenTextElements_RendersThree()
+    public async Task Render_LabelOfEightTextElements_RendersSix()
     {
         await using MudBunitContext ctx = new();
-        Avatar avatar = new(Label: "ABCDEFG", Image: null, Background: null);
+        Avatar avatar = new(Label: "ABCDEFGH", Image: null, Background: null);
 
         var cut = ctx.Render<AgentAvatar>(parameters => parameters
             .Add(p => p.Name, "echo")
             .Add(p => p.Avatar, avatar));
 
-        Assert.Equal("ABC", cut.Find(".mud-avatar").TextContent.Trim());
+        Assert.Equal("ABCDEF", cut.Find(".mud-avatar").TextContent.Trim());
+    }
+
+    /// <summary>A five-character label at Medium renders in full and carries <c>avatar-label-len-5</c>, which <c>app.css</c> sizes down.</summary>
+    [Fact]
+    public async Task Render_FiveCharacterLabel_Medium_ShowsAllWithLengthClass()
+    {
+        await using MudBunitContext ctx = new();
+        Avatar avatar = new(Label: "ABCDE", Image: null, Background: null);
+
+        var cut = ctx.Render<AgentAvatar>(parameters => parameters
+            .Add(p => p.Name, "echo")
+            .Add(p => p.Avatar, avatar)
+            .Add(p => p.Size, Size.Medium));
+
+        var root = cut.Find(".mud-avatar");
+        Assert.Equal("ABCDE", root.TextContent.Trim());
+        Assert.Contains("avatar-label-len-5", root.ClassList);
+    }
+
+    /// <summary>A label of one to three characters keeps today's size: no <c>avatar-label-len-</c> class.</summary>
+    [Theory]
+    [InlineData("A")]
+    [InlineData("AB")]
+    [InlineData("ABC")]
+    public async Task Render_ShortLabel_HasNoLengthClass(string label)
+    {
+        await using MudBunitContext ctx = new();
+        Avatar avatar = new(Label: label, Image: null, Background: null);
+
+        var cut = ctx.Render<AgentAvatar>(parameters => parameters
+            .Add(p => p.Name, "echo")
+            .Add(p => p.Avatar, avatar));
+
+        var root = cut.Find(".mud-avatar");
+        Assert.Equal(label, root.TextContent.Trim());
+        Assert.DoesNotContain(root.ClassList, c => c.StartsWith("avatar-label-len-", StringComparison.Ordinal));
+    }
+
+    /// <summary>The 24px avatar has no room for six characters at the 10px floor, so it draws only the first three text elements and no length class.</summary>
+    [Fact]
+    public async Task Render_SixCharacterLabel_Small_ShowsFirstThreeAndNoLengthClass()
+    {
+        await using MudBunitContext ctx = new();
+        Avatar avatar = new(Label: "ABCDEF", Image: null, Background: null);
+
+        var cut = ctx.Render<AgentAvatar>(parameters => parameters
+            .Add(p => p.Name, "echo")
+            .Add(p => p.Avatar, avatar)
+            .Add(p => p.Size, Size.Small));
+
+        var root = cut.Find(".mud-avatar");
+        Assert.Equal("ABC", root.TextContent.Trim());
+        Assert.DoesNotContain(root.ClassList, c => c.StartsWith("avatar-label-len-", StringComparison.Ordinal));
+    }
+
+    /// <summary>A Small avatar wearing <c>avatar-transcript</c> is 32px, so it draws all six characters under <c>avatar-label-len-6</c>.</summary>
+    [Fact]
+    public async Task Render_SixCharacterLabel_SmallWithTranscriptClass_ShowsAllWithLengthClass()
+    {
+        await using MudBunitContext ctx = new();
+        Avatar avatar = new(Label: "ABCDEF", Image: null, Background: null);
+
+        var cut = ctx.Render<AgentAvatar>(parameters => parameters
+            .Add(p => p.Name, "echo")
+            .Add(p => p.Avatar, avatar)
+            .Add(p => p.Size, Size.Small)
+            .Add(p => p.Class, "avatar-transcript"));
+
+        var root = cut.Find(".mud-avatar");
+        Assert.Equal("ABCDEF", root.TextContent.Trim());
+        Assert.Contains("avatar-label-len-6", root.ClassList);
     }
 
     /// <summary>A zero-width-joiner family emoji label counts as one text element, so it renders unchanged rather than being cut mid-sequence.</summary>

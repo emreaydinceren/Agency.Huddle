@@ -156,7 +156,7 @@ about the design changed — see [ADR-0020](../adr/0020-a-hook-is-a-prompt.md).
 An avatar was the initials of a Name on the Theme's `Primary` colour, in two places, with
 nothing about it choosable — and `app.css` admitted the gap in a comment: *"The monogram
 stands in for Slack's avatar photo."* It is now three optional fields — a label of up to
-three characters, an uploaded image, and a background colour — rendered everywhere an
+six characters, an uploaded image, and a background colour — rendered everywhere an
 Agent appears, the transcript included. The Human has one too. See
 [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md).
 

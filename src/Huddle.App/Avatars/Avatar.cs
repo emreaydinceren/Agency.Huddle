@@ -34,9 +34,15 @@ public sealed record Avatar(string? Label, string? Image, string? Background)
     /// The longest a <see cref="Label"/> may be, counted in Unicode text elements rather than in
     /// <see cref="string.Length"/> - see <see cref="TrimLabel(string?)"/> for why the distinction
     /// matters. Named rather than written as a literal because the editor's own character counter
-    /// has to agree with the guard that enforces it, and two copies of <c>3</c> would eventually not.
+    /// has to agree with the guard that enforces it, and two copies of <c>6</c> would eventually not.
+    /// Six is the most that stays legible inside the 32px circle at its smallest scaled font; the
+    /// 24px row avatar cannot hold that many and shows only <see cref="SmallLabelTextElements"/>
+    /// of them (see <c>AgentAvatar</c>).
     /// </summary>
-    internal const int MaxLabelTextElements = 3;
+    internal const int MaxLabelTextElements = 6;
+
+    /// <summary>How many text elements of a label the 24px row avatar draws, which has no room for more at the 10px font floor.</summary>
+    internal const int SmallLabelTextElements = 3;
 
     /// <summary>The avatar of an Agent or the Human who has not customised one - today's rendering exactly, with all three fields unset.</summary>
     public static Avatar None { get; } = new(Label: null, Image: null, Background: null);
@@ -45,7 +51,7 @@ public sealed record Avatar(string? Label, string? Image, string? Background)
     public bool IsDefault => this.Label is null && this.Image is null && this.Background is null;
 
     /// <summary>
-    /// Strips control characters from <paramref name="raw"/> and takes at most its first three text
+    /// Strips control characters from <paramref name="raw"/> and takes at most its first <see cref="MaxLabelTextElements"/> text
     /// elements, returning <see langword="null"/> when the result is empty or whitespace.
     /// </summary>
     /// <remarks>
@@ -55,7 +61,7 @@ public sealed record Avatar(string? Label, string? Image, string? Background)
     /// UTF-16 code units and never in <see cref="System.Text.Rune"/> count. <see cref="string.Length"/>
     /// does not account for surrogate pairs at all, and a <see cref="System.Text.Rune"/> fixes only
     /// that: it still counts a skin-tone modifier or a zero-width-joiner sequence as several units when
-    /// a reader sees one glyph. Only a text element matches what a person means by "three characters
+    /// a reader sees one glyph. Only a text element matches what a person means by "characters
     /// of a label":
     /// </para>
     /// <list type="table">
@@ -81,16 +87,24 @@ public sealed record Avatar(string? Label, string? Image, string? Background)
             return null;
         }
 
+        var trimmed = FirstTextElements(stripped, MaxLabelTextElements);
+        return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
+    }
+
+    /// <summary>The first <paramref name="count"/> text elements of <paramref name="text"/>, or all of it when it has fewer.</summary>
+    /// <param name="text">The text to cut.</param>
+    /// <param name="count">How many text elements to keep.</param>
+    internal static string FirstTextElements(string text, int count)
+    {
         StringBuilder builder = new();
-        var elements = StringInfo.GetTextElementEnumerator(stripped);
-        var count = 0;
-        while (count < MaxLabelTextElements && elements.MoveNext())
+        var elements = StringInfo.GetTextElementEnumerator(text);
+        var taken = 0;
+        while (taken < count && elements.MoveNext())
         {
             builder.Append((string)elements.Current);
-            count++;
+            taken++;
         }
 
-        var trimmed = builder.ToString();
-        return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
+        return builder.ToString();
     }
 }
