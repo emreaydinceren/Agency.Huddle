@@ -367,7 +367,7 @@ there makes it active.*
 **Steps**
 
 1. Create the folder `<data>\Teams\Legal\` in a file explorer. Add no Agent to it.
-2. In the sidebar, verify `Legal` appears in the Teams list (open the Teams group first) with a trailing count of `0`; hover it and the tooltip reads "No members" (wait a few seconds; reload the page if it has not appeared).
+2. In the sidebar, verify `Legal` appears in the Teams list with a trailing count of `0`; hover it and the tooltip reads "No members" (wait a few seconds; reload the page if it has not appeared).
 3. Click `Legal` in the sidebar.
 4. On the Members page, click **Add** on any role card, then **Save changes**.
 

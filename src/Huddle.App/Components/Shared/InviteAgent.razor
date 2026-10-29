@@ -58,7 +58,7 @@
                         {
                             var status = PersonaStatusResolver.Resolve(this.Gateway.IsOnline(agent.Id), this.Health.Get(agent.Name));
                             var name = agent.Name;
-                            <MudButton Size="Size.Small" Variant="Variant.Text" FullWidth="true" Class="invite-agent" OnClick="@(() => this.InviteAsync(name))">
+                            <MudButton Size="Size.Small" Variant="Variant.Text" FullWidth="true" Class="invite-agent-option" OnClick="@(() => this.InviteAsync(name))">
                                 <AgentLabel Name="@name" State="status.State" Avatar="this.Avatars.Get(name)" />
                             </MudButton>
                         }

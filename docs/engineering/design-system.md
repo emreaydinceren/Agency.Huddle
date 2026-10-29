@@ -590,17 +590,19 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
 
 - **Every row is one line, 32px high** (`--nav-row-height`). The label is a
   `span.sidebar-row-label` with the full name as its `title`, and it ellipsises. A row is
-  `body2` (13px) in body colour, with a 24px avatar or an 18px icon (`--icon-size-row`) and an
-  8px gap to the label. A section header is `caption` (12px) at weight 600 in
+  `body2` (13px) in body colour, with a 24px avatar or an 18px icon (`--icon-size-row`) and a
+  4px gap to the label. A section header is `caption` (12px) at weight 600 in
   `TextSecondary`, sentence case, 16px above and 4px below (UX-014). Footer entries are rows
   too, or icon-only buttons with an `aria-label` (UX-017).
 - **Every row sits on two lines: an icon line and a text line.** Every row has a 24px leading
   slot, and every leading mark is centred in it: a section's icon, a row's 18px icon, a 24px
-  avatar, a Team's chevron, the "+" of an action row, the arrow of "Show all". Every label
-  starts 8px after the slot: a section title, a name, "Show all", "New chat". A row with no
-  mark keeps the slot empty. The grid is one set of tokens in `app.css` "Left menu"
-  (`--nav-inset`, `--nav-pad`, `--nav-slot`, `--nav-gap`, `--nav-step`, `--nav-end`), and every
-  view of the Sidebar uses it, so switching views moves nothing sideways.
+  avatar, a Team's chevron, the "+" of an action row, the arrow of "Show all". The slot starts
+  4px inside the row's pill and every label starts 4px after it: a section title, a name, "Show
+  all", "New chat". These are VS Code's Explorer proportions scaled to the 32px row (its 16px
+  twistie becomes the 24px slot, its few-px margins stay tight), so a label starts 32px inside
+  its row's pill. A row with no mark keeps the slot empty. The grid is one set of tokens in
+  `app.css` "Left menu" (`--nav-inset`, `--nav-pad`, `--nav-slot`, `--nav-gap`, `--nav-step`,
+  `--nav-end`), and every view of the Sidebar uses it, so switching views moves nothing sideways.
 - **A section header and its rows share the lines.** The header heads its list; it is not a
   level above it.
 - **Every view starts at one top.** Its first row, a section header, a destination (Agents,
@@ -609,8 +611,8 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
   rows fall on a 32px rhythm.
 - **Nesting moves a row in by exactly one step** (`--nav-step`, the slot and the gap): a
   child's mark sits under its parent's label, and its label starts one step further in. A row
-  sets its level with `--nav-level`, never a padding of its own. A Team's Rooms and Projects
-  are level 1; "Build a team" is a top-level action, in line with the Teams.
+  sets its level with `--nav-level`, never a padding of its own. A Team's Rooms and Library
+  folders are level 1, and the rows inside them level 1.25; "Build a team" is a top-level action, in line with the Teams.
 - **Trailing details end on one line**, `--nav-end` inside the row's right edge: a Team's
   member count, a Needs you time and count, a section's collapse arrow. A count gives way to
   the row's hover "..." while the row is hovered or focused; on touch, where the button always

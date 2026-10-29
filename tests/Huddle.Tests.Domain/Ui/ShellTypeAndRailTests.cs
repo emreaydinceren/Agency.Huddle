@@ -67,7 +67,7 @@ public sealed class ShellTypeAndRailTests
         Assert.Matches(@"\.page-breadcrumbs \.mud-breadcrumb-separator\s*\{[^}]*padding-inline:\s*8px;", CssText.AppCss(CssNewlines.AsIs));
     }
 
-    /// <summary>A sidebar row is 32px tall with an 18px icon and an 8px gap; a section header is 12px, weight 600, 16px above and 4px below.</summary>
+    /// <summary>A sidebar row is 32px tall with an 18px icon and a 4px gap; a section header is 12px, weight 600, 16px above and 4px below.</summary>
     [Fact]
     public void Sidebar_RowAndSectionHeaderMetrics()
     {
@@ -75,7 +75,7 @@ public sealed class ShellTypeAndRailTests
 
         Assert.Matches(@"--nav-row-height:\s*32px;[^}]*--icon-size-row:\s*18px;", css);
         Assert.Matches(@"\.mud-nav-group \.mud-collapse-container \.mud-nav-link \.mud-nav-link-icon\s*\{[^}]*font-size:\s*var\(--icon-size-row\);", css);
-        Assert.Matches(@"--nav-gap:\s*8px;", css);
+        Assert.Matches(@"--nav-gap:\s*4px;", css);
         Assert.Matches(@"\.mud-nav-group > \.mud-nav-link \.mud-nav-link-text\s*\{[^}]*font-size:\s*var\(--mud-typography-caption-size\);[^}]*font-weight:\s*600;[^}]*text-secondary", css);
         Assert.Matches(@"\.mud-nav-group > \.mud-nav-link\s*\{[^}]*margin-top:\s*16px;[^}]*margin-bottom:\s*4px;", css);
         Assert.DoesNotContain("nav-section-link", css, StringComparison.Ordinal);

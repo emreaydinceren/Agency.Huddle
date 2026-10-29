@@ -74,9 +74,9 @@ public sealed class SidebarConsistencyTests
     /// <summary>"Left menu" declares each token of the sidebar grid exactly once, in px on the spacing scale (UX-015).</summary>
     [Theory]
     [InlineData("--nav-inset", "4px")]
-    [InlineData("--nav-pad", "8px")]
+    [InlineData("--nav-pad", "4px")]
     [InlineData("--nav-slot", "24px")]
-    [InlineData("--nav-gap", "8px")]
+    [InlineData("--nav-gap", "4px")]
     [InlineData("--nav-step", "calc(var(--nav-slot) + var(--nav-gap))")]
     [InlineData("--nav-end", "8px")]
     public void LeftMenu_DeclaresEachGridTokenOnce(string token, string value)
@@ -111,19 +111,18 @@ public sealed class SidebarConsistencyTests
     }
 
     /// <summary>
-    /// A nested row moves in by setting <c>--nav-level</c>, never a padding of its own: the Teams nav's Project and Team
-    /// Room rows are level 1, and no stale indent literal or token is left (UX-015).
+    /// A nested row moves in by setting <c>--nav-level</c>, never a padding of its own: the Teams nav's Rooms and Library
+    /// folders are level 1, the rows inside them a quarter level further, and no stale indent literal or token is left (UX-015).
     /// </summary>
     [Fact]
-    public void TeamsNav_ProjectAndTeamRoomRows_AreLevelOne()
+    public void TeamsNav_FoldersAreLevelOne_AndTheirRowsAQuarterFurther()
     {
         string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.DoesNotContain("3.875rem", css, StringComparison.Ordinal);
         Assert.DoesNotContain("--nav-indent", css, StringComparison.Ordinal);
-        ShellSidebarRowsTests.SourceHas(
-            CssText.RuleBodyInList(css, ".teams-nav-host .mud-nav-item.nav-team-room-link"),
-            "--nav-level: 1");
+        ShellSidebarRowsTests.SourceHas(CssText.RuleBodyInList(css, ".teams-nav-host .teams-nav-folder"), "--nav-level: 1;");
+        ShellSidebarRowsTests.SourceHas(CssText.RuleBodyInList(css, ".teams-nav-host .teams-nav-folder .mud-collapse-container"), "--nav-level: 1.25");
     }
 
     /// <summary>
