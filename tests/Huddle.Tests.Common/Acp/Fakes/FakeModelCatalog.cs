@@ -73,9 +73,34 @@ public sealed class FakeModelCatalog : IModelCatalog
     /// </summary>
     public List<string?> EffortProbedModels { get; } = [];
 
+    /// <summary>What <see cref="PeekRuntime"/> hands back, as the cache would; the default is nothing cached.</summary>
+    public RuntimeNames Runtime { get; set; }
+
+    /// <summary>Every (Adapter id, model id, effort id) triple <see cref="PeekRuntime"/> was asked about, in call order.</summary>
+    public List<(string? AdapterId, string? Model, string? Effort)> PeeksAsked { get; } = [];
+
+    /// <summary>When <see langword="true"/>, <see cref="GetAsync"/> throws, standing in for an unexpected probe failure.</summary>
+    public bool ThrowOnProbe { get; set; }
+
+    /// <summary>Completes when <see cref="GetAsync"/> is first called, so a test can wait for a fire-and-forget warm-up without polling.</summary>
+    public TaskCompletionSource FirstProbe { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <inheritdoc/>
+    public RuntimeNames PeekRuntime(string? adapterId, string? model, string? effort)
+    {
+        this.PeeksAsked.Add((adapterId, model, effort));
+        return this.Runtime;
+    }
+
     public ValueTask<IReadOnlyList<AgentModelOption>> GetAsync(string? adapterId, CancellationToken cancellationToken)
     {
         this.ProbeCount++;
+        this.FirstProbe.TrySetResult();
+        if (this.ThrowOnProbe)
+        {
+            throw new InvalidOperationException("The fake probe was told to fail.");
+        }
+
         this.AdaptersProbed.Add(adapterId);
 
         var models = adapterId is not null && this.ModelsByAdapter.TryGetValue(adapterId, out var forAdapter)

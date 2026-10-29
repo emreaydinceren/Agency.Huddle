@@ -33,6 +33,17 @@ internal static class ModelConfigOptions
     }
 
     /// <summary>
+    /// The <c>currentValue</c> of the model select: the model the agent reports it is running.
+    /// Null when there is no model option at all.
+    /// </summary>
+    /// <param name="configOptions">The response's <c>configOptions</c> array, or null.</param>
+    /// <returns>The current model id, or null.</returns>
+    internal static string? CurrentValue(dotacp.protocol.SessionConfigOption[]? configOptions)
+    {
+        return SessionConfigSelects.CurrentValue(configOptions, dotacp.protocol.SessionConfigOptionCategory.Model);
+    }
+
+    /// <summary>
     /// Looks up <paramref name="model"/> by exact match against an option's <c>value</c>. Returns
     /// false (never throws) when there is no model option at all, or the id does not match any
     /// option - a stale stored model must not prevent a session from starting on the agent's

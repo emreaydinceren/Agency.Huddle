@@ -43,10 +43,7 @@ internal static class ModeConfigOptions
     /// <returns>The current mode id, or null.</returns>
     internal static string? CurrentValue(dotacp.protocol.SessionConfigOption[]? configOptions)
     {
-        dotacp.protocol.SessionConfigSelect? select = SessionConfigSelects.Find(configOptions, dotacp.protocol.SessionConfigOptionCategory.Mode);
-#pragma warning disable HAA0601 // The protocol id is a struct with an implicit conversion to string: a method call, not a boxing conversion.
-        return select is null ? null : (string)select.CurrentValue;
-#pragma warning restore HAA0601
+        return SessionConfigSelects.CurrentValue(configOptions, dotacp.protocol.SessionConfigOptionCategory.Mode);
     }
 
     /// <summary>

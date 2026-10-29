@@ -25,6 +25,9 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     // for, and nothing has asked to tune how long a one-off probe is allowed to hang.
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(20);
 
+    /// <summary>The adapter's effort id meaning "let the model choose": a sentinel that names no level.</summary>
+    private const string EffortSentinelId = "default";
+
     private readonly AgentPaths agentPaths;
     private readonly ILogger<ModelCatalogProbe> logger;
     private readonly AdapterProfileResolver resolver;
@@ -58,6 +61,12 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     // one probe fills both and one cache entry serves both. The modes held here are UNFILTERED; the
     // hidden-modes policy is applied on the way out, so it is never baked into a cached answer.
     private readonly ConcurrentDictionary<string, SessionCatalog> effortCache =
+        new(StringComparer.Ordinal);
+
+    // What the Adapter itself runs on when nothing is chosen, per RESOLVED profile id: the current model
+    // and effort ids the throwaway session reported on a probe that requested no model. Set only by a
+    // successful null-model probe, like the caches above, so a failure caches nothing.
+    private readonly ConcurrentDictionary<string, AdapterDefaults> defaultsCache =
         new(StringComparer.Ordinal);
 
     private readonly WorkModePolicy workModePolicy;
@@ -143,6 +152,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
                 // GetEffortLevelsAsync would have probed for itself. The payoff: opening a card and
                 // leaving the model at "Agent default" costs zero extra adapter spawns.
                 this.effortCache[ModelCatalogProbe.EffortCacheKey(profile.Id, null)] = new SessionCatalog(result.EffortLevels, result.Modes);
+                this.defaultsCache[profile.Id] = new AdapterDefaults(result.CurrentModel, result.CurrentEffort);
             }
 
             return result.Models;
@@ -167,6 +177,52 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
         // Filtered here, on the way out, so the cache holds what the Adapter advertised.
         return this.workModePolicy.Filter(catalog.Modes);
     }
+
+    /// <inheritdoc/>
+    public RuntimeNames PeekRuntime(string? adapterId, string? model, string? effort)
+    {
+        (AdapterProfile profile, _) = this.resolver.Resolve(adapterId);
+        this.modelCache.TryGetValue(profile.Id, out IReadOnlyList<AgentModelOption>? models);
+        this.defaultsCache.TryGetValue(profile.Id, out AdapterDefaults? defaults);
+
+        string? modelName = null;
+        if (model is not null)
+        {
+            modelName = ModelCatalogProbe.NameOfModel(models, model);
+        }
+        else if (defaults?.Model is { } defaultModel)
+        {
+            modelName = ModelCatalogProbe.NameOfModel(models, defaultModel) ?? defaultModel;
+        }
+
+        string? effortName = null;
+        if (effort is not null)
+        {
+            if (this.effortCache.TryGetValue(ModelCatalogProbe.EffortCacheKey(profile.Id, model), out SessionCatalog? catalog))
+            {
+                effortName = ModelCatalogProbe.NameOfEffort(catalog.EffortLevels, effort);
+            }
+        }
+        else if (model is null
+            && defaults?.Effort is { } defaultEffort
+            && !string.Equals(defaultEffort, ModelCatalogProbe.EffortSentinelId, StringComparison.Ordinal))
+        {
+            // Only the Adapter's default model has a known default effort; a chosen model's is never probed here.
+            effortName = this.effortCache.TryGetValue(ModelCatalogProbe.EffortCacheKey(profile.Id, null), out SessionCatalog? defaultCatalog)
+                ? ModelCatalogProbe.NameOfEffort(defaultCatalog.EffortLevels, defaultEffort) ?? defaultEffort
+                : defaultEffort;
+        }
+
+        return new RuntimeNames(modelName, effortName);
+    }
+
+    /// <summary>The display name of the model with id <paramref name="id"/> in <paramref name="models"/>, or null when absent.</summary>
+    private static string? NameOfModel(IReadOnlyList<AgentModelOption>? models, string id) =>
+        models?.FirstOrDefault(option => string.Equals(option.Id, id, StringComparison.Ordinal))?.Name;
+
+    /// <summary>The display name of the effort level with id <paramref name="id"/> in <paramref name="levels"/>, or null when absent.</summary>
+    private static string? NameOfEffort(IReadOnlyList<AgentEffortOption> levels, string id) =>
+        levels.FirstOrDefault(option => string.Equals(option.Id, id, StringComparison.Ordinal))?.Name;
 
     /// <summary>
     /// The throwaway session's effort ladder and Work Modes for one (Adapter, Model), served from the
@@ -207,6 +263,10 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
             if (succeeded)
             {
                 this.effortCache[key] = answered;
+                if (model is null)
+                {
+                    this.defaultsCache[profile.Id] = new AdapterDefaults(result.CurrentModel, result.CurrentEffort);
+                }
             }
 
             return answered;
@@ -246,7 +306,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
 
         return levels.Count == 0
             ? levels
-            : levels.Where(level => !string.Equals(level.Id, "default", StringComparison.Ordinal)).ToList();
+            : levels.Where(level => !string.Equals(level.Id, ModelCatalogProbe.EffortSentinelId, StringComparison.Ordinal)).ToList();
     }
 
     /// <summary>
@@ -261,10 +321,15 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     private sealed record ProbeResult(
         IReadOnlyList<AgentModelOption> Models,
         IReadOnlyList<AgentEffortOption> EffortLevels,
-        IReadOnlyList<AgentModeOption> Modes)
+        IReadOnlyList<AgentModeOption> Modes,
+        string? CurrentModel = null,
+        string? CurrentEffort = null)
     {
         internal static ProbeResult Empty { get; } = new ProbeResult([], [], []);
     }
+
+    /// <summary>The model and effort ids an Adapter reported running when none was requested.</summary>
+    private sealed record AdapterDefaults(string? Model, string? Effort);
 
     /// <summary>The effort ladder and the Work Modes of one (Adapter, Model), cached as a pair because one probe answers both.</summary>
     private sealed record SessionCatalog(
@@ -298,7 +363,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
         try
         {
             AdapterProbeOutcome outcome = await this.probeRunner.RunAsync(processOptions, probeCwd, model, timeoutCts.Token).ConfigureAwait(false);
-            return (true, new ProbeResult(outcome.Models, ModelCatalogProbe.WithoutAdapterDefault(outcome.EffortLevels), outcome.Modes));
+            return (true, new ProbeResult(outcome.Models, ModelCatalogProbe.WithoutAdapterDefault(outcome.EffortLevels), outcome.Modes, outcome.CurrentModel, outcome.CurrentEffort));
         }
         catch (AgentAuthenticationRequiredException ex)
         {

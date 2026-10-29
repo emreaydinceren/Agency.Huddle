@@ -24,6 +24,11 @@ internal sealed class AdapterProcessProbeRunner(IOptions<TeamOptions> options, I
             processOptions, sessionOptions, options.Value.Acp.TraceWire, loggerFactory, cancellationToken).ConfigureAwait(false);
         await using var adapterScope = adapter.ConfigureAwait(false);
 
-        return new AdapterProbeOutcome(adapter.Session.Models, adapter.Session.EffortLevels) { Modes = adapter.Session.ModeOptions };
+        return new AdapterProbeOutcome(adapter.Session.Models, adapter.Session.EffortLevels)
+        {
+            Modes = adapter.Session.ModeOptions,
+            CurrentModel = adapter.Session.CurrentModelId,
+            CurrentEffort = adapter.Session.CurrentEffortId,
+        };
     }
 }

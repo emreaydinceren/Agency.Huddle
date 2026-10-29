@@ -43,6 +43,17 @@ internal static class EffortConfigOptions
     }
 
     /// <summary>
+    /// The <c>currentValue</c> of the effort select, unfiltered: it may be the "default" sentinel,
+    /// which means "the model chooses" and names no level. Null when there is no effort option.
+    /// </summary>
+    /// <param name="configOptions">The response's <c>configOptions</c> array, or null.</param>
+    /// <returns>The current effort id, or null.</returns>
+    internal static string? CurrentValue(dotacp.protocol.SessionConfigOption[]? configOptions)
+    {
+        return SessionConfigSelects.CurrentValue(configOptions, dotacp.protocol.SessionConfigOptionCategory.ThoughtLevel);
+    }
+
+    /// <summary>
     /// Looks up <paramref name="effort"/> by exact match against an option's <c>value</c>. Returns
     /// false (never throws) when there is no effort option at all, or the id does not match any
     /// option.
