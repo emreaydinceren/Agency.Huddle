@@ -48,7 +48,7 @@ public sealed class AgentProfileCardAvatarTests
     private static async Task TypeLabelAsync(IRenderedComponent<ContainerFragment> cut, string label)
     {
         await SelectAvatarChoiceAsync(cut, "A short label");
-        await SetImmediateTextValueAsync(cut, "Label", label);
+        await SetAvatarLabelAsync(cut, label);
     }
 
     /// <summary>Uploads <paramref name="bytes"/> through the open editor's file input.</summary>
@@ -237,7 +237,7 @@ public sealed class AgentProfileCardAvatarTests
         WaitForEditorClosed(cut);
         await OpenAvatarEditorAsync(cut);
 
-        IElement input = FindInputControl(cut, "Label").QuerySelector("input") ?? throw new InvalidOperationException("No input under 'Label'.");
+        IElement input = cut.Find(AvatarLabelInput);
         Assert.Equal("AB", input.GetAttribute("value"));
         Assert.Equal("AB", EditorPreviewText(cut));
     }

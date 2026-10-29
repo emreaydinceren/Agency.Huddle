@@ -580,7 +580,7 @@ public sealed class TeamPageTests
 
         await AgentProfileCardTestSupport.OpenAvatarEditorAsync(cut);
         await AgentProfileCardTestSupport.SelectAvatarChoiceAsync(cut, "A short label");
-        await AgentProfileCardTestSupport.SetImmediateTextValueAsync(cut, "Label", "QA");
+        await AgentProfileCardTestSupport.SetAvatarLabelAsync(cut, "QA");
         await AgentProfileCardTestSupport.ClickEditorButtonAsync(cut, "Save");
 
         cut.WaitForAssertion(() => Assert.Equal(new Avatar("QA", null, null), folders.ReadResult?.Avatar));

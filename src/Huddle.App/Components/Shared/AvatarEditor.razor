@@ -98,7 +98,7 @@ else
                    overridden. This is the markup MudInputControl renders for a counter (the helper container, the d-flex helper text, the
                    right-aligned ms-auto line), so it looks the same, and it counts text elements as the limit does. Like the stock counter
                    it does not change colour past the limit. Trimming happens once, in Working's Avatar.TrimLabel call, not here. *@
-                <MudTextField @ref="this.labelField" T="string" Label="Label" Variant="Variant.Outlined" Margin="Margin.Dense"
+                <MudTextField @ref="this.labelField" T="string" aria-label="Avatar label" Class="avatar-label-field" Variant="Variant.Outlined" Margin="Margin.Dense"
                               Value="@this.label" ValueChanged="this.OnLabelChangedAsync"
                               Immediate="true"
                               Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.EmojiEmotions"

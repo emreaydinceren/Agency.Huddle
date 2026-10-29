@@ -124,12 +124,7 @@ public sealed class AvatarEditorTests
 
     /// <summary>Types <paramref name="value"/> into the Label field by raising its <c>oninput</c>.</summary>
     private static Task TypeLabelAsync(IRenderedComponent<ContainerFragment> cut, string value) =>
-        cut.InvokeAsync(() =>
-        {
-            IElement control = cut.FindAll("div.mud-input-control")
-                .First(c => c.QuerySelectorAll("label").Any(l => l.TextContent.Contains("Label", StringComparison.Ordinal)));
-            return (control.QuerySelector("input") ?? throw new InvalidOperationException("No Label input.")).InputAsync(value);
-        });
+        AgentProfileCardTestSupport.SetAvatarLabelAsync(cut, value);
 
     /// <summary>Clicks the first button whose trimmed text equals <paramref name="text"/>.</summary>
     private static Task ClickButtonAsync(IRenderedComponent<ContainerFragment> cut, string text) =>
@@ -175,14 +170,14 @@ public sealed class AvatarEditorTests
         Assert.Equal("radiogroup", cut.Find(".avatar-choices").GetAttribute("role"));
         Assert.True(IsSelected(cut, UploadCard));
         Assert.True(HasButton(cut, "Upload…"));
-        Assert.True(HasInputLabelled(cut, "Label"));
+        AssertLabelFieldIsNamedByAriaOnly(cut);
 
         await SelectChoiceAsync(cut, "Initials of the name");
 
         Assert.True(IsSelected(cut, "Initials of the name"));
         Assert.False(IsSelected(cut, UploadCard));
         Assert.True(HasButton(cut, "Upload…"));
-        Assert.True(HasInputLabelled(cut, "Label"));
+        AssertLabelFieldIsNamedByAriaOnly(cut);
         Assert.Equal(AvatarPalette.Colours.Count, cut.FindAll(Swatch).Count);
     }
 
@@ -328,9 +323,12 @@ public sealed class AvatarEditorTests
         Assert.NotEmpty(cut.FindAll(Swatch));
     }
 
-    /// <summary>Whether a field labelled <paramref name="text"/> is on the page.</summary>
-    private static bool HasInputLabelled(IRenderedComponent<ContainerFragment> cut, string text) =>
-        cut.FindAll("div.mud-input-control").Any(c => c.QuerySelectorAll("label").Any(l => string.Equals(l.TextContent.Trim(), text, StringComparison.Ordinal)));
+    /// <summary>Asserts the label field is present with the accessible name "Avatar label" and that no visible <c>&lt;label&gt;</c> reads "Label".</summary>
+    private static void AssertLabelFieldIsNamedByAriaOnly(IRenderedComponent<ContainerFragment> cut)
+    {
+        Assert.Equal("Avatar label", cut.Find(AgentProfileCardTestSupport.AvatarLabelInput).GetAttribute("aria-label"));
+        Assert.DoesNotContain(cut.FindAll("label"), l => string.Equals(l.TextContent.Trim(), "Label", StringComparison.Ordinal));
+    }
 
     /// <summary>The Background palette offers every swatch of <see cref="AvatarPalette"/> and no swatch is chosen until one is pressed.</summary>
     [Fact]

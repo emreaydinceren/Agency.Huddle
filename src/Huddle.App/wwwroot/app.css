@@ -762,8 +762,10 @@ a.team-ref,
    Theme (MainLayout renders .theme-mode-dark) runs the colour at 35% over its Surface with letters mixed 75% toward
    white: a deep fill, light letters. There is no per-colour black or white. AvatarColours mirrors both recipes in C#
    so a test can prove the 4.5:1 contrast.
-   A text label may run to six characters. AgentAvatar adds .avatar-label-len-4, -5 or -6 for a label of that many
-   text elements (1-3 keep the 40% size, no class), and the rules after the 72px diameter below shrink the letters
+   A text label may run to six characters. AgentAvatar adds .avatar-label-len-1, -4, -5 or -6 for a label of that many
+   text elements (2-3 keep the 40% size, no class). A single element (an emoji, one letter) grows to 55% of the
+   diameter so it fills the circle; the 24px avatar gets it too, since a one-element label stays one there. The rules
+   after the 72px diameter below shrink the letters
    to 0.3, 0.24 and 0.2 of the diameter: an upper-case letter at weight 600 averages about 0.65em, so N of them fill
    about 80% of the circle's width. Wide letters (W, M) can still reach the edge, where the circle clips them. These are the one place the 10px floor
    does not hold (a 6-character label cannot fit a 32px circle at 10px), so they use a 7px floor instead. The 24px
@@ -806,6 +808,22 @@ a.team-ref,
     width: 72px;
     height: 72px;
     font-size: max(10px, calc(72px * 0.4));
+}
+
+.mud-avatar.mud-avatar-small.avatar-label-len-1 {
+    font-size: max(10px, calc(24px * 0.55));
+}
+
+.mud-avatar.avatar-transcript.avatar-label-len-1 {
+    font-size: max(10px, calc(32px * 0.55));
+}
+
+.mud-avatar.mud-avatar-medium.avatar-label-len-1 {
+    font-size: max(10px, calc(40px * 0.55));
+}
+
+.mud-avatar.mud-avatar-large.avatar-label-len-1 {
+    font-size: max(10px, calc(72px * 0.55));
 }
 
 .mud-avatar.avatar-transcript.avatar-label-len-4 {

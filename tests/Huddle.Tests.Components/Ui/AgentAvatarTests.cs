@@ -355,9 +355,42 @@ public sealed class AgentAvatarTests
         Assert.Contains("avatar-label-len-5", root.ClassList);
     }
 
-    /// <summary>A label of one to three characters keeps today's size: no <c>avatar-label-len-</c> class.</summary>
+    /// <summary>A one-element label (a letter, an emoji, a ZWJ emoji sequence) carries <c>avatar-label-len-1</c>, which <c>app.css</c> sizes up.</summary>
     [Theory]
     [InlineData("A")]
+    [InlineData("😀")]
+    [InlineData("🧑‍💻")]
+    public async Task Render_OneElementLabel_HasLenOneClass(string label)
+    {
+        await using MudBunitContext ctx = new();
+        Avatar avatar = new(Label: label, Image: null, Background: null);
+
+        var cut = ctx.Render<AgentAvatar>(parameters => parameters
+            .Add(p => p.Name, "echo")
+            .Add(p => p.Avatar, avatar));
+
+        var root = cut.Find(".mud-avatar");
+        Assert.Equal(label, root.TextContent.Trim());
+        Assert.Contains("avatar-label-len-1", root.ClassList);
+    }
+
+    /// <summary>A picture never carries a label-length class, even when it also has a one-element label.</summary>
+    [Fact]
+    public async Task Render_PictureWithOneElementLabel_HasNoLengthClass()
+    {
+        await using MudBunitContext ctx = new();
+        Avatar avatar = new(Label: "A", Image: "abc123.png", Background: null);
+
+        var cut = ctx.Render<AgentAvatar>(parameters => parameters
+            .Add(p => p.Name, "echo")
+            .Add(p => p.Avatar, avatar));
+
+        var root = cut.Find(".mud-avatar");
+        Assert.DoesNotContain(root.ClassList, c => c.StartsWith("avatar-label-len-", StringComparison.Ordinal));
+    }
+
+    /// <summary>A label of two or three characters keeps today's size: no <c>avatar-label-len-</c> class.</summary>
+    [Theory]
     [InlineData("AB")]
     [InlineData("ABC")]
     public async Task Render_ShortLabel_HasNoLengthClass(string label)

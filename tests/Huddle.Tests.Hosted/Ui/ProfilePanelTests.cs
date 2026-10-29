@@ -91,7 +91,7 @@ public sealed class ProfilePanelTests
         Assert.True(HasEditorButton(cut, "Save"));
 
         await SelectAvatarChoiceAsync(cut, "A short label");
-        await SetImmediateTextValueAsync(cut, "Label", "ME");
+        await SetAvatarLabelAsync(cut, "ME");
         await ClickEditorButtonAsync(cut, "Save");
 
         cut.WaitForAssertion(() => Assert.Equal("ME", avatars.Get("You").Label), TimeSpan.FromSeconds(10));
