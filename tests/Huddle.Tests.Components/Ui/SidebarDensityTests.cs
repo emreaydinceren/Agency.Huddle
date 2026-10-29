@@ -76,11 +76,11 @@ public sealed class SidebarDensityTests
 
         IRenderedComponent<ContainerFragment> cut = SidebarDensityTests.Render<TeamsNav>(ctx);
 
-        IElement lab = cut.FindAll("div.hover-reveal-row").Single(row => row.QuerySelector(".hover-reveal-link")?.TextContent.Trim() == "Lab");
+        IElement lab = cut.FindAll("div.hover-reveal-row").Single(row => row.QuerySelector(".hover-reveal-link .sidebar-row-label")?.TextContent.Trim() == "Lab");
         Assert.Equal("0", lab.QuerySelector(".sidebar-row-meta")?.TextContent.Trim());
         Assert.Equal("No members", lab.QuerySelector(".sidebar-row-meta")?.GetAttribute("title"));
         Assert.Null(lab.QuerySelector(".hover-reveal-link .sidebar-row-meta"));
-        IElement business = cut.FindAll("div.hover-reveal-row").Single(row => row.QuerySelector(".hover-reveal-link")?.TextContent.Trim() == "Business");
+        IElement business = cut.FindAll("div.hover-reveal-row").Single(row => row.QuerySelector(".hover-reveal-link .sidebar-row-label")?.TextContent.Trim() == "Business");
         Assert.Equal("3", business.QuerySelector(".sidebar-row-meta")?.TextContent.Trim());
         Assert.Equal("3 members", business.QuerySelector(".sidebar-row-meta")?.GetAttribute("title"));
     }

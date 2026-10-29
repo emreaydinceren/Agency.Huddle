@@ -19,6 +19,7 @@
 @inject NavigationManager Navigation
 @inject ServerNavigator ServerNavigation
 @inject AvatarStore Avatars
+@inject ITeamCatalog TeamCatalog
 @inject IHumanIdentity Human
 @inject IMentionAliasSource AliasSource
 @inject IServiceProvider Services
@@ -38,6 +39,10 @@ else
         <div class="room-header px-4">
             <PageHeader Title="@this.room.Name" Chrome="true" TitleEditor="@(this.isRenaming ? this.RenameEditor : null)">
                 <TitleTrailing>
+                    @if (this.isTeamRoom && this.room.Team is { Length: > 0 } roomTeam)
+                    {
+                        <TeamAvatar Team="@roomTeam" Avatar="this.TeamCatalog.Find(roomTeam)?.Avatar ?? Avatar.None" Size="Size.Small" Class="avatar-transcript room-team-avatar" />
+                    }
                     @* The Room's kind, hidden in app.css; a style pack may show it as a chip (Nordic, ADR-0057). *@
                     <span class="room-kind-chip">@this.RoomKind</span>
                     @if (!this.isRenaming && !this.isTeamRoom)
@@ -362,6 +367,10 @@ else
         // "Every component subscribing to RoomEvents must unsubscribe in Dispose" - the same
         // reasoning applies to any singleton's event).
         this.Avatars.AvatarsChanged += this.OnAvatarsChanged;
+
+        // A Team Room's header draws its Team's avatar, which lives in _team.md; the catalog raises Changed when that file
+        // changes, so a new avatar shows at once. Unsubscribed in Dispose, below.
+        this.TeamCatalog.Changed += this.OnAvatarsChanged;
     }
 
     protected override Task OnAfterRenderAsync(bool firstRender)
@@ -422,6 +431,7 @@ else
         this.Health.Changed -= this.OnHealthOrPresenceChanged;
         this.Gateway.PresenceChanged -= this.OnHealthOrPresenceChanged;
         this.Avatars.AvatarsChanged -= this.OnAvatarsChanged;
+        this.TeamCatalog.Changed -= this.OnAvatarsChanged;
     }
 
     private async Task LoadRoomAsync(string roomId)

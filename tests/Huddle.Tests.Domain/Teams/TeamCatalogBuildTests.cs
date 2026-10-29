@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.Tasks;
 
@@ -232,5 +233,28 @@ public sealed class TeamCatalogBuildTests
         return teams.Select(
             t => $"{t.Name}|projects={string.Join(",", t.Projects)}|members={string.Join(",", t.Members)}|folder={t.HasFolder}")
             .ToArray();
+    }
+
+    /// <summary>A Team whose team file carries an avatar exposes it on the summary, and one without a file or without the keys has <c>Avatar.None</c>.</summary>
+    [Fact]
+    public void Build_TeamFileAvatar_IsCarriedOntoTheSummary()
+    {
+        IReadOnlyList<TeamFolder> folders =
+        [
+            new("Business", (IReadOnlyList<string>)[], false),
+            new("Ops", (IReadOnlyList<string>)[], false),
+            new("Sales", (IReadOnlyList<string>)[], false),
+        ];
+        Avatar avatar = new("BZ", "0123456789abcdef0123456789abcdef.png", "#1E90FF");
+        Dictionary<string, TeamFile> teamFiles = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["business"] = new TeamFile(new VersionedRef("development", "1"), null, null, null, "Process.md", string.Empty) { Avatar = avatar },
+            ["Ops"] = new TeamFile(new VersionedRef("development", "1"), null, null, null, "Process.md", string.Empty),
+        };
+
+        IReadOnlyList<TeamSummary> result = TeamCatalog.Build([], [], folders, teamFiles);
+
+        Assert.Equal([avatar, Avatar.None, Avatar.None], result.Select(static summary => summary.Avatar));
+        Assert.Equal(["Business", "Ops", "Sales"], result.Select(static summary => summary.Name));
     }
 }

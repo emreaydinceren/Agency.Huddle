@@ -467,7 +467,9 @@ Component parameters are in the [catalog](UXDesignGuidelines.md#display).
 - **`AgentAvatar` is the only place an avatar becomes pixels.** Never draw a raw
   `MudAvatar` for an Agent, and never compute a monogram elsewhere (UX-051). Keep its
   single `MudAvatar` root.
-- **An avatar is a circle at one of four sizes.** `Small` (24px) in rows, the sidebar, the
+- **An avatar is a circle at one of four sizes (a Team's is a rounded square).** `Small` (24px) in rows, the sidebar, the
+  `TeamAvatar` wraps `AgentAvatar` with `Shape="RoundedSquare"`, adding `.avatar-square`; the sizes and
+  the picture's hairline are the same. An Agent or the Human is never a square, and a Team never a circle.
   Board and the Room header; `.avatar-transcript` (32px) in the Transcript, where it fills the
   32px `.message-gutter`; `Medium` (40px) on cards and tiles, the Agents tile and roster
   cards; `Large` (72px) on a `AgentProfileCard` and in the avatar editor. Pass the class and the

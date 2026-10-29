@@ -11,6 +11,14 @@ date: 2026-10-10
 > still goes through the upload path, and nothing is written to disk before there is a Name to file
 > it under.
 
+> **Amended 2026-10-29: a spelled-out button now accompanies the avatar.** The decision stands: the avatar still opens
+> the dialog, and it keeps its pencil and focus ring. But the Consequences below say the pencil "carries the whole discovery",
+> and a manual test found that newcomers do not find it. Each editable avatar now has a quiet text button, **Edit avatar…**
+> (`Variant.Text`, `Size.Small`, no icon), that raises the same handler as the avatar. It sits under the avatar on the Agent card
+> (View, Edit and Create) and on the Human's profile card (Settings > Profile), and in the Team page header before **Duplicate**
+> ([ADR-0069](0069-a-teams-avatar-lives-in-team-md-and-is-a-rounded-square.md)); a Team with no `_team.md` has neither button.
+> Nothing else about the dialog changes.
+
 ## The defect
 
 The Agent card carried the whole avatar editor inline: a radio group, a label box, an upload

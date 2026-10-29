@@ -5,10 +5,12 @@
     related items under "In the Feed" and navigation buttons. The parent owns which card is expanded; nothing here writes anything.
     The card never shows Message text.
 *@
+@using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Feed
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Tabs
 @inject TimeProvider Clock
+@inject ITeamCatalog Catalog
 @inject TabService Tabs
 @inject NavigationManager Navigation
 @inject LibraryPathResolver LibraryResolver
@@ -74,7 +76,7 @@
                         <span class="feed-meta-sep" aria-hidden="true"> • </span>
                     }
 
-                    <span class="feed-team-chip"><span class="feed-team-monogram" aria-hidden="true">@FeedCardText.Monogram(team)</span> <span class="feed-team-name">@team</span></span>
+                    <span class="feed-team-chip"><TeamAvatar Team="@team" Avatar="this.Catalog.Find(team)?.Avatar ?? Avatar.None" Size="Size.Small" Class="feed-team-avatar" /> <span class="feed-team-name">@team</span></span>
                 }
             </div>
             @if (this.Pill is { } pill)

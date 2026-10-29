@@ -86,11 +86,16 @@
             @* The avatar is the way into the avatar editor in every mode, so it is a real button: focusable,
                announced, and carrying the one hover/focus cue (the pencil, app.css .agent-profile-card-avatar). The
                avatar itself keeps its own single root element; the button wraps it rather than replacing it. *@
-            <button type="button" class="agent-profile-card-avatar" aria-label="Change avatar" title="Change avatar" @onclick="this.EditAvatarAsync">
-                <AgentAvatar Name="@this.name" Avatar="this.avatar" Size="Size.Large"
-                                PendingImage="this.avatarPendingBytes" PendingImageExtension="@this.avatarPendingExtension" />
-                <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="agent-profile-card-avatar-edit" />
-            </button>
+            @* The pencil is easy to miss, so a quiet text button under the avatar says plainly that it can be changed (ADR-0047).
+               Both open the same editor. *@
+            <div class="avatar-edit-column">
+                <button type="button" class="agent-profile-card-avatar" aria-label="Change avatar" title="Change avatar" @onclick="this.EditAvatarAsync">
+                    <AgentAvatar Name="@this.name" Avatar="this.avatar" Size="Size.Large"
+                                    PendingImage="this.avatarPendingBytes" PendingImageExtension="@this.avatarPendingExtension" />
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="agent-profile-card-avatar-edit" />
+                </button>
+                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.EditAvatarAsync">Edit avatar…</MudButton>
+            </div>
 
             @if (this.mode == AgentProfileCardMode.Create)
             {
@@ -1157,17 +1162,12 @@
 
     /// <summary>
     /// Writes the avatar this card shows under the current <see cref="name"/>: first an image applied but not yet
-    /// written, through <see cref="AvatarStore.WriteImage(ReadOnlySpan{byte}, string)"/>, then the avatar itself. Only
+    /// written, through <see cref="AvatarStore.CommitPendingImage(Avatar, byte[], string)"/>, then the avatar itself. Only
     /// here, with a Name known (a Create mints one when it is saved), can an image be filed under the right key.
     /// </summary>
     private void SaveAvatar()
     {
-        Avatar toSave = this.avatar;
-        if (this.avatarPendingBytes is not null && this.avatarPendingExtension is not null)
-        {
-            toSave = toSave with { Image = this.Avatars.WriteImage(this.avatarPendingBytes, this.avatarPendingExtension) };
-        }
-
+        Avatar toSave = this.Avatars.CommitPendingImage(this.avatar, this.avatarPendingBytes, this.avatarPendingExtension);
         this.Avatars.Save(this.name, toSave);
         this.avatar = toSave;
         this.avatarPendingBytes = null;

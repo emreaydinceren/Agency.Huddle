@@ -861,6 +861,50 @@ a.team-ref,
     color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-white));
 }
 
+/* A Team's face is a rounded square, so a Team never reads as a person (ADR-0069). TeamAvatar asks AgentAvatar for it.
+   Two classes, so it beats MudBlazor's single-class .mud-avatar { border-radius: 50% } whatever the sheet order. */
+.mud-avatar.avatar-square {
+    border-radius: var(--mud-default-borderradius);
+}
+
+/* The avatar editor's emoji picker (the vendored <emoji-picker> in lib/emoji-picker). Its colours are the Theme's: every
+   colour variable the element reads is mapped to a MudBlazor palette variable or a skin token built from one, which is
+   already swapped for a Dark Theme, so no per-mode rule is needed here. emoji-picker.js also gives the element a light or dark class so its form controls
+   and scrollbars follow the Theme. The popover is the picker's own frame, with no padding of its own. */
+.avatar-emoji-popover {
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+emoji-picker {
+    /* The picker sizes itself from this height (its default is 400px). The cap keeps it inside a short window, with room for
+       the popover to sit above or below the field. */
+    height: min(400px, 45vh);
+    --background: var(--mud-palette-surface);
+    --border-color: var(--ink-edge);
+    --border-radius: var(--mud-default-borderradius);
+    --input-border-color: var(--hu-line-control);
+    --input-font-color: var(--mud-palette-text-primary);
+    --input-placeholder-color: var(--mud-palette-text-secondary);
+    --category-font-color: var(--mud-palette-text-secondary);
+    --indicator-color: var(--mud-palette-primary);
+    --outline-color: var(--mud-palette-text-primary);
+    --button-hover-background: var(--hu-hover);
+    --button-active-background: var(--hu-hover);
+}
+
+/* A Team's rounded square leads its row in the sidebar's Teams list, 8px before the name. */
+.teams-nav-host .mud-avatar.teams-nav-avatar {
+    margin-inline-end: 8px;
+    vertical-align: middle;
+}
+
+/* The Team Room's header avatar sits beside the title, which is 8px away already. */
+.room-header .mud-avatar.room-team-avatar {
+    flex: none;
+}
+
 /* A picture or illustration is the same circle with a 1px inner hairline in Divider, drawn over the image. */
 .mud-avatar.avatar-image {
     position: relative;
@@ -873,6 +917,11 @@ a.team-ref,
     border-radius: 50%;
     box-shadow: inset 0 0 0 1px var(--ink-edge);
     pointer-events: none;
+}
+
+/* A rounded square's hairline follows its corners. Spelled out rather than "inherit", which the CV11 radius rule does not allow. */
+.mud-avatar.avatar-square.avatar-image::after {
+    border-radius: var(--mud-default-borderradius);
 }
 
 /* Empty state (change list C7): a centred stack of a 32px icon, a 14px/600 title, a 13px sentence and an action.
@@ -3330,6 +3379,21 @@ body.sidebar-resizing {
     cursor: pointer;
 }
 
+/* The Team page's avatar button is the same control, drawn as the Team's rounded square. */
+.agent-profile-card-avatar.team-page-avatar {
+    border-radius: var(--mud-default-borderradius);
+}
+
+/* An editable avatar and the "Edit avatar…" text button under it, centred, 4px apart. */
+.avatar-edit-column {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    align-self: flex-start;
+    gap: 4px;
+}
+
 .agent-profile-card-avatar-edit {
     position: absolute;
     right: -2px;
@@ -3426,6 +3490,14 @@ body.sidebar-resizing {
 .avatar-choice-body .mud-file-upload {
     flex: 0 0 auto;
     width: auto;
+}
+
+/* The label's counter is drawn by AvatarEditor (it counts text elements), so it is a sibling of the field in this
+   wrapping row, not inside it as MudBlazor's own counter is. It takes a row of its own under the field, right-aligned,
+   and the negative margin cancels the row gap so it sits as close as the stock counter did. */
+.avatar-choice-body > .mud-input-control-helper-container {
+    flex-basis: 100%;
+    margin-top: -8px;
 }
 
 /* An image card's status line (the file name, or the not-yet-saved note) takes its own row under the card's two buttons,

@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.TeamTypes;
 
@@ -16,7 +17,8 @@ internal sealed class TeamDuplicator(
     HireService hire,
     PersonaStore personas,
     ISkillAvailability skills,
-    IHireContext context)
+    IHireContext context,
+    AvatarStore avatars)
 {
     /// <summary>The refusal for a target name that is taken.</summary>
     internal const string ExistsMessage = "A Team with that name exists.";
@@ -72,7 +74,10 @@ internal sealed class TeamDuplicator(
             return TeamDuplicator.Refuse(workspaceProblem);
         }
 
-        TeamFile file = new(sourceFile.TeamType, null, workspace, null, TeamPaths.ProcessFileName, string.Empty);
+        TeamFile file = new(sourceFile.TeamType, null, workspace, null, TeamPaths.ProcessFileName, string.Empty)
+        {
+            Avatar = this.CopyAvatar(sourceFile.Avatar),
+        };
         TeamCreateResult created = folders.CreateTeam(target, file);
         if (created.Outcome != TeamCreateOutcome.Created)
         {
@@ -87,6 +92,25 @@ internal sealed class TeamDuplicator(
         }
 
         return new DuplicateResult(true, null, hired, skipped);
+    }
+
+    /// <summary>
+    /// Gives the new Team its own copy of the source's avatar. An image is read and written under a new file name, never shared:
+    /// replacing or deleting one Team's picture must not remove the other's. An image whose file is gone is dropped.
+    /// </summary>
+    /// <param name="source">The source Team's avatar.</param>
+    /// <returns>The avatar to store for the new Team.</returns>
+    private Avatar CopyAvatar(Avatar source)
+    {
+        if (source.Image is null)
+        {
+            return source;
+        }
+
+        byte[]? bytes = avatars.ReadImage(source.Image);
+        return bytes is null
+            ? source with { Image = null }
+            : source with { Image = avatars.WriteImage(bytes, Path.GetExtension(source.Image)) };
     }
 
     /// <summary>Reads each source member's role; members without a usable role go to <paramref name="skipped"/>.</summary>

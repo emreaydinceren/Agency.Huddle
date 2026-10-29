@@ -34,7 +34,8 @@
         }
         <AvatarEditor Name="@this.Name" Value="this.Current" ValueChanged="this.OnValueChanged" SaveMode="AvatarSaveMode.Buffered"
                       PendingImage="this.PendingImage" PendingImageExtension="@this.PendingImageExtension"
-                      PendingImageChanged="this.OnPendingImageChanged" LibraryOpenChanged="this.OnLibraryOpenChanged" />
+                      PendingImageChanged="this.OnPendingImageChanged" LibraryOpenChanged="this.OnLibraryOpenChanged"
+                      AllowLibrary="this.AllowLibrary" Shape="this.Shape" />
     </DialogContent>
     <DialogActions>
         @if (!this.libraryOpen)
@@ -74,6 +75,14 @@
     /// </summary>
     [Parameter]
     public bool Deferred { get; set; }
+
+    /// <summary>Whether the editor offers the image library; passed through to <see cref="AvatarEditor"/>. A Team's avatar editor turns it off.</summary>
+    [Parameter]
+    public bool AllowLibrary { get; set; } = true;
+
+    /// <summary>The outline of the editor's previews; passed through to <see cref="AvatarEditor"/>. A Team's is <see cref="AvatarShape.RoundedSquare"/>.</summary>
+    [Parameter]
+    public AvatarShape Shape { get; set; } = AvatarShape.Circle;
 
     private Avatar? edited;
     private byte[]? pendingBytes;

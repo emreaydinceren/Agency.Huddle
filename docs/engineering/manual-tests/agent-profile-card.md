@@ -141,7 +141,7 @@ If the yellow bar appears but the console shows an unrelated exception (a databa
 **Pass if — all of these**
 
 - The header reads `New agent`; the button on its right is a close icon (an ×-shaped Material icon, not a text glyph) and has the tooltip/aria-label `Close`.
-- A circular avatar showing a monogram on a randomly coloured background is present at the top left of the card body. It is a button named `Change avatar` (pressing it opens the **Avatar** window), and a small pencil appears on it when you point at it.
+- A circular avatar showing a monogram on a randomly coloured background is present at the top left of the card body. It is a button named `Change avatar` (pressing it opens the **Avatar** window), and a small pencil appears on it when you point at it. A quiet text button `Edit avatar…` sits under it and opens the same window.
 - The four inputs are, in order: **Name** (placeholder `Chief of Staff`, hint `Letters, digits, spaces, - and _. Spaces are fine.`), **Title** (placeholder `Chief of Staff`, hint `A short role description, shown alongside the Name.`), **Alias** (placeholder `coo`, hint `A short working handle, for mentions and quick reference.`), **Teams** (placeholder `Business, Household`, hint `Comma-separated. Leave blank for no team.`).
 - The multi-line box is labelled `Persona body`, has placeholder `You are the Chief of Staff. You keep the team honest.`, and its hint reads `Markdown. Becomes the agent's system prompt, placed after the Name, Title, Alias and Teams above — no front matter needed here.`
 - Below the multi-line box the controls are, in this order (`AgentProfileCard.razor`):

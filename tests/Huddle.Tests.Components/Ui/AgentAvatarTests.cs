@@ -443,4 +443,70 @@ public sealed class AgentAvatarTests
         var element = Assert.IsAssignableFrom<IElement>(root);
         Assert.Contains("mud-avatar", element.ClassList);
     }
+
+    /// <summary>A rounded-square avatar carries <c>avatar-square</c>, for both a monogram and a picture, so the hairline follows the shape.</summary>
+    /// <param name="withImage">Whether the avatar has an image.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Render_RoundedSquare_EmitsAvatarSquare(bool withImage)
+    {
+        await using MudBunitContext ctx = new();
+        Avatar avatar = new(Label: null, Image: withImage ? "abc123.png" : null, Background: null);
+
+        var cut = ctx.Render<AgentAvatar>(parameters => parameters
+            .Add(p => p.Name, "Growth")
+            .Add(p => p.Avatar, avatar)
+            .Add(p => p.Size, Size.Medium)
+            .Add(p => p.Shape, AvatarShape.RoundedSquare));
+
+        IElement root = cut.Find(".mud-avatar");
+        Assert.Contains("avatar-square", root.ClassList);
+        Assert.Equal(withImage, root.ClassList.Contains("avatar-image"));
+    }
+
+    /// <summary>The default shape is a circle: no <c>avatar-square</c> class.</summary>
+    [Fact]
+    public async Task Render_DefaultShape_IsACircle()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = ctx.Render<AgentAvatar>(parameters => parameters
+            .Add(p => p.Name, "Emily Lee")
+            .Add(p => p.Avatar, Avatar.None));
+
+        Assert.DoesNotContain("avatar-square", cut.Find(".mud-avatar").ClassList);
+    }
+
+    /// <summary><c>TeamAvatar</c> always draws a rounded square, and draws the monogram of the Team's name when it has no avatar.</summary>
+    [Fact]
+    public async Task TeamAvatar_AlwaysRoundedSquare_WithTheTeamMonogram()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = ctx.Render<TeamAvatar>(parameters => parameters
+            .Add(p => p.Team, "Growth"));
+
+        IElement root = cut.Find(".mud-avatar");
+        Assert.Contains("avatar-square", root.ClassList);
+        Assert.Equal("GR", root.TextContent.Trim());
+    }
+
+    /// <summary><c>TeamAvatar</c> passes its label, size and class through to the one renderer.</summary>
+    [Fact]
+    public async Task TeamAvatar_Label_SizeAndClass_ReachTheAvatar()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = ctx.Render<TeamAvatar>(parameters => parameters
+            .Add(p => p.Team, "Growth")
+            .Add(p => p.Avatar, new Avatar("QA", null, null))
+            .Add(p => p.Size, Size.Small)
+            .Add(p => p.Class, "feed-team-avatar"));
+
+        IElement root = cut.Find(".mud-avatar");
+        Assert.Equal("QA", root.TextContent.Trim());
+        Assert.Contains("mud-avatar-small", root.ClassList);
+        Assert.Contains("feed-team-avatar", root.ClassList);
+    }
 }

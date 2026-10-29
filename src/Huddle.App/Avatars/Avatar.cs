@@ -47,6 +47,18 @@ public sealed record Avatar(string? Label, string? Image, string? Background)
     /// <summary>The avatar of an Agent or the Human who has not customised one - today's rendering exactly, with all three fields unset.</summary>
     public static Avatar None { get; } = new(Label: null, Image: null, Background: null);
 
+    /// <summary>
+    /// Whether <paramref name="name"/> is a bare file name that can be joined onto the image directory: no directory separator
+    /// of either platform, no drive colon and no <c>..</c>. Checked on both separators whatever the host, because a hand-edited
+    /// file written on one platform is read on another, and the name becomes a path to read and to delete.
+    /// </summary>
+    /// <param name="name">The stored image name to check.</param>
+    /// <returns><see langword="true"/> when the name cannot leave the image directory.</returns>
+    internal static bool IsBareImageName(string name) =>
+        name.Length > 0
+        && name.IndexOfAny(['/', '\\', ':']) < 0
+        && !name.Contains("..", StringComparison.Ordinal);
+
     /// <summary>Whether every field is unset, meaning nothing overrides the default rendering.</summary>
     public bool IsDefault => this.Label is null && this.Image is null && this.Background is null;
 

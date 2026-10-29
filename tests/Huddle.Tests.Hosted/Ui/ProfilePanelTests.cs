@@ -114,4 +114,19 @@ public sealed class ProfilePanelTests
             builder.OpenComponent<ProfilePanel>(0);
             builder.CloseComponent();
         });
+
+    /// <summary>The Human's card has a spelled-out "Edit avatar…" button under the avatar, and pressing it opens the editor.</summary>
+    [Fact]
+    public async Task EditAvatarButton_OpensTheEditor()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewProfileContext(factory);
+        IRenderedComponent<ContainerFragment> cut = RenderPanel(ctx);
+
+        Assert.Equal("Edit avatar…", cut.Find(".avatar-edit-column .mud-button-text").TextContent.Trim());
+        await ClickButtonAsync(cut, "Edit avatar…");
+        cut.WaitForElement(EditorDialog);
+
+        Assert.True(HasEditorButton(cut, "Save"));
+    }
 }

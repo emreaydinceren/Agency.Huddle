@@ -42,7 +42,7 @@
                                aria-expanded="@(isExpanded ? "true" : "false")"
                                OnClick="@(() => this.ToggleAsync(team.Name))" />
                 <NavTabLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}")" TabTitle="@team.Name" Match="NavLinkMatch.Prefix"
-                            Class="hover-reveal-link"><span class="sidebar-row-label" title="@team.Name">@team.Name</span></NavTabLink>
+                            Class="hover-reveal-link"><TeamAvatar Team="@team.Name" Avatar="team.Avatar" Size="Size.Small" Class="teams-nav-avatar" /><span class="sidebar-row-label" title="@team.Name">@team.Name</span></NavTabLink>
                 @* Meta never takes the row's text: the member count trails the name, and its tooltip says what it counts. *@
                 <span class="sidebar-row-meta" title="@(team.HasMembers ? Plural.Of(team.Members.Count, "member", "members") : "No members")">@team.Members.Count</span>
                 <MudMenu @ref="@this.menuRefs[team.Name]" Class="hover-reveal-menu" Dense="true">

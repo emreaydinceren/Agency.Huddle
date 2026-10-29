@@ -67,6 +67,13 @@
     public string? Class { get; set; }
 
     /// <summary>
+    /// The outline: <see cref="AvatarShape.Circle"/> (the default) for an Agent or the Human, <see cref="AvatarShape.RoundedSquare"/>
+    /// for a Team, which adds <c>avatar-square</c>. Callers draw a Team through <c>TeamAvatar</c> and never set this by hand.
+    /// </summary>
+    [Parameter]
+    public AvatarShape Shape { get; set; } = AvatarShape.Circle;
+
+    /// <summary>
     /// <see cref="Avatar"/>, or <see cref="Avatars.Avatar.None"/> when it is <see langword="null"/> -
     /// the one place that substitution happens, so every other member below can assume a real value.
     /// Fully qualified rather than a bare <c>Avatar.None</c>: this component's own <see cref="Avatar"/>
@@ -192,6 +199,11 @@
         get
         {
             string kind = this.ImageSource is not null ? "avatar-image" : "avatar-monogram";
+            if (this.Shape == AvatarShape.RoundedSquare)
+            {
+                kind = string.Concat(kind, " avatar-square");
+            }
+
             if (this.LabelLengthClass is { } lengthClass)
             {
                 kind = string.Concat(kind, " ", lengthClass);

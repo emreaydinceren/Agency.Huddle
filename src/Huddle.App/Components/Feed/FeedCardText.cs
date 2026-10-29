@@ -37,23 +37,6 @@ internal static class FeedCardText
         return new(FeedPillKind.Waiting, "Waiting for you · " + FeedTime.CardAge(now, item.At), item.SourceType == FeedSourceType.RoomBudget);
     }
 
-    /// <summary>The two-letter monogram of a Team: the initials of its first two words, or its first two letters.</summary>
-    /// <param name="team">The Team Name.</param>
-    /// <returns>The monogram in capitals.</returns>
-    public static string Monogram(string team)
-    {
-        ArgumentNullException.ThrowIfNull(team);
-
-        string[] words = team.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-        if (words.Length == 0)
-        {
-            return string.Empty;
-        }
-
-        string letters = words.Length >= 2 ? new string([words[0][0], words[1][0]]) : words[0][..Math.Min(2, words[0].Length)];
-        return letters.ToUpperInvariant();
-    }
-
     /// <summary>The badge a kind of item wears.</summary>
     /// <param name="type">The item's source type.</param>
     /// <returns>The badge.</returns>

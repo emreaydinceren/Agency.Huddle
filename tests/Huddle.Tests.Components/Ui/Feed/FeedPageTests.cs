@@ -23,6 +23,9 @@ public sealed partial class FeedPageTests
 
     private static string Text(IElement element) => Whitespace().Replace(element.TextContent, " ").Trim();
 
+    /// <summary>A Team filter option's name: the text beside the Team's avatar, whose own monogram is not part of the name.</summary>
+    private static string OptionName(IElement item) => item.QuerySelector(".feed-team-option-name") is { } name ? Text(name) : Text(item);
+
     private static MudBunitContext NewContext(FeedCardHost host, TimeProvider? clock = null)
     {
         MudBunitContext ctx = host.NewContext();
@@ -157,9 +160,9 @@ public sealed partial class FeedPageTests
 
         await cut.InvokeAsync(() => cut.Find("div.mud-input-control").MouseDownAsync());
 
-        string[] options = [.. cut.FindAll(".mud-list-item").Select(Text)];
+        string[] options = [.. cut.FindAll(".mud-list-item").Select(OptionName)];
         Assert.Equal(["All teams", "Growth", "Platform"], options);
-        await cut.FindAll(".mud-list-item").Single(item => Text(item) == "Platform").ClickAsync(new());
+        await cut.FindAll(".mud-list-item").Single(item => OptionName(item) == "Platform").ClickAsync(new());
         Assert.EndsWith("/feed?category=rooms&team=Platform", ctx.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().Uri, StringComparison.Ordinal);
     }
 

@@ -47,7 +47,7 @@ public sealed class TeamsNavTests
 
         Assert.Empty(cut.FindAll(".teams-nav .mud-nav-group"));
         string[] expected = ["Sales & Ops", "Business", "Lab #2"];
-        string[] actual = [.. cut.FindAll(".teams-nav > div.hover-reveal-row .hover-reveal-link a").Select(a => a.TextContent.Trim())];
+        string[] actual = [.. cut.FindAll(".teams-nav > div.hover-reveal-row .hover-reveal-link a .sidebar-row-label").Select(label => label.TextContent.Trim())];
         Assert.Equal(expected, actual);
     }
 
@@ -1122,9 +1122,9 @@ public sealed class TeamsNavTests
         return new TeamSummary(name, projects ?? [], members, true);
     }
 
-    /// <summary>The row <c>div.hover-reveal-row</c> whose Team link text is <paramref name="team"/>.</summary>
+    /// <summary>The row <c>div.hover-reveal-row</c> whose Team link label (beside the Team's avatar) is <paramref name="team"/>.</summary>
     private static AngleSharp.Dom.IElement RowFor(IRenderedComponent<ContainerFragment> cut, string team) =>
-        cut.FindAll("div.hover-reveal-row").Single(row => string.Equals(row.QuerySelector(".hover-reveal-link a")?.TextContent.Trim(), team, StringComparison.Ordinal));
+        cut.FindAll("div.hover-reveal-row").Single(row => string.Equals(row.QuerySelector(".hover-reveal-link a .sidebar-row-label")?.TextContent.Trim(), team, StringComparison.Ordinal));
 
     /// <summary>The "Team actions" button of <paramref name="team"/>'s row.</summary>
     private static AngleSharp.Dom.IElement MenuButton(IRenderedComponent<ContainerFragment> cut, string team) =>
@@ -1152,5 +1152,19 @@ public sealed class TeamsNavTests
 
     /// <summary>The trimmed text of every Team link, in render order.</summary>
     private static string[] LinkTexts(IRenderedComponent<ContainerFragment> cut) =>
-        [.. cut.FindAll(".hover-reveal-link a").Select(a => a.TextContent.Trim())];
+        [.. cut.FindAll(".hover-reveal-link a .sidebar-row-label").Select(label => label.TextContent.Trim())];
+
+    /// <summary>Each Team row leads with the Team's avatar as a rounded square, before the label: its own label when it has one, else the monogram.</summary>
+    [Fact]
+    public async Task TeamRow_LeadsWithTheTeamsRoundedSquareAvatar()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business") with { Avatar = new Avatar("BZ", null, null) }, Team("Research")] };
+        await using MudBunitContext ctx = NewContext(catalog);
+
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        string[] avatars = [.. cut.FindAll(".hover-reveal-link a .mud-avatar.avatar-square").Select(avatar => avatar.TextContent.Trim())];
+        Assert.Equal(["BZ", "RE"], avatars);
+        Assert.Equal(["Business", "Research"], LinkTexts(cut));
+    }
 }

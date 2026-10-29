@@ -345,4 +345,30 @@ public sealed class ProfileCardTests
 
         Assert.Equal("Go", cut.Find(".roster-actions .probe").TextContent);
     }
+
+    /// <summary>With <c>OnAvatarClick</c> set the card draws a spelled-out "Edit avatar…" button under the avatar, and it raises the same callback as the avatar.</summary>
+    [Fact]
+    public async Task OnAvatarClick_Set_DrawsTheEditAvatarButton_WhichRaisesTheCallback()
+    {
+        await using MudBunitContext ctx = new();
+        int clicks = 0;
+
+        var cut = RenderIt(ctx, Plain, parameters => parameters.Add(p => p.OnAvatarClick, EventCallback.Factory.Create(this, () => clicks++)));
+        await cut.InvokeAsync(() => cut.Find(".avatar-edit-column .mud-button-text").ClickAsync());
+
+        Assert.Equal("Edit avatar…", cut.Find(".avatar-edit-column .mud-button-text").TextContent.Trim());
+        Assert.Equal(1, clicks);
+    }
+
+    /// <summary>Without <c>OnAvatarClick</c> the avatar is plain and there is no edit button.</summary>
+    [Fact]
+    public async Task OnAvatarClick_NotSet_HasNoEditAvatarButton()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = RenderIt(ctx, Plain);
+
+        Assert.Empty(cut.FindAll(".avatar-edit-column"));
+        Assert.Empty(cut.FindAll("button"));
+    }
 }
