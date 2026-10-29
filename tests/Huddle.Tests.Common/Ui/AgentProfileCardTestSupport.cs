@@ -30,19 +30,16 @@ internal static class AgentProfileCardTestSupport
     }
 
     /// <summary>
-    /// Clicks the <c>MudRadio</c> whose own text is <paramref name="choiceLabel"/>, inside the avatar
-    /// editor's <c>MudRadioGroup</c>. Clicks the inner <c>input.mud-radio-input</c>, not the outer
-    /// <c>label.mud-radio</c> - verified against the rendered markup rather than assumed: the outer
-    /// label carries only <c>@onkeydown</c> and <c>@onclick:stoppropagation</c>, and MudRadio binds its
-    /// actual <c>@onclick</c> to the native radio input itself.
+    /// Clicks the radio input of the avatar editor's choice card whose text contains <paramref name="choiceLabel"/>.
+    /// The click bubbles to the card, as a browser's does, so it exercises the same idempotent choose handler.
     /// </summary>
     /// <param name="cut">The rendered page holding the card.</param>
-    /// <param name="choiceLabel">The radio's visible text - "Initials of the name", "A short label" or "An image".</param>
+    /// <param name="choiceLabel">The card's visible name - "Initials of the name", "A short label", "Image from the library" or "Upload an image".</param>
     internal static Task SelectAvatarChoiceAsync(IRenderedComponent<ContainerFragment> cut, string choiceLabel) =>
         ClickAsync(cut, () =>
         {
-            var radio = cut.FindAll(".mud-radio").First(element => element.TextContent.Contains(choiceLabel, StringComparison.Ordinal));
-            return radio.QuerySelector("input.mud-radio-input") ?? throw new InvalidOperationException($"No radio input under '{choiceLabel}'.");
+            var card = cut.FindAll(".avatar-choice-card").First(element => element.TextContent.Contains(choiceLabel, StringComparison.Ordinal));
+            return card.QuerySelector("input[type=radio]") ?? throw new InvalidOperationException($"No radio input under '{choiceLabel}'.");
         });
 
     /// <summary>The CSS selector of the card's avatar, a button that opens the avatar editor dialog.</summary>
@@ -61,8 +58,11 @@ internal static class AgentProfileCardTestSupport
         cut.WaitForElement(EditorDialog);
     }
 
-    /// <summary>The CSS selector of the avatar editor's Background palette, the wrapper around the swatches and the label above them.</summary>
-    internal const string BackgroundPicker = EditorDialog + " .avatar-editor-background";
+    /// <summary>The CSS selector of the avatar editor's Background palette while it is offered (not hidden under an image card): the wrapper around the swatches and the label above them.</summary>
+    internal const string BackgroundPicker = EditorDialog + " .avatar-editor-background:not(.avatar-editor-background-hidden)";
+
+    /// <summary>The CSS selector of the Background palette while an image card is chosen: still rendered, so the dialog keeps its height, but hidden and inert.</summary>
+    internal const string HiddenBackgroundPicker = EditorDialog + " .avatar-editor-background.avatar-editor-background-hidden[inert]";
 
     /// <summary>The CSS selector of one swatch in the Background palette: the radio input behind each circle.</summary>
     internal const string Swatch = BackgroundPicker + " .avatar-swatch-input";

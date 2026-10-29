@@ -1,6 +1,19 @@
 @*
-    The avatar editor: a live preview, the three-way choice (initials of the name, a short label, an image), the label
-    field with its counter, an upload and a library pick for the image, and the background swatches. It is one component
+    The avatar editor: a live preview, a radio group of choice cards, and the background swatches. The cards, top to
+    bottom, each with a small avatar showing what that choice gives:
+      Initials of the name - nothing more.
+      A short label        - the label field with its counter, always rendered; typing in it chooses this card.
+      Image from the library (only when a library is configured) - a "Choose from library" button. It is not selectable
+                  until it holds a picture (its radio input is disabled, so the arrow keys skip it, and a press on the card
+                  does nothing); only the button opens the library, and cancelling leaves the earlier choice. Once it holds a picture it
+                  shows "Remove image", which returns the choice to Initials since this card cannot be chosen empty.
+      Upload an image      - the "Upload…" button. This card can be chosen with no image (the avatar falls back to
+                  initials), and "Remove image" keeps it chosen. An avatar with nothing stored opens here, and a stored
+                  image always belongs to this card: the saved avatar does not record where it came from.
+    There is one image slot (the stored name, or the pending bytes) and a field saying which card owns it; a pick from one
+    image card replaces the picture the other held. Each card is a label around a visually hidden radio input (as the
+    swatches are), so Tab reaches the group and the arrow keys move within it; a click on empty card space chooses it, and
+    choosing is idempotent because the label, the input and the card all report one press. It is one component
     for every surface that edits an Avatar, so the rules live once: the label is trimmed through Avatar.TrimLabel, an
     upload is checked against AvatarImage.MaxBytes and then AvatarImage.SniffExtension, and a background is only ever set
     by pressing a swatch.
@@ -10,8 +23,8 @@
                   button); a chosen image is written through AvatarStore.WriteImage.
       Buffered  - nothing is written. Each change is reported through ValueChanged, and a chosen image's bytes and
                   extension through PendingImageChanged, for the surface that owns the Save button to write (or drop).
-                  Leaving the Image choice, or pressing Remove image, drops the pending image (null, null) so a surface
-                  never files an orphan.
+                  Leaving an image card for a card that does not own the image, or pressing Remove image, drops the
+                  pending image (null, null) so a surface never files an orphan.
 
     Value is the avatar to start from and is read as a snapshot: the editor re-seeds only when the parent passes a Value
     that differs from the last one it passed AND from what the editor already holds. That second test is the echo guard.
@@ -23,8 +36,8 @@
     are a radio group of 32px circles drawn with the avatar recipe for the current mode (audit B8h), one per
     AvatarPalette.Swatches entry, the same set a new Agent's random colour is drawn from, each with its colour name.
     A stored colour outside the palette highlights no swatch and is kept until one is pressed. A background sits behind
-    initials or a label; an image covers it, so under "An image" the swatches are not offered - the stored colour is
-    left alone.
+    initials or a label; an image covers it, so under either image card the swatches are not offered - the stored colour
+    is left alone.
 
     The library (audit B8k): "Choose from library" opens the Avatar Library. Outside a dialog (Settings) that is a dialog
     of its own. Inside one (the Agent card's avatar dialog) a third dialog would stack three deep, so the library
@@ -59,77 +72,119 @@ else
                         PendingImage="this.pendingBytes" PendingImageExtension="@this.pendingExtension" />
     </MudStack>
 
-    <MudRadioGroup T="AvatarChoice" Value="this.choice" ValueChanged="this.OnChoiceChangedAsync" Class="mb-2">
-        <MudRadio T="AvatarChoice" Value="AvatarChoice.Initials">Initials of the name</MudRadio>
-        <MudRadio T="AvatarChoice" Value="AvatarChoice.Label">A short label</MudRadio>
-        <MudRadio T="AvatarChoice" Value="AvatarChoice.Image">An image</MudRadio>
-    </MudRadioGroup>
+    <div class="avatar-choices" role="radiogroup" aria-label="Avatar">
+        <div class="@this.CardClass(AvatarChoice.Initials)" @onclick="@(() => this.ChooseAsync(AvatarChoice.Initials))">
+            <label class="avatar-choice-pick">
+                <input type="radio" name="avatar-choice" class="visually-hidden"
+                       checked="@(this.choice == AvatarChoice.Initials)" @onclick="@(() => this.ChooseAsync(AvatarChoice.Initials))" />
+                <AgentAvatar Name="@this.Name" Avatar="this.InitialsThumb" Size="Size.Medium" />
+                <span class="avatar-choice-title">Initials of the name</span>
+            </label>
+        </div>
 
-    @if (this.choice == AvatarChoice.Label)
-    {
-        @* No MaxLength: it truncates by UTF-16 index, which can cut a surrogate pair in half. Counter gives the same
-           affordance without that defect, sized from Avatar.MaxLabelTextElements so the two can never drift apart.
-           Trimming happens once, in Working's Avatar.TrimLabel call, not here. *@
-        <MudTextField T="string" Label="Label" Variant="Variant.Outlined" Margin="Margin.Dense"
-                      Value="@this.label" ValueChanged="this.OnLabelChangedAsync"
-                      Immediate="true" Counter="@Avatar.MaxLabelTextElements"
-                      HelperText="Shown instead of initials." />
-    }
+        <div class="@this.CardClass(AvatarChoice.Label)" @onclick="@(() => this.ChooseAsync(AvatarChoice.Label))">
+            <label class="avatar-choice-pick">
+                <input type="radio" name="avatar-choice" class="visually-hidden"
+                       checked="@(this.choice == AvatarChoice.Label)" @onclick="@(() => this.ChooseAsync(AvatarChoice.Label))" />
+                <AgentAvatar Name="@this.Name" Avatar="this.LabelThumb" Size="Size.Medium" />
+                <span class="avatar-choice-title">A short label</span>
+            </label>
+            <div class="avatar-choice-body">
+                @* No MaxLength: it truncates by UTF-16 index, which can cut a surrogate pair in half. Counter gives the same
+                   affordance without that defect, sized from Avatar.MaxLabelTextElements so the two can never drift apart.
+                   Trimming happens once, in Working's Avatar.TrimLabel call, not here. *@
+                <MudTextField T="string" Label="Label" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Value="@this.label" ValueChanged="this.OnLabelChangedAsync"
+                              Immediate="true" Counter="@Avatar.MaxLabelTextElements" />
+            </div>
+        </div>
 
-    @if (this.choice == AvatarChoice.Image)
-    {
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-            <MudFileUpload T="IBrowserFile" Accept=".png,.jpg,.jpeg,.webp" MaximumFileCount="1" FilesChanged="this.OnFileChangedAsync">
-                <CustomContent Context="fileUpload">
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Upload" OnClick="@(() => fileUpload.OpenFilePickerAsync())">
-                        Choose an image
-                    </MudButton>
-                </CustomContent>
-            </MudFileUpload>
-
-            @if (this.LibraryLocator.IsConfigured)
-            {
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.PhotoLibrary" OnClick="this.ChooseFromLibraryAsync">
-                    Choose from library
-                </MudButton>
-            }
-        </MudStack>
-
-        @if (this.pendingBytes is not null || this.image is not null)
+        @if (this.LibraryLocator.IsConfigured)
         {
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-2">
-                <MudText Typo="Typo.body2">@(this.pendingBytes is not null ? "New image selected (not yet saved)" : this.image)</MudText>
-                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.RemoveImageAsync">Remove image</MudButton>
-            </MudStack>
+            <div class="@this.CardClass(AvatarChoice.Library)" @onclick="@(() => this.ChooseAsync(AvatarChoice.Library))">
+                <label class="avatar-choice-pick">
+                    <input type="radio" name="avatar-choice" class="visually-hidden"
+                           checked="@(this.choice == AvatarChoice.Library)" disabled="@(!this.LibraryHoldsImage)"
+                           @onclick="@(() => this.ChooseAsync(AvatarChoice.Library))" />
+                    <AgentAvatar Name="@this.Name" Avatar="this.LibraryThumb" Size="Size.Medium"
+                                 PendingImage="this.LibraryHoldsImage ? this.pendingBytes : null"
+                                 PendingImageExtension="@(this.LibraryHoldsImage ? this.pendingExtension : null)" />
+                    <span class="avatar-choice-title">Image from the library</span>
+                </label>
+                <div class="avatar-choice-body">
+                    <span class="avatar-choice-actions" @onclick:stopPropagation="true">
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.PhotoLibrary" OnClick="this.ChooseFromLibraryAsync">
+                            Choose from library
+                        </MudButton>
+                    </span>
+                    @if (this.LibraryHoldsImage)
+                    {
+                        <MudText Typo="Typo.body2">@this.HeldImageText</MudText>
+                        <span class="avatar-choice-actions" @onclick:stopPropagation="true">
+                            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.RemoveImageAsync">Remove image</MudButton>
+                        </span>
+                    }
+                </div>
+            </div>
         }
-    }
+
+        <div class="@this.CardClass(AvatarChoice.Upload)" @onclick="@(() => this.ChooseAsync(AvatarChoice.Upload))">
+            <label class="avatar-choice-pick">
+                <input type="radio" name="avatar-choice" class="visually-hidden"
+                       checked="@(this.choice == AvatarChoice.Upload)" @onclick="@(() => this.ChooseAsync(AvatarChoice.Upload))" />
+                <AgentAvatar Name="@this.Name" Avatar="this.UploadThumb" Size="Size.Medium"
+                             PendingImage="this.UploadHoldsImage ? this.pendingBytes : null"
+                             PendingImageExtension="@(this.UploadHoldsImage ? this.pendingExtension : null)" />
+                <span class="avatar-choice-title">Upload an image</span>
+            </label>
+            <div class="avatar-choice-body">
+                <span class="avatar-choice-actions" @onclick:stopPropagation="true">
+                    <MudFileUpload T="IBrowserFile" Accept=".png,.jpg,.jpeg,.webp" MaximumFileCount="1" FilesChanged="this.OnFileChangedAsync">
+                        <CustomContent Context="fileUpload">
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Upload" OnClick="@(() => fileUpload.OpenFilePickerAsync())">
+                                Upload…
+                            </MudButton>
+                        </CustomContent>
+                    </MudFileUpload>
+                </span>
+                @if (this.UploadHoldsImage)
+                {
+                    <MudText Typo="Typo.body2">@this.HeldImageText</MudText>
+                    <span class="avatar-choice-actions" @onclick:stopPropagation="true">
+                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.RemoveImageAsync">Remove image</MudButton>
+                    </span>
+                }
+            </div>
+        </div>
+    </div>
 
     @if (this.error is not null)
     {
         <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2" role="alert">@this.error</MudAlert>
     }
 
-    @if (this.choice != AvatarChoice.Image)
-    {
-        <div class="avatar-editor-background mt-2">
-            <div class="group-label" id="avatar-editor-background-label">Background</div>
-            <div class="avatar-swatches" role="radiogroup" aria-labelledby="avatar-editor-background-label">
-                @foreach (AvatarSwatch swatch in AvatarPalette.Swatches)
-                {
-                    <label class="avatar-swatch" title="@swatch.Name">
-                        <input type="radio" name="avatar-background" class="avatar-swatch-input visually-hidden"
-                               checked="@this.IsChosen(swatch)" @onclick="@(() => this.OnBackgroundPickedAsync(swatch.Hex))" />
-                        <span class="avatar-swatch-dot" style="@AvatarColours.MonogramStyle(swatch.Hex)" aria-hidden="true"></span>
-                        <span class="visually-hidden">@swatch.Name</span>
-                    </label>
-                }
-            </div>
-            @if (this.background is not null)
+    @* Under an image card the Background is hidden, not removed: it keeps its space, so the dialog does not change height
+       and re-centre under the pointer when the Human moves between cards (B8i). inert takes it out of the tab order and
+       the accessibility tree. *@
+    <div class="@(this.IsImageChoice ? "avatar-editor-background avatar-editor-background-hidden mt-2" : "avatar-editor-background mt-2")"
+         inert="@this.IsImageChoice" aria-hidden="@(this.IsImageChoice ? "true" : null)">
+        <div class="group-label" id="avatar-editor-background-label">Background</div>
+        <div class="avatar-swatches" role="radiogroup" aria-labelledby="avatar-editor-background-label">
+            @foreach (AvatarSwatch swatch in AvatarPalette.Swatches)
             {
-                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.UseThemeColourAsync" Class="mt-1">Use the theme colour</MudButton>
+                <label class="avatar-swatch" title="@swatch.Name">
+                    <input type="radio" name="avatar-background" class="avatar-swatch-input visually-hidden"
+                           checked="@this.IsChosen(swatch)" @onclick="@(() => this.OnBackgroundPickedAsync(swatch.Hex))" />
+                    <span class="avatar-swatch-dot" style="@AvatarColours.MonogramStyle(swatch.Hex)" aria-hidden="true"></span>
+                    <span class="visually-hidden">@swatch.Name</span>
+                </label>
             }
         </div>
-    }
+        @if (this.background is not null)
+        {
+            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.UseThemeColourAsync" Class="mt-1">Use the theme colour</MudButton>
+        }
+    </div>
 </div>
 }
 
@@ -143,6 +198,7 @@ else
     private string? pendingExtension;
     private Avatar lastValue = Avatar.None;
     private bool libraryOpen;
+    private bool imageFromLibrary;
 
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }
@@ -179,11 +235,52 @@ else
     [Parameter]
     public EventCallback<bool> LibraryOpenChanged { get; set; }
 
-    /// <summary>The single place the editor's fields are projected back into an <see cref="Avatar"/>: for the preview and for everything reported or saved. Under Image the stored name only, never a pending one.</summary>
+    /// <summary>The single place the editor's fields are projected back into an <see cref="Avatar"/>: for the preview and for everything reported or saved. Under the image card that owns the slot, the stored name only, never a pending one.</summary>
     private Avatar Working => new(
         this.choice == AvatarChoice.Label ? Avatar.TrimLabel(this.label) : null,
-        this.choice == AvatarChoice.Image ? this.image : null,
+        this.OwnsImageSlot(this.choice) ? this.image : null,
         this.background);
+
+    /// <summary>Whether the chosen card is an image card (library or upload), which hides the Background swatches.</summary>
+    private bool IsImageChoice => this.choice is AvatarChoice.Library or AvatarChoice.Upload;
+
+    /// <summary>Whether the single image slot holds a picture, stored or pending.</summary>
+    private bool HasImage => this.image is not null || this.pendingBytes is not null;
+
+    /// <summary>Whether the library card holds the picture: it is selectable only then.</summary>
+    private bool LibraryHoldsImage => this.imageFromLibrary && this.HasImage;
+
+    /// <summary>Whether the upload card holds the picture. A stored image on reopen always belongs here: the saved avatar does not record where it came from.</summary>
+    private bool UploadHoldsImage => !this.imageFromLibrary && this.HasImage;
+
+    /// <summary>The thumbnail of the Initials card: the initials with the current background.</summary>
+    private Avatar InitialsThumb => new(null, null, this.background);
+
+    /// <summary>The thumbnail of the Label card: the trimmed label, or the initials while it is empty.</summary>
+    private Avatar LabelThumb => new(Avatar.TrimLabel(this.label), null, this.background);
+
+    /// <summary>The thumbnail of the library card: its picture, or the initials while it holds none.</summary>
+    private Avatar LibraryThumb => new(null, this.LibraryHoldsImage ? this.image : null, this.background);
+
+    /// <summary>The thumbnail of the upload card: its picture, or the initials while it holds none.</summary>
+    private Avatar UploadThumb => new(null, this.UploadHoldsImage ? this.image : null, this.background);
+
+    /// <summary>What an image card says about the picture it holds: the pending note, or the stored file name.</summary>
+    private string? HeldImageText => this.pendingBytes is not null ? "New image selected (not yet saved)" : this.image;
+
+    /// <summary>Whether <paramref name="value"/> is an image card that owns the image slot, so that choosing it makes the avatar's image the slot's.</summary>
+    /// <param name="value">The card to test.</param>
+    private bool OwnsImageSlot(AvatarChoice value) => value switch
+    {
+        AvatarChoice.Library => this.imageFromLibrary,
+        AvatarChoice.Upload => !this.imageFromLibrary,
+        _ => false,
+    };
+
+    /// <summary>The CSS class of a choice card, marking the chosen one.</summary>
+    /// <param name="value">The card.</param>
+    private string CardClass(AvatarChoice value) =>
+        this.choice == value ? "avatar-choice-card avatar-choice-card-selected" : "avatar-choice-card";
 
     /// <summary>Whether <paramref name="swatch"/> is the chosen background. A background outside the palette matches none and is kept until a swatch is pressed.</summary>
     /// <param name="swatch">The swatch to test.</param>
@@ -198,7 +295,7 @@ else
         {
             this.pendingBytes = this.PendingImage;
             this.pendingExtension = this.PendingImageExtension;
-            this.choice = AvatarChoice.Image;
+            this.choice = AvatarChoice.Upload;
         }
     }
 
@@ -217,16 +314,17 @@ else
         }
     }
 
-    /// <summary>Sets every field from <paramref name="avatar"/>, deriving the choice from which of image and label is set - the precedence <see cref="AgentAvatar"/> renders by - and dropping any pending image and error.</summary>
+    /// <summary>Sets every field from <paramref name="avatar"/>, deriving the choice from which of image and label is set - the precedence <see cref="AgentAvatar"/> renders by - and dropping any pending image and error. A stored image, and an avatar with nothing stored, belong to the upload card.</summary>
     /// <param name="avatar">The avatar to show.</param>
     private void Seed(Avatar avatar)
     {
         this.choice = avatar switch
         {
-            { Image: not null } => AvatarChoice.Image,
+            { Image: not null } => AvatarChoice.Upload,
             { Label: not null } => AvatarChoice.Label,
-            _ => AvatarChoice.Image,
+            _ => AvatarChoice.Upload,
         };
+        this.imageFromLibrary = false;
         this.label = avatar.Label ?? string.Empty;
         this.image = avatar.Image;
         this.background = avatar.Background;
@@ -260,26 +358,41 @@ else
         await this.PendingImageChanged.InvokeAsync((null, null));
     }
 
-    /// <summary>Switches the three-way choice; leaving Image drops a pending image.</summary>
-    /// <param name="value">The newly chosen option.</param>
-    private async Task OnChoiceChangedAsync(AvatarChoice value)
+    /// <summary>
+    /// Chooses a card. Idempotent: a label click, the input's click and the card's own click all arrive for one press, and
+    /// only the first changes anything. The library card holds no picture until one is picked, so a press on it then does
+    /// nothing: only its "Choose from library" button opens the library.
+    /// </summary>
+    /// <param name="value">The card pressed.</param>
+    private async Task ChooseAsync(AvatarChoice value)
     {
-        this.choice = value;
-        this.error = null;
-        if (value != AvatarChoice.Image)
+        if (value == this.choice || (value == AvatarChoice.Library && !this.LibraryHoldsImage))
         {
-            await this.DropPendingAsync();
+            return;
         }
 
+        await this.ApplyChoiceAsync(value);
         await this.CommitAsync();
     }
 
-    /// <summary>Stores the Label box's typed text, once per keystroke.</summary>
+    /// <summary>Makes <paramref name="value"/> the chosen card and clears the error; a pending image the new card does not own is dropped.</summary>
+    /// <param name="value">The card to choose.</param>
+    private async Task ApplyChoiceAsync(AvatarChoice value)
+    {
+        this.choice = value;
+        this.error = null;
+        if (!this.OwnsImageSlot(value))
+        {
+            await this.DropPendingAsync();
+        }
+    }
+
+    /// <summary>Stores the Label box's typed text, once per keystroke; typing chooses the Label card.</summary>
     /// <param name="value">The text now in the box.</param>
     private async Task OnLabelChangedAsync(string value)
     {
         this.label = value;
-        this.error = null;
+        await this.ApplyChoiceAsync(AvatarChoice.Label);
         await this.CommitAsync();
     }
 
@@ -322,7 +435,7 @@ else
             return;
         }
 
-        await this.TakeImageAsync(bytes, extension);
+        await this.TakeImageAsync(bytes, extension, fromLibrary: false);
     }
 
     /// <summary>The "too large" message, sized from <see cref="AvatarImage.MaxBytes"/>.</summary>
@@ -392,15 +505,18 @@ else
             return;
         }
 
-        await this.TakeImageAsync(picked.Bytes, picked.Extension);
+        await this.TakeImageAsync(picked.Bytes, picked.Extension, fromLibrary: true);
     }
 
-    /// <summary>Takes a validated image: written through the store at once in Immediate mode, held as pending in Buffered mode.</summary>
+    /// <summary>Takes a validated image into the single image slot and chooses the card it came from, replacing what the other image card held: written through the store at once in Immediate mode, held as pending in Buffered mode.</summary>
     /// <param name="bytes">The image bytes, already validated as a PNG, JPEG or WebP.</param>
     /// <param name="extension">The extension, with its dot.</param>
-    private async Task TakeImageAsync(byte[] bytes, string extension)
+    /// <param name="fromLibrary">Whether the picture came from the library card rather than the upload card.</param>
+    private async Task TakeImageAsync(byte[] bytes, string extension, bool fromLibrary)
     {
         this.error = null;
+        this.imageFromLibrary = fromLibrary;
+        this.choice = fromLibrary ? AvatarChoice.Library : AvatarChoice.Upload;
         if (this.SaveMode == AvatarSaveMode.Immediate)
         {
             this.image = this.Avatars.WriteImage(bytes, extension);
@@ -415,9 +531,18 @@ else
         await this.CommitAsync();
     }
 
-    /// <summary>Clears the chosen image, stored or pending, so the avatar falls back to initials until a new file is chosen.</summary>
+    /// <summary>
+    /// Clears the held image, stored or pending, so the avatar falls back to initials. The upload card stays chosen (it can
+    /// be chosen empty); the library card cannot be chosen empty, so removing its picture returns the choice to Initials.
+    /// </summary>
     private async Task RemoveImageAsync()
     {
+        if (this.choice == AvatarChoice.Library)
+        {
+            this.choice = AvatarChoice.Initials;
+        }
+
+        this.imageFromLibrary = false;
         this.image = null;
         this.error = null;
         await this.DropPendingAsync();

@@ -33,13 +33,19 @@ public sealed class R3TeamsSourceTests
         Assert.Contains("border: 1px solid var(--ink-edge);", persona, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 
-    /// <summary>The avatar editor reserves the height of its tallest mode, so the dialog does not change height between modes (B8i).</summary>
+    /// <summary>An avatar choice card has a one-pixel edge border and the chosen one is ringed in the primary colour without growing, so choosing never shifts the layout (P8).</summary>
     [Fact]
-    public void AvatarEditor_ReservesTheTallestModesHeight()
+    public void AvatarChoiceCard_RingsTheChosenCardWithoutGrowingIt()
     {
-        string editor = CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), ".avatar-editor");
+        string css = CssText.AppCss(CssNewlines.AsIs);
+        string card = CssText.RuleBodyLoose(css, ".avatar-choice-card");
+        string selected = CssText.RuleBodyLoose(css, ".avatar-choice-card-selected,\n.avatar-choice-card-selected:hover");
 
-        Assert.Matches(@"min-height: \d+(\.\d+)?rem;", editor);
+        Assert.Contains("border: 1px solid var(--ink-edge);", card, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("box-shadow: inset 0 0 0 1px var(--mud-palette-primary);", selected, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.DoesNotContain("min-height", card, StringComparison.Ordinal);
+        Assert.Contains("visibility: hidden;", CssText.RuleBodyLoose(css, ".avatar-editor-background-hidden"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("justify-content: flex-end;", CssText.RuleBodyLoose(css, ".avatar-choice-body"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 
     /// <summary>A swatch is a 32px circle drawn with the avatar recipe: the colour at 20% over Surface, 35% in a Dark Theme (B8h).</summary>

@@ -55,9 +55,9 @@ public sealed class AgentProfileCardAvatarTests
     private static void UploadFile(IRenderedComponent<ContainerFragment> cut, byte[] bytes, string fileName) =>
         cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromBinary(bytes, fileName, contentType: "image/png"));
 
-    /// <summary>Create mode shows no avatar controls inline; clicking the avatar opens the editor with the three-way choice.</summary>
+    /// <summary>Create mode shows no avatar controls inline; clicking the avatar opens the editor with its choice cards.</summary>
     [Fact]
-    public async Task CreateMode_ClickingTheAvatar_OpensTheEditorWithTheThreeWayChoice()
+    public async Task CreateMode_ClickingTheAvatar_OpensTheEditorWithTheChoiceCards()
     {
         await using TeamWebApplicationFactory factory = new();
         await using MudBunitContext ctx = NewContext(factory);
@@ -70,8 +70,8 @@ public sealed class AgentProfileCardAvatarTests
 
         await OpenAvatarEditorAsync(cut);
 
-        string[] choices = [.. cut.FindAll(EditorDialog + " .mud-radio").Select(radio => radio.TextContent.Trim())];
-        Assert.Equal(["Initials of the name", "A short label", "An image"], choices);
+        string[] choices = [.. cut.FindAll(EditorDialog + " .avatar-choice-title").Select(title => title.TextContent.Trim())];
+        Assert.Equal(["Initials of the name", "A short label", "Upload an image"], choices);
         Assert.EndsWith("'s avatar", cut.Find(EditorDialog + " .mud-dialog-title").TextContent.Trim(), StringComparison.Ordinal);
     }
 
@@ -107,7 +107,7 @@ public sealed class AgentProfileCardAvatarTests
         Assert.NotNull(cut.Find(AvatarButton));
         Assert.DoesNotContain("Initials of the name", cut.Markup, StringComparison.Ordinal);
         Assert.DoesNotContain("A short label", cut.Markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("Choose an image", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Upload an image", cut.Markup, StringComparison.Ordinal);
 
         await OpenAvatarEditorAsync(cut);
 
@@ -218,7 +218,7 @@ public sealed class AgentProfileCardAvatarTests
         await OpenAvatarEditorAsync(cut);
 
         Assert.Equal("CO",EditorPreviewText(cut));
-        Assert.Equal(0, CountControlsLabelled(cut, "Label"));
+        Assert.Equal("Upload an image", cut.Find(EditorDialog + " .avatar-choice-card-selected .avatar-choice-title").TextContent.Trim());
     }
 
     /// <summary>Reopening the editor after an Apply starts from what was applied, not from what is on disk.</summary>
@@ -431,8 +431,9 @@ public sealed class AgentProfileCardAvatarTests
     }
 
     /// <summary>
-    /// A background colour only matters behind initials or a label: the palette shows for those two choices and is gone under
-    /// "An image". The palette is the whole Background control: there is no button to clear it back to the theme's colour.
+    /// A background colour only matters behind initials or a label: the palette shows for those two choices and is hidden under
+    /// the upload card - still rendered and inert, so the dialog keeps its height (B8i). The palette is the whole Background
+    /// control: there is no button to clear it back to the theme's colour.
     /// </summary>
     [Fact]
     public async Task Editor_BackgroundPalette_ShowsForInitialsAndLabel_AndIsHiddenForAnImage()
@@ -457,9 +458,10 @@ public sealed class AgentProfileCardAvatarTests
         Assert.Single(cut.FindAll(BackgroundPicker));
         Assert.False(HasEditorButton(cut, "Use the theme colour"));
 
-        await SelectAvatarChoiceAsync(cut, "An image");
+        await SelectAvatarChoiceAsync(cut, "Upload an image");
 
         Assert.Empty(cut.FindAll(BackgroundPicker));
+        Assert.Single(cut.FindAll(HiddenBackgroundPicker));
 
         await SelectAvatarChoiceAsync(cut, "Initials of the name");
 
@@ -478,7 +480,7 @@ public sealed class AgentProfileCardAvatarTests
 
         IRenderedComponent<ContainerFragment> cut = await OpenViewCardAsync(ctx, factory, "coo");
         await OpenAvatarEditorAsync(cut);
-        await SelectAvatarChoiceAsync(cut, "An image");
+        await SelectAvatarChoiceAsync(cut, "Upload an image");
         UploadFile(cut, MinimalPng, "avatar.png");
         await ClickEditorButtonAsync(cut, "Save");
         WaitForEditorClosed(cut);
@@ -526,7 +528,7 @@ public sealed class AgentProfileCardAvatarTests
         await SetTextValueAsync(cut, "Alias", "zzl");
         await SetTextValueAsync(cut, "Persona text", "a body");
         await OpenAvatarEditorAsync(cut);
-        await SelectAvatarChoiceAsync(cut, "An image");
+        await SelectAvatarChoiceAsync(cut, "Upload an image");
         UploadFile(cut, MinimalPng, "avatar.png");
         await TypeLabelAsync(cut, "AB");
         await ClickEditorButtonAsync(cut, "Apply");
@@ -553,7 +555,7 @@ public sealed class AgentProfileCardAvatarTests
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, factory);
         await ClickButtonAsync(cut, "New agent");
         await OpenAvatarEditorAsync(cut);
-        await SelectAvatarChoiceAsync(cut, "An image");
+        await SelectAvatarChoiceAsync(cut, "Upload an image");
         UploadFile(cut, MinimalPng, "avatar.png");
         await ClickEditorButtonAsync(cut, "Apply");
         WaitForEditorClosed(cut);
@@ -582,7 +584,7 @@ public sealed class AgentProfileCardAvatarTests
         await SetTextValueAsync(cut, "Alias", "zza");
         await SetTextValueAsync(cut, "Persona text", "a body");
         await OpenAvatarEditorAsync(cut);
-        await SelectAvatarChoiceAsync(cut, "An image");
+        await SelectAvatarChoiceAsync(cut, "Upload an image");
         UploadFile(cut, MinimalPng, "avatar.png");
         await ClickEditorButtonAsync(cut, "Apply");
         WaitForEditorClosed(cut);
@@ -610,7 +612,7 @@ public sealed class AgentProfileCardAvatarTests
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, factory);
         await ClickButtonAsync(cut, "New agent");
         await OpenAvatarEditorAsync(cut);
-        await SelectAvatarChoiceAsync(cut, "An image");
+        await SelectAvatarChoiceAsync(cut, "Upload an image");
         UploadFile(cut, new byte[AvatarImage.MaxBytes + 1], "big.png");
 
         Assert.Equal("That file is larger than 512 KB.", cut.Find(EditorDialog + " .mud-alert").TextContent.Trim());
@@ -627,7 +629,7 @@ public sealed class AgentProfileCardAvatarTests
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, factory);
         await ClickButtonAsync(cut, "New agent");
         await OpenAvatarEditorAsync(cut);
-        await SelectAvatarChoiceAsync(cut, "An image");
+        await SelectAvatarChoiceAsync(cut, "Upload an image");
         UploadFile(cut, [1, 2, 3, 4], "fake.png");
 
         Assert.Equal("That file is not a PNG, JPEG or WebP image.", cut.Find(EditorDialog + " .mud-alert").TextContent.Trim());

@@ -3362,14 +3362,84 @@ body.sidebar-resizing {
     }
 }
 
-/* The avatar editor (audit B8h, B8i). The editor reserves the height of its tallest mode (a label field over the
-   Background swatches) so the dialog does not change height when the Human switches between Initials, A short label
-   and An image: 72px preview, the radio row, the field, the group label, three rows of 32px swatches and the
-   "Use the theme colour" button. */
-.avatar-editor {
-    /* Measured at 1440x900: the label mode's content is about 421px (5px over 26rem) and the other two modes' 368px, so
-       27rem (432px) makes all three the same height. */
-    min-height: 27rem;
+/* The avatar editor (audit B8h, B8i, P8). The choices are a stack of cards, each a label around a visually hidden radio
+   input, so the editor is the same height in every mode and needs no reserved height. The chosen card keeps its 1px
+   border and adds an inset 1px ring, so choosing never shifts the layout; a card whose radio is disabled (the library
+   card before a pick) stays clickable. */
+.avatar-choice-card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    border: 1px solid var(--ink-edge);
+    border-radius: var(--mud-default-borderradius);
+    cursor: pointer;
+}
+
+.avatar-choice-card:hover {
+    border-color: var(--ink-field);
+}
+
+.avatar-choice-card-selected,
+.avatar-choice-card-selected:hover {
+    border-color: var(--mud-palette-primary);
+    box-shadow: inset 0 0 0 1px var(--mud-palette-primary);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 10%, var(--mud-palette-surface));
+}
+
+.avatar-choice-card:has(input:focus-visible) {
+    outline: 2px solid var(--hu-focus);
+    outline-offset: 2px;
+}
+
+.avatar-choice-pick {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+}
+
+/* The card's controls sit at its right edge; the label field fills the row, so only the image cards' buttons move. */
+.avatar-choice-body {
+    display: flex;
+    flex: 1 1 12rem;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+}
+
+/* Only the label field fills the card; the upload control is a mud-input-control too, and must stay as wide as its
+   button, like "Choose from library". */
+.avatar-choice-body .mud-input-control:not(.mud-file-upload) {
+    flex: 1 1 auto;
+}
+
+.avatar-choice-body .mud-file-upload {
+    flex: 0 0 auto;
+    width: auto;
+}
+
+/* An image card's status line (the file name, or the not-yet-saved note) takes its own row under the card's two buttons,
+   so the picker and Remove image sit side by side. */
+.avatar-choice-body .mud-typography-body2 {
+    flex-basis: 100%;
+    order: 1;
+    text-align: end;
+}
+
+/* Under an image card the Background keeps its space but is not shown, so the dialog keeps its height (B8i). */
+.avatar-editor-background-hidden {
+    visibility: hidden;
+}
+
+/* The buttons stop their click from reaching the card; the wrapper is only as wide as its button, so a click on the
+   card's empty space still chooses the card. */
+.avatar-choice-actions {
+    display: inline-flex;
 }
 
 /* The Background palette is a radio group of 32px circles drawn with the avatar recipe for the current mode: the

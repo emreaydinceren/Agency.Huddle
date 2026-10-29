@@ -226,7 +226,7 @@ public sealed class R3TeamsCardTests
 
         IRenderedComponent<ContainerFragment> cut = await OpenViewCardAsync(ctx, factory, "coo");
         await OpenAvatarEditorAsync(cut);
-        await SelectAvatarChoiceAsync(cut, "An image");
+        await SelectAvatarChoiceAsync(cut, "Upload an image");
         await ClickEditorButtonAsync(cut, ButtonText);
         cut.WaitForAssertion(() => Assert.True(cut.FindAll(Thumb).Count > 3), TimeSpan.FromSeconds(5));
 
@@ -258,7 +258,7 @@ public sealed class R3TeamsCardTests
 
         IRenderedComponent<ContainerFragment> cut = await OpenViewCardAsync(ctx, factory, "coo");
         await OpenAvatarEditorAsync(cut);
-        await SelectAvatarChoiceAsync(cut, "An image");
+        await SelectAvatarChoiceAsync(cut, "Upload an image");
         await ClickEditorButtonAsync(cut, ButtonText);
         cut.WaitForAssertion(() => Assert.True(cut.FindAll(Thumb).Count > 3), TimeSpan.FromSeconds(5));
         await ClickAsync(cut, () => cut.FindAll(Thumb)[3]);

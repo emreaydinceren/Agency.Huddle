@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1000" width="1200" height="1000" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 7: The Agents page">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1300" width="1200" height="1300" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 7: The Agents page">
 <title>Figure 7: The Agents page</title>
 <defs><filter id="sh" x="-10%" y="-10%" width="125%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.22"/></filter><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7280"/></marker></defs>
-<rect width="1200" height="1000" fill="#ffffff"/>
+<rect width="1200" height="1300" fill="#ffffff"/>
 <text x="24" y="30" font-size="18" font-weight="700" fill="#1f2430" text-anchor="start">Figure 7: The Agents page</text>
 <text x="24" y="48" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">Agents.razor. A directory of Agent tiles grouped by Team. A tile opens the Agent card (a dialog, drawn below and in Figure 8).</text>
 <rect x="24" y="60" width="1152" height="610" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
@@ -113,27 +113,77 @@
 <text x="436" y="888" font-size="10" font-weight="600" fill="#6b7280" text-anchor="start">Model</text>
 <rect x="436" y="894" width="310" height="20" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
 <rect x="436" y="912" width="310" height="3" rx="1" fill="#0e7c86" stroke="none"/>
-<rect x="800" y="716" width="360" height="214" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
-<rect x="796" y="708" width="25" height="17" rx="8.5" fill="#475569"/>
+<rect x="800" y="716" width="360" height="560" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
+<rect x="796" y="708" width="25" height="17" rx="8.5" fill="#475569" stroke="none" stroke-width="1"/>
 <text x="808.5" y="720.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">P8</text>
 <text x="816" y="744" font-size="16" font-weight="600" fill="#1f2430" text-anchor="start">coo's avatar</text>
 <rect x="1116" y="726" width="28" height="28" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
 <text x="1130" y="745" font-size="11" font-weight="400" fill="#1f2430" text-anchor="middle">✕</text>
-<text x="816" y="764" font-size="10" font-weight="600" fill="#6b7280" text-anchor="start">Background</text>
-<circle cx="832" cy="794" r="16" fill="#9fb3c8" stroke="none" stroke-width="1"/>
-<circle cx="872" cy="794" r="16" fill="#c8a99f" stroke="none" stroke-width="1"/>
-<circle cx="912" cy="794" r="16" fill="#a3c89f" stroke="none" stroke-width="1"/>
-<circle cx="952" cy="794" r="16" fill="#b59fc8" stroke="none" stroke-width="1"/>
-<circle cx="992" cy="794" r="16" fill="#c8c39f" stroke="none" stroke-width="1"/>
-<circle cx="872" cy="794" r="19" fill="none" stroke="#0e7c86" stroke-width="2"/>
-<rect x="816" y="836" width="150" height="26" rx="5" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
-<text x="891.0" y="853.0" font-size="10" font-weight="500" fill="#1f2430" text-anchor="middle">Choose from library</text>
-<text x="816" y="884" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">replaces this content, with a Back button</text>
-<text x="24" y="980" font-size="11" font-weight="700" fill="#6b7280" text-anchor="start">Key</text>
-<rect x="58" y="969" width="30" height="14" rx="3" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
-<text x="94" y="980" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">always rendered</text>
-<rect x="194" y="969" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
-<text x="230" y="980" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">only in some states</text>
-<rect x="354" y="969" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
-<text x="390" y="980" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">overlay above the page</text>
+<circle cx="844" cy="792" r="26" fill="#cfe3dc" stroke="none" stroke-width="1"/>
+<text x="844" y="798" font-size="15" font-weight="600" fill="#1f2430" text-anchor="middle">CO</text>
+<text x="882" y="788" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Live preview: what Save would give</text>
+<text x="882" y="802" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">(Large, image, then label, then initials)</text>
+<rect x="816" y="830" width="328" height="48" rx="6" fill="#e6f2f3" stroke="#0e7c86" stroke-width="2"/>
+<circle cx="842" cy="854" r="16" fill="#cfe3dc" stroke="none" stroke-width="1"/>
+<text x="842" y="858" font-size="10" font-weight="600" fill="#1f2430" text-anchor="middle">CO</text>
+<text x="868" y="858" font-size="11" font-weight="500" fill="#1f2430" text-anchor="start">Initials of the name</text>
+<rect x="816" y="886" width="328" height="48" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<circle cx="842" cy="910" r="16" fill="#cfe3dc" stroke="none" stroke-width="1"/>
+<text x="842" y="914" font-size="8" font-weight="600" fill="#1f2430" text-anchor="middle">Grace</text>
+<text x="868" y="914" font-size="11" font-weight="500" fill="#1f2430" text-anchor="start">A short label</text>
+<rect x="964" y="897" width="170" height="26" rx="4" fill="#ffffff" stroke="#0e7c86" stroke-width="1.2"/>
+<text x="972" y="914" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Grace</text>
+<text x="1128" y="914" font-size="9" font-weight="400" fill="#6b7280" text-anchor="end">5 / 6</text>
+<rect x="816" y="942" width="328" height="48" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<circle cx="842" cy="966" r="16" fill="#d9c7b0" stroke="none" stroke-width="1"/>
+<text x="842" y="970" font-size="11" font-weight="400" fill="#1f2430" text-anchor="middle">🖼</text>
+<text x="868" y="970" font-size="11" font-weight="500" fill="#1f2430" text-anchor="start">Image from the library</text>
+<rect x="1004" y="953" width="130" height="26" rx="5" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="1069" y="970" font-size="10" font-weight="500" fill="#1f2430" text-anchor="middle">▣ Choose from library</text>
+<rect x="816" y="998" width="328" height="48" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<circle cx="842" cy="1022" r="16" fill="#cfe3dc" stroke="none" stroke-width="1"/>
+<text x="842" y="1026" font-size="10" font-weight="600" fill="#1f2430" text-anchor="middle">CO</text>
+<text x="868" y="1026" font-size="11" font-weight="500" fill="#1f2430" text-anchor="start">Upload an image</text>
+<rect x="1054" y="1009" width="80" height="26" rx="5" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="1094" y="1026" font-size="10" font-weight="500" fill="#1f2430" text-anchor="middle">⬆ Upload…</text>
+<text x="816" y="1064" font-size="10" font-weight="600" fill="#6b7280" text-anchor="start">Background</text>
+<circle cx="832" cy="1086" r="12" fill="#9fb3c8" stroke="none" stroke-width="1"/>
+<circle cx="862" cy="1086" r="12" fill="#c8a99f" stroke="none" stroke-width="1"/>
+<circle cx="892" cy="1086" r="12" fill="#a3c89f" stroke="none" stroke-width="1"/>
+<circle cx="922" cy="1086" r="12" fill="#b59fc8" stroke="none" stroke-width="1"/>
+<circle cx="952" cy="1086" r="12" fill="#c8c39f" stroke="none" stroke-width="1"/>
+<circle cx="982" cy="1086" r="12" fill="#9fc8c3" stroke="none" stroke-width="1"/>
+<circle cx="1012" cy="1086" r="12" fill="#c89fb5" stroke="none" stroke-width="1"/>
+<circle cx="1042" cy="1086" r="12" fill="#b3c89f" stroke="none" stroke-width="1"/>
+<circle cx="1072" cy="1086" r="12" fill="#9fa9c8" stroke="none" stroke-width="1"/>
+<circle cx="1102" cy="1086" r="12" fill="#c8b59f" stroke="none" stroke-width="1"/>
+<circle cx="832" cy="1116" r="12" fill="#9fb3c8" stroke="none" stroke-width="1"/>
+<circle cx="862" cy="1116" r="12" fill="#c8a99f" stroke="none" stroke-width="1"/>
+<circle cx="892" cy="1116" r="12" fill="#a3c89f" stroke="none" stroke-width="1"/>
+<circle cx="922" cy="1116" r="12" fill="#b59fc8" stroke="none" stroke-width="1"/>
+<circle cx="952" cy="1116" r="12" fill="#c8c39f" stroke="none" stroke-width="1"/>
+<circle cx="982" cy="1116" r="12" fill="#9fc8c3" stroke="none" stroke-width="1"/>
+<circle cx="1012" cy="1116" r="12" fill="#c89fb5" stroke="none" stroke-width="1"/>
+<circle cx="1042" cy="1116" r="12" fill="#b3c89f" stroke="none" stroke-width="1"/>
+<circle cx="1072" cy="1116" r="12" fill="#9fa9c8" stroke="none" stroke-width="1"/>
+<circle cx="1102" cy="1116" r="12" fill="#c8b59f" stroke="none" stroke-width="1"/>
+<circle cx="892" cy="1116" r="15" fill="none" stroke="#0e7c86" stroke-width="2"/>
+<text x="892" y="1120" font-size="11" font-weight="600" fill="#1f2430" text-anchor="middle">✓</text>
+<rect x="816" y="1140" width="130" height="22" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="881" y="1155" font-size="10" font-weight="500" fill="#1f2430" text-anchor="middle">Use the theme colour</text>
+<line x1="800" y1="1176" x2="1160" y2="1176" stroke="#cfd4dc" stroke-width="1"/>
+<text x="1050" y="1201" font-size="11" font-weight="500" fill="#1f2430" text-anchor="middle">Cancel</text>
+<rect x="1084" y="1186" width="60" height="24" rx="5" fill="#0e7c86" stroke="none" stroke-width="1"/>
+<text x="1114" y="1202" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">Save</text>
+<text x="816" y="1228" font-size="9.5" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Library card only when a library is configured; it opens</text>
+<text x="816" y="1240" font-size="9.5" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">the library in place of this content, with a Back button.</text>
+<text x="816" y="1252" font-size="9.5" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Upload… works as today's "An image"; an empty library card</text>
+<text x="816" y="1264" font-size="9.5" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">ignores a click, only its button opens it. Buttons sit right.</text>
+<text x="24" y="1280" font-size="11" font-weight="700" fill="#6b7280" text-anchor="start">Key</text>
+<rect x="58" y="1269" width="30" height="14" rx="3" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="94" y="1280" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">always rendered</text>
+<rect x="194" y="1269" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="230" y="1280" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">only in some states</text>
+<rect x="354" y="1269" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
+<text x="390" y="1280" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">overlay above the page</text>
 </svg>
