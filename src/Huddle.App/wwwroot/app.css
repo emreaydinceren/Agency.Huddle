@@ -4503,9 +4503,12 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 
 :is(.team-page-wide, .library-page) .library-document .library-document-split > .library-rendered {
     width: 100%;
+    max-width: none;
     margin-inline: 0;
     overflow: auto;
-    padding: 24px 16px 0;
+
+    /* The scroller fills its half so the scrollbar sits at the pane's edge; the text is centred in it with padding, at the same 46.29em measure as Read mode. */
+    padding: 24px max(16px, calc((100% - calc(var(--mud-typography-body1-size) * 8 / 7 * 46.29)) / 2)) 0;
 }
 
 .library-ref-missing {
@@ -4985,17 +4988,16 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 /* A Library document's rendered Markdown. The global reset zeroes block margins, so without these the paragraphs of a Teammate definition run together. */
 /* The reading styles, shared by Read mode and Split's preview. Long-form text is the one size derived from
    the scale rather than taken from it (design-system.md "Typography"): body1 x 8/7 is 16px, at a 1.65
-   line height, and the headings step up from that so an h1 is a heading, not a banner. The 35em measure is
-   about 70 characters of Inter prose a line, set flush left so the text starts on the same 16px line as the
-   toolbar and the notices above it rather than floating in the middle of a wide pane. */
+   line height, and the headings step up from that so an h1 is a heading, not a banner. The 46.29em measure
+   (35em widened by 15% twice) is about 92 characters of Inter prose a line, centred in the pane. */
 .library-rendered {
     overflow-wrap: anywhere;
     font-size: calc(var(--mud-typography-body1-size) * 8 / 7);
     line-height: 1.65;
 
-    /* 35em of text plus the pane's 16px a side, so the padding does not eat into the measure. */
-    max-width: calc(calc(var(--mud-typography-body1-size) * 8 / 7 * 35) + 32px);
-    margin-inline: 0;
+    /* 46.29em of text plus the pane's 16px a side, so the padding does not eat into the measure. */
+    max-width: calc(calc(var(--mud-typography-body1-size) * 8 / 7 * 46.29) + 32px);
+    margin-inline: auto;
 }
 
 /* Document history (DocHistory spec §6.7, §6.8, §6.10): the byline under the toolbar, the History under the note. */
@@ -5060,8 +5062,8 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 
 .doc-history {
     box-sizing: border-box;
-    max-width: calc(calc(var(--mud-typography-body1-size) * 8 / 7 * 35) + 32px);
-    margin: 24px 0 0;
+    max-width: calc(calc(var(--mud-typography-body1-size) * 8 / 7 * 46.29) + 32px);
+    margin: 24px auto 0;
     padding-inline: 16px;
 }
 

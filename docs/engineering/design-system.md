@@ -753,8 +753,8 @@ The Room is the Transcript over the Composer in one column.
 ### The Library
 
 - **Tree rows** are 30px, 13px text, 16px icons and a 16px indent.
-- **The reader** is `body1` x 8/7 (16px) at 1.65 with a 35em measure, set flush left on the
-  toolbar's 16px line rather than centred in the pane. A note's Markdown h1 is
+- **The reader** is `body1` x 8/7 (16px) at 1.65 with a 46.29em measure (35em widened 15% twice),
+  centred in the pane rather than set flush left. A note's Markdown h1 is
   24px at 600, the one size above 20px in the app, and only in the reader.
 - **The document toolbar** ends in a hairline, as every toolbar does (see Lines). The tree
   header and the document toolbar are one band of the same height, with one Chrome line across

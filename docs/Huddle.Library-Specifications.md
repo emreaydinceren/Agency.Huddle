@@ -447,7 +447,7 @@ As ADR-0029 decided:
   toggled from the sidebar's *Library* link, the `?library=` link handler (§6.6) and a close
   button in the pane's toolbar.
 - **Density (round 2 of the UI change list).** Tree rows are 30px high with 13px text, 16px icons and a 16px
-  indent. The reader body is 16px at line-height 1.65 in a 35em measure, and the note title is 24px, weight 600
+  indent. The reader body is 16px at line-height 1.65 in a 46.29em measure, centred in the pane, and the note title is 24px, weight 600
   (the one size above 20px, reader only). The file path in the toolbar is 12px `TextSecondary`, middle-truncated
   by `LibraryPathDisplay.Shorten` with the whole path in a tooltip. The "Linked from N notes" panel
   (`.library-backlinks`) is as wide as the text column, its label 13px at weight 500. Read, Edit and Split are
