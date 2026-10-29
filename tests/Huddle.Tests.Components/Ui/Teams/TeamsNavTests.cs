@@ -16,6 +16,7 @@ using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Agents;
+using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Factories;
@@ -73,9 +74,15 @@ public sealed class TeamsNavTests
             "/teams/Business",
             "/teams/Business/projects/2025%20Taxes%20Project",
             "/teams/Business/projects/Marketing",
+            "/teams/Business/tasks/all-tasks",
+            "/teams/Business/tasks/my-tasks",
             "/teams/Sales%20%26%20Ops",
+            "/teams/Sales%20%26%20Ops/tasks/all-tasks",
+            "/teams/Sales%20%26%20Ops/tasks/my-tasks",
             "/teams/Lab%20%232",
             "/teams/Lab%20%232/projects/Item%20%231",
+            "/teams/Lab%20%232/tasks/all-tasks",
+            "/teams/Lab%20%232/tasks/my-tasks",
             "/teams/build",
         ];
         cut.WaitForAssertion(() =>
@@ -732,17 +739,21 @@ public sealed class TeamsNavTests
                 "/rooms/older",
                 "/rooms/newer",
                 "/teams/Business/projects/Marketing",
+                "/teams/Business/tasks/all-tasks",
+                "/teams/Business/tasks/my-tasks",
                 "/teams/Sales",
                 "/rooms/other",
+                "/teams/Sales/tasks/all-tasks",
+                "/teams/Sales/tasks/my-tasks",
                 "/teams/build",
             ];
             Assert.Equal(expected, hrefs);
         });
     }
 
-    /// <summary>An open Team holds a Rooms folder with its Rooms, then a Library folder with its Projects, both open; nothing else sits in either.</summary>
+    /// <summary>An open Team holds a Rooms folder with its Rooms, a Library folder with its Projects, then a Tasks folder with the Views, all open; nothing else sits in any.</summary>
     [Fact]
-    public async Task ExpandedTeam_GroupsItsRoomsAndProjects_IntoRoomsThenLibraryFolders()
+    public async Task ExpandedTeam_GroupsItsRoomsProjectsAndViews_IntoRoomsLibraryThenTasksFolders()
     {
         ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
         script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true });
@@ -754,18 +765,21 @@ public sealed class TeamsNavTests
 
         cut.WaitForAssertion(() =>
         {
-            string[] folders = ["Rooms", "Library"];
+            string[] folders = ["Rooms", "Library", "Tasks"];
             Assert.Equal(folders, FolderTitles(cut));
             string?[] rooms = ["/rooms/teamroom", "/rooms/chat"];
             Assert.Equal(rooms, FolderHrefs(cut, "Rooms"));
             string?[] projects = ["/teams/Business/projects/Marketing", "/teams/Business/projects/Taxes"];
             Assert.Equal(projects, FolderHrefs(cut, "Library"));
+            string?[] views = ["/teams/Business/tasks/all-tasks", "/teams/Business/tasks/my-tasks"];
+            Assert.Equal(views, FolderHrefs(cut, "Tasks"));
             Assert.Equal("true", FolderHeader(cut, "Rooms").GetAttribute("aria-expanded"));
             Assert.Equal("true", FolderHeader(cut, "Library").GetAttribute("aria-expanded"));
+            Assert.Equal("true", FolderHeader(cut, "Tasks").GetAttribute("aria-expanded"));
         });
     }
 
-    /// <summary>An empty folder is not drawn: a Team with Rooms and no Projects has only Rooms, one with Projects and no Rooms only Library.</summary>
+    /// <summary>An empty folder is not drawn: a Team with Rooms and no Projects has only Rooms (and Tasks), one with Projects and no Rooms only Library (and Tasks).</summary>
     [Fact]
     public async Task ExpandedTeam_DrawsNoFolderForWhatItDoesNotHave()
     {
@@ -778,7 +792,7 @@ public sealed class TeamsNavTests
 
         cut.WaitForAssertion(() =>
         {
-            string[] folders = ["Rooms", "Library"];
+            string[] folders = ["Rooms", "Tasks", "Library", "Tasks"];
             Assert.Equal(folders, FolderTitles(cut));
             string?[] rooms = ["/rooms/teamroom"];
             Assert.Equal(rooms, FolderHrefs(cut, "Rooms"));
@@ -797,7 +811,7 @@ public sealed class TeamsNavTests
 
         await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: directory);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-        cut.WaitForAssertion(() => Assert.Equal(2, FolderTitles(cut).Length));
+        cut.WaitForAssertion(() => Assert.Equal(3, FolderTitles(cut).Length));
 
         await cut.InvokeAsync(() => FolderHeader(cut, "Library").ClickAsync());
 
@@ -805,6 +819,7 @@ public sealed class TeamsNavTests
         {
             Assert.Equal("false", FolderHeader(cut, "Library").GetAttribute("aria-expanded"));
             Assert.Equal("true", FolderHeader(cut, "Rooms").GetAttribute("aria-expanded"));
+            Assert.Equal("true", FolderHeader(cut, "Tasks").GetAttribute("aria-expanded"));
         });
         Assert.Empty(Writes(ctx));
     }
@@ -824,6 +839,71 @@ public sealed class TeamsNavTests
         await cut.InvokeAsync(() => nav.NavigateTo("/teams/Business/projects/Marketing"));
 
         cut.WaitForAssertion(() => Assert.Equal("true", FolderHeader(cut, "Library").GetAttribute("aria-expanded")));
+    }
+
+    /// <summary>The Tasks folder lists every View in the store's order, each linking to the escaped <c>/teams/{Team}/tasks/{ViewId}</c> route under its View's name.</summary>
+    [Fact]
+    public async Task TasksFolder_ListsEveryView_LinkingToTheTeamScopedRoute()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Sales & Ops")] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: """["sales & ops"]""");
+        ViewStore views = ctx.Services.GetRequiredService<ViewStore>();
+        Assert.True(views.Save(new TaskView { Id = "board", Name = "Sprint board", Kind = ViewKind.List }).Saved);
+
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            string?[] hrefs = ["/teams/Sales%20%26%20Ops/tasks/all-tasks", "/teams/Sales%20%26%20Ops/tasks/my-tasks", "/teams/Sales%20%26%20Ops/tasks/board"];
+            Assert.Equal(hrefs, FolderHrefs(cut, "Tasks"));
+            string[] names = [.. views.Views.Select(static view => view.Name)];
+            string[] labels = [.. Folder(cut, "Tasks").QuerySelectorAll(".nav-team-view-link .sidebar-row-label").Select(static label => label.TextContent.Trim())];
+            Assert.Equal(names, labels);
+        });
+    }
+
+    /// <summary>A View saved after the nav rendered appears in the Team's Tasks folder: the nav follows <see cref="ViewStore.ViewsChanged"/>.</summary>
+    [Fact]
+    public async Task ViewsChanged_AddsTheNewViewToTheTasksFolder()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        cut.WaitForAssertion(() => Assert.Equal(2, FolderHrefs(cut, "Tasks").Length));
+
+        Assert.True(ctx.Services.GetRequiredService<ViewStore>().Save(new TaskView { Id = "late", Name = "Late", Kind = ViewKind.List }).Saved);
+
+        string?[] expected = ["/teams/Business/tasks/all-tasks", "/teams/Business/tasks/my-tasks", "/teams/Business/tasks/late"];
+        cut.WaitForAssertion(() => Assert.Equal(expected, FolderHrefs(cut, "Tasks")));
+    }
+
+    /// <summary>With Tasks turned off, an open Team draws no Tasks folder.</summary>
+    [Fact]
+    public async Task TasksFolder_NotDrawn_WhenTasksAreOff()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, tasksEnabled: false);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        string[] expected = ["Library"];
+        cut.WaitForAssertion(() => Assert.Equal(expected, FolderTitles(cut)));
+    }
+
+    /// <summary>Navigating to a Team-scoped View reopens that Team's Tasks folder the Human closed, so the page they are on is never folded away.</summary>
+    [Fact]
+    public async Task NavigatingToATeamView_ReopensAClosedTasksFolder()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        cut.WaitForAssertion(() => Assert.Equal("true", FolderHeader(cut, "Tasks").GetAttribute("aria-expanded")));
+        await cut.InvokeAsync(() => FolderHeader(cut, "Tasks").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal("false", FolderHeader(cut, "Tasks").GetAttribute("aria-expanded")));
+
+        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
+        await cut.InvokeAsync(() => nav.NavigateTo("/teams/Business/tasks/my-tasks"));
+
+        cut.WaitForAssertion(() => Assert.Equal("true", FolderHeader(cut, "Tasks").GetAttribute("aria-expanded")));
     }
 
     /// <summary>Each folder keeps its own 8-row limit: nine Projects fold behind the Library's "Show all (9)" while two Rooms show in full, and Show all lists every Project.</summary>
@@ -1067,6 +1147,7 @@ public sealed class TeamsNavTests
         ctx.Services.AddSingleton(sp => new AvatarStore(sp.GetRequiredService<TempDataDir>().Options(), NullLogger<AvatarStore>.Instance));
         ctx.Services.AddSingleton<ITeamCatalog>(catalog);
         ctx.Services.AddSingleton<ITeamFolders>(folders ?? new FakeTeamFolders());
+        ctx.Services.AddSingleton(sp => new Agency.Huddle.App.Tasks.Views.ViewStore(sp.GetRequiredService<TempDataDir>().Options(), NullLogger<Agency.Huddle.App.Tasks.Views.ViewStore>.Instance));
         TeamOptions teamOptions = new();
         teamOptions.Library.Enabled = libraryEnabled;
         teamOptions.Tasks.Enabled = tasksEnabled;
