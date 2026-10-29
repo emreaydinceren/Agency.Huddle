@@ -174,20 +174,21 @@ public sealed class SidebarDensityTests
         Assert.Equal(11, cut.FindAll("a[href^='/rooms/']").Count);
     }
 
-    /// <summary>The Teams view's only group is the Teams group, so it starts open (audit B3a), away from the Teams and on a Team's page alike.</summary>
+    /// <summary>The Teams view has no "Teams" header to open: each Team is a root row of the nav, shown at once, away from the Teams and on a Team's page alike.</summary>
     [Fact]
-    public async Task TeamsGroup_IsOpenByDefault_AndOnATeamPage()
+    public async Task Teams_AreRootRows_WithNoGroupHeader()
     {
         FakeTeamCatalog catalog = new() { Teams = [SidebarDensityTests.Team("Business", members: 1)] };
-        await using MudBunitContext closed = SidebarDensityTests.NewContext(out _, catalog);
-        IRenderedComponent<ContainerFragment> closedCut = SidebarDensityTests.Render<TeamsNav>(closed);
-        closedCut.WaitForAssertion(() => Assert.Equal("true", SidebarDensityTests.GroupHeader(closedCut).GetAttribute("aria-expanded")));
+        await using MudBunitContext away = SidebarDensityTests.NewContext(out _, catalog);
+        IRenderedComponent<ContainerFragment> awayCut = SidebarDensityTests.Render<TeamsNav>(away);
+        awayCut.WaitForAssertion(() => Assert.Single(awayCut.FindAll(".teams-nav > div.hover-reveal-row")));
+        Assert.Empty(awayCut.FindAll(".teams-nav .mud-nav-group"));
 
-        await using MudBunitContext open = SidebarDensityTests.NewContext(out _, catalog);
-        open.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/Business");
-        IRenderedComponent<ContainerFragment> openCut = SidebarDensityTests.Render<TeamsNav>(open);
+        await using MudBunitContext onTeam = SidebarDensityTests.NewContext(out _, catalog);
+        onTeam.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/Business");
+        IRenderedComponent<ContainerFragment> onTeamCut = SidebarDensityTests.Render<TeamsNav>(onTeam);
 
-        openCut.WaitForAssertion(() => Assert.Equal("true", SidebarDensityTests.GroupHeader(openCut).GetAttribute("aria-expanded")));
+        onTeamCut.WaitForAssertion(() => Assert.Single(onTeamCut.FindAll(".teams-nav > div.hover-reveal-row")));
     }
 
     /// <summary>More than eight Teams show eight and "Show all (N)", which expands to every Team.</summary>

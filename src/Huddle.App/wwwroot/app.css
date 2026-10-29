@@ -1432,14 +1432,17 @@ body.sidebar-resizing {
    A section header and its rows share the two lines: the header heads its list, it is not a level above it. Nesting
    (a Team's Rooms and Projects) moves a row in by --nav-step, one slot and one gap, so a child's mark sits under its
    parent's label and its label starts one step further in; set --nav-level on the row, never a padding of its own.
-   Every sidebar row is one height (UX-014, UX-017). */
+   Every sidebar row is one height (UX-014, UX-017).
+
+   The proportions are VS Code's Explorer scaled to the 32px row: its 22px row puts a 16px twistie a few px in and the
+   label a few px after it, so here the slot is that twistie at 32/22 and the pad and gap stay a tight 4px. */
 :root {
     --nav-row-height: 32px;
     --icon-size-row: 18px;
     --nav-inset: 4px;
-    --nav-pad: 8px;
+    --nav-pad: 4px;
     --nav-slot: 24px;
-    --nav-gap: 8px;
+    --nav-gap: 4px;
     --nav-step: calc(var(--nav-slot) + var(--nav-gap));
     --nav-end: 8px;
 }
@@ -6542,13 +6545,44 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     font-weight: inherit;
 }
 
-/* ---- Teams nav: the Team, Project and Room rows in the sidebar -------------------------------
-   A Team is a top-level row: its chevron fills the leading slot and its name starts on the text line, with the
-   teams' "Build a team" in line with them. A Team's Rooms and Projects are one level in (Left menu): their icon sits
-   under the Team's name. The level is set on the .mud-nav-item, and the link inherits it. */
-.teams-nav-host .mud-nav-item.nav-project-link,
-.teams-nav-host .mud-nav-item.nav-team-room-link {
+/* ---- Teams nav: the Team, folder, Project and Room rows in the sidebar -------------------------
+   A Team is a root row of the Teams view, under no section header: its chevron fills the leading slot and its name
+   starts on the text line, with "Build a team" in line with them. An open Team's Rooms and Library folders are one
+   level in (Left menu): their folder icon sits under the Team's name. A folder's rows step a quarter level further,
+   as the Chats view's folders do. The level is set on the folder, and its header and rows inherit it. */
+.teams-nav-host .teams-nav-folder {
     --nav-level: 1;
+}
+
+.teams-nav-host .teams-nav-folder .mud-collapse-container {
+    --nav-level: 1.25;
+}
+
+/* A folder header is a row, not a section: no gap above or below it. Outranks the section rules in Left menu. */
+.sidebar-views .teams-nav-host .teams-nav-folder.mud-nav-group > .mud-nav-link {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+/* With no group around them, the Team rows take the row rules a group's rows get (Sidebar rows, below). */
+.teams-nav-host .mud-nav-link {
+    min-width: 0;
+    min-height: var(--nav-row-height);
+    padding-top: 4px;
+    padding-bottom: 4px;
+    color: var(--mud-palette-text-primary);
+}
+
+.teams-nav-host .mud-nav-link .mud-nav-link-icon {
+    font-size: var(--icon-size-row);
+}
+
+.teams-nav-host .mud-nav-link .mud-nav-link-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .teams-nav-host .nav-project-link .mud-nav-link-icon {
@@ -8478,9 +8512,10 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 /* -- nav=tile: the sidebar, quiet rows in the subtle ink and the current row a lifted tile ---------------------- */
+/* The sides are 4px, not 8px, so a row's label starts where the Left menu grid's VS Code proportions put it. */
 :root:has([data-hu-nav="tile"]) .sidebar-views {
     border-inline-start: 0;
-    padding: 8px 8px 16px;
+    padding: 8px 4px 16px;
 }
 
 :root:has([data-hu-nav="tile"]) .mud-drawer .mud-navmenu .mud-nav-link {

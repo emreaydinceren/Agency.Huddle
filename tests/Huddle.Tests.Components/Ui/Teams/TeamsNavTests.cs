@@ -24,18 +24,18 @@ using Agency.Huddle.Tests.NeedsYou;
 namespace Agency.Huddle.Tests.Ui.Teams;
 
 /// <summary>
-/// Pins Spec §6.5's listing half: <c>TeamsNav</c> is one <c>MudNavMenu.teams-nav</c> holding a
-/// "Teams" group; each Team is a <c>div.hover-reveal-row</c> whose link goes to the escaped
-/// <c>/teams/{team}</c> route, with its Projects as <c>nav-project-link</c> rows, a "No members" hint
-/// for a memberless Team, a "Team actions" menu (button or right-click) offering "New project", and a
-/// trailing "Build a team" action. It follows <see cref="ITeamCatalog.Changed"/> and unsubscribes on
-/// dispose.
+/// Pins Spec §6.5's listing half: <c>TeamsNav</c> is one <c>MudNavMenu.teams-nav</c> whose root rows
+/// are the Teams, under no "Teams" header; each Team is a <c>div.hover-reveal-row</c> whose link goes to
+/// the escaped <c>/teams/{team}</c> route, and an open Team holds a Rooms folder and a Library folder
+/// (its Projects as <c>nav-project-link</c> rows). A memberless Team shows a "No members" hint, the
+/// "Team actions" menu (button or right-click) offers "New project", and "Build a team" trails the list.
+/// It follows <see cref="ITeamCatalog.Changed"/> and unsubscribes on dispose.
 /// </summary>
 public sealed class TeamsNavTests
 {
-    /// <summary>The group is titled "Teams", and the Teams appear in the catalog's own order (not sorted).</summary>
+    /// <summary>The Teams are the nav's root rows, in the catalog's own order (not sorted), with no "Teams" group header above them.</summary>
     [Fact]
-    public async Task Renders_GroupTitledTeams_WithTeamsInCatalogOrder()
+    public async Task Renders_TeamsAsRootRows_InCatalogOrder()
     {
         FakeTeamCatalog catalog = new()
         {
@@ -45,9 +45,9 @@ public sealed class TeamsNavTests
         await using MudBunitContext ctx = NewContext(catalog);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
-        Assert.Equal("Teams", cut.Find(".teams-nav .mud-nav-group .mud-nav-link-text").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".teams-nav .mud-nav-group"));
         string[] expected = ["Sales & Ops", "Business", "Lab #2"];
-        string[] actual = [.. cut.FindAll(".hover-reveal-link a").Select(a => a.TextContent.Trim())];
+        string[] actual = [.. cut.FindAll(".teams-nav > div.hover-reveal-row .hover-reveal-link a").Select(a => a.TextContent.Trim())];
         Assert.Equal(expected, actual);
     }
 
@@ -705,7 +705,7 @@ public sealed class TeamsNavTests
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
-    /// <summary>T1/T5 sidebar half: an expanded Team lists its Team Room first, then its other scoped Rooms oldest first, then its Projects; an archived scoped Room is left out.</summary>
+    /// <summary>T1/T5 sidebar half: an expanded Team lists its Team Room first, then its other scoped Rooms oldest first (the Rooms folder), then its Projects (the Library folder); an archived scoped Room is left out.</summary>
     [Fact]
     public async Task ExpandedTeam_ListsTeamRoomFirst_ThenScopedRooms_ThenProjects()
     {
@@ -738,6 +738,119 @@ public sealed class TeamsNavTests
             ];
             Assert.Equal(expected, hrefs);
         });
+    }
+
+    /// <summary>An open Team holds a Rooms folder with its Rooms, then a Library folder with its Projects, both open; nothing else sits in either.</summary>
+    [Fact]
+    public async Task ExpandedTeam_GroupsItsRoomsAndProjects_IntoRoomsThenLibraryFolders()
+    {
+        ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
+        script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true });
+        script.Rooms.Add(new Room("chat", "Ada", DateTimeOffset.UnixEpoch.AddDays(1)) { Team = "Business" });
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing", "Taxes"])] };
+
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: directory);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            string[] folders = ["Rooms", "Library"];
+            Assert.Equal(folders, FolderTitles(cut));
+            string?[] rooms = ["/rooms/teamroom", "/rooms/chat"];
+            Assert.Equal(rooms, FolderHrefs(cut, "Rooms"));
+            string?[] projects = ["/teams/Business/projects/Marketing", "/teams/Business/projects/Taxes"];
+            Assert.Equal(projects, FolderHrefs(cut, "Library"));
+            Assert.Equal("true", FolderHeader(cut, "Rooms").GetAttribute("aria-expanded"));
+            Assert.Equal("true", FolderHeader(cut, "Library").GetAttribute("aria-expanded"));
+        });
+    }
+
+    /// <summary>An empty folder is not drawn: a Team with Rooms and no Projects has only Rooms, one with Projects and no Rooms only Library.</summary>
+    [Fact]
+    public async Task ExpandedTeam_DrawsNoFolderForWhatItDoesNotHave()
+    {
+        ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
+        script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true });
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business"), Team("Sales", projects: ["Budget"])] };
+
+        await using MudBunitContext ctx = NewContext(catalog, stored: """["business","sales"]""", directory: directory);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            string[] folders = ["Rooms", "Library"];
+            Assert.Equal(folders, FolderTitles(cut));
+            string?[] rooms = ["/rooms/teamroom"];
+            Assert.Equal(rooms, FolderHrefs(cut, "Rooms"));
+            string?[] projects = ["/teams/Sales/projects/Budget"];
+            Assert.Equal(projects, FolderHrefs(cut, "Library"));
+        });
+    }
+
+    /// <summary>Clicking a folder's header closes that folder only, and writes nothing to storage (folders are not remembered).</summary>
+    [Fact]
+    public async Task FolderHeader_Click_ClosesThatFolderOnly()
+    {
+        ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
+        script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true });
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: directory);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        cut.WaitForAssertion(() => Assert.Equal(2, FolderTitles(cut).Length));
+
+        await cut.InvokeAsync(() => FolderHeader(cut, "Library").ClickAsync());
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("false", FolderHeader(cut, "Library").GetAttribute("aria-expanded"));
+            Assert.Equal("true", FolderHeader(cut, "Rooms").GetAttribute("aria-expanded"));
+        });
+        Assert.Empty(Writes(ctx));
+    }
+
+    /// <summary>Navigating to a Project reopens its Team's Library folder the Human closed, so the page they are on is never folded away.</summary>
+    [Fact]
+    public async Task NavigatingToAProject_ReopensAClosedLibraryFolder()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        cut.WaitForAssertion(() => Assert.Equal("true", FolderHeader(cut, "Library").GetAttribute("aria-expanded")));
+        await cut.InvokeAsync(() => FolderHeader(cut, "Library").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal("false", FolderHeader(cut, "Library").GetAttribute("aria-expanded")));
+
+        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
+        await cut.InvokeAsync(() => nav.NavigateTo("/teams/Business/projects/Marketing"));
+
+        cut.WaitForAssertion(() => Assert.Equal("true", FolderHeader(cut, "Library").GetAttribute("aria-expanded")));
+    }
+
+    /// <summary>Each folder keeps its own 8-row limit: nine Projects fold behind the Library's "Show all (9)" while two Rooms show in full, and Show all lists every Project.</summary>
+    [Fact]
+    public async Task LibraryOverTheLimit_FoldsBehindItsOwnShowAll()
+    {
+        ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
+        script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true });
+        script.Rooms.Add(new Room("chat", "Ada", DateTimeOffset.UnixEpoch.AddDays(1)) { Team = "Business" });
+        string[] projects = [.. Enumerable.Range(1, 9).Select(i => $"Project {i}")];
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: projects)] };
+
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: directory);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(2, FolderHrefs(cut, "Rooms").Length);
+            Assert.Equal(8, ProjectTexts(cut).Length);
+        });
+        Assert.Empty(Folder(cut, "Rooms").QuerySelectorAll(".sidebar-show-all"));
+        IElement showAll = Folder(cut, "Library").QuerySelectorAll(".sidebar-show-all .mud-nav-link").Single();
+        Assert.Equal("Show all (9)", showAll.TextContent.Trim());
+
+        await cut.InvokeAsync(() => showAll.ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal(9, ProjectTexts(cut).Length));
     }
 
     /// <summary>A collapsed Team shows none of its Rooms, only its row.</summary>
@@ -1020,6 +1133,22 @@ public sealed class TeamsNavTests
     /// <summary>The trimmed text of every open <c>MudMenu</c> item (role <c>menuitem</c>, class <c>mud-menu-item</c>).</summary>
     private static string[] MenuItemTexts(IRenderedComponent<ContainerFragment> cut) =>
         [.. cut.FindAll("div.mud-menu-item").Select(item => item.TextContent.Trim())];
+
+    /// <summary>The titles of every Rooms or Library folder, in render order.</summary>
+    private static string[] FolderTitles(IRenderedComponent<ContainerFragment> cut) =>
+        [.. cut.FindAll(".teams-nav-folder > .mud-nav-link .mud-nav-link-text").Select(text => text.TextContent.Trim())];
+
+    /// <summary>The one folder titled <paramref name="title"/>.</summary>
+    private static IElement Folder(IRenderedComponent<ContainerFragment> cut, string title) =>
+        cut.FindAll(".teams-nav-folder").Single(folder => string.Equals(folder.QuerySelector(":scope > .mud-nav-link .mud-nav-link-text")?.TextContent.Trim(), title, StringComparison.Ordinal));
+
+    /// <summary>The header of the one folder titled <paramref name="title"/>, which opens and closes it.</summary>
+    private static IElement FolderHeader(IRenderedComponent<ContainerFragment> cut, string title) =>
+        Folder(cut, title).QuerySelectorAll(":scope > .mud-nav-link").Single();
+
+    /// <summary>The href of every link inside the folder titled <paramref name="title"/>, in render order.</summary>
+    private static string?[] FolderHrefs(IRenderedComponent<ContainerFragment> cut, string title) =>
+        [.. Folder(cut, title).QuerySelectorAll("a[href]").Select(a => a.GetAttribute("href"))];
 
     /// <summary>The trimmed text of every Team link, in render order.</summary>
     private static string[] LinkTexts(IRenderedComponent<ContainerFragment> cut) =>
