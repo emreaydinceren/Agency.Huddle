@@ -46,6 +46,22 @@ public interface IAgentSession : IAsyncDisposable
     string? CurrentModeId { get; }
 
     /// <summary>
+    /// The model id this session is running once <see cref="AgentSessionOptions.Model"/> has been
+    /// applied and read back, so it is the EFFECTIVE model when the agent clamped or ignored the
+    /// request. Null when the agent advertised no model option. A default member returning null, so
+    /// a session type that cannot report it need not implement it.
+    /// </summary>
+    string? CurrentModelId => null;
+
+    /// <summary>
+    /// The effort id this session is running once <see cref="AgentSessionOptions.Effort"/> has been
+    /// applied and read back, so it is the EFFECTIVE effort when the agent clamped the request.
+    /// Unfiltered: it may be the agent's "default" sentinel, which means "the model chooses". Null
+    /// when the agent advertised no effort option. A default member returning null.
+    /// </summary>
+    string? CurrentEffortId => null;
+
+    /// <summary>
     /// Sends one prompt: its text, then its Prompt blocks in order. This is the one method an
     /// implementer must write, so none can handle the string form and silently drop blocks.
     /// </summary>

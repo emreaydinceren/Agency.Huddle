@@ -3,6 +3,7 @@ using Agency.Huddle.App.Components;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.TeamTypes;
+using Microsoft.Extensions.Logging;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -53,6 +54,110 @@ public sealed class AgentProfilesTests
 
         Assert.NotNull(view);
         Assert.Equal(new ProfileRuntime("Claude Code", "Agent default", "Model default"), view.Profile.Runtime);
+    }
+
+    /// <summary>A default the catalog has cached reads as its display name marked "(default)".</summary>
+    [Fact]
+    public async Task BuildAsync_NoChoicesDefaultsCached_ShowsDefaultNames()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        await fixture.InitializeAsync(ct);
+        fixture.ModelCatalog.Runtime = new RuntimeNames("Opus 5.5", "High");
+        fixture.AddAgent("Ada", "Lead");
+
+        AgentProfileView? view = await fixture.Profiles.BuildAsync("Ada", null, ct);
+
+        Assert.NotNull(view);
+        Assert.Equal(new ProfileRuntime("Claude Code", "Opus 5.5 (default)", "High (default)"), view.Profile.Runtime);
+        Assert.Equal(0, fixture.ModelCatalog.ProbeCount);
+    }
+
+    /// <summary>A chosen Model and Effort read as the display names the catalog has cached, not as ids.</summary>
+    [Fact]
+    public async Task BuildAsync_ChosenIdsCached_ShowsDisplayNames()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        await fixture.InitializeAsync(ct);
+        fixture.ModelCatalog.Runtime = new RuntimeNames("Sonnet", "Medium");
+        fixture.AddAgent("Ada", "Lead", model: "sonnet", effort: "medium");
+
+        AgentProfileView? view = await fixture.Profiles.BuildAsync("Ada", null, ct);
+
+        Assert.NotNull(view);
+        Assert.Equal(new ProfileRuntime("Claude Code", "Sonnet", "Medium"), view.Profile.Runtime);
+        Assert.Equal(("sonnet", "medium"), (fixture.ModelCatalog.PeeksAsked[0].Model, fixture.ModelCatalog.PeeksAsked[0].Effort));
+    }
+
+    /// <summary>An uncached chosen id falls back to the raw id, and an uncached default to the Agent card's wording.</summary>
+    [Fact]
+    public async Task BuildAsync_CacheEmpty_FallsBackToIdsAndDefaultWording()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        await fixture.InitializeAsync(ct);
+        fixture.AddAgent("Ada", "Lead", model: "sonnet");
+
+        AgentProfileView? view = await fixture.Profiles.BuildAsync("Ada", null, ct);
+
+        Assert.NotNull(view);
+        Assert.Equal(new ProfileRuntime("Claude Code", "sonnet", "Model default"), view.Profile.Runtime);
+    }
+
+    /// <summary>An empty cache starts a background warm-up against the Persona's own Adapter, without making the build wait for it.</summary>
+    [Fact]
+    public async Task BuildAsync_CacheEmpty_WarmsTheCatalogInTheBackground()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        await fixture.InitializeAsync(ct);
+        fixture.ModelCatalog.NeverCompletes = true;
+        fixture.AddAgent("Ada", "Lead", adapter: "codex");
+
+        AgentProfileView? view = await fixture.Profiles.BuildAsync("Ada", null, ct);
+        await fixture.ModelCatalog.FirstProbe.Task.WaitAsync(TimeSpan.FromSeconds(10), ct);
+
+        Assert.NotNull(view);
+        Assert.Equal(["codex"], fixture.ModelCatalog.AdaptersProbed);
+    }
+
+    /// <summary>Names that are already cached start no warm-up.</summary>
+    [Fact]
+    public async Task BuildAsync_NamesCached_DoesNotWarm()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        await fixture.InitializeAsync(ct);
+        fixture.ModelCatalog.Runtime = new RuntimeNames("Opus 5.5", "High");
+        fixture.AddAgent("Ada", "Lead");
+
+        await fixture.Profiles.BuildAsync("Ada", null, ct);
+        await Task.Yield();
+
+        Assert.Empty(fixture.ModelCatalog.AdaptersProbed);
+    }
+
+    /// <summary>
+    /// A warm-up that throws is caught and logged, so it can never surface as an unobserved task
+    /// exception, and it frees its Adapter's slot so the next open warms again. The fake throws
+    /// synchronously, so the catch and the finally have both run by the time the build returns.
+    /// </summary>
+    [Fact]
+    public async Task BuildAsync_WarmFails_LogsAndRetriesOnNextOpen()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        await fixture.InitializeAsync(ct);
+        fixture.ModelCatalog.ThrowOnProbe = true;
+        fixture.AddAgent("Ada", "Lead");
+
+        AgentProfileView? view = await fixture.Profiles.BuildAsync("Ada", null, ct);
+        await fixture.Profiles.BuildAsync("Ada", null, ct);
+
+        Assert.NotNull(view);
+        Assert.Equal(2, fixture.Logs.AtExactly(LogLevel.Warning).Count);
+        Assert.Equal(2, fixture.ModelCatalog.ProbeCount);
     }
 
     /// <summary>An Adapter that is no longer configured shows the default Adapter, the one the Agent will actually run on.</summary>

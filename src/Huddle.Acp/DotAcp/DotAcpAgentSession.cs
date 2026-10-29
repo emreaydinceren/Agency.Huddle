@@ -77,6 +77,10 @@ internal sealed partial class DotAcpAgentSession : IAgentSession, ISessionSink
 
     public string? CurrentModeId { get; private set; }
 
+    public string? CurrentModelId { get; private set; }
+
+    public string? CurrentEffortId { get; private set; }
+
     public IPermissionHandler PermissionHandler { get; }
 
     public CancellationToken PromptCancellation { get; private set; } = CancellationToken.None;
@@ -129,6 +133,18 @@ internal sealed partial class DotAcpAgentSession : IAgentSession, ISessionSink
     {
         ArgumentNullException.ThrowIfNull(modeOptions);
         this.ModeOptions = modeOptions;
+    }
+
+    /// <summary>
+    /// Sets <see cref="CurrentModelId"/> and <see cref="CurrentEffortId"/> from the configOptions
+    /// snapshots read back after the model and the effort were applied.
+    /// </summary>
+    /// <param name="modelId">The model the agent reports running, or null when it advertises none.</param>
+    /// <param name="effortId">The effort the agent reports running, or null when it advertises none.</param>
+    internal void SetCurrentRuntime(string? modelId, string? effortId)
+    {
+        this.CurrentModelId = modelId;
+        this.CurrentEffortId = effortId;
     }
 
     /// <summary>

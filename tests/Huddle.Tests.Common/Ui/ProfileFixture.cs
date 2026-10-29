@@ -1,3 +1,4 @@
+using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Factories;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
@@ -10,8 +11,10 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Elicitation;
 using Agency.Huddle.Tests.Teams;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -24,6 +27,9 @@ namespace Agency.Huddle.Tests.Ui;
 internal sealed class ProfileFixture : IDisposable
 {
     private readonly TempDataDir dir = new();
+
+    /// <summary>Hands <see cref="AgentProfiles"/> a typed logger that records into <see cref="Logs"/>.</summary>
+    private readonly LoggerFactory loggerFactory;
 
     /// <summary>Builds the stores over a fresh data directory, with one team type (<c>t01</c>) and one pool job (<c>tutor</c>).</summary>
     public ProfileFixture()
@@ -45,7 +51,8 @@ internal sealed class ProfileFixture : IDisposable
         this.Directory = this.dir.CreateDirectory();
         this.Gateway = new FakeAgentGateway();
         this.Health = new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance);
-        this.Profiles = new AgentProfiles(this.Personas, this.Types, this.Pool, this.Avatars, this.Catalog, this.Directory, this.Gateway, this.Health, AgentProfileCardTestSupport.BuildAdapterCatalog(("claude", "Claude Code"), ("codex", "Codex")));
+        this.loggerFactory = new LoggerFactory([this.Logs]);
+        this.Profiles = new AgentProfiles(this.Personas, this.Types, this.Pool, this.Avatars, this.Catalog, this.Directory, this.Gateway, this.Health, AgentProfileCardTestSupport.BuildAdapterCatalog(("claude", "Claude Code"), ("codex", "Codex")), this.ModelCatalog, new Logger<AgentProfiles>(this.loggerFactory));
         FileChatStore store = new(this.dir.Options(), NullLogger<FileChatStore>.Instance);
         RoomEvents events = new(NullLogger<RoomEvents>.Instance);
         this.Chat = new ChatService(this.Directory, store, events, new FakeMentionAliasSource(), TestOptions.Create(), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance)
@@ -80,6 +87,12 @@ internal sealed class ProfileFixture : IDisposable
 
     /// <summary>How full each Agent's context window is, as the Members panel's context meter reads it.</summary>
     public ContextFill ContextFill { get; } = new();
+
+    /// <summary>The model catalog the profile reads names from; never launches an adapter.</summary>
+    public FakeModelCatalog ModelCatalog { get; } = new();
+
+    /// <summary>What <see cref="Profiles"/> logged.</summary>
+    public RecordingLoggerProvider Logs { get; } = new();
 
     /// <summary>The service under test.</summary>
     public AgentProfiles Profiles { get; }
@@ -139,6 +152,7 @@ internal sealed class ProfileFixture : IDisposable
     public void Dispose()
     {
         this.Personas.Dispose();
+        this.loggerFactory.Dispose();
         this.dir.Dispose();
     }
 }

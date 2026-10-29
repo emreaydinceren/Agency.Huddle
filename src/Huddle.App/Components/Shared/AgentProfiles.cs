@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
@@ -14,7 +15,10 @@ namespace Agency.Huddle.App.Components.Shared;
 /// It reads the same sources Build a team does for a member (the Persona file, its role, the hiring
 /// pool's job) except that the role comes from the Persona's own frontmatter rather than from a team
 /// type the Human has selected. It also reads out what the Agent runs on: its Adapter from the
-/// Persona file, and its Model and Effort from their stores.
+/// Persona file, and its Model and Effort from their stores, shown by display name when the model
+/// catalog already has them cached. Building a profile never waits on a probe: names that are not
+/// cached yet fall back to the raw id or the default wording, and a background warm-up fills the cache
+/// for the next open.
 /// </summary>
 /// <param name="personas">The Agent directory and definitions.</param>
 /// <param name="types">The team types, to find the Persona's role.</param>
@@ -25,6 +29,8 @@ namespace Agency.Huddle.App.Components.Shared;
 /// <param name="gateway">The pipe gateway, for whether the agent is connected.</param>
 /// <param name="health">Reported health, the other input to the status dot.</param>
 /// <param name="adapters">The configured Adapters, for the display name of the one the Agent runs on.</param>
+/// <param name="modelCatalog">The model catalog, read cache-only for Model and Effort names and warmed in the background when it has none.</param>
+/// <param name="logger">Reports a failed background warm-up.</param>
 /// <param name="human">The Human's live identity, so the Human's own avatar opens their profile too; <see langword="null"/> treats every name as an Agent's.</param>
 internal sealed class AgentProfiles(
     PersonaStore personas,
@@ -36,13 +42,21 @@ internal sealed class AgentProfiles(
     IAgentGateway gateway,
     PersonaHealth health,
     AdapterCatalog adapters,
+    IModelCatalog modelCatalog,
+    ILogger<AgentProfiles> logger,
     IHumanIdentity? human = null)
 {
+    /// <summary>Appended to a name the Agent has not chosen but runs on anyway.</summary>
+    private const string DefaultSuffix = " (default)";
+
     /// <summary>What the Agent card says for a Model the Persona has not chosen.</summary>
     private const string DefaultModelText = "Agent default";
 
     /// <summary>What the Agent card says for an Effort the Persona has not chosen.</summary>
     private const string DefaultEffortText = "Model default";
+
+    /// <summary>The Adapters a background warm-up is already running for, keyed on the requested Adapter id ("" for the default), so repeated card opens do not queue probes behind one another.</summary>
+    private readonly ConcurrentDictionary<string, bool> warming = new(StringComparer.Ordinal);
 
     /// <summary>Builds the profile of the Agent - or the Human - called <paramref name="name"/>.</summary>
     /// <param name="name">The Agent's Name or alias.</param>
@@ -93,12 +107,83 @@ internal sealed class AgentProfiles(
     /// <summary>
     /// Reads out what the Persona runs on. The Adapter is the one it actually launches on: the default
     /// when the Persona names none or names one that is not configured (the Agent card warns of the
-    /// same fallback). Model and Effort stay raw ids, because naming them would need a probe.
+    /// same fallback). Model and Effort use the display names the model catalog has already cached,
+    /// never probing from here: a chosen one falls back to its raw id, and one the Persona did not
+    /// choose reads "{name} (default)", falling back to "Agent default" / "Model default". When a
+    /// name is missing from the cache a background warm-up is started, so the next open has it.
     /// </summary>
     /// <param name="persona">The Persona with its stored Model and Effort joined in.</param>
     /// <returns>The three display strings.</returns>
-    private ProfileRuntime ReadRuntime(Persona persona) => new(
-        (adapters.Find(persona.Adapter) ?? adapters.Default).DisplayName,
-        persona.Model ?? DefaultModelText,
-        persona.Effort ?? DefaultEffortText);
+    private ProfileRuntime ReadRuntime(Persona persona)
+    {
+        RuntimeNames names = modelCatalog.PeekRuntime(persona.Adapter, persona.Model, persona.Effort);
+        if (names.Model is null || (persona.Effort is not null && names.Effort is null))
+        {
+            this.StartWarm(persona.Adapter, persona.Model, persona.Effort);
+        }
+
+        return new ProfileRuntime(
+            (adapters.Find(persona.Adapter) ?? adapters.Default).DisplayName,
+            AgentProfiles.Describe(persona.Model, names.Model, DefaultModelText),
+            AgentProfiles.Describe(persona.Effort, names.Effort, DefaultEffortText));
+    }
+
+    /// <summary>The text for one Model or Effort: the chosen id's name (or the id), else the default's name marked as such, else <paramref name="fallback"/>.</summary>
+    /// <param name="chosen">The id the Persona chose, or null.</param>
+    /// <param name="name">The cached display name for the chosen id, or for the default when none was chosen; null when not cached.</param>
+    /// <param name="fallback">What to say for a default that is not cached.</param>
+    private static string Describe(string? chosen, string? name, string fallback)
+    {
+        if (chosen is not null)
+        {
+            return name ?? chosen;
+        }
+
+        return name is null ? fallback : name + DefaultSuffix;
+    }
+
+    /// <summary>
+    /// Starts, without awaiting it, the probes that would fill the names this card could not show. At
+    /// most one warm-up per Adapter runs at a time; the catalog's own gate and cache deduplicate the rest.
+    /// </summary>
+    /// <param name="adapterId">The Persona's Adapter id.</param>
+    /// <param name="model">The Persona's chosen model id, or null.</param>
+    /// <param name="effort">The Persona's chosen effort id, or null.</param>
+    private void StartWarm(string? adapterId, string? model, string? effort)
+    {
+        if (this.warming.TryAdd(adapterId ?? string.Empty, true))
+        {
+            _ = this.WarmAsync(adapterId, model, effort);
+        }
+    }
+
+    /// <summary>
+    /// Fills the model catalog's cache for an Adapter. Never throws: it runs unobserved, so an escaping
+    /// exception would surface as an unobserved task exception long after the card was drawn.
+    /// </summary>
+    /// <param name="adapterId">The Persona's Adapter id.</param>
+    /// <param name="model">The Persona's chosen model id, or null.</param>
+    /// <param name="effort">The Persona's chosen effort id, or null.</param>
+    private async Task WarmAsync(string? adapterId, string? model, string? effort)
+    {
+        try
+        {
+            _ = await modelCatalog.GetAsync(adapterId, CancellationToken.None);
+            if (model is not null && effort is not null)
+            {
+                _ = await modelCatalog.GetEffortLevelsAsync(adapterId, model, CancellationToken.None);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Safe to swallow: this is a best-effort cache fill nobody awaits, the card has already
+            // been drawn with its fallback text, and the catalog caches nothing on failure so the
+            // next open simply tries again.
+            logger.LogWarning(ex, "Warming the model catalog for the profile card failed.");
+        }
+        finally
+        {
+            this.warming.TryRemove(adapterId ?? string.Empty, out _);
+        }
+    }
 }

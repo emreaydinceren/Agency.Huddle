@@ -276,6 +276,155 @@ public sealed class ModelCatalogCacheTests
         Assert.Equal(2, runner.Calls.Count);
     }
 
+    /// <summary>An outcome whose models and efforts have display names and whose session reported the given current values.</summary>
+    private static AdapterProbeOutcome Outcome(string? currentModel, string? currentEffort) =>
+        new(
+            [new AgentModelOption("opus", "Opus 5.5", null), new AgentModelOption("sonnet", "Sonnet", null)],
+            [new AgentEffortOption("default", "Default", null), new AgentEffortOption("high", "High", null), new AgentEffortOption("low", "Low", null)])
+        {
+            CurrentModel = currentModel,
+            CurrentEffort = currentEffort,
+        };
+
+    /// <summary>Peeking an empty cache returns nothing and never reaches the probe runner.</summary>
+    [Fact]
+    public void PeekRuntime_EmptyCache_ReturnsNothingAndDoesNotProbe()
+    {
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new();
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+
+        RuntimeNames names = probe.PeekRuntime("claude", null, null);
+        RuntimeNames chosen = probe.PeekRuntime("claude", "opus", "high");
+
+        Assert.Equal(default, names);
+        Assert.Equal(default, chosen);
+        Assert.Empty(runner.Calls);
+    }
+
+    /// <summary>The null-model probe caches the Adapter's defaults, which peek reports by display name.</summary>
+    [Fact]
+    public async Task PeekRuntime_AfterDefaultProbe_NamesTheAdapterDefaults()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new() { Handler = static (_, _, _) => ModelCatalogCacheTests.Outcome("opus", "high") };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+        await probe.GetAsync("claude", ct);
+
+        RuntimeNames names = probe.PeekRuntime("claude", null, null);
+
+        Assert.Equal(new RuntimeNames("Opus 5.5", "High"), names);
+        Assert.Single(runner.Calls);
+    }
+
+    /// <summary>Peek resolves the Adapter the way the probe does, so the default Adapter's cache answers for an unnamed one.</summary>
+    [Fact]
+    public async Task PeekRuntime_UnnamedAdapter_UsesTheDefaultAdaptersCache()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new() { Handler = static (_, _, _) => ModelCatalogCacheTests.Outcome("opus", "high") };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+        await probe.GetAsync("claude", ct);
+
+        RuntimeNames names = probe.PeekRuntime(null, null, null);
+
+        Assert.Equal("Opus 5.5", names.Model);
+    }
+
+    /// <summary>The adapter's "default" effort sentinel names no level, so the default Effort is unknown.</summary>
+    [Fact]
+    public async Task PeekRuntime_EffortSentinel_YieldsUnknownEffort()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new() { Handler = static (_, _, _) => ModelCatalogCacheTests.Outcome("opus", "default") };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+        await probe.GetAsync("claude", ct);
+
+        RuntimeNames names = probe.PeekRuntime("claude", null, null);
+
+        Assert.Equal(new RuntimeNames("Opus 5.5", null), names);
+    }
+
+    /// <summary>A chosen model id and effort id map to their display names from the cached lists.</summary>
+    [Fact]
+    public async Task PeekRuntime_ChosenIds_MapToDisplayNames()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new() { Handler = static (_, _, _) => ModelCatalogCacheTests.Outcome("opus", "high") };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+        await probe.GetAsync("claude", ct);
+        await probe.GetEffortLevelsAsync("claude", "sonnet", ct);
+
+        RuntimeNames names = probe.PeekRuntime("claude", "sonnet", "low");
+
+        Assert.Equal(new RuntimeNames("Sonnet", "Low"), names);
+    }
+
+    /// <summary>A chosen id the cached lists do not contain stays unknown rather than being invented.</summary>
+    [Fact]
+    public async Task PeekRuntime_ChosenIdNotInCache_IsUnknown()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new() { Handler = static (_, _, _) => ModelCatalogCacheTests.Outcome("opus", "high") };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+        await probe.GetAsync("claude", ct);
+
+        RuntimeNames names = probe.PeekRuntime("claude", "retired-model", "Low");
+
+        Assert.Equal(default, names);
+    }
+
+    /// <summary>The default Effort is only known for the default model, so choosing a model leaves it unknown.</summary>
+    [Fact]
+    public async Task PeekRuntime_ModelChosenEffortNot_DefaultEffortIsUnknown()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new() { Handler = static (_, _, _) => ModelCatalogCacheTests.Outcome("opus", "high") };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+        await probe.GetAsync("claude", ct);
+
+        RuntimeNames names = probe.PeekRuntime("claude", "sonnet", null);
+
+        Assert.Equal(new RuntimeNames("Sonnet", null), names);
+    }
+
+    /// <summary>A failed probe leaves no defaults behind, so peek still knows nothing.</summary>
+    [Fact]
+    public async Task PeekRuntime_AfterFailedProbe_ReturnsNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new() { Handler = static (_, _, _) => throw new IOException("adapter unreachable") };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+        await probe.GetAsync("claude", ct);
+
+        RuntimeNames names = probe.PeekRuntime("claude", null, null);
+
+        Assert.Equal(default, names);
+    }
+
+    /// <summary>The effort-and-modes probe for the default model also records the Adapter's defaults.</summary>
+    [Fact]
+    public async Task PeekRuntime_AfterDefaultModelEffortProbe_NamesTheDefaultEffort()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new() { Handler = static (_, _, _) => ModelCatalogCacheTests.Outcome("opus", "low") };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+        await probe.GetEffortLevelsAsync("claude", null, ct);
+
+        RuntimeNames names = probe.PeekRuntime("claude", null, null);
+
+        Assert.Equal("Low", names.Effort);
+        Assert.Equal("opus", names.Model);
+    }
+
     /// <summary>Builds a <see cref="ModelCatalogProbe"/> over two configured Adapters, "claude" and "agency".</summary>
     /// <param name="dir">The isolated data directory the probe's Work Dir root lives under.</param>
     /// <param name="runner">The fake probe runner standing in for the real process spawn.</param>
