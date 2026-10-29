@@ -301,4 +301,89 @@ public sealed class MentionParserTests
 
         Assert.Empty(result);
     }
+
+    /// <summary>"@all" Mentions every Agent in the Room, in Member order, so each of them takes a Turn.</summary>
+    [Fact]
+    public void Parse_AllMentionsEveryAgent()
+    {
+        var human = new User("h", "Emre", UserKind.Human, null);
+        var a = new User("1", "a", UserKind.Agent, null);
+        var b = new User("2", "b", UserKind.Agent, null);
+
+        var result = MentionParser.Parse("@all what do you think?", [human, a, b]);
+
+        Assert.Equal([a, b], result);
+    }
+
+    /// <summary>"@all" never Mentions the Human: it asks the Agents for a Turn, and must not raise a Needs You card.</summary>
+    [Fact]
+    public void Parse_AllDoesNotMentionTheHuman()
+    {
+        var human = new User("h", "Emre", UserKind.Human, null);
+        var a = new User("1", "a", UserKind.Agent, null);
+
+        var result = MentionParser.Parse("@all", [human, a]);
+
+        Assert.DoesNotContain(human, result);
+    }
+
+    /// <summary>"@all" is matched case-insensitively and ends at a word boundary, like a Name: "@ALL," counts and "@allison" does not.</summary>
+    [Fact]
+    public void Parse_AllFollowsTheNameBoundaryRules()
+    {
+        var a = new User("1", "a", UserKind.Agent, null);
+
+        Assert.Equal([a], MentionParser.Parse("@ALL, please review", [a]));
+        Assert.Empty(MentionParser.Parse("@allison", [a]));
+        Assert.Empty(MentionParser.Parse("team@all", [a]));
+    }
+
+    /// <summary>A Member whose Name begins with "all" still wins over "@all", because the longer handle is read first.</summary>
+    [Fact]
+    public void Parse_LongerNameStartingWithAllBeatsAll()
+    {
+        var allHands = new User("1", "All Hands", UserKind.Agent, null);
+        var other = new User("2", "other", UserKind.Agent, null);
+
+        var result = MentionParser.Parse("@All Hands", [allHands, other]);
+
+        Assert.Equal([allHands], result);
+    }
+
+    /// <summary>A Member Named exactly "All" is Mentioned alone by "@all": on a tie in length a Name wins, so it is not everyone.</summary>
+    [Fact]
+    public void Parse_MemberNamedAllBeatsAll()
+    {
+        var all = new User("1", "All", UserKind.Agent, null);
+        var other = new User("2", "other", UserKind.Agent, null);
+
+        var result = MentionParser.Parse("@all", [all, other]);
+
+        Assert.Equal([all], result);
+    }
+
+    /// <summary>An Alias "all" is Mentioned alone by "@all": on a tie in length an Alias wins too, so it is not everyone.</summary>
+    [Fact]
+    public void Parse_AliasAllBeatsAll()
+    {
+        var owner = new User("1", "Allegra", UserKind.Agent, null);
+        var other = new User("2", "other", UserKind.Agent, null);
+        var aliases = new[] { new MentionAlias("all", "Allegra") };
+
+        var result = MentionParser.Parse("@all", [owner, other], aliases);
+
+        Assert.Equal([owner], result);
+    }
+
+    /// <summary>"@all" alongside a Name lists each Agent once, the Named one where it first appears.</summary>
+    [Fact]
+    public void Parse_AllWithANameCollapsesDuplicates()
+    {
+        var a = new User("1", "a", UserKind.Agent, null);
+        var b = new User("2", "b", UserKind.Agent, null);
+
+        var result = MentionParser.Parse("@b and @all", [a, b]);
+
+        Assert.Equal([b, a], result);
+    }
 }

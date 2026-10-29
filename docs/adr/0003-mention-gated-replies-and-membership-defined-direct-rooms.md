@@ -6,6 +6,9 @@ date: 2026-09-09
 > **Partially superseded by [ADR-0004](0004-direct-rooms-reply-without-mention.md):**
 > mention-gating below still governs Group Rooms, but a Bot in a Direct Room
 > now answers every Message regardless of Mention.
+>
+> **Amended 2026-10-29 by [ADR-0068](0068-at-all-mentions-every-agent-in-the-room.md):** `@all` Mentions
+> every Agent Member at once. It is resolved into the same list of Mentions, so the rule below is unchanged.
 
 # Every Bot member receives every Message with a mentioned flag; Direct Rooms are defined by membership
 

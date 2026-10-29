@@ -735,23 +735,10 @@ else
         this.members.Where(static member => member.Kind == UserKind.Human).Select(static member => member.Id).ToHashSet(StringComparer.Ordinal);
 
     /// <summary>
-    /// The handles <see cref="MessageList"/> draws as Mention pills: each Agent Member's Name and Alias, and the
-    /// Human's own. They come from the Members and the alias source, as <see cref="MentionParser"/>'s do, so a pill is
-    /// drawn exactly where a Mention would be counted.
+    /// The handles <see cref="MessageList"/> draws as Mention pills, built by <see cref="MentionMarks.For"/>.
     /// </summary>
     /// <returns>The Room's mentionable handles.</returns>
-    private MentionMarks MentionHandles()
-    {
-        HashSet<string> agentNames = this.members
-            .Where(static member => member.Kind == UserKind.Agent)
-            .Select(static member => member.Name)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        string humanName = this.Human.Name;
-        IReadOnlyList<MentionAlias> aliases = this.AliasSource.Aliases;
-        List<string> handles = [.. agentNames, .. aliases.Where(alias => agentNames.Contains(alias.Name)).Select(static alias => alias.Alias)];
-        List<string> ownHandles = [humanName, .. aliases.Where(alias => string.Equals(alias.Name, humanName, StringComparison.OrdinalIgnoreCase)).Select(static alias => alias.Alias)];
-        return new MentionMarks(handles, ownHandles);
-    }
+    private MentionMarks MentionHandles() => MentionMarks.For(this.members, this.Human.Name, this.AliasSource.Aliases);
 
     private void OnDraftChanged(string roomId)
     {

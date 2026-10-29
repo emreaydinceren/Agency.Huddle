@@ -131,7 +131,7 @@ internal static class PromptCatalog
             Label: "Chat rules",
             HelperText:
                 "The paragraph explaining when to answer (a two-member Room vs. a group) and how to " +
-                "write a mention. Takes no placeholders, so an override is plain prose.",
+                "write a mention, including @all for every agent. Takes no placeholders, so an override is plain prose.",
             Default:
                 """
                 A Room with two members is a private conversation with the human: answer every
@@ -139,6 +139,9 @@ internal static class PromptCatalog
                 @-mentioned. Address another member by writing @ followed by their exact name.
                 A name may contain spaces, so "@Chief of Staff" is one mention of one member;
                 write the name exactly as it is given to you, with no quotes around it.
+                "@all" counts as a mention of every agent in the Room, exactly as if each name were
+                written, so the rule above applies to it unchanged. Write "@all" yourself only when
+                you need every other agent to answer, never just to reply to one member.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -812,7 +815,7 @@ internal static class PromptCatalog
                 A Room is a conversation with a fixed set of members. There is only one kind of Room, and
                 how you behave in it follows from how many members it has:
                   - two members  — a private conversation with the human. Answer every message.
-                  - three or more — a group. Answer only when you are @-mentioned.
+                  - three or more — a group. Answer only when you are @-mentioned, by name or by "@all".
                 A Room listed under a Team belongs to that Team, and files shared in it are in that Team's folder.
                 A file the Human attaches is saved in the Library and its path is in the Message; open it with your file tools.
                 """,
@@ -847,7 +850,7 @@ internal static class PromptCatalog
             Key: "getHelp.mentions",
             Label: "Help: mentions",
             HelperText:
-                "The MENTIONS section of get_help: how to address another member by name. Takes no " +
+                "The MENTIONS section of get_help: how to address another member by name, and every agent with @all. Takes no " +
                 "placeholders.",
             Default:
                 """
@@ -855,6 +858,10 @@ internal static class PromptCatalog
                 Address another member by writing @ followed by their exact name. A name may contain
                 spaces, so "@Chief of Staff" is one mention of one member. Write the name exactly as it
                 was given to you, with no quotes around it.
+                "@all" counts as a mention of every agent in the Room at once, exactly as if each name
+                were written. It does not mention the human. Write it only when you need every other
+                agent's answer: each answer spends the Room's budget, so never write it only to reply
+                to one member.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
