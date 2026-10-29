@@ -316,6 +316,7 @@ public sealed class SidebarDensityTests
         ctx.Services.AddSingleton(sp => new AvatarStore(sp.GetRequiredService<TempDataDir>().Options(), NullLogger<AvatarStore>.Instance));
         ctx.Services.AddSingleton<ITeamCatalog>(catalog);
         ctx.Services.AddSingleton<ITeamFolders>(new FakeTeamFolders());
+        ctx.Services.AddSingleton(sp => new Agency.Huddle.App.Tasks.Views.ViewStore(sp.GetRequiredService<TempDataDir>().Options(), NullLogger<Agency.Huddle.App.Tasks.Views.ViewStore>.Instance));
         ctx.Services.AddSingleton(TestOptions.Create());
         ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
         ctx.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetResult(null);

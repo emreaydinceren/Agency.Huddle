@@ -116,6 +116,41 @@ public sealed class TasksPageDetailTests
         Assert.Equal("/tasks/item/new/edit?team=Platform&project=Alpha", tab.Url);
     }
 
+    /// <summary>The Team route (<c>/teams/{Team}/tasks/{ViewId}</c>) shows only that Team's Tasks, matching its name ignoring case, says so without a Reset filters button when the Team has none, and never saves the Team to the View.</summary>
+    [Fact]
+    public async Task TeamRoute_ShowsOnlyThatTeamsTasks_WithoutSavingTheTeamToTheView()
+    {
+        using TaskToolHarness harness = new();
+        CreateTask(harness, "Alpha");
+        await using MudBunitContext sameCtx = UiTestHost.Create().WithHarness(harness);
+        await using MudBunitContext otherCtx = UiTestHost.Create().WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> sameTeam = RenderPage(sameCtx, ViewStore.AllTasksId, team: "platform");
+        Assert.NotNull(FindTaskRow(sameTeam, "Alpha"));
+        Assert.Empty(sameTeam.FindAll(".tasks-empty .empty-state-title"));
+
+        IRenderedComponent<ContainerFragment> otherTeam = RenderPage(otherCtx, ViewStore.AllTasksId, team: "Growth");
+        Assert.Equal("No tasks in Growth yet", otherTeam.Find(".tasks-empty .empty-state-title").TextContent.Trim());
+        Assert.Empty(otherTeam.FindAll(".tasks-empty-action"));
+
+        TaskView saved = Assert.IsType<TaskView>(harness.Views.Get(ViewStore.AllTasksId));
+        Assert.Empty(saved.Filter.Teams);
+    }
+
+    /// <summary>"+ New task" on the Team route starts the new Task in that Team, though the View's own filter names none.</summary>
+    [Fact]
+    public async Task NewTaskHeaderButton_TeamRoute_StartsTheNewTaskInThatTeam()
+    {
+        using TaskToolHarness harness = new();
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, ViewStore.AllTasksId, team: "Platform");
+
+        await cut.InvokeAsync(() => cut.Find(".tasks-new-task").ClickAsync());
+
+        Agency.Huddle.App.Tabs.Tab tab = Assert.Single(harness.Tabs.Tabs, static t => string.Equals(t.Key, "task-new-edit", StringComparison.Ordinal));
+        Assert.Equal("/tasks/item/new/edit?team=Platform", tab.Url);
+    }
+
     /// <summary>The page hosts <see cref="WakeToasts"/> (renders nothing itself) and a page-header <see cref="AiReactingChip"/>.</summary>
     [Fact]
     public async Task Page_HostsWakeToastsAndAiReactingChip()
@@ -149,14 +184,19 @@ public sealed class TasksPageDetailTests
         Assert.Equal(expected, watched);
     }
 
-    /// <summary>Renders <see cref="TasksPage"/>, optionally routed to <paramref name="viewId"/>.</summary>
-    private static IRenderedComponent<ContainerFragment> RenderPage(MudBunitContext ctx, string? viewId = null) =>
+    /// <summary>Renders <see cref="TasksPage"/>, optionally routed to <paramref name="viewId"/> and narrowed to <paramref name="team"/>.</summary>
+    private static IRenderedComponent<ContainerFragment> RenderPage(MudBunitContext ctx, string? viewId = null, string? team = null) =>
         ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<TasksPage>(0);
             if (viewId is not null)
             {
                 builder.AddAttribute(1, nameof(TasksPage.ViewId), viewId);
+            }
+
+            if (team is not null)
+            {
+                builder.AddAttribute(2, nameof(TasksPage.Team), team);
             }
 
             builder.CloseComponent();

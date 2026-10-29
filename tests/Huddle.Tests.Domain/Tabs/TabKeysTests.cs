@@ -8,6 +8,7 @@ public sealed class TabKeysTests
     [InlineData("/rooms/ab12", "room:ab12")]
     [InlineData("/teams/Core", "team:core")]
     [InlineData("/teams/Core/tasks", "team:core")]
+    [InlineData("/teams/Core/tasks/board", "team-tasks:core/board")]
     [InlineData("/teams/Core/projects/Alpha", "project:core/alpha")]
     [InlineData("/teams/Core/projects/Alpha/files", "project:core/alpha")]
     [InlineData("/teams/build", "team-build")]
@@ -51,5 +52,19 @@ public sealed class TabKeysTests
     public void IsSafeRelative_AcceptsOnlyPaths(string? url, bool expected)
     {
         Assert.Equal(expected, TabKeys.IsSafeRelative(url));
+    }
+
+    /// <summary>A Team's Tasks-folder address opens the Tasks page with its Team and View, not the Team page that <c>/teams/{Team}/{Tab}</c> would also reach.</summary>
+    [Fact]
+    public void Resolve_TeamViewAddress_OpensTheTasksPageNarrowedToTheTeam()
+    {
+        TabPageRoutes app = new(typeof(Agency.Huddle.App.ServiceCollectionExtensions).Assembly);
+
+        TabPage? page = app.Resolve("/teams/Growth%20Team/tasks/my-tasks");
+
+        Assert.NotNull(page);
+        Assert.Equal(typeof(Agency.Huddle.App.Components.Pages.Tasks), page.Component);
+        Assert.Equal("Growth Team", page.Parameters["Team"]);
+        Assert.Equal("my-tasks", page.Parameters["ViewId"]);
     }
 }

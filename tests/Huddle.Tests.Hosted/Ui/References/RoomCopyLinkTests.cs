@@ -220,6 +220,7 @@ public sealed class RoomCopyLinkTests
         ctx.Services.AddSingleton(chat);
         ctx.Services.AddSingleton<ITeamCatalog>(catalog);
         ctx.Services.AddSingleton<ITeamFolders>(new FakeTeamFolders());
+        ctx.Services.AddSingleton(new Agency.Huddle.App.Tasks.Views.ViewStore(TestOptions.Create(), NullLogger<Agency.Huddle.App.Tasks.Views.ViewStore>.Instance));
         ctx.Services.AddSingleton(events);
         ctx.Services.AddNeedsYouTracker();
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());

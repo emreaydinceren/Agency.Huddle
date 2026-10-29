@@ -1,7 +1,9 @@
 @*
     Spec §6.5: the sidebar's list of Teams, each a root row of the Teams view (no "Teams" header over them: the
-    Activity bar already says it). An open Team holds two folders, Rooms and Library, the Chats view's folder shape
-    (RoomList.razor's room-folder): each starts open, closes by its header, and is not drawn when it is empty.
+    Activity bar already says it). An open Team holds three folders, Rooms, Library and Tasks, the Chats view's folder
+    shape (RoomList.razor's room-folder): each starts open, closes by its header, and is not drawn when it is empty.
+    The Tasks folder lists the same Views as TaskViewNav.razor, each linking to /teams/{Team}/tasks/{ViewId}, where
+    the Tasks page narrows that View to the Team; Rename and Delete stay on the Tasks view's own rows.
     Copies TaskViewNav.razor's shape: subscribe to ITeamCatalog.Changed, marshal with
     DispatchAsync and unsubscribe in Dispose (the catalog is a singleton, so an undisposed
     subscription would throw on the next publish after this component is torn down), plus the
@@ -22,6 +24,7 @@
 @inject ITeamDirectory TeamDirectory
 @inject RoomEvents Events
 @inject ITeamFolders Folders
+@inject ViewStore Views
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
 @inject IOptions<TeamOptions> TeamConfig
@@ -99,6 +102,22 @@
                         <ShowAllRow Total="team.Projects.Count" Expanded="this.showAllRows.Contains(libraryKey)" OnToggle="@(() => this.ToggleShowAllRows(libraryKey))" />
                     </MudNavGroup>
                 }
+                @if (this.TeamConfig.Value.Tasks.Enabled && this.Views.Views.Count > 0)
+                {
+                    string tasksKey = FolderKey(team.Name, TasksFolder);
+                    string teamName = team.Name;
+                    <MudNavGroup Class="teams-nav-folder teams-nav-tasks" Title="Tasks" Icon="@Icons.Material.Outlined.Folder"
+                                 Expanded="this.IsFolderOpen(tasksKey)" ExpandedChanged="@(open => this.SetFolderOpen(tasksKey, open))">
+                        @foreach (TaskView view in SidebarRows.Visible(this.Views.Views, this.showAllRows.Contains(tasksKey), view => this.IsActiveView(teamName, view)))
+                        {
+                            <NavTabLink @key="view.Id" Href="@TeamViewHref(teamName, view.Id)"
+                                        TabTitle="@Tasks.TeamViewTitle(teamName, view.Name)"
+                                        Icon="@(view.Kind == ViewKind.Kanban ? Icons.Material.Outlined.ViewKanban : Icons.Material.Outlined.ViewList)"
+                                        Class="nav-team-view-link"><span class="sidebar-row-label" title="@view.Name">@view.Name</span></NavTabLink>
+                        }
+                        <ShowAllRow Total="this.Views.Views.Count" Expanded="this.showAllRows.Contains(tasksKey)" OnToggle="@(() => this.ToggleShowAllRows(tasksKey))" />
+                    </MudNavGroup>
+                }
             }
         }
         <ShowAllRow Total="this.Catalog.Teams.Count" Expanded="this.showAllTeams" OnToggle="this.ToggleShowAllTeams" />
@@ -121,6 +140,7 @@
     /// <summary>The folder names under a Team, after a control character that keeps them apart from any Team name.</summary>
     private const string RoomsFolder = "\u0001rooms";
     private const string LibraryFolder = "\u0001library";
+    private const string TasksFolder = "\u0001tasks";
 
     /// <summary>Folder keys of the folders the Human closed. Every folder starts open, and the choice lasts for this circuit only.</summary>
     private readonly HashSet<string> closedFolders = new(StringComparer.OrdinalIgnoreCase);
@@ -142,11 +162,12 @@
     /// <summary>Counts the Room loads started; a load that finds a higher number than its own has been overtaken and drops its result.</summary>
     private int loadVersion;
 
-    /// <summary>Subscribes to <see cref="ITeamCatalog.Changed"/>, <see cref="RoomEvents.RoomsChanged"/> and navigation, reads the route's Team and loads each Team's Rooms.</summary>
+    /// <summary>Subscribes to <see cref="ITeamCatalog.Changed"/>, <see cref="RoomEvents.RoomsChanged"/>, <see cref="ViewStore.ViewsChanged"/> and navigation, reads the route's Team and loads each Team's Rooms.</summary>
     protected override async Task OnInitializedAsync()
     {
         this.Catalog.Changed += this.OnCatalogChanged;
         this.Events.RoomsChanged += this.OnRoomsChanged;
+        this.Views.ViewsChanged += this.OnViewsChanged;
         this.locationChanged = (_, _) => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.UpdateRoute();
@@ -205,11 +226,12 @@
         }
     }
 
-    /// <summary>Unsubscribes from <see cref="ITeamCatalog.Changed"/>, <see cref="RoomEvents.RoomsChanged"/> and navigation.</summary>
+    /// <summary>Unsubscribes from <see cref="ITeamCatalog.Changed"/>, <see cref="RoomEvents.RoomsChanged"/>, <see cref="ViewStore.ViewsChanged"/> and navigation.</summary>
     public void Dispose()
     {
         this.Catalog.Changed -= this.OnCatalogChanged;
         this.Events.RoomsChanged -= this.OnRoomsChanged;
+        this.Views.ViewsChanged -= this.OnViewsChanged;
         if (this.locationChanged is not null)
         {
             this.Navigation.LocationChanged -= this.locationChanged;
@@ -227,6 +249,13 @@
 
     private bool IsActiveRoom(Room room) =>
         string.Equals(room.Id, SidebarRows.RoomId(SidebarRows.CurrentPath(this.Navigation)), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The address of <paramref name="viewId"/> narrowed to <paramref name="team"/>, the Tasks page's <c>/teams/{Team}/tasks/{ViewId}</c> route.</summary>
+    private static string TeamViewHref(string team, string viewId) =>
+        $"/teams/{Uri.EscapeDataString(team)}/tasks/{Uri.EscapeDataString(viewId)}";
+
+    private bool IsActiveView(string team, TaskView view) =>
+        string.Equals("/" + SidebarRows.CurrentPath(this.Navigation), TeamViewHref(team, view.Id), StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The Rooms listed in the Team's Rooms folder (see <see cref="roomsByTeam"/>), or none before they load.</summary>
     private IReadOnlyList<Room> RoomsOf(TeamSummary team) =>
@@ -330,6 +359,10 @@
         {
             this.closedFolders.Remove(FolderKey(this.routeTeam, LibraryFolder));
         }
+        else if (segments.Length >= 4 && string.Equals(segments[2], "tasks", StringComparison.OrdinalIgnoreCase))
+        {
+            this.closedFolders.Remove(FolderKey(this.routeTeam, TasksFolder));
+        }
     }
 
     private void OnCatalogChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
@@ -338,6 +371,8 @@
         await this.LoadRoomsAsync();
         this.StateHasChanged();
     });
+
+    private void OnViewsChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 
     private void OnRoomsChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
     {

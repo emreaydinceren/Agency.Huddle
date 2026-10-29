@@ -29,6 +29,7 @@
 @page "/tasks/{ViewId}"
 @page "/tasks/new"
 @page "/tasks/item/{TaskIdText}"
+@page "/teams/{Team}/tasks/{ViewId}"
 @implements IDisposable
 @using Microsoft.Extensions.Options
 @using Agency.Huddle.App.Components.Shared.Dialogs
@@ -181,6 +182,11 @@
                 {
                     <EmptyState Title="No tasks yet" Text="Choose New task in the toolbar to add the first one." />
                 }
+                else if (this.Team is { } team && !this.Store.All.Any(task => string.Equals(task.Location.Team, team, StringComparison.OrdinalIgnoreCase)))
+                {
+                    @* The Team route's own "No tasks yet": Reset filters cannot help, since the Team is not part of the View's filter. *@
+                    <EmptyState Title="@($"No tasks in {team} yet")" Text="Choose New task in the toolbar to add the first one." />
+                }
                 else if (!string.IsNullOrWhiteSpace(this.search) && this.FilteredTasks(null).Count > 0)
                 {
                     <EmptyState Title="@($"No tasks match '{this.search}'")" Text="Try a different search." />
@@ -213,6 +219,13 @@
     /// <summary>The route's Task id segment for <c>/tasks/item/{TaskIdText}</c> (Spec §13.13.3) - null for every other route.</summary>
     [Parameter]
     public string? TaskIdText { get; set; }
+
+    /// <summary>
+    /// The route's Team for <c>/teams/{Team}/tasks/{ViewId}</c> (a Team's Tasks folder in the sidebar) - null for every other route.
+    /// It narrows the View to that Team's Tasks for this page only and is never saved to the View, like the search text.
+    /// </summary>
+    [Parameter]
+    public string? Team { get; set; }
 
     private TaskView effectiveView = new() { Id = ViewStore.AllTasksId, Name = "All Tasks", Kind = ViewKind.List };
     private string? search;
@@ -428,6 +441,11 @@
             searchText,
             this.Human.Name,
             currentSprint: this.Sprints.Current?.Id);
+        if (this.Team is { } team)
+        {
+            filtered = [.. filtered.Where(task => string.Equals(task.Location.Team, team, StringComparison.OrdinalIgnoreCase))];
+        }
+
         return TaskQuery.Sort(filtered, this.effectiveView.Sort);
     }
 
@@ -485,7 +503,10 @@
     private Task OnCreateClickedAsync(MouseEventArgs args)
     {
         _ = args;
-        return this.OnNewTaskAsync(NewTaskDefaults.For(this.effectiveView));
+        NewTaskDefaults defaults = NewTaskDefaults.For(this.effectiveView);
+        return this.OnNewTaskAsync(this.Team is { } team && !string.Equals(team, defaults.Team, StringComparison.OrdinalIgnoreCase)
+            ? new NewTaskDefaults(team, null)
+            : defaults);
     }
 
     /// <summary>"+ New task" (the header button, Spec §13.3): opens a new Task in the edit page's Tab with <paramref name="defaults"/>.</summary>
@@ -509,7 +530,12 @@
     /// The document title (audit E2): the Tab's title, so the browser's tab and the Tab strip agree. A Task's item route is "Task {id}", as
     /// <c>TabKeys.Describe</c> names it; every other route is the View's display name, which is the Tab's title too.
     /// </summary>
-    private string DocumentTitle => this.TaskIdText is { } id ? $"Task {id}" : this.effectiveView.Name;
+    private string DocumentTitle => this.TaskIdText is { } id ? $"Task {id}" : TeamViewTitle(this.Team, this.effectiveView.Name);
+
+    /// <summary>The title of a View's Tab: its name, followed by the Team it is narrowed to (<c>/teams/{Team}/tasks/{ViewId}</c>) so it stays apart from the unscoped View's Tab.</summary>
+    /// <param name="team">The route's Team, or <see langword="null"/> for an unscoped View.</param>
+    /// <param name="view">The View's name.</param>
+    internal static string TeamViewTitle(string? team, string view) => team is null ? view : $"{view} · {team}";
 
     /// <summary>The key of the Tab showing this page, from its own address (the browser URL names only the focused group's Tab).</summary>
     private string TabKey => TabKeys.Describe(this.Page?.Url ?? this.Navigation.Uri).Key;
@@ -522,7 +548,20 @@
     private void SyncTrail()
     {
         bool showsView = this.Options.Value.Tasks.Enabled && this.TaskIdText is null && !this.viewNotFound;
-        this.Tabs.SetTrail(this.TabKey, showsView ? [new TrailCrumb("Tasks", "/tasks", "tasks"), new TrailCrumb(this.effectiveView.Name, null, string.Empty)] : null);
+        this.Tabs.SetTrail(this.TabKey, showsView ? this.ViewTrail() : null);
+    }
+
+    /// <summary>The trail of a View: <c>Tasks › {View}</c>, or <c>{Team} › Tasks › {View}</c> when the route narrows it to a Team (both crumbs open that Team's page).</summary>
+    private TrailCrumb[] ViewTrail()
+    {
+        TrailCrumb view = new(this.effectiveView.Name, null, string.Empty);
+        if (this.Team is not { } team)
+        {
+            return [new TrailCrumb("Tasks", "/tasks", "tasks"), view];
+        }
+
+        string teamHref = $"/teams/{Uri.EscapeDataString(team)}";
+        return [new TrailCrumb(team, teamHref, "team"), new TrailCrumb("Tasks", $"{teamHref}/tasks", "tasks"), view];
     }
 
     /// <summary>The ids of every Task in the current effective View (Spec §10.8), unnarrowed by the search box, for <see cref="AiReactingChip.Watched"/>.</summary>
