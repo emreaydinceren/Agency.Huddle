@@ -3740,12 +3740,31 @@ body.sidebar-resizing {
    page leaves free space on the right instead of stretching them): .task-board-columns and
    .task-board-lane-columns share the exact same grid-template-columns (set inline by TaskBoard), so their tracks land
    at identical x offsets and a header cell sits directly above the cards it describes. The board
-   itself scrolls inside the pane in both directions (OP-3, UX-007): it is capped to the pane's height
-   (a viewport unit), which puts its horizontal scrollbar at the pane's bottom
-   edge instead of below the last lane, and the column header row sticks to the top while the lanes scroll. */
+   itself scrolls inside the pane in both directions (OP-3, UX-007), and the column header row sticks to the top while
+   the lanes scroll. On the Tasks page the board takes exactly what the toolbar leaves of the pane, so .tab-body never
+   scrolls as well and the board's horizontal scrollbar sits at the pane's bottom edge. A viewport-unit cap guessed the
+   toolbar's height; when the toolbar was taller, the pane scrolled too and hid that scrollbar below its fold. Elsewhere
+   (the Team page's Tasks tab) the cap still bounds the board. */
 .task-board {
     overflow: auto;
     max-height: calc(100vh - 12rem);
+}
+
+.tab-body > .tasks-page:has(> .task-board) {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tasks-page:has(> .task-board) > * {
+    flex: none;
+}
+
+.tasks-page > .task-board {
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: none;
 }
 
 .task-board-columns {
