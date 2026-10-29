@@ -5003,7 +5003,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px 16px;
+    gap: 4px 8px;
     margin: 0;
     padding: 4px 16px;
     border: 0;
@@ -5013,6 +5013,29 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     font-size: var(--mud-typography-body2-size);
     text-align: start;
     cursor: pointer;
+}
+
+/* Inside the rendered note the byline sits under the first heading, on the note's own left edge. */
+.library-rendered .doc-byline {
+    margin-bottom: 16px;
+    padding-inline: 0;
+}
+
+/* The "·" between the groups; the avatars carry no text, so only the Names are bold. */
+.doc-byline-sep {
+    color: var(--mud-palette-text-disabled);
+}
+
+.doc-byline .doc-history-actor-name {
+    font-weight: 600;
+}
+
+/* The note's tags, above its first heading. */
+.library-document-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
 }
 
 .doc-byline-part,
@@ -5194,6 +5217,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 .library-rendered > :first-child,
+.library-rendered > .library-document-tags + *,
 .library-rendered > .library-properties + * {
     margin-top: 0;
 }

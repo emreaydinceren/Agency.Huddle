@@ -109,6 +109,55 @@ public sealed class LibraryDocumentScrollTests : IDisposable
         Assert.Empty(cut.FindAll(".doc-history"));
     }
 
+    /// <summary>The note reads top to bottom as its tags, its first heading, then its byline; the byline's groups are separated by a "·" and no separator comes first.</summary>
+    [Fact]
+    public async Task Read_ShowsTagsThenHeadingThenByline_WithDotsBetweenGroups()
+    {
+        string root = this.library.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "n.md"), "---\ntags: [alpha]\n---\n# Title\n\nBody text #beta\n");
+        LibraryPath path = this.library.Resolve(root, "n.md");
+        await using MudBunitContext ctx = this.NewContext();
+        this.SeedHistory(ctx, path);
+        IRenderedComponent<ContainerFragment> cut = LibraryDocumentScrollTests.RenderDoc(ctx, path);
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-rendered .doc-byline")));
+
+        string[] order = [.. cut.FindAll(".library-rendered > .library-document-tags, .library-rendered > h1, .library-rendered > .doc-byline, .library-rendered > p").Select(static e => e.LocalName == "div" ? e.ClassList[0] : e.LocalName)];
+        Assert.Equal(["library-document-tags", "h1", "doc-byline", "p"], order);
+        Assert.Equal(["alpha", "beta"], cut.FindAll(".library-document-tag").Select(static e => e.TextContent.Trim()));
+        // Written by · Edited by · Reviewed by · the time: three separators for four groups.
+        Assert.Equal(["·", "·", "·"], cut.FindAll(".doc-byline > .doc-byline-sep").Select(static e => e.TextContent));
+        Assert.Equal("doc-byline-part", cut.Find(".doc-byline").FirstElementChild?.ClassList[0]);
+    }
+
+    /// <summary>A note with no tags draws no tags row, and one that does not open with a heading gets the byline above its body.</summary>
+    [Fact]
+    public async Task Read_NoTagsNoHeading_BylineLeadsTheBody()
+    {
+        string root = this.library.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "plain.md"), "Just a paragraph.\n");
+        LibraryPath path = this.library.Resolve(root, "plain.md");
+        await using MudBunitContext ctx = this.NewContext();
+        this.SeedHistory(ctx, path);
+        IRenderedComponent<ContainerFragment> cut = LibraryDocumentScrollTests.RenderDoc(ctx, path);
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-rendered .doc-byline")));
+
+        Assert.Empty(cut.FindAll(".library-document-tags"));
+        Assert.Equal(["doc-byline", "p"], cut.FindAll(".library-rendered > .doc-byline, .library-rendered > p").Select(static e => e.LocalName == "div" ? e.ClassList[0] : e.LocalName));
+    }
+
+    private void SeedHistory(MudBunitContext ctx, LibraryPath path)
+    {
+        DocHistoryStore store = new(this.library.BoundOptions, NullLogger<DocHistoryStore>.Instance);
+        store.Append(path, new DocHistoryEntry(DateTimeOffset.UtcNow.AddHours(-3), "Mira", DocActorKind.Agent, DocChangeKind.Created, "Drafted"));
+        store.Append(path, new DocHistoryEntry(DateTimeOffset.UtcNow.AddHours(-2), "Ruth", DocActorKind.Agent, DocChangeKind.Edited, "Tightened"));
+        store.Append(path, new DocHistoryEntry(DateTimeOffset.UtcNow.AddHours(-1), "Lena", DocActorKind.Agent, DocChangeKind.Reviewed, "Checked"));
+        ctx.Services.AddSingleton(store);
+        ctx.Services.AddSingleton(new Agency.Huddle.App.Avatars.AvatarStore(this.library.BoundOptions, NullLogger<Agency.Huddle.App.Avatars.AvatarStore>.Instance));
+        ctx.Services.AddSingleton(new RightSidebarService());
+    }
+
     /// <summary>With History switched off the document shows neither the byline nor the History.</summary>
     [Fact]
     public async Task HistoryDisabled_ShowsNeitherByline()
