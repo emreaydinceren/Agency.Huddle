@@ -228,10 +228,10 @@ public sealed class AvatarEditorTests
 
         IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate));
         await SelectChoiceAsync(cut, "A short label");
-        await TypeLabelAsync(cut, "ABCDE");
+        await TypeLabelAsync(cut, "ABCDEFGH");
 
-        Assert.Equal("ABC", avatars.Get("You").Label);
-        Assert.Equal("ABC", cut.Find(".mud-avatar").TextContent.Trim());
+        Assert.Equal("ABCDEF", avatars.Get("You").Label);
+        Assert.Equal("ABCDEF", cut.Find(".mud-avatar").TextContent.Trim());
     }
 
     /// <summary>

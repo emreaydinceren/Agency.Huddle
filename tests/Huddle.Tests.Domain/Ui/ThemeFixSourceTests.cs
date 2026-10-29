@@ -30,6 +30,7 @@ public sealed partial class ThemeFixSourceTests
         "roster-tier-", // Components/Shared/ProfileCard.razor: the tier name
         "status-chip-", // Components/Shared/StatusChip.razor (colour) and Components/Tasks/TaskStatusChip.razor (state)
         "priority-", // Components/Tasks/TaskPriorityChip.razor: the priority level
+        "avatar-label-len-", // Components/Shared/AgentAvatar.razor: the label's text-element count, 4 to 6
     ];
 
     /// <summary>

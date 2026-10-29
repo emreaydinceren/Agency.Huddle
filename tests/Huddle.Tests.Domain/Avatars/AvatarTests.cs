@@ -9,22 +9,22 @@ namespace Agency.Huddle.Tests.Avatars;
 /// </summary>
 public sealed class AvatarTests
 {
-    /// <summary>A three-character label passes through unchanged.</summary>
+    /// <summary>A six-character label, the longest allowed, passes through unchanged.</summary>
     [Fact]
-    public void TrimLabel_ThreeCharacters_PassesUnchanged()
+    public void TrimLabel_SixCharacters_PassesUnchanged()
     {
-        var trimmed = Avatar.TrimLabel("ABC");
+        var trimmed = Avatar.TrimLabel("ABCDEF");
 
-        Assert.Equal("ABC", trimmed);
+        Assert.Equal("ABCDEF", trimmed);
     }
 
-    /// <summary>A four-character label truncates to its first three text elements.</summary>
+    /// <summary>A seven-character label truncates to its first six text elements.</summary>
     [Fact]
-    public void TrimLabel_FourCharacters_TruncatesToThree()
+    public void TrimLabel_SevenCharacters_TruncatesToSix()
     {
-        var trimmed = Avatar.TrimLabel("ABCD");
+        var trimmed = Avatar.TrimLabel("ABCDEFG");
 
-        Assert.Equal("ABC", trimmed);
+        Assert.Equal("ABCDEF", trimmed);
     }
 
     /// <summary><see langword="null"/> input returns <see langword="null"/>.</summary>
@@ -80,27 +80,27 @@ public sealed class AvatarTests
         Assert.Equal(thumbsUpMediumSkinTone, trimmed);
     }
 
-    /// <summary>Three emoji text elements pass through unchanged.</summary>
+    /// <summary>Six emoji text elements pass through unchanged.</summary>
     [Fact]
-    public void TrimLabel_ThreeEmoji_PassesUnchanged()
+    public void TrimLabel_SixEmoji_PassesUnchanged()
     {
-        const string threeEmoji = "\U0001F600\U0001F601\U0001F602";
+        const string sixEmoji = "\U0001F600\U0001F601\U0001F602\U0001F603\U0001F604\U0001F605";
 
-        var trimmed = Avatar.TrimLabel(threeEmoji);
+        var trimmed = Avatar.TrimLabel(sixEmoji);
 
-        Assert.Equal(threeEmoji, trimmed);
+        Assert.Equal(sixEmoji, trimmed);
     }
 
-    /// <summary>Four emoji text elements truncate to the first three.</summary>
+    /// <summary>Seven emoji text elements truncate to the first six.</summary>
     [Fact]
-    public void TrimLabel_FourEmoji_TruncatesToThree()
+    public void TrimLabel_SevenEmoji_TruncatesToSix()
     {
-        const string fourEmoji = "\U0001F600\U0001F601\U0001F602\U0001F603";
-        const string firstThree = "\U0001F600\U0001F601\U0001F602";
+        const string sevenEmoji = "\U0001F600\U0001F601\U0001F602\U0001F603\U0001F604\U0001F605\U0001F606";
+        const string firstSix = "\U0001F600\U0001F601\U0001F602\U0001F603\U0001F604\U0001F605";
 
-        var trimmed = Avatar.TrimLabel(fourEmoji);
+        var trimmed = Avatar.TrimLabel(sevenEmoji);
 
-        Assert.Equal(firstThree, trimmed);
+        Assert.Equal(firstSix, trimmed);
     }
 
     /// <summary><see cref="Avatar.None"/> has every field unset, so <see cref="Avatar.IsDefault"/> is true.</summary>

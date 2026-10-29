@@ -24,9 +24,9 @@
     {
         <img src="@this.ImageSource" alt="" />
     }
-    else if (this.TrimmedLabel is not null)
+    else if (this.DisplayLabel is not null)
     {
-        @this.TrimmedLabel
+        @this.DisplayLabel
     }
     else
     {
@@ -79,9 +79,46 @@
     /// <see cref="Resolved"/>'s <see cref="Avatars.Avatar.Label"/>, re-trimmed through
     /// <see cref="Avatars.Avatar.TrimLabel(string?)"/> at render time rather than assumed
     /// already-trimmed - so a hand-edited <c>avatars.json</c> cannot put four hundred characters into
-    /// a tile laid out for three.
+    /// a tile laid out for six.
     /// </summary>
     private string? TrimmedLabel => Agency.Huddle.App.Avatars.Avatar.TrimLabel(this.Resolved.Label);
+
+    /// <summary>
+    /// The label as drawn: <see cref="TrimmedLabel"/>, cut again to its first
+    /// <see cref="Avatars.Avatar.SmallLabelTextElements"/> text elements when <see cref="DrawsMonogramOnly"/>, because a
+    /// 24px circle cannot hold more at the 10px font floor. <see langword="null"/> when there is no label.
+    /// </summary>
+    private string? DisplayLabel
+    {
+        get
+        {
+            string? label = this.TrimmedLabel;
+            return label is not null && this.DrawsMonogramOnly
+                ? Agency.Huddle.App.Avatars.Avatar.FirstTextElements(label, Agency.Huddle.App.Avatars.Avatar.SmallLabelTextElements)
+                : label;
+        }
+    }
+
+    /// <summary>
+    /// <c>avatar-label-len-N</c> when a label of 4, 5 or 6 text elements is drawn, which <c>app.css</c> sizes down so it
+    /// fits the circle; <see langword="null"/> for a picture, for no label, for 1-3 elements (today's size) and for the
+    /// 24px avatar, which never draws more than three.
+    /// </summary>
+    private string? LabelLengthClass
+    {
+        get
+        {
+            if (this.ImageSource is not null || this.DisplayLabel is not { } label)
+            {
+                return null;
+            }
+
+            int length = new StringInfo(label).LengthInTextElements;
+            return length is >= 4 and <= Agency.Huddle.App.Avatars.Avatar.MaxLabelTextElements
+                ? string.Concat("avatar-label-len-", length.ToString(CultureInfo.InvariantCulture))
+                : null;
+        }
+    }
 
     /// <summary>
     /// The bytes of an image the Human has chosen but not saved yet, shown inline in place of
@@ -147,13 +184,19 @@
     /// <summary>
     /// The root's classes: the caller's <see cref="Class"/>, plus <c>avatar-image</c> for a picture (the same circle
     /// with a 1px inner hairline) or <c>avatar-monogram</c> for letters (the Agent's colour at 20% over Surface,
-    /// letters mixed 75% toward TextPrimary; a Dark Theme uses 35% and white, both in <c>app.css</c>).
+    /// letters mixed 75% toward TextPrimary; a Dark Theme uses 35% and white, both in <c>app.css</c>), plus
+    /// <see cref="LabelLengthClass"/> for a long label.
     /// </summary>
     private string RootClass
     {
         get
         {
             string kind = this.ImageSource is not null ? "avatar-image" : "avatar-monogram";
+            if (this.LabelLengthClass is { } lengthClass)
+            {
+                kind = string.Concat(kind, " ", lengthClass);
+            }
+
             return string.IsNullOrEmpty(this.Class) ? kind : string.Concat(this.Class, " ", kind);
         }
     }

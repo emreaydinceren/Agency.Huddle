@@ -522,7 +522,7 @@ or tab to it. A window titled **Avatar** opens with three choices, and **An imag
 is selected when the avatar has no label or image yet:
 
 - **Initials of the name** shows the letters Huddle makes from the Name.
-- **A short label** shows up to three characters you type instead.
+- **A short label** shows up to six characters you type instead (the small avatar in rows and the sidebar shows the first three).
 - **An image** shows a picture. **Choose an image** uploads a PNG, JPEG or WebP
   file of up to 512 KB, and **Choose from library** (see the next section) picks
   one of the ready-made pictures.

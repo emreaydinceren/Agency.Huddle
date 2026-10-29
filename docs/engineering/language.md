@@ -72,8 +72,9 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   three:
 : **Initials** — the first and last word of the Name, as `Monogram` derives them.
   The default, and *not* a stored kind: it is what renders when neither of the other
-  two is set. **Label** — up to three characters, counted as Unicode text elements so
-  one emoji is one character however many code units it takes. **Image** — an uploaded
+  two is set. **Label** — up to six characters, counted as Unicode text elements so
+  one emoji is one character however many code units it takes (the 24px row avatar draws
+  only the first three). **Image** — an uploaded
   PNG, JPEG or WebP.
 : Held per Agent in `{DataDir}/avatars.json`, keyed by **Name**, which is why the
   Human has one too and why a Message finds one from its sender. Deliberately **not**
