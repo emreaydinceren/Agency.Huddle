@@ -284,7 +284,7 @@ minute does not fill the panel. Nothing is collapsed in the file.
 
 ### 6.7 `DocumentByline`
 
-One line under `LibraryDocument.razor`'s toolbar (the document has no title element of its own), Markdown files only.
+One line under the note's first heading (a note that does not open with one gets it above its body), Markdown files only. It is drawn inside the rendered note, so it shows in Read and in the Split preview; above an editor with no preview (Edit mode) it sits under the toolbar. Above the heading, in the same rendered note, sit the note's tags (spec for Library tags Â§6.17). The groups ("Written by", "Edited by", "Reviewed by", "Objected by") are separated by a "Â·", and so is the time; every Name is bold.
 Each Name is shown with its avatar from `AvatarStore`: `ProfileAvatar` for an Agent, so a click opens the profile
 popover, and `TeammateAvatar` for the Human. The Name's tooltip shows that actor's latest summary. The time is relative ("today 11:02"), with the full date in a tooltip. With no
 history the line is absent, not "No history". It re-reads on `DocHistoryStore.Changed` for its own path.
@@ -357,7 +357,7 @@ Nothing is written inside a Library Root.
 Add to [language.md](engineering/language.md):
 
 - **History** (of a document): the entries its editors logged, newest last on disk, newest first on screen.
-- **Byline**: the one line under a document's title summarising its History.
+- **Byline**: the one line under a document's first heading summarising its History.
 
 ## 10. Testing
 

@@ -1,0 +1,19 @@
+@*
+    A note's tags as a row of chips above its first heading (Spec §6.17): its frontmatter `tags` and its inline #tags.
+    Draws nothing for a note with none. Tag text comes from files, so it is rendered as Razor text only.
+*@
+@if (this.Tags.Count > 0)
+{
+    <div class="library-document-tags" aria-label="Tags">
+        @foreach (string tag in this.Tags)
+        {
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="tag-chip library-document-tag">@tag</MudChip>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The note's tags, in the order to show them.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<string> Tags { get; set; } = [];
+}

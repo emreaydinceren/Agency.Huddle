@@ -13,6 +13,7 @@
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Sidebar
 @using Agency.Huddle.App.Tabs
+@using Microsoft.AspNetCore.Components.Rendering
 @inject LibraryFileService FileService
 @inject ITaskReferenceResolver Tasks
 @inject ILibraryNoteResolver NoteResolver
@@ -62,7 +63,7 @@
     }
     else if (this.content is not null)
     {
-        @if (this.ShowsHistory())
+        @if (this.ShowsHistory() && !this.BylineInBody())
         {
             <DocumentByline Path="@this.Path" OnOpenHistory="@this.OpenHistoryPanel" />
         }
@@ -155,6 +156,7 @@
         string body = text[bodyStart..].TrimStart('\r', '\n');
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "class", "library-rendered");
+        this.RenderTags(builder, text);
         if (fields.Count > 0 && block is not null)
         {
             builder.OpenComponent<LibraryProperties>(2);
@@ -163,9 +165,44 @@
             builder.CloseComponent();
         }
 
-        builder.AddContent(8, (MarkupString)MarkdownRenderer.ToHtml(body, this.Tasks, this.NoteResolver, this.Path));
+        // The byline sits under the note's first heading; a note that does not open with one gets it above the body.
+        string html = MarkdownRenderer.ToHtml(body, this.Tasks, this.NoteResolver, this.Path);
+        int headingEnd = html.StartsWith("<h1", StringComparison.Ordinal) ? html.IndexOf("</h1>", StringComparison.Ordinal) : -1;
+        int splitAt = headingEnd < 0 ? 0 : headingEnd + "</h1>".Length;
+        builder.AddContent(8, (MarkupString)html[..splitAt]);
+        if (this.BylineInBody())
+        {
+            builder.OpenComponent<DocumentByline>(20);
+            builder.AddComponentParameter(21, nameof(DocumentByline.Path), this.Path);
+            builder.AddComponentParameter(22, nameof(DocumentByline.OnOpenHistory), EventCallback.Factory.Create(this, this.OpenHistoryPanel));
+            builder.CloseComponent();
+        }
+
+        builder.AddContent(9, (MarkupString)html[splitAt..]);
         builder.CloseElement();
     };
+
+    /// <summary>The note's tags (its frontmatter <c>tags</c> and its inline <c>#tag</c>s, Spec §6.17) as chips above its first heading; nothing for a note with none.</summary>
+    /// <param name="builder">The builder of the <c>.library-rendered</c> element.</param>
+    /// <param name="text">The document's raw Markdown, frontmatter included.</param>
+    private void RenderTags(RenderTreeBuilder builder, string text)
+    {
+        IReadOnlyList<string> tags = NoteTags.Of(text);
+        if (tags.Count == 0)
+        {
+            return;
+        }
+
+        builder.OpenComponent<LibraryDocumentTags>(30);
+        builder.AddComponentParameter(31, nameof(LibraryDocumentTags.Tags), tags);
+        builder.CloseComponent();
+    }
+
+    /// <summary>Whether the byline is drawn inside the rendered note, under its first heading, rather than above the editor. It is when the note is rendered here: in Read, in the Split preview, and in a mode that cannot edit.</summary>
+    private bool BylineInBody() =>
+        this.ShowsHistory()
+        && this.content is { ViewOnlyReason: null } shown
+        && !(this.mode == LibraryMode.Edit && shown.Editable);
 
     /// <summary>The document's path inside a Library Root.</summary>
     [Parameter, EditorRequired]

@@ -9,7 +9,7 @@ namespace Agency.Huddle.Tests.Ui.Library;
 /// </summary>
 public sealed class LibraryReadingStyleSourceTests
 {
-    private const string Measure = "max-width: calc(calc(var(--mud-typography-body1-size) * 8 / 7 * 35) + 32px);";
+    private const string Measure = "max-width: calc(calc(var(--mud-typography-body1-size) * 8 / 7 * 46.29) + 32px);";
 
     /// <summary>Tree rows are 30px tall, their icons 16px and the warning glyph on a folder 14px.</summary>
     [Fact]
@@ -22,13 +22,15 @@ public sealed class LibraryReadingStyleSourceTests
         Assert.Contains("height: 14px;", CssText.RuleBody(css, ".library-tree-orphan .mud-icon-root", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
-    /// <summary>The rendered note takes the reader's measure.</summary>
+    /// <summary>The rendered note takes the reader's measure and is centred in the pane.</summary>
     [Fact]
     public void AppCss_RenderedNote_TakesTheReaderMeasure()
     {
         string css = CssText.AppCss();
+        string body = CssText.RuleBody(css, ".library-rendered", RuleMatch.Last);
 
-        Assert.Contains(Measure, CssText.RuleBody(css, ".library-rendered", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains(Measure, body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("margin-inline: auto;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
     /// <summary>The Read, Edit and Split labels are 13px.</summary>
