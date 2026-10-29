@@ -44,12 +44,12 @@ adds:
    below therefore takes a baseline Turn first** — a throwaway Message in each Room the test uses —
    before it changes anything. A Room of three or more Members answers only when the Agent is
    @Mentioned, so every Message in a shared Room below carries `@<Name>`.
-3. **Define the Keeper.** The *Keeper* is a Teammate you create for these tests with
+3. **Define the Keeper.** The *Keeper* is an Agent you create for these tests with
    [`P-NEW-PERSONA`](common.md#p-new-persona): Name `Keeper`, Title `Keeper`, one sentence in
    **Persona body** ("You keep one short note per client in your Work Dir."), **Model** Haiku,
-   **Effort** `low`, **Teams** blank. Its Work Dir is `<data>\Teammates\Keeper\work\` and its memory
-   folder is `<data>\Teammates\Keeper\work\memory\` (`TeammatePaths.cs`,
-   `DotAcpAgentHostFactory.cs:131-136`). Several tests also use a second Teammate, `Aide`, made the
+   **Effort** `low`, **Teams** blank. Its Work Dir is `<data>\Agents\Keeper\work\` and its memory
+   folder is `<data>\Agents\Keeper\work\memory\` (`AgentPaths.cs`,
+   `DotAcpAgentHostFactory.cs:131-136`). Several tests also use a second Agent, `Aide`, made the
    same way and never @Mentioned unless a step says so.
 4. **No `TraceWire`.** It prints the tool server's bearer token into the log and stays forbidden
    (see [Standing conventions](common.md#standing-conventions)). The File Changes block is
@@ -91,9 +91,9 @@ live check on §6.8's warning that a wrong attribution must only ever cost an ex
 **Expect**
 
 - Step 2: [`O-TOOLCALLS`](common.md#o-toolcalls) for `Keeper` has a write or edit line, and a new
-  `.md` file exists in `<data>\Teammates\Keeper\work\memory\`. If not, the Agent chose not to
+  `.md` file exists in `<data>\Agents\Keeper\work\memory\`. If not, the Agent chose not to
   remember: *Inconclusive*, repeat step 2 with "please save that to your memory".
-- Step 3: the reply quotes that file's path, ending `\Teammates\Keeper\work\memory\<file>.md`, and
+- Step 3: the reply quotes that file's path, ending `\Agents\Keeper\work\memory\<file>.md`, and
   the line carries the suffix `(by you, in Room '…')` (`turn.fileByYouSuffix`).
 - Step 4: the reply does not list that file — the Agent's own edit is never reported back into the
   Room it was made in.
@@ -115,7 +115,7 @@ block is read straight off it.*
 **Steps**
 
 1. Baseline: send "hello" and wait for the reply.
-2. In an editor create `C:\seeds\huddle\uat\data\Teammates\Bo\work\notes.txt` containing `one`.
+2. In an editor create `C:\seeds\huddle\uat\data\Agents\Bo\work\notes.txt` containing `one`.
 3. Send "hello again".
 4. Change the file's content to `two` and save.
 5. Send "hello once more".
@@ -124,9 +124,9 @@ block is read straight off it.*
 
 - Step 1's reply carries no File Changes block.
 - Step 3's reply contains the header text "Since your last Turn in this Room, these files
-  changed." followed by `added C:\seeds\huddle\uat\data\Teammates\Bo\work\notes.txt`
+  changed." followed by `added C:\seeds\huddle\uat\data\Agents\Bo\work\notes.txt`
   (`PromptCatalog.cs:338` `turn.fileChangesHeader`; `turn.fileAdded`).
-- Step 5's reply contains `changed C:\seeds\huddle\uat\data\Teammates\Bo\work\notes.txt`.
+- Step 5's reply contains `changed C:\seeds\huddle\uat\data\Agents\Bo\work\notes.txt`.
 
 ---
 
@@ -152,7 +152,7 @@ FM-1 has just run, so `notes.txt` exists in Bo's Work Dir and Bo has a baseline 
 
 **Expect**
 
-The reply contains `changed C:\seeds\huddle\uat\data\Teammates\Bo\work\notes.txt`, on the very first
+The reply contains `changed C:\seeds\huddle\uat\data\Agents\Bo\work\notes.txt`, on the very first
 Turn after the restart.
 
 ---
@@ -173,7 +173,7 @@ tool call keeps its own write out of its own next prompt in that Room.*
 **Expect**
 
 - Step 2: [`O-TOOLCALLS`](common.md#o-toolcalls) shows the write, and
-  `<data>\Teammates\Keeper\work\client-a.txt` exists. If not, the Agent did not write it:
+  `<data>\Agents\Keeper\work\client-a.txt` exists. If not, the Agent did not write it:
   *Inconclusive*.
 - Step 3: the reply does not list `client-a.txt` — the Agent's own write is not reported back to
   it in this Room.
@@ -215,7 +215,7 @@ Create the folder `<data>\shared-notes\` with a file `price.txt` containing `10`
 
 ---
 
-### FM-5 — Renaming a watched Teammate does not spuriously list anything
+### FM-5 — Renaming a watched Agent does not spuriously list anything
 
 **Paid 💰** · about 20 min · three short Turns
 
@@ -225,14 +225,14 @@ watching it by Name does not see a burst of false adds or deletes from the renam
 
 **Before you start**
 
-Put a file `plan.txt` in `<data>\Teammates\Aide\work\`. Agent A is the Keeper, Agent B is Aide.
+Put a file `plan.txt` in `<data>\Agents\Aide\work\`. Agent A is the Keeper, Agent B is Aide.
 
 **Steps**
 
 1. In the Keeper's Room send "hello" (baseline).
-2. Ask the Keeper to `watch_folder` `Aide` (a Teammate Name resolves to that Teammate's Work Dir).
+2. Ask the Keeper to `watch_folder` `Aide` (an Agent Name resolves to that Agent's Work Dir).
 3. Send any other Message. This Turn baselines Aide's folder.
-4. On Aide's card on the Teammates page choose **Edit**, change **Name** to `Aide2`, and **Save**.
+4. On Aide's card on the Agents page choose **Edit**, change **Name** to `Aide2`, and **Save**.
 5. In the Keeper's Room send the question from Setup step 4.
 
 **Expect**
@@ -261,16 +261,16 @@ that the Human never had auto-memory on to begin with. Use the Keeper.
 **Steps**
 
 1. In one Room, tell the Keeper "I prefer C# for any code. Please remember that."
-2. Restart the Keeper from the Teammates page (not the whole app).
+2. Restart the Keeper from the Agents page (not the whole app).
 3. In a different Room (the Keeper and Aide Room B from FM-0, `@Keeper` in every Message), ask it
    for code and then "What do you remember about my coding preferences, and from which file?"
-4. Check `<data>\Teammates\Keeper\work\memory\` for a file recording the preference.
+4. Check `<data>\Agents\Keeper\work\memory\` for a file recording the preference.
 5. Check `~\.claude\projects\<a folder named after the Work Dir path>\memory\` on the machine
    running the Adapter for anything new since step 1.
 
 **Expect**
 
-- `<data>\Teammates\Keeper\work\memory\` holds a file recording the C# preference (step 4), and the
+- `<data>\Agents\Keeper\work\memory\` holds a file recording the C# preference (step 4), and the
   step 3 answer names a file in that folder.
 - The code in step 3's reply is in C#.
 - **Nothing new appears** under the Human's `~\.claude\projects\...\memory\` for the Keeper's Work
@@ -290,7 +290,7 @@ is not").*
 **Steps**
 
 1. In the Keeper's Room, tell it "in this chat, answer only in French."
-2. Look in `<data>\Teammates\Keeper\work\memory\`.
+2. Look in `<data>\Agents\Keeper\work\memory\`.
 
 **Expect**
 
@@ -403,7 +403,7 @@ Create the empty folder `<data>\claude-config` first. Launch with `P-LAUNCH-PAID
 
 **Steps**
 
-1. Open the Keeper's card on the Teammates page and read its status.
+1. Open the Keeper's card on the Agents page and read its status.
 2. Send the Keeper "hello" and read the reply.
 
 **Expect and record**

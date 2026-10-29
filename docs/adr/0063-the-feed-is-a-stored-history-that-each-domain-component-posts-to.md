@@ -5,7 +5,7 @@ date: 2026-10-20
 
 # The Feed is a stored history that each domain component posts to
 
-The **Feed** is one stored list of what Teammates and Huddle did. It is shown two ways: the
+The **Feed** is one stored list of what Agents and Huddle did. It is shown two ways: the
 **Notifications** button in the Top Bar, which opens a panel in the Right sidebar, and the **Feed**
 Tab, the full timeline. Each item is posted by the component that already knows the fact. The full
 design is [Huddle.Feed-Specifications.md](../Huddle.Feed-Specifications.md).
@@ -15,7 +15,7 @@ design is [Huddle.Feed-Specifications.md](../Huddle.Feed-Specifications.md).
 Needs You ([ADR-0050](0050-needs-you-is-derived-from-room-events-and-held-in-memory.md)) says which
 Rooms and Tasks wait on the Human now, and forgets a Room once it clears. Nothing records what
 happened while the Human was away: which Tasks were created, which Rooms started, which documents
-changed, which asks came and went. A Task assigned to the Human, or a gate that refused a Teammate's
+changed, which asks came and went. A Task assigned to the Human, or a gate that refused an Agent's
 move and now needs the Human's call, shows nowhere the Human looks first.
 
 ## The decision
@@ -103,6 +103,6 @@ card is lost when Huddle stops), so each producer resolves its own stale rows at
   behaviour stay as ADR-0050 and [ADR-0061](0061-a-human-gated-task-waits-in-needs-you-for-the-humans-acceptance.md) say.
 - **The table grows only by settings.** Undismissed Notifications are kept until dismissed; the
   specification lists a retention for resolved ones as an open decision.
-- **Names are stored as they were.** A renamed Teammate's old items keep the old Name, as Document
+- **Names are stored as they were.** A renamed Agent's old items keep the old Name, as Document
   History does ([ADR-0060](0060-a-documents-history-is-what-its-editors-report.md)).
-- **Nothing removes a Member from a Room today,** so "a Teammate left" has no producer in slice 1.
+- **Nothing removes a Member from a Room today,** so "an Agent left" has no producer in slice 1.

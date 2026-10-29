@@ -6,7 +6,7 @@ date: 2026-09-22
 # An Agent holds one session per Room, and only Memory and File Changes cross between them
 
 An Agent's working context becomes per Room: one **Room Session** for each (Persona, Room). What
-makes the Agent one Teammate stays per Persona and is shared by all its Room Sessions: its Persona
+makes the Agent one Agent stays per Persona and is shared by all its Room Sessions: its Persona
 text, Work Dir, Memory, App Tools and Adapter process. Continuity between Rooms comes only through
 Memory and File Changes. The full design is
 [Huddle.RoomSessions-Specifications.md](../Huddle.RoomSessions-Specifications.md). It lifts the
@@ -97,7 +97,7 @@ it back from Memory, from reports posted to it, and from the seed Message of eac
 | Keep one session per Persona, with better labels and Prompts | A label is a convention the model may ignore, and the four failures are about long runs. The better Prompt ships anyway, as Phase 0 |
 | One session per Turn, rebuilt from the Transcript | Re-reads the whole history every Turn, and loses tool results and the Agent's own working |
 | One Adapter process per Room Session | Doubles the processes; each session already has its own CLI child |
-| One Adapter process for every Persona | Every Teammate behind one crash and one environment |
+| One Adapter process for every Persona | Every Agent behind one crash and one environment |
 | `session/load` instead of resume | It replays history through the live event stream |
 | The runner reading the Transcript file, or a read App Tool | The first breaks the rule that everything a runner knows arrives in an Envelope. The second relies on the model calling it on the right Turn |
 | A token Budget per Room | It would reset on every fresh Room, the loop it exists to catch |

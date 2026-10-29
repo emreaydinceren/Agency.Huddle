@@ -151,7 +151,7 @@ public sealed class PackCardTests : IDisposable
         this.fixture.Host.Source();
         this.fixture.Host.Pack("documents", "docx", this.fixture.Host.CloneSkill("docx"));
         this.fixture.Host.SkillsMd(["packs/documents.skillpack.json"]);
-        this.fixture.Host.Teammate("Jane", ["docx"], [new Agency.Huddle.App.Teams.VersionedRef("documents", "1.0.0")]);
+        this.fixture.Host.Agent("Jane", ["docx"], [new Agency.Huddle.App.Teams.VersionedRef("documents", "1.0.0")]);
         await this.fixture.Host.ReadAsync();
         string file = this.fixture.Host.Registry.Current.Resolved.Packs[0].FilePath ?? string.Empty;
         await using MudBunitContext ctx = this.fixture.NewContext();
@@ -162,7 +162,7 @@ public sealed class PackCardTests : IDisposable
         Task removing = cut.InvokeAsync(() => cut.Find(".pack-card-menu-remove").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Equal("Jane has this Pack. Choose what happens to them.", cut.Find(".remove-pack-holders").TextContent.Trim()));
-        Assert.Equal(["Cancel", "Keep their Skills", "Remove from Teammates too"], cut.FindAll(".remove-pack-dialog .mud-dialog-actions button, .mud-dialog-actions button").Select(static button => button.TextContent.Trim()).Distinct());
+        Assert.Equal(["Cancel", "Keep their Skills", "Remove from Agents too"], cut.FindAll(".remove-pack-dialog .mud-dialog-actions button, .mud-dialog-actions button").Select(static button => button.TextContent.Trim()).Distinct());
         await cut.InvokeAsync(() => cut.Find(".remove-pack-cancel").ClickAsync());
         await removing;
         Assert.True(File.Exists(file));

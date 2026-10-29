@@ -12,7 +12,7 @@ internal static class SidebarViews
     [
         new(SidebarView.Chats, "Chats", Icons.Material.Filled.Chat),
         new(SidebarView.Teams, "Teams", Icons.Material.Outlined.Groups),
-        new(SidebarView.Teammates, "Teammates", Icons.Material.Filled.Group),
+        new(SidebarView.Agents, "Agents", Icons.Material.Filled.Group),
         new(SidebarView.Tasks, "Tasks", Icons.Material.Outlined.TaskAlt),
         new(SidebarView.Library, "Library", Icons.Material.Filled.MenuBook),
     ];
@@ -43,7 +43,7 @@ internal static class SidebarViews
 
     /// <summary>
     /// The page area a Tab's address belongs to: the first path segment when it names one of the places the
-    /// Activity bar follows (<c>rooms</c>, <c>teams</c>, <c>teammates</c>, <c>tasks</c>, <c>library</c>,
+    /// Activity bar follows (<c>rooms</c>, <c>teams</c>, <c>agents</c>, <c>tasks</c>, <c>library</c>,
     /// <c>settings</c>), otherwise <see langword="null"/> (the home page, an unknown address).
     /// </summary>
     /// <param name="url">The site-relative address of the focused pane's active Tab, or <see langword="null"/> when it has none.</param>
@@ -61,7 +61,7 @@ internal static class SidebarViews
         {
             "rooms" => "rooms",
             "teams" => "teams",
-            "teammates" => "teammates",
+            "agents" => "agents",
             "tasks" => "tasks",
             "library" => "library",
             "settings" => "settings",
@@ -80,7 +80,7 @@ internal static class SidebarViews
     public static SidebarView? ViewForArea(string area, SidebarView? current) => area switch
     {
         "teams" => SidebarView.Teams,
-        "teammates" => SidebarView.Teammates,
+        "agents" => SidebarView.Agents,
         "tasks" => SidebarView.Tasks,
         "library" => SidebarView.Library,
         "settings" => null,

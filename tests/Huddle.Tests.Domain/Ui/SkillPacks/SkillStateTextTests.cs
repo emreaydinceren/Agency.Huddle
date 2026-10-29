@@ -24,8 +24,8 @@ public sealed class SkillStateTextTests
     [Fact]
     public void Sentence_FillsHoldersAndReason()
     {
-        Assert.Equal("2 Teammates carry it: Jane and Omar. They use a copy in Skills/, never your AI tool's clone.", SkillStateText.Sentence(ItemState.InUse, ["Jane", "Omar"], null));
-        Assert.Equal("Its Source pulled it: licence changed. New hires cannot take it. Teammates who have it keep working and are flagged.", SkillStateText.Sentence(ItemState.Withdrawn, [], "licence changed."));
+        Assert.Equal("2 Agents carry it: Jane and Omar. They use a copy in Skills/, never your AI tool's clone.", SkillStateText.Sentence(ItemState.InUse, ["Jane", "Omar"], null));
+        Assert.Equal("Its Source pulled it: licence changed. New hires cannot take it. Agents who have it keep working and are flagged.", SkillStateText.Sentence(ItemState.Withdrawn, [], "licence changed."));
         Assert.Equal("In use by 2", SkillStateText.ChipText(ItemState.InUse, 2));
         Assert.Equal("Jane, Omar and Ravi", SkillStateText.AndList(["Jane", "Omar", "Ravi"]));
         Assert.Equal("Jane", SkillStateText.AndList(["Jane"]));

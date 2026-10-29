@@ -168,13 +168,13 @@ legitimate empty result. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle
   ran".** The documented `dotnet test Huddle.slnx --` is exact. Adding
   `--nologo` or `-v minimal` ahead of the `--` exits 5 having run nothing, which
   scrolls past looking like a pass. Run the command verbatim.
-- **Editing a Persona's `name:` renames the Teammate, and since 2026-09-15 the
-  whole Teammate follows it.** `PersonaStore.Update` still moves the Model and
+- **Editing a Persona's `name:` renames the Agent, and since 2026-09-15 the
+  whole Agent follows it.** `PersonaStore.Update` still moves the Model and
   Effort rows by hand, and `PersonaRenameCascade` now renames the Agent's
   Team Directory row **in place, keeping its id** — so the Rooms, the
   `room_members` rows and every `ChatMessage.SenderId` follow with no work,
   because all of them reference the id and never the Name. See
-  [ADR-0011](../adr/0011-a-rename-moves-the-teammate-not-its-history.md).
+  [ADR-0011](../adr/0011-a-rename-moves-the-agent-not-its-history.md).
   Two things about it are load-bearing and easy to undo by accident:
   - **`PersonaRenamed` is raised synchronously, before `PersonasChanged`, and
     `ITeamDirectory.RenameUser` is synchronous for that reason alone.**
@@ -186,7 +186,7 @@ legitimate empty result. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle
   - **A rename does not rewrite history, deliberately.** `ChatMessage` carries a
     denormalised `SenderName` as well as `SenderId`, so Messages already posted
     keep the Name they were posted under. That is a record, not a bug; the
-    `SenderId` still proves it was one Teammate throughout.
+    `SenderId` still proves it was one Agent throughout.
 
 - **`ProtocolJson.Options` escapes anything unsafe for HTML, which ruins a file
   a human edits.** It sets no `Encoder`, so it inherits `JavaScriptEncoder.Default`:
@@ -283,15 +283,15 @@ legitimate empty result. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle
 - **`MudColorPicker` has no null state: bind `Text`, never `Value`.** `Value` is a
   non-nullable `MudColor`, so the control materialises a colour on its **first
   render** whether or not anyone has picked one. Bind it and merely *opening* the
-  Edit teammate card — or the Appearance tab — writes a hard-coded hex background
-  for a Teammate who never chose one, permanently divorced from the Theme and
+  Edit agent card — or the Appearance tab — writes a hard-coded hex background
+  for an Agent who never chose one, permanently divorced from the Theme and
   invisible until someone switches Themes and wonders why one avatar did not follow.
   Nothing fails: the build is clean, the control looks right, and the wrong value is
   the one the user is shown. `Text` is a `string?` and is exactly the value that goes
   to `avatars.json`, so binding it keeps "no background chosen" expressible; a blank
   maps to `null`, never to `""`. The Appearance editor carries the reasoning inline and
   pairs the picker with an explicit **Use the theme colour** action, because a
-  picker alone gives a user no way back to *unset*. **The Teammate card's avatar
+  picker alone gives a user no way back to *unset*. **The Agent card's avatar
   editor (`AvatarEditorDialog`) no longer uses a text field**: it shows the static
   palette of `AvatarPalette.Colours`, hands the picker a *transparent* colour while
   nothing is chosen (it matches no swatch), and changes the background only in the

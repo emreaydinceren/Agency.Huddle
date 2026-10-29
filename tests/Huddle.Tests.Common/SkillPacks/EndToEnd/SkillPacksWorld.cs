@@ -41,7 +41,7 @@ internal sealed class SkillPacksWorld : IAsyncDisposable
     /// <summary>Writes <c>InstallSkillPack.md</c> and <c>install-context.json</c>.</summary>
     public InstallFileWriter Install { get; }
 
-    /// <summary>The copier the Teammate card and the hire path use.</summary>
+    /// <summary>The copier the Agent card and the hire path use.</summary>
     public SkillCopier Copier { get; }
 
     /// <summary>The updater the update card uses.</summary>

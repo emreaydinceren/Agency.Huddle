@@ -8,7 +8,7 @@ internal sealed class FakeStartGate : IPersonaStartGate
     /// <summary>Gets the names waited for, in order.</summary>
     public List<string> Waited { get; } = [];
 
-    /// <summary>Gets or sets whether the Teammate reports running before the timeout.</summary>
+    /// <summary>Gets or sets whether the Agent reports running before the timeout.</summary>
     public bool Running { get; set; } = true;
 
     /// <summary>Gets or sets whether the wait throws <see cref="OperationCanceledException"/>.</summary>

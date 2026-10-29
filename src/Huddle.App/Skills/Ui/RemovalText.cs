@@ -6,7 +6,7 @@ internal static class RemovalText
     /// <summary>The title of the Remove Pack confirm and of <c>RemovePackDialog</c>.</summary>
     public static string PackTitle(string title) => $"Remove \"{title}\"?";
 
-    /// <summary>The message of the Remove Pack confirm when no Teammate holds it.</summary>
+    /// <summary>The message of the Remove Pack confirm when no Agent holds it.</summary>
     /// <param name="fileInFolder">The file's path relative to the Skill Sources folder, Windows separators, when it is inside; else null.</param>
     /// <param name="fileOutside">The file's full path when it is outside the folder; else null.</param>
     public static string PackMessage(string? fileInFolder, string? fileOutside)
@@ -14,21 +14,21 @@ internal static class RemovalText
         string where = fileInFolder is not null
             ? $"This removes its row from SKILLS.md and deletes {fileInFolder} from the Skill Sources folder."
             : $"This removes its row from SKILLS.md. {Outside(fileOutside)}";
-        return $"{where} No Teammate has this Pack. Your AI tool's clone is not touched.";
+        return $"{where} No Agent has this Pack. Your AI tool's clone is not touched.";
     }
 
     /// <summary>The sentence for a file outside the folder.</summary>
     public static string Outside(string? file) =>
         file is null ? string.Empty : $"The file {file} is outside the Skill Sources folder, so Huddle leaves it where it is.";
 
-    /// <summary>The title of the Remove from Teammates confirm.</summary>
+    /// <summary>The title of the Remove from Agents confirm.</summary>
     public static string UnholdTitle(int count)
     {
-        string teammates = Agency.Huddle.App.Components.Shared.Plural.Of(count, "Teammate", "Teammates");
-        return $"Remove from {teammates}?";
+        string agents = Agency.Huddle.App.Components.Shared.Plural.Of(count, "Agent", "Agents");
+        return $"Remove from {agents}?";
     }
 
-    /// <summary>The message of the Remove from Teammates confirm.</summary>
+    /// <summary>The message of the Remove from Agents confirm.</summary>
     public static string UnholdMessage(IReadOnlyList<string> holders) =>
         $"{SkillStateText.AndList(holders)} will lose the Skills no one else gave them, and the Pack's \"consult when\" phrase. They restart. The Pack's row and file stay.";
 
@@ -46,7 +46,7 @@ internal static class RemovalText
         string row = fileInFolder is not null
             ? $"This removes its row from SKILLS.md and deletes {fileInFolder} from the Skill Sources folder."
             : "This removes its row from SKILLS.md.";
-        string listed = $"Its {Agency.Huddle.App.Components.Shared.Plural.Of(skills, "Skill", "Skills")} stop being listed. Teammates keep their copies in Skills/.";
+        string listed = $"Its {Agency.Huddle.App.Components.Shared.Plural.Of(skills, "Skill", "Skills")} stop being listed. Agents keep their copies in Skills/.";
         string packs = packsUsingIt.Count == 0 ? string.Empty : $" These Packs name Skills in it and will show Broken until your AI tool fixes them: {SkillStateText.AndList(packsUsingIt)}.";
         string outside = fileOutside is null ? string.Empty : $" {Outside(fileOutside)}";
         return $"{row} {listed}{packs}{outside}";
@@ -65,7 +65,7 @@ internal static class RemovalText
             parts.Add($"It also removes {Agency.Huddle.App.Components.Shared.Plural.Of(rowTitles.Count, "row", "rows")} from SKILLS.md ({string.Join(", ", rowTitles)}) and deletes their files from the Skill Sources folder.");
         }
 
-        parts.Add(clone is null ? "Teammates keep their copies in Skills/." : $"Teammates keep their copies in Skills/. Your AI tool's clone at {clone} is not touched.");
+        parts.Add(clone is null ? "Agents keep their copies in Skills/." : $"Agents keep their copies in Skills/. Your AI tool's clone at {clone} is not touched.");
         parts.Add("If you share this folder with another Huddle, it loses the notes too.");
         return string.Join(' ', parts);
     }

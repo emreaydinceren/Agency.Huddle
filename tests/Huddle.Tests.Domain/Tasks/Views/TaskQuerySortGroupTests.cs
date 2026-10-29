@@ -182,9 +182,9 @@ public sealed class TaskQuerySortGroupTests
         Assert.Equal(["Growth", "Platform"], root.Children.Select(c => c.Label));
     }
 
-    /// <summary>A Teammate literally named "Unassigned" gets a group of its own, kept apart from the null-Assignee group, which still sorts last.</summary>
+    /// <summary>An Agent literally named "Unassigned" gets a group of its own, kept apart from the null-Assignee group, which still sorts last.</summary>
     [Fact]
-    public void Group_TeammateNamedUnassigned_KeptApartFromNullGroup()
+    public void Group_AgentNamedUnassigned_KeptApartFromNullGroup()
     {
         List<TaskItem> tasks =
         [

@@ -269,7 +269,7 @@ R3Fix, R3Shared, R3Srch, AppCssTokensB), which are not `RuleBody`; list-aware `R
 | Helper | File | Use it when |
 | --- | --- | --- |
 | `UiTestHost.Create` and the `With*` extensions | `Ui/UiTestHost.cs` | Building a `MudBunitContext`: `Create(configure)`, then `WithHarness`, `WithTabs` (it uses `TryAdd`), `WithTeamOptions`, `WithRoutes(url, panels)`, `WithChatStack`. |
-| `ServicePresets` and `CopyFrom` | `Ui/ServicePresets.cs` | Copying services from a `TeamWebApplicationFactory` into a context: `services.CopyFrom(source, ServicePresets.Chat)`, or `Teammates` or `Settings`. |
+| `ServicePresets` and `CopyFrom` | `Ui/ServicePresets.cs` | Copying services from a `TeamWebApplicationFactory` into a context: `services.CopyFrom(source, ServicePresets.Chat)`, or `Agents` or `Settings`. |
 | `RenderWithPopovers<T>` | `Ui/RenderedComponentExtensions.cs` | Rendering any component that opens a popover, menu or dialog host. Use plain `Render<T>` only where the component has none. |
 | `FindButton`, `FindFirstButton`, `TextOf`, `MenuItems`, `ClickMenuItemAsync` | `Ui/RenderedComponentExtensions.cs` | Querying a rendered fragment. `FindButton` needs exactly one match; use `FindFirstButton` when several can match. |
 | `ShowDialogAsync<TDialog>`, `EditSelectAsync<T>` | `Ui/DialogExtensions.cs` | Opening a dialog through the dialog service and waiting for its title, or setting a `MudSelect` value. |

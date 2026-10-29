@@ -10,7 +10,7 @@ namespace Agency.Huddle.App.Skills.Ui;
 /// <param name="Removed">Skills the Pack no longer lists. Always empty: Huddle keeps no earlier copy of a Pack file.</param>
 /// <param name="ConsultWhenFrom">The phrase before, when known.</param>
 /// <param name="ConsultWhenTo">The Pack's phrase now.</param>
-/// <param name="Teammates">The holders whose file would change.</param>
+/// <param name="Agents">The holders whose file would change.</param>
 internal sealed record PackUpdatePlan(
     string PackId,
     string Title,
@@ -21,8 +21,8 @@ internal sealed record PackUpdatePlan(
     IReadOnlyList<SkillMembershipChange> Removed,
     string? ConsultWhenFrom,
     string? ConsultWhenTo,
-    IReadOnlyList<TeammateChange> Teammates)
+    IReadOnlyList<AgentChange> Agents)
 {
     /// <summary>Whether nothing would change.</summary>
-    public bool IsEmpty => this.FileChanges.Count == 0 && this.Teammates.Count == 0;
+    public bool IsEmpty => this.FileChanges.Count == 0 && this.Agents.Count == 0;
 }

@@ -8,7 +8,7 @@ namespace Agency.Huddle.App.SkillSources;
 /// <summary>
 /// Keeps <see cref="SkillRegistry"/> current (§8.5, §6.5 "RegistryWatcher"). It owns when: file watchers on the watch roots,
 /// a 500 ms quiet period, and a 30-second poll for what a watcher cannot see. At start it runs the move, repairs the copier's
-/// folders and does the first full read, all before any Teammate starts (it is registered before them).
+/// folders and does the first full read, all before any Agent starts (it is registered before them).
 /// </summary>
 internal sealed class RegistryWatcher : IHostedService, IDisposable
 {

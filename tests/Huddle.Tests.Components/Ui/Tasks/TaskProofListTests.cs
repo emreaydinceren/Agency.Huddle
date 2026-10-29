@@ -22,7 +22,7 @@ using TaskProofListComponent = Agency.Huddle.App.Components.Tasks.TaskProofList;
 /// </summary>
 public sealed class TaskProofListTests
 {
-    /// <summary>An open item owned by a Teammate.</summary>
+    /// <summary>An open item owned by an Agent.</summary>
     private static readonly ProofItem OpenOwned = new("citation check", false, "Nova", "19 of 23 in #RSH-209", ProofItemSource.Process);
 
     /// <summary>A met item.</summary>
@@ -107,7 +107,7 @@ public sealed class TaskProofListTests
 
     /// <summary>Ask shows only on an open item with an owner who is not the Human: not on a met item, an unowned one or the Human's own.</summary>
     [Fact]
-    public async Task Ask_ShownOnlyOnOpenItemOwnedByAnotherTeammate()
+    public async Task Ask_ShownOnlyOnOpenItemOwnedByAnotherAgent()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TempDataDir dir = new();

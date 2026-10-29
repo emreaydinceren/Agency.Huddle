@@ -2,17 +2,17 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.SkillSources;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.TeamTypes;
 
 namespace Agency.Huddle.App.Teams;
 
 /// <summary>
-/// Turns a resolved card into an ordinary Teammate file, a model row and an avatar (HR-5, HR-6,
+/// Turns a resolved card into an ordinary Agent file, a model row and an avatar (HR-5, HR-6,
 /// Spec §Hiring steps 4-5). Refusals write nothing; a failure after the file is written is logged and
-/// reported, and the Teammate stays. <see cref="StartTeamAsync"/> hires a whole Team, manager first.
+/// reported, and the Agent stays. <see cref="StartTeamAsync"/> hires a whole Team, manager first.
 /// </summary>
-/// <param name="personas">Where the Teammate file is written.</param>
+/// <param name="personas">Where the Agent file is written.</param>
 /// <param name="types">The team types, for the role and its candidate.</param>
 /// <param name="skills">The registry, for each Pack's consult-when addition.</param>
 /// <param name="avatars">Where the avatar is saved.</param>
@@ -48,7 +48,7 @@ internal sealed class HireService(
     /// <param name="team">The Team to start.</param>
     /// <param name="hires">One request per member, all for the same team type.</param>
     /// <param name="ct">Cancels the start; a cancelled start keeps the members already hired.</param>
-    /// <returns>The outcome with the Teammates hired so far.</returns>
+    /// <returns>The outcome with the Agents hired so far.</returns>
     public async Task<StartTeamResult> StartTeamAsync(string team, IReadOnlyList<HireRequest> hires, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(team);
@@ -108,7 +108,7 @@ internal sealed class HireService(
 
     /// <summary>Waits until the hired manager runs.</summary>
     /// <param name="manager">The manager's hire request.</param>
-    /// <param name="started">The Teammates hired so far.</param>
+    /// <param name="started">The Agents hired so far.</param>
     /// <param name="ct">Cancels the wait.</param>
     /// <returns>The stopping result, or <see langword="null"/> when the manager runs.</returns>
     private async Task<StartTeamResult?> WaitForManagerAsync(HireRequest manager, List<string> started, CancellationToken ct)
@@ -209,7 +209,7 @@ internal sealed class HireService(
 
                 if (role.MaxPerTeam > 0 && (this.CountInRole(team, type.Id, role.Id) + group.Count()) > role.MaxPerTeam)
                 {
-                    return HireService.Stop($"Team '{team}' already has the most {role.Title} Teammates it allows ({role.MaxPerTeam}).", []);
+                    return HireService.Stop($"Team '{team}' already has the most {role.Title} Agents it allows ({role.MaxPerTeam}).", []);
                 }
             }
 
@@ -237,13 +237,13 @@ internal sealed class HireService(
         return new Candidate(name, name.ToLowerInvariant(), template.Title, template.Stance, [request.Team], this.MergeConsultWhen(template, request.Card));
     }
 
-    /// <summary>Whether a Teammate by this name or alias exists.</summary>
+    /// <summary>Whether an Agent by this name or alias exists.</summary>
     private bool NameInUse(string name)
     {
         return personas.ResolveByNameOrAlias(name) is not null || personas.ResolveByNameOrAlias(name.ToLowerInvariant()) is not null;
     }
 
-    /// <summary>Whether the request's Teammate already exists in the same Team and role of the same team type.</summary>
+    /// <summary>Whether the request's Agent already exists in the same Team and role of the same team type.</summary>
     private bool AlreadyHired(HireRequest request)
     {
         PersonaEntry? entry = personas.ResolveByNameOrAlias(request.Card.Name);
@@ -269,7 +269,7 @@ internal sealed class HireService(
     }
 
     /// <summary>Hires one member and records the name.</summary>
-    /// <returns>The refusal text, or <see langword="null"/> when the Teammate was written.</returns>
+    /// <returns>The refusal text, or <see langword="null"/> when the Agent was written.</returns>
     private string? HireOne(HireRequest request, List<string> started)
     {
         HireResult result = this.Hire(request);
@@ -287,7 +287,7 @@ internal sealed class HireService(
         return new StartTeamResult(false, error, started);
     }
 
-    /// <summary>Hires one Teammate.</summary>
+    /// <summary>Hires one Agent.</summary>
     /// <param name="request">What to hire.</param>
     /// <returns>The outcome; a refusal writes nothing.</returns>
     public HireResult Hire(HireRequest request)
@@ -335,7 +335,7 @@ internal sealed class HireService(
         }
     }
 
-    /// <summary>Writes the drafts as Teammates of <paramref name="team"/>, in order; the first failure stops the batch and the ones already written stay.</summary>
+    /// <summary>Writes the drafts as Agents of <paramref name="team"/>, in order; the first failure stops the batch and the ones already written stay.</summary>
     /// <param name="team">The Team they join.</param>
     /// <param name="drafts">The drafts; call <see cref="CheckDrafts"/> first.</param>
     /// <returns>The outcome with the names written.</returns>
@@ -360,8 +360,8 @@ internal sealed class HireService(
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
-                    logger.LogWarning(ex, "Teammate {PersonaName} could not be written.", draft.Name);
-                    return new DraftHireResult($"{draft.Name} could not be hired: the Teammate file could not be written.", hired);
+                    logger.LogWarning(ex, "Agent {PersonaName} could not be written.", draft.Name);
+                    return new DraftHireResult($"{draft.Name} could not be hired: the Agent file could not be written.", hired);
                 }
 
                 hired.Add(draft.Name);
@@ -372,7 +372,7 @@ internal sealed class HireService(
         return new DraftHireResult(null, hired);
     }
 
-    /// <summary>Saves a drafted Teammate's avatar and image; a failure is logged and the Teammate stays.</summary>
+    /// <summary>Saves a drafted Agent's avatar and image; a failure is logged and the Agent stays.</summary>
     private void SaveDraftAvatar(DraftHire draft)
     {
         try
@@ -384,7 +384,7 @@ internal sealed class HireService(
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ChatException)
         {
-            logger.LogWarning(ex, "Teammate {PersonaName} was hired but its avatar could not be saved.", draft.Name);
+            logger.LogWarning(ex, "Agent {PersonaName} was hired but its avatar could not be saved.", draft.Name);
         }
     }
 
@@ -416,7 +416,7 @@ internal sealed class HireService(
 
         if (role.MaxPerTeam > 0 && this.CountInRole(request.Team, request.TypeId, request.RoleId) >= role.MaxPerTeam)
         {
-            return HireService.Refuse($"Team '{request.Team}' already has the most {role.Title} Teammates it allows ({role.MaxPerTeam}).");
+            return HireService.Refuse($"Team '{request.Team}' already has the most {role.Title} Agents it allows ({role.MaxPerTeam}).");
         }
 
         string? consultWhen = this.MergeConsultWhen(template, request.Card);
@@ -448,14 +448,14 @@ internal sealed class HireService(
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            logger.LogWarning(ex, "Teammate {PersonaName} could not be written.", name);
-            return HireService.Refuse($"{name} could not be hired: the Teammate file could not be written.");
+            logger.LogWarning(ex, "Agent {PersonaName} could not be written.", name);
+            return HireService.Refuse($"{name} could not be hired: the Agent file could not be written.");
         }
 
         return this.SaveAvatar(name);
     }
 
-    /// <summary>Saves the new Teammate's default avatar; a failure is logged and reported while the Teammate stays.</summary>
+    /// <summary>Saves the new Agent's default avatar; a failure is logged and reported while the Agent stays.</summary>
     private HireResult SaveAvatar(string name)
     {
         try
@@ -465,12 +465,12 @@ internal sealed class HireService(
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            logger.LogWarning(ex, "Teammate {PersonaName} was hired but its avatar could not be saved.", name);
+            logger.LogWarning(ex, "Agent {PersonaName} was hired but its avatar could not be saved.", name);
             return new HireResult(true, $"{name} was hired, but the avatar could not be saved.", name);
         }
     }
 
-    /// <summary>Counts the Team's Teammates hired into a role.</summary>
+    /// <summary>Counts the Team's Agents hired into a role.</summary>
     private int CountInRole(string team, string typeId, string roleId)
     {
         int count = 0;
@@ -516,8 +516,8 @@ internal sealed class HireService(
     private static string Describe(HireRefusal refusal)
     {
         return refusal.Kind == HireLimitKind.PerTeam
-            ? $"Team '{refusal.Team}' is full: {refusal.Used} of {refusal.Limit} Teammates."
-            : $"{refusal.Used} of {refusal.Limit} agent processes are running, so no more Teammates can be hired.";
+            ? $"Team '{refusal.Team}' is full: {refusal.Used} of {refusal.Limit} Agents."
+            : $"{refusal.Used} of {refusal.Limit} agent processes are running, so no more Agents can be hired.";
     }
 
     /// <summary>Builds the result of a refused hire.</summary>

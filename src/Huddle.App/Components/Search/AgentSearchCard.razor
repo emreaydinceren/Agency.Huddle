@@ -1,0 +1,39 @@
+@*
+    The Agent card (spec §6.6): the house avatar, the Name, then the Title and the Teams, or
+    "No team" when the Agent has none (OP-8). The avatar is resolved by Name, as the Agents page
+    resolves it. The action slot is empty in V1 (D-12).
+*@
+
+@using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Search
+
+@inject AvatarStore Avatars
+
+<SearchCardShell Archived="this.Hit.IsArchived" AccessibleName="@this.AccessibleName">
+    <Icon><AgentAvatar Name="@this.Hit.Name" Avatar="this.Avatars.Get(this.Hit.Name)" Size="Size.Small" /></Icon>
+    <Title><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></Title>
+    <Meta>@this.Meta</Meta>
+</SearchCardShell>
+
+@code {
+    /// <summary>The Agent this card shows.</summary>
+    [Parameter, EditorRequired]
+    public required AgentHit Hit { get; set; }
+
+    /// <summary>The phrase the match is bolded for.</summary>
+    [Parameter]
+    public string Phrase { get; set; } = string.Empty;
+
+    /// <summary>The meta line: the Title, then the Teams joined by commas, or "No team" (OP-8).</summary>
+    private string Meta
+    {
+        get
+        {
+            string teams = this.Hit.Teams.Count == 0 ? "No team" : string.Join(", ", this.Hit.Teams);
+            return $"{this.Hit.PersonaTitle} · {teams}";
+        }
+    }
+
+    /// <summary>The accessible name: the Name, then the meta line (spec §11).</summary>
+    private string AccessibleName => $"{this.Hit.Title}, {this.Meta}";
+}

@@ -5,7 +5,7 @@
 (delivered 2026-09-16) · **Amends, when accepted:**
 [ADR-0014](adr/0014-the-tool-name-prefix-belongs-to-the-adapter.md)
 
-Huddle runs every Teammate through one ACP client (`src/Huddle.Acp`) and picks *which* agent
+Huddle runs every Agent through one ACP client (`src/Huddle.Acp`) and picks *which* agent
 process to launch from an **Adapter Profile** named in the Persona's `adapter:` frontmatter
 ([ADR-0013](adr/0013-an-adapter-is-a-property-of-the-persona.md)). Today the profiles that exist
 are `claude` (`@agentclientprotocol/claude-agent-acp`), `agency` and `mock`. This document
@@ -71,9 +71,9 @@ effort owns that code. These are requests to that effort, announced rather than 
 
 ### 1.1 Primary goal
 
-A Human can hire or edit a Teammate, choose **Codex**, **Antigravity** or **Copilot** (or
-**Gemini**, where configured) in the Teammate card's Adapter select, and that Teammate takes
-part in Rooms exactly as a Claude Teammate does. It reads its Persona, calls `get_help`,
+A Human can hire or edit an Agent, choose **Codex**, **Antigravity** or **Copilot** (or
+**Gemini**, where configured) in the Agent card's Adapter select, and that Agent takes
+part in Rooms exactly as a Claude Agent does. It reads its Persona, calls `get_help`,
 `post_message`, `ask_human` and the other App Tools, honours its Work Mode, reports when it
 fails, and is stopped by Stop.
 
@@ -97,9 +97,9 @@ they were ACP itself (§5). Each becomes a profile field with a per-vendor defau
    today (§6.1).
 3. An operator adds a vendor by writing a profile with `"Preset": "codex"` (or `antigravity`,
    `copilot`, `gemini`) and nothing else, given the vendor's agent is installed and signed in.
-4. A Teammate on any new Adapter can see and call every App Tool by the name its system prompt
+4. An Agent on any new Adapter can see and call every App Tool by the name its system prompt
    gives it.
-5. A Teammate on any new Adapter receives its Persona text and tool guide, on a new session and
+5. An Agent on any new Adapter receives its Persona text and tool guide, on a new session and
    on a resumed one, even when the Adapter ignores `_meta.systemPrompt`.
 6. A Persona looping across Rooms still goes `Degraded` and stops taking Turns on an Adapter
    that sends no `usage_update` (the per-Room Budget already holds on every Adapter; §6.6).
@@ -197,7 +197,7 @@ the development machine, so none of this has been observed on the wire: spikes S
 | Modes (`mode` option) | `read-only`, `workspace-write`, `agent` ("Auto review": Codex's own reviewer asks only on actions it judges unsafe), `agent-full-access` (approval `never`, sandbox `danger-full-access`). Default `agent`, overridable with the `INITIAL_AGENT_MODE` env [source]. | Hide `agent-full-access`. Whether `agent` lets requests bypass Huddle's guards is Q-17. |
 | Plan | A **separate** option, `collaboration_mode`, values `default` and `plan` [source]; its category was not established. | Plan is not a `mode` value for Codex (§6.5, Q-15). |
 | Model and effort | `model` from Codex `model/list`; `reasoning_effort` with category `thought_level`; `fast-mode` with category `model_config`. Unknown ids or values give `invalidParams`; a change applies from the next Turn [source]. | Huddle's existing Model and Effort readers apply unchanged. |
-| Network | Every Turn passes a sandbox policy from the mode; **workspace modes force `networkAccess: false`**, overriding `CODEX_CONFIG` and `config.toml`. Only `agent-full-access` has network. Open issues #406, #310, #477 and PRs #608, #368 track it [source]. | App Tool calls run inside the Codex process, not the sandboxed shell, so they should work [inferred]. A Teammate's shell commands that need the network (`git push`, `dotnet restore`) fail in every mode Huddle offers (§8, E-V3). |
+| Network | Every Turn passes a sandbox policy from the mode; **workspace modes force `networkAccess: false`**, overriding `CODEX_CONFIG` and `config.toml`. Only `agent-full-access` has network. Open issues #406, #310, #477 and PRs #608, #368 track it [source]. | App Tool calls run inside the Codex process, not the sandboxed shell, so they should work [inferred]. An Agent's shell commands that need the network (`git push`, `dotnet restore`) fail in every mode Huddle offers (§8, E-V3). |
 | Permission: execute | `toolCall {kind: "execute", rawInput: {command: <string>, cwd, …}, locations}`. The command is a **string** [source]. | Huddle's `command` argument name already matches. |
 | Permission: edit | `toolCall {kind: "edit", locations: [changed paths]}` with **no `rawInput`** [source]. | The paths are only in `locations`, which Huddle's `ToolCallInfo` does not carry today (§6.8). |
 | Permission options | `allow_once`, `allow_for_session` (allow_always), `accept_execpolicy_amendment` (allow_always), network-policy amendments, `decline` (reject_once, **continues** the Turn), `cancel` (reject_once, **ends** the Turn); listed allow first, then rejects [source]. | Two options share `reject_once`; Huddle takes the first (§6.8, Q-18). |
@@ -432,8 +432,8 @@ the launch environment, so a Persona edit restarts the process, as it already do
 **Profile fields:** `SystemPromptDelivery`, `InstructionsFileName` (a bare file name, validated
 at startup) and, if added, `SystemPromptEnvVar` and `SystemPromptJsonKey`.
 
-**Who else can touch the file.** The Work Dir is `Teammates/<Name>/work/`
-([ADR-0031](adr/0031-teammates-and-teams-are-sibling-folders.md)), inside the `Teammates/` Library
+**Who else can touch the file.** The Work Dir is `Agents/<Name>/work/`
+([ADR-0031](adr/0031-agents-and-teams-are-sibling-folders.md)), inside the `Agents/` Library
 root ([ADR-0027](adr/0027-the-library-sees-only-configured-roots.md)), and it is the Agent's cwd.
 The Human could edit `AGENTS.md` in the Library; the Agent could rewrite its own Persona, a
 prompt-injection surface that does not exist with `_meta`; and a watched Work Dir would report
@@ -442,7 +442,7 @@ So the file is treated as **Huddle's output, derived from the Persona**:
 
 1. **Regenerated, not trusted.** Before each `session/new` and `session/resume`, Huddle compares
    the file with the composed text, rewrites it on a difference and logs a warning. The file's
-   first lines say it is generated from the Persona, with the Teammate's name. This is the
+   first lines say it is generated from the Persona, with the Agent's name. This is the
    guarantee.
 2. **One writer at a time.** The compare-and-write runs under one per-Persona gate, as
    `DocHistoryStopHook`'s `ScriptGate` does, and writes through `AtomicFile`.
@@ -458,7 +458,7 @@ exception into [ADR-0029](adr/0029-between-the-human-and-an-agent-the-last-write
 
 **Ancestor files.** Codex reads `AGENTS.md` from the git root down to the cwd; Gemini scans
 ancestors for `GEMINI.md` ([geminicli.com](https://geminicli.com/docs/cli/gemini-md/)). A
-`DataDir` inside a git repository hands every Teammate that repository's instruction files too,
+`DataDir` inside a git repository hands every Agent that repository's instruction files too,
 and so does the probe's cwd. Startup warns when `DataDir` is inside a git working tree and any
 profile uses `InstructionsFile`.
 
@@ -568,8 +568,8 @@ The App catches `AgentAuthenticationRequiredException` where the session is star
 the failure text from the profile; `Huddle.Acp` is unchanged. An empty `authMethods` does not
 mean signed in; the error from `session/new` is the signal.
 
-**No browser from an unattended Teammate.** The `codex` preset sets `NO_BROWSER=1`, which removes
-Codex's browser sign-in method, so a Teammate starting at night never opens a sign-in page.
+**No browser from an unattended Agent.** The `codex` preset sets `NO_BROWSER=1`, which removes
+Codex's browser sign-in method, so an Agent starting at night never opens a sign-in page.
 Antigravity's equivalent is Q-14.
 
 **Protected folders (G-6).** `WorkDirPermissionHandler` protects a list: the union of every
@@ -730,9 +730,9 @@ with an ACP-only default (P9, P11), recorded as an amendment here, never a branc
 
 | # | Case | Behaviour | Severity |
 | --- | --- | --- | --- |
-| E-V1 | An Adapter ignores `_meta.systemPrompt` and the profile still says `MetaReplace` | The Teammate answers with no Persona and no tool names. This is exactly Codex's behaviour (§2.4), which is why its preset uses `InstructionsFile`. An operator adding an unknown Adapter writes `"Preset": "None"`. | **high** |
+| E-V1 | An Adapter ignores `_meta.systemPrompt` and the profile still says `MetaReplace` | The Agent answers with no Persona and no tool names. This is exactly Codex's behaviour (§2.4), which is why its preset uses `InstructionsFile`. An operator adding an unknown Adapter writes `"Preset": "None"`. | **high** |
 | E-V2 | The tool-name format is wrong for the Adapter | The model reports that no such tool exists and burns a Turn (ADR-0014). Spikes record the real names first. | **high** |
-| E-V3 | Codex shell commands need the network | Codex's workspace modes force network off every Turn (§2.4), so `git push`, `dotnet restore` and similar fail inside the agent. Huddle does not offer full access to work around it. The Teammate's Turn reports the failure; the Engineering Guide says Codex Teammates cannot reach the network from the shell until upstream PRs #608 / #368 land. | high, accepted |
+| E-V3 | Codex shell commands need the network | Codex's workspace modes force network off every Turn (§2.4), so `git push`, `dotnet restore` and similar fail inside the agent. Huddle does not offer full access to work around it. The Agent's Turn reports the failure; the Engineering Guide says Codex Agents cannot reach the network from the shell until upstream PRs #608 / #368 land. | high, accepted |
 | E-V4 | The Adapter does not advertise `mcpCapabilities.http` | The Persona goes `Degraded` naming the reason (§6.4). | medium |
 | E-V5 | Not signed in | `Failed` with the profile's `LoginHint`. | medium |
 | E-V6 | No usage reported | `TokenBudget` is inert; the per-Room Budget and `TurnBudget` still stop a loop. | medium |
@@ -859,7 +859,7 @@ mock **records and never validates** (P8).
 
 ### Phase 7 — live, per vendor · Tier 4, paid
 
-`engineering/manual-tests/adapter-vendors.md`, written when phase 7 starts: per vendor, a Teammate
+`engineering/manual-tests/adapter-vendors.md`, written when phase 7 starts: per vendor, an Agent
 posts in a Room, calls `get_help`, answers a Mention, asks the Human a question, is refused a
 protected-folder edit, is stopped mid-Turn, and resumes in a second Room with its Persona intact.
 Re-run on each pin bump.
@@ -911,7 +911,7 @@ browser may open.
 
 | # | Verify | How | Pass | Decides |
 | --- | --- | --- | --- | --- |
-| A2-1 | Whether `oauth-personal` reuses the stored Google sign-in without a browser (Q-14) | Start the server with `auth.type: oauth-personal` and no browser available; call `session/new` | A session id, no browser | Whether an unattended Teammate can use a personal account, or the preset recommends an API key |
+| A2-1 | Whether `oauth-personal` reuses the stored Google sign-in without a browser (Q-14) | Start the server with `auth.type: oauth-personal` and no browser available; call `session/new` | A session id, no browser | Whether an unattended Agent can use a personal account, or the preset recommends an API key |
 | A2-2 | `session/new` with HTTP MCP | Record the response | `configOptions` for model, effort and mode; `availableCommands` | `HiddenModes`, `PlanMode`, `Commands`, Tiers |
 | A2-3 | System-prompt route | One prompt asking for every sentinel (`_meta` append, `AGENTS.md`, `GEMINI.md`) and where each came from | The `_meta` sentinel is reported | `MetaAppend` vs `InstructionsFile`, and which file name |
 | A2-4 | Resume keeps the prompt | `session/resume`, then ask again | The `_meta` sentinel is still reported | That `MetaAppend` survives Huddle's resumes |
@@ -1016,8 +1016,8 @@ Checked on 2026-10-19:
 | D-V10 | **Launch details pinned from the ACP registry, never fetched at run time** | hand-maintained commands; startup resolution | Reproducible, offline-safe installs, with checksums for binaries. |
 | D-V11 | **Permission scanning reads `locations` and rooted strings, never resolves relative ones** | named arguments only; resolving every string | Codex edits carry paths only in `locations`; resolving relative strings causes false refusals. |
 | D-V12 | **No use of `_meta.jetbrains.air.customInstructions`** | sending it as Codex's instruction key | It is another client's namespace, it is dropped on resume, and impersonating AIR could change other behaviour in the adapter. |
-| D-V13 | **Codex starts in `workspace-write`, with `agent` hidden until Q-17 is settled** | Codex's default `agent` | Huddle's gates must see every action a Teammate takes; `agent` lets Codex's own reviewer decide some. |
-| D-V14 | **Accept that Codex Teammates cannot reach the network from the shell** | offering `agent-full-access`; copying Buzz's `CODEX_CONFIG` override | Full access removes every approval; the override no longer works. Upstream is tracking a fix. |
+| D-V13 | **Codex starts in `workspace-write`, with `agent` hidden until Q-17 is settled** | Codex's default `agent` | Huddle's gates must see every action an Agent takes; `agent` lets Codex's own reviewer decide some. |
+| D-V14 | **Accept that Codex Agents cannot reach the network from the shell** | offering `agent-full-access`; copying Buzz's `CODEX_CONFIG` override | Full access removes every approval; the override no longer works. Upstream is tracking a fix. |
 
 ### Candidate ADRs
 

@@ -236,7 +236,7 @@ public sealed class TaskServiceGateTests
         Assert.Equal("Fix login page", Assert.IsType<TaskResult.Saved>(result).Task.Title);
     }
 
-    /// <summary>A Teammate other than the Human cannot set approved_by.</summary>
+    /// <summary>An Agent other than the Human cannot set approved_by.</summary>
     [Fact]
     public void Update_AgentSetsApprovedBy_IsRefused()
     {

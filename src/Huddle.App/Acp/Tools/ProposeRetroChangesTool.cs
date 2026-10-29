@@ -10,7 +10,7 @@ using Agency.Huddle.App.Teams;
 namespace Agency.Huddle.App.Acp.Tools;
 
 /// <summary>
-/// Lets a Team member who holds the <c>retrospective</c> Skill propose up to three changes to the Human (RT-5). A change names an
+/// Lets an Agent who holds the <c>retrospective</c> Skill propose up to three changes to the Human (RT-5). A change names an
 /// allowed file, the exact text to find and its replacement. The tool only stores the proposal; it has no write path to any file, and
 /// Huddle makes the edit when the Human accepts. Offered only to a Persona holding a Skill that lists it.
 /// </summary>
@@ -143,7 +143,7 @@ internal sealed class ProposeRetroChangesTool(
 
             if (!IsAllowed(team, file))
             {
-                refusal = "targetFile must be Process.md, _team.md or the file of a Team member (Name.md).";
+                refusal = "targetFile must be Process.md, _team.md or the file of an Agent (Name.md).";
                 return false;
             }
 

@@ -18,9 +18,9 @@ internal static class ReferencePickerModel
     private const int LibraryMinChars = 3;
 
     /// <summary>The footer line of spec §5.7.</summary>
-    private const string FooterText = "Narrow with teammate: task: room: team: lib:";
+    private const string FooterText = "Narrow with agent: task: room: team: lib:";
 
-    /// <summary>The note on a Teammate who is not a Member of the Room (D-22).</summary>
+    /// <summary>The note on an Agent who is not a Member of the Room (D-22).</summary>
     private const string NotMemberNote = "Not in this Room";
 
     /// <summary>The prefix of the note on a Team Room (D-27).</summary>
@@ -32,7 +32,7 @@ internal static class ReferencePickerModel
     /// <summary>The groups in their order: the active side first, in the order of spec §5.3.</summary>
     private static readonly SearchSlot[] ActiveSlots =
     [
-        new(SearchFilter.Teammates, SearchScope.Active, "Teammates"),
+        new(SearchFilter.Agents, SearchScope.Active, "Agents"),
         new(SearchFilter.Tasks, SearchScope.Active, "Tasks"),
         new(SearchFilter.Rooms, SearchScope.Active, "Rooms"),
         new(SearchFilter.Teams, SearchScope.Active, "Teams"),
@@ -99,7 +99,7 @@ internal static class ReferencePickerModel
         return new ReferencePickerView(built, emptyText, footer, liveText, highlight);
     }
 
-    /// <summary>The groups the picker searches for this state, in order: one filter, All, or the Teammates alone under <c>/invite </c>.</summary>
+    /// <summary>The groups the picker searches for this state, in order: one filter, All, or the Agents alone under <c>/invite </c>.</summary>
     /// <param name="input">The input.</param>
     /// <returns>The slots, active side first.</returns>
     private static List<SearchSlot> SelectedSlots(ReferencePickerInput input)
@@ -132,7 +132,7 @@ internal static class ReferencePickerModel
     {
         if (input.InviteCommand)
         {
-            return group == SearchFilter.Teammates;
+            return group == SearchFilter.Agents;
         }
 
         return input.Filter == SearchFilter.All || input.Filter == group;
@@ -147,10 +147,10 @@ internal static class ReferencePickerModel
     private static List<Draft> DraftsFor(SearchSlot slot, SearchResult result, ReferencePickerInput input, HashSet<string> members)
     {
         IEnumerable<SearchHit> hits = result.Hits;
-        if (slot.Group == SearchFilter.Teammates)
+        if (slot.Group == SearchFilter.Agents)
         {
             // A Member comes first unless the box is /invite, where the people it can add come first (D-22, D-23).
-            hits = hits.OrderBy(hit => hit is TeammateHit teammate && members.Contains(teammate.Name) != input.InviteCommand ? 0 : 1);
+            hits = hits.OrderBy(hit => hit is AgentHit agent && members.Contains(agent.Name) != input.InviteCommand ? 0 : 1);
         }
 
         return hits.Take(CapFor(input.Filter, slot.Group)).Select(hit => DraftFor(hit, input, members)).ToList();
@@ -179,9 +179,9 @@ internal static class ReferencePickerModel
     {
         switch (hit)
         {
-            case TeammateHit teammate:
-                bool isMember = members.Contains(teammate.Name);
-                return new Draft(hit, string.Concat("@", teammate.Name), !isMember, isMember ? null : NotMemberNote);
+            case AgentHit agent:
+                bool isMember = members.Contains(agent.Name);
+                return new Draft(hit, string.Concat("@", agent.Name), !isMember, isMember ? null : NotMemberNote);
             case RoomHit room:
                 return new Draft(hit, InsertFor(hit), false, RoomNote(room));
             case LibraryHit library:
@@ -234,7 +234,7 @@ internal static class ReferencePickerModel
         return string.Concat("`", path, "`");
     }
 
-    /// <summary>The line for an empty picker: the Library's three characters, the task line for <c>#</c>, or the Teammate line for <c>@</c> (spec §5.7).</summary>
+    /// <summary>The line for an empty picker: the Library's three characters, the task line for <c>#</c>, or the Agent line for <c>@</c> (spec §5.7).</summary>
     /// <param name="input">The input.</param>
     /// <returns>The line.</returns>
     private static string EmptyTextFor(ReferencePickerInput input)

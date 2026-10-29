@@ -14,7 +14,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Ui;
@@ -131,7 +131,7 @@ public sealed class TeamsPhase4EndToEndTests
         TaskActor webManager = await teams.Web.ActorAsync(run, ManagerRole, ct);
         TaskActor apiManager = await teams.Api.ActorAsync(run, ManagerRole, ct);
         string chief = run.Services.GetRequiredService<PersonaStore>().Entries
-            .First(static entry => string.Equals(entry.Builtin, BuiltinTeammate.ChiefOfStaffMarker, StringComparison.Ordinal)).Name;
+            .First(static entry => string.Equals(entry.Builtin, BuiltinAgent.ChiefOfStaffMarker, StringComparison.Ordinal)).Name;
         _ = await run.Services.GetRequiredService<ITeamDirectory>().UpsertAgentUserAsync(chief, null, ct);
         _ = await Tool<FileRequestTool>(run, webManager).InvokeAsync(FileArguments(null), ct);
         TaskItem request = Assert.Single(store.All, static task => string.Equals(task.Location.Team, ApiTeam, StringComparison.Ordinal));
@@ -298,13 +298,13 @@ public sealed class TeamsPhase4EndToEndTests
         return fields ?? throw new InvalidOperationException("Not a Request.");
     }
 
-    /// <summary>The Skill names the stored Teammate holds.</summary>
+    /// <summary>The Skill names the stored Agent holds.</summary>
     /// <param name="run">The running host.</param>
-    /// <param name="name">The Teammate's name.</param>
+    /// <param name="name">The Agent's name.</param>
     /// <returns>The Skill names.</returns>
     private static IReadOnlyList<string> SkillsOf(Run run, string name)
     {
-        Persona persona = run.Services.GetRequiredService<PersonaStore>().Get(name) ?? throw new InvalidOperationException("No such Teammate.");
+        Persona persona = run.Services.GetRequiredService<PersonaStore>().Get(name) ?? throw new InvalidOperationException("No such Agent.");
         Assert.True(PersonaFrontmatter.TryReadIdentity(persona.Text, out PersonaIdentity? identity, out _));
         return identity?.Skills ?? [];
     }
@@ -317,7 +317,7 @@ public sealed class TeamsPhase4EndToEndTests
     /// <summary>Builds an agent tool the way the host does: dependencies from the container, the caller's user id last.</summary>
     /// <typeparam name="TTool">The tool type.</typeparam>
     /// <param name="run">The running host.</param>
-    /// <param name="caller">The calling Teammate.</param>
+    /// <param name="caller">The calling Agent.</param>
     /// <returns>The tool.</returns>
     private static TTool Tool<TTool>(Run run, TaskActor caller)
         where TTool : class => ActivatorUtilities.CreateInstance<TTool>(run.Services, caller.UserId ?? string.Empty);
@@ -469,7 +469,7 @@ public sealed class TeamsPhase4EndToEndTests
         /// <returns>The card.</returns>
         public CardState Card(string roleId) => this.Cards.First(each => string.Equals(each.RoleId, roleId, StringComparison.Ordinal));
 
-        /// <summary>Builds the Task actor for the Teammate hired for <paramref name="roleId"/>.</summary>
+        /// <summary>Builds the Task actor for the Agent hired for <paramref name="roleId"/>.</summary>
         /// <param name="run">The running host.</param>
         /// <param name="roleId">The role id.</param>
         /// <param name="ct">Cancels the user lookup.</param>
@@ -541,7 +541,7 @@ public sealed class TeamsPhase4EndToEndTests
             .Select(static post => post.Message.Text.Replace('\n', '|')));
 
         /// <summary>Counts the Task wake Messages to <paramref name="name"/> that carry <paramref name="marker"/>.</summary>
-        /// <param name="name">The woken Teammate's name.</param>
+        /// <param name="name">The woken Agent's name.</param>
         /// <param name="marker">Text the wake Message must contain, such as <c>Request event: Filed</c>.</param>
         /// <returns>The count.</returns>
         public int Wakes(string name, string marker) => this.Posts.Count(post =>
@@ -549,7 +549,7 @@ public sealed class TeamsPhase4EndToEndTests
             && post.Message.Text.Contains(marker, StringComparison.Ordinal));
 
         /// <summary>Counts the Task wake Messages posted that open with a Mention of <paramref name="name"/>.</summary>
-        /// <param name="name">The woken Teammate's name.</param>
+        /// <param name="name">The woken Agent's name.</param>
         /// <param name="changedBy">The actor the wake names as having changed the Task, or <see langword="null"/> for any wake.</param>
         /// <returns>The count.</returns>
         public int WakesOf(string name, string? changedBy) => this.Posts.Count(post =>
@@ -564,7 +564,7 @@ public sealed class TeamsPhase4EndToEndTests
         }
     }
 
-    /// <summary>Starts an in-memory mock agent for every launch, one per Teammate host.</summary>
+    /// <summary>Starts an in-memory mock agent for every launch, one per Agent host.</summary>
     private sealed class MockLauncher : IAgentProcessLauncher
     {
         /// <inheritdoc />

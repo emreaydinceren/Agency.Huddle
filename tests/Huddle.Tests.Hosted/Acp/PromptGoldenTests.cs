@@ -12,7 +12,7 @@ using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Questions;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Tools;
@@ -144,7 +144,7 @@ public sealed class PromptGoldenTests
         AssertMatchesGolden("systemPrompt.skills.txt", actual);
     }
 
-    /// <summary>Pins the composed prompt of one hired Team member: the role block with its colleagues and skills (Task 29, MS-7).</summary>
+    /// <summary>Pins the composed prompt of one hired Agent: the role block with its colleagues and skills (Task 29, MS-7).</summary>
     [Fact]
     public void SystemPrompt_HiredMember_MatchesGolden()
     {
@@ -889,8 +889,8 @@ public sealed class PromptGoldenTests
             new FollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new AskHumanTool(new QuestionStore(events), chat, directory, TimeProvider.System, "caller-id", new FakePromptSource()),
-            new ValidateTeammateTool(checker, new FakePromptSource()),
-            new ProposeTeammatesTool(proposals, checker, directory, new HireLimitGuard(new Agency.Huddle.Tests.Teams.FakeTeamCatalog(), options, static () => 0), TimeProvider.System, "test-agent", new FakePromptSource()),
+            new ValidateAgentTool(checker, new FakePromptSource()),
+            new ProposeAgentsTool(proposals, checker, directory, new HireLimitGuard(new Agency.Huddle.Tests.Teams.FakeTeamCatalog(), options, static () => 0), TimeProvider.System, "test-agent", new FakePromptSource()),
             new CreateTaskTool(taskHarness.Service, taskHarness.Triggers, taskHarness.Directory, taskHarness.Sprints, new FakePromptSource(), "caller-id"),
             new GetTaskTool(taskHarness.Store, taskHarness.Sprints, new FakePromptSource()),
             new ListTasksTool(taskHarness.Store, taskHarness.Directory, taskHarness.Personas, taskHarness.Sprints, new FakePromptSource(), "caller-id"),
@@ -900,7 +900,7 @@ public sealed class PromptGoldenTests
         ];
 
         // GetHelpTool lists only the ungated tools (those not in SkillGrants.Grantable).
-        // Skill-gated tools (validate_teammate, propose_teammates) are only offered to a Persona holding a Skill that lists them.
+        // Skill-gated tools (validate_agent, propose_agents) are only offered to a Persona holding a Skill that lists them.
         // A Persona with no Skills should not see them in get_help.
         var ungatedTools = others.Where(tool => !SkillGrants.Grantable.Contains(tool.Name, StringComparer.Ordinal)).ToList();
         var getHelp = new GetHelpTool(ungatedTools, new FakePromptSource(), "mcp__team__");

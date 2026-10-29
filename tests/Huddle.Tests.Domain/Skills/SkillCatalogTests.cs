@@ -11,7 +11,7 @@ namespace Agency.Huddle.Tests.Skills;
 public sealed class SkillCatalogTests
 {
     /// <summary>The two grantable tools that the team-building Skill must list in its frontmatter (Spec §6.5).</summary>
-    private static readonly string[] ExpectedTools = ["validate_teammate", "propose_teammates"];
+    private static readonly string[] ExpectedTools = ["validate_agent", "propose_agents"];
 
     /// <summary>The catalog holds <c>team-building</c> with exactly its four shipped files, keyed ordinally.</summary>
     [Fact]
@@ -101,7 +101,7 @@ public sealed class SkillCatalogTests
     /// Enforces Spec §6.1 (Constraints): a shipped Skill that fails <see cref="SkillValidator.Validate"/>
     /// is a test failure here, never a runtime warning. Every Skill in <see cref="SkillCatalog.All"/>
     /// must come back with zero Issues at any severity — Info and Warning included, not just Error —
-    /// and <c>team-building</c>'s two-entry <c>tools: [validate_teammate, propose_teammates]</c> flow
+    /// and <c>team-building</c>'s two-entry <c>tools: [validate_agent, propose_agents]</c> flow
     /// list must survive into <see cref="SkillValidation.Tools"/> unchanged, in order.
     /// </summary>
     [Fact]
@@ -147,15 +147,15 @@ public sealed class SkillCatalogTests
     }
 
     /// <summary>
-    /// The shipped <c>team-building</c> SKILL.md names <c>propose_teammates</c>, never
-    /// <c>create_teammate</c>, and no file mentions that obsolete tool name (Spec §6.13 Changes).
+    /// The shipped <c>team-building</c> SKILL.md names <c>propose_agents</c>, never
+    /// <c>create_agent</c>, and no file mentions that obsolete tool name (Spec §6.13 Changes).
     /// </summary>
     [Fact]
-    public void TeamBuilding_SkillMd_NamesProposeTeammates_NeverCreateTeammate()
+    public void TeamBuilding_SkillMd_NamesProposeAgents_NeverCreateAgent()
     {
         List<string> violations = ContentContractViolations(SkillCatalog.All["team-building"]);
-        List<string> createTeammateViolations = violations.Where(v => v.StartsWith("create_teammate:", StringComparison.Ordinal)).ToList();
-        Assert.Empty(createTeammateViolations);
+        List<string> createAgentViolations = violations.Where(v => v.StartsWith("create_agent:", StringComparison.Ordinal)).ToList();
+        Assert.Empty(createAgentViolations);
     }
 
     /// <summary>
@@ -239,17 +239,17 @@ public sealed class SkillCatalogTests
         // Create a mutable copy of team-building files.
         Dictionary<string, string> files = new(SkillCatalog.All["team-building"], StringComparer.Ordinal);
 
-        // Mutate SKILL.md: change frontmatter tools to list create_teammate instead of validate_teammate.
+        // Mutate SKILL.md: change frontmatter tools to list create_agent instead of validate_agent.
         string skillMd = files["SKILL.md"];
         string mutatedSkillMd = skillMd.Replace(
-            "tools: [validate_teammate, propose_teammates]",
-            "tools: [validate_teammate, create_teammate]",
+            "tools: [validate_agent, propose_agents]",
+            "tools: [validate_agent, create_agent]",
             StringComparison.Ordinal);
 
-        // Also add a mention of create_teammate to the body so it fails the create_teammate check too.
+        // Also add a mention of create_agent to the body so it fails the create_agent check too.
         mutatedSkillMd = mutatedSkillMd.Replace(
-            "Call `validate_teammate`",
-            "Call `create_teammate` and `validate_teammate`",
+            "Call `validate_agent`",
+            "Call `create_agent` and `validate_agent`",
             StringComparison.Ordinal);
 
         files["SKILL.md"] = mutatedSkillMd;
@@ -257,18 +257,18 @@ public sealed class SkillCatalogTests
         // Check violations.
         List<string> violations = ContentContractViolations(files);
 
-        // Assert both a tools: violation and a create_teammate: violation are reported.
+        // Assert both a tools: violation and a create_agent: violation are reported.
         List<string> toolsViolations = violations.Where(v => v.StartsWith("tools:", StringComparison.Ordinal)).ToList();
-        List<string> createTeammateViolations = violations.Where(v => v.StartsWith("create_teammate:", StringComparison.Ordinal)).ToList();
+        List<string> createAgentViolations = violations.Where(v => v.StartsWith("create_agent:", StringComparison.Ordinal)).ToList();
 
         Assert.NotEmpty(toolsViolations);
-        Assert.NotEmpty(createTeammateViolations);
+        Assert.NotEmpty(createAgentViolations);
     }
 
     /// <summary>
     /// Validates a Skill's files against the content contract (Spec §6.13). Returns one human-readable
     /// violation string per violation found, each prefixed with a kind tag: <c>tools:</c>,
-    /// <c>prefix:</c>, <c>create_teammate:</c>, <c>unnamed-file:</c>, <c>description:</c>, or
+    /// <c>prefix:</c>, <c>create_agent:</c>, <c>unnamed-file:</c>, <c>description:</c>, or
     /// <c>step0:</c>. An empty list means the Skill is compliant.
     /// </summary>
     /// <param name="files">Every file in the Skill, keyed by file name.</param>
@@ -277,7 +277,7 @@ public sealed class SkillCatalogTests
     {
         List<string> violations = [];
 
-        // Rule 1: tools must be exactly [validate_teammate, propose_teammates].
+        // Rule 1: tools must be exactly [validate_agent, propose_agents].
         // We need to check the raw frontmatter because SkillValidator.Validate drops ungrantable tools.
         if (files.TryGetValue("SKILL.md", out string? skillMdText))
         {
@@ -322,33 +322,33 @@ public sealed class SkillCatalogTests
             }
         }
 
-        // Rule 3: SKILL.md names propose_teammates and no file contains create_teammate.
+        // Rule 3: SKILL.md names propose_agents and no file contains create_agent.
         bool skillMdNamesPropose = false;
-        bool anyFileNamesCreateTeammate = false;
+        bool anyFileNamesCreateAgent = false;
 
         if (files.TryGetValue("SKILL.md", out skillMdText) &&
-            skillMdText.Contains("propose_teammates", StringComparison.Ordinal))
+            skillMdText.Contains("propose_agents", StringComparison.Ordinal))
         {
             skillMdNamesPropose = true;
         }
 
         foreach (var (_, text) in files)
         {
-            if (text.Contains("create_teammate", StringComparison.Ordinal))
+            if (text.Contains("create_agent", StringComparison.Ordinal))
             {
-                anyFileNamesCreateTeammate = true;
+                anyFileNamesCreateAgent = true;
                 break;
             }
         }
 
         if (!skillMdNamesPropose)
         {
-            violations.Add("create_teammate: SKILL.md does not name 'propose_teammates'");
+            violations.Add("create_agent: SKILL.md does not name 'propose_agents'");
         }
 
-        if (anyFileNamesCreateTeammate)
+        if (anyFileNamesCreateAgent)
         {
-            violations.Add("create_teammate: at least one file mentions the obsolete 'create_teammate' tool");
+            violations.Add("create_agent: at least one file mentions the obsolete 'create_agent' tool");
         }
 
         // Rule 4: every file other than SKILL.md is named in SKILL.md.

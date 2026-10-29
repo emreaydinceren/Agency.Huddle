@@ -19,8 +19,8 @@ public sealed partial class PromptCatalogTests
     /// <summary>
     /// The catalog carries exactly the 37 prompts the task specifies, no more and no fewer: the original
     /// 24, plus <c>systemPrompt.skills</c> and <c>tool.readSkill.description</c> added for Spec §6.4, plus
-    /// <c>tool.validateTeammate.description</c> added for Spec §6.8 (Task 9.3), plus
-    /// <c>tool.proposeTeammates.description</c> added for Spec §6.9 (Task 10.2), plus
+    /// <c>tool.validateAgent.description</c> added for Spec §6.8 (Task 9.3), plus
+    /// <c>tool.proposeAgents.description</c> added for Spec §6.9 (Task 10.2), plus
     /// <c>turn.greeting</c> added for Spec §6.14 (Task 16.3), plus the six File Changes Turn prompts
     /// (<c>turn.fileChangesHeader</c>, <c>turn.fileAdded</c>, <c>turn.fileChanged</c>,
     /// <c>turn.fileDeleted</c>, <c>turn.fileChangesMore</c>, <c>turn.folderUnchecked</c>) added for
@@ -431,7 +431,7 @@ public sealed partial class PromptCatalogTests
     [InlineData("tool.triageRequest.description", "Triages a Request filed with your Team. Decision 'accept' moves it to To Do (optionally name the assignee); 'decline' rejects it and needs a reason; 'needs_info' keeps it in Backlog and needs a reason saying what is missing.")]
     [InlineData("tool.proposeSprint.description", "Proposes a Sprint to the Human: a name and the Tasks to put in it. Nothing is created until the Human approves. Only the manager of the Team can propose, and every Task must belong to that Team and not be Done.")]
     [InlineData("tool.markRetroRow.description", "Marks a Done or Partial row of the Team's Retro register as Verified, Partial or Changed after checking it against later evidence. Verified needs evidence that links a Task id, a logs/... line (logs/...#L12) or a _retros/ file.")]
-    [InlineData("tool.proposeRetroChanges.description", "Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (Process.md, _team.md or a Team member's Name.md), the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.")]
+    [InlineData("tool.proposeRetroChanges.description", "Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (Process.md, _team.md or an Agent's Name.md), the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.")]
     public void ToolDescriptionPrompts_AreNextSessionWithTodaysDefault(string key, string expectedDefault)
     {
         var prompt = PromptCatalog.Get(key);
@@ -842,7 +842,7 @@ public sealed partial class PromptCatalogTests
         var prompt = PromptCatalog.Get("turn.referencesHint");
 
         Assert.Equal(
-            "To learn more, list Teammates and their Teams with {{listAgents}}. You cannot read the Messages of a Room you are not a Member of.",
+            "To learn more, list Agents and their Teams with {{listAgents}}. You cannot read the Messages of a Room you are not a Member of.",
             prompt.Default.TrimEnd('\r', '\n'));
     }
 

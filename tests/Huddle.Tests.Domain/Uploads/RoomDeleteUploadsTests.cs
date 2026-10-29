@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 
 namespace Agency.Huddle.Tests.Uploads;
 

@@ -524,7 +524,7 @@ public sealed class FeedCardTests
     private static FeedItem HelperItem(FeedSourceType type, FeedPayload payload) =>
         FeedTestData.Item(type, payload, notify: true, actor: FeedActor.Huddle) with { TargetKey = "helper:NeedsHuman" };
 
-    /// <summary>A Helper's own gate-on item wears the Helper mark, not a Teammate's avatar, and its name is the Task actor's.</summary>
+    /// <summary>A Helper's own gate-on item wears the Helper mark, not an Agent's avatar, and its name is the Task actor's.</summary>
     [Fact]
     public async Task Card_HelperActor_DrawsTheHelperMark()
     {

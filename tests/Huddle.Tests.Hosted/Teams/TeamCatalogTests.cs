@@ -313,7 +313,7 @@ public sealed class TeamCatalogTests
     /// <param name="name">The Persona's Name.</param>
     /// <param name="teams">The comma-separated Team labels, or null for none.</param>
     private static void WritePersona(TempDataDir dir, string name, string? teams) =>
-        TestPersonaFiles.Write(new TeammatePaths(dir.Options()), name.ToLowerInvariant(), PersonaText(name, teams));
+        TestPersonaFiles.Write(new AgentPaths(dir.Options()), name.ToLowerInvariant(), PersonaText(name, teams));
 
     /// <summary>Creates a Team folder, or a Project folder under it, beneath the Tasks scan root.</summary>
     /// <param name="dir">The temporary data directory.</param>

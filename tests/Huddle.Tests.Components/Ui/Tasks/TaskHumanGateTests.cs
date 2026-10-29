@@ -101,7 +101,7 @@ public sealed class TaskHumanGateTests
         Assert.Contains(HumanGateCopy.Subheading, text, StringComparison.Ordinal); // contains-ok: whole sentence inside the section's text; the exact string is pinned by the Assert.Equal beside it.
         Assert.Equal("Human gate", HumanGateCopy.Heading);
         Assert.Equal("You decide whether this is done", HumanGateCopy.Subheading);
-        Assert.DoesNotContain("Teammates draft, check and track", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Agents draft, check and track", text, StringComparison.Ordinal);
         Assert.DoesNotContain(HumanGateCopy.DoneRuleLabel, text, StringComparison.Ordinal);
         Assert.Empty(cut.FindAll(".task-human-gate-helper, .task-human-gate-done-rule, .task-human-gate-explanation"));
     }

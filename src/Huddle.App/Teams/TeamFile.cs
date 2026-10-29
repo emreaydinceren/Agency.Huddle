@@ -9,7 +9,7 @@ namespace Agency.Huddle.App.Teams;
 /// <see cref="Manager"/> form the team card other managers read.
 /// </summary>
 /// <param name="TeamType">The team type and version the Team was created from.</param>
-/// <param name="Manager">The manager Teammate's name, or <see langword="null"/> when none is set.</param>
+/// <param name="Manager">The manager Agent's name, or <see langword="null"/> when none is set.</param>
 /// <param name="Workspace">The workspace folder the Team works in, or <see langword="null"/>.</param>
 /// <param name="Owns">The one-line statement of what the Team owns, or <see langword="null"/>.</param>
 /// <param name="Process">The process document file name, normally <c>Process.md</c>.</param>

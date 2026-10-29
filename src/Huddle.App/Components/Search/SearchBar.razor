@@ -16,7 +16,7 @@
 @inject SearchOrchestrator Orchestrator
 @inject TabService Tabs
 @inject NavigationManager Navigation
-@inject TeammateCardOpener CardOpener
+@inject AgentProfileCardOpener CardOpener
 @inject IJSRuntime JS
 
 <div class="search-bar" @ref="this.host" @onclick="this.OpenAsync" @onfocusin="this.OpenAsync" @onfocusout="this.CloseAsync">
@@ -26,7 +26,7 @@
                   Immediate="true"
                   Variant="Variant.Outlined"
                   Margin="Margin.Dense"
-                  Placeholder="Search teams, teammates, library, tasks, rooms…"
+                  Placeholder="Search teams, agents, library, tasks, rooms…"
                   Adornment="Adornment.Start"
                   AdornmentIcon="@Icons.Material.Filled.Search"
                   OnKeyDown="this.OnKeyDownAsync"
@@ -125,7 +125,7 @@
     [
         SearchFilter.All,
         SearchFilter.Teams,
-        SearchFilter.Teammates,
+        SearchFilter.Agents,
         SearchFilter.Library,
         SearchFilter.Tasks,
         SearchFilter.Rooms,
@@ -377,15 +377,15 @@
     }
 
     /// <summary>
-    /// Opens a hit (spec §9, OP-11). A Teammate opens its card dialog and changes no Tab. Enter navigates the
+    /// Opens a hit (spec §9, OP-11). An Agent opens its card dialog and changes no Tab. Enter navigates the
     /// focused Tab in place; Ctrl+Enter opens a permanent Tab, or only focuses it when it is already open.
     /// </summary>
     private async Task OpenHitAsync(SearchHit hit, bool inNewTab)
     {
-        if (hit is TeammateHit teammate)
+        if (hit is AgentHit agent)
         {
             await this.CloseAsync();
-            _ = await this.CardOpener.OpenAsync(teammate.Name, this.disposed.Token);
+            _ = await this.CardOpener.OpenAsync(agent.Name, this.disposed.Token);
             return;
         }
 

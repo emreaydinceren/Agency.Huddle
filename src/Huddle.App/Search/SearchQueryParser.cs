@@ -6,11 +6,11 @@ namespace Agency.Huddle.App.Search;
 /// </summary>
 internal static class SearchQueryParser
 {
-    /// <summary>The five prefixes and the filter each one sets. The colon decides, so <c>team:</c> is not <c>teammate:</c>.</summary>
+    /// <summary>The five prefixes and the filter each one sets. The colon decides, so <c>team:</c> is not <c>agent:</c>.</summary>
     private static readonly (string Prefix, SearchFilter Filter)[] Prefixes =
     [
         ("team:", SearchFilter.Teams),
-        ("teammate:", SearchFilter.Teammates),
+        ("agent:", SearchFilter.Agents),
         ("lib:", SearchFilter.Library),
         ("task:", SearchFilter.Tasks),
         ("room:", SearchFilter.Rooms),
@@ -33,7 +33,7 @@ internal static class SearchQueryParser
         }
 
         string phrase = rest.Trim();
-        bool browse = phrase.Length == 0 && (filter is SearchFilter.Teams or SearchFilter.Teammates);
+        bool browse = phrase.Length == 0 && (filter is SearchFilter.Teams or SearchFilter.Agents);
         bool searchable = !phrase.StartsWith('>') && (phrase.Length >= SearchLimits.MinChars || browse);
 
         return new SearchParse(filter, phrase, searchable);
@@ -60,7 +60,7 @@ internal static class SearchQueryParser
         {
             SearchFilter.All => string.Empty,
             SearchFilter.Teams => "team:",
-            SearchFilter.Teammates => "teammate:",
+            SearchFilter.Agents => "agent:",
             SearchFilter.Library => "lib:",
             SearchFilter.Tasks => "task:",
             SearchFilter.Rooms => "room:",

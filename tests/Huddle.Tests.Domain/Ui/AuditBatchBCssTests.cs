@@ -112,14 +112,14 @@ public sealed partial class AuditBatchBCssTests
         Assert.Matches(@"margin-inline-end:\s*var\(--nav-gap\)", AuditBatchBCssTests.DeclarationsFor(".room-row-avatar"));
     }
 
-    /// <summary>The destination rows (Teammates, Library) keep the section header's icon geometry, so they are not indented like a group's children.</summary>
+    /// <summary>The destination rows (Agents, Library) keep the section header's icon geometry, so they are not indented like a group's children.</summary>
     [Fact]
     public void AppCss_DestinationRowIcon_IsNotInTheGroupSlot()
     {
         Assert.DoesNotContain(".nav-row-link .mud-nav-link .mud-nav-link-icon", CssText.AppCss(CssNewlines.AsIs), StringComparison.Ordinal);
     }
 
-    /// <summary>A destination row (Teammates, Library) is a 32px, 13px, body-colour row, not a section header.</summary>
+    /// <summary>A destination row (Agents, Library) is a 32px, 13px, body-colour row, not a section header.</summary>
     [Fact]
     public void AppCss_DestinationRow_IsAnOrdinaryRow()
     {
@@ -141,7 +141,7 @@ public sealed partial class AuditBatchBCssTests
         string library = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Library", "LibraryNavLink.razor"));
 
         Assert.DoesNotContain("nav-section-link", css, StringComparison.Ordinal);
-        Assert.Matches(@"<NavTabLink Href=""/teammates""[^>]*Class=""nav-row-link""", layout);
+        Assert.Matches(@"<NavTabLink Href=""/agents""[^>]*Class=""nav-row-link""", layout);
         Assert.Matches(@"<NavTabLink Href=""/library""[^>]*Class=""nav-row-link""", library);
         Assert.Matches(@"\.mud-nav-group > \.mud-nav-link \.mud-nav-link-text\s*\{[^}]*font-weight:\s*600", css);
     }

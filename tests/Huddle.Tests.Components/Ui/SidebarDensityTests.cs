@@ -13,7 +13,7 @@ using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Components.Teams;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;

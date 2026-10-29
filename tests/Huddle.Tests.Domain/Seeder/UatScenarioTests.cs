@@ -3,29 +3,29 @@ using Agency.Huddle.Seeder.Scenarios;
 
 namespace Agency.Huddle.Tests.Seeder;
 
-/// <summary>Pins the <c>uat</c> scenario: two mock-adapter Teammates and nothing a normal install would not have to opt into.</summary>
+/// <summary>Pins the <c>uat</c> scenario: two mock-adapter Agents and nothing a normal install would not have to opt into.</summary>
 public sealed class UatScenarioTests
 {
     private static SeedPlan Plan() => new UatScenario().Build(SeededFolder.Today);
 
-    /// <summary>The cast is exactly Ada and Bo, in no Team and holding no Skill, so they can never be mistaken for real Teammates.</summary>
+    /// <summary>The cast is exactly Ada and Bo, in no Team and holding no Skill, so they can never be mistaken for real Agents.</summary>
     [Fact]
     public void Plan_IsAdaAndBoOnly()
     {
         SeedPlan plan = Plan();
 
-        Assert.Equal(["Ada", "Bo"], plan.Teammates.Select(t => t.Name));
-        Assert.All(plan.Teammates, t => Assert.Empty(t.Teams));
-        Assert.All(plan.Teammates, t => Assert.Empty(t.Skills));
+        Assert.Equal(["Ada", "Bo"], plan.Agents.Select(t => t.Name));
+        Assert.All(plan.Agents, t => Assert.Empty(t.Teams));
+        Assert.All(plan.Agents, t => Assert.Empty(t.Skills));
         Assert.Empty(plan.Teams);
         Assert.Empty(plan.Tasks);
         Assert.Empty(plan.Files);
         Assert.Empty(plan.Skills);
     }
 
-    /// <summary>Each Teammate has an empty one-to-one Room named after it, which is what the old demo agents left behind.</summary>
+    /// <summary>Each Agent has an empty one-to-one Room named after it, which is what the old demo agents left behind.</summary>
     [Fact]
-    public void Plan_HasOneEmptyDirectRoomPerTeammate()
+    public void Plan_HasOneEmptyDirectRoomPerAgent()
     {
         SeedPlan plan = Plan();
 

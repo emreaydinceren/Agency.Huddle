@@ -5,7 +5,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Fakes;
-using Agency.Huddle.Tests.Teammates;
+using Agency.Huddle.Tests.Agents;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Agency.Huddle.Tests.Teams;
@@ -32,7 +32,7 @@ public sealed class HireServiceStartTests
 
     private static HireService Create(TempDataDir dir, out PersonaStore personas, out FakeSkillCopier installer, out FakeStartGate gate, TeamOptions? options = null, Func<TeamTypeCatalog, ProcessProvisioner>? makeProvisioner = null, Func<TeamTypeCatalog, TeamOnboarding>? makeOnboarding = null)
     {
-        personas = new(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        personas = new(new AgentPaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         Dictionary<string, string> builtins = new(StringComparer.Ordinal)
         {
             ["web/team-type.json"] = Manifest,
@@ -116,7 +116,7 @@ public sealed class HireServiceStartTests
         Assert.Equal(["tdd", "planning", "coding"], asked);
     }
 
-    /// <summary>A copyable Skill is copied into Skills/ before the manager is hired: no Teammate exists while the copier runs
+    /// <summary>A copyable Skill is copied into Skills/ before the manager is hired: no Agent exists while the copier runs
     /// (Skill Packs spec §6.10.3).</summary>
     [Fact]
     public async Task StartTeamAsync_CopiesSkillsBeforeTheManagerIsHired()
@@ -216,7 +216,7 @@ public sealed class HireServiceStartTests
         Assert.Empty(personas.ListNames());
     }
 
-    /// <summary>A Skill that is not ready blocks the start, is named with its reason, and no Teammate is written.</summary>
+    /// <summary>A Skill that is not ready blocks the start, is named with its reason, and no Agent is written.</summary>
     [Fact]
     public async Task StartTeamAsync_SkillMissing_BlocksNamingIt()
     {
@@ -313,7 +313,7 @@ public sealed class HireServiceStartTests
             [Request("Lee", "lead"), Request("Dan", "dev"), Request("Dee", "dev"), Request("Dot", "dev"), Request("Dib", "dev")], ct);
 
         Assert.False(result.Ok);
-        Assert.Equal("Team 'Web Team' already has the most Developer Teammates it allows (3).", result.Error);
+        Assert.Equal("Team 'Web Team' already has the most Developer Agents it allows (3).", result.Error);
         Assert.Empty(result.Started);
         Assert.Empty(personas.ListNames());
     }
@@ -331,7 +331,7 @@ public sealed class HireServiceStartTests
         StartTeamResult result = await service.StartTeamAsync(TeamName, [Request("Lee", "lead"), Request("Dan", "dev"), Request("Dee", "dev")], ct);
 
         Assert.False(result.Ok);
-        Assert.Equal("Team 'Web Team' already has the most Developer Teammates it allows (3).", result.Error);
+        Assert.Equal("Team 'Web Team' already has the most Developer Agents it allows (3).", result.Error);
         Assert.Empty(result.Started);
         Assert.Equal(["Eli", "Eve"], personas.ListNames().Order(StringComparer.Ordinal));
     }
@@ -343,7 +343,7 @@ public sealed class HireServiceStartTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         TeamOptions options = new();
-        options.Acp.MaxTeammatesPerTeam = 2;
+        options.Acp.MaxAgentsPerTeam = 2;
         HireService service = Create(dir, out PersonaStore personas, out _, out _, options);
 
         StartTeamResult result = await service.StartTeamAsync(TeamName, [Request("Lee", "lead"), Request("Dan", "dev"), Request("Dee", "dev")], ct);
@@ -390,20 +390,20 @@ public sealed class HireServiceStartTests
         Assert.Equal(3, personas.ListNames().Count);
     }
 
-    /// <summary>A file system failure while writing the Teammate is a refusal, not an exception.</summary>
+    /// <summary>A file system failure while writing the Agent is a refusal, not an exception.</summary>
     [Fact]
-    public void Hire_TeammateCannotBeWritten_RefusesInsteadOfThrowing()
+    public void Hire_AgentCannotBeWritten_RefusesInsteadOfThrowing()
     {
         using TempDataDir dir = new();
         HireService service = Create(dir, out PersonaStore personas, out _, out _);
-        TeammatePaths paths = new(dir.Options());
+        AgentPaths paths = new(dir.Options());
         Directory.CreateDirectory(paths.DefinitionsRoot);
-        File.WriteAllText(paths.TeammateFolder("Dan"), "in the way");
+        File.WriteAllText(paths.AgentFolder("Dan"), "in the way");
 
         HireResult result = service.Hire(Request("Dan", "dev"));
 
         Assert.False(result.Ok);
-        Assert.Equal("Dan could not be hired: the Teammate file could not be written.", result.Error);
+        Assert.Equal("Dan could not be hired: the Agent file could not be written.", result.Error);
         Assert.Null(result.PersonaName);
         Assert.Empty(personas.ListNames());
     }
@@ -415,8 +415,8 @@ public sealed class HireServiceStartTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         HireService service = Create(dir, out _, out _, out FakeStartGate gate);
-        TeammatePaths paths = new(dir.Options());
-        gate.OnWait = _ => File.WriteAllText(paths.TeammateFolder("Dan"), "in the way");
+        AgentPaths paths = new(dir.Options());
+        gate.OnWait = _ => File.WriteAllText(paths.AgentFolder("Dan"), "in the way");
 
         StartTeamResult result = await service.StartTeamAsync(TeamName, [Request("Lee", "lead"), Request("Dan", "dev")], ct);
 

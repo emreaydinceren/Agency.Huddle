@@ -59,7 +59,7 @@ public sealed class ArgumentParserTests
     [InlineData]
     [InlineData("frobnicate")]
     [InlineData("validate", "a", "b")]
-    [InlineData("schema", "teammate")]
+    [InlineData("schema", "agent")]
     [InlineData("roles", "extra")]
     public void Parse_BadInput_UsageAndExit2(params string[] args)
     {

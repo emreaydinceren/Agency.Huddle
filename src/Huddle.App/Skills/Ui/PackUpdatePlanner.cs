@@ -9,13 +9,13 @@ namespace Agency.Huddle.App.Skills.Ui;
 /// <summary>Works out an update (Skill Packs spec §6.9.8, §8.4). Pure apart from reading through <see cref="IFileReader"/>.</summary>
 internal static class PackUpdatePlanner
 {
-    /// <summary>The plan for one Pack; its Teammates are the holders whose file would change.</summary>
-    public static PackUpdatePlan Plan(string packId, SkillRegistry registry, SkillStore skills, IReadOnlyList<Persona> teammates, IFileReader files)
+    /// <summary>The plan for one Pack; its Agents are the holders whose file would change.</summary>
+    public static PackUpdatePlan Plan(string packId, SkillRegistry registry, SkillStore skills, IReadOnlyList<Persona> agents, IFileReader files)
     {
         ArgumentNullException.ThrowIfNull(packId);
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(skills);
-        ArgumentNullException.ThrowIfNull(teammates);
+        ArgumentNullException.ThrowIfNull(agents);
         ArgumentNullException.ThrowIfNull(files);
         PackEntry? pack = registry.FindPack(packId);
         if (pack is null)
@@ -27,10 +27,10 @@ internal static class PackUpdatePlanner
         IReadOnlyList<SkillFileChange> fileChanges = [.. pack.SkillNames.Select(snapshot.Resolved.FindSkill).OfType<SkillEntry>().Where(static entry => entry.HasUpdate)
             .Select(entry => FileChange(entry, registry, skills, files))];
 
-        List<TeammateChange> changes = [];
+        List<AgentChange> changes = [];
         HashSet<string> added = new(StringComparer.Ordinal);
         string? fromVersion = null;
-        foreach (Persona persona in teammates.Where(persona => HoldsPack(persona.Text, pack.Id)))
+        foreach (Persona persona in agents.Where(persona => HoldsPack(persona.Text, pack.Id)))
         {
             if (!PersonaFrontmatter.TryReadIdentity(persona.Text, out PersonaIdentity? identity, out _))
             {
@@ -44,7 +44,7 @@ internal static class PackUpdatePlanner
             bool versionChanges = !string.Equals(version, pack.Version, StringComparison.Ordinal);
             if (add.Count > 0 || consult || versionChanges)
             {
-                changes.Add(new TeammateChange(persona.Name, identity.Title, add, [], consult, versionChanges));
+                changes.Add(new AgentChange(persona.Name, identity.Title, add, [], consult, versionChanges));
                 added.UnionWith(add);
             }
         }

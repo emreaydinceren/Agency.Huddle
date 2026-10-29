@@ -11,13 +11,13 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat). The lane gives you **Ada** and **Bo** on the free mock adapter and `<data>` is `C:\seeds\huddle\uat\data`. This area adds:
 
 1. A pinned Library root, as in [the Library page](library.md): in `T-B` create `$vault = 'C:\seeds\huddle\uat\vault'` and `Set-Content "$vault\findings.md" "# Findings`n`nThree findings.`n"`, then add `$vault` in **Settings → Library** with the Name `Vault`.
-2. For the paid tests, a real Teammate made with [`P-NEW-PERSONA`](common.md#p-new-persona): Name `Keeper`, Title `Keeper`, **Model** Haiku, **Effort** `low`, **Teams** blank. Ask it to work in `$vault`.
+2. For the paid tests, a real Agent made with [`P-NEW-PERSONA`](common.md#p-new-persona): Name `Keeper`, Title `Keeper`, **Model** Haiku, **Effort** `low`, **Teams** blank. Ask it to work in `$vault`.
 3. History files live under `<data>\doc-history\<root id>\`, one `.jsonl` per document. Open them only to check a result; never edit one while the app runs.
-4. The Stop hook script is `<data>\hooks\doc-history-stop.js`, and each Teammate offered `log_change` has an entry for it in `<data>\Teammates\<Name>\work\.claude\settings.local.json`. The hook needs `node` on PATH, which the Adapter needs anyway.
+4. The Stop hook script is `<data>\hooks\doc-history-stop.js`, and each Agent offered `log_change` has an entry for it in `<data>\Agents\<Name>\work\.claude\settings.local.json`. The hook needs `node` on PATH, which the Adapter needs anyway.
 
 ## Tests
 
-### DOCHISTORY-01 — Two Teammates create and edit a document; the byline and the panel show both
+### DOCHISTORY-01 — Two Agents create and edit a document; the byline and the panel show both
 
 **Paid 💰** · about 12 min · two short Turns
 
@@ -144,7 +144,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 - Clicking the byline scrolls the History into view.
 - In Edit mode neither the History nor the backlinks are shown.
 
-### DOCHISTORY-07 — A Teammate offered log_change gets the Stop hook, and existing settings stay
+### DOCHISTORY-07 — An Agent offered log_change gets the Stop hook, and existing settings stay
 
 **Free** · about 8 min
 
@@ -156,18 +156,18 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Steps**
 
-1. In `T-B`, read `<data>\Teammates\Ada\work\.claude\settings.local.json` and check that `<data>\hooks\doc-history-stop.js` exists.
+1. In `T-B`, read `<data>\Agents\Ada\work\.claude\settings.local.json` and check that `<data>\hooks\doc-history-stop.js` exists.
 2. Stop the app. Add a key of your own to that settings file, for example `"model": "keep-me"`, keeping it valid JSON. Relaunch and wait for **Ada** to be **Online**.
 3. Read the file again.
 4. Stop the app, replace the file's whole content with `{ not json`, relaunch, wait for **Ada**, and read it again. Then delete the file so the next launch writes it fresh.
 
 **Pass if — all of these**
 
-- At step 1 the file has a `hooks.Stop` list with exactly one entry whose command is `node "<data>\hooks\doc-history-stop.js" log_change` (Ada's mock Adapter gives tools no `mcp__team__` prefix; a Claude Teammate's command ends in `mcp__team__log_change`), and the script exists.
+- At step 1 the file has a `hooks.Stop` list with exactly one entry whose command is `node "<data>\hooks\doc-history-stop.js" log_change` (Ada's mock Adapter gives tools no `mcp__team__` prefix; a Claude Agent's command ends in `mcp__team__log_change`), and the script exists.
 - At step 3 your `"model": "keep-me"` is still there, and there is still exactly one hook entry, not two.
 - At step 4 the file still reads `{ not json`, and the app started **Ada** anyway (the hook is a nudge, never a reason to refuse a session).
 
-### DOCHISTORY-08 — The hook sends a Teammate back to log, and leaves other Turns alone
+### DOCHISTORY-08 — The hook sends an Agent back to log, and leaves other Turns alone
 
 **Paid 💰** · about 6 min · two short Turns
 

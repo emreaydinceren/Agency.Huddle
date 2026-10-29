@@ -49,8 +49,8 @@ public sealed class FeedPresentationTests
         Assert.Equal("mentioned you in a Room that was deleted", Flatten(FeedSummary.Of(Item(FeedSourceType.RoomMention, new RoomWaitPayload("r1", null, null), true))));
         FeedSummaryLine opened = FeedSummary.Of(Item(FeedSourceType.RoomCreated, new RoomCreatedPayload("r1", "Nova", null, ["You", "Nova"])));
         Assert.Equal("opened You ↔ Nova", Flatten(opened));
-        Assert.Equal("1 Teammate", opened.Context);
-        Assert.Equal("3 Teammates", FeedSummary.Of(Item(FeedSourceType.RoomCreated, new RoomCreatedPayload("r1", "Plan", null, ["You", "A", "B", "C"]))).Context);
+        Assert.Equal("1 Agent", opened.Context);
+        Assert.Equal("3 Agents", FeedSummary.Of(Item(FeedSourceType.RoomCreated, new RoomCreatedPayload("r1", "Plan", null, ["You", "A", "B", "C"]))).Context);
         FeedSummaryLine joined = FeedSummary.Of(Item(FeedSourceType.RoomJoined, new RoomJoinedPayload("r1", "Plan", null, "Sage")));
         Assert.Equal("Sage joined Plan", Flatten(joined));
         Assert.True(joined.OmitActor);
@@ -102,20 +102,20 @@ public sealed class FeedPresentationTests
         Assert.Null(FeedSummary.StatusOf(Item(FeedSourceType.TaskCreated, new TaskCreatedPayload("G-1", "T", "G", null)), Utc));
     }
 
-    /// <summary>A Helper's gate-on shows its reason after the dot, a Teammate's still shows the Team; a Helper's pause and failing items read as the §7 sentences with a Helper chip.</summary>
+    /// <summary>A Helper's gate-on shows its reason after the dot, an Agent's still shows the Team; a Helper's pause and failing items read as the §7 sentences with a Helper chip.</summary>
     [Fact]
     public void Of_HelperItems_ReadAsTheSpecSentences()
     {
         FeedSummaryLine helperGate = FeedSummary.Of(Item(FeedSourceType.TaskGateOn, new TaskGatePayload("GRO-41", "Email the pricing sheet", "Growth", null, "Sends a document outside the Team"), true));
-        FeedSummaryLine teammateGate = FeedSummary.Of(Item(FeedSourceType.TaskGateOn, new TaskGatePayload("GRO-41", "T", "Growth", null)));
+        FeedSummaryLine agentGate = FeedSummary.Of(Item(FeedSourceType.TaskGateOn, new TaskGatePayload("GRO-41", "T", "Growth", null)));
         FeedSummaryLine paused = FeedSummary.Of(Item(FeedSourceType.HelperPaused, new HelperPausedPayload("NeedsHuman", "Needs Human", 50, 0), true));
         FeedSummaryLine failing = FeedSummary.Of(Item(FeedSourceType.HelperFailing, new HelperFailingPayload("NeedsHuman", "Needs Human", 3, "The adapter isn't signed in"), true));
 
         Assert.Equal("turned on Requires your acceptance for Email the pricing sheet", Flatten(helperGate));
         Assert.Equal("Sends a document outside the Team", helperGate.Context);
-        Assert.Equal("in Growth", teammateGate.Context);
+        Assert.Equal("in Growth", agentGate.Context);
         Assert.Equal("paused Needs Human: its daily cap of 50 calls is reached", Flatten(paused));
-        Assert.Equal("Teammates' Tasks are not judged until you continue or the day ends", paused.Context);
+        Assert.Equal("Agents' Tasks are not judged until you continue or the day ends", paused.Context);
         Assert.Equal(new FeedSegment(FeedSegmentKind.Helper, "Needs Human", "NeedsHuman"), paused.Segments[1]);
         Assert.Equal("Needs Human failed 3 times in a row", Flatten(failing));
         Assert.Equal("The adapter isn't signed in", failing.Context);

@@ -270,7 +270,7 @@ internal sealed partial class AvatarStore : IDisposable
     /// </summary>
     /// <remarks>
     /// The file name is <see cref="Guid.NewGuid()"/> plus <paramref name="extension"/> - never derived
-    /// from the Teammate's Name, for three reasons, each a real defect this avoids:
+    /// from the Agent's Name, for three reasons, each a real defect this avoids:
     /// <list type="number">
     /// <item><description>A Name may contain interior spaces (<c>rules.md</c>), so a Name-derived URL would need percent-encoding at every call site.</description></item>
     /// <item><description><c>docs/engineering/known-limits.md</c> records that Windows reserved device names (<c>CON</c>, <c>NUL</c>, <c>COM1</c>) pass <c>NameRules</c>, and <c>CON.png</c> is a file Windows will not create.</description></item>
@@ -341,7 +341,7 @@ internal sealed partial class AvatarStore : IDisposable
     /// </summary>
     /// <remarks>
     /// This is not defensive padding - it is the boundary this store is responsible for. A background
-    /// reaches <c>TeammateAvatar</c> as a <see cref="MudColor"/>, and <see cref="MudColor"/>'s string
+    /// reaches <c>AgentAvatar</c> as a <see cref="MudColor"/>, and <see cref="MudColor"/>'s string
     /// constructor <b>throws</b> on anything it cannot parse (<see cref="ArgumentException"/> for
     /// <c>"not-a-colour"</c>, <see cref="FormatException"/> for <c>"zzz"</c>) rather than returning a
     /// fallback. <c>avatars.json</c> is hand-editable by design, so a Human typing <c>purple-ish</c>

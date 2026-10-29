@@ -98,7 +98,7 @@ internal sealed partial class ViewStore : IDisposable
 
     /// <summary>
     /// Raised after <see cref="Save(TaskView)"/>, <see cref="Delete(string)"/> or
-    /// <see cref="RenameTeammate(string, string)"/> has written the file and rebuilt the resolved
+    /// <see cref="RenameAgent(string, string)"/> has written the file and rebuilt the resolved
     /// snapshot, and after an external edit to <see cref="FilePath"/> is picked up by the
     /// filesystem watcher and its debounce settles. There is no own-write suppression - see the
     /// class remarks - so one call to <see cref="Save(TaskView)"/> raises this event twice: once
@@ -224,13 +224,13 @@ internal sealed partial class ViewStore : IDisposable
     /// <summary>
     /// Rewrites <paramref name="oldName"/> to <paramref name="newName"/> in every View's
     /// <see cref="TaskFilter.Assignees"/> (Spec §9.6) - never touching the <c>@me</c> or
-    /// <c>@unassigned</c> tokens, which name no Teammate. A no-op, with no write and no
+    /// <c>@unassigned</c> tokens, which name no Agent. A no-op, with no write and no
     /// <see cref="ViewsChanged"/>, while <see cref="LoadError"/> is set or when no View's filter
     /// names <paramref name="oldName"/>.
     /// </summary>
-    /// <param name="oldName">The Teammate's current Name, matched <see cref="StringComparison.OrdinalIgnoreCase"/>.</param>
-    /// <param name="newName">The Teammate's new Name.</param>
-    internal void RenameTeammate(string oldName, string newName)
+    /// <param name="oldName">The Agent's current Name, matched <see cref="StringComparison.OrdinalIgnoreCase"/>.</param>
+    /// <param name="newName">The Agent's new Name.</param>
+    internal void RenameAgent(string oldName, string newName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(oldName);
         ArgumentException.ThrowIfNullOrWhiteSpace(newName);

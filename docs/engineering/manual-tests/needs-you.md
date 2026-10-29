@@ -10,10 +10,10 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat). This area adds:
 
-1. Wait until **Ada** and **Bo** are both **Online** on `/teammates`. Two empty one-to-one Rooms, `Ada` and `Bo`, exist from that point.
+1. Wait until **Ada** and **Bo** are both **Online** on `/agents`. Two empty one-to-one Rooms, `Ada` and `Bo`, exist from that point.
 2. Open each Room once and send `hello`, so each has a Transcript file. Note each Room's id: the 32 hexadecimal characters after `/rooms/` in the address bar.
 3. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'`, and `$ada = '<Ada's id>'`, `$bo = '<Bo's id>'`.
-4. This area makes an Agent Mention you by writing a Message line into the Transcript and relaunching, because the mock Teammates strip every `@` from what they echo. Define the helper once:
+4. This area makes an Agent Mention you by writing a Message line into the Transcript and relaunching, because the mock Agents strip every `@` from what they echo. Define the helper once:
 
    ```powershell
    function Ask([string]$room, [string]$who) {
@@ -81,7 +81,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 **Before you start**
 
 - No Mention is outstanding in `Ada` (sending a Message in step 1 would clear one anyway).
-- Ada is a mock Teammate. A prompt containing `[elicit:one]` makes it put one Form to you before it echoes.
+- Ada is a mock Agent. A prompt containing `[elicit:one]` makes it put one Form to you before it echoes.
 
 **Steps**
 

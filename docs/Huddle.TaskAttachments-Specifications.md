@@ -209,8 +209,8 @@ Edit | Preview toggle, shown only when the Library is enabled:
 - `get_task` and the wake Message already carry the description text, so the path lines
   reach the assignee with no change.
 - `LibraryDocumentCollector.ResolveLocationAsync` gains a branch: a file under
-  `uploads:/Tasks/<ID>/` is labelled `Task <ID>` (not `upload`, and not a Room id read as a
-  Teammate). This only matters when a chat Message names the file.
+  `uploads:/Tasks/<ID>/` is labelled `Task <ID>` (not `upload`, and not a Room id read as an
+  Agent). This only matters when a chat Message names the file.
 - The Library documents block is **not** extended to Task descriptions. A Task description is
   not a Turn's trigger Message, and AtTagging D-16 keeps that block to the trigger.
 

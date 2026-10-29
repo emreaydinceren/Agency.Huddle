@@ -110,7 +110,7 @@ public sealed class ProofContextBuilderTests
         Assert.Empty(context.Gates);
     }
 
-    /// <summary>The coverage map holds each named Teammate's role coverage and leaves out names with no Persona.</summary>
+    /// <summary>The coverage map holds each named Agent's role coverage and leaves out names with no Persona.</summary>
     [Fact]
     public void CoverageFor_NamesWithRoles_MapsThemAndSkipsUnknown()
     {
@@ -155,7 +155,7 @@ public sealed class ProofContextBuilderTests
     private static DocHistoryEntry Entry(int minutes, string actor, DocChangeKind kind) =>
         new(Noon.AddMinutes(minutes), actor, DocActorKind.Agent, kind, "s");
 
-    /// <summary>Real stores: a Task harness with two role-bearing Teammates, a Library root, a document history store and a Team whose Process holds a Definition of Done.</summary>
+    /// <summary>Real stores: a Task harness with two role-bearing Agents, a Library root, a document history store and a Team whose Process holds a Definition of Done.</summary>
     private sealed class Rig : IDisposable
     {
         /// <summary>The Team every Task belongs to.</summary>
@@ -169,7 +169,7 @@ public sealed class ProofContextBuilderTests
         private readonly string docsRoot;
         private readonly DocHistoryStore history;
 
-        /// <summary>Seeds the Teammates, the Process and the stores.</summary>
+        /// <summary>Seeds the Agents, the Process and the stores.</summary>
         public Rig()
         {
             RoleRef lead = new("web", "lead", "1.2.0");

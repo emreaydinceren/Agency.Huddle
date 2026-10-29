@@ -265,7 +265,7 @@ Figure 12's narrow inset as `S4`.
 
 | Id | Title, icon, order | Shows | Source, as used today | Empty |
 | --- | --- | --- | --- | --- |
-| `task-activity` | Activity, `Bolt`, 10 | Up to three rows. "Woken in Room {name}" with its time, the Room a link (what `TaskDetail`'s People group shows today). "Wakes: {used} of {granted}", in Error ink when exhausted. "{Teammate} is working on it", with the avatar and presence badge, while the `AiReactingChip` rule holds for this Task. No count in the header | `TaskActivity.LastWake` (`WakeRecord`), `TaskActivity.Budget` (`WakeBudget`), the rule in `AiReactingChip` over `TurnActivity` | "Not woken yet." |
+| `task-activity` | Activity, `Bolt`, 10 | Up to three rows. "Woken in Room {name}" with its time, the Room a link (what `TaskDetail`'s People group shows today). "Wakes: {used} of {granted}", in Error ink when exhausted. "{Agent} is working on it", with the avatar and presence badge, while the `AiReactingChip` rule holds for this Task. No count in the header | `TaskActivity.LastWake` (`WakeRecord`), `TaskActivity.Budget` (`WakeBudget`), the rule in `AiReactingChip` over `TurnActivity` | "Not woken yet." |
 | `task-blockers` | Blocked by, `Block`, 20 | One row per Task in Blocked by: the id (12px Quiet ink), the title and the live state dot, the Right sidebar's Task row. A click opens it at `/tasks/item/{id}`. The count is the open blockers | `TaskStore.Get` for each id in the saved Blocked by | Hidden when Blocked by is empty (the panel's `AppliesTo` also checks this) |
 | `task-blocks` | Blocks, `Block`, 25 | One row per open Task whose Blocked by names this one, in the same row format. A click opens it. The count is the rows | The query `TaskTriggerService` runs to wake dependants (`TaskStore.All` where Blocked by contains the id), moved to one `TaskStore` method both use | Hidden when no Task names this one |
 | `task-documents` | Linked documents, `Link`, 30 | One row per Library file the saved Description links to, as the Description preview resolves them: the file's icon and name, the folder as a tooltip. A click opens the file. A link that does not resolve is a row in Quiet ink with "Not found" | `ILibraryReferenceResolver`, as `MarkdownRenderer.ToHtml` uses it for the Description | "The description links to no files." Not registered while the Library is off (`IsEnabled`) |
@@ -275,7 +275,7 @@ Figure 12's narrow inset as `S4`.
 | # | When | Then |
 | --- | --- | --- |
 | B1 | The Human clicks a row or card | `T7` opens with `T15` for that Task. The List and Board behave as today |
-| B2 | The Human opens `/tasks/item/{id}` (a link, Search, Needs you, a Teammate tile) | As today, but the drawer shows `T15` |
+| B2 | The Human opens `/tasks/item/{id}` (a link, Search, Needs you, an Agent tile) | As today, but the drawer shows `T15` |
 | B3 | The Human clicks **Edit** in `T15` | `T7` closes. A permanent Tab "Edit {id}" opens right of the active Tab and takes focus, showing `K` |
 | B4 | **Edit** for a Task whose edit Tab is already open | That Tab is activated and its group focused. No second Tab opens |
 | B5 | The Human saves in `K` | As `TaskDetail` saves today: the wake, the gates and the Proof apply. The page stays open on the saved Task and `K2a`'s Save is disabled again. Any `T15` showing that Task redraws |

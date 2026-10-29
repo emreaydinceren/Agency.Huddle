@@ -7,7 +7,7 @@ namespace Agency.Huddle.SkillPacks.Files;
 /// <summary>A <c>*.skillpack.json</c> file (§7.2).</summary>
 /// <param name="SchemaVersion">Always <see cref="KnownSchemaVersion"/> once parsed.</param>
 /// <param name="Id">The Pack id.</param>
-/// <param name="Version">Free text compared with a Teammate's <c>_packs</c> entry.</param>
+/// <param name="Version">Free text compared with an Agent's <c>_packs</c> entry.</param>
 /// <param name="Title">Shown on the card.</param>
 /// <param name="Source">The Source id.</param>
 /// <param name="AppliesTo">Role ids.</param>

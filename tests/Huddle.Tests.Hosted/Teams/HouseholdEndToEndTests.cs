@@ -32,7 +32,7 @@ public sealed class HouseholdEndToEndTests
 
     private const string Connector = "email:read";
 
-    /// <summary>The liaison card needs setup until the connector is listed; then the Team starts with both Teammates and a Task reaches Done with no gate refusal.</summary>
+    /// <summary>The liaison card needs setup until the connector is listed; then the Team starts with both Agents and a Task reaches Done with no gate refusal.</summary>
     [Fact]
     public async Task HouseholdTeam_NoWorkspace_HiresStartsAndTakesATaskToDone()
     {
@@ -67,7 +67,7 @@ public sealed class HouseholdEndToEndTests
         DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(30);
         while (catalog.Find(TeamName) is not { Manager: not null } current || current.Members.Count != 2)
         {
-            Assert.True(DateTime.UtcNow < deadline, "Timed out waiting for the Team catalog to list both Teammates.");
+            Assert.True(DateTime.UtcNow < deadline, "Timed out waiting for the Team catalog to list both Agents.");
             await Task.Delay(50, ct);
         }
 

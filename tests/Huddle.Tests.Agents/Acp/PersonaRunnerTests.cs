@@ -10,7 +10,7 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Pipes;
@@ -100,7 +100,7 @@ public sealed class PersonaRunnerTests
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
-        var persona = new Persona("Chief of Staff", BuiltinTeammate.DefaultText);
+        var persona = new Persona("Chief of Staff", BuiltinAgent.DefaultText);
 
         await using var runner = CreateHost(fixture, persona, factory);
         await runner.StartAsync(ct);
@@ -172,7 +172,7 @@ public sealed class PersonaRunnerTests
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
-        var persona = new Persona("Chief of Staff", BuiltinTeammate.DefaultText);
+        var persona = new Persona("Chief of Staff", BuiltinAgent.DefaultText);
 
         var firstFactory = new FakeAgentHostFactory();
         await using var firstRunner = CreateHost(fixture, persona, firstFactory);
@@ -218,7 +218,7 @@ public sealed class PersonaRunnerTests
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
-        var persona = new Persona("Chief of Staff", BuiltinTeammate.DefaultText);
+        var persona = new Persona("Chief of Staff", BuiltinAgent.DefaultText);
 
         var firstFactory = new FakeAgentHostFactory();
         await using var firstRunner = CreateHost(fixture, persona, firstFactory);
@@ -266,7 +266,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.FailNextCreateWith(new InvalidOperationException("Session creation failed."));
-        var persona = new Persona("Chief of Staff", BuiltinTeammate.DefaultText);
+        var persona = new Persona("Chief of Staff", BuiltinAgent.DefaultText);
 
         await using var runner = CreateHost(fixture, persona, factory);
 
@@ -291,7 +291,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("Welcome aboard! What would you like to get done first?");
-        var persona = new Persona("Chief of Staff", BuiltinTeammate.DefaultText);
+        var persona = new Persona("Chief of Staff", BuiltinAgent.DefaultText);
 
         await using var runner = CreateHost(fixture, persona, factory);
         await runner.StartAsync(ct);
@@ -322,7 +322,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueFailure(new InvalidOperationException("boom"));
-        var persona = new Persona("Chief of Staff", BuiltinTeammate.DefaultText);
+        var persona = new Persona("Chief of Staff", BuiltinAgent.DefaultText);
 
         await using var runner = CreateHost(fixture, persona, factory);
         await runner.StartAsync(ct);
@@ -359,7 +359,7 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "greeting reply");
         factory.Session.EnqueueReply("pong");
-        var persona = new Persona("Chief of Staff", BuiltinTeammate.DefaultText);
+        var persona = new Persona("Chief of Staff", BuiltinAgent.DefaultText);
 
         await using var runner = CreateHost(fixture, persona, factory);
         await runner.StartAsync(ct);
@@ -596,7 +596,7 @@ public sealed class PersonaRunnerTests
         await directory.CreateRoomAsync("Plans", [KnownIds.Human, chief.Id], "Marketing", ct: ct);
         var factory = new FakeAgentHostFactory();
 
-        await using var runner = CreateHost(fixture, new Persona("Chief of Staff", BuiltinTeammate.DefaultText), factory);
+        await using var runner = CreateHost(fixture, new Persona("Chief of Staff", BuiltinAgent.DefaultText), factory);
         await runner.StartAsync(ct);
 
         var (_, rootRoomId) = await Eventually.DirectRoomAsync(fixture.Services, "Chief of Staff", ct);
@@ -1108,7 +1108,7 @@ public sealed class PersonaRunnerTests
         Assert.Empty(commands.Get("nova"));
     }
 
-    /// <summary>A stopped runner forgets what it offered: a Teammate that is not running offers nothing.</summary>
+    /// <summary>A stopped runner forgets what it offered: an Agent that is not running offers nothing.</summary>
     [Fact]
     public async Task StoppingTheRunner_ForgetsItsOfferedCommands()
     {

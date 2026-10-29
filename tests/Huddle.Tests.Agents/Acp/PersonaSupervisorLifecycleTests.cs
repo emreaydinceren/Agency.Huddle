@@ -654,7 +654,7 @@ public sealed class PersonaSupervisorLifecycleTests
     /// brand-new list on every refresh. If <see cref="Persona"/> ever grew a list-typed Skills
     /// member, <see cref="PersonaSupervisor"/>'s record-equality <c>NeedsRestart</c> check would
     /// compare that freshly built list against the one captured at start by reference - never
-    /// equal - and restart every Teammate holding any Skill on every single refresh, related or
+    /// equal - and restart every Agent holding any Skill on every single refresh, related or
     /// not. Deliberately drives the refresh through the real <see cref="FileSystemWatcher"/> and its
     /// debounce (rather than <see cref="PersonaStore.Add"/>, as the other tests in this class use),
     /// since that is the actual trigger path this guard is about. The touched file is malformed on
@@ -671,7 +671,7 @@ public sealed class PersonaSupervisorLifecycleTests
             new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
-        var paths = new TeammatePaths(options);
+        var paths = new AgentPaths(options);
         TestPersonaFiles.Write(paths, "zeta", SkillsPersonaText("zeta"));
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();

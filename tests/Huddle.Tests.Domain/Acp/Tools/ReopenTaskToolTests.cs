@@ -99,7 +99,7 @@ public sealed class ReopenTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Equal("Could not identify caller 'ghost-id' as a Teammate.", result);
+        Assert.Equal("Could not identify caller 'ghost-id' as an Agent.", result);
         TaskItem? stored = harness.Store.Get(task.Id);
         Assert.NotNull(stored);
         Assert.True(stored.Location.Closed);

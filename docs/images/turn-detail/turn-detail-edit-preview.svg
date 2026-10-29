@@ -21,7 +21,7 @@ text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px}
 <rect class="panel" x="20" y="36" width="720" height="140" rx="8"/>
 <text class="mut" x="36" y="64">▾</text><text class="ok b" x="56" y="64">✓</text><text class="ink" x="78" y="64">Edit notes.md</text><text class="mut s" x="724" y="64" text-anchor="end">line 12</text>
 <rect class="code" x="56" y="74" width="668" height="92" rx="6"/>
-<text class="mut mono s" x="70" y="92">…\Teammates\Chief of Staff\work\notes.md</text>
+<text class="mut mono s" x="70" y="92">…\Agents\Chief of Staff\work\notes.md</text>
 <rect class="rembg" x="68" y="100" width="644" height="26" rx="3"/><rect class="rembar" x="68" y="100" width="4" height="26"/>
 <text class="mut s b" x="82" y="117">Removed</text><text class="ink mono" x="150" y="117">− Teh meeting is on Friday.</text>
 <rect class="addbg" x="68" y="132" width="644" height="26" rx="3"/><rect class="addbar" x="68" y="132" width="4" height="26"/>
@@ -32,7 +32,7 @@ text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px}
 <rect class="panel" x="20" y="216" width="720" height="112" rx="8"/>
 <text class="mut" x="36" y="244">▾</text><text class="ok b" x="56" y="244">✓</text><text class="ink" x="78" y="244">Write summary.txt</text>
 <rect class="code" x="56" y="254" width="668" height="64" rx="6"/>
-<text class="mut mono s" x="70" y="272">…\Teammates\Chief of Staff\work\summary.txt</text>
+<text class="mut mono s" x="70" y="272">…\Agents\Chief of Staff\work\summary.txt</text>
 <rect class="addbg" x="68" y="280" width="644" height="26" rx="3"/><rect class="addbar" x="68" y="280" width="4" height="26"/>
 <text class="mut s b" x="82" y="297">Added</text><text class="ink mono" x="150" y="297">+ Meeting moved to Friday. Notes fixed.</text>
 
@@ -41,7 +41,7 @@ text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px}
 <rect class="panel" x="20" y="368" width="720" height="172" rx="8"/>
 <text class="mut" x="36" y="396">▾</text><text class="run b" x="56" y="396">◐</text><text class="ink" x="78" y="396">Edit Program.cs</text><text class="mut s" x="724" y="396" text-anchor="end">line 40</text>
 <rect class="code" x="56" y="406" width="668" height="124" rx="6"/>
-<text class="mut mono s" x="70" y="424">…\Teammates\Chief of Staff\work\src\Program.cs</text>
+<text class="mut mono s" x="70" y="424">…\Agents\Chief of Staff\work\src\Program.cs</text>
 <rect class="rembg" x="68" y="432" width="644" height="26" rx="3"/><rect class="rembar" x="68" y="432" width="4" height="26"/>
 <text class="mut s b" x="82" y="449">Removed</text><text class="ink mono" x="150" y="449">− public static void Main(string[] args) { Run(args); }…</text>
 <rect class="addbg" x="68" y="464" width="644" height="26" rx="3"/><rect class="addbar" x="68" y="464" width="4" height="26"/>

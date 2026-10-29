@@ -203,7 +203,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
     /// <param name="userId">The id of the row to rename.</param>
     /// <param name="newName">
     /// The new Name. Must satisfy <see cref="NameRules.IsValidAgentName(string?)"/>, and must not
-    /// already belong to a different Teammate.
+    /// already belong to a different Agent.
     /// </param>
     /// <returns><see langword="true"/> if the row was renamed; otherwise <see langword="false"/>.</returns>
     /// <remarks>

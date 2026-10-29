@@ -13,7 +13,7 @@ namespace Agency.Huddle.Tests.Profile;
 
 /// <summary>
 /// The Human's rename end to end over real temp-directory stores: <see cref="HumanProfileValidator"/>
-/// refuses a Teammate's Name or Alias, <see cref="SqliteTeamDirectory.RenameHuman"/> renames the Human's
+/// refuses an Agent's Name or Alias, <see cref="SqliteTeamDirectory.RenameHuman"/> renames the Human's
 /// row in place, <see cref="HumanRenameCascade"/> moves the Avatar, Task assignee, View filter and row,
 /// <see cref="CompositeMentionAliasSource"/> adds the Human's Alias, and <see cref="SenderDisplay"/>
 /// shows the current Name on an old Message.
@@ -101,10 +101,10 @@ public sealed class HumanRenameTests
         Assert.Equal("You", await directory.ReadHumanNameAsync(ct));
     }
 
-    /// <summary>The validator refuses a Teammate's Name, a Teammate's Alias, an Alias equal to the Name, and an invalid Name.</summary>
+    /// <summary>The validator refuses an Agent's Name, an Agent's Alias, an Alias equal to the Name, and an invalid Name.</summary>
     [Theory]
-    [InlineData("coo", null, "Name 'coo' already belongs to the Teammate coo.")]
-    [InlineData("Alan", "COO", "Alias 'COO' already belongs to the Teammate coo.")]
+    [InlineData("coo", null, "Name 'coo' already belongs to the Agent coo.")]
+    [InlineData("Alan", "COO", "Alias 'COO' already belongs to the Agent coo.")]
     [InlineData("Alan", "alan", "Alias must be different from your Name.")]
     [InlineData("../x", null, "Name must be 1-64 letters, digits, '-' or '_', starting with a letter or digit, with single spaces only between words.")]
     [InlineData("Alan", "al.", "Alias must be 1-64 letters, digits, '-' or '_', starting with a letter or digit, with single spaces only between words.")]
@@ -160,9 +160,9 @@ public sealed class HumanRenameTests
         Assert.Contains(new MentionAlias("al", "Alan"), source.Aliases);
     }
 
-    /// <summary>A Human Alias a Teammate later takes is left out, so a Mention never resolves to two Members.</summary>
+    /// <summary>A Human Alias an Agent later takes is left out, so a Mention never resolves to two Members.</summary>
     [Fact]
-    public async Task Aliases_HumanAliasTakenByATeammate_IsLeftOut()
+    public async Task Aliases_HumanAliasTakenByAAgent_IsLeftOut()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
@@ -197,7 +197,7 @@ public sealed class HumanRenameTests
         {
             SqliteTeamDirectory directory = new(dir.Options());
             await directory.InitializeAsync("You", ct);
-            PersonaStore personas = new(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+            PersonaStore personas = new(new AgentPaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
             HumanProfileStore store = new(dir.Options(), NullLogger<HumanProfileStore>.Instance);
             AvatarStore avatars = new(dir.Options(), NullLogger<AvatarStore>.Instance);
             TaskStore taskStore = new(dir.Options(), personas, TimeProvider.System, NullLogger<TaskStore>.Instance, store);

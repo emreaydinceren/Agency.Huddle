@@ -51,7 +51,7 @@ public sealed class SeedFeedTests
     {
         using SeededFolder seed = await SeededFolder.CreateAsync(TestContext.Current.CancellationToken);
         var options = seed.Options();
-        using PersonaStore personas = new(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
+        using PersonaStore personas = new(new AgentPaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
         using TaskStore tasks = new(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
         FeedStore store = new(options);
         string human = seed.Summary.Plan.HumanName;

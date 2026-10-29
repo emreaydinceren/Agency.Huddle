@@ -29,7 +29,7 @@
 <circle cx="628" cy="176" r="10" fill="#5b64c8"/>
 <text x="628" y="180" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">3</text>
 <text x="646" y="172" font-size="11" font-weight="700" fill="#1f2430" text-anchor="start">Hire</text>
-<text x="646" y="186" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">2 Teammates drafted</text>
+<text x="646" y="186" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">2 Agents drafted</text>
 <line x1="608" y1="194" x2="870" y2="194" stroke="#5b64c8" stroke-width="2"/>
 <circle cx="904" cy="176" r="10" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
 <text x="904" y="180" font-size="11" font-weight="700" fill="#6b7280" text-anchor="middle">4</text>
@@ -149,7 +149,7 @@
 <text x="971" y="810" font-size="10" font-weight="600" fill="#1f2430" text-anchor="middle">Add</text>
 <text x="264" y="838" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Order: Add card, the roles the template defines (green “Suggested”), your own roles, then the rest of the pool. Edit and Delete only on your own roles; ☑ = on the roster.</text>
 <text x="64" y="852" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Draft roster</text>
-<text x="150" y="852" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">2 draft Teammates · dashed ring = not hired yet</text>
+<text x="150" y="852" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">2 draft Agents · dashed ring = not hired yet</text>
 <rect x="380" y="840" width="32" height="17" rx="8.5" fill="#475569"/>
 <text x="396.0" y="852.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B9c</text>
 <text x="422" y="852" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Two rows that fill down, then right; scrolls right</text>
@@ -182,7 +182,7 @@
 <text x="170" y="1115" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">✎ Edit</text>
 <text x="236" y="1115" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Remove</text>
 <rect x="340" y="862" width="260" height="130" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
-<text x="470" y="922" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle">Draft Teammates appear here,</text>
+<text x="470" y="922" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle">Draft Agents appear here,</text>
 <text x="470" y="936" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle">each with a name and an avatar.</text>
 <text x="470" y="1010" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle" font-style="italic">While the roster is empty this dashed box holds the space</text>
 <text x="896" y="884" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Each card: an avatar drawn from the library</text>
@@ -199,8 +199,8 @@
 <text x="90" y="1260" font-size="13" font-weight="700" fill="#1f2430" text-anchor="start">Approve</text>
 <rect x="64" y="1270" width="150" height="34" rx="6" fill="#5b64c8" stroke="#5b64c8" stroke-width="1"/>
 <text x="139" y="1292" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">✓ Approve &amp; hire</text>
-<text x="232" y="1292" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Off (hint: “Finish the team details first.” or “Add at least one Teammate to the roster.”) until step 2 is</text>
-<text x="232" y="1306" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">complete and the roster has a Teammate. On: creates the Team, hires the roster, sets the manager, opens the Team.</text>
+<text x="232" y="1292" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Off (hint: “Finish the team details first.” or “Add at least one Agent to the roster.”) until step 2 is</text>
+<text x="232" y="1306" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">complete and the roster has an Agent. On: creates the Team, hires the roster, sets the manager, opens the Team.</text>
 <rect x="760" y="1228" width="380" height="24" rx="4" fill="#fdecea" stroke="#d32f2f" stroke-width="1.2" stroke-dasharray="6 4"/>
 <text x="770" y="1244" font-size="10" font-weight="400" fill="#7f1d1d" text-anchor="start">A refused hire shows here; part-way failures add “Open team”.</text>
 <rect x="24" y="1348" width="1152" height="430" rx="6" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.4"/>
@@ -248,7 +248,7 @@
 <rect x="800" y="1382" width="360" height="360" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.4"/>
 <rect x="806" y="1387" width="32" height="17" rx="8.5" fill="#475569"/>
 <text x="822" y="1399.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B9e</text>
-<text x="852" y="1400" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Edit draft (TeammateCard, draft mode)</text>
+<text x="852" y="1400" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Edit draft (AgentProfileCard, draft mode)</text>
 <text x="816" y="1428" font-size="13" font-weight="700" fill="#1f2430" text-anchor="start">Edit draft</text>
 <text x="1138" y="1428" font-size="11" font-weight="400" fill="#6b7280" text-anchor="middle">✕</text>
 <circle cx="846" cy="1472" r="22" fill="#e3d3a6" stroke="#1f2430" stroke-width="1.2"/>
@@ -263,7 +263,7 @@
 <text x="894" y="1578" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Teams</text>
 <rect x="816" y="1602" width="332" height="40" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
 <text x="826" y="1618" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Persona body, Skills, Model, Effort, Work mode</text>
-<text x="816" y="1662" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">The same card as a new Teammate, started from the draft with its</text>
+<text x="816" y="1662" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">The same card as a new Agent, started from the draft with its</text>
 <text x="816" y="1676" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">avatar. Save draft changes only the roster card; nothing is created.</text>
 <text x="1020" y="1732" font-size="11" font-weight="400" fill="#1f2430" text-anchor="middle">Cancel</text>
 <rect x="1054" y="1714" width="94" height="20" rx="4" fill="#5b64c8" stroke="#5b64c8" stroke-width="1"/>

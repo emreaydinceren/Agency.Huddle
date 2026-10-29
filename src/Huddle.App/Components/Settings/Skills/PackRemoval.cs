@@ -7,7 +7,7 @@ using MudBlazor;
 namespace Agency.Huddle.App.Components.Settings.Skills;
 
 /// <summary>Remove a Pack from the card and from Details (Skill Packs spec §6.12.2): a confirm when nobody holds it,
-/// <see cref="RemovePackDialog"/> when Teammates do, then the removal, a re-read and the outcome.</summary>
+/// <see cref="RemovePackDialog"/> when Agents do, then the removal, a re-read and the outcome.</summary>
 internal static class PackRemoval
 {
     /// <summary>The snackbar key every removal shares.</summary>

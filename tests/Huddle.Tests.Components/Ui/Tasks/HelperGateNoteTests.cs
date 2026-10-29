@@ -43,7 +43,7 @@ public sealed class HelperGateNoteTests
         Assert.Equal("Turned on by the Scripted Helper. If you turn it off, the Helper won't ask about this Task again.", note);
     }
 
-    /// <summary>A Teammate's or the Human's gate-on shows no Helper line.</summary>
+    /// <summary>An Agent's or the Human's gate-on shows no Helper line.</summary>
     /// <param name="actor">Who turned the gate on.</param>
     [Theory]
     [InlineData("Leo")]

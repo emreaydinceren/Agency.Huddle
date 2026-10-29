@@ -73,11 +73,11 @@ The paid lane. Only for tests marked 💰, and read
 First, make the built-in Chief of Staff cheap. It is seeded at every start, has no
 stored Model (the account default), and with ACP on and an empty direct Room it takes
 a Greeting Turn, which is paid
-(`PersonaRunner.cs:481-495`, `BuiltinTeammateSeeder.cs`):
+(`PersonaRunner.cs:481-495`, `BuiltinAgentSeeder.cs`):
 
-1. Launch with `P-LAUNCH-FREE` and open **Teammates** in the sidebar.
-2. On the **Chief of Staff** card choose **Edit** (`TeammateCard.razor:165`), set **Model** to
-   Haiku and **Effort** to `low`, then **Save** (`TeammateCard.razor:561`).
+1. Launch with `P-LAUNCH-FREE` and open **Agents** in the sidebar.
+2. On the **Chief of Staff** card choose **Edit** (`AgentProfileCard.razor:165`), set **Model** to
+   Haiku and **Effort** to `low`, then **Save** (`AgentProfileCard.razor:561`).
 3. `P-STOP`.
 4. Launch paid, below.
 
@@ -97,12 +97,12 @@ Adapter holding a live session open, so stop it with `Stop-Process -Id <ProcessI
 ### P-LAUNCH-UAT
 
 The free lane with someone to talk to. **Explicit opt-in:** nothing a normal install does
-creates these Teammates, and the shipped app has no demo agents (`Team:DemoAgent:Enabled`
+creates these Agents, and the shipped app has no demo agents (`Team:DemoAgent:Enabled`
 is `false`). They exist only in the data folder this procedure builds. Use it for any test
-that needs a Teammate to answer without spending money; the test names it in **Before you
+that needs an Agent to answer without spending money; the test names it in **Before you
 start**.
 
-The cast is **Ada** and **Bo**, two Teammates on the free mock adapter, in no Team, each
+The cast is **Ada** and **Bo**, two Agents on the free mock adapter, in no Team, each
 with an empty one-to-one Room named after itself. Run in `T-A`, from the repo root, after `P-BUILD`:
 
 ```powershell
@@ -123,7 +123,7 @@ returns to exactly Ada, Bo and their two empty Rooms. It never touches `src\Hudd
 Wait for `Now listening on: http://localhost:5100`; Ada and Bo go **Online** within a few
 seconds.
 
-What the mock Teammates do, so a Pass-if is never written against a model:
+What the mock Agents do, so a Pass-if is never written against a model:
 
 - A reply is the **whole prompt echoed back**, split into three streamed chunks. It is long,
   it contains the text you sent, and it is plain text with no bold prefix. Judge "a reply
@@ -155,7 +155,7 @@ names the one it means. `<data>` is the data folder of the lane in use — see
 | --- | --- | --- | --- |
 | **P-RESET-ALL** | `P-STOP`, then `Remove-Item -Recurse -Force <data>` | Everything — Rooms, Transcripts, Personas, Teams, settings | Nothing |
 | **P-RESET-ROOMS** | `P-STOP`, then delete `<data>\rooms` and `<data>\team.db`, `team.db-wal`, `team.db-shm` | Rooms, Member lists, Transcripts | Personas, Teams, settings |
-| **P-RESET-TEAMS** | `P-STOP`, then delete every folder under `<data>\Teammates` | Every Persona and its Work Dir. The Chief of Staff is re-seeded at the next start | `team.db`, Rooms, Teams, settings |
+| **P-RESET-TEAMS** | `P-STOP`, then delete every folder under `<data>\Agents` | Every Persona and its Work Dir. The Chief of Staff is re-seeded at the next start | `team.db`, Rooms, Teams, settings |
 | **P-RESET-TEAM-FOLDERS** | `P-STOP`, then delete `<data>\Teams` | Team folders, their notes and Tasks | Personas, `team.db`, Rooms, settings |
 | **P-RESET-SETTINGS** | `P-STOP`, then delete `<data>\prompts.json` and `<data>\appearance.json` if present | Prompt and Theme overrides | Everything else |
 
@@ -167,18 +167,18 @@ Budget counters need no reset: they live in memory and a restart clears them.
 
 ### P-NEW-PERSONA
 
-Always through the UI, never by writing the file: **Teammates** in the sidebar →
-**New teammate** → fill **Name**, **Title**, **Alias**, **Teams** (blank unless the
+Always through the UI, never by writing the file: **Agents** in the sidebar →
+**New agent** → fill **Name**, **Title**, **Alias**, **Teams** (blank unless the
 test says otherwise), one sentence in **Persona body**, choose **Model** and
-**Effort**, then the card's **Add teammate** submit button.
+**Effort**, then the card's **Add agent** submit button.
 
-Writing `<data>\Teammates\<Name>\<Name>.md` by hand (the definition must sit in the
-Teammate's own folder; a `.md` at the `Teammates` root is rejected) still skips the
-`team.db` rows that store Model and Effort, so the Teammate runs on the account
+Writing `<data>\Agents\<Name>\<Name>.md` by hand (the definition must sit in the
+Agent's own folder; a `.md` at the `Agents` root is rejected) still skips the
+`team.db` rows that store Model and Effort, so the Agent runs on the account
 default — which may be far more expensive than Haiku. Leaving **Model** on `Agent default` does the
 same thing and is not equivalent to choosing Haiku.
 
-A file that fails to load appears on `/teammates` under **Files that didn't load**
+A file that fails to load appears on `/agents` under **Files that didn't load**
 with its reason beside it.
 
 ### P-ECHO-BOT
@@ -220,7 +220,7 @@ Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
   Measure-Object | Select-Object -ExpandProperty Count
 ```
 
-`0` is the resting value in `E-FREE`. In `E-PAID` it equals the number of Online Teammates. In
+`0` is the resting value in `E-FREE`. In `E-PAID` it equals the number of Online Agents. In
 BOTH lanes, opening a Model or Effort picker adds one short-lived extra row — the catalog probe
 runs even with `Acp:Enabled=false`, by design (`docs/engineering/rules.md`), because it spends
 nothing: it never starts a Turn. That row disappearing within seconds is the probe finishing,
@@ -245,7 +245,7 @@ Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
 
 One row per running Persona Adapter, plus a short-lived extra row whenever a Model
 or Effort picker probes. `CommandLine` names the Persona, so this is also how you
-tell which Adapter belongs to which Teammate.
+tell which Adapter belongs to which Agent.
 
 ### O-TRANSCRIPT
 
@@ -280,7 +280,7 @@ No envelope at all means the Agent is not a Member or is not connected. An envel
 with `"mentioned":false` means it **is** a Member and the parser decided against it.
 Those are different diagnoses.
 
-`O-WIRE` is the echo-bot console only. It never sees an in-process Teammate, so it
+`O-WIRE` is the echo-bot console only. It never sees an in-process Agent, so it
 cannot observe a Persona's prompt or tool calls; use `O-TOOLCALLS` or the mock
 adapter's echo for those (see [Never set TraceWire](#standing-conventions)).
 
@@ -326,8 +326,8 @@ It prints `0` when none is running. `O-ADAPTERS` never counts these.
 
 | Path | Holds |
 | --- | --- |
-| `Teammates\<Name>\<Name>.md` | One Persona's definition. Nothing else but `work\` may sit in the folder |
-| `Teammates\<Name>\work\` | That Persona's Work Dir |
+| `Agents\<Name>\<Name>.md` | One Persona's definition. Nothing else but `work\` may sit in the folder |
+| `Agents\<Name>\work\` | That Persona's Work Dir |
 | `Teams\` | Team folders, their notes and Tasks (`Teams\<Team>\[<Project>\]_tasks\[_closed]`) — never Personas |
 | `views.json` | Saved Task Views — **absent until first save** |
 | `rooms\<RoomId>.jsonl` | One Room's Transcript |
@@ -352,21 +352,21 @@ finds where `Team:DataDir` actually resolved.
   (the reply is the whole prompt); a Persona's stored definition through `O-FILE`.
 - **Clear every variable a test set** before the next one, or it inherits and
   reports a false result. `Get-ChildItem Env:Team__*` lists what is set.
-- **"Invite teammate" and "Add teammate" are two different controls.** The invite
+- **"Invite agent" and "Add agent" are two different controls.** The invite
   toggle in a Room header (an icon button; its tooltip and `aria-label` read
-  "Invite teammate") and the submit button of the Create card on `/teammates`
-  (**Add teammate**). Find the Room-header one by container (`.invite-teammate`
+  "Invite agent") and the submit button of the Create card on `/agents`
+  (**Add agent**). Find the Room-header one by container (`.invite-agent`
   wraps it) or `aria-label`, never by text alone.
 - **Four controls are icon buttons with no visible text.** **Remove** on the
-  Teammate card (`PersonRemove`), **Stop** on a streaming Draft (`StopCircle`),
+  Agent card (`PersonRemove`), **Stop** on a streaming Draft (`StopCircle`),
   **Settings** in the drawer (`Settings`, pinned to the bottom) and **Archived chats**
   in the drawer (`Archive`, directly above Settings). Each carries a `MudTooltip` and
   an `aria-label` spelling the name this script uses, so **find them by
   `aria-label`, never by button text** — in DevTools,
   `document.querySelector('[aria-label="Stop"]')`. Steps written before this change
-  still name them in words; that is the same control. **New teammate** on
-  `/teammates` is a text button (first in the toolbar), and **Teammates** in the
-  drawer and the **Add teammate** submit button also show their text.
+  still name them in words; that is the same control. **New agent** on
+  `/agents` is a text button (first in the toolbar), and **Agents** in the
+  drawer and the **Add agent** submit button also show their text.
 - **A Room can be renamed, and a renamed Room stops auto-renaming.** The Edit icon
   beside a Room's title puts it into edit mode; Enter or blur commits, Escape
   cancels. Until somebody renames it, a Room is still named after its Agent Members
@@ -374,13 +374,13 @@ finds where `Team:DataDir` actually resolved.
   that expects an invite to change a Room's name must use a Room nobody has
   renamed, and the reverse is a test of its own.
 - **There is no send button.** The composer is a bare textarea with placeholder
-  `Message {Room name}… (/invite @Teammate)`; Enter posts, Shift+Enter adds a newline. Its absence
+  `Message {Room name}… (/invite @Agent)`; Enter posts, Shift+Enter adds a newline. Its absence
   is not a defect.
 - **There are no demo agents in manual testing.** The built-in `echo` and `alpha`
   agents are off by default (`Team:DemoAgent:Enabled` is `false`) and exist for the
-  automated tests only; no manual test turns them on. A test that needs a Teammate to
+  automated tests only; no manual test turns them on. A test that needs an Agent to
   answer for free uses `P-LAUNCH-UAT` and **Ada** and **Bo**, which are real Personas
-  on the mock adapter, appear on `/teammates`, and exist only in the data folder that
+  on the mock adapter, appear on `/agents`, and exist only in the data folder that
   procedure builds. A test that needs an external pipe client uses `P-ECHO-BOT`.
 - **Names are permanent; Rooms are not, since 2026-09-21.** Nothing in the UI
   deletes an *Agent*, so every Name you connect under still leaves a Room behind —

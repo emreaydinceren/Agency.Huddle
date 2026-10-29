@@ -533,7 +533,7 @@ public sealed class QuestionCardTests
         /// <summary>Holds the service's directory calls while a test keeps an answer in flight.</summary>
         public DirectoryGate Gate { get; }
 
-        /// <summary>Creates a Room of the Human and a Teammate named Coach.</summary>
+        /// <summary>Creates a Room of the Human and an Agent named Coach.</summary>
         /// <param name="ct">Cancels the writes.</param>
         public async Task<(Room Room, User Coach)> RoomWithCoachAsync(CancellationToken ct)
         {

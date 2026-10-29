@@ -8,7 +8,7 @@ public sealed class TabKeysFeedTests
     [Theory]
     [InlineData("/feed")]
     [InlineData("/feed?category=tasks")]
-    [InlineData("/feed?category=needs-you&teammate=Nova&team=Growth")]
+    [InlineData("/feed?category=needs-you&agent=Nova&team=Growth")]
     public void Describe_Feed_IsOneTabTitledFeed(string url)
     {
         TabDescriptor descriptor = TabKeys.Describe(url);
@@ -25,18 +25,18 @@ public sealed class TabKeysFeedTests
         Assert.NotEqual(TabIcons.For("page"), TabIcons.For("feed"));
     }
 
-    /// <summary>A Feed Tab's remembered address reaches the page's Category, Teammate and Team parameters, so a restored Tab shows the same filter.</summary>
+    /// <summary>A Feed Tab's remembered address reaches the page's Category, Agent and Team parameters, so a restored Tab shows the same filter.</summary>
     [Fact]
     public void Resolve_FeedAddress_FillsTheFilterParameters()
     {
         TabPageRoutes app = new(typeof(Agency.Huddle.App.ServiceCollectionExtensions).Assembly);
 
-        TabPage? page = app.Resolve("/feed?category=gates&teammate=Nova&team=Growth%20Team");
+        TabPage? page = app.Resolve("/feed?category=gates&agent=Nova&team=Growth%20Team");
 
         Assert.NotNull(page);
         Assert.Equal(typeof(Agency.Huddle.App.Components.Pages.FeedPage), page.Component);
         Assert.Equal("gates", page.Parameters["Category"]);
-        Assert.Equal("Nova", page.Parameters["Teammate"]);
+        Assert.Equal("Nova", page.Parameters["Agent"]);
         Assert.Equal("Growth Team", page.Parameters["Team"]);
     }
 }

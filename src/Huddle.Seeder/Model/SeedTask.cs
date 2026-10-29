@@ -21,10 +21,10 @@ internal sealed record SeedTask
     /// <summary>Low, Medium, High or Urgent.</summary>
     public required string Priority { get; init; }
 
-    /// <summary>The Human's name or a Teammate's name.</summary>
+    /// <summary>The Human's name or an Agent's name.</summary>
     public required string Creator { get; init; }
 
-    /// <summary>The Teammate or Human it is assigned to, or <see langword="null"/> when unassigned.</summary>
+    /// <summary>The Agent or Human it is assigned to, or <see langword="null"/> when unassigned.</summary>
     public string? Assignee { get; init; }
 
     /// <summary>Whether the file lives in the <c>_closed</c> folder.</summary>

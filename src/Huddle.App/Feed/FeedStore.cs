@@ -75,7 +75,7 @@ internal sealed class FeedStore
             _ = command.Parameters.AddWithValue("$before", Text(before));
         }
 
-        AppendActorAndTeam(sql, command, query.Teammate, query.Team);
+        AppendActorAndTeam(sql, command, query.Agent, query.Team);
         _ = sql.Append(" AND ").Append(CategoryCondition(query.Category, command));
         if (query.ExcludeDismissed)
         {
@@ -156,11 +156,11 @@ internal sealed class FeedStore
         return command.ExecuteScalar() is string text && long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out long id) ? id : 0;
     }
 
-    /// <summary>The number on each Category segment under the Teammate and Team filters, in one query.</summary>
-    /// <param name="teammate">Only items by this actor, or <see langword="null"/>.</param>
+    /// <summary>The number on each Category segment under the Agent and Team filters, in one query.</summary>
+    /// <param name="agent">Only items by this actor, or <see langword="null"/>.</param>
     /// <param name="team">Only items about this Team, or <see langword="null"/>.</param>
     /// <returns>The seven counts.</returns>
-    public FeedCounts Counts(string? teammate, string? team)
+    public FeedCounts Counts(string? agent, string? team)
     {
         using SqliteConnection connection = this.OpenConnection();
         using SqliteCommand command = connection.CreateCommand();
@@ -172,7 +172,7 @@ internal sealed class FeedStore
         }
 
         _ = sql.Append(" FROM feed_events WHERE 1 = 1");
-        AppendActorAndTeam(sql, command, teammate, team);
+        AppendActorAndTeam(sql, command, agent, team);
         command.CommandText = sql.ToString();
 
         using SqliteDataReader reader = command.ExecuteReader();
@@ -303,12 +303,12 @@ internal sealed class FeedStore
         return command.ExecuteNonQuery();
     }
 
-    private static void AppendActorAndTeam(StringBuilder sql, SqliteCommand command, string? teammate, string? team)
+    private static void AppendActorAndTeam(StringBuilder sql, SqliteCommand command, string? agent, string? team)
     {
-        if (teammate is not null)
+        if (agent is not null)
         {
-            _ = sql.Append(" AND actor = $teammate COLLATE NOCASE");
-            _ = command.Parameters.AddWithValue("$teammate", teammate);
+            _ = sql.Append(" AND actor = $agent COLLATE NOCASE");
+            _ = command.Parameters.AddWithValue("$agent", agent);
         }
 
         if (team is not null)

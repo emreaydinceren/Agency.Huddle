@@ -145,7 +145,7 @@ public sealed class AvatarStoreTests
         Assert.Equal("123", store.Get("Jarvis").Label);
     }
 
-    /// <summary><see cref="AvatarStore.WriteImage"/> returns an opaque file name, never the Teammate's Name, and creates the file on disk.</summary>
+    /// <summary><see cref="AvatarStore.WriteImage"/> returns an opaque file name, never the Agent's Name, and creates the file on disk.</summary>
     [Fact]
     public void WriteImage_ReturnsAnOpaqueNameAndCreatesTheFile()
     {

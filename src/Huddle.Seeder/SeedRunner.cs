@@ -25,14 +25,14 @@ internal static class SeedRunner
 
         SeedPlan plan = request.Scenario.Build(request.Today);
 
-        // Without this marker Huddle's one-time layout migration moves every non-Task note under Teams/ into Teammates/_unsorted/.
-        SeedIo.WriteText(SeedIo.Resolve(dataDir, "Teammates/" + LayoutMarker), string.Empty);
+        // Without this marker Huddle's one-time layout migration moves every non-Task note under Teams/ into Agents/_unsorted/.
+        SeedIo.WriteText(SeedIo.Resolve(dataDir, "Agents/" + LayoutMarker), string.Empty);
 
         DatabaseResult ids = await DatabaseSeeder.SeedAsync(plan, dataDir, ct).ConfigureAwait(false);
         FeedSeeder.Write(plan, dataDir, ids, TimeProvider.System);
 
         WriteFolders(plan, dataDir);
-        WriteTeammates(plan, dataDir);
+        WriteAgents(plan, dataDir);
         WriteTasks(plan, dataDir, ids);
         WriteFiles(plan, dataDir);
         WriteBinaryFiles(plan, dataDir, ids);
@@ -57,16 +57,16 @@ internal static class SeedRunner
         }
     }
 
-    private static void WriteTeammates(SeedPlan plan, string dataDir)
+    private static void WriteAgents(SeedPlan plan, string dataDir)
     {
-        foreach (SeedTeammate teammate in plan.Teammates)
+        foreach (SeedAgent agent in plan.Agents)
         {
-            SeedIo.WriteText(SeedIo.Resolve(dataDir, $"Teammates/{teammate.Name}/{teammate.Name}.md"), TeammateFileWriter.RenderTeammate(teammate));
+            SeedIo.WriteText(SeedIo.Resolve(dataDir, $"Agents/{agent.Name}/{agent.Name}.md"), AgentFileWriter.RenderAgent(agent));
         }
 
         foreach (SeedSkill skill in plan.Skills)
         {
-            SeedIo.WriteText(SeedIo.Resolve(dataDir, $"Skills/{skill.Name}/SKILL.md"), TeammateFileWriter.RenderSkill(skill));
+            SeedIo.WriteText(SeedIo.Resolve(dataDir, $"Skills/{skill.Name}/SKILL.md"), AgentFileWriter.RenderSkill(skill));
         }
     }
 

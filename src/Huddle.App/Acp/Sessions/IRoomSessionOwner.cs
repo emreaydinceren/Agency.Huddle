@@ -33,7 +33,7 @@ internal interface IRoomSessionOwner
 
     /// <summary>
     /// Reports the running cost an Adapter session has reported so far. Display only: it feeds the
-    /// Teammate card's Spend line and nothing on the Turn path reads it, so it cannot spend a Budget.
+    /// Agent card's Spend line and nothing on the Turn path reads it, so it cannot spend a Budget.
     /// </summary>
     /// <param name="sessionId">The Adapter session that reported the total; the Spend memory is keyed by it.</param>
     /// <param name="runningTotal">The session's running total so far, not the amount of one Turn.</param>

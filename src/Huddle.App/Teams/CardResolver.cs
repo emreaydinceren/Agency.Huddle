@@ -12,7 +12,7 @@ internal static class CardResolver
     /// <summary>Resolves a role's card. Needs setup when a default is missing (a name conflict, no adapter for the tier, an
     /// unmet connector) or a Pack or Skill is not ready to hire.</summary>
     /// <param name="role">The role being hired.</param>
-    /// <param name="namesInUse">The Teammate names already taken, compared without case.</param>
+    /// <param name="namesInUse">The Agent names already taken, compared without case.</param>
     /// <param name="answered">The adapters that answered their model probe.</param>
     /// <param name="tierMap">Configured model ids by adapter id, then tier.</param>
     /// <param name="avoidAdapters">Adapter ids to avoid when another adapter answered.</param>
@@ -71,7 +71,7 @@ internal static class CardResolver
 
     /// <summary>Picks the card's name: the chosen one, else the first free suggestion, else the first suggestion.</summary>
     /// <param name="role">The role being hired.</param>
-    /// <param name="namesInUse">The Teammate names already taken, compared without case.</param>
+    /// <param name="namesInUse">The Agent names already taken, compared without case.</param>
     /// <param name="chosenName">A name the user chose, or <see langword="null"/> to take the first free suggestion.</param>
     /// <param name="reasons">Receives "name conflict" when the name is taken.</param>
     /// <returns>The name for the card.</returns>

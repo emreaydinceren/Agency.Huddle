@@ -20,7 +20,7 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 public sealed class SettingsPageTests
 {
-    /// <summary>Renders the real <see cref="Settings"/> page against a <see cref="TeamWebApplicationFactory"/>'s live <see cref="PromptStore"/> and <see cref="AppearanceStore"/>, the same pattern <c>TeammatesPageTests</c> uses for <c>Teammates</c>.</summary>
+    /// <summary>Renders the real <see cref="Settings"/> page against a <see cref="TeamWebApplicationFactory"/>'s live <see cref="PromptStore"/> and <see cref="AppearanceStore"/>, the same pattern <c>AgentsPageTests</c> uses for <c>Agents</c>.</summary>
     private static MudBunitContext NewContext(TeamWebApplicationFactory factory)
     {
         MudBunitContext ctx = UiTestHost.Create(services => services.CopyFrom(factory.Services, ServicePresets.Settings));
@@ -213,7 +213,7 @@ public sealed class SettingsPageTests
         Assert.True(resetAll.HasAttribute("disabled"));
     }
 
-    /// <summary>The sidebar link to Settings appears on every page, alongside the Teammates link.</summary>
+    /// <summary>The sidebar link to Settings appears on every page, alongside the Agents link.</summary>
     [Fact]
     public async Task Sidebar_LinksToSettingsPage()
     {
@@ -381,7 +381,7 @@ public sealed class SettingsPageTests
         var html = await client.GetStringAsync("/settings/personas", ct);
 
         // contains-ok: the haystack is the whole rendered page's HTML; only the presence of the path matters here, not the surrounding markup.
-        Assert.Contains(factory.TeammatesDirPath, html, StringComparison.Ordinal);
+        Assert.Contains(factory.AgentsDirPath, html, StringComparison.Ordinal);
         Assert.Contains(factory.DbPath, html, StringComparison.Ordinal);
     }
 
@@ -429,7 +429,7 @@ public sealed class SettingsPageTests
     /// UX-080) deletes that folder and the row reverts to Default. Needs
     /// <see cref="MudBunitContext.RenderWithPopovers"/>, not a plain HTTP round trip: the dialog is
     /// real MudBlazor content shown through <c>IDialogService</c>, the same reasoning
-    /// <c>TeammateCardTests</c> gives for <c>TeammateCard</c>'s own dialog.
+    /// <c>AgentProfileCardTests</c> gives for <c>AgentProfileCard</c>'s own dialog.
     /// </summary>
     [Fact]
     public async Task SkillsTab_OverriddenSkill_ShowsRestoreDefault_ClickRemovesFolder()

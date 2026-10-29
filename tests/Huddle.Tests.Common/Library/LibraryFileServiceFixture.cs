@@ -52,7 +52,7 @@ internal sealed class LibraryFileServiceFixture : IDisposable
         this.temp = temp;
         this.teamOptions = teamOptions;
         this.DataDir = teamOptions.DataDir;
-        TeammatePaths paths = new(Options.Create(teamOptions));
+        AgentPaths paths = new(Options.Create(teamOptions));
         this.RootStore = new LibraryRootStore(Options.Create(teamOptions), paths, NullLogger<LibraryRootStore>.Instance);
         this.Resolver = new LibraryPathResolver(this.RootStore, Options.Create(teamOptions), NullLogger<LibraryPathResolver>.Instance);
         this.Index = new WikiLinkIndex(this.RootStore, this.Resolver, Options.Create(teamOptions));
@@ -72,14 +72,14 @@ internal sealed class LibraryFileServiceFixture : IDisposable
     /// query <c>LinksTo</c>/<c>Backlinks</c>/<c>IsAvailable</c> or call <c>Invalidate</c> after an operation.</summary>
     public WikiLinkIndex Index { get; private set; }
 
-    /// <summary>Builds a fixture with the standard Teams/Teammates layout, optionally customising <see cref="TeamOptions"/> first.</summary>
+    /// <summary>Builds a fixture with the standard Teams/Agents layout, optionally customising <see cref="TeamOptions"/> first.</summary>
     /// <param name="configure">An optional callback to customise the bound <see cref="TeamOptions"/> before use.</param>
     /// <param name="supportsReparsePoints"><see langword="true"/> for a test that creates directory links, so the data directory sits on the system temp folder.</param>
     public static LibraryFileServiceFixture Build(Action<TeamOptions>? configure = null, bool supportsReparsePoints = false)
     {
         TempDataDir temp = new(supportsReparsePoints);
         Directory.CreateDirectory(Path.Combine(temp.Path, "Teams"));
-        Directory.CreateDirectory(Path.Combine(temp.Path, "Teammates"));
+        Directory.CreateDirectory(Path.Combine(temp.Path, "Agents"));
 
         TeamOptions teamOptions = new() { DataDir = temp.Path };
         configure?.Invoke(teamOptions);
@@ -91,14 +91,14 @@ internal sealed class LibraryFileServiceFixture : IDisposable
     /// Builds a fixture over an existing <paramref name="dataDir"/> (e.g. a
     /// <see cref="Agency.Huddle.Tests.Acp.Tools.TaskToolHarness"/>'s <c>TempDataDir</c>), so a Library
     /// test and a Tasks stack see the same on-disk Team folders (Task 7.4.t). Ensures <c>Teams/</c> and
-    /// <c>Teammates/</c> exist under it but does not own or dispose <paramref name="dataDir"/> itself.
+    /// <c>Agents/</c> exist under it but does not own or dispose <paramref name="dataDir"/> itself.
     /// </summary>
     /// <param name="dataDir">The already-existing data directory to attach to.</param>
     /// <param name="configure">An optional callback to customise the bound <see cref="TeamOptions"/> before use.</param>
     public static LibraryFileServiceFixture Attach(string dataDir, Action<TeamOptions>? configure = null)
     {
         Directory.CreateDirectory(Path.Combine(dataDir, "Teams"));
-        Directory.CreateDirectory(Path.Combine(dataDir, "Teammates"));
+        Directory.CreateDirectory(Path.Combine(dataDir, "Agents"));
 
         TeamOptions teamOptions = new() { DataDir = dataDir };
         configure?.Invoke(teamOptions);
@@ -120,16 +120,16 @@ internal sealed class LibraryFileServiceFixture : IDisposable
         return path;
     }
 
-    /// <summary>Writes a minimal, valid Teammate definition under the Teammates root and reloads the store
+    /// <summary>Writes a minimal, valid Agent definition under the Agents root and reloads the store
     /// and resolver. Returns the written text.</summary>
-    /// <param name="stem">The Teammate folder and definition file stem.</param>
+    /// <param name="stem">The Agent folder and definition file stem.</param>
     /// <param name="name">The frontmatter <c>Name</c> value.</param>
     /// <param name="alias">The frontmatter <c>Alias</c> value.</param>
-    public string CreateTeammate(string stem, string name, string alias)
+    public string CreateAgent(string stem, string name, string alias)
     {
-        TeammatePaths paths = new(Options.Create(this.teamOptions));
+        AgentPaths paths = new(Options.Create(this.teamOptions));
         string text = $"---\nName: {name}\nTitle: Chief of Staff\nAlias: {alias}\n_builtin: chief-of-staff\n---\nbody";
-        Directory.CreateDirectory(paths.TeammateFolder(stem));
+        Directory.CreateDirectory(paths.AgentFolder(stem));
         File.WriteAllText(paths.DefinitionFile(stem), text);
         this.Reload();
         return text;
@@ -185,7 +185,7 @@ internal sealed class LibraryFileServiceFixture : IDisposable
 
     /// <summary>Resolves <paramref name="relativePath"/> inside whichever configured root's full path equals
     /// <paramref name="rootPath"/> or contains it (so a caller can pass a folder several levels under a root,
-    /// e.g. a Teammate's work folder, and not just a pinned root's own path).</summary>
+    /// e.g. an Agent's work folder, and not just a pinned root's own path).</summary>
     /// <param name="rootPath">A configured root's absolute path, or a folder underneath one.</param>
     /// <param name="relativePath">The path to resolve, relative to <paramref name="rootPath"/>.</param>
     public LibraryPath Resolve(string rootPath, string relativePath)
@@ -222,20 +222,20 @@ internal sealed class LibraryFileServiceFixture : IDisposable
         return resolved;
     }
 
-    /// <summary>Resolves <paramref name="relativePath"/> inside the Teammates root (a folder, not a definition file).</summary>
-    /// <param name="relativePath">The path to resolve, relative to the Teammates root.</param>
-    public LibraryPath ResolveTeammatesFolder(string relativePath)
+    /// <summary>Resolves <paramref name="relativePath"/> inside the Agents root (a folder, not a definition file).</summary>
+    /// <param name="relativePath">The path to resolve, relative to the Agents root.</param>
+    public LibraryPath ResolveAgentsFolder(string relativePath)
     {
-        Assert.True(this.Resolver.TryResolve("teammates", relativePath, out LibraryPath? resolved, out _));
+        Assert.True(this.Resolver.TryResolve("agents", relativePath, out LibraryPath? resolved, out _));
         Assert.NotNull(resolved);
         return resolved;
     }
 
-    /// <summary>Resolves the definition file for the Teammate with stem <paramref name="stem"/>.</summary>
-    /// <param name="stem">The Teammate's folder and definition file stem.</param>
-    public LibraryPath ResolveTeammates(string stem)
+    /// <summary>Resolves the definition file for the Agent with stem <paramref name="stem"/>.</summary>
+    /// <param name="stem">The Agent's folder and definition file stem.</param>
+    public LibraryPath ResolveAgents(string stem)
     {
-        Assert.True(this.Resolver.TryResolve("teammates", $"{stem}/{stem}.md", out LibraryPath? resolved, out _));
+        Assert.True(this.Resolver.TryResolve("agents", $"{stem}/{stem}.md", out LibraryPath? resolved, out _));
         Assert.NotNull(resolved);
         return resolved;
     }
@@ -243,7 +243,7 @@ internal sealed class LibraryFileServiceFixture : IDisposable
     /// <summary>Reloads the root store and resolver, picking up on-disk changes made since construction.</summary>
     public void Reload()
     {
-        TeammatePaths paths = new(Options.Create(this.teamOptions));
+        AgentPaths paths = new(Options.Create(this.teamOptions));
         this.Index.Dispose();
         this.RootStore = new LibraryRootStore(Options.Create(this.teamOptions), paths, NullLogger<LibraryRootStore>.Instance);
         this.Resolver = new LibraryPathResolver(this.RootStore, Options.Create(this.teamOptions), NullLogger<LibraryPathResolver>.Instance);

@@ -146,7 +146,7 @@ internal static class TaskToolText
         User? user = await directory.GetUserAsync(callerAgentId, cancellationToken).ConfigureAwait(false);
         if (user is null)
         {
-            return (null, $"Could not identify caller '{callerAgentId}' as a Teammate.");
+            return (null, $"Could not identify caller '{callerAgentId}' as an Agent.");
         }
 
         return (new TaskActor(TaskActorKind.Agent, user.Name, callerAgentId), string.Empty);

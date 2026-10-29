@@ -5,7 +5,7 @@ namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
 /// Reads <c>app.css</c> and every scoped <c>.razor.css</c> as source text - a source assertion,
-/// for the same reason <c>TeammateDialogParametersTests</c> reflects over real types rather than
+/// for the same reason <c>AgentDialogParametersTests</c> reflects over real types rather than
 /// rendering one - because nothing in this suite renders a browser, and CSS custom properties resolve
 /// entirely inside the browser's cascade. MudBlazor's <c>MudTheme</c> is the single source of theming
 /// now, so what this suite can
@@ -211,7 +211,7 @@ public sealed partial class ThemeSourceTests
     /// the utility class <c>mud-text-secondary</c> (resolving to
     /// <c>--mud-palette-text-secondary</c>). The two spellings are one word apart and read as
     /// interchangeable, which is exactly how seven <c>MudText</c> elements across
-    /// <c>Teammates.razor</c> and <c>TeammateCard.razor</c> once rendered as brand-blue links instead
+    /// <c>Agents.razor</c> and <c>AgentProfileCard.razor</c> once rendered as brand-blue links instead
     /// of the muted grey text every other element on the same page already got right through
     /// <c>app.css</c>'s <c>var(--mud-palette-text-secondary)</c>. Enumerating the directory, rather
     /// than naming each file, is the same argument <see cref="ScopedCss_DeclaresNoColourLiteral"/>
@@ -256,11 +256,11 @@ public sealed partial class ThemeSourceTests
 
     /// <summary>
     /// No <c>.razor</c> file under <c>Components</c> carries a colour literal inside a
-    /// <c>Style="..."</c> attribute. <c>TeammateAvatar</c> is the reason this rule exists: it renders
-    /// a per-Teammate background colour, and that colour is real user data - typed into
+    /// <c>Style="..."</c> attribute. <c>AgentAvatar</c> is the reason this rule exists: it renders
+    /// a per-Agent background colour, and that colour is real user data - typed into
     /// <c>avatars.json</c> or picked in the avatar editor - not a design choice this repository owns,
     /// so it cannot live in a stylesheet the way every other colour in this application does. It is
-    /// built entirely from a C# string (<c>TeammateAvatar.InlineStyle</c>) and handed to
+    /// built entirely from a C# string (<c>AgentAvatar.InlineStyle</c>) and handed to
     /// <c>MudAvatar</c>'s own <c>Style</c> parameter as <c>Style="@this.InlineStyle"</c> - never a
     /// literal typed straight into markup. Nothing above catches that shape: every colour sweep in
     /// this class reads <c>.css</c> files, and <see cref="RazorComponents_NoMudTextUsesColorSecondary"/>

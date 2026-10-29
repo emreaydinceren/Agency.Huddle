@@ -45,7 +45,7 @@ public sealed class ListAgentsToolTests
         // this file - proving ListAgentsTool surfaces an OTHER frontmatter field through
         // PersonaFrontmatter.ComposeJobDescription - is written directly, as a hand-authored file
         // would be, rather than through Add.
-        var paths = new TeammatePaths(dir.Options());
+        var paths = new AgentPaths(dir.Options());
         TestPersonaFiles.Write(
             paths,
             "coo",

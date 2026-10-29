@@ -21,7 +21,7 @@ namespace Agency.Huddle.Tests.Ui;
 /// cases exercise it directly rather than by driving a render lifecycle; the avatar cases render the
 /// real component through <see cref="MudBunitContext"/> against a real <see cref="AvatarStore"/> -
 /// the same "render for real, register the real store" pattern <c>AppearanceAvatarTests</c> and
-/// <c>TeammateAvatarTests</c> both use - since <see cref="AvatarStore.Get(string)"/> is what a row
+/// <c>AgentAvatarTests</c> both use - since <see cref="AvatarStore.Get(string)"/> is what a row
 /// actually resolves against, not a lookup this suite could fake without also proving the wiring.
 /// </summary>
 public sealed class MessageListTests
@@ -99,7 +99,7 @@ public sealed class MessageListTests
     }
 
     /// <summary>
-    /// A Draft gets an avatar too - it is the same Teammate mid-sentence, and a gutter that only
+    /// A Draft gets an avatar too - it is the same Agent mid-sentence, and a gutter that only
     /// appeared once the Turn landed would make every streaming reply jump sideways as it completed.
     /// </summary>
     [Fact]
@@ -114,9 +114,9 @@ public sealed class MessageListTests
         Assert.NotEmpty(cut.FindAll(".mud-avatar"));
     }
 
-    /// <summary>A Message from a Teammate with a stored label shows that label rather than the monogram.</summary>
+    /// <summary>A Message from an Agent with a stored label shows that label rather than the monogram.</summary>
     [Fact]
-    public async Task MessageList_Message_FromTeammateWithStoredLabel_ShowsTheLabel()
+    public async Task MessageList_Message_FromAgentWithStoredLabel_ShowsTheLabel()
     {
         await using var factory = new TeamWebApplicationFactory();
         var avatars = factory.Services.GetRequiredService<AvatarStore>();
@@ -129,9 +129,9 @@ public sealed class MessageListTests
         Assert.Equal("EC", cut.Find(".mud-avatar").TextContent.Trim());
     }
 
-    /// <summary>A Message from a Teammate shows that Teammate's title between its name and the time.</summary>
+    /// <summary>A Message from an Agent shows that Agent's title between its name and the time.</summary>
     [Fact]
-    public async Task MessageList_Message_FromTeammate_ShowsTheTitleBesideTheName()
+    public async Task MessageList_Message_FromAgent_ShowsTheTitleBesideTheName()
     {
         await using var factory = new TeamWebApplicationFactory();
         PersonaEntry persona = factory.Services.GetRequiredService<PersonaStore>().Entries[0];
@@ -172,7 +172,7 @@ public sealed class MessageListTests
 
     /// <summary>
     /// The Human's own Messages resolve through the same <see cref="AvatarStore.Get(string)"/> path a
-    /// Teammate's do: a Message whose <see cref="ChatMessage.SenderName"/> is the Human's Name picks
+    /// Agent's do: a Message whose <see cref="ChatMessage.SenderName"/> is the Human's Name picks
     /// up the Human's own stored avatar, with no separate lookup path for it.
     /// </summary>
     [Fact]
@@ -200,7 +200,7 @@ public sealed class MessageListTests
     private static Draft DraftFrom(string senderName, string text) =>
         new("msg-1", "room-1", "agent-1", senderName, text, []);
 
-    /// <summary>Registers this factory's real <see cref="AvatarStore"/> into a fresh <see cref="MudBunitContext"/> - the same pattern <c>AppearanceAvatarTests.NewContext</c> and <c>TeammateCardTests.NewContext</c> use.</summary>
+    /// <summary>Registers this factory's real <see cref="AvatarStore"/> into a fresh <see cref="MudBunitContext"/> - the same pattern <c>AppearanceAvatarTests.NewContext</c> and <c>AgentProfileCardTests.NewContext</c> use.</summary>
     /// <param name="factory">The factory whose composed <see cref="AvatarStore"/> singleton to reuse.</param>
     /// <param name="library">The <see cref="ILibraryReferenceResolver"/> to register, or a fake that resolves nothing when omitted.</param>
     /// <param name="options">The <see cref="IOptions{TOptions}"/> of <see cref="TeamOptions"/> to register, or the factory's own when omitted.</param>
@@ -222,7 +222,7 @@ public sealed class MessageListTests
         // MessageList shows each Agent's context fill on its newest Message.
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<ContextFill>());
 
-        // MessageList shows a Teammate's title beside its name, read from the Persona.
+        // MessageList shows an Agent's title beside its name, read from the Persona.
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaStore>());
         return ctx;
     }

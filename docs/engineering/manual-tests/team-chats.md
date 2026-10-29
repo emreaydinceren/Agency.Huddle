@@ -1,6 +1,6 @@
 # Team chats
 
-Prove, in a real browser, that every Team has a Team Room holding the Human and every member; that a chat started inside a Team is listed under that Team and not under Rooms; that **Message** on the Members tab opens the Team's own one-to-one rather than the root one; that the Team Room cannot be renamed; that archiving and a vanished Team behave as ADR-0052 says; and that a digest lands in the Team Room while a Task wake lands in the Team's own Room for its assignee. The automated suite proves the directory, the reconciler, the prompt label and the wakes against fakes; this page proves what only a browser and a running app show: the sidebar's place and nesting, the Members tab's action, the Explorer rename, and the Transcripts a real Teammate writes into. The design is [the Team chats spec](../../Huddle.TeamChats-Specifications.md) and [ADR-0052](../../adr/0052-a-room-belongs-to-the-root-or-to-one-team.md).
+Prove, in a real browser, that every Team has a Team Room holding the Human and every member; that a chat started inside a Team is listed under that Team and not under Rooms; that **Message** on the Members tab opens the Team's own one-to-one rather than the root one; that the Team Room cannot be renamed; that archiving and a vanished Team behave as ADR-0052 says; and that a digest lands in the Team Room while a Task wake lands in the Team's own Room for its assignee. The automated suite proves the directory, the reconciler, the prompt label and the wakes against fakes; this page proves what only a browser and a running app show: the sidebar's place and nesting, the Members tab's action, the Explorer rename, and the Transcripts a real Agent writes into. The design is [the Team chats spec](../../Huddle.TeamChats-Specifications.md) and [ADR-0052](../../adr/0052-a-room-belongs-to-the-root-or-to-one-team.md).
 
 **11 tests** · 11 free · about 1.1 hours. Written 2026-10-12; **not yet run by a person**. The feature was built on 2026-10-12; uploads are a separate spec and are not covered here.
 
@@ -10,13 +10,13 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat). This area adds:
 
-1. Wait until **Ada** and **Bo** are both **Online** on `/teammates`. Both are in no Team yet.
+1. Wait until **Ada** and **Bo** are both **Online** on `/agents`. Both are in no Team yet.
 2. Open Ada's and Bo's root one-to-ones under **Rooms** once, send `hello` in each, and note each Room's id: the 32 hexadecimal characters after `/rooms/` in the address bar. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'`, and `$ada = '<Ada's room id>'`, `$bo = '<Bo's room id>'`.
 3. Create the Team **Marketing** by making the folder `<data>\Teams\Marketing` and reloading the page. It has no members, so it has no Team Room yet, and that is expected.
-4. Add **Ada** to Marketing: open her card on `/teammates`, select **Edit**, add `Marketing` to the `teams:` line of the text and save. Wait until Ada is **Online** again. Then add **Bo** the same way. The Team Room appears within a few seconds of each add; if it does not, reload the page once.
-5. The area's tests share this fixture and run in order. TEAMCHATS-02 adds a third Teammate, and TEAMCHATS-07 renames the folder, so leave the fixture as it is when a test says so.
+4. Add **Ada** to Marketing: open her card on `/agents`, select **Edit**, add `Marketing` to the `teams:` line of the text and save. Wait until Ada is **Online** again. Then add **Bo** the same way. The Team Room appears within a few seconds of each add; if it does not, reload the page once.
+5. The area's tests share this fixture and run in order. TEAMCHATS-02 adds a third Agent, and TEAMCHATS-07 renames the folder, so leave the fixture as it is when a test says so.
 
-This area makes a Teammate post a Message into a Transcript by hand, because the mock Teammates strip every `@` from what they echo. Define the helper once:
+This area makes an Agent post a Message into a Transcript by hand, because the mock Agents strip every `@` from what they echo. Define the helper once:
 
 ```powershell
 function Post([string]$room, [string]$who, [string]$text) {
@@ -53,7 +53,7 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 - At step 3 the Room holds you, Ada and Bo, and its name is exactly `Marketing`.
 - At step 4 there is still exactly one `Marketing` row under the Team: a restart does not create a second Team Room.
 
-### TEAMCHATS-02 — A Teammate who joins the Team is invited into the Team Room and the Transcript says so
+### TEAMCHATS-02 — An Agent who joins the Team is invited into the Team Room and the Transcript says so
 
 **Free** · about 6 min
 
@@ -61,11 +61,11 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 
 **Before you start**
 
-- TEAMCHATS-01 has passed. Hire a third Teammate with **Add teammate** on the Teammates page, named `Kim`, and wait for it to be **Online**. Kim is in no Team yet.
+- TEAMCHATS-01 has passed. Hire a third Agent with **Add agent** on the Agents page, named `Kim`, and wait for it to be **Online**. Kim is in no Team yet.
 
 **Steps**
 
-1. Open **Kim**'s card on `/teammates`, select **Edit**, add `Marketing` to the `teams:` line of the text and save.
+1. Open **Kim**'s card on `/agents`, select **Edit**, add `Marketing` to the `teams:` line of the text and save.
 2. Wait until Kim is **Online**, then open the Team Room.
 3. Read the end of the Transcript.
 4. Open the Members tab of Marketing.
@@ -80,12 +80,12 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 
 **Free** · about 8 min
 
-*Proves T5 and D-4: the Team's New chat makes a Room under the Team, and any Teammate may join it.*
+*Proves T5 and D-4: the Team's New chat makes a Room under the Team, and any Agent may join it.*
 
 **Before you start**
 
 - TEAMCHATS-02 has passed. Kim is in Marketing.
-- Hire a fourth Teammate named `Ola` with **Add teammate**, and wait for it to be **Online**. Ola is not in Marketing, and it stays out of it for this test.
+- Hire a fourth Agent named `Ola` with **Add agent**, and wait for it to be **Online**. Ola is not in Marketing, and it stays out of it for this test.
 
 **Steps**
 
@@ -96,9 +96,9 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 
 **Pass if — all of these**
 
-- At step 2 the heading reads `New chat in Marketing`, and Marketing's members are listed before the other Teammates.
+- At step 2 the heading reads `New chat in Marketing`, and Marketing's members are listed before the other Agents.
 - At step 4 a new Room, named after its members (`Ada, Ola`), is listed under **Marketing**, below the Team Room, and not in **Rooms**.
-- The new Room opens and both Teammates are in its member list, including Ola, which is not in Marketing.
+- The new Room opens and both Agents are in its member list, including Ola, which is not in Marketing.
 
 ### TEAMCHATS-04 — Message on the Members tab opens the Team's own one-to-one, not the root one
 
@@ -175,7 +175,7 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 **Before you start**
 
 - TEAMCHATS-03 has passed, so Marketing has a Team Room and at least one more scoped Room.
-- Ada and Bo no longer carry the `Marketing` label: on the Members tab of Marketing, choose **Remove** › **Remove from team** on each of them, select **Save changes**, and wait for both to be **Online**. A Team that a Teammate still names is not gone, so it would not be archived.
+- Ada and Bo no longer carry the `Marketing` label: on the Members tab of Marketing, choose **Remove** › **Remove from team** on each of them, select **Save changes**, and wait for both to be **Online**. A Team that an Agent still names is not gone, so it would not be archived.
 - Note the Team Room's id and the number of Messages in it.
 
 **Steps**

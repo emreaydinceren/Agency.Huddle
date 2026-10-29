@@ -19,7 +19,7 @@
 <text x="73" y="118" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Top bar</text>
 <text x="128.5" y="118" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">MudAppBar</text>
 <rect x="48" y="134" width="330" height="24" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
-<text x="82" y="150" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Library  ›  Teammates  ›  Lena  ›  Lena.md   (focused pane)</text>
+<text x="82" y="150" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Library  ›  Agents  ›  Lena  ›  Lena.md   (focused pane)</text>
 <rect x="44" y="126" width="32" height="17" rx="8.5" fill="#1d4f8f"/>
 <text x="60.0" y="138.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">S1a</text>
 <rect x="430" y="134" width="350" height="24" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
@@ -101,7 +101,7 @@
 <rect x="232" y="588" width="76" height="26" rx="5" fill="#0e7c86" stroke="#0e7c86" stroke-width="1.2"/>
 <text x="270.0" y="605.0" font-size="10" font-weight="600" fill="#fff" text-anchor="middle">Start chat</text>
 <text x="212" y="636" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle" font-style="italic">Other views replace these:</text>
-<text x="212" y="648" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle" font-style="italic">Teams (S2c), Teammates (S2d),</text>
+<text x="212" y="648" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle" font-style="italic">Teams (S2c), Agents (S2d),</text>
 <text x="212" y="660" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle" font-style="italic">Tasks (S2e), Library (S2f).</text>
 <text x="212" y="672" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle" font-style="italic">Pressed button in S5a collapses it.</text>
 <rect x="340" y="178" width="536" height="506" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.4"/>
@@ -121,7 +121,7 @@
 <rect x="352" y="294" width="25" height="17" rx="8.5" fill="#6b3fa0"/>
 <text x="364.5" y="306.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">W6</text>
 <text x="608" y="420" font-size="18" font-weight="600" fill="#6b7280" text-anchor="middle">Page</text>
-<text x="608" y="442" font-size="12" font-weight="400" fill="#6b7280" text-anchor="middle">Chat · Tasks · Library · Team · Teammates · Settings</text>
+<text x="608" y="442" font-size="12" font-weight="400" fill="#6b7280" text-anchor="middle">Chat · Tasks · Library · Team · Agents · Settings</text>
 <text x="608" y="460" font-size="11" font-weight="400" fill="#6b7280" text-anchor="middle" font-style="italic">Figures 3 to 7</text>
 <rect x="488" y="500" width="230" height="130" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4" filter="url(#sh)"/>
 <rect x="484" y="492" width="32" height="17" rx="8.5" fill="#1d4f8f"/>

@@ -4,7 +4,7 @@ namespace Agency.Huddle.App.Avatars;
 
 /// <summary>
 /// The one palette of avatar background colours: the swatches the avatar editor offers, and the set a new
-/// Teammate's random background is drawn from, so a random colour is always one the editor can show as selected.
+/// Agent's random background is drawn from, so a random colour is always one the editor can show as selected.
 /// </summary>
 internal static class AvatarPalette
 {

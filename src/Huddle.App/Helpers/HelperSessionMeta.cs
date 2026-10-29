@@ -4,7 +4,7 @@ namespace Agency.Huddle.App.Helpers;
 
 /// <summary>
 /// The <c>_meta</c> that makes a Helper's session toolless on an Adapter that isolates user settings (the Claude
-/// adapter), found by the HL-0 spike (see <c>acp-session-config.md</c>): the user-settings isolation every Teammate
+/// adapter), found by the HL-0 spike (see <c>acp-session-config.md</c>): the user-settings isolation every Agent
 /// gets, plus no built-in tools, no claude.ai connectors and no MCP servers beyond the (empty) configured set.
 /// </summary>
 internal static class HelperSessionMeta

@@ -11,7 +11,7 @@ using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.References;
 using Agency.Huddle.App.Services;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Acp;
@@ -561,7 +561,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         // taken no Messages yet.
         if (!this.greetingQueued &&
             PersonaFrontmatter.TryReadIdentity(this.persona.Text, out var identity, out _) &&
-            string.Equals(identity.Builtin, BuiltinTeammate.ChiefOfStaffMarker, StringComparison.Ordinal))
+            string.Equals(identity.Builtin, BuiltinAgent.ChiefOfStaffMarker, StringComparison.Ordinal))
         {
             var emptyHumanRoom = welcome.Rooms.FirstOrDefault(room =>
                 room.Team is null && room.Members.Count == 2 && room.Members.Any(member => member.Kind == UserKind.Human) && room.IsEmpty);
@@ -619,7 +619,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                 await this.stream.DisposeAsync().ConfigureAwait(false);
             }
 
-            // A stopped Teammate offers nothing; the next runner relearns the list from its Adapter.
+            // A stopped Agent offers nothing; the next runner relearns the list from its Adapter.
             this.commands?.Forget(this.persona.Name);
 
             // A stopped Agent has no context. After the pool is disposed, so a last usage update

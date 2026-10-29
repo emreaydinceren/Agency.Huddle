@@ -24,7 +24,7 @@ public sealed class TaskTriggerRoomResolutionTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         Room origin = await harness.Directory.CreateRoomAsync("Origin", [KnownIds.Human, agents.Nova.Id], ct);
         await harness.Directory.SetRoomArchivedAsync(origin.Id, true, ct);
         _ = await harness.Directory.CreateRoomAsync("Direct", [KnownIds.Human, agents.Nova.Id], ct);
@@ -45,7 +45,7 @@ public sealed class TaskTriggerRoomResolutionTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         Room origin = await harness.Directory.CreateRoomAsync("Origin", [KnownIds.Human, agents.Kai.Id], ct);
         Room creatorRoom = await harness.Directory.CreateRoomAsync("Creator", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova", originRoomId: origin.Id));
@@ -65,7 +65,7 @@ public sealed class TaskTriggerRoomResolutionTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         Room origin = await harness.Directory.CreateRoomAsync("Origin", [KnownIds.Human, agents.Nova.Id], ct);
         Room creatorRoom = await harness.Directory.CreateRoomAsync("Creator", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova", originRoomId: origin.Id));
@@ -86,7 +86,7 @@ public sealed class TaskTriggerRoomResolutionTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         Room creatorRoom = await harness.Directory.CreateRoomAsync("Creator", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova", originRoomId: "no-such-room"));
 
@@ -105,7 +105,7 @@ public sealed class TaskTriggerRoomResolutionTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         User? zeta = await harness.Directory.UpsertAgentUserAsync("Zeta", null, ct);
         Assert.NotNull(zeta);
         _ = await harness.Directory.CreateRoomAsync("Superset", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id, zeta.Id], ct);
@@ -127,7 +127,7 @@ public sealed class TaskTriggerRoomResolutionTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         Room exact = await harness.Directory.CreateRoomAsync("Exact", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova"));
 
@@ -147,7 +147,7 @@ public sealed class TaskTriggerRoomResolutionTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         _ = await harness.Directory.CreateRoomAsync("Trio", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
         Room direct = await harness.Directory.CreateRoomAsync("Direct", [KnownIds.Human, agents.Nova.Id], ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova"));
@@ -167,7 +167,7 @@ public sealed class TaskTriggerRoomResolutionTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         Room direct = await harness.Directory.CreateRoomAsync("Direct", [KnownIds.Human, agents.Nova.Id], ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "Ghost", assignee: "Nova"));
 
@@ -190,7 +190,7 @@ public sealed class TaskTriggerRoomResolutionTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         _ = await harness.Directory.CreateRoomAsync("Direct", [KnownIds.Human, agents.Nova.Id], ct);
         Room actorRoom = await harness.Directory.CreateRoomAsync("Actor", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova"));
@@ -211,7 +211,7 @@ public sealed class TaskTriggerRoomResolutionTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         Room direct = await harness.Directory.CreateRoomAsync("Direct", [KnownIds.Human, agents.Nova.Id], ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova"));
 
@@ -232,7 +232,7 @@ public sealed class TaskTriggerRoomResolutionTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova"));
         int roomsBefore = (await harness.Directory.GetRoomsAsync(ct)).Count;
 
@@ -254,7 +254,7 @@ public sealed class TaskTriggerRoomResolutionTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova"));
 
         harness.Raise(task, HumanActor, "Status: To Do → In Progress");
@@ -272,7 +272,7 @@ public sealed class TaskTriggerRoomResolutionTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         Room archived = await harness.Directory.CreateRoomAsync("Old", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
         await harness.Directory.SetRoomArchivedAsync(archived.Id, true, ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova"));
@@ -293,7 +293,7 @@ public sealed class TaskTriggerRoomResolutionTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         Room archived = await harness.Directory.CreateRoomAsync("Old", [KnownIds.Human, agents.Nova.Id], ct);
         await harness.Directory.SetRoomArchivedAsync(archived.Id, true, ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova"));
@@ -318,7 +318,7 @@ public sealed class TaskTriggerRoomResolutionTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova"));
         int roomsBefore = (await harness.Directory.GetRoomsAsync(ct)).Count;
 

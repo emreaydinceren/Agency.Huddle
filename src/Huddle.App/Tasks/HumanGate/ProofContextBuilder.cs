@@ -49,7 +49,7 @@ internal sealed class ProofContextBuilder(
             documents);
     }
 
-    /// <summary>Maps each named Teammate to the coverage of their role; names with no Persona or role are left out.</summary>
+    /// <summary>Maps each named Agent to the coverage of their role; names with no Persona or role are left out.</summary>
     /// <param name="names">The names to look up.</param>
     /// <returns>Name to comma-joined coverage.</returns>
     internal IReadOnlyDictionary<string, string> CoverageFor(IEnumerable<string> names)

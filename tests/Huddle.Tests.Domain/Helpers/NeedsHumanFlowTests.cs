@@ -14,7 +14,7 @@ using static Agency.Huddle.Tests.Tasks.TaskGateText;
 namespace Agency.Huddle.Tests.Helpers;
 
 /// <summary>
-/// The Needs Human Helper from a Teammate's save to the gate turning on: the trigger's filters, the dispatcher, the runner
+/// The Needs Human Helper from an Agent's save to the gate turning on: the trigger's filters, the dispatcher, the runner
 /// and the Helper's apply step over a real <c>TaskService</c> (Helpers Spec §6.9 to §6.11, plan HL-12, HL-13).
 /// </summary>
 public sealed class NeedsHumanFlowTests : IAsyncLifetime
@@ -105,9 +105,9 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
     /// <summary>Holds still long enough for a wrongly queued judgement to have run.</summary>
     private static Task SettleAsync() => Task.Delay(150, TestContext.Current.CancellationToken);
 
-    /// <summary>A Teammate's new Task that needs the Human gets the gate, logged by the Helper with the reason (U-1).</summary>
+    /// <summary>An Agent's new Task that needs the Human gets the gate, logged by the Helper with the reason (U-1).</summary>
     [Fact]
-    public async Task TeammateCreate_NeedsHuman_TurnsGateOnWithReason()
+    public async Task AgentCreate_NeedsHuman_TurnsGateOnWithReason()
     {
         TaskItem task = this.Create(Leo);
 
@@ -125,7 +125,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
 
     /// <summary>The model saying no writes nothing to the Task (U-2).</summary>
     [Fact]
-    public async Task TeammateCreate_DoesNotNeedHuman_WritesNothing()
+    public async Task AgentCreate_DoesNotNeedHuman_WritesNothing()
     {
         this.process.Text = GateOff;
         TaskItem task = this.Create(Leo, "Summarise the interview notes");
@@ -153,7 +153,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
 
     /// <summary>A Task that already has an Action is gated, so it is not judged (U-12).</summary>
     [Fact]
-    public async Task TeammateCreate_WithAction_IsNotJudged()
+    public async Task AgentCreate_WithAction_IsNotJudged()
     {
         _ = this.Create(Leo, action: "Send the reply");
 
@@ -165,7 +165,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
 
     /// <summary>Moving a Task to In Progress, which changes none of the text the Helper reads, makes no call (U-4).</summary>
     [Fact]
-    public async Task TeammateStatusMove_IsNotJudgedAgain()
+    public async Task AgentStatusMove_IsNotJudgedAgain()
     {
         this.process.Text = GateOff;
         TaskItem task = this.Create(Leo, "Summarise the interview notes");
@@ -183,7 +183,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
 
     /// <summary>An Evidence line added to the description is not a content change (U-4).</summary>
     [Fact]
-    public async Task TeammateEvidenceLine_IsNotJudgedAgain()
+    public async Task AgentEvidenceLine_IsNotJudgedAgain()
     {
         this.process.Text = GateOff;
         TaskItem task = this.Create(Leo, "Summarise the interview notes");
@@ -207,9 +207,9 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
         Assert.Equal(before, this.status.Get(NeedsHumanHelper.HelperId));
     }
 
-    /// <summary>A Teammate rewriting the title of an open Task is judged again.</summary>
+    /// <summary>An Agent rewriting the title of an open Task is judged again.</summary>
     [Fact]
-    public async Task TeammateTitleRewrite_IsJudgedAgain()
+    public async Task AgentTitleRewrite_IsJudgedAgain()
     {
         this.process.Text = GateOff;
         TaskItem task = this.Create(Leo, "Summarise the interview notes");
@@ -226,7 +226,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
 
     /// <summary>A rewrite of a closed Task is not judged.</summary>
     [Fact]
-    public async Task TeammateRewriteOfClosedTask_IsNotJudged()
+    public async Task AgentRewriteOfClosedTask_IsNotJudged()
     {
         this.process.Text = GateOff;
         TaskItem task = this.Create(Leo, "Summarise the interview notes");
@@ -335,7 +335,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
         Assert.Equal(2, this.process.Calls);
     }
 
-    /// <summary>A failure in the dispatcher never reaches the Teammate's save.</summary>
+    /// <summary>A failure in the dispatcher never reaches the Agent's save.</summary>
     [Fact]
     public async Task TriggerFailure_DoesNotReachTheSaver()
     {
@@ -442,7 +442,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
     {
         Assert.Equal("NeedsHuman", this.helper.Id.Value);
         Assert.Equal("Needs Human", this.helper.DisplayName);
-        Assert.Equal("Turns on the Human gate when a Teammate's Task leaves the team or can't be undone. It never turns it off.", this.helper.Description);
+        Assert.Equal("Turns on the Human gate when an Agent's Task leaves the team or can't be undone. It never turns it off.", this.helper.Description);
         Assert.Equal(["helper.needsHuman.system", "helper.needsHuman.task"], this.helper.PromptKeys);
         Assert.Equal(new HelperDefaults(true, "claude", "haiku", "low", 50), this.helper.Defaults);
     }

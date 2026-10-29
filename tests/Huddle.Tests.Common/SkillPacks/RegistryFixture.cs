@@ -35,7 +35,7 @@ internal sealed class RegistryFixture
     public List<InstalledSkill> Installed { get; } = [];
 
     /// <summary>The App Tool names in the context.</summary>
-    public List<string> AppTools { get; } = ["propose_sprint", "propose_teammates", "validate_teammate"];
+    public List<string> AppTools { get; } = ["propose_sprint", "propose_agents", "validate_agent"];
 
     /// <summary>The "now" the context carries.</summary>
     public DateTimeOffset Now { get; set; } = new(2026, 10, 17, 12, 0, 0, TimeSpan.Zero);

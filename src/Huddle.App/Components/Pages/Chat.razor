@@ -73,7 +73,7 @@ else
                         </MudAvatarGroup>
                         <MudText Typo="Typo.caption" Class="room-members-label">@Plural.Of(agentMembers.Count, "member", "members") + you</MudText>
                         @* The leading @ is load-bearing: RoomId="this.room.Id" would pass that literal text. *@
-                        <InviteTeammate RoomId="@this.room.Id" RoomName="@this.room.Name" />
+                        <InviteAgent RoomId="@this.room.Id" RoomName="@this.room.Name" />
                     </MudStack>
                 </Aside>
             </PageHeader>
@@ -125,18 +125,18 @@ else
         @* Rendered inline rather than as a component for the same reason every other strip on this
            page is: a string Parameter missing its leading @ passes the literal text, compiles clean
            and fails only on screen - see docs/engineering/rules.md. The drafts.Count == 0 guard is
-           deliberate: a teammate mid-Turn from an earlier Mention is visibly typing, and "name one to
+           deliberate: an agent mid-Turn from an earlier Mention is visibly typing, and "name one to
            ask for a reply" rendered beside a streaming row is a worse lie than silence. *@
         @if (this.outlook == RoomReply.ContextOnly && this.drafts.Count == 0)
         {
             @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
                so role="status" is added explicitly, per rules.md. status rather than alert per
                ADR-0011's precedent: this is a consequence of the Human's own Message, not an
-               interruption. Says "No teammate" rather than "Nobody", because @@You is itself a
+               interruption. Says "No agent" rather than "Nobody", because @@You is itself a
                Mention, and so is any handle that resolved to the Human - the claim has to be about
-               teammates or it is false in its own test case. *@
+               agents or it is false in its own test case. *@
             <MudAlert Severity="Severity.Info" Dense="true" Class="reply-note room-notice-column" role="status">
-                No teammate was @@-mentioned — name one to ask for a reply.
+                No agent was @@-mentioned — name one to ask for a reply.
             </MudAlert>
         }
         @* Directly above the Budget prompt, per Spec §6.11: a waiting Proposal is the thing you need
@@ -146,7 +146,7 @@ else
            itself, and it already owns its own RoomEvents subscription rather than duplicating one
            here. *@
         <ProposalCard RoomId="@this.room.Id" />
-        @* A Sprint a manager proposed (PL-4), shown in the manager's room beside the Teammate Proposal. *@
+        @* A Sprint a manager proposed (PL-4), shown in the manager's room beside the Agent Proposal. *@
         <SprintProposalCard RoomId="@this.room.Id" />
         @* Changes a retro agent proposed (RT-5), shown in the proposer's room; Accept makes the edit. *@
         <RetroProposalCard RoomId="@this.room.Id" />
@@ -178,7 +178,7 @@ else
                 @if (this.ContinueWouldWakeNobody())
                 {
                     <p class="budget-prompt-warning">
-                        Continue will deliver the last message again, and it is a teammate's own — a teammate is never delivered its own message, so this will wake nobody. Say something instead.
+                        Continue will deliver the last message again, and it is an agent's own — an agent is never delivered its own message, so this will wake nobody. Say something instead.
                     </p>
                 }
                 <MudStack Row="true" Spacing="2" Class="budget-prompt-actions">
@@ -216,7 +216,7 @@ else
         else if (this.continueResult is ExtendResult.Granted && this.continueOutlook is RoomReply.ContextOnly)
         {
             <MudAlert Severity="Severity.Info" Dense="true" Class="continue-note" role="status">
-                Budget granted and the last message was delivered again, but it names no teammate. Mention one by name to get an answer.
+                Budget granted and the last message was delivered again, but it names no agent. Mention one by name to get an answer.
             </MudAlert>
         }
         else if (this.continueResult is ExtendResult.NotPaused)
@@ -318,7 +318,7 @@ else
     /// <summary>True when the shown Room is its Team's Team Room, which is named after the Team and so has no Rename pencil.</summary>
     private bool isTeamRoom;
 
-    /// <summary>The Room's kind as its header chip names it: its Team's Team Room, a one-to-one with one Teammate, or a group.</summary>
+    /// <summary>The Room's kind as its header chip names it: its Team's Team Room, a one-to-one with one Agent, or a group.</summary>
     private string RoomKind => (this.isTeamRoom, this.members.Count(static member => member.Kind == UserKind.Agent)) switch
     {
         (true, _) => "Team",
@@ -664,7 +664,7 @@ else
             // running has none, which is the ordinary case: Team:Acp:Enabled is false by default, so
             // in a stock configuration no Persona has ever started and every Agent is Offline. Listing
             // those would put a permanent role="alert" in every Room, telling the Human nothing the
-            // Teammate tile does not already show - and an alert that is always on is one nobody reads,
+            // Agent tile does not already show - and an alert that is always on is one nobody reads,
             // which is exactly the failure this strip exists to prevent.
             if (status is { State: PersonaState.Offline or PersonaState.Degraded, Reason: not null })
             {
@@ -735,7 +735,7 @@ else
         this.members.Where(static member => member.Kind == UserKind.Human).Select(static member => member.Id).ToHashSet(StringComparer.Ordinal);
 
     /// <summary>
-    /// The handles <see cref="MessageList"/> draws as Mention pills: each Teammate Member's Name and Alias, and the
+    /// The handles <see cref="MessageList"/> draws as Mention pills: each Agent Member's Name and Alias, and the
     /// Human's own. They come from the Members and the alias source, as <see cref="MentionParser"/>'s do, so a pill is
     /// drawn exactly where a Mention would be counted.
     /// </summary>

@@ -64,7 +64,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     private bool forcedRebuildPending;
 
     /// <summary>
-    /// Validates the Teams/Teammates layout with <see cref="LayoutGuard.ValidateTeamsAndTeammates"/>
+    /// Validates the Teams/Agents layout with <see cref="LayoutGuard.ValidateTeamsAndAgents"/>
     /// (kept here, alongside the host's own <c>PostConfigure</c> call, for a host that constructs a
     /// <see cref="TaskStore"/> without going through <c>AddTeamServices</c>), creates the Tasks root
     /// under <see cref="TeamsOptions.Dir"/>, then scans it.
@@ -84,7 +84,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         this.personas = personas;
         this.logger = logger;
 
-        LayoutGuard.ValidateTeamsAndTeammates(options.Value);
+        LayoutGuard.ValidateTeamsAndAgents(options.Value);
 
         string tasksRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Teams.Dir));
 
@@ -419,7 +419,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     /// <summary>
     /// Writes several Tasks in one batch, under a single acquisition of <see cref="writeGate"/>, and
     /// raises <see cref="IndexChanged"/> at most once for the whole batch rather than once per item
-    /// (Settled corrections-B2 D5 item 7 - the Teammate-rename cascade, Task 6.6, writes many files
+    /// (Settled corrections-B2 D5 item 7 - the Agent-rename cascade, Task 6.6, writes many files
     /// for one rename and must not flood subscribers with one event per file).
     /// </summary>
     /// <param name="writes">Each Task to write, the version it was last seen at, and its new composed text.</param>

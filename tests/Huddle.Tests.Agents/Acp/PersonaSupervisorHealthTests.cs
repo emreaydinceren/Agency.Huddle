@@ -147,7 +147,7 @@ public sealed class PersonaSupervisorHealthTests
         Assert.NotNull(status);
         Assert.Equal(PersonaState.Degraded, status.State);
         var dataDirName = Path.GetFileName(options.Value.DataDir);
-        Assert.Equal($"Watched folder 'Nope' is not a Teammate or a folder inside {dataDirName}.", status.Reason);
+        Assert.Equal($"Watched folder 'Nope' is not an Agent or a folder inside {dataDirName}.", status.Reason);
         Assert.Single(factory.Calls, call => call.Persona.Name == "nova");
     }
 
@@ -186,7 +186,7 @@ public sealed class PersonaSupervisorHealthTests
         var dataDirName = Path.GetFileName(options.Value.DataDir);
         var adapterIndex = reason.IndexOf("bogus-adapter", StringComparison.Ordinal);
         var skillIndex = reason.IndexOf("Skill 'nonexistent' does not exist.", StringComparison.Ordinal);
-        var watchIndex = reason.IndexOf($"Watched folder 'Nope' is not a Teammate or a folder inside {dataDirName}.", StringComparison.Ordinal);
+        var watchIndex = reason.IndexOf($"Watched folder 'Nope' is not an Agent or a folder inside {dataDirName}.", StringComparison.Ordinal);
         Assert.True(adapterIndex >= 0, reason);
         Assert.True(skillIndex > adapterIndex, reason);
         Assert.True(watchIndex > skillIndex, reason);

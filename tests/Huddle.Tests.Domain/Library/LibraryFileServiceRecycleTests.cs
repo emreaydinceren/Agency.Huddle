@@ -52,21 +52,21 @@ public sealed class LibraryFileServiceRecycleTests
         Assert.True(Directory.Exists(folderPath));
     }
 
-    /// <summary>Recycling a protected item (Team/Project folder, Teammate folder, its definition, its Work
+    /// <summary>Recycling a protected item (Team/Project folder, Agent folder, its definition, its Work
     /// Dir, or a root) is refused with the matching Protected refusal text; the bin is never called.</summary>
     [Theory]
     [InlineData("TeamFolder")]
     [InlineData("ProjectFolder")]
-    [InlineData("TeammateFolder")]
-    [InlineData("TeammateDefinition")]
+    [InlineData("AgentFolder")]
+    [InlineData("AgentDefinition")]
     [InlineData("WorkDir")]
     [InlineData("Root")]
     public async Task Recycle_Protected_Refused(string kind)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        _ = fixture.CreateTeammate("ada", "Ada", "ada");
-        string workDir = Path.Combine(fixture.DataDir, "Teammates", "ada", "work");
+        _ = fixture.CreateAgent("ada", "Ada", "ada");
+        string workDir = Path.Combine(fixture.DataDir, "Agents", "ada", "work");
         Directory.CreateDirectory(workDir);
         string teamsRoot = Path.Combine(fixture.DataDir, "Teams");
         string marketing = Path.Combine(teamsRoot, "Marketing");
@@ -80,9 +80,9 @@ public sealed class LibraryFileServiceRecycleTests
         {
             "TeamFolder" => (fixture.ResolveTeams("Marketing"), "Team and Project folders can't be renamed, moved or deleted here.", marketing),
             "ProjectFolder" => (fixture.ResolveTeams("Marketing/Q4"), "Team and Project folders can't be renamed, moved or deleted here.", projectFolder),
-            "TeammateFolder" => (fixture.ResolveTeammatesFolder("ada"), "Teammate folders can't be renamed, moved or deleted here.", Path.Combine(fixture.DataDir, "Teammates", "ada")),
-            "TeammateDefinition" => (fixture.ResolveTeammates("ada"), "Teammate folders can't be renamed, moved or deleted here.", Path.Combine(fixture.DataDir, "Teammates", "ada", "ada.md")),
-            "WorkDir" => (fixture.ResolveTeammatesFolder("ada/work"), "Teammate folders can't be renamed, moved or deleted here.", workDir),
+            "AgentFolder" => (fixture.ResolveAgentsFolder("ada"), "Agent folders can't be renamed, moved or deleted here.", Path.Combine(fixture.DataDir, "Agents", "ada")),
+            "AgentDefinition" => (fixture.ResolveAgents("ada"), "Agent folders can't be renamed, moved or deleted here.", Path.Combine(fixture.DataDir, "Agents", "ada", "ada.md")),
+            "WorkDir" => (fixture.ResolveAgentsFolder("ada/work"), "Agent folders can't be renamed, moved or deleted here.", workDir),
             "Root" => (fixture.ResolveTeams(string.Empty), "A Library root can't be renamed, moved or deleted.", teamsRoot),
             _ => throw new InvalidOperationException($"Unknown kind: {kind}"),
         };

@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Components.NeedsYou;
 using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tabs;
@@ -14,19 +14,19 @@ using Agency.Huddle.Tests.Factories;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// U9 shell rows: the Teammates section header and footer row height (UX-014, UX-017, OP-4), the Team chevron
+/// U9 shell rows: the Agents section header and footer row height (UX-014, UX-017, OP-4), the Team chevron
 /// colour (UX-018), the shared <c>RoomActions</c> helper (UX-R29), the global <c>.visually-hidden</c> class
 /// (UX-R21) and the Needs You Dismiss tooltip (UX-V09).
 /// </summary>
 public sealed class ShellSidebarRowsTests
 {
-    /// <summary>The Teammates entry is a destination, not a header: it is an ordinary row through the <c>nav-row-link</c> class (audit A7).</summary>
+    /// <summary>The Agents entry is a destination, not a header: it is an ordinary row through the <c>nav-row-link</c> class (audit A7).</summary>
     [Fact]
-    public void MainLayout_TeammatesLink_TakesTheOrdinaryRowClass()
+    public void MainLayout_AgentsLink_TakesTheOrdinaryRowClass()
     {
         string markup = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Layout", "MainLayout.razor"));
 
-        Assert.Matches(@"<NavTabLink Href=""/teammates""[^>]*Class=""nav-row-link""", markup);
+        Assert.Matches(@"<NavTabLink Href=""/agents""[^>]*Class=""nav-row-link""", markup);
     }
 
     /// <summary>The <c>nav-row-link</c> rule gives the 13px, weight-400, body-colour label of every other sidebar row (audit A7).</summary>

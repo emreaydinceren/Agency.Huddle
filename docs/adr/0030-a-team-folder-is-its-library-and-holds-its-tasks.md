@@ -11,7 +11,7 @@ Project's notes and any sub-folders under them. A Team's Tasks move into a reser
 folder at each level. This amends the Tasks root in
 [ADR-0025](0025-in-tasks-a-team-is-a-folder-by-convention.md), and it needs the Tasks effort's
 agreement before it is accepted. `Teams/` is free for this because Persona files move to
-`Teammates/` ([ADR-0031](0031-teammates-and-teams-are-sibling-folders.md)). The full design is
+`Agents/` ([ADR-0031](0031-agents-and-teams-are-sibling-folders.md)). The full design is
 [Huddle.Library-Specifications.md](../Huddle.Library-Specifications.md) (§6.2, §6.3).
 
 ## The problem
@@ -63,7 +63,7 @@ Teams/
 - **Team and Project folders cannot be renamed, moved or deleted from the Library.** A rename
   there is a change of filing for every Task inside it (ADR-0025) and wakes every assignee
   ([ADR-0026](0026-a-change-to-a-task-wakes-its-assignee.md)), so it belongs to Tasks and
-  Teammates, not to a file tree.
+  Agents, not to a file tree.
 - **A Team folder is a Watched Folder for every Persona in that Team,** with `_`-prefixed folders
   pruned from the scan, so Task files do not reach File Changes twice. A change to a Task already
   wakes its assignee.
@@ -84,7 +84,7 @@ Teams/
   effort accepts it. Existing `Tasks/` data moves in ADR-0031's migration.
 - **ADR-0025's rules still hold:** location is truth for Team, Project and Closed, and identity is
   the frontmatter `id`. Only the root and the `_tasks/` level change.
-- **`Teammates/` and `Teams/` must not overlap.** Start-up enforces it, as ADR-0025 required for
+- **`Agents/` and `Teams/` must not overlap.** Start-up enforces it, as ADR-0025 required for
   `Tasks/`.
 - **An Agent now sees its Team's notes change.** That is the point of the Watched Folder, and it
   costs a folder scan per Turn per Team, bounded by `FileChanges:MaxFilesPerFolder`.

@@ -70,9 +70,9 @@ public sealed class LibraryProtectionTests
         yield return new object?[] { LibraryNodeRole.Root, false, false, false, "A Library root can't be renamed, moved or deleted." };
         yield return new object?[] { LibraryNodeRole.TeamFolder, false, false, false, "Team and Project folders can't be renamed, moved or deleted here." };
         yield return new object?[] { LibraryNodeRole.ProjectFolder, false, false, false, "Team and Project folders can't be renamed, moved or deleted here." };
-        yield return new object?[] { LibraryNodeRole.TeammateFolder, false, false, false, "Teammate folders can't be renamed, moved or deleted here." };
-        yield return new object?[] { LibraryNodeRole.TeammateDefinition, false, false, false, "Teammate folders can't be renamed, moved or deleted here." };
-        yield return new object?[] { LibraryNodeRole.WorkDir, false, false, false, "Teammate folders can't be renamed, moved or deleted here." };
+        yield return new object?[] { LibraryNodeRole.AgentFolder, false, false, false, "Agent folders can't be renamed, moved or deleted here." };
+        yield return new object?[] { LibraryNodeRole.AgentDefinition, false, false, false, "Agent folders can't be renamed, moved or deleted here." };
+        yield return new object?[] { LibraryNodeRole.WorkDir, false, false, false, "Agent folders can't be renamed, moved or deleted here." };
         yield return new object?[] { LibraryNodeRole.Folder, true, true, true, null };
         yield return new object?[] { LibraryNodeRole.File, true, true, true, null };
     }
@@ -85,9 +85,9 @@ public sealed class LibraryProtectionTests
             LibraryNodeRole.Root => new LibraryPath(root, "", "/tmp/root", role),
             LibraryNodeRole.TeamFolder => new LibraryPath(root, "Teams/Marketing", "/tmp/root/Teams/Marketing", role),
             LibraryNodeRole.ProjectFolder => new LibraryPath(root, "Teams/Marketing/Q4", "/tmp/root/Teams/Marketing/Q4", role),
-            LibraryNodeRole.TeammateFolder => new LibraryPath(root, "Teammates/Nova", "/tmp/root/Teammates/Nova", role),
-            LibraryNodeRole.TeammateDefinition => new LibraryPath(root, "Teammates/Nova/Nova.md", "/tmp/root/Teammates/Nova/Nova.md", role),
-            LibraryNodeRole.WorkDir => new LibraryPath(root, "Teammates/Nova/work", "/tmp/root/Teammates/Nova/work", role),
+            LibraryNodeRole.AgentFolder => new LibraryPath(root, "Agents/Nova", "/tmp/root/Agents/Nova", role),
+            LibraryNodeRole.AgentDefinition => new LibraryPath(root, "Agents/Nova/Nova.md", "/tmp/root/Agents/Nova/Nova.md", role),
+            LibraryNodeRole.WorkDir => new LibraryPath(root, "Agents/Nova/work", "/tmp/root/Agents/Nova/work", role),
             LibraryNodeRole.Folder => new LibraryPath(root, "Teams/Marketing/notes", "/tmp/root/Teams/Marketing/notes", role),
             LibraryNodeRole.File => new LibraryPath(root, "Teams/Marketing/plan.md", "/tmp/root/Teams/Marketing/plan.md", role),
             _ => throw new InvalidOperationException($"Unknown role: {role}"),

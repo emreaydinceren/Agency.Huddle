@@ -4,7 +4,7 @@ namespace Agency.Huddle.Seeder.Model;
 
 /// <summary>One Feed item the seeder stores, in the Feed's own shape but with names instead of ids (Feed spec §6.3).</summary>
 /// <param name="Type">What the item reports.</param>
-/// <param name="Actor">Who did it, as the Feed stores the name: a Teammate, <c>You</c>, <c>Huddle</c> or a Helper's name.</param>
+/// <param name="Actor">Who did it, as the Feed stores the name: an Agent, <c>You</c>, <c>Huddle</c> or a Helper's name.</param>
 /// <param name="ActorKind">The actor's kind.</param>
 /// <param name="Target">A Task id, a Room key, a Helper id, or a path below <c>Teams/</c> for a document.</param>
 /// <param name="MinutesAgo">How long before the seed time it happened.</param>

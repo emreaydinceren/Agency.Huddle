@@ -137,7 +137,7 @@ public sealed class TaskFieldComponentsTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = this.RenderAssignee(ctx, "Nova", presence: null);
 
-        Assert.Equal(Size.Small, cut.FindComponent<TeammateAvatar>().Instance.Size);
+        Assert.Equal(Size.Small, cut.FindComponent<AgentAvatar>().Instance.Size);
         Assert.Equal("Nova", cut.Find(".task-assignee-name").TextContent.Trim());
         Assert.Single(cut.FindAll(".mud-avatar"));
     }

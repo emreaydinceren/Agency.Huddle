@@ -147,7 +147,7 @@ public sealed class RetroProposalTests
         Assert.Equal("---\nteamType: 'web@1.2.0'\nprocess: 'Process.md'\n---\nTeam notes: keep it tiny.\n", fixture.TeamNow);
     }
 
-    /// <summary>A Team member's file is edited through the Persona store.</summary>
+    /// <summary>An Agent's file is edited through the Persona store.</summary>
     [Fact]
     public async Task AcceptAsync_MemberFile_UpdatesPersona()
     {
@@ -199,7 +199,7 @@ public sealed class RetroProposalTests
         Assert.Single(fixture.Proposals.Pending("Platform"));
     }
 
-    /// <summary>A Teammate-file edit that changes <c>name:</c> is refused: a retro change cannot rename a Teammate.</summary>
+    /// <summary>An Agent-file edit that changes <c>name:</c> is refused: a retro change cannot rename an Agent.</summary>
     [Fact]
     public async Task AcceptAsync_MemberFileRename_IsRefused()
     {
@@ -213,7 +213,7 @@ public sealed class RetroProposalTests
 
         Persona after = fixture.Harness.Personas.Get("Kai") ?? throw new InvalidOperationException("Kai vanished.");
         Assert.Equal(RetroChangeOutcomeKind.Refused, outcome.Kind);
-        Assert.Equal("A retro change cannot rename a Teammate; Kai.md was not changed.", outcome.Text);
+        Assert.Equal("A retro change cannot rename an Agent; Kai.md was not changed.", outcome.Text);
         Assert.Equal(before.Text, after.Text);
         Assert.Null(fixture.Harness.Personas.Get("Kay"));
         Assert.Empty(fixture.Retro.ReadRegister("Platform"));
@@ -397,7 +397,7 @@ public sealed class RetroProposalTests
 
         string result = await tool.InvokeAsync(Arguments("Platform", Edit(), Edit(file)), ct);
 
-        Assert.Equal("targetFile must be Process.md, _team.md or the file of a Team member (Name.md).", result);
+        Assert.Equal("targetFile must be Process.md, _team.md or the file of an Agent (Name.md).", result);
         Assert.Empty(fixture.Proposals.Pending("Platform"));
     }
 
@@ -439,7 +439,7 @@ public sealed class RetroProposalTests
 
         Assert.Equal("propose_retro_changes", tool.Name);
         Assert.Equal(
-            "Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (Process.md, _team.md or a Team member's Name.md), " +
+            "Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (Process.md, _team.md or an Agent's Name.md), " +
             "the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; " +
             "nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.",
             tool.Description);

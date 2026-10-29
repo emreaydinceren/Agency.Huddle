@@ -1,7 +1,7 @@
 @*
     The Right sidebar's Activity panel for a Task open in its edit page (docs/Huddle.TaskReadView-Specifications.md, D-8):
-    what the app works out about the Task's wakes - the last Room it woke a Teammate in, how much of the wake budget is
-    spent, and whether a Teammate is working on it now. It reads TaskActivity and TurnActivity only, so it shows the Task
+    what the app works out about the Task's wakes - the last Room it woke an Agent in, how much of the wake budget is
+    spent, and whether an Agent is working on it now. It reads TaskActivity and TurnActivity only, so it shows the Task
     as stored and never an unsaved edit in the form. It has no count: a row is not a thing to tally.
 *@
 @using Agency.Huddle.App.Sidebar
@@ -18,7 +18,7 @@
 {
     WakeRecord? lastWake = this.Activity.LastWake(subject.Id);
     WakeBudget budget = this.Activity.Budget(subject.Id);
-    string? working = this.WorkingTeammate(lastWake);
+    string? working = this.WorkingAgent(lastWake);
 
     @if (lastWake is null && working is null && budget.Used == 0)
     {
@@ -83,11 +83,11 @@
     }
 
     /// <summary>
-    /// The Teammate working on the Task now, by the rule <see cref="AiReactingChip"/> applies: the last wake's Room has a Turn
-    /// running for the Teammate it woke. Null when there is no such wake or the Teammate is not known.
+    /// The Agent working on the Task now, by the rule <see cref="AiReactingChip"/> applies: the last wake's Room has a Turn
+    /// running for the Agent it woke. Null when there is no such wake or the Agent is not known.
     /// </summary>
     /// <param name="lastWake">The Task's last wake.</param>
-    private string? WorkingTeammate(WakeRecord? lastWake)
+    private string? WorkingAgent(WakeRecord? lastWake)
     {
         if (lastWake is not { RoomId: { } roomId })
         {

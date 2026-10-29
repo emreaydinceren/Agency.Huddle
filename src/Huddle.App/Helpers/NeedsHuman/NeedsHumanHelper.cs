@@ -7,11 +7,11 @@ using Agency.Huddle.App.Tasks.HumanGate;
 namespace Agency.Huddle.App.Helpers.NeedsHuman;
 
 /// <summary>
-/// Turns the Human gate on when a Teammate's Task leaves the team or can't be undone (Helpers Spec §6.10 and §6.11). It only
+/// Turns the Human gate on when an Agent's Task leaves the team or can't be undone (Helpers Spec §6.10 and §6.11). It only
 /// ever turns the gate on, and never judges a Task the Human has turned the gate off on.
 /// </summary>
 /// <param name="tasks">Reads the Task at apply time.</param>
-/// <param name="service">Makes the change, through the same service the Human and the Teammates use.</param>
+/// <param name="service">Makes the change, through the same service the Human and the Agents use.</param>
 /// <param name="overrides">The Tasks the Human turned the gate off on.</param>
 /// <param name="settings">Tells whether the Helper has been turned off since the run started.</param>
 internal sealed class NeedsHumanHelper(TaskStore tasks, TaskService service, NeedsHumanOverrideStore overrides, HelperSettingsResolver settings)
@@ -33,7 +33,7 @@ internal sealed class NeedsHumanHelper(TaskStore tasks, TaskService service, Nee
     public string DisplayName => "Needs Human";
 
     /// <inheritdoc/>
-    public string Description => "Turns on the Human gate when a Teammate's Task leaves the team or can't be undone. It never turns it off.";
+    public string Description => "Turns on the Human gate when an Agent's Task leaves the team or can't be undone. It never turns it off.";
 
     /// <inheritdoc/>
     public IReadOnlyList<string> PromptKeys { get; } = ["helper.needsHuman.system", "helper.needsHuman.task"];

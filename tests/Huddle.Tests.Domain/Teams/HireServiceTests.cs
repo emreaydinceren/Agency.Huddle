@@ -4,12 +4,12 @@ using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
-using Agency.Huddle.Tests.Teammates;
+using Agency.Huddle.Tests.Agents;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Agency.Huddle.Tests.Teams;
 
-/// <summary>Tests for <see cref="HireService"/>: a resolved card becomes an ordinary Teammate file plus store rows (HR-5, HR-6).</summary>
+/// <summary>Tests for <see cref="HireService"/>: a resolved card becomes an ordinary Agent file plus store rows (HR-5, HR-6).</summary>
 public sealed class HireServiceTests
 {
     private const string TeamName = "Web Team";
@@ -40,7 +40,7 @@ public sealed class HireServiceTests
 
     private static HireService Create(TempDataDir dir, out PersonaStore personas, out HireLimitHarness harness, int perTeam = 8)
     {
-        personas = new(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        personas = new(new AgentPaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         Dictionary<string, string> builtins = new(StringComparer.Ordinal)
         {
             ["web/team-type.json"] = Manifest,
@@ -51,7 +51,7 @@ public sealed class HireServiceTests
         TeamTypeCatalog types = new(dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
         FakeSkillAvailability packs = new FakeSkillAvailability().WithPack("msbuild-authoring", "1.0.0", "MSBuild", ["target-authoring"], ".csproj changes");
         TeamOptions options = new();
-        options.Acp.MaxTeammatesPerTeam = perTeam;
+        options.Acp.MaxAgentsPerTeam = perTeam;
         harness = new HireLimitHarness(Microsoft.Extensions.Options.Options.Create(options));
         AvatarStore avatars = new(dir.Options(), NullLogger<AvatarStore>.Instance);
         return new HireService(personas, types, packs, avatars, harness.Guard, new FakeSkillCopier(), new FakeStartGate(), NullLogger<HireService>.Instance);
@@ -67,12 +67,12 @@ public sealed class HireServiceTests
 
     private static string FileText(TempDataDir dir, string name)
     {
-        return File.ReadAllText(Path.Combine(dir.Path, "Teammates", name, $"{name}.md"));
+        return File.ReadAllText(Path.Combine(dir.Path, "Agents", name, $"{name}.md"));
     }
 
-    /// <summary>A hire writes an ordinary Teammate file that parses back with its role, packs, team and merged consult_when.</summary>
+    /// <summary>A hire writes an ordinary Agent file that parses back with its role, packs, team and merged consult_when.</summary>
     [Fact]
-    public void Hire_ReadyCard_WritesTeammateFileThatParsesBack()
+    public void Hire_ReadyCard_WritesAgentFileThatParsesBack()
     {
         using TempDataDir dir = new();
         HireService service = Create(dir, out PersonaStore personas, out _);
@@ -131,12 +131,12 @@ public sealed class HireServiceTests
         Assert.Single(personas.Entries);
     }
 
-    /// <summary>A file that exists on disk but is not a loaded Teammate is never overwritten.</summary>
+    /// <summary>A file that exists on disk but is not a loaded Agent is never overwritten.</summary>
     [Fact]
     public void Hire_FileAlreadyOnDisk_NotOverwritten()
     {
         using TempDataDir dir = new();
-        string folder = Path.Combine(dir.Path, "Teammates", "Jane");
+        string folder = Path.Combine(dir.Path, "Agents", "Jane");
         Directory.CreateDirectory(folder);
         File.WriteAllText(Path.Combine(folder, "Jane.md"), "not a persona");
         HireService service = Create(dir, out PersonaStore personas, out _);
@@ -161,9 +161,9 @@ public sealed class HireServiceTests
         HireResult result = service.Hire(Request("Lou"));
 
         Assert.False(result.Ok);
-        Assert.Equal("Team 'Web Team' already has the most Developer Teammates it allows (2).", result.Error);
+        Assert.Equal("Team 'Web Team' already has the most Developer Agents it allows (2).", result.Error);
         Assert.Equal(2, personas.Entries.Count);
-        Assert.False(File.Exists(Path.Combine(dir.Path, "Teammates", "Lou", "Lou.md")));
+        Assert.False(File.Exists(Path.Combine(dir.Path, "Agents", "Lou", "Lou.md")));
     }
 
     /// <summary>A hire the per-Team limit refuses is reported and nothing is written.</summary>
@@ -177,9 +177,9 @@ public sealed class HireServiceTests
         HireResult result = service.Hire(Request("Jane"));
 
         Assert.False(result.Ok);
-        Assert.Equal("Team 'Web Team' is full: 3 of 3 Teammates.", result.Error);
+        Assert.Equal("Team 'Web Team' is full: 3 of 3 Agents.", result.Error);
         Assert.Empty(personas.Entries);
-        Assert.False(File.Exists(Path.Combine(dir.Path, "Teammates", "Jane", "Jane.md")));
+        Assert.False(File.Exists(Path.Combine(dir.Path, "Agents", "Jane", "Jane.md")));
     }
 
     /// <summary>An unknown team type or role is refused and nothing is written.</summary>
@@ -200,9 +200,9 @@ public sealed class HireServiceTests
         Assert.Empty(personas.Entries);
     }
 
-    /// <summary>An avatar that cannot be saved is reported but the written Teammate stays.</summary>
+    /// <summary>An avatar that cannot be saved is reported but the written Agent stays.</summary>
     [Fact]
-    public void Hire_AvatarSaveFails_ReportsErrorAndKeepsTeammate()
+    public void Hire_AvatarSaveFails_ReportsErrorAndKeepsAgent()
     {
         using TempDataDir dir = new();
         Directory.CreateDirectory(Path.Combine(dir.Path, "avatars.json"));

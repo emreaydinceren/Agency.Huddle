@@ -3,14 +3,14 @@
 **6 tests** · 1 free, 5 paid 💰 (cheap: an image cost about 1,000 tokens) · about 1.4 hours
 
 Prove, in a real browser against a real Adapter, that a Library image the Human's Message names is
-**seen** by the Teammate without a tool call, that a named image over a limit quietly falls back to its
+**seen** by the Agent without a tool call, that a named image over a limit quietly falls back to its
 path, that an image mentioned only in catch-up is not re-sent, that an Adapter Profile can turn the
 whole thing off, and that an Adapter which never advertised image support gets plain path lines. The
 automated suite proves the parts, and the delivering agent ran the wire-level checks live on
 2026-10-01 (see below); this page proves they hold together on a screen. **Written 2026-10-01,
 repaired 2026-10-09.** PROMPTBLOCKS-02 and 03 were run by the delivering agent in the app on the first
 date, once each, on Haiku, and passed; results for every test are in [the tracker](tracker.md).
-PROMPTBLOCKS-04 (two Teammates in one Room) and PROMPTBLOCKS-06 have not been run.
+PROMPTBLOCKS-04 (two Agents in one Room) and PROMPTBLOCKS-06 have not been run.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -31,7 +31,7 @@ dotnet run --project src/Huddle.App --urls http://localhost:5100 -- `
   --Team:Library:Roots:0:Path=C:\scratch\design
 ```
 
-1. Create a **scratch** Teammate with [`P-NEW-PERSONA`](common.md#p-new-persona) on the stock Claude
+1. Create a **scratch** Agent with [`P-NEW-PERSONA`](common.md#p-new-persona) on the stock Claude
    Adapter, Model Haiku, Effort `low`, named `Nova`. Its one-to-one Room is the **fresh direct Room**
    the tests use.
 2. In `C:\scratch\design` put these files (any image editor will do; the content matters, not the size):
@@ -43,13 +43,13 @@ dotnet run --project src/Huddle.App --urls http://localhost:5100 -- `
      grayscale noise of that size is about 1.4 MB and stays under the limit).
    - `one.png` to `six.png`: six small distinct PNGs (a solid colour each is enough).
 3. Every message below names a file by its **full path**, typed or pasted, not by a link, and tells the
-   Teammate not to use any tool, so that "it read the file with a tool" cannot pass for "it was sent the
+   Agent not to use any tool, so that "it read the file with a tool" cannot pass for "it was sent the
    image".
 4. `O-LOG` shows the app log; the Information line this page looks for reads
    `Persona '<Name>' sent image paths in room <id> as path lines instead of blocks: <Reason>=<n>.`
    (`RoomSession.cs:1763-1767`). It ends with a full stop and holds counts, never a path.
 5. [`O-TOOLCALLS`](common.md#o-toolcalls) is the tool-call oracle: the folder
-   `<data>\logs\tool-calls\<Name>\` does not exist until the Teammate's first tool call, and a Turn
+   `<data>\logs\tool-calls\<Name>\` does not exist until the Agent's first tool call, and a Turn
    made no tool call when the newest line of today's file has a `time` before you pressed Send (or the
    folder is absent). The live Draft's activity rows show the same calls.
 
@@ -59,7 +59,7 @@ dotnet run --project src/Huddle.App --urls http://localhost:5100 -- `
 
 **Paid** 💰 · about 10 min
 
-*Proves P1: the image travels with the message, and the Teammate reads the words and the colour out of
+*Proves P1: the image travels with the message, and the Agent reads the words and the colour out of
 it.*
 
 **Steps**
@@ -91,7 +91,7 @@ it.*
 
 **Steps**
 
-1. In a fresh direct Room (a second scratch Teammate, `Kai`, on the same Adapter, Haiku / low), type one
+1. In a fresh direct Room (a second scratch Agent, `Kai`, on the same Adapter, Haiku / low), type one
    Message naming `one.png` to `six.png` by full path, each on its own line, and asking:
    `Without using any tool, how many pictures can you actually see, and what colour is each?`
 2. Read the reply, then `O-LOG`.
@@ -121,7 +121,7 @@ Turn still runs, and the reason is logged.*
 
 **Pass if — all of these**
 
-- The Teammate replies `PATHONLY` and the Turn completes.
+- The Agent replies `PATHONLY` and the Turn completes.
 - `O-LOG` has one Information line ending `TooLarge=1.`, and it does not contain the file's path.
 
 **Fail if — any of these**
@@ -137,7 +137,7 @@ Turn still runs, and the reason is logged.*
 
 **Steps**
 
-1. Make a Room with the Human and **two** scratch Teammates, `Nova` and `Kai` (Haiku / low each).
+1. Make a Room with the Human and **two** scratch Agents, `Nova` and `Kai` (Haiku / low each).
 2. Type `@Nova here is the picture, just say OK: C:\scratch\design\checkout.png` and wait for Nova's reply.
 3. Note the time, then type `@Kai Without opening any file or using any tool, what words are in the green banner of that picture?`
 4. Read Kai's reply, then `O-TOOLCALLS` for `Kai`.
@@ -178,7 +178,7 @@ Turn still runs, and the reason is logged.*
     --Team:Acp:Adapters:0:IsolateUserSettings=true
   ```
 
-- A **new** scratch Teammate, `Wren`, whose card shows **Adapter: claude**, Haiku / low, and so a fresh
+- A **new** scratch Agent, `Wren`, whose card shows **Adapter: claude**, Haiku / low, and so a fresh
   direct Room. A resumed session still holds every image it was sent earlier, so `Nova`'s Room and
   `checkout.png` must not be reused.
 
@@ -190,7 +190,7 @@ Turn still runs, and the reason is logged.*
 
 **Pass if — all of these**
 
-- The Teammate does **not** say `MANGO 7316` without first calling a file tool (a `Wren` line in
+- The Agent does **not** say `MANGO 7316` without first calling a file tool (a `Wren` line in
   `O-TOOLCALLS` after Send), or says it cannot see the image.
 - Your Message shows the path as a Library link (the path is a Library path, so the switch is what
   withheld the block).

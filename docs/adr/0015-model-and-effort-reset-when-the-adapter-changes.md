@@ -5,7 +5,7 @@ date: 2026-09-16
 
 # Model and Effort reset when the Adapter changes
 
-A Teammate card now has three cascading selects: Adapter, then Model, then Effort. Each
+An Agent card now has three cascading selects: Adapter, then Model, then Effort. Each
 constrains the one below it. This records what happens to the two below when the top one
 changes, because the answer is **deliberate data loss on an edit**, which is not a thing to do
 silently.
@@ -38,7 +38,7 @@ Adapter changed
 ```
 
 Null means "use the Adapter's default", which is the normal case and always valid. So the reset
-lands the Teammate in a working state rather than an empty one.
+lands the Agent in a working state rather than an empty one.
 
 The note announcing it uses **`role="status"`, never `role="alert"`**. It is a consequence of
 what the human just did, not an interruption — the same reasoning, and the same markup, as the
@@ -81,7 +81,7 @@ from the *shape* of the change rather than found by a user.
   rename cost for a convenience.
 - The reset happens in the card, on change — not at save time and not in `PersonaStore`. A human
   who changes Adapter and cancels loses nothing.
-- Saving after an Adapter change restarts the session, so the Teammate loses its conversation
+- Saving after an Adapter change restarts the session, so the Agent loses its conversation
   memory too. That is [ADR-0013](0013-an-adapter-is-a-property-of-the-persona.md)'s consequence,
   not this one's, but a human experiences them together and the helper text says so.
 - A stored-but-unconfigured Adapter id is **synthesised into the choice list** rather than

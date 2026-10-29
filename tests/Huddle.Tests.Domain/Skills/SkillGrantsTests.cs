@@ -35,8 +35,8 @@ public sealed class SkillGrantsTests
     [
         new StubTool("post_message"),
         new StubTool("create_room"),
-        new StubTool("validate_teammate"),
-        new StubTool("propose_teammates"),
+        new StubTool("validate_agent"),
+        new StubTool("propose_agents"),
         new StubTool("read_skill"),
     ];
 
@@ -54,15 +54,15 @@ public sealed class SkillGrantsTests
             { "NoSkills", null, ["post_message", "create_room"] },
             {
                 "SkillWithBothGrantableTools",
-                ["validate_teammate", "propose_teammates"],
-                ["post_message", "create_room", "validate_teammate", "propose_teammates", "read_skill"]
+                ["validate_agent", "propose_agents"],
+                ["post_message", "create_room", "validate_agent", "propose_agents", "read_skill"]
             },
             { "SkillWithNoTools", [], ["post_message", "create_room", "read_skill"] },
         };
     }
 
     /// <summary>
-    /// With no Skills, none of <c>read_skill</c>, <c>validate_teammate</c> or <c>propose_teammates</c> is
+    /// With no Skills, none of <c>read_skill</c>, <c>validate_agent</c> or <c>propose_agents</c> is
     /// offered, but every other tool is kept; a Skill listing both <see cref="SkillGrants.Grantable"/>
     /// tools offers both of them plus <c>read_skill</c>; a Skill listing no tools offers only
     /// <c>read_skill</c> among the gated ones.
@@ -95,14 +95,14 @@ public sealed class SkillGrantsTests
         [
             new StubTool("read_skill"),
             new StubTool("post_message"),
-            new StubTool("propose_teammates"),
-            new StubTool("validate_teammate"),
+            new StubTool("propose_agents"),
+            new StubTool("validate_agent"),
         ];
-        Skill skill = TeamBuildingSkill(["propose_teammates", "validate_teammate"]);
+        Skill skill = TeamBuildingSkill(["propose_agents", "validate_agent"]);
 
         IReadOnlyList<IAppTool> offered = SkillGrants.Offer(all, [skill]);
 
-        string[] expectedNames = ["read_skill", "post_message", "propose_teammates", "validate_teammate"];
+        string[] expectedNames = ["read_skill", "post_message", "propose_agents", "validate_agent"];
         Assert.Equal(expectedNames, offered.Select(tool => tool.Name));
     }
 
@@ -111,12 +111,12 @@ public sealed class SkillGrantsTests
     /// <see cref="SkillGrants.Grantable"/>, so no Skill file can switch it off for a Persona that does
     /// not hold the Skill, and <see cref="SkillGrants.Offer"/> keeps it whether the Persona holds no
     /// Skill, a Skill that names it, or a Skill that does not. Asking costs nothing and creates
-    /// nothing, unlike <c>propose_teammates</c>, which is gated because each Teammate is a billed process.
+    /// nothing, unlike <c>propose_agents</c>, which is gated because each Agent is a billed process.
     /// </summary>
     [Fact]
     public void Offer_AskHuman_IsOfferedToEveryPersonaWhateverItsSkills()
     {
-        IReadOnlyList<IAppTool> all = [new StubTool("ask_human"), new StubTool("propose_teammates")];
+        IReadOnlyList<IAppTool> all = [new StubTool("ask_human"), new StubTool("propose_agents")];
 
         Assert.DoesNotContain("ask_human", (IEnumerable<string>)SkillGrants.Grantable);
         Assert.Equal(["ask_human"], SkillGrants.Offer(all, []).Select(tool => tool.Name));

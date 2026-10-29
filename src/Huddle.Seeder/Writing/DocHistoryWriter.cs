@@ -28,7 +28,7 @@ internal static class DocHistoryWriter
     private static readonly Dictionary<string, string> RootIdByFolder = new(StringComparer.Ordinal)
     {
         ["Teams"] = "teams",
-        ["Teammates"] = "teammates",
+        ["Agents"] = "agents",
         ["Uploads"] = "uploads",
     };
 
@@ -42,7 +42,7 @@ internal static class DocHistoryWriter
         string folder = slash < 0 ? relativePath : relativePath[..slash];
         if (slash < 0 || !RootIdByFolder.TryGetValue(folder, out string? rootId))
         {
-            throw new InvalidOperationException($"The document {relativePath} is not under Teams/, Teammates/ or Uploads/.");
+            throw new InvalidOperationException($"The document {relativePath} is not under Teams/, Agents/ or Uploads/.");
         }
 
         return $"doc-history/{rootId}/{relativePath[(slash + 1)..]}.jsonl";

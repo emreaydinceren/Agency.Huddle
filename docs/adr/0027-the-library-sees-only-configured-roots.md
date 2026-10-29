@@ -30,7 +30,7 @@ read or write anywhere on the machine.
 | Root | Where | Configured by |
 | --- | --- | --- |
 | **Teams** | `{DataDir}/Teams/`, one folder per Team: notes and Projects ([ADR-0030](0030-a-team-folder-is-its-library-and-holds-its-tasks.md)) | Built in |
-| **Teammates** | `{DataDir}/Teammates/`, one folder per Teammate: its definition, and its `work/` folder with artifacts and `memory/` ([ADR-0031](0031-teammates-and-teams-are-sibling-folders.md)) | Built in |
+| **Agents** | `{DataDir}/Agents/`, one folder per Agent: its definition, and its `work/` folder with artifacts and `memory/` ([ADR-0031](0031-agents-and-teams-are-sibling-folders.md)) | Built in |
 | **Uploads** | `{DataDir}/Uploads/`, one folder per root Room holding files attached in the chat; a Team Room's files sit under its Team's `Uploads/` instead ([ADR-0053](0053-an-upload-is-saved-to-the-library-and-sent-as-its-path.md)) | Built in |
 | **Pinned roots** | Any folder the Human adds, such as `E:\Repos\Huddle\docs` | `Team:Library:Roots` in configuration, plus the Settings → Library panel, persisted to `{DataDir}/library-roots.json` on first save |
 
@@ -54,8 +54,8 @@ that type, so there is no code path that touches the disk with an unresolved str
 | --- | --- |
 | The whole file system, like an OS file dialog | One path-handling bug becomes a read or write anywhere on the machine, from a same-origin page with no authentication |
 | `DataDir` only | Excludes the main pinned-root use case: editing specs in a repo that is also an Obsidian vault |
-| One configured root | A Team folder, a Teammate's Work Dir and a repo's docs are three different places. One root would have to be a common ancestor, which is usually a drive |
-| Per-Room scope (only the Room's Teammates' folders) | The Library changes under the Human when they switch Rooms. Specs and Team notes belong to no Room |
+| One configured root | A Team folder, an Agent's Work Dir and a repo's docs are three different places. One root would have to be a common ancestor, which is usually a drive |
+| Per-Room scope (only the Room's Agents' folders) | The Library changes under the Human when they switch Rooms. Specs and Team notes belong to no Room |
 | Absolute paths from the browser, checked with `StartsWith` | `StartsWith` passes `C:\Data\Library-evil` for root `C:\Data\Library`, and ignores junctions |
 
 ## Consequences

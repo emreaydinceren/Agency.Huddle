@@ -46,7 +46,7 @@
         this.Catalog.Changed -= this.OnMembersChanged;
     }
 
-    /// <summary>Finds each member's AGENT user, which a Teammate has once it has connected at least once.</summary>
+    /// <summary>Finds each member's AGENT user, which an Agent has once it has connected at least once.</summary>
     private async Task LoadAgentIdsAsync()
     {
         Dictionary<string, string?> agentIds = new(StringComparer.OrdinalIgnoreCase);
@@ -59,7 +59,7 @@
         this.agentIdByMember = agentIds;
     }
 
-    /// <summary>A member's state, resolved as the Teammates page resolves it.</summary>
+    /// <summary>A member's state, resolved as the Agents page resolves it.</summary>
     /// <param name="member">The member's Name.</param>
     private PersonaState StateOf(string member)
     {

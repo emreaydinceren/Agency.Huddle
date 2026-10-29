@@ -11,7 +11,7 @@ using Agency.Huddle.App.Search;
 using Agency.Huddle.App.Tasks;
 
 /// <summary>
-/// Finds Teams, Teammates, Library entries, Tasks and Rooms for an Agent by exact phrase, the way Global Search does for
+/// Finds Teams, Agents, Library entries, Tasks and Rooms for an Agent by exact phrase, the way Global Search does for
 /// the Human. It calls the same providers and the same ranker, once per pass, with no debounce and no event flow. Rooms are
 /// the sensitive category: by default only the Rooms the caller is a Member of, plus the Rooms scoped to one of the caller's
 /// Teams, are read, and the list is passed to the Rooms provider so no other Transcript is opened. <c>scope: "all"</c>
@@ -46,7 +46,7 @@ internal sealed class SearchTool(
 
     private const string ScopeAll = "all";
 
-    private static readonly string[] FilterNames = ["all", "teams", "teammates", "library", "tasks", "rooms"];
+    private static readonly string[] FilterNames = ["all", "teams", "agents", "library", "tasks", "rooms"];
 
     /// <inheritdoc />
     public string Name => "search";
@@ -140,7 +140,7 @@ internal sealed class SearchTool(
 
         if (!parse.IsSearchable)
         {
-            refusal = $"The query needs at least {SearchLimits.MinChars} characters. Only an empty query for teams or teammates browses.";
+            refusal = $"The query needs at least {SearchLimits.MinChars} characters. Only an empty query for teams or agents browses.";
             return false;
         }
 
@@ -308,8 +308,8 @@ internal sealed class SearchTool(
     {
         return hit switch
         {
-            TeamHit team => $"{team.Name} | {team.TypeLabel ?? "no type"} | {team.TeammateCount} teammates",
-            TeammateHit teammate => $"{teammate.Name} | {teammate.PersonaTitle} | {(teammate.Teams.Count == 0 ? "no team" : string.Join(", ", teammate.Teams))}",
+            TeamHit team => $"{team.Name} | {team.TypeLabel ?? "no type"} | {team.AgentCount} agents",
+            AgentHit agent => $"{agent.Name} | {agent.PersonaTitle} | {(agent.Teams.Count == 0 ? "no team" : string.Join(", ", agent.Teams))}",
             LibraryHit library => $"{library.RootId}:{library.RelativePath}{(library.IsFolder ? " (folder)" : string.Empty)}{SnippetOf(library.Snippet)}",
             TaskHit task => $"{task.Id} | {task.Status.ToWire()} | {task.Assignee ?? "unassigned"} | {task.Team} | {task.TaskTitle}",
             RoomHit room => RoomLine(room),
@@ -344,7 +344,7 @@ internal sealed class SearchTool(
             (SearchFilter.Tasks, SearchScope.Archived) => "Closed Tasks",
             (SearchFilter.Rooms, SearchScope.Archived) => "Archived Rooms",
             (SearchFilter.Teams, _) => "Teams",
-            (SearchFilter.Teammates, _) => "Teammates",
+            (SearchFilter.Agents, _) => "Agents",
             (SearchFilter.Library, _) => "Library",
             (SearchFilter.Tasks, _) => "Tasks",
             (SearchFilter.Rooms, _) => "Rooms",

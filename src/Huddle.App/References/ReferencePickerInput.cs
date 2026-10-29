@@ -9,7 +9,7 @@ namespace Agency.Huddle.App.References;
 /// <param name="Groups">The state of each group and side, keyed by filter and scope. A missing key is an update that has not arrived.</param>
 /// <param name="MemberNames">The names of the Room's Members, compared ignoring case.</param>
 /// <param name="LibraryRootPaths">The full path of each Library Root, keyed by root id.</param>
-/// <param name="InviteCommand">Whether the box starts with <c>/invite </c>, which shows the Teammates group only.</param>
+/// <param name="InviteCommand">Whether the box starts with <c>/invite </c>, which shows the Agents group only.</param>
 /// <param name="ListboxId">The element id of the list, which the row ids extend.</param>
 /// <param name="Highlight">The index the highlight was last set to.</param>
 internal sealed record ReferencePickerInput(

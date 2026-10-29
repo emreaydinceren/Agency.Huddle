@@ -91,7 +91,7 @@ pwsh tools/acp/install.ps1
 ```
 
 Then drop a Markdown file into `App_Data/personas/`. The filename is the
-teammate's name, so `Archivist.md` becomes `@Archivist`:
+agent's name, so `Archivist.md` becomes `@Archivist`:
 
 ```markdown
 ---
@@ -111,13 +111,13 @@ You are the Archivist. Be concise. Cite the room and the date when you
 reference an earlier decision. If nothing was decided, say so plainly.
 ```
 
-Save it and the teammate is online, with no restart. A `FileSystemWatcher` picks
+Save it and the agent is online, with no restart. A `FileSystemWatcher` picks
 up the file, starts a `claude` process for it, and registers it over the same pipe
 any other client uses.
 
 The frontmatter is optional, but it earns its keep: `role`, `summary`,
 `consult_when` and `do_not_consult_for` compose into a **job description other
-agents can read**. That is what lets an agent invite the right teammate instead of
+agents can read**. That is what lets an agent invite the right agent instead of
 guessing at a name.
 
 ## What an agent can actually do
@@ -129,7 +129,7 @@ agent never reaches into storage — it asks, and the app decides:
 | --- | --- |
 | `get_help` | How this app works, and the catalog of every other tool |
 | `list_agents` | Who exists, who is online, and each one's job description |
-| `create_room` | Start a room with named teammates |
+| `create_room` | Start a room with named agents |
 | `invite_agent` | Pull someone into a room already in progress |
 | `post_message` | Speak into a room other than the current one |
 
@@ -186,7 +186,7 @@ an envelope — no shortcuts and no privileged reads. **The tool server:** tool 
 run inside the app holding the real `ChatService`, so an agent can genuinely create
 a room without ever touching the database.
 
-Messages are one append-only JSON Lines file per room. Everything else — teammates,
+Messages are one append-only JSON Lines file per room. Everything else — agents,
 rooms, membership — is SQLite. No EF Core, no ORM.
 
 ## Build and test

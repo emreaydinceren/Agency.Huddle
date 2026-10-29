@@ -46,7 +46,7 @@ internal sealed class TeamDuplicator(
     /// <param name="sourceTeam">The Team to copy.</param>
     /// <param name="newTeam">The new Team's name.</param>
     /// <param name="newWorkspace">The new Team's workspace folder, or <see langword="null"/> or blank for none.</param>
-    /// <returns>The new Teammates and the source members that were skipped, or the refusal.</returns>
+    /// <returns>The new Agents and the source members that were skipped, or the refusal.</returns>
     public DuplicateResult Duplicate(string sourceTeam, string newTeam, string? newWorkspace)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceTeam);

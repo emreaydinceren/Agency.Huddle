@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Questions;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Teams;
@@ -317,7 +317,7 @@ public sealed class ChatServiceTests
     /// <summary>
     /// The whole feature: a Room the Human hand-renamed away from its auto-derived name must keep that
     /// name across a later Invitation, or the rename the Human just made is thrown away on the very
-    /// next <c>/invite</c>, <b>Add teammate</b>, or <c>mcp__team__invite_agent</c> call.
+    /// next <c>/invite</c>, <b>Add agent</b>, or <c>mcp__team__invite_agent</c> call.
     /// </summary>
     [Fact]
     public async Task Invite_IntoAHandRenamedRoom_LeavesTheNameAlone()
@@ -1269,8 +1269,8 @@ public sealed class ChatServiceTests
         new() { Teams = [.. teams.Select(t => new TeamSummary(t, [], [], false))] };
 
     /// <summary>
-    /// A New chat started inside a Team with one Teammate creates a Room scoped to that Team and leaves
-    /// the root one-to-one with the same Teammate alone (T6).
+    /// A New chat started inside a Team with one Agent creates a Room scoped to that Team and leaves
+    /// the root one-to-one with the same Agent alone (T6).
     /// </summary>
     [Fact]
     public async Task CreateRoomFor_SingleAgentInTeam_CreatesScopedRoom_AndLeavesRootRoomAlone()
@@ -1294,7 +1294,7 @@ public sealed class ChatServiceTests
         Assert.Equal(root.Id, stillRoot?.Id);
     }
 
-    /// <summary>A New chat in a Team with several Teammates, one of them not in the Team, is scoped and named as before (T5).</summary>
+    /// <summary>A New chat in a Team with several Agents, one of them not in the Team, is scoped and named as before (T5).</summary>
     [Fact]
     public async Task CreateRoomFor_SeveralAgentsInTeam_CreatesScopedRoom_NamedByDerive()
     {
@@ -1416,7 +1416,7 @@ public sealed class ChatServiceTests
         Assert.Single(await directory.GetRoomsForTeamAsync("Marketing", ct));
     }
 
-    /// <summary>Two Teams get two separate one-to-ones with the same Teammate.</summary>
+    /// <summary>Two Teams get two separate one-to-ones with the same Agent.</summary>
     [Fact]
     public async Task EnsureTeamOneToOne_ForTwoTeams_CreatesTwoRooms()
     {

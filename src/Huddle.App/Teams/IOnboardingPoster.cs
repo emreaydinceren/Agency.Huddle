@@ -4,7 +4,7 @@ namespace Agency.Huddle.App.Teams;
 internal interface IOnboardingPoster
 {
     /// <summary>Posts <paramref name="text"/> to the manager's Room.</summary>
-    /// <param name="managerName">The manager Teammate's Name.</param>
+    /// <param name="managerName">The manager Agent's Name.</param>
     /// <param name="text">The message.</param>
     /// <param name="ct">Cancels the post.</param>
     /// <returns><see langword="true"/> when the message was posted; <see langword="false"/> when the manager or its Room could not be reached.</returns>
@@ -16,7 +16,7 @@ internal interface IOnboardingPoster
     /// recipient's root one-to-one, exactly as <see cref="PostAsync"/> does.
     /// </summary>
     /// <param name="team">The Team the post is for.</param>
-    /// <param name="recipientName">The recipient Teammate's Name.</param>
+    /// <param name="recipientName">The recipient Agent's Name.</param>
     /// <param name="text">The message.</param>
     /// <param name="ct">Cancels the post.</param>
     /// <returns><see langword="true"/> when the message was posted; <see langword="false"/> when the recipient or a Room could not be reached.</returns>

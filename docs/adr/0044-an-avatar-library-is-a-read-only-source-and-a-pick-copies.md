@@ -16,11 +16,11 @@ date: 2026-10-08
 
 ## The defect
 
-An Avatar can only be an image the Human already has on disk. Giving a Teammate a face therefore
+An Avatar can only be an image the Human already has on disk. Giving an Agent a face therefore
 means finding a suitable picture somewhere, cropping it square, shrinking it under the 512 000-byte
 cap and then uploading it. [ADR-0019](0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md)
 refuses an image decoder, so the app cannot do any of that work itself. The feature exists, but
-choosing a face is a chore, and most Teammates keep their initials.
+choosing a face is a chore, and most Agents keep their initials.
 
 ## The decision
 
@@ -33,7 +33,7 @@ index when it opens and drops it when it closes. Thumbnails are served by a stat
 the server never holds the pixels. The one picked file is read on demand and handed to the
 `avatarPendingBytes` and `WriteImage` path that an upload already feeds.
 
-The Teammate therefore owns its copy. Moving or deleting the library afterwards does not blank
+The Agent therefore owns its copy. Moving or deleting the library afterwards does not blank
 anybody's face, and nothing downstream of the picker changes.
 
 ### The nine decisions
@@ -43,7 +43,7 @@ who proposes it again can see why it was not taken.
 
 | # | Decision | The alternative it beat |
 | --- | --- | --- |
-| D-1 | A pick **copies** the file into the Avatar store. | Putting a library file name in `avatars.json`. That needs a second image namespace in `TeammateAvatar`, and a moved library would blank every Teammate. |
+| D-1 | A pick **copies** the file into the Avatar store. | Putting a library file name in `avatars.json`. That needs a second image namespace in `AgentAvatar`, and a moved library would blank every Agent. |
 | D-2 | A **second static mount** serves the thumbnails at `/avatar-library`. | A `data:` URI per thumbnail, which ADR-0019 rejected for payload size and missing caching, or a custom endpoint. |
 | D-3 | The picker is a **modal `MudDialog`**. | A drawer or sliding panel, which the product owner rejected, or an inline expander inside the card. |
 | D-4 | **No visible text on a picture.** The accessible name is `aria-label` only. | Captions or tooltips, and `title`, which is a tooltip. |
@@ -64,4 +64,4 @@ who proposes it again can see why it was not taken.
 - **Library images are served unauthenticated,** as other avatars already are. The library holds
   illustrations, not personal data, and the same-origin reasoning in ADR-0019 applies unchanged.
 - **Every picked face is a copy.** Disk use grows by one image per pick. That is accepted, because
-  it is what makes a Teammate independent of the library.
+  it is what makes an Agent independent of the library.

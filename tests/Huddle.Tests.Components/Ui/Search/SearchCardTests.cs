@@ -20,7 +20,7 @@ public sealed class SearchCardTests : IDisposable
     private readonly TempDataDir dataDir = new();
     private readonly AvatarStore avatarStore;
 
-    /// <summary>Builds a real, empty <see cref="AvatarStore"/>, since <see cref="TeammateSearchCard"/> injects it for the avatar.</summary>
+    /// <summary>Builds a real, empty <see cref="AvatarStore"/>, since <see cref="AgentSearchCard"/> injects it for the avatar.</summary>
     public SearchCardTests()
     {
         this.avatarStore = new AvatarStore(this.dataDir.Options(), NullLogger<AvatarStore>.Instance);
@@ -29,7 +29,7 @@ public sealed class SearchCardTests : IDisposable
     /// <summary>Releases the temporary data directory backing the avatar store.</summary>
     public void Dispose() => this.dataDir.Dispose();
 
-    /// <summary>A Team with a type and four Teammates shows its name, then <c>Development Team · 4 teammates</c>.</summary>
+    /// <summary>A Team with a type and four Agents shows its name, then <c>Development Team · 4 agents</c>.</summary>
     [Fact]
     public async Task TeamCard_RendersNameTypeAndCount()
     {
@@ -39,44 +39,44 @@ public sealed class SearchCardTests : IDisposable
         IRenderedComponent<TeamSearchCard> cut = ctx.Render<TeamSearchCard>(p => p.Add(c => c.Hit, hit));
 
         Assert.Equal("Marketing", cut.Find(".search-card-title").TextContent.Trim());
-        Assert.Equal("Development Team · 4 teammates", cut.Find(".search-card-meta").TextContent.Trim());
+        Assert.Equal("Development Team · 4 agents", cut.Find(".search-card-meta").TextContent.Trim());
     }
 
-    /// <summary>A Team with one Teammate and no type says <c>1 teammate</c>, not <c>1 teammates</c>.</summary>
+    /// <summary>A Team with one Agent and no type says <c>1 agent</c>, not <c>1 agents</c>.</summary>
     [Fact]
-    public async Task TeamCard_OneTeammate_IsSingular()
+    public async Task TeamCard_OneAgent_IsSingular()
     {
         await using MudBunitContext ctx = new();
         TeamHit hit = new("Platform", null, 1, MatchTier.NamePrefix);
 
         IRenderedComponent<TeamSearchCard> cut = ctx.Render<TeamSearchCard>(p => p.Add(c => c.Hit, hit));
 
-        Assert.Equal("1 teammate", cut.Find(".search-card-meta").TextContent.Trim());
+        Assert.Equal("1 agent", cut.Find(".search-card-meta").TextContent.Trim());
     }
 
-    /// <summary>A Teammate shows its Name, then its Title and Teams, joined as <c>Product Manager · Marketing, Platform</c>.</summary>
+    /// <summary>An Agent shows its Name, then its Title and Teams, joined as <c>Product Manager · Marketing, Platform</c>.</summary>
     [Fact]
-    public async Task TeammateCard_RendersNameTitleAndTeams()
+    public async Task AgentProfileCard_RendersNameTitleAndTeams()
     {
         await using MudBunitContext ctx = new();
         ctx.Services.AddSingleton(this.avatarStore);
-        TeammateHit hit = new("Nova", "Product Manager", "nova", ["Marketing", "Platform"], MatchTier.ExactName);
+        AgentHit hit = new("Nova", "Product Manager", "nova", ["Marketing", "Platform"], MatchTier.ExactName);
 
-        IRenderedComponent<TeammateSearchCard> cut = ctx.Render<TeammateSearchCard>(p => p.Add(c => c.Hit, hit));
+        IRenderedComponent<AgentSearchCard> cut = ctx.Render<AgentSearchCard>(p => p.Add(c => c.Hit, hit));
 
         Assert.Equal("Nova", cut.Find(".search-card-title").TextContent.Trim());
         Assert.Equal("Product Manager · Marketing, Platform", cut.Find(".search-card-meta").TextContent.Trim());
     }
 
-    /// <summary>A Teammate with no Team says <c>No team</c> in place of the Team list (OP-8).</summary>
+    /// <summary>An Agent with no Team says <c>No team</c> in place of the Team list (OP-8).</summary>
     [Fact]
-    public async Task TeammateCard_NoTeam_SaysNoTeam()
+    public async Task AgentProfileCard_NoTeam_SaysNoTeam()
     {
         await using MudBunitContext ctx = new();
         ctx.Services.AddSingleton(this.avatarStore);
-        TeammateHit hit = new("Nova", "Product Manager", "nova", [], MatchTier.ExactName);
+        AgentHit hit = new("Nova", "Product Manager", "nova", [], MatchTier.ExactName);
 
-        IRenderedComponent<TeammateSearchCard> cut = ctx.Render<TeammateSearchCard>(p => p.Add(c => c.Hit, hit));
+        IRenderedComponent<AgentSearchCard> cut = ctx.Render<AgentSearchCard>(p => p.Add(c => c.Hit, hit));
 
         Assert.Equal("Product Manager · No team", cut.Find(".search-card-meta").TextContent.Trim());
     }
@@ -199,7 +199,7 @@ public sealed class SearchCardTests : IDisposable
     /// <param name="kind">Which card's sample hit to render through the switch.</param>
     [Theory]
     [InlineData("team")]
-    [InlineData("teammate")]
+    [InlineData("agent")]
     [InlineData("library")]
     [InlineData("room")]
     public async Task EveryCard_HasAnEmptyActionSlot(string kind)
@@ -255,7 +255,7 @@ public sealed class SearchCardTests : IDisposable
     }
 
     /// <summary>One sample hit per card kind, for the tests that do not care about the text.</summary>
-    /// <param name="kind">The card kind: team, teammate, library, task or room.</param>
+    /// <param name="kind">The card kind: team, agent, library, task or room.</param>
     /// <returns>A hit whose subtype selects the matching card.</returns>
     private static SearchHit SampleHit(string kind)
     {
@@ -263,7 +263,7 @@ public sealed class SearchCardTests : IDisposable
         return kind switch
         {
             "team" => new TeamHit("Marketing", "Development Team", 4, MatchTier.ExactName),
-            "teammate" => new TeammateHit("Nova", "Product Manager", "nova", ["Marketing"], MatchTier.ExactName),
+            "agent" => new AgentHit("Nova", "Product Manager", "nova", ["Marketing"], MatchTier.ExactName),
             "library" => new LibraryHit("root", "Marketing", "plan.md", string.Empty, false, null, null, MatchTier.ExactName),
             "task" => new TaskHit(new TaskId("SUP", 12), "Support SAML login", TaskState.ToDo, null, "Platform", false, MatchTier.ExactName),
             _ => new RoomHit("room-1", "findings", 1, "msg-1", "Kai", "login", time, false, MatchTier.ContentMatch),

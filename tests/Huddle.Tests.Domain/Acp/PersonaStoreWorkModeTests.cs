@@ -15,7 +15,7 @@ public sealed class PersonaStoreWorkModeTests
     public void Get_JoinsTheStoredWorkModeToTheFile()
     {
         using TempDataDir dir = new();
-        TestPersonaFiles.Write(new TeammatePaths(dir.Options()), "coo", TestPersonas.FrontmatterText("coo", "You are the Chief of Staff."));
+        TestPersonaFiles.Write(new AgentPaths(dir.Options()), "coo", TestPersonas.FrontmatterText("coo", "You are the Chief of Staff."));
         new PersonaWorkModeStore(dir.Options()).Set("coo", "plan");
         using PersonaStore store = CreateStore(dir);
 

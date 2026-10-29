@@ -100,7 +100,7 @@
     private const string HideItem = "Hide";
     private const string UnhideItem = "Unhide";
     private const string ShowInLibraryItem = "Show in Library";
-    private const string RemoveFromTeammatesItem = "Remove from Teammates";
+    private const string RemoveFromAgentsItem = "Remove from Agents";
     private const string RemoveItem = "Remove";
 
     private MudMenu? menu;
@@ -147,7 +147,7 @@
 
         if (view.State == ItemState.Withdrawn && view.Holders.Count > 0)
         {
-            items.Add(RemoveFromTeammatesItem);
+            items.Add(RemoveFromAgentsItem);
         }
 
         if (view.Pack.File is not null)
@@ -185,7 +185,7 @@
             case ShowInLibraryItem when this.LibraryPath(view) is { } relative:
                 this.Navigation.NavigateTo(LibraryLinkQuery.BuildPageUri(LibraryRootStore.SkillSourcesRootId, relative));
                 break;
-            case RemoveFromTeammatesItem:
+            case RemoveFromAgentsItem:
                 await MenuDialogs.AfterClosingAsync(this.menu, () => this.UnholdAsync(view));
                 break;
             case RemoveItem:
@@ -235,7 +235,7 @@
     /// <summary>Takes a withdrawn Pack off its holders after a confirm.</summary>
     private async Task UnholdAsync(PackView view)
     {
-        bool confirmed = await this.DialogService.ConfirmAsync(RemovalText.UnholdTitle(view.Holders.Count), RemovalText.UnholdMessage(view.Holders), "Remove from Teammates", danger: true);
+        bool confirmed = await this.DialogService.ConfirmAsync(RemovalText.UnholdTitle(view.Holders.Count), RemovalText.UnholdMessage(view.Holders), "Remove from Agents", danger: true);
         if (!confirmed)
         {
             return;

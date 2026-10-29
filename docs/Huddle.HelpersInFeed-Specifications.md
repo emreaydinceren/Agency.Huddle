@@ -44,7 +44,7 @@ Helper's wake-up Message no longer pretends to be the Human.
 2. **No duplicate rows.** A Helper's gate change is already a `task-gate-on` item, posted by
    `TaskService`. This slice makes that item say it was a Helper and why. It does not add a second
    "Verdict" item.
-3. **A Helper is not the Human and not a Teammate,** in the Feed or in a Room. It gets its own
+3. **A Helper is not the Human and not an Agent,** in the Feed or in a Room. It gets its own
    Feed actor kind, and its wake-up Messages are posted by Huddle.
 4. **Read-only stays.** The Feed shows what happened and links to where it is fixed. Continue, turning
    a Helper off and turning a gate off stay where they are (Feed spec §3, v2).
@@ -55,7 +55,7 @@ Helper's wake-up Message no longer pretends to be the Human.
   The bell's count goes up by one: **Needs Human (Helper)** turned on Requires your acceptance for
   `#GRO-41 Email the pricing sheet to Acme` · "Sends a document outside the Team". The Human opens
   the Task, decides the gate is wrong and turns it off. The item dims as resolved.
-- It is 16:00 and the Helper has made its 50 calls. The next Teammate save is skipped, and the Feed
+- It is 16:00 and the Helper has made its 50 calls. The next Agent save is skipped, and the Feed
   shows **Huddle** paused `Needs Human`: its daily cap of 50 calls is reached. The Human follows
   the link to Settings > Helpers and presses Continue (+10 today). The item resolves.
 - The Claude adapter's login expired. The Helper fails three times in a row; the Feed shows
@@ -98,8 +98,8 @@ Helper's wake-up Message no longer pretends to be the Human.
 - The Name stays the Task actor's Name, `Needs Human (Helper)` (`TaskActors.Helper`).
 - **Drawing.** A Helper item's avatar is the Helper mark: `Icons.Material.Outlined.Psychology` (the
   Settings > Helpers icon) on a Quiet tile, in `FeedItemRow` (20px) and `FeedCard` (40px). Clicking
-  it does not filter by Teammate (a Helper is not one); it does nothing. In the Teammate filter's
-  terms, a Helper is never a Teammate.
+  it does not filter by Agent (a Helper is not one); it does nothing. In the Agent filter's
+  terms, a Helper is never an Agent.
 
 ### 5.2 A Helper's gate change becomes a Notification
 
@@ -109,7 +109,7 @@ stored deserialise with `Reason` null, so the envelope version stays 1.
 **Rule.** In `TaskFeedRules.For`, the existing `task-gate-on` post (gated now, not before, actor not
 the Human) changes in two ways when `change.Actor.Kind == TaskActorKind.Helper`:
 
-- `notify` is **true**. A Teammate's gate-on stays Activity, as slice 1 decided.
+- `notify` is **true**. An Agent's gate-on stays Activity, as slice 1 decided.
 - `Reason` is the patch's reason. A Task has no Reason field: `NeedsHumanHelper.ApplyAsync` puts its
   cut Verdict reason in `TaskPatch.Reason`, and `TaskService` only writes it into the Change log
   summary as `(reason: …)`. So `TaskChange` gains a trailing `string? Reason = null`, which
@@ -127,7 +127,7 @@ change:
 | The Task closes | Nothing is left to decide |
 
 `TaskFeedRules.Holds(task-gate-on, …)` (startup, Feed spec §6.10) is: the Task exists, is open, is
-gated, has no recorded decision since the item was posted, and is not waiting in Needs You. A Teammate's
+gated, has no recorded decision since the item was posted, and is not waiting in Needs You. An Agent's
 gate-on item is never a Notification, so it is never resolved, as before.
 
 **Copy** (Feed spec §7, new row):
@@ -183,7 +183,7 @@ number the Helpers spec §12 named.
 
 | Source type | Summary (chips in braces) | Status line |
 | --- | --- | --- |
-| `helper-paused` | `paused {Helper}: its daily cap of <n> calls is reached` · `Teammates' Tasks are not judged until you continue or the day ends` | `Paused <hh:mm> · Continue is on the Helper's card` |
+| `helper-paused` | `paused {Helper}: its daily cap of <n> calls is reached` · `Agents' Tasks are not judged until you continue or the day ends` | `Paused <hh:mm> · Continue is on the Helper's card` |
 | `helper-failing` | `{Helper} failed <n> times in a row` · `<last error, cut to 120 characters>` | `Since <hh:mm> · Tasks are not being judged` |
 
 A resolved one ends `· done <hh:mm>`, as every Notification does. The kind badges are the existing
@@ -238,7 +238,7 @@ its `room-mention` Notification.
   - `PersonaRunner.SenderIsHuman` finds no Member for `huddle`, so the post counts as not-Human:
     it does not reset the Room's Budget or the assignee's token Budget (Helpers spec §10 OD-1 is
     closed by this).
-  - The Helper's wake-up still uses none of the Task's Teammate wake budget (slice 2's rule).
+  - The Helper's wake-up still uses none of the Task's Agent wake budget (slice 2's rule).
 - **HF-9 findings** (the spike over every reader of `ChatMessage.SenderId` and `SenderName`, run on
   `main` at `a9a0b274`; 57 occurrences in `src`). The ones that assume a Member, a `User` or "not an
   Agent means the Human" and so need a change in HF-10 or HF-11:
@@ -251,11 +251,11 @@ its `room-mention` Notification.
      nor sets on a Huddle post (`NeedsYouRule` and `NeedsYouStartupScan` compare with `KnownIds.Human`
      only and need no change).
   3. **`MessageList.razor`** draws a Task wake-up as the muted system row only inside its Human
-     branch, so a Huddle wake-up would fall into the Teammate branch with an initials avatar and the
+     branch, so a Huddle wake-up would fall into the Agent branch with an initials avatar and the
      agent-facing "Call get_task" line. HF-10 draws a Huddle-posted wake-up as the same system row and
      any other Huddle Message as an ordinary row with the Huddle mark (`ToggleOn`, as the Feed
      draws Huddle) and the name "Huddle".
-  4. **`ReadRecordsTool`** refuses an unscoped Room that holds a sender who is neither a Team member
+  4. **`ReadRecordsTool`** refuses an unscoped Room that holds a sender who is neither an Agent
      nor the Human ("participants outside Team"). A Huddle Message is not a participant, so HF-10
      exempts `KnownIds.Huddle` beside the Human.
   5. **`TaskTriggerService`**: `ResolveSenderIdAsync` returns the Human for every non-Agent;
@@ -297,7 +297,7 @@ its `room-mention` Notification.
 | # | Decision | Alternative rejected |
 | --- | --- | --- |
 | HF-D1 | No separate Verdict item: a Helper's `task-gate-on` carries the reason and is the Feed item (owner, 2026-10-20) | A `helper-verdict` source type beside `task-gate-on` (two rows for one change) |
-| HF-D2 | A Helper's gate-on is a Notification, resolved when the Human turns the gate off, decides, the Task waits in Needs You, or it closes (owner, 2026-10-20) | Activity only, like a Teammate's |
+| HF-D2 | A Helper's gate-on is a Notification, resolved when the Human turns the gate off, decides, the Task waits in Needs You, or it closes (owner, 2026-10-20) | Activity only, like an Agent's |
 | HF-D3 | A new Helpers Category holds `helper-paused` and `helper-failing` (owner, 2026-10-20) | Gates; no Category |
 | HF-D4 | The Helper's wake-up is posted by Huddle, a sender that is neither the Human nor an Agent, in this slice (owner, 2026-10-20; ADR-0065) | Keep posting as the Human; a separate follow-up |
 | HF-D5 | `FeedActorKind.Helper`, and an explicit arm for every `TaskActorKind` in `ActorOf` | Leaving Helpers as "outside Huddle" |
@@ -318,7 +318,7 @@ Functional tests per [agents/Testing.md](../agents/Testing.md), each with a `///
 
 | Area | What the tests pin |
 | --- | --- |
-| `TaskFeedRules` | A Helper's gate-on is a Notification with the reason; a Teammate's is still Activity; each of the four resolution conditions; `Holds` at startup; every `TaskActorKind` has an explicit arm |
+| `TaskFeedRules` | A Helper's gate-on is a Notification with the reason; an Agent's is still Activity; each of the four resolution conditions; `Holds` at startup; every `TaskActorKind` has an explicit arm |
 | `FeedPayloads` and the envelope | `helper` round-trips; an old row without `Reason` reads `null`; both new payloads round-trip and match their source types |
 | `FeedCategories` and `FeedStore.Counts` | Every source type is in exactly one of five type Categories; the Helpers count equals the Helpers list |
 | `HelperFeed` | One pause item per pause, resolved by Continue, by a new day's first run, and by turning the Helper off; one failing item per streak (at 3, not 4), resolved by the next good run; seeded from unresolved items after a restart; a Feed failure never escapes |

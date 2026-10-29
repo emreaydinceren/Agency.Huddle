@@ -5,18 +5,18 @@ using Agency.Huddle.Tests.Css;
 namespace Agency.Huddle.Tests.Ui.Teams;
 
 /// <summary>
-/// Round 3 of the visual audit for the Teammates tiles, the Team page, its dialogs and the avatar pickers: the rules that
+/// Round 3 of the visual audit for the Agents tiles, the Team page, its dialogs and the avatar pickers: the rules that
 /// live in the stylesheet and in razor source (a render cannot tell a 12px padding or a monospace block from a default).
 /// </summary>
 public sealed class R3TeamsSourceTests
 {
     private static string Source(params string[] path) => File.ReadAllText(CssSource.RepoPath(["src", "Huddle.App", .. path]));
 
-    /// <summary>A Teammates tile has 12px padding, as the Board card does, not 16px (B7a, design-system "Teammates").</summary>
+    /// <summary>An Agents tile has 12px padding, as the Board card does, not 16px (B7a, design-system "Agents").</summary>
     [Fact]
     public void Tile_HasTwelvePixelPadding()
     {
-        string tile = CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), ".teammate-tile");
+        string tile = CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), ".agent-tile");
 
         Assert.Contains("padding: 12px;", tile, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
@@ -25,7 +25,7 @@ public sealed class R3TeamsSourceTests
     [Fact]
     public void PersonaBlock_IsMonospaceAtThirteenPixelsOnTheWashWithAnEdge()
     {
-        string persona = CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), ".teammate-card-persona");
+        string persona = CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), ".agent-profile-card-persona");
 
         Assert.Contains("font-family: var(--font-mono);", persona, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("font-size: var(--mud-typography-body2-size);", persona, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
@@ -101,8 +101,8 @@ public sealed class R3TeamsSourceTests
     {
         string css = CssText.AppCss(CssNewlines.AsIs);
 
-        Assert.Equal("color: var(--mud-palette-text-primary);", CssText.RuleBodyLoose(css, ".mud-input-control.teammate-card-probing .mud-input.mud-disabled"));
-        Assert.Equal("border-color: var(--hu-line-control);", CssText.RuleBodyLoose(css, ".mud-input-control.teammate-card-probing .mud-input.mud-input-outlined.mud-disabled .mud-input-outlined-border"));
+        Assert.Equal("color: var(--mud-palette-text-primary);", CssText.RuleBodyLoose(css, ".mud-input-control.agent-profile-card-probing .mud-input.mud-disabled"));
+        Assert.Equal("border-color: var(--hu-line-control);", CssText.RuleBodyLoose(css, ".mud-input-control.agent-profile-card-probing .mud-input.mud-input-outlined.mud-disabled .mud-input-outlined-border"));
     }
 
     /// <summary>"Roles" starts 24px under the tab rail's Chrome line: the global panel padding applies and the Team page's wide layout does not override it (B7e).</summary>
@@ -128,7 +128,7 @@ public sealed class R3TeamsSourceTests
         Assert.True(
             buildTeam.IndexOf("roster-leave", StringComparison.Ordinal) < buildTeam.IndexOf("<MudDivider />", StringComparison.Ordinal)
             && buildTeam.IndexOf("<MudDivider />", StringComparison.Ordinal) < buildTeam.IndexOf("menu-item-destructive", StringComparison.Ordinal),
-            "Delete teammate must come last, after a divider.");
+            "Delete agent must come last, after a divider.");
         Assert.Contains("color-mix(in srgb, var(--mud-palette-error) 70%, var(--mud-palette-text-primary));", CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), ".menu-item-destructive.mud-menu-item,\r\n.menu-item-destructive.mud-menu-item .mud-icon-root"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 

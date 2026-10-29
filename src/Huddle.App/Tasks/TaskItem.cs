@@ -1,6 +1,6 @@
 namespace Agency.Huddle.App.Tasks;
 
-/// <summary>A work item that the Human and AI Teammates share.</summary>
+/// <summary>A work item that the Human and AI Agents share.</summary>
 public sealed record TaskItem
 {
     /// <summary>The Task's unique identifier.</summary>

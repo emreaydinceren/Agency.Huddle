@@ -40,7 +40,7 @@
                         var agentId = agent.Id;
                         <div class="new-chat-agent">
                             <MudCheckBox T="bool" Dense="true" Value="@this.selectedAgentIds.Contains(agentId)" ValueChanged="@((bool isChecked) => this.ToggleAgent(agentId, isChecked))">
-                                <TeammateLabel Name="@agent.Name" State="status.State" Avatar="this.Avatars.Get(agent.Name)" />
+                                <AgentLabel Name="@agent.Name" State="status.State" Avatar="this.Avatars.Get(agent.Name)" />
                             </MudCheckBox>
                         </div>
                     }
@@ -63,7 +63,7 @@
     private IReadOnlyList<User> agents = [];
     private bool isOpen;
 
-    /// <summary>The Team the new Room is scoped to, or <see langword="null"/> for a root Room. With a Team the panel is open from the start (the Team's menu opened it), is headed "New chat in {Team}" and lists the Team's Teammates first.</summary>
+    /// <summary>The Team the new Room is scoped to, or <see langword="null"/> for a root Room. With a Team the panel is open from the start (the Team's menu opened it), is headed "New chat in {Team}" and lists the Team's Agents first.</summary>
     [Parameter]
     public string? Team { get; set; }
 

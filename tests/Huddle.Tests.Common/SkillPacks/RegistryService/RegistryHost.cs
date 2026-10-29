@@ -3,7 +3,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.SkillSources;
 using Agency.Huddle.App.Skills;
-using Agency.Huddle.Tests.Teammates;
+using Agency.Huddle.Tests.Agents;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
@@ -51,7 +51,7 @@ internal sealed class RegistryHost : IDisposable
     /// <summary>The Skill store.</summary>
     public SkillStore Skills { get; }
 
-    /// <summary>The Teammate store.</summary>
+    /// <summary>The Agent store.</summary>
     public PersonaStore Personas { get; }
 
     /// <summary>The hidden items.</summary>
@@ -146,8 +146,8 @@ internal sealed class RegistryHost : IDisposable
         Write(this.Dir, "SKILLS.md", $"# Skills registry\n\n## Packs\n\n| Local path |\n| --- |\n{Rows(packs)}\n## Catalogs\n\n| Local path |\n| --- |\n{Rows(catalogs ?? [])}");
     }
 
-    /// <summary>Adds a Teammate whose <c>_packs</c> and <c>skills:</c> name the given ids.</summary>
-    public void Teammate(string name, IReadOnlyList<string> skills, IReadOnlyList<Agency.Huddle.App.Teams.VersionedRef> packs)
+    /// <summary>Adds an Agent whose <c>_packs</c> and <c>skills:</c> name the given ids.</summary>
+    public void Agent(string name, IReadOnlyList<string> skills, IReadOnlyList<Agency.Huddle.App.Teams.VersionedRef> packs)
     {
         this.Personas.Add(new PersonaIdentity(name, "Developer", name.ToUpperInvariant(), ["Web"], Skills: skills, Packs: packs), "You build.");
     }

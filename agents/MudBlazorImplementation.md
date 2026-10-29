@@ -20,14 +20,14 @@ styles and tests the component, which the MudBlazor example does not.
 | `MudNavMenu`, `MudNavLink`, `MudMenu` | [`RoomList.razor`](../src/Huddle.App/Components/Shared/RoomList.razor) |
 | `MudTextField`, `MudButton`, `MudIconButton`, `MudAlert`, `MudStack` | [`Chat.razor`](../src/Huddle.App/Components/Pages/Chat.razor) |
 | `MudTabs`, `MudTabPanel` | [`Settings.razor`](../src/Huddle.App/Components/Pages/Settings.razor) |
-| `MudSelect`, `MudRadioGroup`, `MudColorPicker`, `MudFileUpload` | [`TeammateCard.razor`](../src/Huddle.App/Components/Shared/TeammateCard.razor) |
+| `MudSelect`, `MudRadioGroup`, `MudColorPicker`, `MudFileUpload` | [`AgentProfileCard.razor`](../src/Huddle.App/Components/Shared/AgentProfileCard.razor) |
 | `MudList`, `MudPaper` | [`Appearance.razor`](../src/Huddle.App/Components/Settings/Appearance.razor) |
 | `MudDialog` opened through `IDialogService` | [`ArchivedChatsDialog.razor`](../src/Huddle.App/Components/Shared/ArchivedChatsDialog.razor), opened from [`ArchivedChats.razor`](../src/Huddle.App/Components/Shared/ArchivedChats.razor) |
 | Confirm through `ShowMessageBoxAsync`, report through `ISnackbar` | [`SkillsPanel.razor`](../src/Huddle.App/Components/Settings/SkillsPanel.razor) |
 | `MudExpansionPanels`, `MudTable` | [`ProposalCard.razor`](../src/Huddle.App/Components/Shared/ProposalCard.razor) |
 | `MudSimpleTable`, `MudChip` | [`SkillsPanel.razor`](../src/Huddle.App/Components/Settings/SkillsPanel.razor) |
 | `MudCollapse`, `MudCheckBox` | [`NewChat.razor`](../src/Huddle.App/Components/Shared/NewChat.razor) |
-| `MudAvatar` | [`TeammateAvatar.razor`](../src/Huddle.App/Components/Shared/TeammateAvatar.razor) |
+| `MudAvatar` | [`AgentAvatar.razor`](../src/Huddle.App/Components/Shared/AgentAvatar.razor) |
 | `MudDataGrid` grouped, with hidden columns | [`TaskListView.razor`](../src/Huddle.App/Components/Tasks/TaskListView.razor) |
 | `MudDropContainer`, `MudDropZone` | [`TaskBoard.razor`](../src/Huddle.App/Components/Tasks/TaskBoard.razor) |
 | `MudToggleGroup`, `MudTimeline`, `MudExitPrompt` | [`TaskDetail.razor`](../src/Huddle.App/Components/Tasks/TaskDetail.razor) |
@@ -65,7 +65,7 @@ a MudBlazor example won't warn you about:
 - **An open dialog's parameters are frozen.** MudBlazor ignores every
   `SetParametersAsync` after `IDialogService.ShowAsync` opens it. Pass an id or
   a snapshot, and let the dialog load and subscribe for itself. The reasoning is
-  in the header comment of [`TeammateCard.razor`](../src/Huddle.App/Components/Shared/TeammateCard.razor).
+  in the header comment of [`AgentProfileCard.razor`](../src/Huddle.App/Components/Shared/AgentProfileCard.razor).
 - **Scoped CSS can't reach inside a MudBlazor component.** `::deep` only
   matches under an HTML element written in your own markup, and a `MudDrawer` or
   `MudLayout` is a component, not one. Such rules go in `app.css`; see the

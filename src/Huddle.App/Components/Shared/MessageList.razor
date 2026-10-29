@@ -87,7 +87,7 @@
             }
             else if (fromHuddle)
             {
-                @* A Message Huddle wrote itself (ADR-0065) has no Teammate to draw: it wears Huddle's mark, as it does in the Feed. *@
+                @* A Message Huddle wrote itself (ADR-0065) has no Agent to draw: it wears Huddle's mark, as it does in the Feed. *@
                 <span class="huddle-mark" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.ToggleOn" Size="Size.Small" /></span>
             }
             else
@@ -119,7 +119,7 @@
     {
         var draft = this.Drafts[draftIndex];
         <div class="message-row streaming">
-            @* A Draft is the same Teammate mid-sentence, so it gets an avatar too - a gutter that only
+            @* A Draft is the same Agent mid-sentence, so it gets an avatar too - a gutter that only
                appeared once the Turn landed would make every streaming reply jump sideways as it
                completed. Resolved through the same AvatarStore.Get(SenderName) lookup a settled
                Message uses, since Draft.SenderName is keyed the same way. *@
@@ -257,7 +257,7 @@
     [Parameter]
     public string? TargetMessageId { get; set; }
 
-    /// <summary>The Team the Room belongs to, or <see langword="null"/> for a root Room; a Teammate's avatar opens their profile with the Team's own one-to-one.</summary>
+    /// <summary>The Team the Room belongs to, or <see langword="null"/> for a root Room; an Agent's avatar opens their profile with the Team's own one-to-one.</summary>
     [Parameter]
     public string? Team { get; set; }
 
@@ -353,7 +353,7 @@
             ? reading
             : null;
 
-    /// <summary>The Teammate's title to show beside <paramref name="senderName"/>, or <see langword="null"/> for a sender with no Persona, such as Huddle.</summary>
+    /// <summary>The Agent's title to show beside <paramref name="senderName"/>, or <see langword="null"/> for a sender with no Persona, such as Huddle.</summary>
     /// <param name="senderName">The Message's sender Name.</param>
     private string? TitleOf(string senderName) =>
         this.Personas.Entries.FirstOrDefault(entry => string.Equals(entry.Name, senderName, StringComparison.OrdinalIgnoreCase))?.Title;

@@ -9,7 +9,7 @@ internal enum RoomReply
     /// <summary>At least one reachable Agent recipient's Reply Gate said Reply.</summary>
     Expected,
 
-    /// <summary>Every reachable Agent recipient decided CatchUp: no teammate was addressed.</summary>
+    /// <summary>Every reachable Agent recipient decided CatchUp: no agent was addressed.</summary>
     ContextOnly,
 
     /// <summary>The Room's Budget is spent. ADR-0006's Continue prompt already owns this surface.</summary>
@@ -19,10 +19,10 @@ internal enum RoomReply
     NoRecipients,
 
     /// <summary>
-    /// A Teammate was Mentioned by name but cannot receive the Message - Offline, Degraded, or
+    /// An Agent was Mentioned by name but cannot receive the Message - Offline, Degraded, or
     /// otherwise not reachable. Deliberately its own outcome rather than folded into
-    /// <see cref="ContextOnly"/>, which would be false (a Teammate WAS named), or into
-    /// <see cref="NoRecipients"/>, which would be false too whenever some other Teammate did receive
+    /// <see cref="ContextOnly"/>, which would be false (an Agent WAS named), or into
+    /// <see cref="NoRecipients"/>, which would be false too whenever some other Agent did receive
     /// it. Every surface renders nothing for this today: explaining it is the deferred half of
     /// ADR-0012, and rendering nothing is how the Room avoids saying something wrong in the meantime.
     /// </summary>

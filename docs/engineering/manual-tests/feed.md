@@ -1,6 +1,6 @@
 # Feed
 
-Prove, in a real browser, that the Feed shows the Human what Teammates and Huddle did and what waits on the Human: that the Notifications bell in the Top Bar counts unseen Notifications and opening its panel marks them seen; that the panel opens on Needs you and switches Category; that the dismiss cross hides a Notification from the bell and not from the Feed; that a Task handed to the Human, a gated Task in Needs You and a Mention each appear and then resolve when the Human acts; that the Feed Tab has its header, cards, expansion, avatar filter, new-items pill and unseen bar; that a restart resolves a Form Notification; that `Team:Feed:Enabled=false` removes the bell and the link; and that no Message text appears anywhere. The automated suite proves the store, the writer, the producers' rules and the components in bUnit; this page proves what only a browser shows: where the bell and the panel sit, the hover-revealed cross, the page layout, scrolling and the restart. The design is [the Feed spec](../../Huddle.Feed-Specifications.md) and [ADR-0063](../../adr/0063-the-feed-is-a-stored-history-that-each-domain-component-posts-to.md).
+Prove, in a real browser, that the Feed shows the Human what Agents and Huddle did and what waits on the Human: that the Notifications bell in the Top Bar counts unseen Notifications and opening its panel marks them seen; that the panel opens on Needs you and switches Category; that the dismiss cross hides a Notification from the bell and not from the Feed; that a Task handed to the Human, a gated Task in Needs You and a Mention each appear and then resolve when the Human acts; that the Feed Tab has its header, cards, expansion, avatar filter, new-items pill and unseen bar; that a restart resolves a Form Notification; that `Team:Feed:Enabled=false` removes the bell and the link; and that no Message text appears anywhere. The automated suite proves the store, the writer, the producers' rules and the components in bUnit; this page proves what only a browser shows: where the bell and the panel sit, the hover-revealed cross, the page layout, scrolling and the restart. The design is [the Feed spec](../../Huddle.Feed-Specifications.md) and [ADR-0063](../../adr/0063-the-feed-is-a-stored-history-that-each-domain-component-posts-to.md).
 
 **17 tests** · 13 free, 4 paid 💰 · about 3.1 hours. Written 2026-10-20 (FEED-15 to FEED-17 are Helpers in the Feed); **not yet run by a person**.
 
@@ -10,11 +10,11 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat). This area adds:
 
-1. Wait until **Ada** and **Bo** are both **Online** on `/teammates`. Two empty one-to-one Rooms, `Ada` and `Bo`, exist from that point.
+1. Wait until **Ada** and **Bo** are both **Online** on `/agents`. Two empty one-to-one Rooms, `Ada` and `Bo`, exist from that point.
 2. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'`. The Feed lives in `$data\team.db`; never open it while the app runs.
 3. Find the Human's Name in **Settings → Profile**. The steps call it `<Human>`.
-4. The mock Teammates cannot call Task tools or Mention you, so the free tests make a Notification in two ways. A Form: send `[elicit:one]` in the `Ada` Room and Ada puts one Form to you. A Task handed to you: create a Task on the Tasks page with no assignee, find its file with `Get-ChildItem $data -Recurse -Filter '<ID>.md'`, change its `assignee:` line to `<Human>` in an editor and save. The file edit counts as an edit made outside Huddle, so its Feed item has the outside-edit mark where a Teammate's avatar would be; the Notification itself is the same. A Task you create or assign in the UI makes Activity only, never a Notification, because a Notification is never posted for the Human's own action.
-5. The paid tests need a real Teammate made with [`P-NEW-PERSONA`](common.md#p-new-persona): Name `Keeper`, Title `Keeper`, **Model** Haiku, **Effort** `low`, in a Team named `Growth` whose `Process.md` has a Definition of Done as in [the Human gate page](human-gate.md#setup). Launch them with `P-LAUNCH-PAID` instead of `P-LAUNCH-UAT`.
+4. The mock Agents cannot call Task tools or Mention you, so the free tests make a Notification in two ways. A Form: send `[elicit:one]` in the `Ada` Room and Ada puts one Form to you. A Task handed to you: create a Task on the Tasks page with no assignee, find its file with `Get-ChildItem $data -Recurse -Filter '<ID>.md'`, change its `assignee:` line to `<Human>` in an editor and save. The file edit counts as an edit made outside Huddle, so its Feed item has the outside-edit mark where an Agent's avatar would be; the Notification itself is the same. A Task you create or assign in the UI makes Activity only, never a Notification, because a Notification is never posted for the Human's own action.
+5. The paid tests need a real Agent made with [`P-NEW-PERSONA`](common.md#p-new-persona): Name `Keeper`, Title `Keeper`, **Model** Haiku, **Effort** `low`, in a Team named `Growth` whose `Process.md` has a Definition of Done as in [the Human gate page](human-gate.md#setup). Launch them with `P-LAUNCH-PAID` instead of `P-LAUNCH-UAT`.
 6. Restarting means `P-STOP`, then the same launch command **without** re-running the seeder, so the data stays.
 7. The bell is the button labelled `Notifications` at the right of the Top Bar, just left of the Right sidebar toggle. With a count, its label reads `Notifications, <n> new`. The Feed link is the `Feed` icon at the top of the Activity bar, above Chats.
 
@@ -152,7 +152,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Before you start**
 
-- Setup is done for the paid lane, with `Keeper` and a second Teammate `Scout` (made the same way) in one Room with you, so the Room is Mention-gated.
+- Setup is done for the paid lane, with `Keeper` and a second Agent `Scout` (made the same way) in one Room with you, so the Room is Mention-gated.
 
 **Steps**
 
@@ -189,7 +189,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 **Pass if — all of these**
 
 - At step 1 a Tab titled `Feed` opens and the tooltip reads `Feed`.
-- At step 2 the title reads `Feed`, a green chip with a dot reads `Live`, the subtitle reads `What Teammates and Huddle did, newest first. Each line links to the Task, Room or document it's about.`, and under it an eye icon and the line `Read-only — the Feed never changes the work and never shows message text.`
+- At step 2 the title reads `Feed`, a green chip with a dot reads `Live`, the subtitle reads `What Agents and Huddle did, newest first. Each line links to the Task, Room or document it's about.`, and under it an eye icon and the line `Read-only — the Feed never changes the work and never shows message text.`
 - At step 3 seven segments read `All`, `Needs you`, `Tasks`, `Documents`, `Rooms`, `Gates`, `Helpers`, each followed by a number, and at the right a select that shows `All teams`.
 - At step 4 the address becomes `/feed?category=rooms`, then `/feed?category=needs-you`, then `/feed`, and the list changes to that Category. Returning to `All` from `Needs you` or from any other Category works every time, and the highlighted segment follows.
 - At step 5 the select lists `All teams` first, then every Team, the address gains `?team=<Team>`, and the `Documents` count is `0` while a Team is chosen.
@@ -222,7 +222,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 - At step 5, where such a Task exists, `Review in Needs you` is outlined with a warning icon and opens the Needs You page on that Task. No card offers Accept, Reply, Dismiss or Decline.
 - At step 6 nothing about the Task has changed, and its Change log has no new entry.
 
-### FEED-09 — Clicking an avatar filters the Feed to that Teammate
+### FEED-09 — Clicking an avatar filters the Feed to that Agent
 
 **Free** · about 6 min
 
@@ -241,7 +241,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Pass if — all of these**
 
-- At step 2 the address is `/feed?teammate=Ada`, only Ada's cards are listed, and a chip reads `Teammate: Ada ×` just left of the Team select. The segment counts change to Ada's items only.
+- At step 2 the address is `/feed?agent=Ada`, only Ada's cards are listed, and a chip reads `Agent: Ada ×` just left of the Team select. The segment counts change to Ada's items only.
 - At step 3 the chip goes, the address is `/feed` again and every card is back.
 - At step 4 the Tab still shows only Ada's cards. A card whose actor is Huddle or `You` has an avatar that is not a button.
 
@@ -380,7 +380,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 **Pass if — all of these**
 
 - At step 2 the bell shows a count and the card sits under `Gates` as well as under `Needs you`.
-- At step 3 the avatar is the Helper mark (a head outline), not a Teammate's picture; the summary reads `Needs Human (Helper) turned on Requires your acceptance for` with a chip for the Task, followed by a reason in the same sentence; the pill reads `Waiting for you`; the status line reads `Asked <hh:mm> · you can turn it off on the Task`; and the expanded Task preview ends with a line `Turned on by the Needs Human Helper: …`.
+- At step 3 the avatar is the Helper mark (a head outline), not an Agent's picture; the summary reads `Needs Human (Helper) turned on Requires your acceptance for` with a chip for the Task, followed by a reason in the same sentence; the pill reads `Waiting for you`; the status line reads `Asked <hh:mm> · you can turn it off on the Task`; and the expanded Task preview ends with a line `Turned on by the Needs Human Helper: …`.
 - At step 4 the wake-up is a muted one-line row, not a bubble, and it is not written under your Name.
 - At step 5 the Room is still in **Needs you** with its Mention, and its Mention Notification is still unresolved.
 - At step 6 the card is dimmed with a `Done` pill and has left the `Needs you` count; it is still listed under `All` and `Gates`.
@@ -397,7 +397,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Steps**
 
-1. Ask a Teammate to create three Tasks, one after another, each a minute apart. Wait 30 seconds after the third.
+1. Ask an Agent to create three Tasks, one after another, each a minute apart. Wait 30 seconds after the third.
 2. Look at the bell, then open the Feed Tab on `Helpers`.
 3. Read the card, expand it, and press `Open Helper settings`.
 4. On the Needs Human card switch **On** off and press **Save**. Return to the Feed Tab.
@@ -420,12 +420,12 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Steps**
 
-1. Ask a Teammate to create a Task. Wait 30 seconds: the card shows `1 of 1 calls today`.
-2. Ask a Teammate to create two more Tasks, a minute apart. Wait 30 seconds.
+1. Ask an Agent to create a Task. Wait 30 seconds: the card shows `1 of 1 calls today`.
+2. Ask an Agent to create two more Tasks, a minute apart. Wait 30 seconds.
 3. Open the Feed Tab on `Helpers`. Read the card.
 4. On the Needs Human card press **Continue (+10 today)**. Return to the Feed Tab.
 
 **Pass if — all of these**
 
-- At step 3 there is exactly one item, by `Huddle`, reading `paused Needs Human: its daily cap of 1 calls is reached` with the explanation that Teammates' Tasks are not judged until you continue or the day ends, and the status line `Paused <hh:mm> · Continue is on the Helper's card`. The card shows `2 skipped while paused`.
+- At step 3 there is exactly one item, by `Huddle`, reading `paused Needs Human: its daily cap of 1 calls is reached` with the explanation that Agents' Tasks are not judged until you continue or the day ends, and the status line `Paused <hh:mm> · Continue is on the Helper's card`. The card shows `2 skipped while paused`.
 - At step 4 the item is dimmed with a `Done` pill and has left the `Needs you` count.

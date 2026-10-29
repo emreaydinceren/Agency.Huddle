@@ -151,9 +151,9 @@
         return built;
     }
 
-    /// <summary>A file the Human may link: not a folder, not a Teammate's definition, and with no backtick in its path (it would break the code span).</summary>
+    /// <summary>A file the Human may link: not a folder, not an Agent's definition, and with no backtick in its path (it would break the code span).</summary>
     private static bool IsPickable(LibraryEntry entry) =>
-        !entry.IsFolder && entry.Path.Role != LibraryNodeRole.TeammateDefinition && !entry.Path.FullPath.Contains('`');
+        !entry.IsFolder && entry.Path.Role != LibraryNodeRole.AgentDefinition && !entry.Path.FullPath.Contains('`');
 
     private static PickerRow FileRow(LibraryPath path, string? detail) =>
         new(path.FullPath, System.IO.Path.GetFileName(path.FullPath), detail, Icons.Material.Outlined.InsertDriveFile, path, GoesUp: false);

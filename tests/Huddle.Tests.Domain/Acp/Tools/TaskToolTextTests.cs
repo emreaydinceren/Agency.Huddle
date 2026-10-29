@@ -127,7 +127,7 @@ public sealed class TaskToolTextTests
         (TaskActor? actor, string refusal) = await TaskToolText.ResolveActorAsync(directory, "ghost-id", ct);
 
         Assert.Null(actor);
-        Assert.Equal("Could not identify caller 'ghost-id' as a Teammate.", refusal);
+        Assert.Equal("Could not identify caller 'ghost-id' as an Agent.", refusal);
     }
 
     /// <summary><see cref="WakeBlock.None"/> notifies the named assignee.</summary>
@@ -457,9 +457,9 @@ public sealed class TaskToolTextTests
         Assert.Contains("human_gate", text, StringComparison.Ordinal); // contains-ok: a required phrase inside the long help/tool text; the full text is pinned by the prompt golden.
     }
 
-    /// <summary>The help paragraph tells a Teammate to set the Action before doing it.</summary>
+    /// <summary>The help paragraph tells an Agent to set the Action before doing it.</summary>
     [Fact]
-    public void HelpParagraph_TellsATeammateToSetTheActionBeforeDoingIt()
+    public void HelpParagraph_TellsAAgentToSetTheActionBeforeDoingIt()
     {
         string text = HelpParagraph;
 
@@ -495,7 +495,7 @@ public sealed class TaskToolTextTests
         Assert.DoesNotContain("mcp__team__", text, StringComparison.Ordinal);
     }
 
-    /// <summary>The help paragraph keeps the vocabulary: Accept, Needs You, Teammate; never "approval" or "sign-off".</summary>
+    /// <summary>The help paragraph keeps the vocabulary: Accept, Needs You, Agent; never "approval" or "sign-off".</summary>
     [Fact]
     public void HelpParagraph_UsesTheHouseWords()
     {

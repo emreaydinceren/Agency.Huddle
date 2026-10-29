@@ -29,7 +29,7 @@ public sealed class MemberWarningsSourcesTests
             warnings);
     }
 
-    /// <summary>A Pack the Teammate records that no row provides any more says so, and what to do.</summary>
+    /// <summary>A Pack the Agent records that no row provides any more says so, and what to do.</summary>
     [Fact]
     public void ForSources_PackNotInRegistry_Warns()
     {

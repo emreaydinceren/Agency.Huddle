@@ -6,7 +6,7 @@ namespace Agency.Huddle.Tests.Acp.Fakes;
 /// <summary>
 /// A test double for <see cref="IModelCatalog"/>. Never launches a real adapter — the real
 /// <see cref="ModelCatalogProbe"/> spawns a process, and no test may. <see cref="ProbeCount"/> and
-/// <see cref="EffortProbeCount"/> are what let a test prove the /teammates page never probes on a
+/// <see cref="EffortProbeCount"/> are what let a test prove the /agents page never probes on a
 /// plain page load.
 /// </summary>
 public sealed class FakeModelCatalog : IModelCatalog

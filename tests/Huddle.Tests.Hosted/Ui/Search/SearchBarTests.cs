@@ -29,10 +29,10 @@ public sealed class SearchBarTests(TeamWebApplicationFactory factory) : IClassFi
     /// <returns>The hit.</returns>
     private static TeamHit Team(string name) => new(name, null, 0, MatchTier.NamePrefix);
 
-    /// <summary>A Teammate hit.</summary>
-    /// <param name="name">The Teammate's name.</param>
+    /// <summary>An Agent hit.</summary>
+    /// <param name="name">The Agent's name.</param>
     /// <returns>The hit.</returns>
-    private static TeammateHit Teammate(string name) => new(name, "Researcher", "scout", ["Core"], MatchTier.NamePrefix);
+    private static AgentHit Agent(string name) => new(name, "Researcher", "scout", ["Core"], MatchTier.NamePrefix);
 
     /// <summary>A Task hit.</summary>
     /// <param name="title">The Task's title.</param>
@@ -72,7 +72,7 @@ public sealed class SearchBarTests(TeamWebApplicationFactory factory) : IClassFi
         Assert.Equal("Type 3 or more characters, or pick a filter.", cut.Find(".search-quiet").TextContent.Trim());
     }
 
-    /// <summary>The chips run All, Teams, Teammates, Library, Tasks, Rooms, in that order.</summary>
+    /// <summary>The chips run All, Teams, Agents, Library, Tasks, Rooms, in that order.</summary>
     [Fact]
     public async Task Chips_InOrder()
     {
@@ -81,7 +81,7 @@ public sealed class SearchBarTests(TeamWebApplicationFactory factory) : IClassFi
 
         await SearchBarHarness.OpenAsync(cut);
 
-        string[] expected = ["All", "Teams", "Teammates", "Library", "Tasks", "Rooms"];
+        string[] expected = ["All", "Teams", "Agents", "Library", "Tasks", "Rooms"];
         Assert.Equal(expected, SearchBarTests.Texts(cut.FindAll("[role='radiogroup'][aria-label='Filter'] [role='radio']")));
     }
 
@@ -93,12 +93,12 @@ public sealed class SearchBarTests(TeamWebApplicationFactory factory) : IClassFi
         IRenderedComponent<ContainerFragment> cut = h.Render();
         await SearchBarHarness.OpenAsync(cut);
 
-        await SearchBarHarness.TypeAsync(cut, "teammate:");
+        await SearchBarHarness.TypeAsync(cut, "agent:");
         string typed = Assert.Single(SearchBarTests.Texts(cut.FindAll("[role='radio'][aria-checked='true']")));
         await SearchBarHarness.TypeAsync(cut, string.Empty);
         await cut.InvokeAsync(() => cut.FindAll("[role='radio']").Single(static chip => chip.TextContent.Trim() == "Tasks").ClickAsync());
 
-        Assert.Equal("Teammates", typed);
+        Assert.Equal("Agents", typed);
         Assert.Equal("task:", SearchBarHarness.Input(cut).GetAttribute("value"));
         Assert.Equal("Tasks", Assert.Single(SearchBarTests.Texts(cut.FindAll("[role='radio'][aria-checked='true']"))));
     }
@@ -117,7 +117,7 @@ public sealed class SearchBarTests(TeamWebApplicationFactory factory) : IClassFi
             [SearchFilter.Rooms] = [SearchBarTests.Room("abc room")],
             [SearchFilter.Tasks] = [SearchBarTests.TaskTitled("abc task")],
             [SearchFilter.Library] = [SearchBarTests.File("abc.md")],
-            [SearchFilter.Teammates] = [SearchBarTests.Teammate("Abcd")],
+            [SearchFilter.Agents] = [SearchBarTests.Agent("Abcd")],
             [SearchFilter.Teams] = [.. Enumerable.Range(1, 7).Select(static n => SearchBarTests.Team($"abc{n}"))],
         };
 
@@ -125,7 +125,7 @@ public sealed class SearchBarTests(TeamWebApplicationFactory factory) : IClassFi
 
         cut.WaitForAssertion(() =>
         {
-            string[] headings = ["Teams", "Teammates", "Library", "Tasks", "Rooms"];
+            string[] headings = ["Teams", "Agents", "Library", "Tasks", "Rooms"];
             Assert.Equal(headings, SearchBarTests.Texts(cut.FindAll(".search-group-heading")));
             Assert.Equal(9, cut.FindAll("[role='option']").Count);
             Assert.DoesNotContain(SearchBarTests.Texts(cut.FindAll("*")), static text => text.StartsWith("See all", StringComparison.OrdinalIgnoreCase));
@@ -388,9 +388,9 @@ public sealed class SearchBarTests(TeamWebApplicationFactory factory) : IClassFi
         Assert.Equal(team.Id, h.Tabs.Active?.Id);
     }
 
-    /// <summary>Enter on a Teammate hit opens that Teammate's card dialog and changes no Tab.</summary>
+    /// <summary>Enter on an Agent hit opens that Agent's card dialog and changes no Tab.</summary>
     [Fact]
-    public async Task Enter_OnTeammateHit_OpensTheCardAndChangesNoTab()
+    public async Task Enter_OnAgentHit_OpensTheCardAndChangesNoTab()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         await using TeamWebApplicationFactory own = new();
@@ -400,15 +400,15 @@ public sealed class SearchBarTests(TeamWebApplicationFactory factory) : IClassFi
         h.Tabs.Keep(room.Id);
         IRenderedComponent<ContainerFragment> cut = h.Render();
         await SearchBarHarness.OpenAsync(cut);
-        await SearchBarHarness.TypeAsync(cut, "teammate:nov");
-        await h.FinishAsync([SearchFilter.Teammates], SearchBarTests.Only(SearchFilter.Teammates, SearchBarTests.Teammate("Nova")), ct);
+        await SearchBarHarness.TypeAsync(cut, "agent:nov");
+        await h.FinishAsync([SearchFilter.Agents], SearchBarTests.Only(SearchFilter.Agents, SearchBarTests.Agent("Nova")), ct);
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[role='option']")));
         await SearchBarHarness.PressAsync(cut, "ArrowDown");
 
         _ = SearchBarHarness.PressAsync(cut, "Enter");
 
-        cut.WaitForState(() => cut.FindComponents<TeammateCard>().Count == 1);
-        Assert.Equal("Nova", cut.FindComponent<TeammateCard>().Instance.Name);
+        cut.WaitForState(() => cut.FindComponents<AgentProfileCard>().Count == 1);
+        Assert.Equal("Nova", cut.FindComponent<AgentProfileCard>().Instance.Name);
         Tab only = Assert.Single(h.Tabs.Tabs);
         Assert.Equal("/rooms/ab12", only.Url);
     }

@@ -90,11 +90,11 @@ public sealed class CandidateFilesTests
     {
         CandidateTemplate template = ParseCandidate("development-manager");
 
-        // contains-ok: the stance is prose, not markup; each tool name must be spelled out in it so the Teammate knows the tool.
+        // contains-ok: the stance is prose, not markup; each tool name must be spelled out in it so the Agent knows the tool.
         Assert.Contains("list_agents", template.Stance, StringComparison.Ordinal);
-        // contains-ok: the stance is prose, not markup; each tool name must be spelled out in it so the Teammate knows the tool.
+        // contains-ok: the stance is prose, not markup; each tool name must be spelled out in it so the Agent knows the tool.
         Assert.Contains("update_task", template.Stance, StringComparison.Ordinal);
-        // contains-ok: the stance is prose, not markup; each tool name must be spelled out in it so the Teammate knows the tool.
+        // contains-ok: the stance is prose, not markup; each tool name must be spelled out in it so the Agent knows the tool.
         Assert.Contains("propose_sprint", template.Stance, StringComparison.Ordinal);
     }
 

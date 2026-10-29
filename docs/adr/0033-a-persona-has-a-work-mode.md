@@ -17,8 +17,8 @@ Every Persona runs in the Adapter's default mode, and Huddle's permission handle
 result on 2026-09-30: the Human decided auto-approve is acceptable for now, and a live Turn
 showed that an edit inside the Work Dir still round-trips a request that is always approved.
 
-Two things follow. There is no way to make a Teammate read-only by construction: the handler
-approves whatever it is asked, so a reviewer can edit. And a Teammate that should edit freely
+Two things follow. There is no way to make an Agent read-only by construction: the handler
+approves whatever it is asked, so a reviewer can edit. And an Agent that should edit freely
 still pays a request per edit.
 
 ACP has a standard place for this. `session/new` returns a `configOptions` entry with
@@ -121,7 +121,7 @@ Huddle's handlers would). The in-app manual tests remain the acceptance run.
 
 ## Consequences
 
-- A Work Mode change restarts the Persona and forgets its Room Sessions, so the Teammate loses
+- A Work Mode change restarts the Persona and forgets its Room Sessions, so the Agent loses
   its conversation memory, as a Model change already does.
 - The resume match rule becomes Adapter, Model, Effort and Work Mode. Existing entries stay
   valid for a Persona with no Work Mode.

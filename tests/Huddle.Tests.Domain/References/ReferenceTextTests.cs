@@ -151,16 +151,16 @@ public sealed class ReferenceTextTests
         Assert.Equal(expected, teamName);
     }
 
-    /// <summary>Each kind of hit inserts its own text: a Teammate as a Mention, a Task as its id, a Room and a Team as a link (spec §6).</summary>
+    /// <summary>Each kind of hit inserts its own text: an Agent as a Mention, a Task as its id, a Room and a Team as a link (spec §6).</summary>
     [Fact]
     public void InsertFor_EachKind()
     {
-        SearchHit teammate = new TeammateHit("Nova", "Router", "nova", ["Marketing"], MatchTier.ExactName);
+        SearchHit agent = new AgentHit("Nova", "Router", "nova", ["Marketing"], MatchTier.ExactName);
         SearchHit task = new TaskHit(new TaskId("GROW", 2), "Title", TaskState.ToDo, null, "Growth", false, MatchTier.ExactName);
         SearchHit room = new RoomHit("abc", "Nova", 0, null, null, null, null, false, MatchTier.ExactName, "Marketing", false);
         SearchHit team = new TeamHit("Growth Ops", null, 0, MatchTier.ExactName);
 
-        Assert.Equal("@Nova", ReferenceText.InsertFor(teammate));
+        Assert.Equal("@Nova", ReferenceText.InsertFor(agent));
         Assert.Equal("GROW-0002", ReferenceText.InsertFor(task));
         Assert.Equal("[Nova (Marketing)](/rooms/abc)", ReferenceText.InsertFor(room));
         Assert.Equal("[Growth Ops](/teams/Growth%20Ops)", ReferenceText.InsertFor(team));

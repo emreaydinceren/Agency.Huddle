@@ -17,7 +17,7 @@ namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
 /// U9 (UX-015, UX-016, OP-5): the sidebar's Room rows tell a 1:1 Room from a group Room by their leading
-/// visual (a small <c>TeammateAvatar</c> versus the <c>Filled.Chat</c> icon), and "Left menu" in
+/// visual (a small <c>AgentAvatar</c> versus the <c>Filled.Chat</c> icon), and "Left menu" in
 /// <c>app.css</c> sets each nesting level's indent once, as a named rem token, instead of repeating literals.
 /// </summary>
 public sealed class SidebarConsistencyTests
@@ -25,9 +25,9 @@ public sealed class SidebarConsistencyTests
     /// <summary>The row element each Room link sits in; the "Chats" group header is outside it.</summary>
     private const string RowSelector = "div.hover-reveal-row";
 
-    /// <summary>A 1:1 Room (one Teammate) shows a small Teammate avatar in its row and not the chat icon (UX-016, OP-5).</summary>
+    /// <summary>A 1:1 Room (one Agent) shows a small Agent avatar in its row and not the chat icon (UX-016, OP-5).</summary>
     [Fact]
-    public async Task RoomRow_OneToOneRoom_ShowsSmallTeammateAvatarNotChatIcon()
+    public async Task RoomRow_OneToOneRoom_ShowsSmallAgentAvatarNotChatIcon()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
@@ -47,7 +47,7 @@ public sealed class SidebarConsistencyTests
         Assert.Empty(row.QuerySelectorAll("svg.mud-nav-link-icon"));
     }
 
-    /// <summary>A group Room (two or more Teammates) shows the chat icon in its row and no avatar (UX-016, OP-5).</summary>
+    /// <summary>A group Room (two or more Agents) shows the chat icon in its row and no avatar (UX-016, OP-5).</summary>
     [Fact]
     public async Task RoomRow_GroupRoom_ShowsChatIconNotAvatar()
     {

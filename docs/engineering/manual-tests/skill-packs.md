@@ -1,12 +1,12 @@
 # Skill Packs: SKILLS.md, the AI tool, updates, the move and shared folders
 
-Prove in a real browser and on real disks what the automated suite cannot: that a real AI tool can follow `InstallSkillPack.md` and Huddle notices its work by itself; that choosing a Pack copies Skills and changes a Teammate; that an update is noticed and applied; that the one-time move turns a real old data folder into `SKILLS.md` without changing any Teammate; and that a shared folder, an unplugged drive and a withdrawn Source behave as the [Skill Packs design](../../Huddle.SkillPacks-Specifications.md) says. Huddle itself never downloads anything in this area: the AI tool does.
+Prove in a real browser and on real disks what the automated suite cannot: that a real AI tool can follow `InstallSkillPack.md` and Huddle notices its work by itself; that choosing a Pack copies Skills and changes an Agent; that an update is noticed and applied; that the one-time move turns a real old data folder into `SKILLS.md` without changing any Agent; and that a shared folder, an unplugged drive and a withdrawn Source behave as the [Skill Packs design](../../Huddle.SkillPacks-Specifications.md) says. Huddle itself never downloads anything in this area: the AI tool does.
 
 **7 tests** · 6 free, 1 paid 💰 · about 2.5 hours. Written 2026-10-18; **not yet run by a person**.
 
 ## Run record
 
-On 2026-10-18 an agent ran the move half of SKILLPACKS-04 on a copy of this computer's src\Huddle.App\App_Data (0.6 MB, two Teammates, no imported Skills, no Packs of the user's own), starting the built app as a process with Team:SkillsRepositoryDir at E:\Repos\skills. It wrote SKILLS.md, six catalogs holding 263 Skills (two duplicates omitted), the Sources local/skills and local/my-packs, two Packs rows for this computer and a report with no problems; no Teammate file changed. The snackbar, the second start and the other six tests were not run. A person still has to run all seven, and SKILLPACKS-04 on an older data folder that has imported Skills and Packs of its own.
+On 2026-10-18 an agent ran the move half of SKILLPACKS-04 on a copy of this computer's src\Huddle.App\App_Data (0.6 MB, two Agents, no imported Skills, no Packs of the user's own), starting the built app as a process with Team:SkillsRepositoryDir at E:\Repos\skills. It wrote SKILLS.md, six catalogs holding 263 Skills (two duplicates omitted), the Sources local/skills and local/my-packs, two Packs rows for this computer and a report with no problems; no Agent file changed. The snackbar, the second start and the other six tests were not run. A person still has to run all seven, and SKILLPACKS-04 on an older data folder that has imported Skills and Packs of its own.
 
 Read [the manual test script](../manual-tests.md) first, then [Common procedures](common.md), which defines the terminals, procedures and oracles this page names. Both are assumed below.
 
@@ -53,39 +53,39 @@ Run [`P-BUILD`](common.md#p-build). This area adds:
 - Huddle itself made a network request for the Skills (it never downloads).
 - The card appears only after a reload or a restart.
 
-### SKILLPACKS-02 — Choosing a Pack copies its Skills, then changes the Teammate
+### SKILLPACKS-02 — Choosing a Pack copies its Skills, then changes the Agent
 
 **Free** · about 15 min
 
-*Proves §13 U2: a Pack chip on a Teammate's card copies every Skill into `<data>\Skills\` with a `.source.json` before the Teammate's file changes.*
+*Proves §13 U2: a Pack chip on an Agent's card copies every Skill into `<data>\Skills\` with a `.source.json` before the Agent's file changes.*
 
 **Before you start**
 
 - SKILLPACKS-01 has passed, or `<ss>` holds a Ready Pack with at least two Skills that the Role you hire names.
-- A Teammate exists in a Role the Pack lists ("For" on its card).
+- An Agent exists in a Role the Pack lists ("For" on its card).
 
 **Steps**
 
-1. Open the Teammate's card and select **Edit**. Under **Packs**, select the Pack's chip so it is set.
+1. Open the Agent's card and select **Edit**. Under **Packs**, select the Pack's chip so it is set.
 2. Select **Save**.
-3. Read `<data>\Skills\` and the Teammate's `.md` with `O-FILE`.
+3. Read `<data>\Skills\` and the Agent's `.md` with `O-FILE`.
 
 **Pass if — all of these**
 
 - At step 1 the Skills select gains the Pack's Skills, and any not yet in `Skills/` are captioned *"Huddle copies it into Skills/ when you save."*
 - At step 3 each of the Pack's Skills has a folder in `<data>\Skills\` holding `SKILL.md` and a `.source.json` naming the Source and `copiedFrom`.
-- The Teammate's frontmatter lists the Skills under `skills`, the Pack under `_packs` with its version, and the Pack's `consultWhenAdds` text under `consult_when`.
+- The Agent's frontmatter lists the Skills under `skills`, the Pack under `_packs` with its version, and the Pack's `consultWhenAdds` text under `consult_when`.
 - The Pack card's holder count on the Packs tab rises by one.
 
 ### SKILLPACKS-03 — A changed Skill shows Update available, and Update copies then changes membership
 
 **Free** · about 20 min
 
-*Proves §13 U3 and U4 and §8.4: a Skill file changed at its pointer marks the Pack **Update available** and changes nothing else; **Update** copies the files first and then the Teammates who are ticked.*
+*Proves §13 U3 and U4 and §8.4: a Skill file changed at its pointer marks the Pack **Update available** and changes nothing else; **Update** copies the files first and then the Agents who are ticked.*
 
 **Before you start**
 
-- SKILLPACKS-02 has passed, so a Teammate holds the Pack.
+- SKILLPACKS-02 has passed, so an Agent holds the Pack.
 - Find the Pack's first Skill's pointer folder: the `path` in its catalog or Pack file under `<ss>`.
 
 **Steps**
@@ -94,33 +94,33 @@ Run [`P-BUILD`](common.md#p-build). This area adds:
 2. Wait up to ten seconds on the Packs tab.
 3. Read the copy in `<data>\Skills\<name>\SKILL.md`.
 4. Select **Review update** on the card. Read the dialog, then select **Update files** (or **Update 1** if a membership change is listed).
-5. Read the copy again, and the Teammate's `.md`.
+5. Read the copy again, and the Agent's `.md`.
 
 **Pass if — all of these**
 
-- At step 2 the card shows *Update available* and a **Review update** button. No Teammate restarts.
+- At step 2 the card shows *Update available* and a **Review update** button. No Agent restarts.
 - At step 3 the copy does **not** have the new line yet.
-- At step 4 the dialog lists the Skill under *Skill files that change for everyone*, with *"Used by {Teammate}. Their copy changes as soon as you update; they do not restart."*, and no checkbox for it.
-- At step 5 the copy has the new line, the Teammate's `.md` is unchanged unless a membership change was ticked, and the card is back to its usable state.
+- At step 4 the dialog lists the Skill under *Skill files that change for everyone*, with *"Used by {Agent}. Their copy changes as soon as you update; they do not restart."*, and no checkbox for it.
+- At step 5 the copy has the new line, the Agent's `.md` is unchanged unless a membership change was ticked, and the card is back to its usable state.
 
-### SKILLPACKS-04 — The move turns a copy of a real data folder into SKILLS.md and changes no Teammate
+### SKILLPACKS-04 — The move turns a copy of a real data folder into SKILLS.md and changes no Agent
 
 **Free** · about 30 min
 
-*Proves §6.13 and §13 U5 against real data, which the automated tests only approximate: the old `SkillPacks/` and catalog become `SKILLS.md`, six catalogs and the Sources `local/skills` and `local/my-packs`, and no Teammate file changes.*
+*Proves §6.13 and §13 U5 against real data, which the automated tests only approximate: the old `SkillPacks/` and catalog become `SKILLS.md`, six catalogs and the Sources `local/skills` and `local/my-packs`, and no Agent file changes.*
 
 **Before you start**
 
 - Stop every Huddle ([`P-STOP`](common.md#p-stop)).
 - Copy a **real** `App_Data` from before Skill Packs, one that has imported Skills and, ideally, a `SkillPacks\` folder of your own, to `C:\seeds\huddle\skillpacks\real`. Never run this on the original.
-- In `T-B`, hash every Teammate file in the copy: `Get-ChildItem C:\seeds\huddle\skillpacks\real\Teammates -Recurse -Filter *.md | Get-FileHash | Export-Csv C:\seeds\huddle\skillpacks\before.csv`.
+- In `T-B`, hash every Agent file in the copy: `Get-ChildItem C:\seeds\huddle\skillpacks\real\Agents -Recurse -Filter *.md | Get-FileHash | Export-Csv C:\seeds\huddle\skillpacks\before.csv`.
 
 **Steps**
 
 1. In `T-A` set `$env:Team__DataDir = 'C:\seeds\huddle\skillpacks\real'` and, if you have the skills repository cloned, `$env:Team__SkillsRepositoryDir` to it. Run `P-LAUNCH-FREE`.
 2. Open Settings › Skills. Read the snackbar.
 3. Read `real\SkillSources\SKILLS.md`, list `real\SkillSources\catalogs\` and `real\SkillSources\sources\local\`, and read `real\skill-sources-move.json`.
-4. Hash the Teammate files again into `after.csv` and compare: `Compare-Object (Import-Csv C:\seeds\huddle\skillpacks\before.csv) (Import-Csv C:\seeds\huddle\skillpacks\after.csv) -Property Hash,Path`.
+4. Hash the Agent files again into `after.csv` and compare: `Compare-Object (Import-Csv C:\seeds\huddle\skillpacks\before.csv) (Import-Csv C:\seeds\huddle\skillpacks\after.csv) -Property Hash,Path`.
 5. `P-STOP`, start again the same way, and open Settings › Skills.
 
 **Pass if — all of these**
@@ -128,7 +128,7 @@ Run [`P-BUILD`](common.md#p-build). This area adds:
 - At step 2 the snackbar reads *"Packs and Skills moved to SKILLS.md"*, possibly with *"· N could not be moved"* or *"· N Skills no longer grant tools"*, and has **Show log**. Record it verbatim.
 - At step 3 `SKILLS.md` exists, `catalogs\` has six `.skillcatalog.json` files, and `sources\local\` has `skills` and `my-packs`; `my-packs` is created on every run, so its `log.jsonl` exists even when you had no Packs of your own. Every problem in `skill-sources-move.json` names a file and a reason.
 - At step 3 the Packs tab shows no *New* chip for what the move wrote.
-- At step 4 `Compare-Object` prints nothing: no Teammate file changed.
+- At step 4 `Compare-Object` prints nothing: no Agent file changed.
 - At step 5 there is no move snackbar and `SKILLS.md` is unchanged: the move ran once.
 
 **Record** the source data folder's age and size, the snackbar text and the problem count in the tracker's Notes. The design asks for this run before release.
@@ -161,40 +161,40 @@ Run [`P-BUILD`](common.md#p-build). This area adds:
 - At step 6 each install file names its own computer and the same Skill Sources folder.
 - 5101 did not run the move (`data2` has no `skill-sources-move.json`), as known-limits.md says.
 
-### SKILLPACKS-06 — A pointer on an unplugged drive shows Not downloaded, and Teammates keep working
+### SKILLPACKS-06 — A pointer on an unplugged drive shows Not downloaded, and Agents keep working
 
 **Free** · about 15 min
 
-*Proves §8.5 and the watcher's polling: a pointer whose drive goes away turns **Not downloaded** without an error page or a crash, Teammates keep their copies, and the drive coming back restores it.*
+*Proves §8.5 and the watcher's polling: a pointer whose drive goes away turns **Not downloaded** without an error page or a crash, Agents keep their copies, and the drive coming back restores it.*
 
 **Before you start**
 
 - A USB drive, or a `subst` drive in `T-B`: `subst S: C:\seeds\huddle\skillpacks\clones`.
-- A catalog row or Pack whose Skill pointers are on that drive, and a Teammate holding one of its Skills (copied, as in SKILLPACKS-02).
+- A catalog row or Pack whose Skill pointers are on that drive, and an Agent holding one of its Skills (copied, as in SKILLPACKS-02).
 - `P-LAUNCH-FREE`.
 
 **Steps**
 
 1. With Settings › Skills › Skills open, unplug the drive (or `subst S: /d`).
 2. Wait up to thirty seconds. Select **Reload** if nothing has changed.
-3. Open the Teammate's card and check its Skills.
+3. Open the Agent's card and check its Skills.
 4. Plug the drive back in (or `subst S: C:\seeds\huddle\skillpacks\clones`) and wait again.
 
 **Pass if — all of these**
 
 - At step 2 the Skills from that drive show **Not downloaded**; the page does not error and the log has no unhandled exception.
-- At step 3 the Teammate still lists the Skill, and `<data>\Skills\<name>\` is still there.
+- At step 3 the Agent still lists the Skill, and `<data>\Skills\<name>\` is still there.
 - At step 4 the Skills return to their usable state without a restart.
 
 ### SKILLPACKS-07 — A withdrawn Source blocks a new hire, and its holders keep working
 
 **Free** · about 15 min
 
-*Proves §13 U13: a Source marked withdrawn stops anyone new from getting its Pack, says why everywhere, and leaves the Teammates who hold it with their copies and a warning.*
+*Proves §13 U13: a Source marked withdrawn stops anyone new from getting its Pack, says why everywhere, and leaves the Agents who hold it with their copies and a warning.*
 
 **Before you start**
 
-- SKILLPACKS-02 has passed: a Teammate holds a Pack from the Source.
+- SKILLPACKS-02 has passed: an Agent holds a Pack from the Source.
 - `P-LAUNCH-FREE`.
 
 **Steps**

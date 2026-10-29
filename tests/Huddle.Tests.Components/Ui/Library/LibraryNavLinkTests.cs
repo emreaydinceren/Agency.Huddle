@@ -5,7 +5,7 @@ namespace Agency.Huddle.Tests.Ui.Library;
 
 /// <summary>
 /// Pins the sidebar's Library entry (<see cref="LibraryNavLink"/>): one home per tree. The Library page owns the tree
-/// (Teams, Teammates, Uploads and every pinned folder), so the sidebar carries a single section link to
+/// (Teams, Agents, Uploads and every pinned folder), so the sidebar carries a single section link to
 /// <c>/library</c> and none of the roots, and it renders nothing when <c>Library.Enabled</c> is off.
 /// </summary>
 public sealed class LibraryNavLinkTests
@@ -23,7 +23,7 @@ public sealed class LibraryNavLinkTests
         Assert.Equal("Library", link.TextContent.Trim());
     }
 
-    /// <summary>The Library page's own tree is not repeated: no Teams, Teammates or Uploads row, no group and no Add folder row.</summary>
+    /// <summary>The Library page's own tree is not repeated: no Teams, Agents or Uploads row, no group and no Add folder row.</summary>
     [Fact]
     public async Task DoesNotRepeatTheLibraryTree()
     {
@@ -35,12 +35,12 @@ public sealed class LibraryNavLinkTests
         Assert.Empty(cut.FindAll(".library-nav-root-link"));
         Assert.Empty(cut.FindAll(".nav-action-link"));
         string text = cut.Markup;
-        Assert.DoesNotContain("Teammates", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Agents", text, StringComparison.Ordinal);
         Assert.DoesNotContain("Uploads", text, StringComparison.Ordinal);
         Assert.DoesNotContain("Add folder", text, StringComparison.Ordinal);
     }
 
-    /// <summary>The entry is a destination row, not a section header: the same <c>nav-row-link</c> class the Teammates link takes.</summary>
+    /// <summary>The entry is a destination row, not a section header: the same <c>nav-row-link</c> class the Agents link takes.</summary>
     [Fact]
     public async Task IsDrawnAsADestinationRow()
     {

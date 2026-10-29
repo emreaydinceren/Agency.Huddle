@@ -57,7 +57,7 @@ internal sealed class CustomRoleStore
     /// <param name="description">The description.</param>
     /// <param name="instructions">The instructions.</param>
     /// <param name="tier">The model strength.</param>
-    /// <param name="skills">The names of the Skills a Teammate in the role carries, or <see langword="null"/> for none.</param>
+    /// <param name="skills">The names of the Skills an Agent in the role carries, or <see langword="null"/> for none.</param>
     /// <returns>The role as stored.</returns>
     /// <exception cref="InvalidOperationException">The file is unreadable, or the title is blank.</exception>
     public CustomRole Add(string title, string description, string instructions, ModelTier tier, IReadOnlyList<string>? skills = null)

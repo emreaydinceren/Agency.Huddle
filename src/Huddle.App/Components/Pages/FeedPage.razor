@@ -1,8 +1,8 @@
 @page "/feed"
 @*
-    The Feed Tab (Feed spec 6.9): what Teammates and Huddle did, newest first, as cards under day headings. The header is the owner's
+    The Feed Tab (Feed spec 6.9): what Agents and Huddle did, newest first, as cards under day headings. The header is the owner's
     wireframe: the title with a Live chip, the read-only note, then the filter bar - the Category control with its counts, the
-    Teammate chip when one is set, and the Team select. Every filter is a query parameter (?category=, ?teammate=, ?team=), so a Tab
+    Agent chip when one is set, and the Team select. Every filter is a query parameter (?category=, ?agent=, ?team=), so a Tab
     that remembers its URL remembers its filter, and choosing a filter navigates the Tab. The page pages by id ("Show more"), takes
     live items through the list's "New items" pill, re-reads the counts when items arrive or change, and marks the Tab seen two seconds
     after it was shown. It is read-only: no dismiss, no accept, no reply. When the Feed is turned off it draws only an empty state.
@@ -29,7 +29,7 @@
     }
     else
     {
-        <PageHeader Title="Feed" Subtitle="What Teammates and Huddle did, newest first. Each line links to the Task, Room or document it's about.">
+        <PageHeader Title="Feed" Subtitle="What Agents and Huddle did, newest first. Each line links to the Task, Room or document it's about.">
             <TitleTrailing>
                 <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text" Class="feed-live-chip">
                     <span class="feed-live-dot" aria-hidden="true"></span>Live
@@ -51,9 +51,9 @@
             </HuddleSegmentedControl>
 
             <div class="feed-filter-end">
-                @if (this.teammate is { } name)
+                @if (this.agent is { } name)
                 {
-                    <TaskFilterChip Label="Teammate" Value="@name" IsSet="true" NoMenu="true" OnClear="this.ClearTeammate" Class="feed-teammate-chip" />
+                    <TaskFilterChip Label="Agent" Value="@name" IsSet="true" NoMenu="true" OnClear="this.ClearAgent" Class="feed-agent-chip" />
                 }
 
                 <MudSelect T="string" Value="@(this.team ?? string.Empty)" ValueChanged="this.OnTeamChosen" Dense="true" Variant="Variant.Outlined"
@@ -74,7 +74,7 @@
             <EmptyState Title="@this.EmptyTitle" Text="@this.EmptyText" />
         }
 
-        <FeedList @key="this.Pager.ListKey" @ref="this.list" Items="this.Pager.Items" Mode="FeedListMode.Cards" TabSeenUpTo="this.tabSeenUpTo" OnTeammate="this.OnTeammateChosen" />
+        <FeedList @key="this.Pager.ListKey" @ref="this.list" Items="this.Pager.Items" Mode="FeedListMode.Cards" TabSeenUpTo="this.tabSeenUpTo" OnAgent="this.OnAgentChosen" />
 
         @if (this.Pager.HasMore)
         {
@@ -90,7 +90,7 @@
 @code {
     private FeedPager? pager;
     private FeedCategory category;
-    private string? teammate;
+    private string? agent;
     private string? team;
     private string? loadedFilter;
     private FeedCounts counts = new(0, 0, 0, 0, 0, 0, 0);
@@ -107,9 +107,9 @@
     [Parameter]
     public string? Category { get; set; }
 
-    /// <summary>The Teammate whose items are shown, from <c>?teammate=</c>.</summary>
+    /// <summary>The Agent whose items are shown, from <c>?agent=</c>.</summary>
     [Parameter]
-    public string? Teammate { get; set; }
+    public string? Agent { get; set; }
 
     /// <summary>The Team whose items are shown, from <c>?team=</c>.</summary>
     [Parameter]
@@ -139,7 +139,7 @@
     {
         get
         {
-            if (this.teammate is { } name)
+            if (this.agent is { } name)
             {
                 return $"Nothing from {name} yet.";
             }
@@ -157,15 +157,15 @@
     {
         get
         {
-            if (this.teammate is not null)
+            if (this.agent is not null)
             {
                 return string.Empty;
             }
 
             return this.category switch
             {
-                FeedCategory.NeedsYou => "Asks from your Teammates appear here.",
-                FeedCategory.All when this.team is null => "What your Teammates do appears here.",
+                FeedCategory.NeedsYou => "Asks from your Agents appear here.",
+                FeedCategory.All when this.team is null => "What your Agents do appears here.",
                 _ => "Try All, or another Team.",
             };
         }
@@ -195,14 +195,14 @@
         }
 
         // Inside a Tab the Tab's own address is the filter. The parameters cannot say "removed": a parameter missing from the new
-        // address is simply not supplied, so the component keeps the old value (choosing All, or clearing the Teammate, did nothing).
-        (string? wantedCategory, string? wantedTeammate, string? wantedTeam) = this.Page is { } page
+        // address is simply not supplied, so the component keeps the old value (choosing All, or clearing the Agent, did nothing).
+        (string? wantedCategory, string? wantedAgent, string? wantedTeam) = this.Page is { } page
             ? ReadFilter(page.Url)
-            : (this.Category, this.Teammate, this.Team);
+            : (this.Category, this.Agent, this.Team);
         FeedCategory parsed = FeedCategories.Parse(wantedCategory);
-        string? parsedTeammate = string.IsNullOrWhiteSpace(wantedTeammate) ? null : wantedTeammate;
+        string? parsedAgent = string.IsNullOrWhiteSpace(wantedAgent) ? null : wantedAgent;
         string? parsedTeam = string.IsNullOrWhiteSpace(wantedTeam) ? null : wantedTeam;
-        string filter = $"{parsed}|{parsedTeammate}|{parsedTeam}";
+        string filter = $"{parsed}|{parsedAgent}|{parsedTeam}";
         if (string.Equals(filter, this.loadedFilter, StringComparison.Ordinal))
         {
             return;
@@ -210,7 +210,7 @@
 
         this.loadedFilter = filter;
         this.category = parsed;
-        this.teammate = parsedTeammate;
+        this.agent = parsedAgent;
         this.team = parsedTeam;
         this.Load();
     }
@@ -238,9 +238,9 @@
         this.seenTimer?.Dispose();
     }
 
-    /// <summary>The <c>category</c>, <c>teammate</c> and <c>team</c> values of an address; each is <see langword="null"/> when the address lacks it.</summary>
+    /// <summary>The <c>category</c>, <c>agent</c> and <c>team</c> values of an address; each is <see langword="null"/> when the address lacks it.</summary>
     /// <param name="url">A site-relative address, with or without a query.</param>
-    private static (string? Category, string? Teammate, string? Team) ReadFilter(string url)
+    private static (string? Category, string? Agent, string? Team) ReadFilter(string url)
     {
         int queryStart = url.IndexOf('?', StringComparison.Ordinal);
         if (queryStart < 0)
@@ -249,13 +249,13 @@
         }
 
         Dictionary<string, Microsoft.Extensions.Primitives.StringValues> query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(url[queryStart..]);
-        return (Value(query, "category"), Value(query, "teammate"), Value(query, "team"));
+        return (Value(query, "category"), Value(query, "agent"), Value(query, "team"));
     }
 
     private static string? Value(Dictionary<string, Microsoft.Extensions.Primitives.StringValues> query, string name) =>
         query.TryGetValue(name, out Microsoft.Extensions.Primitives.StringValues values) && values.Count > 0 ? values[0] : null;
 
-    private static string BuildUrl(FeedCategory category, string? teammate, string? team)
+    private static string BuildUrl(FeedCategory category, string? agent, string? team)
     {
         List<string> parts = [];
         if (category != FeedCategory.All)
@@ -263,9 +263,9 @@
             parts.Add("category=" + Uri.EscapeDataString(FeedCategories.ToWire(category)));
         }
 
-        if (teammate is not null)
+        if (agent is not null)
         {
-            parts.Add("teammate=" + Uri.EscapeDataString(teammate));
+            parts.Add("agent=" + Uri.EscapeDataString(agent));
         }
 
         if (team is not null)
@@ -277,9 +277,9 @@
     }
 
     /// <summary>Points this page's Tab, and the address bar, at the filter the Human chose.</summary>
-    private void GoTo(FeedCategory nextCategory, string? nextTeammate, string? nextTeam)
+    private void GoTo(FeedCategory nextCategory, string? nextAgent, string? nextTeam)
     {
-        string url = BuildUrl(nextCategory, nextTeammate, nextTeam);
+        string url = BuildUrl(nextCategory, nextAgent, nextTeam);
         if (this.Page is { } page)
         {
             _ = this.Tabs.Navigate(page.TabId, url);
@@ -292,7 +292,7 @@
     {
         if (chosen != this.category)
         {
-            this.GoTo(chosen, this.teammate, this.team);
+            this.GoTo(chosen, this.agent, this.team);
         }
     }
 
@@ -301,13 +301,13 @@
         string? next = string.IsNullOrEmpty(chosen) ? null : chosen;
         if (!string.Equals(next, this.team, StringComparison.Ordinal))
         {
-            this.GoTo(this.category, this.teammate, next);
+            this.GoTo(this.category, this.agent, next);
         }
     }
 
-    private void OnTeammateChosen(string name) => this.GoTo(this.category, name, this.team);
+    private void OnAgentChosen(string name) => this.GoTo(this.category, name, this.team);
 
-    private void ClearTeammate() => this.GoTo(this.category, null, this.team);
+    private void ClearAgent() => this.GoTo(this.category, null, this.team);
 
     private void MarkTabSeen(object? state)
     {
@@ -323,10 +323,10 @@
     private void Load()
     {
         this.Pager.Category = this.category;
-        this.Pager.Teammate = this.teammate;
+        this.Pager.Agent = this.agent;
         this.Pager.Team = this.team;
         this.Pager.Load();
-        this.counts = this.Store.Counts(this.teammate, this.team);
+        this.counts = this.Store.Counts(this.agent, this.team);
     }
 
     private void ShowMore() => this.Pager.ShowMore();
@@ -341,7 +341,7 @@
                 await this.list.AddNewItemsAsync(matching);
             }
 
-            this.counts = this.Store.Counts(this.teammate, this.team);
+            this.counts = this.Store.Counts(this.agent, this.team);
             this.StateHasChanged();
         });
     }
@@ -355,7 +355,7 @@
     private void RefreshShownRows()
     {
         FeedRefresh refresh = this.Pager.RefreshInPlace();
-        this.counts = this.Store.Counts(this.teammate, this.team);
+        this.counts = this.Store.Counts(this.agent, this.team);
         if (refresh.Any)
         {
             this.list?.Refresh(refresh);

@@ -110,7 +110,7 @@ internal static class UiTestHost
     /// events, a Team catalog, a fake gateway, health, an avatar store and a <see cref="TabService"/>.
     /// </summary>
     /// <param name="ctx">The context to register into.</param>
-    /// <param name="directory">The Teammate directory.</param>
+    /// <param name="directory">The Agent directory.</param>
     /// <param name="chat">The chat service; its Team catalog is used when <paramref name="catalog"/> is <see langword="null"/>.</param>
     /// <param name="events">The Room events bus.</param>
     /// <param name="dir">The data directory the avatar store reads its options from; <see langword="null"/> uses default options.</param>

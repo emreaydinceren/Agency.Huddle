@@ -700,7 +700,7 @@ public sealed class TeamFolderProvisionerTests
 
     /// <summary>An isolated <see cref="PersonaStore"/>, <see cref="LibraryRootStore"/> and
     /// <see cref="LibraryPathResolver"/> over a fresh temp <c>DataDir</c>, with <c>Teams/</c> and
-    /// <c>Teammates/</c> already created (<see cref="TeammateLayoutMigration"/>'s job, not this
+    /// <c>Agents/</c> already created (<see cref="AgentLayoutMigration"/>'s job, not this
     /// fixture's - see §6.2's remarks).</summary>
     private sealed class ProvisionerFixture : IDisposable
     {
@@ -716,14 +716,14 @@ public sealed class TeamFolderProvisionerTests
 
             this.dir = new TempDataDir();
             Directory.CreateDirectory(Path.Combine(this.dir.Path, "Teams"));
-            Directory.CreateDirectory(Path.Combine(this.dir.Path, "Teammates"));
+            Directory.CreateDirectory(Path.Combine(this.dir.Path, "Agents"));
             foreach (string seed in seedFolders)
             {
                 Directory.CreateDirectory(Path.Combine(this.dir.Path, "Teams", seed));
             }
 
             IOptions<TeamOptions> options = this.dir.Options();
-            TeammatePaths paths = new(options);
+            AgentPaths paths = new(options);
             this.Personas = new PersonaStore(paths, new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
             this.Roots = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
             this.Resolver = new LibraryPathResolver(this.Roots, options, NullLogger<LibraryPathResolver>.Instance);

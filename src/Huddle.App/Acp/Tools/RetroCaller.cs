@@ -3,7 +3,7 @@ using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Acp.Tools;
 
-/// <summary>The caller check the retro tools share: a Team member who holds the <c>retrospective</c> Skill and is the Team's manager or its Retro agent.</summary>
+/// <summary>The caller check the retro tools share: an Agent who holds the <c>retrospective</c> Skill and is the Team's manager or its Retro agent.</summary>
 internal static class RetroCaller
 {
     /// <summary>The Skill a caller must hold.</summary>

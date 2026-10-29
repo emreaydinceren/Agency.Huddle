@@ -671,7 +671,7 @@ public static partial class MarkdownRenderer
     /// Wraps every Mention of one of <paramref name="mentions"/>' handles written in plain literal-run text in a
     /// <see cref="MentionInline"/>. Names and Aliases are sorted together, longest first, as
     /// <see cref="MentionParser"/> sorts them, so "@Emily Lee" marks "Emily Lee" and not "Emily" in a Room that
-    /// holds both; a Teammate's handle precedes an equal-length own handle.
+    /// holds both; an Agent's handle precedes an equal-length own handle.
     /// </summary>
     /// <param name="document">The parsed Markdown document, mutated in place.</param>
     /// <param name="mentions">The handles to mark.</param>
@@ -754,7 +754,7 @@ public static partial class MarkdownRenderer
             && literal.Span.Start < endExclusive
             && literal.Span.End >= start);
 
-    /// <summary>Builds the pill for a Mention of a Teammate.</summary>
+    /// <summary>Builds the pill for a Mention of an Agent.</summary>
     /// <param name="rawToken">The Mention exactly as typed, <c>@</c> included.</param>
     private static MentionInline CreateMention(string rawToken) => MarkdownRenderer.CreateMentionInline(rawToken, own: false);
 

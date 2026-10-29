@@ -51,7 +51,7 @@ internal static class TestStores
     public static PersonaStore CreatePersonaStore(this TempDataDir dir) => dir.Options().CreatePersonaStore();
 
     /// <summary>Creates a real <see cref="PersonaStore"/> over <paramref name="options"/>.</summary>
-    /// <param name="options">The options whose data directory holds the Teammates.</param>
+    /// <param name="options">The options whose data directory holds the Agents.</param>
     public static PersonaStore CreatePersonaStore(this IOptions<TeamOptions> options) =>
-        new(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
+        new(new AgentPaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
 }

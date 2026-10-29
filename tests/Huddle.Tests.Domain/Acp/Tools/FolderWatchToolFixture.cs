@@ -10,7 +10,7 @@ namespace Agency.Huddle.Tests.Acp.Tools;
 /// <summary>
 /// A real <see cref="FileChangeTracker"/> and its collaborators over an isolated <see cref="TempDataDir"/>,
 /// shared by <c>WatchFolderToolTests</c> and <c>UnwatchFolderToolTests</c> and matching
-/// <c>FileChangeTrackerTests.CreateFixtureAsync</c>'s shape. The Teammate "Nova" is registered, so
+/// <c>FileChangeTrackerTests.CreateFixtureAsync</c>'s shape. The Agent "Nova" is registered, so
 /// every tool test can bind that caller Name at construction.
 /// </summary>
 /// <param name="dataDir">The temp data directory, disposed with the fixture.</param>
@@ -35,17 +35,17 @@ internal sealed class FolderWatchToolFixture(TempDataDir dataDir, PersonaStore p
         SqliteTeamDirectory directory = new(options);
         await directory.InitializeAsync("You", ct);
 
-        TeammatePaths teammatePaths = new(options);
+        AgentPaths agentPaths = new(options);
         PersonaStore personas = new(
-            teammatePaths,
+            agentPaths,
             new PersonaModelStore(options),
             new PersonaEffortStore(options), new PersonaWorkModeStore(options),
             NullLogger<PersonaStore>.Instance);
         FileStateStore store = new(options, NullLogger<FileStateStore>.Instance);
-        WatchedFolderResolver resolver = new(options, teammatePaths);
-        FileChangeTracker tracker = new(store, personas, directory, resolver, options, teammatePaths, NullLogger<FileChangeTracker>.Instance);
+        WatchedFolderResolver resolver = new(options, agentPaths);
+        FileChangeTracker tracker = new(store, personas, directory, resolver, options, agentPaths, NullLogger<FileChangeTracker>.Instance);
 
-        // Registered so "Nova" resolves via the Teammate-Name rule (FC §6.3) to its own Work Dir,
+        // Registered so "Nova" resolves via the Agent-Name rule (FC §6.3) to its own Work Dir,
         // matching the caller Name every tool test binds at construction.
         personas.Add(new PersonaIdentity("Nova", "Nova", "Nova", []), "You are Nova.");
 

@@ -6,7 +6,7 @@ using Agency.Huddle.Tests.Css;
 namespace Agency.Huddle.Tests.Themes;
 
 /// <summary>
-/// Pins the monogram recipe (<see cref="AvatarColours"/>): in a Light Theme the Teammate's colour at 20% over Surface for the fill and
+/// Pins the monogram recipe (<see cref="AvatarColours"/>): in a Light Theme the Agent's colour at 20% over Surface for the fill and
 /// 75% toward TextPrimary for the letters; in a Dark Theme the colour at 35% over Surface and 75% toward white. The recipe replaces the
 /// old black-or-white choice, so the proof that matters is that the letters clear the WCAG 4.5:1 text floor on the fill for any colour,
 /// in the Huddle Light and Huddle Dark palettes.
@@ -41,7 +41,7 @@ public sealed class AvatarColoursTests
         Assert.Equal("#808080", AvatarColours.Mix(black, white, 50).ToString(MudColorOutputFormats.Hex));
     }
 
-    /// <summary>The inline style hands only the Teammate's colour to <c>app.css</c> as the avatar's own primary, so each Theme resolves the recipe itself.</summary>
+    /// <summary>The inline style hands only the Agent's colour to <c>app.css</c> as the avatar's own primary, so each Theme resolves the recipe itself.</summary>
     [Fact]
     public void MonogramStyle_HandsTheColourToTheStylesheetRecipe()
     {

@@ -84,7 +84,7 @@ public sealed class DocHistoryEndToEndTests
     {
         DocHistoryStore store = new(fixture.BoundOptions, NullLogger<DocHistoryStore>.Instance);
         DocHistoryRecorder recorder = new(store, fixture.BoundOptions, NullLogger<DocHistoryRecorder>.Instance, new ConfiguredHumanIdentity("Emre"));
-        LogChangeTool real = new(recorder, fixture.Resolver, fixture.BoundOptions, new TeammatePaths(fixture.BoundOptions), BoundName, new FakePromptSource());
+        LogChangeTool real = new(recorder, fixture.Resolver, fixture.BoundOptions, new AgentPaths(fixture.BoundOptions), BoundName, new FakePromptSource());
         return (new RecordingLogChangeTool(real), store);
     }
 }

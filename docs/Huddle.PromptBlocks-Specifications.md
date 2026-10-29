@@ -78,7 +78,7 @@ Concretely:
 5. **Nothing new crosses the pipe, the Transcript or the wire.** The Message text is unchanged, the
    Transcript is unchanged, and `ProtocolVersion` does not move.
 
-**Why this matters.** The Library exists so a Human and a Teammate can share files, and chat links
+**Why this matters.** The Library exists so a Human and an Agent can share files, and chat links
 to them ([ADR-0027](adr/0027-the-library-sees-only-configured-roots.md)). Images are the one kind a
 model cannot be handed by a path alone: an Adapter with file tools can open one only if the model
 chooses to, at the cost of a tool round trip, and an Adapter without them cannot at all. The ACP
@@ -678,7 +678,7 @@ goes in [Known limits](engineering/known-limits.md), and `@Nova /compact`
 
 ## 13. End-to-end flow
 
-The Human writes, in a Room with Nova (a Claude Teammate, `ReadsFiles: true`):
+The Human writes, in a Room with Nova (a Claude Agent, `ReadsFiles: true`):
 
 > `@Nova what is wrong with E:\Huddle\Teams\Design\checkout.png`
 
@@ -715,7 +715,7 @@ The same Message to a profile with `ReadsFiles: false` and `image` not advertise
 
 ### 14.1 D-1 — Images are blocks for every Adapter that takes them, including file-readers
 
-*Decided 2026-10-01.* A Claude Teammate can open `checkout.png` with its `Read` tool, so a path line
+*Decided 2026-10-01.* A Claude Agent can open `checkout.png` with its `Read` tool, so a path line
 would be enough, in principle. But the model has to decide to look, and the look costs a tool round
 trip and a second prompt. The Human said "look at it" and the Agent should be looking. The cost, image
 tokens, is paid only in the Turn that names the file. *Alternatives:* **path only** (zero change, but
@@ -1002,7 +1002,7 @@ members; T1.4 pins what actually crosses the wire.
 | --- | --- | --- | --- |
 | V-1 | Does a 3 MiB, 8,000 px PNG sent as a base64 `image` block reach the model through `claude-agent-acp` 0.75.1 and get described correctly? What does the provider enforce on bytes and pixels, what does the image cost in `usage_update`, and what does an animated GIF do? | A raw JSON-RPC harness against the real Adapter, as the Commands spec ran one; a few cheap turns | **Answered 2026-10-01** by `RealAdapterPromptBlockTests` (through the real `DotAcpAgentSession`, not a raw harness). A solid red 64 px PNG was described as `red`. A 3,001,523-byte PNG (1000 × 1000, incompressible) was accepted and the Turn ended `EndTurn`. Image cost in `usage_update`: the context fill moved from about 58,000 to about 59,300 with the 3 MB image and to about 61,400 with four of 1.97 MB each, so roughly **1,000 tokens an image whatever its size**: the provider downscales. The 8,000 px edge limit and an animated GIF were **not** run; the edge cap is Anthropic's documented figure and a GIF is sent as its bytes |
 | V-2 | Does a `session/prompt` line of about 11 MB cross `dotacp`'s writer and the adapter's reader intact? | A harness sending four 2 MiB images to the real Adapter, and to `FakeAcpAgent` for the writer | **Answered 2026-10-01.** Four noise PNGs of 1.97 MB each (7,877,912 raw bytes, about 10.5 MB of base64 on one line) crossed the writer and the adapter's reader, and the model replied `FOUR` |
-| V-3 | Does `@Nova` with a named PNG work end to end in the real app, on a Claude Persona, with the reply describing the picture? | `manual-tests/prompt-blocks.md` PROMPTBLOCKS-01; about $0.05 | **Answered 2026-10-01**, in the app on a Haiku Teammate: `BANANA 4821` and the circle's colour read out of a named PNG with no tool call; and a 4.3 MB PNG fell back to its path with `TooLarge=1` logged. PROMPTBLOCKS-02 (four of six images, `ImageCountCap=2`) and -05 (`PromptBlocks=false` gives `CANNOT SEE`) passed in the app the same day; PROMPTBLOCKS-04, which needs two Teammates in one Room, is deferred to user acceptance |
+| V-3 | Does `@Nova` with a named PNG work end to end in the real app, on a Claude Persona, with the reply describing the picture? | `manual-tests/prompt-blocks.md` PROMPTBLOCKS-01; about $0.05 | **Answered 2026-10-01**, in the app on a Haiku Agent: `BANANA 4821` and the circle's colour read out of a named PNG with no tool call; and a 4.3 MB PNG fell back to its path with `TooLarge=1` logged. PROMPTBLOCKS-02 (four of six images, `ImageCountCap=2`) and -05 (`PromptBlocks=false` gives `CANNOT SEE`) passed in the app the same day; PROMPTBLOCKS-04, which needs two Agents in one Room, is deferred to user acceptance |
 | V-4 | What does the Adapter do with a corrupt body behind a valid header: a refusal, or a hang? Does the Turn fail cleanly once? | A truncated PNG with a valid `IHDR` | **Answered 2026-10-01.** The Turn did not fail and did not hang: it ended `EndTurn` once, and the reply said `API Error: an image in the conversation could not be processed and was removed.` The Adapter drops the image from the conversation, so it cannot poison later Turns |
 | V-5 | Does `agency-acp` advertise `image` or `embeddedContext`, and does its model accept an image? | Point the harness at `agency-acp`; free | Open. Not a V1 gate |
 | V-6 | Does any Adapter we run honour a blob `resource` (PDF)? | As V-1, with a small PDF | Open. A V2 gate |

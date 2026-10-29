@@ -1,14 +1,14 @@
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.TeamTypes;
 
 namespace Agency.Huddle.App.Teams;
 
 /// <summary>
 /// Hires a Candidate that carries a role (HR-13): the card is resolved from the role through
-/// <see cref="CardResolver"/> and written by <see cref="HireService"/>, so the Teammate gets the
+/// <see cref="CardResolver"/> and written by <see cref="HireService"/>, so the Agent gets the
 /// role's skills, packs and model tier instead of the Candidate's own text.
 /// </summary>
-/// <param name="hires">Writes the Teammate.</param>
+/// <param name="hires">Writes the Agent.</param>
 /// <param name="types">The team types, for the role.</param>
 /// <param name="skills">The registry a card draws its Packs and Skills from.</param>
 /// <param name="context">The adapters and connectors the card resolves against.</param>

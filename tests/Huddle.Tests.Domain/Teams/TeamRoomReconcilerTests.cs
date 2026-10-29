@@ -4,7 +4,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Elicitation;
 using Agency.Huddle.Tests.Factories;
@@ -14,7 +14,7 @@ namespace Agency.Huddle.Tests.Teams;
 
 /// <summary>
 /// Tests for <see cref="TeamRoomReconciler"/> (Team chats spec §6.4): the Team Room per Team, filling it
-/// as Teammates join, archiving Rooms of a vanished Team, and the guards around all three. Every test
+/// as Agents join, archiving Rooms of a vanished Team, and the guards around all three. Every test
 /// calls <see cref="TeamRoomReconciler.ReconcileAsync"/> directly, so none waits on a timer.
 /// </summary>
 public sealed class TeamRoomReconcilerTests

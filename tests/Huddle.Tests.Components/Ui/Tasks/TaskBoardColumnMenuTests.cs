@@ -203,9 +203,9 @@ public sealed partial class TaskBoardColumnMenuTests
         Assert.Empty(harness.Views.Get(ViewStore.AllTasksId)?.Columns ?? []);
     }
 
-    /// <summary>corrections-B7 12.4 item 3: grouped by Team, the lane of an orphan Team folder carries the chip "No teammate is in Legal" (Spec §13.12); a Team some Persona is in has none.</summary>
+    /// <summary>corrections-B7 12.4 item 3: grouped by Team, the lane of an orphan Team folder carries the chip "No agent is in Legal" (Spec §13.12); a Team some Persona is in has none.</summary>
     [Fact]
-    public async Task BoardLane_OrphanTeam_ShowsNoTeammateChip()
+    public async Task BoardLane_OrphanTeam_ShowsNoAgentChip()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -217,13 +217,13 @@ public sealed partial class TaskBoardColumnMenuTests
 
         IElement legal = Lane(cut, "Legal");
         IElement platform = Lane(cut, "Platform");
-        Assert.Equal("No teammate is in Legal", Assert.Single(legal.QuerySelectorAll(".task-orphan-team-chip")).TextContent.Trim());
+        Assert.Equal("No agent is in Legal", Assert.Single(legal.QuerySelectorAll(".task-orphan-team-chip")).TextContent.Trim());
         Assert.Empty(platform.QuerySelectorAll(".task-orphan-team-chip"));
     }
 
     /// <summary>corrections-B7 12.4 item 3: the List's Team group header carries the same orphan chip, once, for Legal only.</summary>
     [Fact]
-    public async Task ListGroupHeader_OrphanTeam_ShowsNoTeammateChip()
+    public async Task ListGroupHeader_OrphanTeam_ShowsNoAgentChip()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -241,7 +241,7 @@ public sealed partial class TaskBoardColumnMenuTests
         });
 
         string[] chips = [.. cut.FindAll(".task-orphan-team-chip").Select(c => c.TextContent.Trim())];
-        string[] expected = ["No teammate is in Legal"];
+        string[] expected = ["No agent is in Legal"];
         Assert.Equal(expected, chips);
     }
 

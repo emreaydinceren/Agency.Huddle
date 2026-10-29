@@ -16,7 +16,7 @@ using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Questions;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Tools;
 using Agency.Huddle.Tests.Factories;
@@ -273,7 +273,7 @@ public sealed class TaskDetailTests
     /// A save that fails with <see cref="IOException"/> (the file is locked by another handle, the same
     /// failure mode <see cref="TaskStore"/>'s own atomic write can hit) keeps <c>pending</c> - the
     /// "Unsaved edits" alert stays - and shows the error in a <see cref="MudAlert"/> with
-    /// <c>role="alert"</c>, following the <c>TeammateCard.SaveAsync</c> precedent (Spec §13.6 "Save
+    /// <c>role="alert"</c>, following the <c>AgentProfileCard.SaveAsync</c> precedent (Spec §13.6 "Save
     /// errors"). Windows-only: mandatory file locking via <see cref="FileShare.None"/> is not enforced on
     /// Linux (the same guard <c>TaskStoreTests.Constructor_UnreadableFile_RejectedNotThrown</c> uses).
     /// </summary>
@@ -402,7 +402,7 @@ public sealed class TaskDetailTests
 
         var cut = RenderPanel(ctx, task.Id);
 
-        Assert.Equal("Wake-ups for this task are paused after 10 changes by Teammates.", cut.TextOf(".task-detail-budget-banner-text"));
+        Assert.Equal("Wake-ups for this task are paused after 10 changes by Agents.", cut.TextOf(".task-detail-budget-banner-text"));
         Assert.Equal("Allow 10 more", cut.FindButton("Allow 10 more").TextContent.Trim());
         Assert.Equal("Save", cut.FindButton("Save").TextContent.Trim());
     }
@@ -416,7 +416,7 @@ public sealed class TaskDetailTests
         ExhaustBudget(harness, task.Id);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
-        Assert.Equal("Wake-ups for this task are paused after 10 changes by Teammates.", cut.TextOf(".task-detail-budget-banner-text"));
+        Assert.Equal("Wake-ups for this task are paused after 10 changes by Agents.", cut.TextOf(".task-detail-budget-banner-text"));
 
         await cut.InvokeAsync(() => cut.FindButton("Allow 10 more").ClickAsync());
 

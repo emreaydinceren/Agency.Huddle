@@ -9,29 +9,29 @@ namespace Agency.Huddle.App.Library;
 internal static class LayoutGuard
 {
     /// <summary>
-    /// Throws when <c>Team:Teams:Dir</c> and <c>Team:Acp:TeammatesDir</c>, resolved under
+    /// Throws when <c>Team:Teams:Dir</c> and <c>Team:Acp:AgentsDir</c>, resolved under
     /// <see cref="TeamOptions.DataDir"/>, are the same directory or either contains the other,
     /// comparing with <see cref="FolderSnapshot.PathComparer"/> on separator-terminated prefixes.
     /// </summary>
     /// <param name="options">The bound <see cref="TeamOptions"/> to validate.</param>
-    internal static void ValidateTeamsAndTeammates(TeamOptions options)
+    internal static void ValidateTeamsAndAgents(TeamOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
 
         string teamsRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(options.DataDir, options.Teams.Dir)));
-        string teammatesRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(options.DataDir, options.Acp.TeammatesDir)));
+        string agentsRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(options.DataDir, options.Acp.AgentsDir)));
 
         string teamsPrefix = teamsRoot + Path.DirectorySeparatorChar;
-        string teammatesPrefix = teammatesRoot + Path.DirectorySeparatorChar;
+        string agentsPrefix = agentsRoot + Path.DirectorySeparatorChar;
 
-        bool equal = FolderSnapshot.PathComparer.Equals(teamsRoot, teammatesRoot);
-        bool teamsInsideTeammates = HasPrefix(teamsPrefix, teammatesPrefix);
-        bool teammatesInsideTeams = HasPrefix(teammatesPrefix, teamsPrefix);
+        bool equal = FolderSnapshot.PathComparer.Equals(teamsRoot, agentsRoot);
+        bool teamsInsideAgents = HasPrefix(teamsPrefix, agentsPrefix);
+        bool agentsInsideTeams = HasPrefix(agentsPrefix, teamsPrefix);
 
-        if (equal || teamsInsideTeammates || teammatesInsideTeams)
+        if (equal || teamsInsideAgents || agentsInsideTeams)
         {
             throw new InvalidOperationException(
-                $"'Team:Teams:Dir' ({teamsRoot}) and 'Team:Acp:TeammatesDir' ({teammatesRoot}) must not overlap.");
+                $"'Team:Teams:Dir' ({teamsRoot}) and 'Team:Acp:AgentsDir' ({agentsRoot}) must not overlap.");
         }
     }
 

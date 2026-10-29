@@ -7,7 +7,7 @@ using Agency.Huddle.App.Pipes;
 /// folder, distinct from <see cref="Agency.Huddle.Tests.Acp.Tools.FakeAgentGateway"/> which serves
 /// the Tools tests and never needs to raise <see cref="PresenceChanged"/>. Every Agent id defaults
 /// to offline, matching the real <c>AgentGateway</c>'s behaviour when nothing ever registers a pipe
-/// connection - the same default <c>TeammatesPageTests</c> already relies on - but a test can flip
+/// connection - the same default <c>AgentsPageTests</c> already relies on - but a test can flip
 /// one Agent online (or back off) and observe <see cref="PresenceChanged"/> fire, which the real
 /// gateway can only be driven to do by dialing an actual named pipe. Not a mocking framework - just
 /// the smallest class satisfying the interface.

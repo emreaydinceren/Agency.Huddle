@@ -10,7 +10,7 @@ namespace Agency.Huddle.Tests.Library;
 /// Exercises the <c>/library-files/{rootId}/{**path}</c> endpoint (Task 12.8) over a real
 /// <see cref="System.Net.Http.HttpClient"/> hosted by <see cref="TeamWebApplicationFactory"/>,
 /// the same shape <see cref="Agency.Huddle.Tests.Ui.AvatarEndpointTests"/> uses for
-/// <c>/teammate-avatars</c>. This endpoint is a stated exception to <c>UseStaticFiles</c> (rules.md):
+/// <c>/agent-avatars</c>. This endpoint is a stated exception to <c>UseStaticFiles</c> (rules.md):
 /// pinned roots can live anywhere on disk, so it re-runs <see cref="Agency.Huddle.App.Library.LibraryPathResolver.TryResolve"/>
 /// on every request instead (Spec §9 item 4).
 /// </summary>
@@ -214,11 +214,11 @@ public sealed class LibraryFilesEndpointTests
 
         await using var factory = new TeamWebApplicationFactory();
         await factory.WriteDefinitionAsync("nova", "---\nname: Nova\n---\nHi\n", ct);
-        var targetPath = Path.Combine(factory.TeammatesDirPath, "nova", "nova.md");
+        var targetPath = Path.Combine(factory.AgentsDirPath, "nova", "nova.md");
         Assert.True(File.Exists(targetPath));
 
         using var client = factory.CreateClient();
-        using var response = await client.GetAsync("/library-files/teams/../Teammates/nova/nova.md", ct);
+        using var response = await client.GetAsync("/library-files/teams/../Agents/nova/nova.md", ct);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.True(File.Exists(targetPath));
@@ -233,11 +233,11 @@ public sealed class LibraryFilesEndpointTests
 
         await using var factory = new TeamWebApplicationFactory();
         await factory.WriteDefinitionAsync("nova", "---\nname: Nova\n---\nHi\n", ct);
-        var targetPath = Path.Combine(factory.TeammatesDirPath, "nova", "nova.md");
+        var targetPath = Path.Combine(factory.AgentsDirPath, "nova", "nova.md");
         Assert.True(File.Exists(targetPath));
 
         using var client = factory.CreateClient();
-        using var response = await client.GetAsync("/library-files/teams/%2e%2e/Teammates/nova/nova.md", ct);
+        using var response = await client.GetAsync("/library-files/teams/%2e%2e/Agents/nova/nova.md", ct);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.True(File.Exists(targetPath));
@@ -447,20 +447,20 @@ public sealed class LibraryFilesEndpointTests
         Assert.Equal("image/png", response.Content.Headers.ContentType?.MediaType);
     }
 
-    /// <summary>An image inside a Teammate's own folder in the Teammates root is served: Spec §6.11 lists Image as previewed through this endpoint for every Library root, and §6.12 shows a Teammate's own files inside the Library tree.</summary>
+    /// <summary>An image inside an Agent's own folder in the Agents root is served: Spec §6.11 lists Image as previewed through this endpoint for every Library root, and §6.12 shows an Agent's own files inside the Library tree.</summary>
     [Fact]
-    public async Task Get_ImageInTeammatesRoot_200()
+    public async Task Get_ImageInAgentsRoot_200()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
         await factory.WriteDefinitionAsync("nova", "---\nname: Nova\n---\nHi\n", ct);
-        var novaFolder = Path.Combine(factory.TeammatesDirPath, "nova");
+        var novaFolder = Path.Combine(factory.AgentsDirPath, "nova");
         await File.WriteAllBytesAsync(Path.Combine(novaFolder, "avatar.png"), MinimalPng, ct);
 
         using var client = factory.CreateClient();
-        using var response = await client.GetAsync("/library-files/teammates/nova/avatar.png", ct);
+        using var response = await client.GetAsync("/library-files/agents/nova/avatar.png", ct);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("image/png", response.Content.Headers.ContentType?.MediaType);

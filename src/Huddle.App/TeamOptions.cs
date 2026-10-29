@@ -50,7 +50,7 @@ public sealed class TeamOptions
     /// <summary>Configuration for the Feed, bound from <c>Team:Feed</c> per Feed spec §6.11.</summary>
     public FeedOptions Feed { get; set; } = new();
 
-    /// <summary>Configuration for team and teammate folder names, per Spec §7. Shared with the Tasks feature.</summary>
+    /// <summary>Configuration for team and agent folder names, per Spec §7. Shared with the Tasks feature.</summary>
     public TeamsOptions Teams { get; set; } = new();
 
     /// <summary>Configuration for the Tasks feature.</summary>

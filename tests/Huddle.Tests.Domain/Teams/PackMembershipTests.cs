@@ -7,7 +7,7 @@ namespace Agency.Huddle.Tests.Teams;
 /// a Pack, the <c>consult_when</c> clause, and the Keep choice that drops only the record.</summary>
 public sealed class PackMembershipTests
 {
-    /// <summary>A Teammate file as Huddle writes one: lists in the flow form <see cref="PersonaFrontmatter.WriteListField"/> uses.</summary>
+    /// <summary>An Agent file as Huddle writes one: lists in the flow form <see cref="PersonaFrontmatter.WriteListField"/> uses.</summary>
     private const string Original = "---\nName: Nova\nTitle: Developer\nAlias: nova\nskills: ['tdd']\n---\nYou build.\n";
 
     private static readonly PackContents Writing = new("writing", "1.2.0", "drafting text", ["draft", "outline"]);

@@ -77,7 +77,7 @@ limit, sized to the thing being looped on:
   the count.
 - **The limit:** `Team:Tasks:AgentWakeBudget`, default 10. When it's reached, further Agent changes
   are still **saved and logged**, but no one is woken.
-- **Resuming:** the Task shows *"Wake-ups paused after 10 changes by Teammates"* with **Allow 10
+- **Resuming:** the Task shows *"Wake-ups paused after 10 changes by Agents"* with **Allow 10
   more**. The Human grants a bounded amount at a time, which is the "ask before spending" rule.
 - **Restarting Huddle:** the count is kept in memory, like the Room Budget, and starts at zero
   after a restart.

@@ -15,10 +15,10 @@ namespace Agency.Huddle.Tests.Ui;
 public sealed class ProfileCardTests
 {
     /// <summary>A profile with only the required text; every optional part is absent.</summary>
-    private static readonly TeammateProfile Plain = new("Ada", "Engineer", "Writes the code.", Avatar.None);
+    private static readonly AgentProfile Plain = new("Ada", "Engineer", "Writes the code.", Avatar.None);
 
     /// <summary>Renders the card for <paramref name="profile"/>, letting the caller set any other parameter.</summary>
-    private static IRenderedComponent<ProfileCard> RenderIt(MudBunitContext ctx, TeammateProfile profile, Action<ComponentParameterCollectionBuilder<ProfileCard>>? configure = null) =>
+    private static IRenderedComponent<ProfileCard> RenderIt(MudBunitContext ctx, AgentProfile profile, Action<ComponentParameterCollectionBuilder<ProfileCard>>? configure = null) =>
         ctx.Render<ProfileCard>(parameters =>
         {
             parameters.Add(p => p.Profile, profile);

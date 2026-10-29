@@ -9,7 +9,7 @@ namespace Agency.Huddle.App.Skills.Ui;
 /// <param name="Pack">The registry's entry.</param>
 /// <param name="Title">The Pack title, or the file name for a row too broken to give one.</param>
 /// <param name="State">The display state.</param>
-/// <param name="Holders">The Teammates whose <c>_packs</c> names it.</param>
+/// <param name="Holders">The Agents whose <c>_packs</c> names it.</param>
 /// <param name="Reason">The Source's <c>statusReason</c>, or null.</param>
 /// <param name="RoleTitles">The <c>appliesTo</c> roles by title, in file order; an unknown role by its id.</param>
 /// <param name="Cause">The cause line under the title, or null when the state needs none.</param>
@@ -96,7 +96,7 @@ internal sealed record PackView(
                 List<string> changed = [.. pack.SkillNames.Where(name => snapshot.Resolved.FindSkill(name)?.HasUpdate == true)];
                 return changed.Count switch
                 {
-                    0 => "The version Teammates hold differs from this Pack file's.",
+                    0 => "The version Agents hold differs from this Pack file's.",
                     1 => $"{changed[0]} has new files.",
                     _ => $"{SkillStateText.AndList(changed)} have new files.",
                 };

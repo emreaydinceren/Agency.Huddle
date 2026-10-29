@@ -142,8 +142,8 @@ it beat.
   `LibraryFileService` (four), `WikiLinkIndex`, `LibrarySearchProvider`, `LibraryDocument.razor`
   (two), `LibraryTree.razor` (two), `LibraryPanel.razor`, `LibraryPathResolver.TryClassify`.
 - `LibraryDocumentCollector.ResolveLocationAsync` gains an Uploads branch so the Agent's
-  `{{location}}` reads `upload` (root) — today an unknown kind falls into the Teammates branch
-  and would read `teammate <roomId>`. A file under `Teams/<T>/Uploads/` keeps its Team label.
+  `{{location}}` reads `upload` (root) — today an unknown kind falls into the Agents branch
+  and would read `agent <roomId>`. A file under `Teams/<T>/Uploads/` keeps its Team label.
 - `WatchedFolderResolver.ReservedFolders` is **not** changed: `LibraryPathResolver.TryClassify`
   refuses every path whose first segment is on that list, so adding `Uploads` there would hide
   the Uploads root from the Library. The watch refusal is a separate check (§6.8).

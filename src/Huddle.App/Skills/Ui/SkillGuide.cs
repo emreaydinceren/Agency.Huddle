@@ -6,16 +6,16 @@ internal static class SkillGuide
 {
     /// <summary>The Skills tab's intro, before <b>Learn more</b>.</summary>
     public const string SkillsIntro =
-        "A Skill is a folder of instructions that a Teammate reads when its work calls for it. "
+        "A Skill is a folder of instructions that an Agent reads when its work calls for it. "
         + "This list shows every Skill Huddle knows about: built in, fetched by your AI tool, or listed in a catalog but not on this computer yet. "
         + "A Skill marked Not downloaded has no folder here; Copy prompt gives your AI tool what it needs to fetch it. "
         + "Huddle never downloads Skills itself. "
-        + "Giving a Teammate a Skill copies it to that Teammate, so later changes reach it only when you apply an update.";
+        + "Giving an Agent a Skill copies it to that Agent, so later changes reach it only when you apply an update.";
 
     /// <summary>The Packs tab's intro, before <b>Learn more</b>.</summary>
     public const string PacksIntro =
         "A Pack is a named set of Skills for some roles, such as MSBuild Authoring. "
-        + "Choosing a Pack on a Teammate gives it all the Pack's Skills at once and tells its manager when to use them. "
+        + "Choosing a Pack on an Agent gives it all the Pack's Skills at once and tells its manager when to use them. "
         + "Packs come from SKILLS.md, a list your AI tool keeps; Huddle never fetches one itself. "
         + "To add one, select Add with your AI tool, say where it is, and paste the prompt into Claude Code, Codex or a similar tool. "
         + "Whatever passes Huddle's checks is ready to use at once; there is no approval step.";
@@ -41,20 +41,20 @@ internal static class SkillGuide
         ["Copy path"] = "Copies the location of InstallSkillPack.md, in the form your AI tool can open.",
         ["Path forms"] = "E:\\…, /mnt/e/… or E:/…: pick the one your AI tool runs under. Huddle remembers the choice until you reload the page.",
         ["Details"] = "Shows where this came from, its Skills, their licences and warnings, and the notes your AI tool kept.",
-        ["Review update"] = "Shows what changed and which Teammates are affected, and lets you apply it.",
-        ["Hide"] = "Leaves it out of lists on this Huddle and any that shares the folder. Nothing is deleted and Teammates who have it keep it.",
+        ["Review update"] = "Shows what changed and which Agents are affected, and lets you apply it.",
+        ["Hide"] = "Leaves it out of lists on this Huddle and any that shares the folder. Nothing is deleted and Agents who have it keep it.",
         ["Unhide"] = "Brings it back into lists on this Huddle and any that shares the folder.",
         ["Show hidden"] = "Includes what you hid, so you can unhide it.",
         ["Show in Library"] = "Opens the pack or catalog file, read only, in the Library.",
         ["Show notes"] = "Opens the notes your AI tool kept for this Source, in the Library.",
         ["Remove Pack"] = "Removes its row from SKILLS.md and its file if Huddle's folder holds it. Your AI tool's clone stays.",
-        ["Remove from Teammates"] = "Takes this Pack off every Teammate that has it. Their copies of the Skills stay.",
-        ["Remove catalog"] = "Removes the catalog's row, and its file if Huddle's folder holds it. Teammates keep their copies.",
+        ["Remove from Agents"] = "Takes this Pack off every Agent that has it. Their copies of the Skills stay.",
+        ["Remove catalog"] = "Removes the catalog's row, and its file if Huddle's folder holds it. Agents keep their copies.",
         ["Remove Source"] = "Deletes this Source's notes, its rows and the files they point to inside Huddle's folder. The clone stays.",
         ["Change"] = "Chooses another Skill Sources folder, for example a synced one shared with another Huddle. It does not move files.",
         ["Use default"] = "Goes back to the folder from configuration.",
         ["Learn more"] = "Opens a help page in Huddle about this tab; it takes you nowhere else.",
-        ["Update"] = "Applies the update: copies the changed Skill files, then changes the Teammates you ticked.",
+        ["Update"] = "Applies the update: copies the changed Skill files, then changes the Agents you ticked.",
         ["Not now"] = "Closes without changing anything.",
         ["Keep or remove Skills"] = "Only stops tracking the Pack, or also takes off the Skills nobody else gave them.",
         ["Restore default"] = "Deletes the edited copy of a built-in Skill so the shipped one is used again.",
@@ -74,17 +74,17 @@ internal static class SkillGuide
 
                 Each card shows the Pack's title, version and state, its Source, how many Skills it holds, when it was last updated and the roles it is for. A line under the title says what is wrong when something is. **Details** shows where the Pack came from, each Skill with its licence and warnings, and the notes your AI tool kept.
 
-                A card marked **New** appeared since you last left this tab. **Check for updates** opens a prompt that asks your AI tool to look for newer versions. **Hide** leaves a Pack out of lists; Teammates who have it keep it.
+                A card marked **New** appeared since you last left this tab. **Check for updates** opens a prompt that asks your AI tool to look for newer versions. **Hide** leaves a Pack out of lists; Agents who have it keep it.
                 """,
             "sources" => $"""
                 {SourcesIntro}
 
-                The tab shows the install file and this computer's name, the Skill Sources folder with **Change…** to choose another, one row per Source and one row per catalog. A Source its owner deprecated, withdrew or moved says so on its row, in words. Withdrawn Skills cannot be given to new hires; Teammates who already have them keep working and are flagged.
+                The tab shows the install file and this computer's name, the Skill Sources folder with **Change…** to choose another, one row per Source and one row per catalog. A Source its owner deprecated, withdrew or moved says so on its row, in words. Withdrawn Skills cannot be given to new hires; Agents who already have them keep working and are flagged.
                 """,
             _ => $"""
                 {SkillsIntro}
 
-                Each row shows the Skill's name and description, where it came from, its state and the Teammates that use it. Search by name, narrow the list with the **State** filter, or turn on **Show hidden** to see what you hid. The **⋯** menu on a row offers **Copy prompt**, **Hide** or **Unhide**, **Show catalog in Library** and, for a built-in Skill you changed, **Restore default**.
+                Each row shows the Skill's name and description, where it came from, its state and the Agents that use it. Search by name, narrow the list with the **State** filter, or turn on **Show hidden** to see what you hid. The **⋯** menu on a row offers **Copy prompt**, **Hide** or **Unhide**, **Show catalog in Library** and, for a built-in Skill you changed, **Restore default**.
 
                 **Reload** reads SKILLS.md and every file it points to again, right now. **Problems** at the bottom lists what failed a check, with the file and the fix.
                 """,

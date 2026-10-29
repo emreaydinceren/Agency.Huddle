@@ -12,8 +12,8 @@ testers in `manual-tests/invite-rooms.md`:
 > A Room can never be deleted, left, or renamed by hand — there is no such control anywhere in
 > the UI, and a Room name is always derived. Do not look for one and do not file its absence.
 
-The reasoning behind it was sound and is restated in [ADR-0011](0011-a-rename-moves-the-teammate-not-its-history.md):
-a Room and its Transcript are **chat facts that outlive the Teammate which created them**. That
+The reasoning behind it was sound and is restated in [ADR-0011](0011-a-rename-moves-the-agent-not-its-history.md):
+a Room and its Transcript are **chat facts that outlive the Agent which created them**. That
 is why removing a Persona does not cascade, and it is still true.
 
 But "a Persona's removal must not destroy a Room" and "a Human may never put a Room away" are
@@ -112,12 +112,12 @@ no UI to reach it, no purge story, and two different meanings of "gone". Archive
 the reversible option; making delete reversible too would leave the pair with no clear
 distinction and nothing that actually reclaims disk.
 
-## Starting a chat with a teammate whose Room is archived
+## Starting a chat with an agent whose Room is archived
 
 `FindRoomWithExactMembersAsync` enforces the invariant from
 [ADR-0003](0003-mention-gated-replies-and-membership-defined-direct-rooms.md): an Agent belongs
 to at most one two-Member Room. An archived Room is now **excluded** from that lookup, so
-starting a chat with a teammate whose 1:1 Room you archived creates a fresh one rather than
+starting a chat with an agent whose 1:1 Room you archived creates a fresh one rather than
 resurrecting the old.
 
 The alternative — find it and unarchive it — preserves the invariant exactly and was the
@@ -144,7 +144,7 @@ reads as an oversight rather than a decision.
 
 **Delete has no trash and no undo.** The confirmation names the Room; that is the whole safety
 mechanism. It is an inline row swap rather than a nested dialog, following
-`TeammateCard.razor`'s written rationale — MudBlazor dialogs are not designed to stack, and a
+`AgentProfileCard.razor`'s written rationale — MudBlazor dialogs are not designed to stack, and a
 yes/no choice does not need a second backdrop and a second focus trap.
 
 **Archiving is not offered to Agents.** No App Tool archives or deletes a Room, and none

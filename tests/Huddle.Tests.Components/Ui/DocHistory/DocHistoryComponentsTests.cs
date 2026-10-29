@@ -115,7 +115,7 @@ public sealed class DocHistoryComponentsTests
 
         Assert.Equal(["Today", "Today", "Yesterday"], cut.FindAll(".doc-history-day-label").Select(static label => label.TextContent.Trim()));
         Assert.Equal(["Saved", "Edited", "Objected"], cut.FindAll(".doc-history-kind").Select(static kind => kind.TextContent.Trim()));
-        Assert.Equal(["you", "Teammate", "Teammate"], cut.FindAll(".doc-history-chip").Select(static chip => chip.TextContent.Trim()));
+        Assert.Equal(["you", "Agent", "Agent"], cut.FindAll(".doc-history-chip").Select(static chip => chip.TextContent.Trim()));
         Assert.Contains(longSummary, cut.Markup, StringComparison.Ordinal);
     }
 

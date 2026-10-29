@@ -10,7 +10,7 @@ This is the design for replacing how Huddle gets Skills and Skill Packs from out
 Huddle downloads them from public GitHub and ships two Packs and a catalog of 265 entries (263 distinct Skill names) inside the
 app. After this change **Huddle makes no network calls for Skills**: the Human's own AI tool
 fetches them wherever it likes and records pointers in a registry file, SKILLS.md, and Huddle
-follows the pointers, checks what they lead to, and offers the result to Teammates.
+follows the pointers, checks what they lead to, and offers the result to Agents.
 
 It is written for the engineers or agents who build it, with no memory of the conversation
 that produced it. The [vision](Huddle.SkillPacksSpec.md) is the user guide and stays the
@@ -39,10 +39,10 @@ Concretely:
 2. **One contract, written down.** `InstallSkillPack.md` tells any AI tool what Huddle expects,
    and the `huddle-packs validate` command runs the same checks Huddle runs, so what passes in
    the AI tool works in Huddle.
-3. **Teammates never change behind the Human's back.** Choosing a Pack or Skill copies it into
+3. **Agents never change behind the Human's back.** Choosing a Pack or Skill copies it into
    `Skills/`; a change at the pointer shows **Update available** until the Human applies it.
 4. **Nothing is lost in the move.** The two shipped Packs, the shipped catalog and every
-   imported Skill reach the new format on first start, with no Teammate restarted.
+   imported Skill reach the new format on first start, with no Agent restarted.
 5. **The screens explain themselves.** The Skills section carries enough guidance text that a
    Human who has never read the User Guide can work out what each tab is for and what to do.
 
@@ -60,15 +60,15 @@ Each row is a scenario the finished system must handle. §13 walks U1 end to end
 | # | The Human does | What must happen |
 | --- | --- | --- |
 | U1 | Selects **Add with your AI tool**, pastes `https://github.com/anthropics/skills`, copies the prompt into Claude Code | Claude Code clones it, writes `packs/document-skills.skillpack.json`, `source.json` and `NOTES.md`, runs `huddle-packs validate --strict` until it passes, and adds a Packs row. Within a second Huddle shows **Document skills is ready · Show** and the card wears **New** |
-| U2 | Selects the **Document skills** chip on a bookkeeper's card | The four Skill folders are copied into `Skills/`, each with `.source.json`; the Teammate's `skills:`, `consult_when:` and `_packs:` change; it restarts |
-| U3 | The AI tool pulls a new commit of anthropics/skills | Cards for the Pack and its holders show **Update available**; nothing changes for any Teammate |
-| U4 | Applies the update in `G7` | Changed Skill copies are replaced for every holder, with no restart; checked Teammates get the membership change and restart |
-| U5 | Starts this version of Huddle for the first time | The move writes SKILLS.md, six catalog files holding 263 Skills, the Sources' notes, rows for the skills repository and for every imported Skill. No Teammate file changes; no card shows **Update available** |
+| U2 | Selects the **Document skills** chip on a bookkeeper's card | The four Skill folders are copied into `Skills/`, each with `.source.json`; the Agent's `skills:`, `consult_when:` and `_packs:` change; it restarts |
+| U3 | The AI tool pulls a new commit of anthropics/skills | Cards for the Pack and its holders show **Update available**; nothing changes for any Agent |
+| U4 | Applies the update in `G7` | Changed Skill copies are replaced for every holder, with no restart; checked Agents get the membership change and restart |
+| U5 | Starts this version of Huddle for the first time | The move writes SKILLS.md, six catalog files holding 263 Skills, the Sources' notes, rows for the skills repository and for every imported Skill. No Agent file changes; no card shows **Update available** |
 | U6 | Opens Build a team for a reviewer while `code-review-and-quality` has no path | The draft shows **Needs setup** with **Copy prompt**; **Approve & hire** waits |
 | U7 | Shares the Skill Sources folder with a laptop that cloned to `C:\src` | Rows with only `DESK-01:` entries are **Not downloaded** on the laptop; **Copy fix prompt** asks the laptop's AI tool to add a `LAPTOP:` entry |
 | U8 | Edits SKILLS.md by hand and breaks a row | That row is **Broken** with the check that failed; every other row still loads |
 | U9 | The AI tool is mid-write when Huddle reads a pack file | No **Broken** flash: Huddle rereads 2 seconds later |
-| U10 | Removes a Source | After **Remove Source?**, its notes, rows and the files it kept in the Skill Sources folder go; its clone and the Teammates' copies stay |
+| U10 | Removes a Source | After **Remove Source?**, its notes, rows and the files it kept in the Skill Sources folder go; its clone and the Agents' copies stay |
 | U11 | A fetched Skill's `tools:` names `propose_sprint` | `S011`: **Broken**. Only built-in Skills grant App Tools |
 | U12 | Runs `huddle-packs validate` with no Huddle running | Same findings as Huddle shows, same summary line, exit code 1 if any error |
 | U13 | `source.json` marks a Source **Withdrawn** | Its Packs and Skills show a red chip; new hires cannot take them; holders are flagged and keep working |
@@ -85,12 +85,12 @@ Each row is a scenario the finished system must handle. §13 walks U1 end to end
 | **An agent inside Huddle that imports** | Decision 1. The Human's own AI tool does it, guided by `InstallSkillPack.md` |
 | **An approval step** | Decision 5. The checks, not a click, keep out what Huddle cannot use safely |
 | **Fetched Skills granting App Tools** | Decision 15. Only built-in Skills do (`S011`) |
-| **Teammates reading files beyond top-level `.md`** | Unchanged runtime rule. Sub-folders and scripts are copied and flagged, never read |
+| **Agents reading files beyond top-level `.md`** | Unchanged runtime rule. Sub-folders and scripts are copied and flagged, never read |
 | **Running, building or installing anything a Skill contains** | Huddle never executes Skill content; `InstallSkillPack.md` forbids the AI tool to |
 | **Huddle editing pack or catalog files** | They belong to the AI tool. Outside two one-off cases, Huddle writes only SKILLS.md (remove a row), `hidden.json`, `log.jsonl` and the copies in `Skills/`. The two cases: the move writes the first SKILLS.md and the files it carries over, once (§6.13), and **Remove** deletes a pack, catalog or Source folder that lives in the Skill Sources folder (§6.12) |
 | **Deleting a clone** | Huddle deletes only inside the Skill Sources folder and `Skills/` |
 | **Merging concurrent writes from two Huddles** | Last write wins ([ADR-0029](adr/0029-between-the-human-and-an-agent-the-last-write-wins.md)) |
-| **A per-Teammate copy of a Skill** | One copy per Skill name in `Skills/`, as today. §8.4 explains what that means for updates |
+| **A per-Agent copy of a Skill** | One copy per Skill name in `Skills/`, as today. §8.4 explains what that means for updates |
 | **Writing to the Skill Sources folder from the Library** | It is a read-only Library root |
 
 ---
@@ -107,8 +107,8 @@ Each row is a scenario the finished system must handle. §13 walks U1 end to end
    the rest of the registry still loads. A missing folder is **Not downloaded**, not an error.
 5. **The first row wins.** Every tie, between two rows, two catalogs or two origins of a name,
    is broken by row order in SKILLS.md, and the loser carries the finding.
-6. **Copy, then change the Teammate.** A Teammate's file names a Skill only after its copy is
-   in place and checked. Teammates use copies, never clones.
+6. **Copy, then change the Agent.** An Agent's file names a Skill only after its copy is
+   in place and checked. Agents use copies, never clones.
 7. **Model-facing text is configuration.** `InstallSkillPack.md`'s fixed sections and every
    prompt the Human pastes come from Settings › Prompts
    ([ADR-0007](adr/0007-model-facing-text-is-configuration.md)). Guidance text in the UI is
@@ -151,7 +151,7 @@ grant) reaches them as a `CheckContext` value. Huddle builds it from its own ser
    │ InstallFileWriter ─► InstallSkillPack.md      │     │ reads the context file       │
    │                     + install-context.json ───┼────►│                              │
    │ SkillSourcesMove (once)   SkillPromptBuilder  │     └──────────────────────────────┘
-   │ Settings › Skills (G4–G7), TeammateCard,      │
+   │ Settings › Skills (G4–G7), AgentProfileCard,      │
    │ BuildTeam, RoleFormDialog, Library root       │
    └───────────────────────────────────────────────┘
 ```
@@ -165,7 +165,7 @@ grant) reaches them as a `CheckContext` value. Huddle builds it from its own ser
 3. **The UI** subscribes to `SkillRegistry.Changed` and redraws: a new row shows **New**, a
    failed one **Broken**.
 4. **The Human chooses** a Pack or Skill. `SkillCopier` copies each Skill into `Skills/`
-   (§8.6); only then does the Teammate's file change, and `SkillStore` sees the new copies as
+   (§8.6); only then does the Agent's file change, and `SkillStore` sees the new copies as
    it does today.
 5. **`InstallFileWriter`** rewrites `InstallSkillPack.md` and the context file whenever roles,
    installed Skills or the registry change, at most once a second.
@@ -379,7 +379,7 @@ this computer's name through `CheckContext.ComputerName`, picks one.
 | Identity | Form | Used for |
 | --- | --- | --- |
 | Row key | `"packs:"` or `"catalogs:"` (lowercase) plus the first entry's path, made absolute against `Directory`, upper-cased with `ToUpperInvariant()`, `/` turned into `\` | The `seen` list ([§6.5](#65-skillregistry-and-registrywatcher)) only; the same path on two computers can differ, and that is fine because the list is per Huddle. A Skill's key is `"skill:"` plus its name |
-| Pack id / catalog id | The `id` inside the file | Everything else: the keys of `CheckResult.States` (`pack:<id>`, `catalog:<id>`, `skill:<name>`; `row:pack:<index>` or `row:catalog:<index>` for a file too broken to give an id, [§6.3](#63-the-checks)), and the only identity a Teammate's `_packs` line uses |
+| Pack id / catalog id | The `id` inside the file | Everything else: the keys of `CheckResult.States` (`pack:<id>`, `catalog:<id>`, `skill:<name>`; `row:pack:<index>` or `row:catalog:<index>` for a file too broken to give an id, [§6.3](#63-the-checks)), and the only identity an Agent's `_packs` line uses |
 
 #### The three file records
 
@@ -503,7 +503,7 @@ namespace Agency.Huddle.SkillPacks.Resolving;
 /// <summary>The state a Pack, catalog or Skill is shown in (§8.3, §8.4, vision "The Skills page at a glance").</summary>
 public enum ItemState
 {
-    /// <summary>Passes the checks and is downloaded; no Teammate holds it and nothing changed.</summary>
+    /// <summary>Passes the checks and is downloaded; no Agent holds it and nothing changed.</summary>
     Available,
 
     /// <summary>The files at the pointer differ from the copy in Skills/ (§8.4).</summary>
@@ -521,7 +521,7 @@ public enum ItemState
     /// <summary>The pointer leads nowhere or an error check fails.</summary>
     Broken,
 
-    /// <summary>Held by one or more Teammates. NEVER produced by the library: it needs Teammate files.
+    /// <summary>Held by one or more Agents. NEVER produced by the library: it needs Agent files.
     /// <c>SkillRegistry</c> derives it for display.</summary>
     InUse,
 
@@ -534,8 +534,8 @@ public enum ItemState
 **Why `New` and `InUse` are in the enum but never produced by the library.** The enum is the
 vocabulary of the chip a card wears, so it lists all eight states of the vision's table. The
 library knows files, not people: it cannot know which rows the Human has already looked at, and
-it cannot know which Teammates hold a Skill. `New` depends on the viewer (the `seen` list in
-`{DataDir}/skill-sources.json`, [§7.2](#72-schemas)), and `InUse` on the Teammate files. If either
+it cannot know which Agents hold a Skill. `New` depends on the viewer (the `seen` list in
+`{DataDir}/skill-sources.json`, [§7.2](#72-schemas)), and `InUse` on the Agent files. If either
 were computed in the library, `huddle-packs` would print a state that differs between two Huddles
 reading one folder. So `Checks.Run` produces the six states a pure read can decide, in
 `CheckResult.States` ([§6.3](#63-the-checks)), and
@@ -841,8 +841,8 @@ rules require.
 | `P003` | Error | Pack file | `id` is lowercase letters, digits and single hyphens, and the file is `<id>.skillpack.json` | Broken | Rename the file to match the id, or fix the id. |
 | `P004` | Error | Pack file | No earlier Packs row has the same `id` (first row wins) | The later Pack: Broken | Another Pack already uses this id. Give one of them a new id. |
 | `P005` | Error | Pack file | Every `appliesTo` entry is a role in this Huddle (`CheckContext.Roles`) | Broken | One of the roles is not in this Huddle. Run `huddle-packs roles` for the list, or add the role first. |
-| `P006` | Warning | Pack file | `appliesTo` is not empty | None | No Teammate card will offer this Pack. List the roles it is for. |
-| `P007` | Warning | Pack file | `consultWhenAdds` is not empty and is at most 200 characters | None | Say in one short phrase when a Teammate should reach for this Pack. |
+| `P006` | Warning | Pack file | `appliesTo` is not empty | None | No Agent card will offer this Pack. List the roles it is for. |
+| `P007` | Warning | Pack file | `consultWhenAdds` is not empty and is at most 200 characters | None | Say in one short phrase when an Agent should reach for this Pack. |
 | `P008` | Error | Pack file | No Skill name appears twice in one Pack | Broken | A Skill is listed twice. Remove one entry. |
 | `P009` | Error | Pack file | Each Pack Skill gives **exactly one** of `path` and `catalog` (a present `path` counts even when it is `""`, which means Not downloaded); a `catalog` names a catalog in SKILLS.md that lists a Skill of that name | Broken | A Skill in this Pack gives both a path and a catalog, neither, or names a catalog entry that does not exist. Give one, and check the catalog id and Skill name. |
 | `D001` | Error | Catalog file | The file is JSON with a known `schemaVersion`, an `id` matching `<id>.skillcatalog.json`, a `source` and a `skills` list | Broken | The catalog file is invalid or its id does not match its file name. Run `huddle-packs schema catalog`. |
@@ -856,12 +856,12 @@ rules require.
 | `S004` | Error | Skill | No symbolic link or junction; no name Windows cannot store (`<>"\|?*`, a reserved device name such as `CON`, a trailing dot or space); no two names that differ only in case | Broken | The folder holds a link or a file name Windows cannot keep. Remove it from the Skill. |
 | `S005` | Error | Skill | The name is not one of Huddle's built-in Skills | Broken | This name belongs to a Skill that ships with Huddle. Rename the Skill. |
 | `S006` | Error | Skill | No Skill of this name in `Skills/` came from a different origin (compared without the commit, §6.3 below) | Broken | A Skill with this name is already installed from somewhere else. Rename this one, or remove the installed one. |
-| `S007` | Warning | Skill | No `.md` file directly in the folder is over 64 KB (65,536 UTF-8 bytes) | None | Teammates skip files over 64 KB. Split the file. |
-| `S008` | Warning | Skill | The folder holds no files in sub-folders or not ending in `.md` | None | Teammates read only the .md files directly in the Skill's folder; the rest is copied but never read. |
+| `S007` | Warning | Skill | No `.md` file directly in the folder is over 64 KB (65,536 UTF-8 bytes) | None | Agents skip files over 64 KB. Split the file. |
+| `S008` | Warning | Skill | The folder holds no files in sub-folders or not ending in `.md` | None | Agents read only the .md files directly in the Skill's folder; the rest is copied but never read. |
 | `S009` | Warning | Skill | A licence is declared, is not proprietary, and equals the Source's | None | The licence is missing, proprietary or differs from the Source's. Read it before you share the folder. |
-| `S010` | Warning | Skill | No scripts, shell commands, network calls or paths outside the Work Dir | None | The Skill ships scripts or commands. Huddle never runs them, and Teammates cannot read them. |
+| `S010` | Warning | Skill | No scripts, shell commands, network calls or paths outside the Work Dir | None | The Skill ships scripts or commands. Huddle never runs them, and Agents cannot read them. |
 | `S011` | Error | Skill | `tools:` names no App Tool (`CheckContext.AppToolNames`) | Broken | Only Huddle's built-in Skills can grant App Tools. Remove the tool from the `tools:` line. |
-| `S012` | Warning | Skill | `description` is at most 300 characters | None | A long description crowds a Teammate's Skill list. Shorten it. |
+| `S012` | Warning | Skill | `description` is at most 300 characters | None | A long description crowds an Agent's Skill list. Shorten it. |
 | `O001` | Error | Source | `sources/<source>/source.json` exists for the Source a pack or catalog names, matches the `source.json` schema (`ref`, `commit` and `localPath` are optional) and has a known `kind` | Broken | This Source has no valid source.json. Ask your AI tool to write it; `huddle-packs schema source` shows the format. |
 | `O002` | Warning | Source | A `github` or `git` Source has a `commit`. Raised only when the Source has none **and** some pack or catalog entry naming it fails `D004` (a Source whose every entry is pinned to a commit needs no single one) | None | The Source is not pinned to a commit. Ask your AI tool to record it. |
 | `O003` | Error | Source | A `deprecated`, `withdrawn` or `moved` status has `statusReason`, and `moved` has `movedTo` | Broken | The Source's status needs a reason (and, if moved, where to). |
@@ -894,7 +894,7 @@ table says so.
 | "More than 200 files" (only when supporting files are allowed) | `SkillValidator` | `S003` error | Now always on: every Skill reached by a pointer may carry supporting files |
 | Total size 5 MB, `MaxFiles` 200 | `SkillDownloader` (goes) | `S003` error | The downloader is deleted, so the rule moves to a `SkillFolderRules` class in the library |
 | Symlinks, `<>"\|?*`, reserved device names, case-only duplicates | `SkillDownloader` (goes) | `S004` error | Same class. A symlink or junction is found with `FileAttributes.ReparsePoint` |
-| Sub-folder and non-`.md` files (flat-file rule) | `SkillValidator` rule 7, loosened by `allowSupportingFiles` | `S008` warning | One finding per Skill: *"scripts/ and 9 other files are never read by Teammates"* (first sub-folder or file, then the count) |
+| Sub-folder and non-`.md` files (flat-file rule) | `SkillValidator` rule 7, loosened by `allowSupportingFiles` | `S008` warning | One finding per Skill: *"scripts/ and 9 other files are never read by Agents"* (first sub-folder or file, then the count) |
 | `ReviewFlagKind.Script`, `ShellCommand`, `NetworkCall`, `PathOutsideWorkDir` | `SkillReviewScanner` | `S010` warning | One finding per kind per Skill: *"ships scripts: scripts/office/unpack.py and 3 more"*. The scanner's heuristics are unchanged |
 | `ReviewFlagKind.NoLicense` | `SkillReviewScanner` | `S009` warning | Part of S009; the rest is below |
 | The scanner "only warns; it never blocks" | `SkillReviewScanner` | Unchanged | S010 stays a warning |
@@ -1136,7 +1136,7 @@ spaces:
 ```text
 ERROR  P005  packs/document-skills.skillpack.json     appliesTo: "accountant" is not a role in this Huddle; see huddle-packs roles
 ERROR  S001  E:\Clones\anthropics-skills\skills\pdf   path leads to no folder
-WARN   S008  E:\Clones\anthropics-skills\skills\docx  scripts/ and 9 other files are never read by Teammates
+WARN   S008  E:\Clones\anthropics-skills\skills\docx  scripts/ and 9 other files are never read by Agents
 OK           SKILLS.md                                Packs row 3 points at packs/document-skills.skillpack.json
 PACKS-VALIDATE Rows=1 Packs=1 Skills=4 Errors=2 Warnings=11
 ```
@@ -1304,8 +1304,8 @@ namespace Agency.Huddle.App.SkillSources;
 /// <param name="Resolved">What the resolver produced.</param>
 /// <param name="Checked">What <c>Checks.Run</c> produced: every finding, and the state of every Pack, catalog and Skill.</param>
 /// <param name="NewKeys">Row keys (§6.2) and <c>skill:&lt;name&gt;</c> keys that are in this snapshot and not in <c>seen</c>.</param>
-/// <param name="PackHolders">Pack id to the names of the Teammates whose <c>_packs</c> names it; the count is the list length.</param>
-/// <param name="SkillHolders">Skill name to the names of the Teammates whose <c>skills:</c> holds it; the count is the list length.</param>
+/// <param name="PackHolders">Pack id to the names of the Agents whose <c>_packs</c> names it; the count is the list length.</param>
+/// <param name="SkillHolders">Skill name to the names of the Agents whose <c>skills:</c> holds it; the count is the list length.</param>
 /// <param name="HiddenPacks">Pack ids in <c>hidden.json</c>.</param>
 /// <param name="HiddenSkills">Skill names in <c>hidden.json</c>.</param>
 internal sealed record RegistrySnapshot(
@@ -1351,8 +1351,8 @@ internal sealed class SkillRegistry : ISkillAvailability, IDisposable
     public SkillAvailability Of(string skillName);                    // what the registry knows about a name (enum in §6.10.1); ISkillAvailability
     public PackEntry? FindPack(string packId);                        // Current.Resolved.FindPack; ISkillAvailability
     public string? SubCategoryOf(string skillName);                   // sub-category of the first catalog entry of that name, empty becomes null; ISkillAvailability
-    public IReadOnlyList<string> HolderNames(PackEntry pack);         // Teammates whose _packs names it, from Current.PackHolders
-    public IReadOnlyList<string> HolderNames(SkillEntry skill);       // Teammates whose skills: holds it, from Current.SkillHolders
+    public IReadOnlyList<string> HolderNames(PackEntry pack);         // Agents whose _packs names it, from Current.PackHolders
+    public IReadOnlyList<string> HolderNames(SkillEntry skill);       // Agents whose skills: holds it, from Current.SkillHolders
     public SkillReadiness CheckReady(IReadOnlyList<string> packIds, IReadOnlyList<string> skillNames);
 
     public Task ReloadAsync(CancellationToken ct);                              // Reload button: RebuildScope.All, drops caches
@@ -1361,7 +1361,7 @@ internal sealed class SkillRegistry : ISkillAvailability, IDisposable
     public CheckContext BuildCheckContext();
 }
 
-/// <summary>Whether a set of Packs and Skills can be handed to Teammates right now (used by CardResolver and HireService).</summary>
+/// <summary>Whether a set of Packs and Skills can be handed to Agents right now (used by CardResolver and HireService).</summary>
 /// <param name="Ready">Skills, with their Pack Skills expanded, that are usable and downloaded.</param>
 /// <param name="Missing">Items that are not: the Pack or Skill, the state (NotDownloaded, Broken, Withdrawn, unknown name) and a one-line reason for a card.</param>
 internal sealed record SkillReadiness(IReadOnlyList<SkillEntry> Ready, IReadOnlyList<MissingItem> Missing)
@@ -1398,7 +1398,7 @@ not one per event.
    lays out. A change to SKILLS.md, **Reload** and start-up are full reads.
 4. `Checks.Run(resolved, context, options, files)` over the whole result, which is cheap once the
    I/O is cached. Its `CheckResult` (findings and states) goes into the snapshot.
-5. Read `hidden.json` and `skill-sources.json` (`seen`), count holders from the Teammate files,
+5. Read `hidden.json` and `skill-sources.json` (`seen`), count holders from the Agent files,
    compute `NewKeys` and `AppearedKeys`.
 6. Publish: `Current = snapshot`; then, outside any lock, `Changed?.Invoke(change)`. A subscriber
    that throws is caught per handler and logged; it never blocks the others.
@@ -1413,7 +1413,7 @@ the previous snapshot and publishes nothing. The next event retries.
 subscribe in `OnInitialized`, unsubscribe in `Dispose`, and call `InvokeAsync(StateHasChanged)`,
 as every other `Changed` event in the app is consumed.
 
-**Holders and persona changes.** A change to a Teammate file does not re-read the registry. The
+**Holders and persona changes.** A change to an Agent file does not re-read the registry. The
 service subscribes to `PersonaStore`'s change event and republishes a new snapshot that reuses
 the same `ResolvedRegistry` with fresh `PackHolders` and `SkillHolders`, then raises `Changed`
 with empty `AppearedKeys`. It also subscribes to `SkillStore.SkillsChanged`, because a copy
@@ -1447,7 +1447,7 @@ Rules:
    dropped, so the list cannot grow without bound. A row that is removed and added again is New
    again.
 5. **Display.** `DisplayState` applies the precedence of [§6.2](#62-registry-model-and-file-readers):
-   `New` shows only when the library state is `Available` and no Teammate holds the item.
+   `New` shows only when the library state is `Available` and no Agent holds the item.
 
 #### Building the `CheckContext`
 
@@ -1470,12 +1470,12 @@ The same shape is what `InstallFileWriter` serialises into `install-context.json
 
 #### Start-up order
 
-Teammates must never start against a registry that is half-read, and a first start must not
+Agents must never start against a registry that is half-read, and a first start must not
 race the move. The rule: **the move, then the first complete read, both finish before any
-Teammate host starts.**
+Agent host starts.**
 
 1. `RegistryWatcher` is an `IHostedService` registered in `ServiceCollectionExtensions` **before**
-   `BuiltinTeammateSeeder` and `PersonaSupervisor`. The host awaits each `StartAsync` in
+   `BuiltinAgentSeeder` and `PersonaSupervisor`. The host awaits each `StartAsync` in
    registration order, so the next service does not begin until this one returns.
 2. `StartAsync` runs, in this order, and awaits each:
    1. `SkillSourcesMove.RunAsync` ([§6.13](#613-the-move)): runs only when `SKILLS.md`
@@ -1487,14 +1487,14 @@ Teammate host starts.**
    4. The file watchers and the poll timer are created. They are *not* needed for correctness at
       start, only afterwards.
 3. If step 2.1 throws, the exception is logged; `StartAsync` continues to 2.3, which publishes a
-   snapshot whose only finding is `R001`. Teammates start; every Pack and Skill shows as absent
+   snapshot whose only finding is `R001`. Agents start; every Pack and Skill shows as absent
    and the Sources tab says why. The move re-runs on the next start because `SKILLS.md` is still
    missing (its last step, [§8.8](#88-writing-skillsmd) "Create").
 4. If 2.3 throws, the snapshot stays `ResolvedRegistry.Empty` and the watcher still starts, so
    the next event can repair it.
 
-Because the copies Teammates use live in `Skills/` and `SkillStore` reads them as today, a
-Teammate never needs the registry to run. The registry matters at choice time, in cards and in
+Because the copies Agents use live in `Skills/` and `SkillStore` reads them as today, an
+Agent never needs the registry to run. The registry matters at choice time, in cards and in
 Build a team.
 
 #### Public API by caller
@@ -1502,7 +1502,7 @@ Build a team.
 | Caller | Uses |
 | --- | --- |
 | **Settings › Skills** (all tabs, Details, `G7`) | `Current`, `Changed`, `DisplayState`, `IsHidden`, `MarkSeenAsync`, `ReloadAsync`; for Remove and Hide, the services of [§6.12](#612-removing-and-hiding), which call `ReloadAsync` afterwards |
-| **`TeammateCard`**, **`RoleFormDialog`** | `PacksForRole`, `Of`, `Current.Resolved.FindSkill`, `DisplayState`, `HolderNames` to show "In use by N"; `ISkillCopier.EnsureAvailableAsync` before a Teammate file changes |
+| **`AgentProfileCard`**, **`RoleFormDialog`** | `PacksForRole`, `Of`, `Current.Resolved.FindSkill`, `DisplayState`, `HolderNames` to show "In use by N"; `ISkillCopier.EnsureAvailableAsync` before an Agent file changes |
 | **`CardResolver`** (static) | Takes an `ISkillAvailability` (`SkillRegistry` implements it: `Of`, `FindPack`, `SubCategoryOf`) from its caller; no dependency on the service class itself, so its tests need no host |
 | **`HireService`**, **`BuildTeam`** | `ISkillCopier.EnsureAvailableAsync(names, ct)` replaces `ISkillInstaller.EnsureInstalledAsync` and `InstallSkillsAsync`; it uses `CheckReady` and `CopyAsync` ([§6.6](#66-skillcopier-and-sourcejson)). A problem it returns becomes the draft's **Needs setup** (`skillsBlocked`), and a hire proceeds only when it returns none |
 | **`SkillPromptBuilder`** | `Current.Resolved` for the rows and findings a fix prompt names; `CheckReady(...).Missing` for **Needs setup** |
@@ -1558,7 +1558,7 @@ algorithm is [§8.6](#86-reading-and-copying-while-the-ai-tool-writes), which th
 not repeat; it fixes the API, the order of calls around it and the errors.
 
 Callers depend on the interface `ISkillCopier`, never on `SkillCopier`, so a test replaces it
-(a sealed class cannot be mocked). `HireService`, `TeammateCard`, `BuildTeam` and the update card
+(a sealed class cannot be mocked). `HireService`, `AgentProfileCard`, `BuildTeam` and the update card
 `G7` ([§6.9.8](#698-the-update-card-g7)) use the members below and no others.
 
 **Inputs / outputs.**
@@ -1574,9 +1574,9 @@ internal interface ISkillCopier
     /// <param name="ct">Cancels the copy; any staging folder is removed and the exception propagates.</param>
     Task<CopyResult> CopyAsync(IReadOnlyList<SkillEntry> skills, CancellationToken ct);
 
-    /// <summary>Makes sure every named Skill a hire or a Teammate save needs is in <c>Skills/</c>: a built-in name or a name already there
+    /// <summary>Makes sure every named Skill a hire or an Agent save needs is in <c>Skills/</c>: a built-in name or a name already there
     /// is skipped, a <see cref="SkillAvailability.Copyable"/> one is copied with <see cref="CopyAsync"/>, and an existing folder is never replaced.</summary>
-    /// <param name="skillNames">The distinct Skill names a batch of Teammates carries.</param>
+    /// <param name="skillNames">The distinct Skill names a batch of Agents carries.</param>
     /// <param name="ct">Cancels the copy.</param>
     /// <returns>One <c>SkillSetupItem</c> (§6.10.1) per name that is not ready, with the copy failure or the registry state as its detail; empty when every Skill is present.</returns>
     Task<IReadOnlyList<SkillSetupItem>> EnsureAvailableAsync(IReadOnlyList<string> skillNames, CancellationToken ct);
@@ -1593,7 +1593,7 @@ internal sealed class SkillCopier(
     public Task<IReadOnlyList<SkillSetupItem>> EnsureAvailableAsync(IReadOnlyList<string> skillNames, CancellationToken ct);
 }
 
-/// <summary>The outcome of a batch. The caller changes a Teammate file only when <see cref="Ok"/>.</summary>
+/// <summary>The outcome of a batch. The caller changes an Agent file only when <see cref="Ok"/>.</summary>
 internal sealed record CopyResult(IReadOnlyList<CopiedSkill> Copied, IReadOnlyList<CopyFailure> Failed)
 {
     public bool Ok => this.Failed.Count == 0;
@@ -1623,10 +1623,10 @@ internal enum CopyFailureKind { NotUsable, Unstable, CheckFailed, NameTaken, Io 
 2. A batch is **independent per Skill**: every Skill is attempted, in input order, even after a
    failure, so the Human sees every problem at once. Skills already swapped stay swapped; a
    good copy with nobody pointing at it is harmless and will be the same copy next time.
-3. **The caller changes a Teammate's file only when `Ok`** ([§8.6](#86-reading-and-copying-while-the-ai-tool-writes), last paragraph). On failure the Teammate is unchanged and
+3. **The caller changes an Agent's file only when `Ok`** ([§8.6](#86-reading-and-copying-while-the-ai-tool-writes), last paragraph). On failure the Agent is unchanged and
    the card shows `Failed[].Message`.
 4. One `SemaphoreSlim(1,1)` **per Skill name** serialises copies of that name (async, so not a
-   `Lock`). Two Teammates choosing the same Pack at once do not race on `Skills/<name>/`; the
+   `Lock`). Two Agents choosing the same Pack at once do not race on `Skills/<name>/`; the
    second finds `AlreadyCurrent`. Copies of different names run one after another within a batch.
 
 **Per Skill**, in order:
@@ -1683,7 +1683,7 @@ Its **Modified locally** comparison of the copy's hash with `sha256` is unchange
 **What it never does.** It does not go online, does not run anything in a Skill, writes only inside
 `Skills/` (plus one appended line in the Source's `log.jsonl`), does not follow a symbolic link or junction (`S004` is checked on the source
 before the copy starts, and the copy skips reparse points as a second guard), and does not
-change a Teammate file.
+change an Agent file.
 
 **Errors beyond the table.** `OperationCanceledException` is not caught: the staging folder is
 deleted in a `finally` and the exception propagates. A staging folder that cannot be deleted is
@@ -1772,11 +1772,11 @@ the registry.
 
 `InstallFileWriter` is an `IHostedService`. Hosted services start in registration order, which
 is: `SkillRegistry` (a singleton), `RegistryWatcher`, `InstallFileWriter`, and only then
-`BuiltinTeammateSeeder` and `DataInitializer`. `RegistryWatcher.StartAsync` runs the move
+`BuiltinAgentSeeder` and `DataInitializer`. `RegistryWatcher.StartAsync` runs the move
 ([§6.13](#613-the-move)) and the first full read ([§6.5](#65-skillregistry-and-registrywatcher));
 the writer does not run the move. Being registered after the watcher, its first write already
 sees the moved rows, and being before the seeder and `DataInitializer`, the files exist before
-any Teammate starts.
+any Agent starts.
 
 ```csharp
 /// <summary>Where <c>InstallSkillPack.md</c> is; lets <c>SkillPromptBuilder</c> avoid the sealed writer.</summary>
@@ -1811,7 +1811,7 @@ internal sealed class InstallFileWriter(
 
 | Step | Rule |
 | --- | --- |
-| Start | `StartAsync` calls the write routine directly (no timer), so the files exist before any Teammate starts. Only then does it subscribe to the seven change events above |
+| Start | `StartAsync` calls the write routine directly (no timer), so the files exist before any Agent starts. Only then does it subscribe to the seven change events above |
 | Request | Every event calls `RequestWrite()`. It marks the writer dirty; if a timer is already pending it returns |
 | Coalesce | The timer fires at `max(0, lastWriteStart + 1 s − now)`. So the first change after a quiet minute writes at once, and a burst of changes writes once per second, always with a final write after the last change |
 | Write | The timer callback clears the dirty flag **before** reading the inputs, so a change during the write schedules another write rather than being lost. `lastWriteStart` is set when the callback starts |
@@ -2001,7 +2001,7 @@ JsonSerializerOptions`.
   body: the five placeholders in the table above are required, so a reworded body cannot lose
   the validate command or the check hints.
 - `PromptTiming` for `installSkillPack.body` is `Live`: an edit reaches the next write, not a
-  running Teammate.
+  running Agent.
 
 **Constraints.** The writer never reads or writes anything under the Skill Sources folder, and
 never throws out of a timer callback for an I/O reason.
@@ -2051,10 +2051,10 @@ first. The defaults are in [Appendix C](#appendix-c--default-prompt-texts).
 | Key | Method | Placeholders (required in bold) | Called by |
 | --- | --- | --- | --- |
 | `skillPrompt.add` | `Add(where, purpose, format)` | **`{{installFile}}`**, **`{{where}}`**, `{{purposeLine}}` | `G5` task **Add from a link or folder**, opened from the Pack bar's **Add with your AI tool** (`G4b`), the Skills tab's **Import skill** and the Packs empty state (`G4d`) |
-| `skillPrompt.findForRole` | `FindForRole(roleId, roleTitle, purpose, format)` | **`{{installFile}}`**, `{{roleTitle}}`, **`{{roleId}}`**, `{{purposeLine}}` | `G5` task **Find Packs for a role**, with the role filled in when opened from a Teammate card's **Find more Packs for Developer** |
+| `skillPrompt.findForRole` | `FindForRole(roleId, roleTitle, purpose, format)` | **`{{installFile}}`**, `{{roleTitle}}`, **`{{roleId}}`**, `{{purposeLine}}` | `G5` task **Find Packs for a role**, with the role filled in when opened from an Agent card's **Find more Packs for Developer** |
 | `skillPrompt.update` | `Update(sourceIds, format)` | **`{{installFile}}`**, **`{{sources}}`** | `G5` task **Check for updates**, opened from the Pack bar's **Check for updates** |
 | `skillPrompt.fix` | `Fix(table, localPath, state, findings, format)` | **`{{installFile}}`**, `{{table}}`, **`{{localPath}}`**, `{{state}}`, `{{problems}}` | `G5` task **Fix a problem**; **Copy fix prompt** on a **Broken** or **Not downloaded** Pack or catalog card (`G4c`) |
-| `skillPrompt.fetchSkill` | `FetchSkill(skillName, catalogId, catalogPath, origin, format)` | **`{{installFile}}`**, **`{{skillName}}`**, `{{catalogId}}`, `{{catalogPath}}`, `{{origin}}` | **Copy prompt** beside a **Not downloaded** Skill, on a Teammate card, the role form, a draft's Skills list and the Skills tab |
+| `skillPrompt.fetchSkill` | `FetchSkill(skillName, catalogId, catalogPath, origin, format)` | **`{{installFile}}`**, **`{{skillName}}`**, `{{catalogId}}`, `{{catalogPath}}`, `{{origin}}` | **Copy prompt** beside a **Not downloaded** Skill, on an Agent card, the role form, a draft's Skills list and the Skills tab |
 | `skillPrompt.needsSetup` | `NeedsSetup(roleId, roleTitle, missing, format)` | **`{{installFile}}`**, `{{roleTitle}}`, **`{{roleId}}`**, **`{{missing}}`** | **Copy prompt** on a **Needs setup** draft card in Build a team (`BuildTeam.razor`, beside `skillsBlocked`) |
 
 All six have `PromptTiming.Live`: the prompt is built when the Human clicks, so an edit reaches
@@ -2223,7 +2223,7 @@ markup reads `this.Registry.Current` and treats `Revision` as the reason to redr
 | `Current.Resolved.Sources` (`ResolvedSource`): `Id` (`github.com/anthropics/skills`), `File` (`Kind`, `Url`, `Commit`, `FetchedAt`, `FetchedBy`, `Status`, `StatusReason`, `MovedTo`), `HasNotes`; `PacksOfSource(id)`, `CatalogsOfSource(id)` | The Sources tab, the Remove flows |
 | `Current.Resolved.Findings` (all, with `Finding(Severity, Code, File, Message)`) | **Broken** causes, the section problem count, the **Problems** list |
 | `DisplayState(item)`, `Current.NewKeys`, `Current.Resolved.RowKey(pack)` | The chips, **New**, the keys passed to `MarkSeenAsync` |
-| `PacksForRole(string roleId)`, `Of(string skillName)`, `SubCategoryOf(string skillName)` | [§6.10](#610-teammate-card-role-form-and-build-a-team) |
+| `PacksForRole(string roleId)`, `Of(string skillName)`, `SubCategoryOf(string skillName)` | [§6.10](#610-agent-card-role-form-and-build-a-team) |
 | `Task ReloadAsync(CancellationToken)`, `event Action<RegistryChange>? Changed`, `Task MarkSeenAsync(...)` | **Reload**, subscriptions, leaving a tab |
 
 `ItemState` is the library enum of [§6.2](#62-registry-model-and-file-readers) (`Available`,
@@ -2253,7 +2253,7 @@ control follows the house defaults: `Size.Small` buttons and chips, `Variant.Out
 | `CopyPathMenu` | `G5b` | `MudMenu` with a `MudButton` activator "Copy path ▾" and three `MudMenuItem`s | `Format` / `FormatChanged` (`PathFormat`, [§6.8](#68-prompts-the-human-pastes)), `OnCopied` | none |
 | `SkillsHelpDialog` | `G8` | `MudDialog` (`SmallForm`), Close only; the help text of one tab rendered as Markdown | `View` (string: `skills`, `packs`, `sources`) | none |
 | `PackDetailsDialog` | `G6` | `MudDialog` (`SmallForm`), `MudSimpleTable` for the Skills, `MudCollapse` for the notes | `PackId` | none |
-| `UpdateDialog` | `G7` | `MudDialog` (`SmallForm`), `MudCheckBox<bool>` per Teammate | `PackId` (or `SkillName` for a Skill outside a Pack) | none |
+| `UpdateDialog` | `G7` | `MudDialog` (`SmallForm`), `MudCheckBox<bool>` per Agent | `PackId` (or `SkillName` for a Skill outside a Pack) | none |
 | `RemovePackDialog` | `G6a` | `MudDialog` (`SmallForm`) with a three-way ending | `PackId` | none |
 | `SkillArrivalWatcher` (`Components/Layout/`, no markup, in `MainLayout`) | The "ready" snackbar | `ISnackbar`, `NavigationManager` | none | `SkillRegistry.Changed` |
 
@@ -2329,14 +2329,14 @@ is not already `InUse` (the vision's card 2 shows **In use by 2** with **Update 
 | Item state | Chip text | `Color` | Icon | Sentence (tooltip, focus and `G6`) |
 | --- | --- | --- | --- | --- |
 | `New` | **New** | `Info` | `Filled.FiberNew` | *Its row appeared since you last opened this tab. It is usable already; the chip only draws your eye.* |
-| `Available` | **Available** | `Success` | `Filled.CheckCircle` | *It passes Huddle's checks and no Teammate has it yet. You can give it to a Teammate now.* |
-| `InUse` | **In use by 2** | `Primary` | `Filled.Group` | *2 Teammates carry it: Jane and Omar. They use a copy in Skills/, never your AI tool's clone.* |
-| `UpdateAvailable` | **Update available** | `Warning` | `Filled.SystemUpdateAlt` | *The files your AI tool has now differ from the copies Teammates use. Nothing changes until you apply the update.* |
+| `Available` | **Available** | `Success` | `Filled.CheckCircle` | *It passes Huddle's checks and no Agent has it yet. You can give it to an Agent now.* |
+| `InUse` | **In use by 2** | `Primary` | `Filled.Group` | *2 Agents carry it: Jane and Omar. They use a copy in Skills/, never your AI tool's clone.* |
+| `UpdateAvailable` | **Update available** | `Warning` | `Filled.SystemUpdateAlt` | *The files your AI tool has now differ from the copies Agents use. Nothing changes until you apply the update.* |
 | `NotDownloaded` | **Not downloaded** | `Default` | `Filled.CloudOff` | *Huddle knows this exists, but there is no folder for it on this computer. Copy a prompt and ask your AI tool to fetch it.* |
 | `Deprecated` | **Deprecated** | `Default` | `Filled.NotInterested` | *Its Source still lists it but advises against it: {reason}. You can still choose it.* |
-| `Withdrawn` | **Withdrawn** | `Error` | `Filled.Block` | *Its Source pulled it: {reason}. New hires cannot take it. Teammates who have it keep working and are flagged.* |
+| `Withdrawn` | **Withdrawn** | `Error` | `Filled.Block` | *Its Source pulled it: {reason}. New hires cannot take it. Agents who have it keep working and are flagged.* |
 | `Broken` | **Broken** | `Error` | `Filled.Error` | *A check failed or a pointer leads nowhere. The card names the check and the file. The rest of SKILLS.md still works.* |
-| Hidden (flag) | **Hidden** | `Default` | `Filled.VisibilityOff` | *You hid it, so it is left out of lists. Teammates who have it keep it. Unhide brings it back.* |
+| Hidden (flag) | **Hidden** | `Default` | `Filled.VisibilityOff` | *You hid it, so it is left out of lists. Agents who have it keep it. Unhide brings it back.* |
 | Modified locally (existing) | **modified locally** | `Warning` | `Filled.Edit` | *Someone edited this Skill's copy on this computer. Applying an update replaces those edits.* |
 
 `{reason}` is `StatusReason` from `source.json`. Amber is attention, so only **Update available**
@@ -2377,7 +2377,7 @@ chip **Broken**.
 | Actions | **Review update** (small outlined) when `UpdateAvailable`; **Copy fix prompt** when `Broken` or `NotDownloaded`; **⋯** |
 
 **⋯** items, in order: *Details*, *Review update* (if applicable), *Copy fix prompt* (if applicable),
-*Hide* or *Unhide*, *Show in Library*, *Remove from Teammates* (only `Withdrawn` with holders),
+*Hide* or *Unhide*, *Show in Library*, *Remove from Agents* (only `Withdrawn` with holders),
 divider, *Remove* (`.menu-item-destructive`). The activator carries `MenuDialogs.ActivatorLabel(title)`
 and each dialog-opening item uses `MenuDialogs.AfterClosingAsync`.
 
@@ -2407,7 +2407,7 @@ stays). `EmptyState` with `Icon="Outlined.AutoAwesome"`:
 | --- | --- | --- |
 | **Add with your AI tool**, **Import skill** | `add` | nothing |
 | **Check for updates** (bar), a Source row's menu | `update` | all Sources, or the row's |
-| A Teammate card's **Find more Packs for {Role}** | `find` | `RoleId` |
+| An Agent card's **Find more Packs for {Role}** | `find` | `RoleId` |
 | A **Broken** card or catalog row, **Copy fix prompt** | none: copies at once | |
 | `G5a` choice **Fix a problem** | `fix` | `RowPath` when opened from a row |
 
@@ -2418,7 +2418,7 @@ disabled, with the field's helper text in `Color.Error`):
 | --- | --- | --- |
 | **Add from a link or folder** | *Your AI tool fetches what you point to, writes the Pack or catalog files, checks them and adds the rows.* | **Where are the Skills?** (required, one line, at most 500 characters, a link or a folder), **What are they for?** (optional, at most 300) |
 | **Find Packs for a role** | *Your AI tool looks through the catalogs you already have, suggests up to three Packs for the role and asks you before it fetches anything.* | **Role** (required; a `MudSelect` of the roles `RoleLister.List()` returns), **What should it get better at?** (optional) |
-| **Check for updates** | *Your AI tool pulls newer commits for the Sources you pick and updates their files. Huddle then shows Update available where Teammates' copies differ.* | **Sources**: *All Sources* switch, else a checkbox per Source |
+| **Check for updates** | *Your AI tool pulls newer commits for the Sources you pick and updates their files. Huddle then shows Update available where Agents' copies differ.* | **Sources**: *All Sources* switch, else a checkbox per Source |
 | **Fix a problem** | *Your AI tool reads what Huddle reported about a row and repairs the row or the files it points to.* | **Which row?** (required `MudSelect` of rows that are **Broken** or **Not downloaded**, each *"Document skills — Broken (P005)"*) |
 
 The prompt box shows the text the matching `SkillPromptBuilder` method returns (`Add`, `FindForRole`,
@@ -2437,8 +2437,8 @@ draft's Needs setup) copies at once without opening `G5`, using the matching
 #### 6.9.8 The update card, `G7`
 
 `PackUpdatePlanner.Plan` returns a `PackUpdatePlan`; the dialog only draws it. It follows the correction in [§8.4](#84-noticing-an-update): a change to a Skill's
-files is shared and has no per-Teammate choice; membership has. `PackUpdatePlanner` reads
-`SkillRegistry.Current`, `HolderNames` and the Teammate files.
+files is shared and has no per-Agent choice; membership has. `PackUpdatePlanner` reads
+`SkillRegistry.Current`, `HolderNames` and the Agent files.
 
 ```csharp
 internal sealed record PackUpdatePlan(
@@ -2447,25 +2447,25 @@ internal sealed record PackUpdatePlan(
     IReadOnlyList<SkillMembershipChange> Added,
     IReadOnlyList<SkillMembershipChange> Removed,
     string? ConsultWhenFrom, string? ConsultWhenTo,
-    IReadOnlyList<TeammateChange> Teammates);
+    IReadOnlyList<AgentChange> Agents);
 
 internal sealed record SkillFileChange(string Name, string FromCommit, string ToCommit, int FilesChanged,
-    bool ModifiedLocally, IReadOnlyList<string> AffectedTeammates);
+    bool ModifiedLocally, IReadOnlyList<string> AffectedAgents);
 
-internal sealed record TeammateChange(string Name, string Role, IReadOnlyList<string> AddSkills,
+internal sealed record AgentChange(string Name, string Role, IReadOnlyList<string> AddSkills,
     IReadOnlyList<string> RemoveSkills, bool ConsultWhenChanges, bool VersionChanges);
 
 internal static class PackUpdatePlanner
 {
-    /// <summary>The plan for one Pack; <c>Teammates</c> holds the Teammates whose <c>_packs</c> names it.</summary>
+    /// <summary>The plan for one Pack; <c>Agents</c> holds the Agents whose <c>_packs</c> names it.</summary>
     public static PackUpdatePlan Plan(
         string packId, SkillRegistry registry, SkillStore skills,
-        IReadOnlyList<Persona> teammates, IFileReader files);
+        IReadOnlyList<Persona> agents, IFileReader files);
 
     /// <summary>The plan for a Skill outside a Pack: <c>FileChanges</c> only.</summary>
     public static PackUpdatePlan PlanSkill(
         string skillName, SkillRegistry registry, SkillStore skills,
-        IReadOnlyList<Persona> teammates, IFileReader files);
+        IReadOnlyList<Persona> agents, IFileReader files);
 }
 ```
 
@@ -2478,7 +2478,7 @@ of the pointer's folder: `SkillFolderHash.FileHashes` (new, beside `Compute`) re
 SHA-256 using the same per-file `Normalize` that `Compute` uses (CRLF to LF for text, `.git` and
 `.source.json` skipped), so a line-ending difference is not a change. The count is the files whose hash
 differs plus the files present on one side only. `ModifiedLocally` comes from `SkillStore`, and
-`AffectedTeammates` from `SkillRegistry.HolderNames`. All reads go through `IFileReader`, so the planner
+`AffectedAgents` from `SkillRegistry.HolderNames`. All reads go through `IFileReader`, so the planner
 is tested with `InMemoryFileReader`.
 
 Layout (the vision's wireframe, with §8.4 applied):
@@ -2506,23 +2506,23 @@ Layout (the vision's wireframe, with §8.4 applied):
 
 | Rule | Behaviour |
 | --- | --- |
-| **Skill files section** | One row per Skill with `UpdateAvailable`: `~ name  fromCommit → toCommit  N files changed`, then *"Used by {names}. Their copy changes as soon as you update; they do not restart."* (*"No Teammate has it yet."* with none). **No checkboxes.** A Skill the Pack newly lists (`+`) is not here; it is membership |
+| **Skill files section** | One row per Skill with `UpdateAvailable`: `~ name  fromCommit → toCommit  N files changed`, then *"Used by {names}. Their copy changes as soon as you update; they do not restart."* (*"No Agent has it yet."* with none). **No checkboxes.** A Skill the Pack newly lists (`+`) is not here; it is membership |
 | **Modified locally** | Each `SkillFileChange.ModifiedLocally` row carries a `MudAlert Severity.Warning Dense` (`role="alert"`): *"You edited {name} on this computer. Updating replaces your edits."* If any row has it, the primary button reads **Update and replace my edits** with `Color.Warning`; otherwise **Update** |
-| **Membership section** | `+` Skills added to the Pack (with Source, short commit and licence), `−` Skills it no longer lists, the `consultWhenAdds` change as *from → to*, and a **checkbox per Teammate** that holds the Pack and whose `skills:`, `consult_when:` or `_packs` version would change. Each row says what changes: *"adds incremental-build; restarts"*. All start checked |
-| **Primary button label** | **Update N** (N Teammates checked) when any is checked; **Update files** when none is checked but file changes exist; disabled when the plan is empty. The vision's `[ Update 2 ]` is the first form |
-| **Not now** | Closes with nothing written. Unchecked Teammates keep their copies' membership and **Update available** stays until the next update |
-| **Update does** | In this order: (1) `ISkillCopier.CopyAsync` copies every `FileChanges` Skill and every `Added` Skill into `Skills/` ([§6.6](#66-skillcopier-and-sourcejson)); one failure stops here and writes nothing else; (2) for each checked Teammate, writes `skills:`, `consult_when:` and `_packs:` with `PackMembership` ([§6.10.4](#6104-teammate-card)) and restarts it; (3) one `update-applied` line per Pack or Skill ([§7.2](#sourcessourcelogjsonl)). A Skill whose files changed is live for its holders at once because Skill bodies are read live |
-| **Which Skills a removal takes** | A `−` Skill leaves a checked Teammate's `skills:` only when neither the Teammate's role nor another Pack it holds provides it, as `TogglePack` already does |
+| **Membership section** | `+` Skills added to the Pack (with Source, short commit and licence), `−` Skills it no longer lists, the `consultWhenAdds` change as *from → to*, and a **checkbox per Agent** that holds the Pack and whose `skills:`, `consult_when:` or `_packs` version would change. Each row says what changes: *"adds incremental-build; restarts"*. All start checked |
+| **Primary button label** | **Update N** (N Agents checked) when any is checked; **Update files** when none is checked but file changes exist; disabled when the plan is empty. The vision's `[ Update 2 ]` is the first form |
+| **Not now** | Closes with nothing written. Unchecked Agents keep their copies' membership and **Update available** stays until the next update |
+| **Update does** | In this order: (1) `ISkillCopier.CopyAsync` copies every `FileChanges` Skill and every `Added` Skill into `Skills/` ([§6.6](#66-skillcopier-and-sourcejson)); one failure stops here and writes nothing else; (2) for each checked Agent, writes `skills:`, `consult_when:` and `_packs:` with `PackMembership` ([§6.10.4](#6104-agent-card)) and restarts it; (3) one `update-applied` line per Pack or Skill ([§7.2](#sourcessourcelogjsonl)). A Skill whose files changed is live for its holders at once because Skill bodies are read live |
+| **Which Skills a removal takes** | A `−` Skill leaves a checked Agent's `skills:` only when neither the Agent's role nor another Pack it holds provides it, as `TogglePack` already does |
 | **Single Skill** | Opened with `SkillName`, the dialog has the Skill files section only, titled *"Update: {name}"* |
 | **Deprecated or Withdrawn** | A one-line `MudAlert` above everything: *"{Source} marks this Pack {Deprecated\|Withdrawn}: {reason}."* |
 
-**`Removed` is always empty.** Huddle keeps no earlier copy of a Pack file, so it cannot tell which Skills a Pack has stopped listing. A Skill the Pack dropped stays on its holders until the Human removes it on the card. Guessing from the Teammate file would risk taking off a Skill the Human gave by hand.
+**`Removed` is always empty.** Huddle keeps no earlier copy of a Pack file, so it cannot tell which Skills a Pack has stopped listing. A Skill the Pack dropped stays on its holders until the Human removes it on the card. Guessing from the Agent file would risk taking off a Skill the Human gave by hand.
 
 #### 6.9.9 The New chip and the snackbar
 
 **New.** The registry decides ([§6.5](#65-skillregistry-and-registrywatcher), "The 'New' overlay"): `seen`
 in `{DataDir}/skill-sources.json` holds the keys the Human has seen, `Current.NewKeys` the keys in the
-snapshot that are not in it, and `DisplayState` shows **New** for an `Available` item no Teammate holds.
+snapshot that are not in it, and `DisplayState` shows **New** for an `Available` item no Agent holds.
 Keys are lowercase-prefixed: `packs:<id>`, `catalogs:<id>` (`Current.Resolved.RowKey(row)`) and `skill:<name>`. What this section adds:
 
 1. The move needs nothing here: the first complete read writes the baseline, so the move's own output
@@ -2566,7 +2566,7 @@ vision's wireframe in `Typo` rows:
 | Notes from your AI tool | **Show notes** opens the Source's `NOTES.md` in the Library; `MudCollapse` shows its first 20 lines |
 | Actions | **Remove**, **Show in Library**, **Close**, with their sentences as `Typo.caption` under the row |
 
-**Unread files** (`S008`) reads: *"Teammates read only the .md files directly in a Skill's folder, up to
+**Unread files** (`S008`) reads: *"Agents read only the .md files directly in a Skill's folder, up to
 64 KB each, so scripts/ and references/ are ignored. A Skill that depends on them may work less well
 in Huddle than in the tool it was written for."*
 
@@ -2591,12 +2591,12 @@ the Settings figure, and update the notes of `G2a`, `G3`, `B9b`, `B9c`, `B9e` an
 | `G5a` | Task choice | `MudRadioGroup<SkillTask>` | **Add from a link or folder**, **Find Packs for a role**, **Check for updates**, **Fix a problem**, each with a line saying what the AI tool will do |
 | `G5b` | Copy path menu | `CopyPathMenu` | **Windows path**, **WSL path**, **Forward slashes**; the prompt box follows the last choice |
 | `G6` | Details card | `PackDetailsDialog` | The Source and commit, the SKILLS.md row, roles, `consult_when`, a row per Skill with licence, files and warnings, findings, notes |
-| `G6a` | Remove Pack dialog | `RemovePackDialog` | Asks **Keep their Skills** or **Remove from Teammates too** when Teammates hold the Pack |
-| `G7` | Update card | `UpdateDialog` | Skill file changes (affected Teammates listed, no checkboxes), Skills added or removed, the `consult_when` change, a checkbox per Teammate for membership |
+| `G6a` | Remove Pack dialog | `RemovePackDialog` | Asks **Keep their Skills** or **Remove from Agents too** when Agents hold the Pack |
+| `G7` | Update card | `UpdateDialog` | Skill file changes (affected Agents listed, no checkboxes), Skills added or removed, the `consult_when` change, a checkbox per Agent for membership |
 | `G8` | Skills help | `SkillsHelpDialog` | In-app help for one tab, opened by **Learn more** at the end of each intro and by the empty state. Close only; text from the User Guide section |
 
 `B9c` gains the line *"Needs setup: Pack "MSBuild Authoring" not downloaded"* with **Copy prompt**; `B10`'s
-sentence about importing Skills is replaced (see [§6.10](#610-teammate-card-role-form-and-build-a-team)).
+sentence about importing Skills is replaced (see [§6.10](#610-agent-card-role-form-and-build-a-team)).
 
 #### 6.9.12 Guidance text
 
@@ -2621,7 +2621,7 @@ This is UI text; it lives in the components and in `SkillStateText`, `SkillProbl
 **Learn more and `SkillsHelpDialog`.** Each intro ends with **Learn more**. It opens `SkillsHelpDialog`
 (`G8`), an in-app dialog with a Close button, so the Human never leaves Huddle and nothing links to
 `docs/Huddle.UserGuide.md`. The dialog's text is drawn from the User Guide: the same commit adds three
-subsections, "The Skills tab", "The Packs tab" and "The Sources tab", under "Giving Teammates Skills",
+subsections, "The Skills tab", "The Packs tab" and "The Sources tab", under "Giving Agents Skills",
 and `SkillGuide.HelpFor(view)` holds the Markdown of the matching one. A test reads the User Guide and
 fails when a paragraph of a help text is not found there word for word, so the two cannot drift. The
 dialog title is the tab name (*Skills*, *Packs* or *Sources*); the text opens with a heading-free first
@@ -2631,8 +2631,8 @@ paragraph, uses the same words as the intro, and never exceeds 250 words.
 
 | Tab | Intro |
 | --- | --- |
-| **Skills** | A Skill is a folder of instructions that a Teammate reads when its work calls for it. This list shows every Skill Huddle knows about: built in, fetched by your AI tool, or listed in a catalog but not on this computer yet. A Skill marked **Not downloaded** has no folder here; **Copy prompt** gives your AI tool what it needs to fetch it. Huddle never downloads Skills itself. Giving a Teammate a Skill copies it to that Teammate, so later changes reach it only when you apply an update. **Learn more** |
-| **Packs** | A Pack is a named set of Skills for some roles, such as MSBuild Authoring. Choosing a Pack on a Teammate gives it all the Pack's Skills at once and tells its manager when to use them. Packs come from SKILLS.md, a list your AI tool keeps; Huddle never fetches one itself. To add one, select **Add with your AI tool**, say where it is, and paste the prompt into Claude Code, Codex or a similar tool. Whatever passes Huddle's checks is ready to use at once; there is no approval step. **Learn more** |
+| **Skills** | A Skill is a folder of instructions that an Agent reads when its work calls for it. This list shows every Skill Huddle knows about: built in, fetched by your AI tool, or listed in a catalog but not on this computer yet. A Skill marked **Not downloaded** has no folder here; **Copy prompt** gives your AI tool what it needs to fetch it. Huddle never downloads Skills itself. Giving an Agent a Skill copies it to that Agent, so later changes reach it only when you apply an update. **Learn more** |
+| **Packs** | A Pack is a named set of Skills for some roles, such as MSBuild Authoring. Choosing a Pack on an Agent gives it all the Pack's Skills at once and tells its manager when to use them. Packs come from SKILLS.md, a list your AI tool keeps; Huddle never fetches one itself. To add one, select **Add with your AI tool**, say where it is, and paste the prompt into Claude Code, Codex or a similar tool. Whatever passes Huddle's checks is ready to use at once; there is no approval step. **Learn more** |
 | **Sources** | A Source is one place Skills come from: a GitHub repository, another Git server or a folder on this computer. Your AI tool keeps notes for each Source on how it found and fetched it, so the next update starts from what it learned. Everything here lives in the Skill Sources folder, which you can share with another Huddle. Removing a Source removes its notes and rows, but never the clone itself. Your AI tool reads the install file first; **Copy path** copies its location. **Learn more** |
 
 **Every button and menu item has one sentence.** Shown as the tooltip (hover and focus), and for
@@ -2649,21 +2649,21 @@ buttons in a dialog as a `Typo.caption` line under the row.
 | Copy path ▾ | Sources tab, `G4d`, `G5` | *Copies the location of InstallSkillPack.md, in the form your AI tool can open.* |
 | Windows path, WSL path, Forward slashes | `G5b` | *E:\…, /mnt/e/… or E:/…: pick the one your AI tool runs under. Huddle remembers the choice until you reload the page.* |
 | Details | Card menu | *Shows where this came from, its Skills, their licences and warnings, and the notes your AI tool kept.* |
-| Review update | Card, menu, Skill row | *Shows what changed and which Teammates are affected, and lets you apply it.* |
-| Hide, Unhide | Card, Skill row | *Leaves it out of lists on this Huddle and any that shares the folder. Nothing is deleted and Teammates who have it keep it.* |
+| Review update | Card, menu, Skill row | *Shows what changed and which Agents are affected, and lets you apply it.* |
+| Hide, Unhide | Card, Skill row | *Leaves it out of lists on this Huddle and any that shares the folder. Nothing is deleted and Agents who have it keep it.* |
 | Show hidden | Switch | *Includes what you hid, so you can unhide it.* |
 | Show in Library | Card menu | *Opens the pack or catalog file, read only, in the Library.* |
 | Show notes | Source row, `G6` | *Opens the notes your AI tool kept for this Source, in the Library.* |
 | Remove (Pack) | Card menu, `G6` | *Removes its row from SKILLS.md and its file if Huddle's folder holds it. Your AI tool's clone stays.* |
-| Remove from Teammates | Withdrawn card | *Takes this Pack off every Teammate that has it. Their copies of the Skills stay.* |
-| Remove (catalog) | Catalog row | *Removes the catalog's row, and its file if Huddle's folder holds it. Teammates keep their copies.* |
+| Remove from Agents | Withdrawn card | *Takes this Pack off every Agent that has it. Their copies of the Skills stay.* |
+| Remove (catalog) | Catalog row | *Removes the catalog's row, and its file if Huddle's folder holds it. Agents keep their copies.* |
 | Remove (Source) | Source row | *Deletes this Source's notes, its rows and the files they point to inside Huddle's folder. The clone stays.* |
 | Change… | Folder | *Chooses another Skill Sources folder, for example a synced one shared with another Huddle. It does not move files.* |
 | Use default | Folder | *Goes back to the folder from configuration.* |
 | Learn more | Each intro, `G4d` | *Opens a help page in Huddle about this tab; it takes you nowhere else.* |
-| Update N, Update files, Update and replace my edits | `G7` | *Applies the update: copies the changed Skill files, then changes the Teammates you ticked.* |
+| Update N, Update files, Update and replace my edits | `G7` | *Applies the update: copies the changed Skill files, then changes the Agents you ticked.* |
 | Not now | `G7` | *Closes without changing anything.* |
-| Keep their Skills, Remove from Teammates too | `G6a` | *Only stops tracking the Pack, or also takes off the Skills nobody else gave them.* |
+| Keep their Skills, Remove from Agents too | `G6a` | *Only stops tracking the Pack, or also takes off the Skills nobody else gave them.* |
 
 **Problem fix sentences (`SkillProblemText`).** The composed text is *"{library message} {fix hint}
 ({code})"*. The fix hint is `CheckCatalog.Find(code).FixHint` from [§6.3](#63-the-checks), the one table
@@ -2682,14 +2682,14 @@ In `tests/Huddle.Tests/Ui/SkillPacks/`. Each has a `///` summary; the first colu
 | `SkillsPanelTests` | Three tabs render in order Skills, Packs, Sources; `?view=packs` selects Packs; an unknown `view` selects Skills; A `SkillRegistry.Changed` raised off the UI thread repaints the open tab; `Dispose` unsubscribes all three events; A tab header badge counts that tab's **New** items; the section-menu badge (`G2a`) counts Broken rows plus `SkillStore.Issues`; zero shows no badge |
 | `SkillStateChipsTests` | Every `ItemState` (including `New` and `InUse`) renders its text, `status-chip-{colour}` class and icon from `SkillStateText`, and none is colour-only; `InUse` shows "In use by 2" and a state of `UpdateAvailable` with holders shows both chips; A state's sentence is in the tooltip and the chip is keyboard focusable |
 | `SkillStateTextTests` | Every `ItemState` value has chip text and a one-sentence explanation ending in a full stop |
-| `PackCardTests` | Title, version, Source, Skill count, roles, updated date via `HumanDate`, and chips render; roles past three show "+N"; A `Broken` card shows the composed cause line and **Copy fix prompt**, not **Review update**; An `UpdateAvailable` card shows **Review update**; `NotDownloaded` names the missing Skills in text; The **⋯** menu order is Details, Review update, Copy fix prompt, Hide, Show in Library, divider, Remove; Remove from Teammates appears only for `Withdrawn` with holders |
+| `PackCardTests` | Title, version, Source, Skill count, roles, updated date via `HumanDate`, and chips render; roles past three show "+N"; A `Broken` card shows the composed cause line and **Copy fix prompt**, not **Review update**; An `UpdateAvailable` card shows **Review update**; `NotDownloaded` names the missing Skills in text; The **⋯** menu order is Details, Review update, Copy fix prompt, Hide, Show in Library, divider, Remove; Remove from Agents appears only for `Withdrawn` with holders |
 | `PackBarTests` | The three buttons exist; the status line joins "3 Sources · 1 new · 1 problem · SKILLS.md read 1 minute ago" and leaves out a zero count; **Reload** calls `ReloadAsync`, disables while it runs and ends with the keyed snackbar |
 | `ReadAgoTextTests` | Boundaries: just now, 1 minute ago, N minutes ago, N hours ago, then a date |
 | `PackEmptyStateTests` | With no Packs rows the empty state shows title, explanation, three steps and the three controls; with one it does not |
 | `AddWithAiDialogTests` | Opening with `Task="update"` selects **Check for updates**; each radio has its sentence under it; An empty **Where are the Skills?** disables the prompt box and both copy buttons; filling it enables them; The prompt for **Add** contains the install file path and the Where text, and the purpose sentence only when given; **Find Packs for a role** names the role title and id; **Fix a problem** lists only **Broken** and **Not downloaded** rows; Choosing **WSL path** rewrites the path in the prompt box; the choice survives re-opening in the same circuit; **Copy prompt** calls the clipboard helper with the prompt and shows the keyed snackbar; a refused copy shows the Ctrl+C warning; The dialog writes no file (no `SkillSourcesSettings`, no `MarkSeenAsync` and no SKILLS.md write). The path forms themselves are pinned by `PathFormatsTests` ([§6.8](#68-prompts-the-human-pastes)) |
 | `PackDetailsDialogTests` | Renders the row's Last updated and Notes, roles, the `consult_when` phrase, a row per Skill, and the state sentence as text; A Skill with `S008` shows "Scripts, unread files" and the unread-files sentence below the table |
-| `PackUpdatePlannerTests` | A changed Skill file is in `FileChanges` with its affected Teammates and never in `Teammates`; an added Skill is in `Added`; A Teammate whose `skills:` already has the new Skill and whose version matches is not listed; A `−` Skill the Teammate's role also provides is not in `RemoveSkills` |
-| `UpdateDialogTests` | The Skill files section has no checkbox; the membership section has one per listed Teammate, all checked; A Modified locally Skill shows the warning and the button reads **Update and replace my edits**; The button reads **Update 2** with two checked, **Update files** with none checked, and is disabled for an empty plan; **Not now** writes nothing; **Update** copies before it rewrites any Teammate, and a copy failure leaves every Teammate file untouched |
+| `PackUpdatePlannerTests` | A changed Skill file is in `FileChanges` with its affected Agents and never in `Agents`; an added Skill is in `Added`; An Agent whose `skills:` already has the new Skill and whose version matches is not listed; A `−` Skill the Agent's role also provides is not in `RemoveSkills` |
+| `UpdateDialogTests` | The Skill files section has no checkbox; the membership section has one per listed Agent, all checked; A Modified locally Skill shows the warning and the button reads **Update and replace my edits**; The button reads **Update 2** with two checked, **Update files** with none checked, and is disabled for an empty plan; **Not now** writes nothing; **Update** copies before it rewrites any Agent, and a copy failure leaves every Agent file untouched |
 | `SkillArrivalWatcherTests` | A Pack becoming `Available` raises one snackbar with key `skill-ready-<id>` and a **Show** action; the first snapshot raises none; Four arrivals in one snapshot raise one "ready" snackbar |
 | `SkillsTabSeenTests` | A key in `Current.NewKeys` shows **New**; leaving the tab calls `MarkSeenAsync` with the keys the tab listed (and not before); a row that arrives while the tab is open stays **New** until then |
 | `SkillsTabTests` | A row per Skill; a catalog Skill with no copy shows **Not downloaded** and **Copy prompt**; built-in shows **Built in**; **Hide** removes the row; **Show hidden** brings it back with the **Hidden** chip; the State filter narrows rows |
@@ -2698,7 +2698,7 @@ In `tests/Huddle.Tests/Ui/SkillPacks/`. Each has a `///` summary; the first colu
 | `SkillsHelpDialogTests` | **Learn more** on each tab and on the empty state opens `SkillsHelpDialog` with that tab's text and a Close button, and navigates nowhere |
 | `SkillsHelpTextTests` | Every paragraph of `SkillGuide.HelpFor(view)` occurs word for word in the matching subsection of `docs/Huddle.UserGuide.md`; no help text exceeds 250 words |
 
-### 6.10 Teammate card, role form and Build a team
+### 6.10 Agent card, role form and Build a team
 
 #### 6.10.1 The shape of the change
 
@@ -2706,7 +2706,7 @@ Today a Skill or Pack named on a card is installed later, by `ImportingSkillInst
 hire** (which downloads from GitHub). After this change Huddle downloads nothing, so every place that
 names a Skill answers three questions with the registry: is it usable (has a folder here), can it be
 copied now, and is anything wrong with it. The rule of [§4](#4-design-principles) principle 6 applies
-everywhere: **a Teammate's file names a Skill only after its copy is in `Skills/`.**
+everywhere: **an Agent's file names a Skill only after its copy is in `Skills/`.**
 
 One shared vocabulary:
 
@@ -2811,12 +2811,12 @@ checks decide, and `S010` is a warning.
 | `HireService.InstallSkillsAsync(IReadOnlyList<SkillRef>, ct)` (line 373) | Delegates to the installer | Renamed `EnsureSkillsAsync(IReadOnlyList<SkillRef>, ct)`; maps names, delegates to `copier.EnsureAvailableAsync`. `BuildTeam` is its caller |
 | `PrepareHiresAsync` | Imports, sets `skillsBlocked` | Below |
 
-#### 6.10.4 Teammate card
+#### 6.10.4 Agent card
 
-All changes are in `TeammateCard.razor`.
+All changes are in `AgentProfileCard.razor`.
 
 **Pack chips (lines 391–405).** `this.rolePacks` becomes the list `SkillRegistry.PacksForRole(roleRef.RoleId)`
-returns: Packs whose `appliesTo` contains the role id, not hidden unless the Teammate holds them,
+returns: Packs whose `appliesTo` contains the role id, not hidden unless the Agent holds them,
 excluding `Broken` (those show on the Packs tab). Chip rendering moves to a new `PackChip.razor` in
 `Components/Shared/` (parameters `PackId`, `Active`, `OnToggle`, plain values, because the card is
 already 2100 lines):
@@ -2827,7 +2827,7 @@ already 2100 lines):
 | `UpdateAvailable` | As today, with a leading `Filled.SystemUpdateAlt` and a link-styled **Update available** beside it that opens `UpdateDialog` |
 | `NotDownloaded` | Not offered as a chip. A line under the row instead: *Pack "MSBuild Authoring" is not downloaded.* with **Copy prompt** (`skillPrompt.fetchSkill`). The line is text, so a touch user can read it |
 | `Deprecated` | As today, with a **Deprecated** icon and its reason in the tooltip |
-| `Withdrawn` | Not offered to add. If the Teammate holds it: a red chip and a `MudAlert Severity.Warning Dense` (`role="status"`, class `teammate-card-warning`): *"Pack "x" was withdrawn by its Source: {reason}. {Name} keeps working."* with **Remove from this Teammate** |
+| `Withdrawn` | Not offered to add. If the Agent holds it: a red chip and a `MudAlert Severity.Warning Dense` (`role="status"`, class `agent-profile-card-warning`): *"Pack "x" was withdrawn by its Source: {reason}. {Name} keeps working."* with **Remove from this Agent** |
 
 Under the chips, a `MudLink` **Find more Packs for {Role title}** opens `AddWithAiDialog` on `find` with
 the role filled in. It shows whenever the card has a role.
@@ -2845,7 +2845,7 @@ cancelled card leaves nothing behind (the existing comment at line 852 says the 
    in-button spinner and the card is not dismissable.
 3. On problems, show them in the card's existing error area and **do not write**: *"Skills not ready:
    x (not downloaded). Copy a prompt below, then save again."*
-4. On success, the existing `PersonaStore.Update` runs, and the Teammate restarts as it does today.
+4. On success, the existing `PersonaStore.Update` runs, and the Agent restarts as it does today.
 
 `SaveDraftAsync` (line 1892, the draft path) copies nothing; the draft returns its names and `BuildTeam`
 checks them at **Approve & hire**.
@@ -2861,7 +2861,7 @@ checks them at **Approve & hire**.
 Not-downloaded Skills are not options in the select. Below it, a collapsed `MudCollapse` titled *"Not
 on this computer yet (N)"* lists them with name, description, origin line and **Copy prompt** each, so
 a Skill that cannot be chosen is still visible with its remedy. Hidden Skills are omitted unless
-already selected. The helper text under the select is unchanged: *Changing Skills restarts this Teammate.*
+already selected. The helper text under the select is unchanged: *Changing Skills restarts this Agent.*
 
 `DraftSkillChoices` (parameter, line 661) becomes `DraftSkillChoices` of `(Name, Description, FromRole,
 Origin, Availability)` where `Availability` is `Copyable` or `NotDownloaded`; a role's not-downloaded
@@ -2879,14 +2879,14 @@ The Skills `MudSelect` (lines 27–48) lists:
 | Group | Items | Caption |
 | --- | --- | --- |
 | Installed | `InstalledSkills.All` as today | the provenance line |
-| In the registry | `Registry.Skills` that are `Copyable` or `Available`, not in `Skills/`, not hidden | origin; *"Huddle copies it into Skills/ when a Teammate in this role is hired."* |
+| In the registry | `Registry.Skills` that are `Copyable` or `Available`, not in `Skills/`, not hidden | origin; *"Huddle copies it into Skills/ when an Agent in this role is hired."* |
 
 **Not downloaded Skills are not options in the select.** They are listed below it in a collapsed *"Not
 on this computer yet (N)"* section, each with **Copy prompt**; a role saved without one simply lacks
 it. A Skill the role already names (editing an old role) that is not usable is kept in the select as a
 checked item with the caption *"Not downloaded"* so editing does not silently drop it, and the dialog
 helper becomes *"Skills not downloaded are listed below; ask your AI tool to fetch them."* The helper
-text of the select reads *"Skills this Huddle has or can copy; a Teammate in this role carries them."*.
+text of the select reads *"Skills this Huddle has or can copy; an Agent in this role carries them."*.
 `CustomRole` and `custom-roles.json` do not change.
 
 #### 6.10.6 Build a team
@@ -2902,7 +2902,7 @@ Changes in `BuildTeam.razor`:
 | After **Save draft** | `DraftMember.SkillSetup` is recomputed with `SkillSetupCheck.For(draft skills, draft packs, this.Registry)` and the draft's `Reasons` replace the Skill lines with the new ones; non-Skill reasons (name, adapter, connector) are kept |
 | `ProfileCard` | Shows the draft's reasons as today, *"Needs setup: Pack "MSBuild Authoring" not downloaded"*. Under it, **Copy prompt** (`skillPrompt.needsSetup`, listing every item, grouped by Pack) when any item is not `Withdrawn`, and for `Withdrawn` the words *"Edit the draft to drop it."* The card's own buttons (Re-roll, Edit, Remove) stay |
 | `CanApprove` | Adds `&& !this.drafts.Any(draft => !draft.Existing && draft.SkillSetup.Count > 0)` |
-| `ApproveHint` | A new first case: *"Some Teammates need setup. Copy their prompt, paste it into your AI tool, and they update here by themselves."* |
+| `ApproveHint` | A new first case: *"Some Agents need setup. Copy their prompt, paste it into your AI tool, and they update here by themselves."* |
 
 **Approve & hire waits.** The button is disabled while any new draft has a `SkillSetupItem`. The
 page subscribes to `SkillRegistry.Changed` and recomputes every new draft's `SkillSetup`, so when the
@@ -2930,18 +2930,18 @@ copied stops the approval with 'Skills not ready: …'". Because copying happens
 a refusal still leaves nothing behind.
 
 `EnsureSkillsAsync` copies into `Skills/` before the Team exists. That is the same ordering as today
-(installs before anything is written) and is safe: a copy in `Skills/` that no Teammate names is not
-a change to any Teammate.
+(installs before anything is written) and is safe: a copy in `Skills/` that no Agent names is not
+a change to any Agent.
 
 #### 6.10.7 `MemberWarnings`
 
 `MemberWarnings.For` keeps its signature; its `Func<string, string?> subCategoryOf` argument is now
-`SkillRegistry.SubCategoryOf` at both call sites (`TeammateCard`, and wherever Build a team's
+`SkillRegistry.SubCategoryOf` at both call sites (`AgentProfileCard`, and wherever Build a team's
 Complete Setup panel computes warnings). `SkillRegistry.SubCategoryOf(name)` returns the `subCategory`
 of the first catalog entry with that name in SKILLS.md row order (empty string becomes `null`), so the
 overlap warning *"a and b are both in API & Interface Design."* behaves as before. A new sibling,
 `MemberWarnings.ForSources(IReadOnlyList<string> skills, IReadOnlyList<VersionedRef> packs,
-ISkillAvailability availability)`, returns sentences for what the Teammate holds: *"Pack "x" was
+ISkillAvailability availability)`, returns sentences for what the Agent holds: *"Pack "x" was
 withdrawn by its Source: {reason}."*, *"Skill "y" was withdrawn…"*, *"Pack "x" is deprecated: {reason}."*,
 and for a `_packs` entry whose Pack no row provides any more, *"Pack "x" is no longer in SKILLS.md.
 {Name} keeps its Skills; remove the Pack here, or ask your AI tool to add it back."*
@@ -2955,8 +2955,8 @@ too many Skills, sub-category, withdrawn, deprecated.
 | `CardResolver` | A Withdrawn Pack or Skill is a `SkillSetupItem`, so the card is **Needs setup** and cannot be hired |
 | `BuildTeam` draft | **Approve & hire** waits; the Human edits the draft to drop it |
 | `HireService.EnsureSkillsAsync` | Returns `Withdrawn` as a problem, so a roster that slipped past (a Source withdrew it between draft and approve) stops with *"Skills not ready: x."* |
-| `TeammateCard` pack chip | A Withdrawn Pack is not offered; the Skills picker omits a Withdrawn Skill unless already selected |
-| Existing Teammates | Never touched. The red chip and `MemberWarnings.ForSources` warning say so |
+| `AgentProfileCard` pack chip | A Withdrawn Pack is not offered; the Skills picker omits a Withdrawn Skill unless already selected |
+| Existing Agents | Never touched. The red chip and `MemberWarnings.ForSources` warning say so |
 
 #### 6.10.9 Tests
 
@@ -2965,15 +2965,15 @@ too many Skills, sub-category, withdrawn, deprecated.
 | `CardResolverTests` (updated) | A known Pack with `NotDownloaded` makes the card `NeedsSetup` with *Pack "MSBuild Authoring" not downloaded* in `Reasons` and a `SkillSetupItem` |
 | `CardResolverTests` | A role Skill with `Unknown`, `Broken`, `Withdrawn`, `NotDownloaded` each gives the matching item and reason; `Present` and `Copyable` give none; A Pack id no row provides is skipped without setup; a stock install still resolves the built-in developer's card with its Pack skipped, and its pooled Skills (not built in, so not on a fresh computer) make it Needs setup until fetched, while with those Skills present it is Ready; `SkillRef.Source` and `Path` are ignored: two refs with different Source and Path and the same name resolve the same |
 | `SkillSetupCheckTests` | One Pack with two missing Skills gives one Pack item, not three |
-| `HireServiceStartTests` (updated) | `StartTeamAsync` stops with *Skills not ready* when `ISkillCopier` reports a problem and writes no Teammate |
+| `HireServiceStartTests` (updated) | `StartTeamAsync` stops with *Skills not ready* when `ISkillCopier` reports a problem and writes no Agent |
 | `HireServiceStartTests` | A `Copyable` Skill is copied before the manager is hired |
 | `SkillCopierEnsureTests` | A built-in name is skipped; a `Present` name is not recopied; a `Copyable` name is copied once; `NotDownloaded`, `Broken`, `Withdrawn` and `Unknown` come back as problems and write nothing |
-| `TeammateCardPackTests` | `Available` and `InUse` Packs render toggle chips; `NotDownloaded` renders the not-downloaded line with **Copy prompt** and no chip; `UpdateAvailable` shows the icon and opens `UpdateDialog`; `Withdrawn` held shows the red chip, the warning and **Remove from this Teammate**; `Withdrawn` not held is not offered; **Find more Packs for {Role}** opens `AddWithAiDialog` on `find` with the role |
-| `TeammateCardSaveTests` | **Save** copies a `Copyable` Skill before `PersonaStore.Update`; a copy failure shows the message and writes no file; **Cancel** copies nothing; `SaveDraftAsync` copies nothing |
-| `TeammateCardSkillsTests` | The select offers `Copyable` registry Skills with the caption; `NotDownloaded` ones appear only in the collapsed list with **Copy prompt** |
+| `AgentProfileCardPackTests` | `Available` and `InUse` Packs render toggle chips; `NotDownloaded` renders the not-downloaded line with **Copy prompt** and no chip; `UpdateAvailable` shows the icon and opens `UpdateDialog`; `Withdrawn` held shows the red chip, the warning and **Remove from this Agent**; `Withdrawn` not held is not offered; **Find more Packs for {Role}** opens `AddWithAiDialog` on `find` with the role |
+| `AgentProfileCardSaveTests` | **Save** copies a `Copyable` Skill before `PersonaStore.Update`; a copy failure shows the message and writes no file; **Cancel** copies nothing; `SaveDraftAsync` copies nothing |
+| `AgentProfileCardSkillsTests` | The select offers `Copyable` registry Skills with the caption; `NotDownloaded` ones appear only in the collapsed list with **Copy prompt** |
 | `PackMembershipTests` | `Remove` keeps a Skill the role or another Pack provides; `Add` then `Remove` returns the original text |
 | `RoleFormDialogTests` | The select lists installed and `Copyable` Skills, not catalog-wide; a not-downloaded Skill the role names stays checked with *Not downloaded* |
-| `BuildTeamSetupTests` | A draft with a not-downloaded Pack shows *Needs setup*, **Copy prompt**, and disables **Approve & hire**; the hint reads the new sentence; A `SkillRegistry.Changed` that makes the Skill usable flips the draft to Ready and enables the button; Editing a draft to drop a Withdrawn Skill clears the item; an existing Teammate in edit mode is never checked; `PrepareHiresAsync` with a problem sets `skillsBlocked`, shows *Skills not ready: …*, and creates no Team |
+| `BuildTeamSetupTests` | A draft with a not-downloaded Pack shows *Needs setup*, **Copy prompt**, and disables **Approve & hire**; the hint reads the new sentence; A `SkillRegistry.Changed` that makes the Skill usable flips the draft to Ready and enables the button; Editing a draft to drop a Withdrawn Skill clears the item; an existing Agent in edit mode is never checked; `PrepareHiresAsync` with a problem sets `skillsBlocked`, shows *Skills not ready: …*, and creates no Team |
 | `MemberWarningsTests` | `subCategoryOf` from the registry gives the same overlap warning as before; `ForSources` lists Withdrawn and Deprecated |
 | `ServiceCollectionExtensionsTests` (updated) | `ISkillInstaller` is no longer registered; `ISkillCopier` resolves to `SkillCopier` |
 
@@ -2981,7 +2981,7 @@ too many Skills, sub-category, withdrawn, deprecated.
 
 #### 6.11.1 What changes
 
-The Skill Sources folder becomes a **fourth built-in Library root**, after Teams, Teammates and Uploads, that
+The Skill Sources folder becomes a **fourth built-in Library root**, after Teams, Agents and Uploads, that
 the Human can read and search but not change. Every write goes through `LibraryFileService`, so the
 rule is enforced in the service and the resolver, never only in the UI. Huddle's own writes into the
 folder (the flows of [§6.12](#612-removing-and-hiding), `log.jsonl`, `hidden.json`) do not pass through
@@ -3005,7 +3005,7 @@ public sealed record LibraryPath(LibraryRoot Root, string RelativePath, string F
 root: it is `true` when `Root.ReadOnly` **or** the resolved `FullPath` lies inside any read-only root.
 That keeps the rule true when a pinned root, a junction or a link reaches into the Skill Sources
 folder, in the way that "the role a resolved path receives follows the RESOLVED location, not the
-root id the caller named" already holds for Teams and Teammates.
+root id the caller named" already holds for Teams and Agents.
 
 #### 6.11.2 `LibraryRootStore`
 
@@ -3016,7 +3016,7 @@ root id the caller named" already holds for Teams and Teammates.
 | Slug reservation | `takenSlugs` (line 218) includes `skill-sources`, so a pinned root named "Skill Sources" becomes `skill-sources-2` |
 | Follows the setting | The store subscribes to `SkillSourcesSettings.Changed`; the handler calls a new `RefreshSkillSources()` that rebuilds the snapshot with the new directory (keeping pinned roots, hidden set and `LoadError`) and raises `RootsChanged` outside the lock. Everything that already listens (`LibraryPanel`, the Library explorer, the Composer picker, `WikiLinkIndex`) repaints |
 | Hide | `SetHidden` accepts `skill-sources` (the guard at line 134 gains it). A hidden root stays in `Roots` and still resolves, like the others |
-| Missing folder | The root stays listed; a listing fails with the existing "isn't available" message. The move creates the folder before any Teammate starts, and `SkillSourcesSettings.SetDir` refuses a folder that does not exist |
+| Missing folder | The root stays listed; a listing fails with the existing "isn't available" message. The move creates the folder before any Agent starts, and `SkillSourcesSettings.SetDir` refuses a folder that does not exist |
 
 `Settings › Library` (`LibraryPanel`) lists the root with the caption *Read only* and no remove or edit
 control, and the **Hide** switch the other built-ins have. Its `G3` note in wireframes.md gains the
@@ -3095,7 +3095,7 @@ A clone outside the folder is not in this root
    [§8.8](#88-writing-skillsmd) describes (the rest of the file is written back byte for byte).
 4. **Every flow is an outcome in a snackbar**, keyed, `Severity.Success` or `Error`, and writes a
    `log.jsonl` line where a Source is known.
-5. **Order is safest first**: Teammates, then the row, then the file, then notes, so a failure leaves
+5. **Order is safest first**: Agents, then the row, then the file, then notes, so a failure leaves
    something re-runnable. The row is removed before its file, so a crash never leaves a row pointing
    at nothing that Huddle itself made.
 
@@ -3109,16 +3109,16 @@ written and no folder is created.
 
 #### 6.12.2 Remove a Pack
 
-Entry: card **⋯** › **Remove**, or **Remove** in `G6`. The Pack's holders are `SkillRegistry.HolderNames(pack)` (a
-Teammate whose `_packs` lists its id).
+Entry: card **⋯** › **Remove**, or **Remove** in `G6`. The Pack's holders are `SkillRegistry.HolderNames(pack)` (an
+Agent whose `_packs` lists its id).
 
 **No holders.** `DialogService.ConfirmAsync(title, message, "Remove", danger: true)`:
 
 | | Text |
 | --- | --- |
 | Title | *Remove "Document skills"?* |
-| Message, file inside the folder | *This removes its row from SKILLS.md and deletes packs\document-skills.skillpack.json from the Skill Sources folder. No Teammate has this Pack. Your AI tool's clone is not touched.* |
-| Message, file outside | *This removes its row from SKILLS.md. The file E:\Repos\skills\packs\x.skillpack.json is outside the Skill Sources folder, so Huddle leaves it where it is. No Teammate has this Pack. Your AI tool's clone is not touched.* |
+| Message, file inside the folder | *This removes its row from SKILLS.md and deletes packs\document-skills.skillpack.json from the Skill Sources folder. No Agent has this Pack. Your AI tool's clone is not touched.* |
+| Message, file outside | *This removes its row from SKILLS.md. The file E:\Repos\skills\packs\x.skillpack.json is outside the Skill Sources folder, so Huddle leaves it where it is. No Agent has this Pack. Your AI tool's clone is not touched.* |
 
 **With holders.** `RemovePackDialog` (`G6a`), title *Remove "Document skills"?*:
 
@@ -3126,36 +3126,36 @@ Teammate whose `_packs` lists its id).
 >
 > **Keep their Skills** — *Their Skills and copies stay exactly as they are. Only the Pack's mark on their cards goes, so it no longer offers an update.*
 >
-> **Remove from Teammates too** — *Also takes off the Skills nobody else gave them, and the Pack's "consult when" phrase. They restart.*
+> **Remove from Agents too** — *Also takes off the Skills nobody else gave them, and the Pack's "consult when" phrase. They restart.*
 >
 > *Either way: the row is removed from SKILLS.md and, if the file is in the Skill Sources folder, the file is deleted. Your AI tool's clone is not touched.*
 
-Buttons: **Cancel**, **Keep their Skills** (outlined), **Remove from Teammates too** (filled,
+Buttons: **Cancel**, **Keep their Skills** (outlined), **Remove from Agents too** (filled,
 `Color.Error`), in that order. Escape cancels.
 
 **Files written or deleted**, in order:
 
 | # | Step | File |
 | --- | --- | --- |
-| 1 | For each holder: **Keep** drops the `_packs` entry only (`PackMembership.DropRecord`), leaving `skills:` and `consult_when:`. **Remove too** calls `PackMembership.Remove` (the same code as the card's chip, so it keeps a Skill the Teammate's role or another Pack provides, and removes the `consultWhenAdds` clause) and restarts the Teammate. Written through `PersonaStore` | `Teammates/<Name>/<Name>.md` |
+| 1 | For each holder: **Keep** drops the `_packs` entry only (`PackMembership.DropRecord`), leaving `skills:` and `consult_when:`. **Remove too** calls `PackMembership.Remove` (the same code as the card's chip, so it keeps a Skill the Agent's role or another Pack provides, and removes the `consultWhenAdds` clause) and restarts the Agent. Written through `PersonaStore` | `Agents/<Name>/<Name>.md` |
 | 2 | Delete the row's lines | `SkillSources/SKILLS.md` |
 | 3 | If the pack file is inside the folder, `File.Delete` | `SkillSources/packs/<id>.skillpack.json` (or wherever it is) |
 | 4 | Remove the id from `packs` in `hidden.json` if present. `hidden.json` is rewritten through a temporary file and a move; no other entry is touched | `SkillSources/hidden.json` |
 | 5 | Append the log line | `sources/<id>/log.jsonl` |
 
-A failure in step 1 stops the flow before step 2 (Teammates already written stay written; running it
+A failure in step 1 stops the flow before step 2 (Agents already written stay written; running it
 again is safe because the operations are idempotent). A failure in 2 stops before 3. A failure in 3 after
 2 leaves an orphan file that a later `R005`-free listing ignores, and the snackbar says *"Removed the
 row, but could not delete {file}. Delete it yourself."* The Skills the Pack named are untouched in
 `Skills/` in both options, and appear on the Skills tab as the plain copies they are (no longer in a Pack).
 
-Log line: event `removed`, `subject` `pack:document-skills`, and `data` `{"row":"packs/document-skills.skillpack.json","fileDeleted":true,"teammates":"kept","holders":["Jane","Omar"]}` where `teammates` is `kept`, `removed` or `none`.
+Log line: event `removed`, `subject` `pack:document-skills`, and `data` `{"row":"packs/document-skills.skillpack.json","fileDeleted":true,"agents":"kept","holders":["Jane","Omar"]}` where `agents` is `kept`, `removed` or `none`.
 
 Snackbar: *"Document skills removed."* (key `skill-removed`).
 
-**Remove from Teammates (Withdrawn).** Card **⋯** › **Remove from Teammates**, shown only for a
-`Withdrawn` Pack with holders. `ConfirmAsync("Remove from 2 Teammates?", "Jane and Omar will lose the Skills no one else gave
-them, and the Pack's "consult when" phrase. They restart. The Pack's row and file stay.", "Remove from Teammates", danger: true)`.
+**Remove from Agents (Withdrawn).** Card **⋯** › **Remove from Agents**, shown only for a
+`Withdrawn` Pack with holders. `ConfirmAsync("Remove from 2 Agents?", "Jane and Omar will lose the Skills no one else gave
+them, and the Pack's "consult when" phrase. They restart. The Pack's row and file stay.", "Remove from Agents", danger: true)`.
 It runs step 1 of **Remove too** only, and logs event `unheld` (`subject` `pack:<id>`, `data.holders`).
 
 #### 6.12.3 Remove a catalog
@@ -3168,7 +3168,7 @@ Entry: Sources tab › catalog row › **⋯** › **Remove**. Packs that name t
 | | Text |
 | --- | --- |
 | Title | *Remove catalog "dotnet-skills"?* |
-| Message | *This removes its row from SKILLS.md and deletes catalogs\dotnet-skills.skillcatalog.json from the Skill Sources folder. Its 106 Skills stop being listed. Teammates keep their copies in Skills/.* then, only when Packs use it: *These Packs name Skills in it and will show Broken until your AI tool fixes them: MSBuild Authoring.* then, when the file is outside: the "leaves it where it is" sentence of [§6.12.2](#6122-remove-a-pack) |
+| Message | *This removes its row from SKILLS.md and deletes catalogs\dotnet-skills.skillcatalog.json from the Skill Sources folder. Its 106 Skills stop being listed. Agents keep their copies in Skills/.* then, only when Packs use it: *These Packs name Skills in it and will show Broken until your AI tool fixes them: MSBuild Authoring.* then, when the file is outside: the "leaves it where it is" sentence of [§6.12.2](#6122-remove-a-pack) |
 
 Files: SKILLS.md row (step 2), the catalog file when inside the folder (step 3), the log line (step 5)
 `removed` (`subject` `catalog:<id>`) with `data` `row`, `fileDeleted`, `skills` (the count), `packsBroken` (their ids).
@@ -3197,9 +3197,9 @@ the action **Undo** (key `skill-hidden`), which removes the entry. The write is 
 move; a malformed `hidden.json` is treated as empty for reading and **not** overwritten: Hide shows
 *"hidden.json could not be read, so nothing was changed. Fix or delete it."* (an `Error` snackbar).
 
-What hiding does: the item leaves the Skills tab, the Packs tab, the Teammate card's Pack chips and
+What hiding does: the item leaves the Skills tab, the Packs tab, the Agent card's Pack chips and
 Skills select, the role form and Build a team's pickers, and `huddle-packs skills`. What it does not do:
-touch a Teammate that holds it (it stays selected and listed on that card), delete anything, or
+touch an Agent that holds it (it stays selected and listed on that card), delete anything, or
 change the item's state in the registry. Hiding is shared across the Huddles that share the folder.
 
 Log line in the item's Source log: event `hidden` or `unhidden`, `subject` `skill:qa-kit` or `pack:<id>`.
@@ -3214,7 +3214,7 @@ Packs and Catalogs row whose pack or catalog file names this Source in `source`)
 | | Text |
 | --- | --- |
 | Title | *Remove Source?* |
-| Message | *This permanently deletes the notes kept for github.com/anthropics/skills: NOTES.md, source.json and log.jsonl.* then *It also removes 2 rows from SKILLS.md (Document skills, anthropics-skills) and deletes their files from the Skill Sources folder.* then *Teammates keep their copies in Skills/. Your AI tool's clone at E:\Clones\anthropics-skills is not touched.* then *If you share this folder with another Huddle, it loses the notes too.* |
+| Message | *This permanently deletes the notes kept for github.com/anthropics/skills: NOTES.md, source.json and log.jsonl.* then *It also removes 2 rows from SKILLS.md (Document skills, anthropics-skills) and deletes their files from the Skill Sources folder.* then *Agents keep their copies in Skills/. Your AI tool's clone at E:\Clones\anthropics-skills is not touched.* then *If you share this folder with another Huddle, it loses the notes too.* |
 
 The `localPath` sentence is left out when `source.json` is unreadable. The rows sentence is left out
 when there are none.
@@ -3235,7 +3235,7 @@ Skill Sources folder, so Huddle did not touch it."*
 **Source removed** chip when `.source.json`'s source no longer exists in the registry. The `hidden.json`
 entries stay. A Source that holds the two Packs of the move (the skills repository) is removed the same way.
 
-Snackbar: *"Source removed. 2 rows and their files are gone; the clone and Teammates' copies are untouched."*
+Snackbar: *"Source removed. 2 rows and their files are gone; the clone and Agents' copies are untouched."*
 
 #### 6.12.6 What is never deleted
 
@@ -3243,7 +3243,7 @@ Snackbar: *"Source removed. 2 rows and their files are gone; the clone and Teamm
 | --- | --- |
 | A clone, wherever it is | Decision 3: where a Skill is cloned does not matter; Huddle did not make it |
 | A pack or catalog file outside the Skill Sources folder | Same; the row goes, the file stays |
-| `Skills/<name>/` copies | Teammates use them; removal of a Pack or Source never reaches a Teammate unless the Human chooses **Remove from Teammates too** |
+| `Skills/<name>/` copies | Agents use them; removal of a Pack or Source never reaches an Agent unless the Human chooses **Remove from Agents too** |
 | `InstallSkillPack.md` and `install-context.json` | Huddle rewrites them on change; they list the new state |
 | `fetched/<name>/` (the move's copies) | They are Skill folders other rows may point at; they are removed only if a Source removal's own rows name them, never by id |
 
@@ -3251,12 +3251,12 @@ Snackbar: *"Source removed. 2 rows and their files are gone; the clone and Teamm
 
 | Test class | Pins |
 | --- | --- |
-| `RemovePackTests` | With no holders the dialog is a confirm with the two message variants; confirming deletes the row's lines and the file inside the folder and leaves a file outside; **Keep their Skills** drops only `_packs` and leaves `skills:` and `consult_when:` byte for byte; **Remove too** removes the Skills no other Pack or role gave and the phrase, and restarts the Teammate; A Teammate write failure stops before SKILLS.md is touched; a file-delete failure after the row is gone says so and leaves SKILLS.md edited; The `hidden.json` id is removed; other entries and a malformed file are untouched; The log line is event `removed`, `subject` `pack:<id>`, with `data` `row`, `fileDeleted`, `teammates` and `holders`; no line and no folder is created when no Source dir exists; **Remove from Teammates** (Withdrawn) leaves the row and file in place |
+| `RemovePackTests` | With no holders the dialog is a confirm with the two message variants; confirming deletes the row's lines and the file inside the folder and leaves a file outside; **Keep their Skills** drops only `_packs` and leaves `skills:` and `consult_when:` byte for byte; **Remove too** removes the Skills no other Pack or role gave and the phrase, and restarts the Agent; An Agent write failure stops before SKILLS.md is touched; a file-delete failure after the row is gone says so and leaves SKILLS.md edited; The `hidden.json` id is removed; other entries and a malformed file are untouched; The log line is event `removed`, `subject` `pack:<id>`, with `data` `row`, `fileDeleted`, `agents` and `holders`; no line and no folder is created when no Source dir exists; **Remove from Agents** (Withdrawn) leaves the row and file in place |
 | `RemoveCatalogTests` | The message names Packs that use the catalog; SKILLS.md and the file inside the folder go; `hidden.json` is unchanged |
 | `RemoveSourceTests` | Rows naming the Source and their in-folder files go, then the Source folder; a clone is untouched; a file outside the folder stays; A reparse point inside `sources/<id>/` is unlinked, its target kept; A Source id that resolves outside `sources/` is refused and nothing is deleted; A failure in step 1 keeps the notes folder |
 | `SkillsMdWriterTests` | Removing a row writes every other byte unchanged (CRLF kept) and retries when the file changed in between |
 | `HiddenStoreTests` | Hide and Unhide round-trip; a malformed file is not overwritten; the write is through a temporary file |
-| `HideTests` | A hidden Skill leaves the Skills tab, the pickers and the role form, but stays selected on a Teammate that holds it; **Undo** restores it |
+| `HideTests` | A hidden Skill leaves the Skills tab, the pickers and the role form, but stays selected on an Agent that holds it; **Undo** restores it |
 | `SkillProvenanceLineTests` (updated) | A copy whose Source no longer exists shows **Source removed** |
 | `SourceLogTests` | Appends one line per call, never rewrites; the line carries the fields of [§7.2](#sourcessourcelogjsonl) (`at`, `computer`, `huddle`, `event`, `subject`) and `computer` is `Team:ComputerName`; concurrent appends do not interleave |
 
@@ -3265,7 +3265,7 @@ Snackbar: *"Source removed. 2 rows and their files are gone; the clone and Teamm
 **Purpose.** Carry what Huddle ships and what the Human has already imported into the new
 format, once, on the first start of this version, by writing exactly the files an AI tool
 following `InstallSkillPack.md` would have written. After it runs there is one way in. It
-changes no Teammate, restarts nobody and opens no network connection.
+changes no Agent, restarts nobody and opens no network connection.
 
 `SkillSourcesMove` lives in `src/Huddle.App/SkillSources/Move/` (namespace
 `Agency.Huddle.App.SkillSources.Move`). It is the only code that reads the old formats. The
@@ -3290,10 +3290,10 @@ catalog ids ([§8.3](#83-resolving-packs-catalogs-and-skills)), the hash rules
 
 | Never | Because |
 | --- | --- |
-| Write, rename or delete any Teammate file (`<Name>.md`, `_packs`, `skills:`, `consult_when:`) | Teammates must not change behind the Human's back. The files in `fetched/` are the bytes Teammates already use, so nothing differs |
-| Restart a Teammate or ask the supervisor for anything | It runs before any Teammate starts, and a no-op to them afterwards |
+| Write, rename or delete any Agent file (`<Name>.md`, `_packs`, `skills:`, `consult_when:`) | Agents must not change behind the Human's back. The files in `fetched/` are the bytes Agents already use, so nothing differs |
+| Restart an Agent or ask the supervisor for anything | It runs before any Agent starts, and a no-op to them afterwards |
 | Open a network connection, or take an `HttpClient` | Decision 2: Huddle makes no network calls for Skills. The move has no constructor parameter that could |
-| Write inside `Skills/` (no new folder, no edit to a `.source.json`) | `Skills/` is what Teammates read. The move reads it and copies out of it |
+| Write inside `Skills/` (no new folder, no edit to a `.source.json`) | `Skills/` is what Agents read. The move reads it and copies out of it |
 | Delete or edit `{DataDir}/SkillPacks/`, `{DataDir}/SkillsCatalog.json` or anything in the skills repository | An older Huddle that opens the same data folder must still work. The move only reads them |
 | Run when `SKILLS.md` exists | Idempotence and sharing (see below) |
 | Stop Huddle from starting | A failed move is logged and retried on the next start; the app runs with an empty registry |
@@ -3302,8 +3302,8 @@ catalog ids ([§8.3](#83-resolving-packs-catalogs-and-skills)), the hash rules
 
 `RegistryWatcher.StartAsync` calls `SkillSourcesMove.RunAsync` as its first step and awaits it,
 then does the first registry read, then starts watching. `SkillRegistry`, `RegistryWatcher` and
-`InstallFileWriter` are registered in that order, all before `BuiltinTeammateSeeder` and
-`DataInitializer` ([§6.14](#614-code-that-goes)), so the move has finished before any Teammate
+`InstallFileWriter` are registered in that order, all before `BuiltinAgentSeeder` and
+`DataInitializer` ([§6.14](#614-code-that-goes)), so the move has finished before any Agent
 starts. Hosted services start in registration order.
 
 `SkillRegistry` must not read the disk in its constructor, because the host constructs every
@@ -3321,9 +3321,9 @@ the later `Changed` event ([§6.5](#65-skillregistry-and-registrywatcher), "Star
   first. A run that stopped earlier left no marker and runs again from the start.
 - **A shared Skill Sources folder** that already holds SKILLS.md, written by another Huddle,
   skips the move on this one. This Huddle's already-imported Skills then have no `fetched/` copy
-  and their catalog entries stay **Not downloaded** here; the Teammates keep their copies in
+  and their catalog entries stay **Not downloaded** here; the Agents keep their copies in
   `Skills/` and nothing shows **Update available**. Only the first Huddle to start moves its
-  Skills. This is acceptable because a copy in `Skills/` is what a Teammate uses, and an AI tool
+  Skills. This is acceptable because a copy in `Skills/` is what an Agent uses, and an AI tool
   can add a path for this computer with **Copy fix prompt**.
 - Deleting `SKILLS.md` by hand makes the move run again. **It never overwrites an existing pack
   file, catalog file, `source.json` or `NOTES.md`**: it skips each one and logs a `moved` line
@@ -3586,7 +3586,7 @@ move only adds rows for them. `E:\Repos\skills` on this computer holds
 `packs/msbuild-authoring.skillpack.json`, `packs/code-review-and-quality.skillpack.json` and
 `NOTES.md`; each Pack names its Skill by `{ "name": "...", "catalog": "..." }` with catalog ids
 `dotnet-skills` and `addyosmani-agent-skills`, and both are `version: "1.0.0"`, which is why
-the `_packs: ['msbuild-authoring@1.0.0']` lines Teammates carry still match.
+the `_packs: ['msbuild-authoring@1.0.0']` lines Agents carry still match.
 
 | `Team:SkillsRepositoryDir` | `packs/<id>.skillpack.json` in it | What the move writes |
 | --- | --- | --- |
@@ -3677,7 +3677,7 @@ For each folder `Skills/<name>/` with a valid `.source.json` (`SkillProvenance.T
    `fetched/` copy, its entry stays **Not downloaded**, `SkillsLeftInPlace` goes up and a
    `moved` line (`action` `skill-left`) says *"edited locally; no pointer written"*. This is deliberate. A
    copy of an edited folder would differ from the recorded hash, so the card would show **Update
-   available** on a Skill nobody updated. The Teammates' copy is untouched and still shows
+   available** on a Skill nobody updated. The Agents' copy is untouched and still shows
    **Modified locally**.
 2. **Copy** the folder, without `.source.json` and `.git`, to
    `.move-<random>/fetched/<name>/`. Then hash the copy. It must equal the record's `sha256`.
@@ -3792,7 +3792,7 @@ user packs, optional skills repository, a `FakeTimeProvider` fixed at 2026-10-17
 | `ShippedPackRowsTests` | No rows when `Team:SkillsRepositoryDir` is empty or missing; otherwise one row per Pack with a `DESK-01:` entry, `sources/local/skills/NOTES.md` copied byte for byte, and both Packs resolving against the fixture copy in `tests/Huddle.Tests/SkillPacks/Fixtures/skills-repo/` (never `E:\Repos\skills` itself) |
 | `UserPacksMoveTests` | The old-schema field map, `source: "local/my-packs"`, versions kept, the three mapping rules, each skip reason, `SkillPacks/` untouched, a user Pack with a shipped id gets the only row |
 | `ImportedSkillsMoveTests` | An imported Skill is copied to `fetched/<name>/` with its recorded hash, `.source.json` and `.git` excluded, and its catalog entry points there; a Skill outside the catalog gets its own catalog, Source and row; a locally modified Skill is left in place with `path` `""` and a `skill-left` line |
-| `MoveBoundaryTests` | Teammate files, `Skills/` and the old inputs are byte-identical after the move; no `HttpClient` in the move's namespace; no Skill shows **Update available** and `msbuild-authoring@1.0.0` still matches |
+| `MoveBoundaryTests` | Agent files, `Skills/` and the old inputs are byte-identical after the move; no `HttpClient` in the move's namespace; no Skill shows **Update available** and `msbuild-authoring@1.0.0` still matches |
 | `MoveOutputChecksTests` | `Checks.Run` over the output finds no error, no `O002` and no `D003`; SKILLS.md round-trips through `RegistryReader` |
 | `MoveReportTests` | The three snackbar texts; `MoveReportStore.TakeUnshown` returns the report once, across a restart |
 | `SkillsMdGoldenTests` | The golden SKILLS.md below |
@@ -3848,7 +3848,7 @@ layout of one catalog file the same way, with `target-authoring` pointed at its 
 - [§6.6](#66-skillcopier-and-sourcejson): keeps reading today's `.source.json` shape.
 - [§7.2](#sourcessourcelogjsonl): the log line shape; and (Appendix B, `LibraryHiddenFolders`) that
   `.move-*` folders are hidden from the Library root like any name that starts with `.`.
-- [§6.10](#610-teammate-card-role-form-and-build-a-team): a `_packs` entry whose Pack is not in the
+- [§6.10](#610-agent-card-role-form-and-build-a-team): a `_packs` entry whose Pack is not in the
   registry shows a card warning (the vision's step 7).
 
 ---
@@ -3867,7 +3867,7 @@ Paths are under `src/Huddle.App/` unless a column says otherwise.
 | --- | --- | --- |
 | `Skills/SkillDownloader.cs`: `SkillDownloader`, `DownloadedSkill`, `DownloadResult` | Nothing in Huddle. The AI tool downloads | Decision 2. The 2-minute `HttpClient` goes with it |
 | `Skills/SkillImporter.cs`: `SkillImporter`, `ISkillImporter`, `ImportPreview`, `ImportOutcome` | `SkillCopier` (copy from a pointer, [§6.6](#66-skillcopier-and-sourcejson)) and the shared `S` checks | The 15-second `HttpClient` that resolved a branch to a commit goes with it |
-| `Teams/ImportingSkillInstaller.cs` | A registry check: a Skill that is not downloaded makes the draft **Needs setup**, and `SkillCopier` copies the rest ([§6.10](#610-teammate-card-role-form-and-build-a-team)) | `Approve & hire` no longer downloads |
+| `Teams/ImportingSkillInstaller.cs` | A registry check: a Skill that is not downloaded makes the draft **Needs setup**, and `SkillCopier` copies the rest ([§6.10](#610-agent-card-role-form-and-build-a-team)) | `Approve & hire` no longer downloads |
 | `ISkillInstaller` in `Teams/HireService.cs` (lines 61 to 69) | `HireService` calls `ISkillCopier` ([§6.6](#66-skillcopier-and-sourcejson)); [§6.10.3](#6103-iskillinstaller-goes-what-replaces-ensureinstalledasync) says how | Line 142 (`EnsureInstalledAsync`) and `InstallSkillsAsync` (line 373) change either way |
 | `Components/Settings/SkillImportDialog.razor` | The prompt dialog `G5` ([§6.9](#69-settings--skills-g4g8-and-its-guidance-text)) | **Import skill** in `SkillsPanel.razor` (line 109) opens `G5` on **Add from a link or folder** |
 | `Skills/SkillsCatalogIndex.cs`: `SkillsCatalogIndex`, `SkillsCatalogEntry` | `SkillRegistry` ([§6.5](#65-skillregistry-and-registrywatcher)): lookups by name, by catalog and by sub-category | `FindById` and `FindByRepoPath` have no caller left. `SubCategoryOf` moves to `SkillRegistry`. The move keeps a private `LegacyCatalogReader` |
@@ -3887,8 +3887,8 @@ Other callers of the deleted types change in place; each is in Appendix B.
 | --- | --- | --- |
 | `Components/Pages/BuildTeam.razor` lines 30 and 31 | `@inject SkillPackStore Packs`, `@inject SkillsCatalogIndex SkillCatalog` | `@inject SkillRegistry Registry` |
 | `Components/Teams/RoleFormDialog.razor` line 13 | `@inject SkillsCatalogIndex SkillCatalog` | `@inject SkillRegistry Registry`; the picker lists every usable and **Not downloaded** Skill |
-| `Components/Shared/TeammateCard.razor` line 1609 | `GetService<SkillPackStore>()?.ForRole(role.RoleId)` | `GetService<SkillRegistry>()?.PacksForRole(role.RoleId)` |
-| `Components/Shared/TeammateCard.razor` line 1711 | `GetService<SkillsCatalogIndex>()` for `SubCategoryOf` | `GetService<SkillRegistry>()` |
+| `Components/Shared/AgentProfileCard.razor` line 1609 | `GetService<SkillPackStore>()?.ForRole(role.RoleId)` | `GetService<SkillRegistry>()?.PacksForRole(role.RoleId)` |
+| `Components/Shared/AgentProfileCard.razor` line 1711 | `GetService<SkillsCatalogIndex>()` for `SubCategoryOf` | `GetService<SkillRegistry>()` |
 | `Teams/HireService.cs` line 106 | A `SkillPackStore packs` constructor parameter | `SkillRegistry registry` and `ISkillCopier copier` |
 | `Teams/RoleHirer.cs` line 31, `Teams/TeamDuplicator.cs` line 30 | A `SkillPackStore packs` constructor parameter | `ISkillAvailability skills` (`SkillRegistry` implements it, [§6.10.1](#6101-the-shape-of-the-change)) |
 | `Teams/CardResolver.cs` lines 105 to 119 | Expands `role.Packs` from a `SkillPackStore` snapshot | The same expansion over an `ISkillAvailability`, reporting **Needs setup** for a missing or not downloaded Pack or Skill |
@@ -3905,11 +3905,11 @@ is on 2026-10-17 and move as earlier edits land, so each row names the statement
 | 233 | `services.AddSingleton<SkillStore>();` | Stays |
 | 235 to 246 | The comment *"Skill import (SK-2 to SK-7)…"* and the registrations of `SkillDownloader` (two `new HttpClient` calls in total, lines 238 and 244), `SkillImporter` and `ISkillImporter` | **Remove all twelve lines**. The solution then constructs no `HttpClient` for Skills |
 | 300 | `AddSingleton<ISkillInstaller, ImportingSkillInstaller>()` | **Remove**; `ISkillCopier` ([§6.6](#66-skillcopier-and-sourcejson)) replaces it. `ServiceCollectionExtensionsTests` line 215 changes with it |
-| before 484 (`AddHostedService<DataInitializer>()`), and so before 494 (`BuiltinTeammateSeeder`) | | **Add**, in this order: `services.AddSingleton<SkillSourcesSettings>();` `services.AddSingleton<IMoveFiles, FileMoveFiles>();` `services.AddSingleton<SkillSourcesMove>();` `services.AddSingleton<MoveReportStore>();` `services.AddSingleton<RegistryWatcher>();` `services.AddHostedService(sp => sp.GetRequiredService<RegistryWatcher>());` |
+| before 484 (`AddHostedService<DataInitializer>()`), and so before 494 (`BuiltinAgentSeeder`) | | **Add**, in this order: `services.AddSingleton<SkillSourcesSettings>();` `services.AddSingleton<IMoveFiles, FileMoveFiles>();` `services.AddSingleton<SkillSourcesMove>();` `services.AddSingleton<MoveReportStore>();` `services.AddSingleton<RegistryWatcher>();` `services.AddHostedService(sp => sp.GetRequiredService<RegistryWatcher>());` |
 | after the `SkillRegistry` line | | **Add**: `services.AddSingleton<ISkillCopier, SkillCopier>();`, `InstallFileWriter` (singleton plus `AddHostedService(sp => …)`, the same pair idiom as `PersonaSupervisor`, **after** `RegistryWatcher`), `SkillPromptBuilder`, `SourceLog`, `RoleLister`, `HiddenStore`, `LibraryRoot` registration for the read-only root ([§6.11](#611-the-skill-sources-library-root)). `SkillSourcesSettings` is registered once, with the hosted-service block above |
 
 `RegistryWatcher` is registered as a singleton **and** a hosted service, as `PersonaSupervisor`
-is, because `TeammateCard` and the Skills panel must reach the very instance that runs (the
+is, because `AgentProfileCard` and the Skills panel must reach the very instance that runs (the
 comment above `PersonaSupervisor` in the file records why a second one flakes). The registration
 order is a requirement: hosted services start in registration order, and the move must finish
 before `PersonaSupervisor` starts. `ServiceCollectionExtensionsTests` gains
@@ -3960,9 +3960,9 @@ hand; **Writer** is what writes it at run time.
 | The move's staging | `SkillSources/.move-<random>/` | Huddle | `SkillSourcesMove`; removed when the move ends, and a stale one at the next start ([§6.13](#613-the-move)) | Nothing; never read as data | Yes, briefly |
 | Copies the move made | `SkillSources/fetched/<name>/` | Huddle (the move) | `SkillSourcesMove`, once | Pointers in the catalog and pack files it wrote | Yes (but see the "Not downloaded" rule for computers that lack the folder) |
 | The clones | Anywhere the AI tool chose | The AI tool | The AI tool | Pointers; `SkillCopier` | No |
-| Copies Teammates use | `Skills/<name>/*`, `Skills/<name>/.source.json` | Huddle | `SkillCopier`; built-in and hand-written Skills are written as today | `SkillStore`, Teammates through `read_skill` | No |
+| Copies Agents use | `Skills/<name>/*`, `Skills/<name>/.source.json` | Huddle | `SkillCopier`; built-in and hand-written Skills are written as today | `SkillStore`, Agents through `read_skill` | No |
 | Copy staging and trash | `Skills/.staging/`, `Skills/.trash/` | Huddle | `SkillCopier`; emptied at start-up | Nothing; `SkillStore.ScanDisk` skips names starting with `.` | No |
-| A Teammate's choices | `_packs`, `skills`, `consult_when` in the Teammate's `.md` | The Human | `TeammateCard`, `HireService`, `SkillCopier`'s callers | `PersonaFrontmatter`, `SkillRegistry` (holder counts) | No |
+| An Agent's choices | `_packs`, `skills`, `consult_when` in the Agent's `.md` | The Human | `AgentProfileCard`, `HireService`, `SkillCopier`'s callers | `PersonaFrontmatter`, `SkillRegistry` (holder counts) | No |
 | Old Packs | `SkillPacks/*.json` | The Human | Nothing after the move | `SkillSourcesMove` once | No |
 | Old catalog override | `SkillsCatalog.json` (user override), embedded `Skills/SkillsCatalog.json` | Human / code | Nothing | `SkillSourcesMove` once | No |
 | Registry snapshot, hash caches, `seen` in memory | `SkillRegistry` | App | `SkillRegistry` | UI, `CardResolver`, `HireService` | No; rebuilt on restart |
@@ -4003,7 +4003,7 @@ Rules shared by every file below:
 | --- | --- | --- | --- |
 | `schemaVersion` | int | Yes | `1` (`P001`) |
 | `id` | string | Yes | Id rule; the file is named `<id>.skillpack.json`; unique across SKILLS.md (`P002`, `P003`, `P004`) |
-| `version` | string | Yes | Free text: a version or a short commit. Compared for equality with the Teammate's `_packs` entry |
+| `version` | string | Yes | Free text: a version or a short commit. Compared for equality with the Agent's `_packs` entry |
 | `title` | string | Yes | Shown on the card |
 | `source` | string | Yes | The Source id (rule above), e.g. `github.com/anthropics/skills`; names `sources/<source>/` |
 | `appliesTo` | string[] | No (warning `P006` if empty) | Role ids; each must be a role in this Huddle (`P005`) |
@@ -4186,7 +4186,7 @@ missing {field}. Start Huddle once so it writes it again, then run this again."*
     { "name": "read-skill", "origin": null, "sha256": null, "builtIn": true },
     { "name": "docx", "origin": "https://github.com/anthropics/skills/tree/dbd4588/skills/docx", "sha256": "9f2c1a0e7b4d5c6a8e3f1b2d4c5a6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f", "builtIn": false }
   ],
-  "appTools": ["propose_sprint", "propose_teammates", "validate_teammate"],
+  "appTools": ["propose_sprint", "propose_agents", "validate_agent"],
   "written": "2026-10-17T16:25:00+02:00"
 }
 ```
@@ -4207,8 +4207,8 @@ Its size is bounded by the roles and Skills the machine has; unlike the appendix
 ```
 
 Missing file means nothing is hidden. Hiding never edits a pack or catalog file. Hiding is not
-removing: a hidden item still resolves, still passes or fails checks and can still be held by a
-Teammate; it just stops showing in lists and cannot be picked for a new hire.
+removing: a hidden item still resolves, still passes or fails checks and can still be held by an
+Agent; it just stops showing in lists and cannot be picked for a new hire.
 
 #### `{DataDir}/skill-sources.json`
 
@@ -4258,10 +4258,10 @@ to touch it.
 | --- | --- | --- | --- |
 | `row-appeared`, `row-broken`, `row-recovered` | `SkillRegistry` after a rebuild | `pack:` or `catalog:` | none |
 | `copied` | `SkillCopier` | `skill:` | `sha256`, `outcome` (`Created`, `Replaced`) |
-| `update-applied` | The update card (`G7`) | `pack:` or `skill:` | `teammates` (names restarted) |
+| `update-applied` | The update card (`G7`) | `pack:` or `skill:` | `agents` (names restarted) |
 | `hidden`, `unhidden` | Hide and Unhide | `pack:` or `skill:` | none |
-| `unheld` | **Remove from Teammates** | `pack:` | `holders` (names) |
-| `removed` | Remove a Pack or catalog | `pack:` or `catalog:` | `row` (the Local path as written), `fileDeleted` (bool), `teammates` (`kept`, `removed` or `none`, Packs only), `holders`, `skills` (count, catalogs only), `packsBroken` (ids, catalogs only) |
+| `unheld` | **Remove from Agents** | `pack:` | `holders` (names) |
+| `removed` | Remove a Pack or catalog | `pack:` or `catalog:` | `row` (the Local path as written), `fileDeleted` (bool), `agents` (`kept`, `removed` or `none`, Packs only), `holders`, `skills` (count, catalogs only), `packsBroken` (ids, catalogs only) |
 | `moved` | The move | `pack:`, `catalog:`, `skill:` or `file:` | none; `action` is one of `catalog-split`, `duplicate-omitted`, `skill-pointed`, `skill-left`, `pack-moved`, `pack-skipped`, `pack-replaced`, `pack-row`, `pack-missing`, `completed` |
 
 ```json
@@ -4299,14 +4299,14 @@ which also lists the Engineering Guide rows that must be added with the code; th
 8. **The Human chooses.** On a card the Human picks the Pack. `SkillCopier` copies each Skill
    from its pointer into `Skills/.staging/`, checks the copy, writes `.source.json`, swaps it into
    `Skills/<name>/` and logs `copied` ([§6.6](#66-skillcopier-and-sourcejson)).
-9. **Only then the Teammate changes.** `skills:`, `consult_when:` and `_packs:` in the
-   Teammate's `.md` are rewritten; the Teammate restarts. `SkillStore` sees the new folder and
+9. **Only then the Agent changes.** `skills:`, `consult_when:` and `_packs:` in the
+   Agent's `.md` are rewritten; the Agent restarts. `SkillStore` sees the new folder and
    raises `SkillsChanged`.
-10. **Holders update.** `SkillRegistry` recounts holders from the Teammate files and republishes
+10. **Holders update.** `SkillRegistry` recounts holders from the Agent files and republishes
     the same resolved registry with new counts; the card shows **In use by 1**.
 11. **Later, the AI tool updates the clone.** Back to step 2. The pointer folder's hash now
     differs from `.source.json`'s `sha256`, so the Pack and its holders show **Update available**
-    ([§8.4](#84-noticing-an-update)); nothing in `Skills/` or any Teammate file changes until
+    ([§8.4](#84-noticing-an-update)); nothing in `Skills/` or any Agent file changes until
     the Human applies it.
 12. **Removing** deletes inside the Skill Sources folder only, rewrites SKILLS.md by deleting a
     row's lines ([§8.8](#88-writing-skillsmd)), and ends at step 2 again. Clones and the copies in
@@ -4428,7 +4428,7 @@ the root of its own clone. Normalising line endings matters here, because two co
 sharing one Skill Sources folder may check the same commit out with different line endings.
 
 **What the hash is compared with.** Huddle holds **one copy per Skill**, `Skills/<name>/`,
-shared by every Teammate that holds it. Its `.source.json` records the hash of the copy as it
+shared by every Agent that holds it. Its `.source.json` records the hash of the copy as it
 was made (`sha256`, as today). Two comparisons follow:
 
 | Compared | Differs means | Shown as |
@@ -4438,20 +4438,20 @@ was made (`sha256`, as today). Two comparisons follow:
 
 When both hold, `G7` warns that applying the update discards the local edits.
 
-**For a Pack**, a Teammate's Pack is out of date when any of these hold:
+**For a Pack**, an Agent's Pack is out of date when any of these hold:
 
-- the Pack file's `version` differs from the version in the Teammate's `_packs` entry;
-- the Pack lists a Skill the Teammate's `skills:` does not hold, or no longer lists one it
+- the Pack file's `version` differs from the version in the Agent's `_packs` entry;
+- the Pack lists a Skill the Agent's `skills:` does not hold, or no longer lists one it
   added;
 - any of its Skills shows **Update available**.
 
 > [!IMPORTANT]
 > This corrects the vision's update card (`G7`). Because a Skill's copy is shared, applying an
-> update to a **Skill's files** changes it for every Teammate that holds it, at once and with
+> update to a **Skill's files** changes it for every Agent that holds it, at once and with
 > no restart (Skill bodies are read live, [Skills spec §4](Huddle.Skills-Specifications.md#4-design-principles)
-> principle 7). `G7` therefore lists those Teammates as **affected**, without checkboxes. The
+> principle 7). `G7` therefore lists those Agents as **affected**, without checkboxes. The
 > checkboxes stay only for **membership** changes: Skills added to or removed from the Pack,
-> its `consult_when` phrase and the `_packs` version, which are per Teammate and do restart it.
+> its `consult_when` phrase and the `_packs` version, which are per Agent and do restart it.
 
 **When hashing runs.** Hashing a folder reads it in full, so it runs only for the Skill
 folders under a changed path ([§8.5](#85-watching-pointers)), at start-up, on **Reload**, and
@@ -4518,8 +4518,8 @@ rename is in `InstallSkillPack.md` §2 as a request, never relied on.
    (`SkillStore.ScanDisk` gains a rule to skip folder names that start with `.`, which the
    Skill name rule could never accept anyway).
 
-Only after every Skill of a choice has been swapped does Huddle change the Teammate's file, so
-a Teammate never names a Skill whose copy failed.
+Only after every Skill of a choice has been swapped does Huddle change the Agent's file, so
+an Agent never names a Skill whose copy failed.
 
 ### 8.7 Configuration Huddle reads
 
@@ -4537,7 +4537,7 @@ folder that does not exist is refused when it is set. Changing it re-reads every
 writes `InstallSkillPack.md` again; it never moves files.
 
 **Existing keys that stay.** `Team:Acp:SkillsDir` (default `Skills`) is still where the copies
-Teammates use live. There are no other Skills keys today, and `TeamPaths.SkillPacksDir` and
+Agents use live. There are no other Skills keys today, and `TeamPaths.SkillPacksDir` and
 `TeamPaths.SkillsCatalogFile` are read only by the move.
 
 **These keys need rows** in the [Engineering Guide](Huddle.EngineeringGuide.md)'s `Team:`
@@ -4591,7 +4591,7 @@ replaces only what changed, so readers never see a mix.
 
 | Worker | Kind | Runs | Must not |
 | --- | --- | --- | --- |
-| `SkillSourcesMove` | Called once by `RegistryWatcher.StartAsync`, before the first full read | At start-up, only when SKILLS.md is missing | Run after any Teammate has started; touch a Teammate file |
+| `SkillSourcesMove` | Called once by `RegistryWatcher.StartAsync`, before the first full read | At start-up, only when SKILLS.md is missing | Run after any Agent has started; touch an Agent file |
 | `RegistryWatcher` | `IHostedService`, one per process | From start-up to shutdown | Block the UI thread; throw out of its loop (a failed read is logged and the previous snapshot kept) |
 | Poll timer | Inside `RegistryWatcher`, `TimeProvider`-based | Every 30 s | Hash a folder whose write time and count are unchanged |
 | `InstallFileWriter` | Subscribes to `SkillRegistry.Changed` and to role and Skill changes | Coalesced, at most once a second | Write when nothing in its output changed (it compares before writing) |
@@ -4623,14 +4623,14 @@ name with a dagger (†) is a test this table adds: it is not in a component sec
 list, and the Appendix A task in brackets writes it. A bare check code in the last column means
 `RegistryChecksTests`, `SkillFolderChecksTests` or `ContextTests` already raise and clear that code
 ([§6.3](#63-the-checks)). Two rules hold for every row: Huddle never throws for bad content
-([§6.1](#61-huddleskillpacks-library-overview) rule 2), and a Teammate keeps working, because it
+([§6.1](#61-huddleskillpacks-library-overview) rule 2), and an Agent keeps working, because it
 reads the copy in `Skills/`, never the pointer ([§4](#4-design-principles) principle 6).
 
 ### 12.1 The registry file and the folder around it
 
 | Situation | What happens | Pinned by |
 | --- | --- | --- |
-| **SKILLS.md missing after the move**, or deleted by hand while Huddle runs | The next rebuild publishes a snapshot whose only finding is `R001`; no row survives. The Packs tab shows `G4d`; **Reload** stays. Cards and drafts treat every Pack as unknown. Teammates are untouched. At the **next start** `RegistryWatcher.StartAsync` calls `SkillSourcesMove` before its first full read, and the move runs again because SKILLS.md is its marker; it writes SKILLS.md and any missing file and never overwrites a file that exists ([§6.13](#613-the-move)) | `R001` in `RegistryChecksTests`; `Rebuild_SkillsMdDeleted_PublishesR001AndNoRows` † (P12); `RunAsync_SkillsMdDeletedByHand_RunsAgain` † (P16) |
+| **SKILLS.md missing after the move**, or deleted by hand while Huddle runs | The next rebuild publishes a snapshot whose only finding is `R001`; no row survives. The Packs tab shows `G4d`; **Reload** stays. Cards and drafts treat every Pack as unknown. Agents are untouched. At the **next start** `RegistryWatcher.StartAsync` calls `SkillSourcesMove` before its first full read, and the move runs again because SKILLS.md is its marker; it writes SKILLS.md and any missing file and never overwrites a file that exists ([§6.13](#613-the-move)) | `R001` in `RegistryChecksTests`; `Rebuild_SkillsMdDeleted_PublishesR001AndNoRows` † (P12); `RunAsync_SkillsMdDeletedByHand_RunsAgain` † (P16) |
 | **Empty or garbage SKILLS.md**: 0 bytes, plain prose, binary, invalid UTF-8 | No `Packs` or `Catalogs` heading, so `R001`; invalid bytes decode to `U+FFFD` and never throw. A table without a `Local path` column is `R002` and its rows are not read. Another table is ignored ([§8.1](#81-reading-skillsmd) step 3) | `Read_EmptyText_R001` †, `Read_BinaryGarbage_R001AndNoThrow` †, `Read_TableWithoutLocalPath_R002` † (all P2) |
 | **SKILLS.md over 1 MB** | `R011`; the file is not parsed, and the previous good rows are **not** kept. The check reads the length first, so a runaway write cannot stall the watcher | `Read_OverOneMegabyte_R011AndNoRows` † (P2); `R011` in `RegistryChecksTests` |
 | **SKILLS.md half written** by the AI tool when Huddle reads | Rows that parse are used. A pack, catalog or `source.json` file that fails to parse and was written in the last 2 seconds is not reported; the watcher reads it again 2 seconds later and only a second failure is **Broken** (U9, [§8.6](#86-reading-and-copying-while-the-ai-tool-writes)) | `Resolve_ParseFailureWithinTwoSeconds_NotReportedYet` † (P5); `Run_ParseFailureAfterRetry_IsBroken` † (P6) |
@@ -4660,27 +4660,27 @@ reads the copy in `Skills/`, never the pointer ([§4](#4-design-principles) prin
 | **A file looks like it holds a secret** | `X001`, **Broken**. The message shows at most four characters of the match, never the secret. Binary files are skipped; a regex that times out counts as no match | `SecretScanTests` (every test) |
 | **A file is locked** (the AI tool or an editor holds it open) | An `IOException` from the reader is treated as the file being absent: the item gets an error finding *"cannot read: {reason}"* with the code of the check that needed it, and the next watcher event or poll retries. `huddle-packs` is unaffected by locks it can read around | `Resolve_FileCannotBeRead_FindingNotThrow` † (P5); `Validate_WorksWhileFilesAreLocked` |
 | **A `source` id is malformed** (`..` in it, a leading `/`, a drive such as `C:`, upper case, an empty segment; a malformed or hostile file) | A `source` id is `host/owner/repo` or `local/name`: lowercase letters, digits, `.` and `-` in each segment, and `/` between segments; no `..`, no leading `/`, no drive. Anything else is `O001` (error) with *"source id is not valid"*, and the resolver reads no file for it, so a Source folder can never lie outside `sources/`. Remove Source applies the same rule | `SourceId_DotDot_O001AndNothingRead` †, `SourceId_InvalidShapes_AreO001` † (both P5); `RemoveSource_IdResolvesOutside_Refused` |
-| **A `source.json` marks the Source Withdrawn** (U13) | Its Packs and Skills show a red chip and are not offered to new hires; `CardResolver` makes a `SkillSetupItem` with no prompt, so a draft stays **Needs setup**. Teammates that hold it keep working and are flagged on the card, with **Remove from this Teammate** | `CardResolver_WithdrawnSkill_NeedsSetup`; `TeammateCardPackTests` (Withdrawn held); `MemberWarningsTests` (`ForSources`) |
+| **A `source.json` marks the Source Withdrawn** (U13) | Its Packs and Skills show a red chip and are not offered to new hires; `CardResolver` makes a `SkillSetupItem` with no prompt, so a draft stays **Needs setup**. Agents that hold it keep working and are flagged on the card, with **Remove from this Agent** | `CardResolver_WithdrawnSkill_NeedsSetup`; `AgentProfileCardPackTests` (Withdrawn held); `MemberWarningsTests` (`ForSources`) |
 | **The Source is deprecated or has moved** | **Deprecated** is still choosable and shows its reason. `moved` shows the new Source and **Copy prompt** to add it | `SourcesTabTests` (deprecated, moved) |
 
-### 12.3 What a Teammate holds
+### 12.3 What an Agent holds
 
 | Situation | What happens | Pinned by |
 | --- | --- | --- |
-| **A Teammate's `_packs` names a Pack no longer in SKILLS.md** | The Teammate keeps working. Its card shows a warning: *Pack "x" is no longer in SKILLS.md. {Name} keeps its Skills.* with **Remove from this Teammate**. **Spec gap:** §6.13 promises this warning and §6.10.7 does not define it; task P25 adds `MemberWarnings.ForSources` the case "Pack not in registry". Not **Update available**, because there is nothing to compare | `ForSources_PackNotInRegistry_Warns` † (P25); `TeammateCardPackTests.PackNotInRegistry_ShowsWarning` † (P25) |
-| **A Teammate holds a Pack at a version the Pack no longer has** | The Pack and the Teammate show **Update available** (`_packs` version differs). Nothing changes until the Human applies `G7` | `PackUpdatePlannerTests` (version change) |
+| **An Agent's `_packs` names a Pack no longer in SKILLS.md** | The Agent keeps working. Its card shows a warning: *Pack "x" is no longer in SKILLS.md. {Name} keeps its Skills.* with **Remove from this Agent**. **Spec gap:** §6.13 promises this warning and §6.10.7 does not define it; task P25 adds `MemberWarnings.ForSources` the case "Pack not in registry". Not **Update available**, because there is nothing to compare | `ForSources_PackNotInRegistry_Warns` † (P25); `AgentProfileCardPackTests.PackNotInRegistry_ShowsWarning` † (P25) |
+| **An Agent holds a Pack at a version the Pack no longer has** | The Pack and the Agent show **Update available** (`_packs` version differs). Nothing changes until the Human applies `G7` | `PackUpdatePlannerTests` (version change) |
 | **Applying an update, and a Skill's copy was edited** | `G7` warns and the button reads **Update and replace my edits**. The pointer hash differs from `.source.json` and the copy hash differs too, so both chips show | `UpdateDialogTests` (Modified locally) |
-| **Save on a card when a Skill cannot be copied** | The Teammate file is not written; the card lists the Skills that are not ready with **Copy prompt**; **Cancel** copies nothing. The same holds in Build a team: **Approve & hire** waits, and `PrepareHiresAsync` stops before `CreateTeam` | `TeammateCardSaveTests`; `BuildTeamSetupTests` |
+| **Save on a card when a Skill cannot be copied** | The Agent file is not written; the card lists the Skills that are not ready with **Copy prompt**; **Cancel** copies nothing. The same holds in Build a team: **Approve & hire** waits, and `PrepareHiresAsync` stops before `CreateTeam` | `AgentProfileCardSaveTests`; `BuildTeamSetupTests` |
 | **A Skill becomes ready while Build a team is open** | The page listens to `SkillRegistry.Changed`, flips the draft to Ready and enables **Approve & hire** by itself | `BuildTeamSetupTests` (Changed flips the draft) |
-| **A hidden Skill that a Teammate holds** | It leaves lists and pickers but stays selected on that Teammate; **Undo** restores it | `HideTests` |
+| **A hidden Skill that an Agent holds** | It leaves lists and pickers but stays selected on that Agent; **Undo** restores it | `HideTests` |
 | **`hidden.json` is corrupt** | Reading treats it as empty, so nothing is hidden, and a warning is logged. **Hide** and **Unhide** do not overwrite it: *"hidden.json could not be read, so nothing was changed. Fix or delete it."* Remove Pack leaves it alone | `HiddenStoreTests` (malformed not overwritten); `RemovePackTests` (malformed untouched) |
 
 ### 12.4 Copying into `Skills/`
 
 | Situation | What happens | Pinned by |
 | --- | --- | --- |
-| **The source keeps changing while it is copied** | Wait for 2 quiet seconds (up to 30), hash before and after, three attempts, then *"The files for {name} kept changing…"* (`Unstable`). The staging folder is deleted; no Teammate changes | `CopyAsync_SourceChangesDuringCopy_RetriesThenReportsUnstable`; `CopyAsync_RecentWrite_WaitsForQuietUpTo30Seconds` |
-| **Copying fails midway (disk full, permission)** | `Io`, *"Huddle could not write {name} to Skills/: {reason}"*. The staging folder is removed in a `finally`; if it cannot be, the start-up sweep takes it. `Skills/<name>/` is untouched because the swap was not reached. The other Skills of the batch are still attempted. `CopyResult.Ok` is false, so the caller writes no Teammate file | `CopyAsync_DiskFullDuringCopy_ReportsIoAndRemovesStaging` † (P13); `CopyAsync_OneOfThreeFails_OthersAreCopied_OkIsFalse` |
+| **The source keeps changing while it is copied** | Wait for 2 quiet seconds (up to 30), hash before and after, three attempts, then *"The files for {name} kept changing…"* (`Unstable`). The staging folder is deleted; no Agent changes | `CopyAsync_SourceChangesDuringCopy_RetriesThenReportsUnstable`; `CopyAsync_RecentWrite_WaitsForQuietUpTo30Seconds` |
+| **Copying fails midway (disk full, permission)** | `Io`, *"Huddle could not write {name} to Skills/: {reason}"*. The staging folder is removed in a `finally`; if it cannot be, the start-up sweep takes it. `Skills/<name>/` is untouched because the swap was not reached. The other Skills of the batch are still attempted. `CopyResult.Ok` is false, so the caller writes no Agent file | `CopyAsync_DiskFullDuringCopy_ReportsIoAndRemovesStaging` † (P13); `CopyAsync_OneOfThreeFails_OthersAreCopied_OkIsFalse` |
 | **The swap fails between the two renames** | The old folder is put back at once | `CopyAsync_SwapFails_RestoresOldFolder` |
 | **Huddle crashes mid-swap** | `Skills/<name>/` is missing and `Skills/.trash/<name>-*` holds the old copy. At the next start the sweep first restores every `Skills/.trash/<name>-*` whose `Skills/<name>/` is missing, then empties the rest of `.trash`, then empties `.staging` ([§6.5](#65-skillregistry-and-registrywatcher) start-up, [§6.6](#66-skillcopier-and-sourcejson)) | `StartAsync_TrashHoldsSkillAndFolderMissing_RestoresItBeforeSweep` † (P13) |
 | **Huddle crashes mid-move** | No SKILLS.md, so the move runs again. `.move-*` folders older than 10 minutes are deleted whether or not SKILLS.md exists; a younger one is kept (another Huddle may be running). Files already placed are overwritten by the same bytes. SKILLS.md is the last `Place` and uses `overwrite: false` | `RunAsync_CrashWhilePlacing_LeavesNoSkillsMd`; `RunAsync_AfterCrash_NextRunCompletesWithSameTree`; `RunAsync_OrphanStagingOlderThanTenMinutes_IsDeleted` |
@@ -4718,7 +4718,7 @@ reads the copy in `Skills/`, never the pointer ([§4](#4-design-principles) prin
 | Situation | What happens | Pinned by |
 | --- | --- | --- |
 | **Remove a Pack whose file is outside the Skill Sources folder** | The row goes; the file stays; the dialog says so | `RemovePackTests` (file outside) |
-| **A Teammate write fails during Remove** | The flow stops before SKILLS.md is touched; running it again is safe | `RemovePackTests` (Teammate write failure) |
+| **An Agent write fails during Remove** | The flow stops before SKILLS.md is touched; running it again is safe | `RemovePackTests` (Agent write failure) |
 | **A file delete fails after the row is gone** | *"Removed the row, but could not delete {file}. Delete it yourself."* An orphan file is ignored | `RemovePackTests` (file-delete failure) |
 | **Remove a catalog that Packs use** | The dialog names the Packs; they show **Broken** (`P009`) until the AI tool fixes them; `hidden.json` is not pruned | `RemoveCatalogTests` |
 | **A write reaches the Skill Sources folder through the Library** (a pinned root, a junction) | `LibraryPath.ReadOnly` is true when the resolved path lies inside any read-only root; every write returns the refusal and touches no file | `LibraryPathResolverReadOnlyTests`; `LibraryFileServiceReadOnlyTests` |
@@ -4730,7 +4730,7 @@ reads the copy in `Skills/`, never the pointer ([§4](#4-design-principles) prin
 | --- | --- | --- |
 | Files per Skill, size per Skill | 200 files, 5 MB (`S003`) | `SkillFolderChecks` |
 | `SKILL.md` description | Error over 500, warning over 300 | `S002`, `S012` |
-| A `.md` file Teammates read | 64 KB (`S007` warns) | `S007` |
+| A `.md` file Agents read | 64 KB (`S007` warns) | `S007` |
 | `NOTES.md` | 16 KB (`O004` warns) | `O004` |
 | Findings in a fix prompt | 20, 300 characters each | `SkillPromptBuilder.Fix` |
 | Appendix rows in `InstallSkillPack.md` | A 200, B 300, C 100, D 100; the context file has no cap | `InstallFileWriter` |
@@ -4765,7 +4765,7 @@ The Human has never added anything. Huddle has started once, the move has run, a
 | 12 | Huddle | `SkillsPanel`, `PacksTab`, `PackBar`, `PackCard`; `SkillArrivalWatcher` | Subscribers repaint through `InvokeAsync`. The new `PackCard` wears **New** (`DisplayState`: Available, nobody holds it, key in `NewKeys`). The status line reads *1 Source · 1 new · …*. `SkillArrivalWatcher` sees the Pack go from absent to usable and shows *Document skills is ready* with **Show** | none |
 | 13 | Human | `NavigationManager` | **Show** goes to `/settings/skills?view=packs&highlight=document-skills`; the card scrolls into view and flashes (`.search-hit-flash`). The whole path from step 7 takes under 1.5 seconds | none |
 | 14 | Human | `PacksTab` | Leaves the tab. `SkillRegistry.MarkSeenAsync` merges the keys into `seen` through `SkillSourcesSettings` (temporary file and a move), keeping `dir`. The chip is gone next time | W `{DS}/skill-sources.json` |
-| 15 | Human | `TeammateCard` of a bookkeeper | The card's Pack chips come from `PacksForRole("bookkeeper")` and now include **Document skills** (U2 starts here: toggling it edits the card in memory; **Save** runs `ISkillCopier.EnsureAvailableAsync`, which copies the four Skills into `Skills/` through `.staging`, then `PersonaStore.Update` writes `skills:`, `consult_when:` and `_packs:`, and the Teammate restarts) | W `{DS}/Skills/<name>/…`, `.source.json`; W the Teammate's `.md` |
+| 15 | Human | `AgentProfileCard` of a bookkeeper | The card's Pack chips come from `PacksForRole("bookkeeper")` and now include **Document skills** (U2 starts here: toggling it edits the card in memory; **Save** runs `ISkillCopier.EnsureAvailableAsync`, which copies the four Skills into `Skills/` through `.staging`, then `PersonaStore.Update` writes `skills:`, `consult_when:` and `_packs:`, and the Agent restarts) | W `{DS}/Skills/<name>/…`, `.source.json`; W the Agent's `.md` |
 
 A failure at any step leaves something re-runnable. A pack file that fails to parse inside the
 2-second window is read again, not reported (step 9). A Pack with a missing Skill shows **Not
@@ -4783,11 +4783,11 @@ Precondition: the Human has given Document skills to Jane and Omar; their Skills
    into `RebuildScope` with the touched Skill folders and the changed pack file.
    `SkillRegistry.RebuildAsync` re-hashes only those folders. A Skill whose `PointerSha256`
    differs from `InstalledSha256` is `UpdateAvailable`, and so are its Pack and the holders'
-   cards. **No Teammate file and no copy in `Skills/` has changed** (U3).
+   cards. **No Agent file and no copy in `Skills/` has changed** (U3).
 3. **The Human reviews.** **Review update** opens `UpdateDialog` (`G7`). `PackUpdatePlanner.Plan`
-   reads `Current`, `HolderNames` and the Teammate files and returns a `PackUpdatePlan`:
-   `FileChanges` (shared, no checkboxes, with the affected Teammates), `Added` and `Removed`
-   Skills, the `consult_when` change, and one `TeammateChange` per Teammate whose membership
+   reads `Current`, `HolderNames` and the Agent files and returns a `PackUpdatePlan`:
+   `FileChanges` (shared, no checkboxes, with the affected Agents), `Added` and `Removed`
+   Skills, the `consult_when` change, and one `AgentChange` per Agent whose membership
    changes. A Skill whose copy was edited adds the warning and changes the button to **Update
    and replace my edits**.
 4. **Files first.** **Update 2** calls `ISkillCopier.CopyAsync` for every changed and every
@@ -4795,9 +4795,9 @@ Precondition: the Human has given Document skills to Jane and Omar; their Skills
    hash again, run the S checks on the copy, write `.source.json`, rename the old folder to
    `.trash`, move the staging folder in, delete the trash. One failure stops here and writes
    nothing else; the dialog shows the message.
-5. **Then Teammates.** For each checked Teammate, `PackMembership` rewrites `skills:`,
-   `consult_when:` and `_packs:`; `PersonaStore.Update` writes the file and the Teammate restarts.
-   Unchecked Teammates keep their membership. A Teammate whose Skill only changed files is
+5. **Then Agents.** For each checked Agent, `PackMembership` rewrites `skills:`,
+   `consult_when:` and `_packs:`; `PersonaStore.Update` writes the file and the Agent restarts.
+   Unchecked Agents keep their membership. An Agent whose Skill only changed files is
    not restarted: Skill bodies are read live.
 6. **Everything settles.** `SkillStore` raises `SkillsChanged` (500 ms); `SkillRegistry`
    rebuilds the touched names, `InstalledSha256` now equals `PointerSha256`, the chips leave
@@ -4808,9 +4808,9 @@ Precondition: the Human has given Document skills to Jane and Omar; their Skills
 | Step | Component | Files |
 | --- | --- | --- |
 | 2 | `RegistryWatcher`, `SkillRegistry`, `SkillFolderHash` | R clone folders, pack file |
-| 3 | `PackUpdatePlanner`, `UpdateDialog` | R Teammate files |
+| 3 | `PackUpdatePlanner`, `UpdateDialog` | R Agent files |
 | 4 | `SkillCopier` | W `Skills/.staging`, `Skills/<name>/`, `.source.json`; `.trash` emptied |
-| 5 | `PackMembership`, `PersonaStore`, `PersonaSupervisor` | W Teammate `.md` files |
+| 5 | `PackMembership`, `PersonaStore`, `PersonaSupervisor` | W Agent `.md` files |
 | 6 | `SourceLog`, `InstallFileWriter` | W `log.jsonl`, `InstallSkillPack.md`, `install-context.json` |
 
 ---
@@ -4825,14 +4825,14 @@ These are the design decisions this spec adds, each with the alternative it beat
 | D-1 | Parse SKILLS.md with Markdig, finding tables by their level-2 heading | A line-by-line regex parser | Markdig already ships with the Library and handles escapes, code spans and alignment rows; a hand parser would disagree with how the file renders |
 | D-2 | A computer entry needs a 2-to-15-character name followed by `": "` | Splitting on the first colon; a different separator such as `=>` | A drive colon is followed by `\`, never a space, and drive letters are one character. Keeping `NAME: path` keeps the cell readable |
 | D-3 | JSON `path` is a string or an object of computer names, with `"*"` for the rest | Always an object; a separate `paths` field | Most Skills have one path. A string stays the common case, and the object form is the same idea as in SKILLS.md |
-| D-4 | Reuse `SkillFolderHash` over the whole folder, skipping `.git` | Hash only the top-level `.md` files Teammates read | The copy holds the whole folder, so the hash must cover it, or a copy could differ from its source unnoticed. A change in `scripts/` showing **Update available** is accurate |
-| D-5 | One shared copy per Skill; `G7` lists file-change holders without checkboxes | A copy per Teammate | `Skills/<name>/` is flat and shared today, and `read_skill` reads it live. A per-Teammate copy would change `SkillStore`, `read_skill` and every Persona's resolution for little gain |
+| D-4 | Reuse `SkillFolderHash` over the whole folder, skipping `.git` | Hash only the top-level `.md` files Agents read | The copy holds the whole folder, so the hash must cover it, or a copy could differ from its source unnoticed. A change in `scripts/` showing **Update available** is accurate |
+| D-5 | One shared copy per Skill; `G7` lists file-change holders without checkboxes | A copy per Agent | `Skills/<name>/` is flat and shared today, and `read_skill` reads it live. A per-Agent copy would change `SkillStore`, `read_skill` and every Persona's resolution for little gain |
 | D-6 | Watch roots, capped at 32, with a 30-second poll for the rest | One watcher per Skill folder; polling only | 263 catalog Skills could mean 263 watchers. Polling alone makes a new row take up to 30 s to appear |
 | D-7 | Do not report a parse failure on a file written in the last 2 s | Requiring the AI tool to write atomically | Huddle cannot enforce what an AI tool does; asking for atomic writes in `InstallSkillPack.md` helps but cannot be relied on |
 | D-8 | Copy through a staging folder, hashing source before and after, then swap | Copying in place; locking the source | A half-copied Skill must never be visible to `SkillStore`, and Huddle cannot lock files another process writes |
 | D-9 | Catalog ids unique across the Catalogs table; the first row wins | Qualifying references with the row's path | Pack files must work on every computer; an id does, a path does not |
 | D-10 | Skill names unique across the whole registry | Namespacing by Source | `Skills/<name>/` and `skills:` lines are flat. Namespacing would change Persona files and the Skill Index |
-| D-11 | A Pack is chosen whole; one missing Skill makes it **Not downloaded** | Choosing what is there and leaving the rest | `_packs` records a version; a Teammate holding part of a Pack at that version would read as up to date when it is not |
+| D-11 | A Pack is chosen whole; one missing Skill makes it **Not downloaded** | Choosing what is there and leaving the rest | `_packs` records a version; an Agent holding part of a Pack at that version would read as up to date when it is not |
 | D-12 | `huddle-packs` reads a context file Huddle writes | Referencing `Huddle.App` to read the hiring pool and Skills | `Huddle.App` is a web app; referencing it would make the command large and slow, and tie it to ASP.NET |
 | D-13 | Framework-dependent, beside the app, not on `PATH` | Self-contained; a global tool | The runtime is already a requirement of Huddle, and `InstallSkillPack.md` gives the full command line |
 | D-14 | `Team:SkillsRepositoryDir` read only by the move; empty means no rows | A permanent setting on the Sources tab; writing rows with no usable path | After the move the repository is a Source like any other, kept up to date by the AI tool. A row with no path for this computer would be an error, not a pointer |
@@ -4906,7 +4906,7 @@ afterthought.
 
 | # | Task | Depends on | Failing tests first | Done when |
 | --- | --- | --- | --- | --- |
-| P0 | **The successor ADR.** Write `docs/adr/0059-skills-and-packs-are-fetched-by-the-humans-ai-tool.md` (numbered 0058 when written; renumbered 0059 on 2026-10-18 because a Theme ADR took 0058). It marks [ADR-0043](adr/0043-imported-skills-are-pinned-by-commit-and-hash.md) "Partly superseded by 0059": pinning, hashing and review stay; the download goes. It decides, one clause each: (1) Huddle makes no network call for Skills, and builds no `HttpClient` for them; (2) the Human's AI tool fetches, guided by `InstallSkillPack.md`, and records pointers in SKILLS.md; (3) Huddle reads pointers and checks what they lead to (`huddle-packs` and Huddle run the same checks); (4) there is no approval step, the checks are the gate; (5) a Teammate uses a copy in `Skills/`, never a clone, and the copy is made before the Teammate file changes; (6) only built-in Skills grant App Tools (`S011`); (7) one copy per Skill name, shared by every holder, so a file update reaches all holders at once and membership changes are per Teammate (§8.4); (8) the first row wins every tie; (9) Huddle deletes only inside the Skill Sources folder and `Skills/.staging` and `.trash`; (10) the shipped Packs move to the skills repository and the shipped catalog is split by the one-time move, 263 Skills, not 265; (11) the Skill Sources folder is a read-only Library root, which amends [ADR-0027](adr/0027-the-library-sees-only-configured-roots.md); (12) `Team:SkillsRepositoryDir` is a configuration key read once by the move, not a UI setting; (13) the prompts the Human pastes are configuration ([ADR-0007](adr/0007-model-facing-text-is-configuration.md)). Edit ADR-0043's status line in the same commit | None | None. A document: reviewed by the owner of the vision before any other task starts | ADR merged with status `accepted`; `docs/Index.md` has its row and `Check-DocIndex.ps1` passes; 0043's status line points at it |
+| P0 | **The successor ADR.** Write `docs/adr/0059-skills-and-packs-are-fetched-by-the-humans-ai-tool.md` (numbered 0058 when written; renumbered 0059 on 2026-10-18 because a Theme ADR took 0058). It marks [ADR-0043](adr/0043-imported-skills-are-pinned-by-commit-and-hash.md) "Partly superseded by 0059": pinning, hashing and review stay; the download goes. It decides, one clause each: (1) Huddle makes no network call for Skills, and builds no `HttpClient` for them; (2) the Human's AI tool fetches, guided by `InstallSkillPack.md`, and records pointers in SKILLS.md; (3) Huddle reads pointers and checks what they lead to (`huddle-packs` and Huddle run the same checks); (4) there is no approval step, the checks are the gate; (5) an Agent uses a copy in `Skills/`, never a clone, and the copy is made before the Agent file changes; (6) only built-in Skills grant App Tools (`S011`); (7) one copy per Skill name, shared by every holder, so a file update reaches all holders at once and membership changes are per Agent (§8.4); (8) the first row wins every tie; (9) Huddle deletes only inside the Skill Sources folder and `Skills/.staging` and `.trash`; (10) the shipped Packs move to the skills repository and the shipped catalog is split by the one-time move, 263 Skills, not 265; (11) the Skill Sources folder is a read-only Library root, which amends [ADR-0027](adr/0027-the-library-sees-only-configured-roots.md); (12) `Team:SkillsRepositoryDir` is a configuration key read once by the move, not a UI setting; (13) the prompts the Human pastes are configuration ([ADR-0007](adr/0007-model-facing-text-is-configuration.md)). Edit ADR-0043's status line in the same commit | None | None. A document: reviewed by the owner of the vision before any other task starts | ADR merged with status `accepted`; `docs/Index.md` has its row and `Check-DocIndex.ps1` passes; 0043's status line points at it |
 | P1 | **Projects and frozen contracts** ([§5.3](#53-contracts-fixed-before-any-stream-starts)). **Announce first**: adding `src/Huddle.SkillPacks` and `src/Huddle.Packs` to `Huddle.slnx` and the two rows in the `CLAUDE.md` "Two projects, one build root" table are shared root changes. Then: create both projects (`Directory.Build.props` applies; Markdig is already a `PackageVersion`, so `Directory.Packages.props` should not change; if it must, announce that too); add `ProjectReference`s from `Huddle.App` and `tests/Huddle.Tests`; write the types of §6.1 and §6.2 as compiling records, enums and signatures whose bodies throw `NotImplementedException` (`Finding`, `Severity`, `CheckContext`, `RoleInfo`, `InstalledSkill`, `CheckOptions`, `CheckResult`, `IFileReader`, `Registry`, `RegistryRow`, `PathEntries`, the three file records, `ResolvedRegistry`, `PackEntry`, `SkillEntry`, `ItemState`); write `CheckCatalog` with all codes of §6.3 (R001 to X002), their severities, titles and fix hints, and the `Retired` list; write the App seams `ISkillCopier`, `ISkillAvailability`, `SkillAvailability`, `SkillSetupItem`, `RegistrySnapshot`, `RegistryChange`, `RebuildScope` and a `SkillRegistry` whose members throw. No separate test project: the suite lives in `tests/Huddle.Tests/SkillPacks/` | P0 | `CheckCatalogTests`: `All_Codes_MatchPinnedList`, `Retired_Codes_AreNeverInAll`, `All_Entries_HaveHintAndTitle`, `Codes_AreUniqueAndWellFormed`. A reflection test, `Library_ReferencesOnlyMarkdig` †, fails when `Huddle.SkillPacks` references `Huddle.App`, `Huddle.Contracts` or an ASP.NET assembly | `dotnet build Huddle.slnx` green with both projects; the four tests green; the announcement is in the PR description and in the project's tracker; `Check-All.ps1` green. **Contracts are frozen**: a later change to a name in §5.3 needs the owner's yes |
 
 ### A.3 Stream L — The library
@@ -4933,13 +4933,13 @@ afterthought.
 | --- | --- | --- | --- | --- |
 | P10 | **Configuration and small stores** ([§8.7](#87-configuration-huddle-reads), [§8.8](#88-writing-skillsmd), [§6.12](#612-removing-and-hiding)): the four `TeamOptions` keys; `SkillSourcesSettings` (`dir`, `seen`, one writer, `Changed`); `HiddenStore`; `SourceLog`; `SkillsMdWriter` (remove a row's lines; retry); `SkillsMdTemplate` | P1 | `SkillSourcesSettingsTests`: `SetDir_MissingFolder_Refused` †, `MarkSeen_KeepsDirInSkillSourcesJson`, `SkillSourcesJson_Unreadable_TreatedAsAbsent` †, `Dir_ConfigurationKey_UsedWhenNoFile`. `HiddenStoreTests`: `Hide_Unhide_RoundTrip`, `MalformedFile_NotOverwritten`, `Write_IsThroughTemporaryFile`. `SourceLogTests`: `Append_NeverRewrites_OneLinePerCall`, `Append_Concurrent_NoInterleave`, `Line_HasAtComputerHuddleEventSubject`. `SkillsMdWriterTests`: `RemoveRow_WritesEveryOtherByteUnchanged_CrlfKept`, `RemoveRow_FileChangedInBetween_Retries` | Tests green; `TeamOptionsTests` pin the four defaults |
 | P11 | **Skill store and provenance** ([§6.3](#63-the-checks), [§6.6](#66-skillcopier-and-sourcejson), [§7.2](#72-schemas)): `SkillStore.ScanDisk` skips folders starting with `.`; ignores `tools:` where `.source.json` exists; `SkillProvenance` gains `schemaVersion`, `source`, `origin`, `copiedFrom`; `SkillProvenanceLine` shows the Source and **Source removed**; `SkillOrigin` | P1 | `ScanDisk_DotFolders_AreSkipped` †, `All_FolderWithSourceJson_IgnoresToolsLine` †, `All_FolderWithoutSourceJson_IsYours` †, `Provenance_NewFile_IsReadByOldReaderShape`, `Provenance_OldFile_ReadsWithNewFieldsNull`, `SkillProvenanceLineTests`: a copy whose Source no longer exists shows **Source removed** | Tests green; every existing `SkillStoreTests` still green |
-| P12 | **Registry service and watcher** ([§6.5](#65-skillregistry-and-registrywatcher), [§8.5](#85-watching-pointers), [§9](#9-incremental-vs-full-processing), [§10](#10-background-workers--async-components)): `SkillRegistry`, `RegistryWatcher`, watch roots, the 32 cap, polling, scope merging, the `seen` baseline, holders, `BuildCheckContext`, start-up order, DI registration (`RegistryWatcher` before `BuiltinTeammateSeeder`); the `SnapshotBuilder` helper for UI tests. Aligns §6.5 start-up step 2.2 with §6.6 (restore `.trash` before the sweep) and §10 with §6.13 (the watcher calls the move) | P5, P6, P7, P8, P10, P11 | `SkillRegistryTests` (the 17 in §6.5), `RegistryWatcherTests`: `WatchRoots_33Roots_CreatesAtMost32AndPollsTheRest` †, `WatchRoots_NestedRoots_Collapse` †, `WatchRoots_NetworkRoot_IsPolled` †, `Watcher_Error_MovesRootToPollingAndFullReread` †, `Poll_PathAppearsLater_TriggersRebuild` †, `Rebuild_Throws_KeepsPreviousSnapshot` †, `Rebuild_BurstOfScopes_MergesIntoOneFollowUp` †, `Rebuild_SkillsMdDeleted_PublishesR001AndNoRows` †, `StartAsync_DirMissing_CreatesIt` †, `StartAsync_SkillSourcesDirOnMissingDrive_EmptySnapshotAndSourcesTabNamesFolder` †. `ServiceCollectionExtensionsTests`: `AddTeamServices_RegistryWatcherStartsBeforePersonaSupervisor` | Tests green; a `FakeTimeProvider` drives the 500 ms, 2 s and 30 s rules with no sleep; a manual run with 50 downloaded Skills meets the §11 numbers |
+| P12 | **Registry service and watcher** ([§6.5](#65-skillregistry-and-registrywatcher), [§8.5](#85-watching-pointers), [§9](#9-incremental-vs-full-processing), [§10](#10-background-workers--async-components)): `SkillRegistry`, `RegistryWatcher`, watch roots, the 32 cap, polling, scope merging, the `seen` baseline, holders, `BuildCheckContext`, start-up order, DI registration (`RegistryWatcher` before `BuiltinAgentSeeder`); the `SnapshotBuilder` helper for UI tests. Aligns §6.5 start-up step 2.2 with §6.6 (restore `.trash` before the sweep) and §10 with §6.13 (the watcher calls the move) | P5, P6, P7, P8, P10, P11 | `SkillRegistryTests` (the 17 in §6.5), `RegistryWatcherTests`: `WatchRoots_33Roots_CreatesAtMost32AndPollsTheRest` †, `WatchRoots_NestedRoots_Collapse` †, `WatchRoots_NetworkRoot_IsPolled` †, `Watcher_Error_MovesRootToPollingAndFullReread` †, `Poll_PathAppearsLater_TriggersRebuild` †, `Rebuild_Throws_KeepsPreviousSnapshot` †, `Rebuild_BurstOfScopes_MergesIntoOneFollowUp` †, `Rebuild_SkillsMdDeleted_PublishesR001AndNoRows` †, `StartAsync_DirMissing_CreatesIt` †, `StartAsync_SkillSourcesDirOnMissingDrive_EmptySnapshotAndSourcesTabNamesFolder` †. `ServiceCollectionExtensionsTests`: `AddTeamServices_RegistryWatcherStartsBeforePersonaSupervisor` | Tests green; a `FakeTimeProvider` drives the 500 ms, 2 s and 30 s rules with no sleep; a manual run with 50 downloaded Skills meets the §11 numbers |
 | P13 | **Copier** ([§6.6](#66-skillcopier-and-sourcejson), [§8.6](#86-reading-and-copying-while-the-ai-tool-writes)): `SkillCopier`, `ISkillCopier` (`CopyAsync`, `EnsureAvailableAsync`), the swap, retries, `.source.json` writing, the start-up repair of `.trash` | P12 | The 21 tests of §6.6, then `CopyAsync_DiskFullDuringCopy_ReportsIoAndRemovesStaging` † and `StartAsync_TrashHoldsSkillAndFolderMissing_RestoresItBeforeSweep` † | Tests green; the copier takes no `HttpClient` (reflection test shared with the move) |
 | P14 | **Install files** ([§6.7](#67-installskillpackmd-and-the-context-file)): `InstallFileWriter` (hosted, after the watcher), the front matter, the body from `installSkillPack.body`, appendices A to D with their caps, the context file, coalescing, retry | P12, P8, P15 (prompt key) | `InstallFileWriterTests`, `InstallAppendixTests`, `InstallContextFileTests` and `InstallBodyDefaultTests` (§6.7) | Tests green; registration order test green; the default body is at most 9,600 bytes raw and the rendered fixed part at most 20,480 |
 | P15 | **Prompts** ([§6.8](#68-prompts-the-human-pastes), [Appendix C](#appendix-c--default-prompt-texts)): the seven `PromptDefinition`s, `prompts.default.json` (regenerate with `agents/scripts/Regenerate-PromptDefaults.ps1`), `PromptFieldFactory.GroupOrder`, `SkillPromptBuilder`, `PathFormats`, `PathFormat`, `PathFormatChoice` | P1 | `SkillPromptBuilderTests` and `PathFormatsTests` (the 28 in §6.8); `PromptCatalogTests.All_HasExpectedPromptCount` 95 to 102; `PromptDefaultsFileTests`; `Prompt_BodyOverrideMissingValidateCommand_IsRejected` | Tests green; `PromptGoldenTests` do not move |
 | P16 | **The move** ([§6.13](#613-the-move)): `SkillSourcesMove`, `IMoveFiles`, `LegacyCatalogReader`, `LegacyPackReader`, `CatalogSplitter`, `MoveStaging`, `MoveNotes`, `MoveReportStore`; the golden files. Announce nothing: all inside `Huddle.App` | P5, P6, P7, P10, P11 | Every class of §6.13 in order: `MoveDetectionTests`, `MoveCrashSafetyTests`, `CatalogSplitTests`, `ShippedPackRowsTests`, `UserPacksMoveTests`, `ImportedSkillsMoveTests`, `MoveBoundaryTests`, `MoveOutputChecksTests`, `MoveReportTests`, `SkillsMdGoldenTests`. Plus `RunAsync_SkillsMdDeletedByHand_RunsAgain` †, `RunAsync_OtherHuddleWinsRace_DiscardsStaging` †, `RunAsync_ExistingCatalogWithPaths_KeepsPathsOnRerun` † | Tests green; `Move_FullFixture_ProducesNoErrorFindings`; the golden `SKILLS.expected.md` reviewed by a person, not just accepted |
 | P17 | **Read-only Library root** ([§6.11](#611-the-skill-sources-library-root)): `LibraryRoot.ReadOnly`, `LibraryRootKind.SkillSources`, `LibraryPath.ReadOnly`, resolver, `LibraryProtection`, every writer in `LibraryFileService`, `LibraryRoots.DefaultDocument`, `LibraryHiddenFolders`, `LibraryPanel` caption | P10 | `LibraryRootStoreSkillSourcesTests`, `LibraryPathResolverReadOnlyTests`, `LibraryFileServiceReadOnlyTests`, `LibraryProtectionTests`, `LibraryExplorerSkillSourcesTests`, `LibraryPanelTests` (updated) | Tests green; the review checklist grep of §6.11.3 has every hit either Huddle's own write or guarded |
-| P18 | **Hire path and cards' logic** ([§6.10](#610-teammate-card-role-form-and-build-a-team) 1 to 3, 8): `ISkillAvailability` on `SkillRegistry`, `SkillSetupCheck`, `SkillSetupText`, `CardResolver` over the registry, `HireService.EnsureSkillsAsync`, `RoleHirer`, `TeamDuplicator`, `PackMembership.Add/Remove/DropRecord` extracted from `TogglePack` | P12, P13 | `CardResolverTests` (the four in §6.10.9), `SkillSetupCheckTests`, `HireServiceStartTests`, `SkillCopierEnsureTests`, `PackMembershipTests`, `CardResolver_WithdrawnSkill_NeedsSetup` | Tests green; existing `Reasons`-reading tests green unchanged |
+| P18 | **Hire path and cards' logic** ([§6.10](#610-agent-card-role-form-and-build-a-team) 1 to 3, 8): `ISkillAvailability` on `SkillRegistry`, `SkillSetupCheck`, `SkillSetupText`, `CardResolver` over the registry, `HireService.EnsureSkillsAsync`, `RoleHirer`, `TeamDuplicator`, `PackMembership.Add/Remove/DropRecord` extracted from `TogglePack` | P12, P13 | `CardResolverTests` (the four in §6.10.9), `SkillSetupCheckTests`, `HireServiceStartTests`, `SkillCopierEnsureTests`, `PackMembershipTests`, `CardResolver_WithdrawnSkill_NeedsSetup` | Tests green; existing `Reasons`-reading tests green unchanged |
 | P22 | **Removing and hiding** ([§6.12](#612-removing-and-hiding)): the remove-Pack, remove-catalog, remove-Source and unhold flows, the hide commands and snackbars; `RemovePackDialog` (`G6a`) | P10, P12, P18 | `RemovePackTests`, `RemoveCatalogTests`, `RemoveSourceTests` (including `RemoveSource_IdResolvesOutside_Refused` and `RemoveSource_ReparsePointInside_IsUnlinkedTargetKept`), `HiddenStoreTests`, `HideTests`, `SkillsMdWriterTests` | Tests green; nothing outside `{SS}` and `Skills/.staging` or `.trash` is ever deleted (a directory-snapshot test) |
 
 ### A.6 Stream U — The user interface
@@ -4953,9 +4953,9 @@ wireframe row in `docs/engineering/wireframes.md` in the same commit (P29 lists 
 | P19 | **Shell and guidance text** ([§6.9.1](#691-what-it-is) to [§6.9.4](#694-state-chips), [§6.9.12](#6912-guidance-text)): `SkillsPanel` with three tabs, `SkillsTab` (virtualised grid), `SkillStateChips`, `SkillStateText`, `SkillProblemText`, `SkillGuide`, the Settings badge | P1, P12 (helper) | `SkillsPanelTests`, `SkillStateChipsTests`, `SkillStateTextTests`, `SkillsTabTests`, `GuidanceTextTests` (intros, button sentences, every `CheckCatalog.All` code composes with its hint and the code last, no "simply", "just" or "easy"), `SkillsTab_FiveThousandRows_RendersWindowOnly` † | Tests green; no colour-only state; every icon-only control has an `aria-label` |
 | P20 | **Packs tab** ([§6.9.5](#695-the-bar-the-cards-and-reload), [§6.9.6](#696-the-empty-state-g4d), [§6.9.9](#699-the-new-chip-and-the-snackbar), [§6.9.10](#6910-details-g6)): `PackBar`, `PackCard`, `PackEmptyState`, `PackDetailsDialog`, `SkillArrivalWatcher`, `ReadAgoText`, the New chip and `MarkSeenAsync` on leaving | P19 | `PackCardTests`, `PackBarTests`, `ReadAgoTextTests`, `PackEmptyStateTests`, `PackDetailsDialogTests`, `SkillArrivalWatcherTests`, `SkillsTabSeenTests`, `BrokenCard_ShowsCopyFixPrompt` † | Tests green |
 | P21 | **Prompt dialog and in-app help** ([§6.9.7](#697-the-prompt-dialog-g5-g5a-g5b), [§6.9.12](#6912-guidance-text)): `AddWithAiDialog`, `CopyPathMenu`, `PromptClipboard`, `SkillsHelpDialog` (`G8`); `Import skill` opens `G5` | P15, P19, P27 | `AddWithAiDialogTests` (the seven in §6.9.13), `SkillsHelpDialogTests`, `SkillsHelpTextTests` (every help paragraph is found word for word in the User Guide) | Tests green; the dialog writes nothing |
-| P23 | **Update card** ([§6.9.8](#698-the-update-card-g7)): `PackUpdatePlanner`, `PackUpdatePlan`, `UpdateDialog` | P13, P18, P19 | `PackUpdatePlannerTests`, `UpdateDialogTests` (the four in §6.9.13) | Tests green; copy-before-Teammate order pinned |
+| P23 | **Update card** ([§6.9.8](#698-the-update-card-g7)): `PackUpdatePlanner`, `PackUpdatePlan`, `UpdateDialog` | P13, P18, P19 | `PackUpdatePlannerTests`, `UpdateDialogTests` (the four in §6.9.13) | Tests green; copy-before-Agent order pinned |
 | P24 | **Sources tab and the move's snackbar** ([§6.9.3](#693-the-three-tabs), [§6.13](#613-the-move)): `SourcesTab`, `SourceRow`, the Folder block, Skills repository (read only), `MainLayout` shows `MoveReportStore.TakeUnshown()` once | P16, P19, P22 | `SourcesTabTests`, `MoveReportTests` (the three texts, `ReportStore_TakeUnshown_ReturnsOnceThenNull`), `MainLayoutMoveSnackbarTests` † | Tests green |
-| P25 | **Teammate card, role form, Build a team, warnings** ([§6.10](#610-teammate-card-role-form-and-build-a-team) 4 to 7): `PackChip`, copy on **Save**, **Find more Packs for {Role}**, the Skills select and its collapsed list, `RoleFormDialog`, `BuildTeam` (Needs setup, Copy prompt, `CanApprove`, `PrepareHiresAsync`), `MemberWarnings.ForSources` including the Pack-not-in-registry case | P18, P19, P21 | `TeammateCardPackTests`, `TeammateCardSaveTests`, `TeammateCardSkillsTests`, `RoleFormDialogTests`, `BuildTeamSetupTests`, `MemberWarningsTests`, `ForSources_PackNotInRegistry_Warns` †, `TeammateCardPackTests.PackNotInRegistry_ShowsWarning` † | Tests green; **Save** copies before `PersonaStore.Update` |
+| P25 | **Agent card, role form, Build a team, warnings** ([§6.10](#610-agent-card-role-form-and-build-a-team) 4 to 7): `PackChip`, copy on **Save**, **Find more Packs for {Role}**, the Skills select and its collapsed list, `RoleFormDialog`, `BuildTeam` (Needs setup, Copy prompt, `CanApprove`, `PrepareHiresAsync`), `MemberWarnings.ForSources` including the Pack-not-in-registry case | P18, P19, P21 | `AgentProfileCardPackTests`, `AgentProfileCardSaveTests`, `AgentProfileCardSkillsTests`, `RoleFormDialogTests`, `BuildTeamSetupTests`, `MemberWarningsTests`, `ForSources_PackNotInRegistry_Warns` †, `AgentProfileCardPackTests.PackNotInRegistry_ShowsWarning` † | Tests green; **Save** copies before `PersonaStore.Update` |
 
 ### A.7 Stream R — Removals
 
@@ -4970,7 +4970,7 @@ Every page added, renamed or deleted under `docs/` changes `docs/Index.md` in th
 
 | # | Task | Depends on | Done when |
 | --- | --- | --- | --- |
-| P27 | **User Guide** (`docs/Huddle.UserGuide.md`): rewrite "Giving Teammates Skills" (near line 1726) and "Importing a Skill" (near line 1782) for SKILLS.md, **Add with your AI tool**, **Not downloaded**, **Update available**, **Needs setup**. Add the subsections "The Skills tab", "The Packs tab" and "The Sources tab", each at most 250 words: they are the text `SkillsHelpDialog` shows and `SkillsHelpTextTests` compares word for word | P0 | The three subsections exist and match `SkillGuide.HelpFor`; no external link; `Check-DocIndex.ps1` passes |
+| P27 | **User Guide** (`docs/Huddle.UserGuide.md`): rewrite "Giving Agents Skills" (near line 1726) and "Importing a Skill" (near line 1782) for SKILLS.md, **Add with your AI tool**, **Not downloaded**, **Update available**, **Needs setup**. Add the subsections "The Skills tab", "The Packs tab" and "The Sources tab", each at most 250 words: they are the text `SkillsHelpDialog` shows and `SkillsHelpTextTests` compares word for word | P0 | The three subsections exist and match `SkillGuide.HelpFor`; no external link; `Check-DocIndex.ps1` passes |
 | P28 | **Engineering docs**: `docs/Huddle.EngineeringGuide.md` gains rows for `Team:SkillSourcesDir`, `Team:ComputerName`, `Team:SkillsRepositoryDir`, `Team:HuddlePacksPath` and replaces `SkillPacks/` in the storage table with `SkillSources/`, `InstallSkillPack.md`, `install-context.json`, `skill-sources.json`, plus the seven prompt keys and the new prompt count; `docs/engineering/language.md` (**Pack** says it comes from SKILLS.md; adds **Source**, **Skill pointer**, **Skill Sources folder**, **Catalog**); `code-map.md` (rows for the two projects and folders, removes the deleted types); `known-limits.md` (the move runs on the first Huddle only; the one-letter computer name) | P0; keys with P10; rest with P26 | The keys table matches `TeamOptions` (a doc check reads both); `Check-DocIndex.ps1` passes |
 | P29 | **`docs/engineering/wireframes.md`**: add `G4`, `G4a` to `G4f`, `G5`, `G5a`, `G5b`, `G6`, `G6a`, `G7`, `G8` as [§6.9.11](#6911-wireframes-proposed-rows-for-docsengineeringwireframesmd) lists; update the notes of `G2a`, `G3`, `B9b`, `B9c`, `B9e` and `B10`; draw the badges in the Settings figure. Done with the UI task that builds each, not after | P19 to P25 | Every code appears in the page and in the component that draws it; the page's own checks pass |
 | P30 | **Manual tests**: new `docs/engineering/manual-tests/skill-packs.md` (SKILLPACKS-01 add with a real AI tool; -02 choose a Pack; -03 update; -04 move on a real data folder; -05 two computers sharing one folder; -06 unplugged drive; -07 Withdrawn); `manual-tests/skills.md` replaces its import steps with a link to the new script; `manual-tests.md` lists it. Run `agents/scripts/Check-ManualTests.ps1` | P24, P25 | The checker passes; a person has run SKILLPACKS-04 on a copy of a real `App_Data` and recorded the result |
@@ -4980,7 +4980,7 @@ Every page added, renamed or deleted under `docs/` changes `docs/Index.md` in th
 
 | # | Task | Depends on | Failing tests first | Done when |
 | --- | --- | --- | --- | --- |
-| P32 | **End-to-end and release check.** A test double of the AI tool (`FakeAiTool`) follows `InstallSkillPack.md` by writing files and running `Program.Run`, then the real watcher and registry react. Run the whole of [§13](#13-end-to-end-flow) | All | `SkillPacksEndToEndTests`: `U1_AiToolAddsPack_PackIsNewAndSnackbarShown`, `U2_ChoosePack_CopiesThenChangesTeammate`, `U3_PointerChanges_ShowsUpdateAvailable_NothingElseChanges`, `U4_ApplyUpdate_CopiesFilesThenMembership`, `U5_FirstStart_MoveWritesSixCatalogs263Skills_NothingNew`, `U9_HalfWrittenPackFile_NoBrokenFlash`, `U13_WithdrawnSource_BlocksNewHire_HoldersKeepWorking`. Then `HuddlePacksParity`: for the output of the move, the library's `Checks.Run` and `huddle-packs validate` agree | `Check-All.ps1` green; `./test-health.ps1` passes with an empty `DataDir` (the watcher must not throw at process start); SKILLPACKS-01 to -07 run and recorded; the move reviewed against a copy of a real data folder |
+| P32 | **End-to-end and release check.** A test double of the AI tool (`FakeAiTool`) follows `InstallSkillPack.md` by writing files and running `Program.Run`, then the real watcher and registry react. Run the whole of [§13](#13-end-to-end-flow) | All | `SkillPacksEndToEndTests`: `U1_AiToolAddsPack_PackIsNewAndSnackbarShown`, `U2_ChoosePack_CopiesThenChangesAgent`, `U3_PointerChanges_ShowsUpdateAvailable_NothingElseChanges`, `U4_ApplyUpdate_CopiesFilesThenMembership`, `U5_FirstStart_MoveWritesSixCatalogs263Skills_NothingNew`, `U9_HalfWrittenPackFile_NoBrokenFlash`, `U13_WithdrawnSource_BlocksNewHire_HoldersKeepWorking`. Then `HuddlePacksParity`: for the output of the move, the library's `Checks.Run` and `huddle-packs validate` agree | `Check-All.ps1` green; `./test-health.ps1` passes with an empty `DataDir` (the watcher must not throw at process start); SKILLPACKS-01 to -07 run and recorded; the move reviewed against a copy of a real data folder |
 
 ### A.10 Order of work for one person
 
@@ -5032,7 +5032,7 @@ reviewer sees one rename, not a deletion and an addition.
 | `src/Huddle.App/Components/Settings/Skills/SkillsTab.razor`, `PacksTab.razor`, `PackBar.razor`, `SourcesTab.razor`, `SourceRow.razor` | `G4`, `G4a` to `G4b`, `G4e`, `G4f`: the three tabs, each with its `SettingsIntro` and **Learn more** ([§6.9](#69-settings--skills-g4g8-and-its-guidance-text)) |
 | `src/Huddle.App/Components/Settings/Skills/PackCard.razor`, `PackEmptyState.razor`, `PackDetailsDialog.razor`, `UpdateDialog.razor`, `RemovePackDialog.razor`, `AddWithAiDialog.razor`, `CopyPathMenu.razor`, `SkillStateChips.razor`, `SkillsHelpDialog.razor` | `G4c`, `G4d`, `G6`, `G7`, `G6a`, `G5`, `G5b`, the state chips with their hover text, and the in-app help (`G8`) |
 | `src/Huddle.App/Components/Layout/SkillArrivalWatcher.cs` | The "ready" snackbar |
-| `src/Huddle.App/Components/Shared/PackChip.razor` | One Pack chip on a Teammate card ([§6.10](#610-teammate-card-role-form-and-build-a-team)) |
+| `src/Huddle.App/Components/Shared/PackChip.razor` | One Pack chip on an Agent card ([§6.10](#610-agent-card-role-form-and-build-a-team)) |
 | `src/Huddle.App/Teams/PackMembership.cs`, `SkillSetupCheck.cs`, `SkillSetupText.cs`, `ISkillAvailability.cs` | The pure rules for adding and removing a Pack's Skills, the **Needs setup** check and its sentences, and the registry seam `CardResolver` takes |
 | `src/Huddle.App/Components/Settings/Skills/ReadAgoText.cs` | "SKILLS.md read 1 minute ago" |
 | `src/Huddle.App/Library/LibraryProtection.cs` | The read-only root guard ([§6.11](#611-the-skill-sources-library-root)) |
@@ -5080,7 +5080,7 @@ reviewer sees one rename, not a deletion and an addition.
 | `src/Huddle.App/Skills/SkillProvenance.cs` | `.source.json` gains the Source and origin; still reads today's shape |
 | `src/Huddle.App/Skills/SkillOrigin.cs` | Describes a Skill by Source and origin as well as repository and path |
 | `src/Huddle.App/Teams/TeamPaths.cs` | `SkillPacksDir` and `SkillsCatalogFile` summaries say they are read only by the move |
-| `src/Huddle.App/Teams/HireService.cs` | `SkillPackStore` becomes `SkillRegistry`; `ISkillInstaller` and lines 142 and 373 per [§6.10](#610-teammate-card-role-form-and-build-a-team) |
+| `src/Huddle.App/Teams/HireService.cs` | `SkillPackStore` becomes `SkillRegistry`; `ISkillInstaller` and lines 142 and 373 per [§6.10](#610-agent-card-role-form-and-build-a-team) |
 | `src/Huddle.App/Teams/RoleHirer.cs`, `Teams/TeamDuplicator.cs` | `SkillPackStore` becomes `SkillRegistry` |
 | `src/Huddle.App/Teams/CardResolver.cs` | Expands `role.Packs` from the registry; reports **Needs setup** |
 | `src/Huddle.App/Teams/MemberWarnings.cs` | Sub-category lookup moves to `SkillRegistry` |
@@ -5089,7 +5089,7 @@ reviewer sees one rename, not a deletion and an addition.
 | `src/Huddle.App/Components/Pages/Settings.razor` | Passes the problem count to the Skills row of the section menu (`G2a`) |
 | `src/Huddle.App/Components/Pages/BuildTeam.razor` | Lines 30 and 31 inject `SkillRegistry`; `PrepareHiresAsync` sets `skillsBlocked` from not-downloaded Skills; draft cards show **Needs setup** |
 | `src/Huddle.App/Components/Teams/RoleFormDialog.razor` | Line 13 injects `SkillRegistry`; the Skill picker marks **Not downloaded** with **Copy prompt** |
-| `src/Huddle.App/Components/Shared/TeammateCard.razor` | Lines 1609 and 1711 use `SkillRegistry`; Pack chips (391 to 402) and `TogglePack` (1594 to 1656) copy before changing the Teammate; **Find more Packs for {Role}**; **Update available** |
+| `src/Huddle.App/Components/Shared/AgentProfileCard.razor` | Lines 1609 and 1711 use `SkillRegistry`; Pack chips (391 to 402) and `TogglePack` (1594 to 1656) copy before changing the Agent; **Find more Packs for {Role}**; **Update available** |
 | `src/Huddle.App/Components/Shared/SkillProvenanceLine.razor` | Shows the Source, and **Source removed** |
 | `src/Huddle.App/Components/Layout/MainLayout.razor` | Shows the move's snackbar once |
 | `src/Huddle.App/Library/LibraryRoot.cs`, `LibraryRootKind.cs` | A read-only flag and the Skill Sources root ([§6.11](#611-the-skill-sources-library-root)) |
@@ -5109,10 +5109,10 @@ reviewer sees one rename, not a deletion and an addition.
 | `tests/Huddle.Tests/Teams/CardResolverTests.cs` | Pack expansion over `SkillRegistry`; **Needs setup** |
 | `tests/Huddle.Tests/Teams/HireServiceTests.cs`, `HireServiceDraftTests.cs`, `HireServicePooledRoleTests.cs`, `HireServiceStartTests.cs` | Constructor and installer changes |
 | `tests/Huddle.Tests/Teams/HouseholdEndToEndTests.cs`, `TeamsPhase3EndToEndTests.cs`, `TeamsPhase4EndToEndTests.cs`, `TeamDuplicatorTests.cs` | Use a registry over a temp Skill Sources folder in place of `SkillPackStore` |
-| `tests/Huddle.Tests/Teammates/RoleHirerTests.cs`, `RoleFixtures.cs`, `ProposalServiceTests.cs` | Same |
+| `tests/Huddle.Tests/Agents/RoleHirerTests.cs`, `RoleFixtures.cs`, `ProposalServiceTests.cs` | Same |
 | `tests/Huddle.Tests/Skills/SkillStoreTests.cs`, `SkillProvenanceTests.cs`, `SkillOriginTests.cs` | New `.source.json` fields; dot-folder skip |
 | `tests/Huddle.Tests/Skills/SkillsCatalogFileTests.cs` | Stays one release; pins the move's input |
-| `tests/Huddle.Tests/Ui/SkillProvenanceLineTests.cs`, `TeammateCardSetupTests.cs`, `SettingsPanelsTests.cs` | Source line, Pack chips, tabs |
+| `tests/Huddle.Tests/Ui/SkillProvenanceLineTests.cs`, `AgentProfileCardSetupTests.cs`, `SettingsPanelsTests.cs` | Source line, Pack chips, tabs |
 | `tests/Huddle.Tests/Ui/Teams/BuildTeamTests.cs` | **Needs setup** and `skillsBlocked` |
 | `tests/Huddle.Tests/Library/LibraryPathResolverTests.cs`, `LibraryRootStoreTests.cs` | The read-only root |
 | `tests/Huddle.Tests/Prompts/PromptCatalogTests.cs`, `PromptDefaultsFileTests.cs` | The seven new keys and their defaults |
@@ -5123,7 +5123,7 @@ reviewer sees one rename, not a deletion and an addition.
 | Path | Change |
 | --- | --- |
 | `docs/Index.md` | A row for the specification and one for the ADR; the vision row becomes "Superseded by …"; the Skill import row points at the new pages (`Check-DocIndex.ps1` fails otherwise) |
-| `docs/Huddle.UserGuide.md` | "Giving Teammates Skills" (line 1726) and "Importing a Skill" (line 1782) are rewritten: Packs and Skills come from SKILLS.md, **Add with your AI tool** replaces **Import skill**, **Not downloaded**, **Update available**, **Needs setup**. Three new subsections, "The Skills tab", "The Packs tab" and "The Sources tab", are the text `SkillsHelpDialog` shows; nothing in the app links to the guide |
+| `docs/Huddle.UserGuide.md` | "Giving Agents Skills" (line 1726) and "Importing a Skill" (line 1782) are rewritten: Packs and Skills come from SKILLS.md, **Add with your AI tool** replaces **Import skill**, **Not downloaded**, **Update available**, **Needs setup**. Three new subsections, "The Skills tab", "The Packs tab" and "The Sources tab", are the text `SkillsHelpDialog` shows; nothing in the app links to the guide |
 | `docs/Huddle.EngineeringGuide.md` | The `Team:` keys table (near line 275) gains `SkillSourcesDir`, `ComputerName`, `SkillsRepositoryDir`, `HuddlePacksPath`; the storage table (lines 346 to 358) replaces `SkillPacks/` with `SkillSources/`, `InstallSkillPack.md`, `install-context.json`, `skill-sources.json` |
 | `docs/Huddle.Skills-Specifications.md` | Cross-references: §6.7 (Skills UI) and the import notes point to this specification; Skill provenance now names a Source |
 | `docs/Huddle.SkillPacksSpec.md` | Status line says "Requirements met by Huddle.SkillPacks-Specifications.md"; wording that this specification overrides is listed in its §14 |
@@ -5160,7 +5160,7 @@ reviewer sees one rename, not a deletion and an addition.
 and the move's `LegacyCatalogReader.cs`.
 
 **Never touched:** `src/Huddle.App/Watching/DebouncedFileWatcher.cs` (reused as is),
-`src/Huddle.App/HiringPool/hiringpool.json` (roles keep naming Packs by id), every Teammate file,
+`src/Huddle.App/HiringPool/hiringpool.json` (roles keep naming Packs by id), every Agent file,
 `src/Huddle.Acp`, `src/Huddle.Console`, `src/Huddle.Contracts`, `src/Huddle.MockAdapter`, and
 `tests/Huddle.Acp.Tests`.
 
@@ -5212,7 +5212,7 @@ and `skillPrompt.needsSetup` point at it.
 ## 1. What you are doing
 
 You add, update and retire Skills and Skill Packs for one Huddle, a chat app where AI
-Teammates work for a Human. Huddle does not download, sign in or go online for Skills. You do,
+Agents work for a Human. Huddle does not download, sign in or go online for Skills. You do,
 with the Human's own sign-ins, and then you record where things are in files Huddle reads.
 Finish by telling the Human what is ready in Huddle (section 11).
 
@@ -5224,7 +5224,7 @@ computer is "{{computer}}". What this Huddle holds today is in the appendix at t
 - Clone or download wherever suits you, pinned to one commit, and record where.
 - Write only in {{skillSourcesDir}} or beside your clone. Never write into Skills/: Huddle
   copies Skills there itself, and a folder you put there would count as the Human's own and
-  skip the checks. Never write in Teammate files, Huddle settings or any log.jsonl.
+  skip the checks. Never write in Agent files, Huddle settings or any log.jsonl.
 - Write each file to a temporary name, then rename it, so Huddle never reads half a file.
 - Never run, build, install or import anything a Skill or repository contains. Only read it.
 - Never put a token, password, cookie or private key in any file you write.
@@ -5255,7 +5255,7 @@ Pack, <id>.skillpack.json. id: lowercase letters, digits, single hyphens; equals
 name; unique in SKILLS.md. version: the Pack's version, else the short commit. title, source
 (host/owner/repo). appliesTo: role ids from appendix A; Huddle offers the Pack on those roles'
 cards. consultWhenAdds: up to 200 characters on when to reach for these Skills; Huddle adds it
-to the Teammate's consult_when line. skills: each has a name and either "path" or "catalog"
+to the Agent's consult_when line. skills: each has a name and either "path" or "catalog"
 (never both), and, with a path, an "origin" URL pinned to a commit.
 
     {
@@ -5321,7 +5321,7 @@ again. Keep it under 16 KB.
 
 ## 8. What Huddle can use
 
-Teammates read only the .md files directly in a Skill's folder, up to 64 KB each. Sub-folders
+Agents read only the .md files directly in a Skill's folder, up to 64 KB each. Sub-folders
 are copied but never read. A Skill's tools: line cannot grant App Tools (check S011). Tell the
 Human when this or a licence matters.
 

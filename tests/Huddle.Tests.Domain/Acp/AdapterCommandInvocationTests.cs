@@ -4,8 +4,8 @@ namespace Agency.Huddle.Tests.Acp;
 
 /// <summary>
 /// Pins <see cref="AdapterCommandInvocation"/>: the pure decision, from a Message's text alone, of
-/// whether it is an Adapter command addressed to one Teammate. It resolves the Mention against the
-/// Teammate's own handles and never by pattern, because a Name may contain spaces.
+/// whether it is an Adapter command addressed to one Agent. It resolves the Mention against the
+/// Agent's own handles and never by pattern, because a Name may contain spaces.
 /// </summary>
 public sealed class AdapterCommandInvocationTests
 {
@@ -63,7 +63,7 @@ public sealed class AdapterCommandInvocationTests
         { "@Nova: /compact" },
     };
 
-    /// <summary>A Message that opens with this Teammate's Mention, then a slash name, is a command, with the name as typed and the arguments trimmed.</summary>
+    /// <summary>A Message that opens with this Agent's Mention, then a slash name, is a command, with the name as typed and the arguments trimmed.</summary>
     /// <param name="text">The Message text.</param>
     /// <param name="expectedName">The command name after the slash.</param>
     /// <param name="expectedArguments">Everything after the name, trimmed.</param>
@@ -77,7 +77,7 @@ public sealed class AdapterCommandInvocationTests
         Assert.Equal(new AdapterCommandCall(expectedName, expectedArguments), call);
     }
 
-    /// <summary>The Mention is resolved against the Teammate's own handle, so a Name with a space is one Mention.</summary>
+    /// <summary>The Mention is resolved against the Agent's own handle, so a Name with a space is one Mention.</summary>
     /// <param name="text">The Message text.</param>
     /// <param name="expectedName">The command name after the slash.</param>
     /// <param name="expectedArguments">Everything after the name, trimmed.</param>
@@ -113,7 +113,7 @@ public sealed class AdapterCommandInvocationTests
         Assert.Equal(new AdapterCommandCall("compact", ""), call);
     }
 
-    /// <summary>When only the shorter handle is the Teammate's, the surname is not a command name: <c>@Emily Lee /compact</c> is not for her.</summary>
+    /// <summary>When only the shorter handle is the Agent's, the surname is not a command name: <c>@Emily Lee /compact</c> is not for her.</summary>
     [Fact]
     public void TryParse_TheShorterHandleOnly_DoesNotTreatTheSurnameAsACommand()
     {
@@ -123,7 +123,7 @@ public sealed class AdapterCommandInvocationTests
         Assert.Null(call);
     }
 
-    /// <summary>A Teammate with no handles is never addressed.</summary>
+    /// <summary>An Agent with no handles is never addressed.</summary>
     [Fact]
     public void TryParse_NoHandles_IsNotACommand()
     {

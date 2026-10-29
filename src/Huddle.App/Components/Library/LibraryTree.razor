@@ -131,7 +131,7 @@
 
 @code {
     private const string TeamProtectedReason = "Team and Project folders can't be renamed, moved or deleted here.";
-    private const string TeammateProtectedReason = "Teammate folders can't be renamed, moved or deleted here.";
+    private const string AgentProtectedReason = "Agent folders can't be renamed, moved or deleted here.";
     private const string ScopeProtectedReason = "This folder can't be renamed, moved or deleted here.";
     private const string RootProtectedReason = "A Library root can't be renamed, moved or deleted.";
 
@@ -375,7 +375,7 @@
             : "library-tree-node";
 
     /// <summary>Whether a row may be picked up: only what <see cref="LibraryProtection"/> lets move, so a root,
-    /// Team, Project or Teammate node never starts a drag.</summary>
+    /// Team, Project or Agent node never starts a drag.</summary>
     private bool CanDrag(LibraryPath path) => LibraryProtection.For(path, this.ScopeFor(path)).CanMove;
 
     private void OnDragStart(LibraryPath path)
@@ -523,17 +523,17 @@
     {
         LibraryNodeRole.TeamFolder => Icons.Material.Outlined.Groups,
         LibraryNodeRole.ProjectFolder => Icons.Material.Outlined.FolderSpecial,
-        LibraryNodeRole.TeammateFolder => Icons.Material.Outlined.Person,
+        LibraryNodeRole.AgentFolder => Icons.Material.Outlined.Person,
         _ => isFolder ? Icons.Material.Outlined.Folder : Icons.Material.Outlined.InsertDriveFile,
     };
 
-    private static string OrphanReason(string teamName) => $"No teammate has the Team label \"{teamName}\".";
+    private static string OrphanReason(string teamName) => $"No agent has the Team label \"{teamName}\".";
 
     private static string? ReasonFor(LibraryNodeRole role) => role switch
     {
         LibraryNodeRole.Root => RootProtectedReason,
         LibraryNodeRole.TeamFolder or LibraryNodeRole.ProjectFolder => TeamProtectedReason,
-        LibraryNodeRole.TeammateFolder or LibraryNodeRole.TeammateDefinition or LibraryNodeRole.WorkDir => TeammateProtectedReason,
+        LibraryNodeRole.AgentFolder or LibraryNodeRole.AgentDefinition or LibraryNodeRole.WorkDir => AgentProtectedReason,
         _ => null,
     };
 

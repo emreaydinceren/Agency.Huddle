@@ -9,6 +9,6 @@ internal enum WakeTarget
     /// <summary>The manager of the Team that received the Request.</summary>
     ReceivingManager,
 
-    /// <summary>The Chief of Staff built-in Teammate.</summary>
+    /// <summary>The Chief of Staff built-in Agent.</summary>
     ChiefOfStaff,
 }

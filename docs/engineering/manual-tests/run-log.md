@@ -81,7 +81,7 @@ File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-07--r
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | /Settings and /TEAMMATES both 200; h1 `Settings` with the Hooks/Appearance rail, h1 `Teammates`. |
+| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | /Settings and /AGENTS both 200; h1 `Settings` with the Hooks/Appearance rail, h1 `Agents`. |
 
 ### SHELLNAV-08 — The drawer is present, identical and fixed-width on every route
 
@@ -89,7 +89,7 @@ File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-08--t
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | All four routes: gridTemplateColumns `240px 1040px`, sidebar children new-chat/room-list/sidebar-link/sidebar-link, links exactly `Teammates -> /teammates` and `Settings -> /settings`, .main-column overflow `hidden`, scrollWidth/Height equal to client on every route. |
+| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | All four routes: gridTemplateColumns `240px 1040px`, sidebar children new-chat/room-list/sidebar-link/sidebar-link, links exactly `Agents -> /agents` and `Settings -> /settings`, .main-column overflow `hidden`, scrollWidth/Height equal to client on every route. |
 
 ### SHELLNAV-09 — The sidebar marks exactly one room active, with aria-current
 
@@ -99,13 +99,13 @@ File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-09--t
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | activeCount 1 both times; `echo \| page` then `alpha \| page`; active link bg rgb(47,61,87) weight 600, the other transparent/400; h1 matched each time. Script NOTE is stale: NavLink DOES emit aria-current=page here. |
 
-### SHELLNAV-10 — /teammates renders, and a bare page load spawns no node process
+### SHELLNAV-10 — /agents renders, and a bare page load spawns no node process
 
-File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-10--teammates-renders-and-a-bare-page-load-spawns-no-node-process)
+File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-10--agents-renders-and-a-bare-page-load-spawns-no-node-process)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | h1 `Teammates`, button `New teammate`, intro opens with the exact sentence; sidebar intact with the room list; no probe/catalog line in O-LOG. O-ADAPTERS read 0 at baseline, 0 after the page load and 0 after a fresh full document load of /teammates. HARNESS NOTE: the F5 key does not reload this browser pane - the re-load was done by navigating to the URL again. |
+| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | h1 `Agents`, button `New agent`, intro opens with the exact sentence; sidebar intact with the room list; no probe/catalog line in O-LOG. O-ADAPTERS read 0 at baseline, 0 after the page load and 0 after a fresh full document load of /agents. HARNESS NOTE: the F5 key does not reload this browser pane - the re-load was done by navigating to the URL again. |
 
 ### SHELLNAV-11 — /settings renders the seven-tab bar and defaults to Profile
 
@@ -137,7 +137,7 @@ File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-14--n
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | document.querySelector("title") returned null on all five routes and document.title was the empty string; curl printed 0 `<title>` tags for /, /teammates, /settings, /settings/appearance and for the followed redirect. Tab label is the URL everywhere. Known limit recorded once for the whole shell. |
+| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | document.querySelector("title") returned null on all five routes and document.title was the empty string; curl printed 0 `<title>` tags for /, /agents, /settings, /settings/appearance and for the followed redirect. Tab label is the URL everywhere. Known limit recorded once for the whole shell. |
 
 ### SHELLNAV-15 — Focus moves to the page's <h1> after every navigation
 
@@ -145,7 +145,7 @@ File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-15--f
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | After clicking Teammates, Settings and echo the activeElement read `H1 \| Teammates`, `H1 \| Settings`, `H1 \| echo`; the h1 carries tabindex="-1" on each. Tab from the heading landed on BUTTON.invite-toggle inside `<main>`, not the sidebar. On /rooms/does-not-exist activeElement was BODY and there is no h1 - the expected accessibility observation. |
+| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | After clicking Agents, Settings and echo the activeElement read `H1 \| Agents`, `H1 \| Settings`, `H1 \| echo`; the h1 carries tabindex="-1" on each. Tab from the heading landed on BUTTON.invite-toggle inside `<main>`, not the sidebar. On /rooms/does-not-exist activeElement was BODY and there is no h1 - the expected accessibility observation. |
 
 ### SHELLNAV-16 — Sidebar links use enhanced navigation, not a full page reload
 
@@ -153,7 +153,7 @@ File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-16--s
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | window.__probe stayed 42 (and a timestamp marker survived) across sidebar clicks to Teammates and Settings; the _blazor negotiate count stayed at 11 over both clicks, so no circuit was rebuilt; the New chat panel stayed open (hidden=false) and sidebar scrollTop stayed 0. No white flash - judged by the surviving JS context and unchanged circuit rather than by eye. |
+| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | window.__probe stayed 42 (and a timestamp marker survived) across sidebar clicks to Agents and Settings; the _blazor negotiate count stayed at 11 over both clicks, so no circuit was rebuilt; the New chat panel stayed open (hidden=false) and sidebar scrollTop stayed 0. No white flash - judged by the surviving JS context and unchanged circuit rather than by eye. |
 
 ### SHELLNAV-17 — The New chat panel toggles, lists agents with status dots, and gates Start chat
 
@@ -201,7 +201,7 @@ File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-24--a
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | Prerendered HTML from curl: exactly one h1 reading `echo`, contains `hi @echo` True, `No rooms yet` False, and the budget line `1 of 40 agent replies since you last spoke.` /settings/appearance and /teammates are likewise complete in the raw HTML (Theme select, tab rail, h1 and intro all present). A cold tab showed sidebar, heading and both message bodies on the first probe and identical three seconds later - no flash, no appear/disappear/reappear - and its budget line matched the already-open tab exactly. Interactivity followed: New chat opened, a checkbox ticked and Start chat enabled. |
+| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | Prerendered HTML from curl: exactly one h1 reading `echo`, contains `hi @echo` True, `No rooms yet` False, and the budget line `1 of 40 agent replies since you last spoke.` /settings/appearance and /agents are likewise complete in the raw HTML (Theme select, tab rail, h1 and intro all present). A cold tab showed sidebar, heading and both message bodies on the first probe and identical three seconds later - no flash, no appear/disappear/reappear - and its budget line matched the already-open tab exactly. Interactivity followed: New chat opened, a checkbox ticked and Start chat enabled. |
 
 ### SHELLNAV-25 — Two browser tabs on the same install stay in step through the shell
 
@@ -209,7 +209,7 @@ File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-25--t
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | Run against the CORRECTED steps 5-11 (see Appendix B). TAB B, untouched on /teammates, gained the new `echo, alpha` room with no refresh - Start chat with two agents creates a new Room even when one with the same members exists. TAB A reloaded into Light: body bg rgb(255,255,255) and a fourth href themes/huddle-light.css. TAB B kept the old dark appearance with three hrefs, and STILL did after clicking Settings in the sidebar; a full document load of the same URL turned it light with the fourth href. Dark was not judgeable on this dark OS - System already resolves to rgb(27,27,31), the same value huddle-dark gives - so Light was used. Restored to System. |
+| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | Run against the CORRECTED steps 5-11 (see Appendix B). TAB B, untouched on /agents, gained the new `echo, alpha` room with no refresh - Start chat with two agents creates a new Room even when one with the same members exists. TAB A reloaded into Light: body bg rgb(255,255,255) and a fourth href themes/huddle-light.css. TAB B kept the old dark appearance with three hrefs, and STILL did after clicking Settings in the sidebar; a full document load of the same URL turned it light with the fourth href. Dark was not judgeable on this dark OS - System already resolves to rgb(27,27,31), the same value huddle-dark gives - so Light was used. Restored to System. |
 
 ### SHELLNAV-26 — The reconnect modal shows exactly one state paragraph at a time when the server goes away
 
@@ -379,7 +379,7 @@ File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#star
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | New chat panel listed `echo` and `alpha` (plus `mybot`, the pipe client left connected by SHELLNAV-20), each with a checkbox and an .agent-dot - 3 checkboxes, 3 dots. With nothing ticked, Start chat was present and disabled=true, and clicking it did nothing: the URL and the room count of 5 were unchanged. Ticking echo set disabled=false; the second New chat click closed the panel with no Room created. Teammates -> /teammates with h1 `Teammates`, Settings -> /settings with h1 `Settings`, and clicking a Room -> /rooms/01a091de37bb78e2beb9d6bcb3414994 with h1 `alpha`. |
+| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | New chat panel listed `echo` and `alpha` (plus `mybot`, the pipe client left connected by SHELLNAV-20), each with a checkbox and an .agent-dot - 3 checkboxes, 3 dots. With nothing ticked, Start chat was present and disabled=true, and clicking it did nothing: the URL and the room count of 5 were unchanged. Ticking echo set disabled=false; the second New chat click closed the panel with no Room created. Agents -> /agents with h1 `Agents`, Settings -> /settings with h1 `Settings`, and clicking a Room -> /rooms/01a091de37bb78e2beb9d6bcb3414994 with h1 `alpha`. |
 
 ### STARTUPCONFIG-07 — Start chat on one known agent reuses its Room; two agents create one new named Room
 
@@ -389,13 +389,13 @@ File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#star
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | From a clean App_Data with exactly 2 Rooms. Ticking ONLY echo and pressing Start chat left the count at 2 and landed back on the SAME room id /rooms/01a0a15467a47b5ea4f594381f786754 with its `hi @echo` / `echo: hi echo` transcript intact - the exact-membership lookup reused it. Ticking BOTH created exactly one new Room (3 total) with heading `echo, alpha`. Step 6 repeated: one further new Room, 4 total, a second entry also named `echo, alpha` at a distinct id 01a0a1552e5c7d9bac8e3ba846d0c916 - consistent with step 4's rule (two agents always mint a new Room), and recorded as an observation since multi-agent reuse is not specified. Two same-named Rooms are distinguishable only by id in the sidebar. |
 
-### STARTUPCONFIG-08 — /teammates lists Personas only — pipe clients never appear there
+### STARTUPCONFIG-08 — /agents lists Personas only — pipe clients never appear there
 
-File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#startupconfig-08--teammates-lists-personas-only--pipe-clients-never-appear-there)
+File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#startupconfig-08--agents-lists-personas-only--pipe-clients-never-appear-there)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | App_Data\Teams empty. /teammates showed h1 `Teammates`, button `New teammate`, the intro opening `A Persona is a Markdown file describing how one teammate should behave`, and exactly `No Personas yet. Choose New teammate to add one.` A word-boundary scan of the whole main column found neither `echo` nor `alpha` - the pipe-connected demo agents do not leak into the Persona list. |
+| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | App_Data\Teams empty. /agents showed h1 `Agents`, button `New agent`, the intro opening `A Persona is a Markdown file describing how one agent should behave`, and exactly `No Personas yet. Choose New agent to add one.` A word-boundary scan of the whole main column found neither `echo` nor `alpha` - the pipe-connected demo agents do not leak into the Persona list. |
 
 ### STARTUPCONFIG-09 — Settings' Prompts tab on a first run says prompts.json is absent, and offers nothing to save or reset
 
@@ -509,13 +509,13 @@ File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#star
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | Run against the CORRECTED steps 7-8 (see Appendix B). Run (a) reported `Hosting environment: Development` / `Now listening on: http://localhost:5100`; run (b) with --no-launch-profile reported `Hosting environment: Production` / `Now listening on: http://localhost:5000`, curl on 5100 returned 000 and on 5000 returned 302. O-ADAPTERS 0 in run (b), though with no Persona files present the `even if Persona files exist` clause is recorded as not-checked. Run (b) renders UNSTYLED: Huddle.App.z3g6d1kai5.styles.css, Components/Layout/ReconnectModal.abdmv1u4y3.razor.js and _framework/blazor.web.wyu7y4jcvb.js each return 500 with `The application is not running against the published output and Static Web Assets are not enabled.` plus a FileNotFoundException. Reproduced on a SOLE instance and shown NOT to be a product defect - a `dotnet publish` build in Production serves all six assets 200. Verbosity: configured level differs (Debug vs Information) but both consoles were identical at 2 `info:` Agency.Huddle lines, correct because Huddle.App has no Debug-level statements. |
 
-### STARTUPCONFIG-27 — Team__Acp__Enabled=false starts no agent process and costs nothing, while /teammates still works fully
+### STARTUPCONFIG-27 — Team__Acp__Enabled=false starts no agent process and costs nothing, while /agents still works fully
 
-File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#startupconfig-27--team__acp__enabledfalse-starts-no-agent-process-and-costs-nothing-while-teammates-still-works-fully)
+File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#startupconfig-27--team__acp__enabledfalse-starts-no-agent-process-and-costs-nothing-while-agents-still-works-fully)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | With Team__Acp__Enabled=false: O-ADAPTERS 0 at baseline, 0 twenty seconds after the app was listening, and 0 again after loading the Teammates page - merely browsing it spawns nothing and spends nothing. The page rendered with h1 `Teammates`, a `New teammate` button, the intro opening `A Persona is a Markdown file describing how one teammate should behave`, and the body `No Personas yet. Choose New teammate to add one.` - not blank, no error. A scan of the whole console for `Persona` and `adapter` returned nothing: no `Persona ... failed to start.` line, no adapter lines. |
+| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | With Team__Acp__Enabled=false: O-ADAPTERS 0 at baseline, 0 twenty seconds after the app was listening, and 0 again after loading the Agents page - merely browsing it spawns nothing and spends nothing. The page rendered with h1 `Agents`, a `New agent` button, the intro opening `A Persona is a Markdown file describing how one agent should behave`, and the body `No Personas yet. Choose New agent to add one.` - not blank, no error. A scan of the whole console for `Persona` and `adapter` returned nothing: no `Persona ... failed to start.` line, no adapter lines. |
 
 ### STARTUPCONFIG-28 — Team__Acp__Enabled=true with only the built-in Chief of Staff starts exactly one process
 
@@ -523,11 +523,11 @@ File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#star
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | ACP ON - no Team__Acp__Enabled set, so Development's `true` applied and the console confirmed `Hosting environment: Development`. With App_Data\Teams empty the app started normally and O-ADAPTERS stayed 0 at baseline and 20 seconds after listening: nothing to start, so nothing spawned. The Teammates page showed `No Personas yet. Choose New teammate to add one.` and the Teams folder was still empty afterwards. Together with STARTUPCONFIG-27 this brackets the flag: off spawns nothing, on-with-an-empty-library spawns nothing. |
+| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | ACP ON - no Team__Acp__Enabled set, so Development's `true` applied and the console confirmed `Hosting environment: Development`. With App_Data\Teams empty the app started normally and O-ADAPTERS stayed 0 at baseline and 20 seconds after listening: nothing to start, so nothing spawned. The Agents page showed `No Personas yet. Choose New agent to add one.` and the Teams folder was still empty afterwards. Together with STARTUPCONFIG-27 this brackets the flag: off spawns nothing, on-with-an-empty-library spawns nothing. |
 
-### STARTUPCONFIG-29 — A Persona file in its own Teammates folder is discovered, reloads on edit in place, and a broken file is named rather than silently dropped
+### STARTUPCONFIG-29 — A Persona file in its own Agents folder is discovered, reloads on edit in place, and a broken file is named rather than silently dropped
 
-File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#startupconfig-29--a-persona-file-in-its-own-teammates-folder-is-discovered-reloads-on-edit-in-place-and-a-broken-file-is-named-rather-than-silently-dropped)
+File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#startupconfig-29--a-persona-file-in-its-own-agents-folder-is-discovered-reloads-on-edit-in-place-and-a-broken-file-is-named-rather-than-silently-dropped)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -547,7 +547,7 @@ File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#star
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | ACP on (Development default), one Persona at Teams\tester.md. Tile showed monogram `T`, second line `Test teammate · @tester`, status `Starting` then `Online` with a green dot rgb(63,191,90). Exactly ONE new adapter appeared (`node ...claude-agent-acp\dist\index.js`, pid 100880) against a baseline of 0, and a `Tester` Room appeared in the sidebar with no refresh - O-LOG logged `Created direct room ... for agent 'Tester'.` Saving Model=Haiku / Effort=low showed `MODEL Haiku` and `EFFORT low` on the card and really did restart the teammate: the adapter pid changed from 100880 to 37132 while the count stayed at 1. A second restart, forced by editing the persona body in place, was sampled with a MutationObserver and gave the full sequence `Online` green -> `Offline` red -> `Starting` AMBER rgb(232,196,106) (`agent-dot starting`) -> `Online` green. No Turn was taken, so nothing was spent. |
+| 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | ACP on (Development default), one Persona at Teams\tester.md. Tile showed monogram `T`, second line `Test agent · @tester`, status `Starting` then `Online` with a green dot rgb(63,191,90). Exactly ONE new adapter appeared (`node ...claude-agent-acp\dist\index.js`, pid 100880) against a baseline of 0, and a `Tester` Room appeared in the sidebar with no refresh - O-LOG logged `Created direct room ... for agent 'Tester'.` Saving Model=Haiku / Effort=low showed `MODEL Haiku` and `EFFORT low` on the card and really did restart the agent: the adapter pid changed from 100880 to 37132 while the count stayed at 1. A second restart, forced by editing the persona body in place, was sampled with a MutationObserver and gave the full sequence `Online` green -> `Offline` red -> `Starting` AMBER rgb(232,196,106) (`agent-dot starting`) -> `Online` green. No Turn was taken, so nothing was spent. |
 
 ### STARTUPCONFIG-32 — Team__Acp__TraceWire=true dumps the tool server's bearer token to the console
 
@@ -557,9 +557,9 @@ File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#star
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `66ffe58d` |  | Run against the CORRECTED step 2 (see Appendix B). With Team__Acp__TraceWire=true ALONE the console carried 0 `Agency.Huddle.Acp.Wire` lines, 0 `Authorization` and 0 `jsonrpc` - the flag binds but LoggerTraceListener forwards at Trace while Development pins Agency.Huddle at Debug. Adding `${env:Logging__LogLevel__Agency.Huddle} = 'Trace'` produced 117 Agency.Huddle.Acp.Wire lines, 81 `trce:` lines, 12 jsonrpc lines and exactly one line carrying `Authorization` / `Bearer` - the tool server's token, dumped as documented. The browser was COMPLETELY unchanged: no banner, no badge, no role=alert element, and no occurrence of trace/tracing/wire anywhere in the page text. Handled as a throwaway: the token value was never printed into this session - only counts were - and both redirected console files were deleted immediately afterwards. |
 
-### STARTUPCONFIG-33 — A spent per-Persona token Budget reads as Degraded on the Teammate tile and in the Room banner
+### STARTUPCONFIG-33 — A spent per-Persona token Budget reads as Degraded on the Agent tile and in the Room banner
 
-File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#startupconfig-33--a-spent-per-persona-token-budget-reads-as-degraded-on-the-teammate-tile-and-in-the-room-banner)
+File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#startupconfig-33--a-spent-per-persona-token-budget-reads-as-degraded-on-the-agent-tile-and-in-the-room-banner)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -571,7 +571,7 @@ File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#star
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `e7863e44` |  | Continued from 33 without restarting. The strip was still showing. `Hello again @tester` drew a reply from the Degraded Persona - `Let's get started on those tests! @tester2` - the `member-health-alert` strip disappeared, and the /teammates tile returned to `Online` with a green dot rgb(63,191,90) and no tooltip. Room and tile agreed at every step. The ping-pong then hit the OTHER cap, `Agents have sent 4 replies since you last spoke, and are paused.` - Team__AgentMessageBudget doing its job, not this test's concern. Cleanup done: app stopped, both Personas deleted, Teams empty, no Team__ variables left, 0 adapters. |
+| 2026-09-14 | Pass *(earlier script)* | `e7863e44` |  | Continued from 33 without restarting. The strip was still showing. `Hello again @tester` drew a reply from the Degraded Persona - `Let's get started on those tests! @tester2` - the `member-health-alert` strip disappeared, and the /agents tile returned to `Online` with a green dot rgb(63,191,90) and no tooltip. Room and tile agreed at every step. The ping-pong then hit the OTHER cap, `Agents have sent 4 replies since you last spoke, and are paused.` - Team__AgentMessageBudget doing its job, not this test's concern. Cleanup done: app stopped, both Personas deleted, Teams empty, no Team__ variables left, 0 adapters. |
 
 ### STARTUPCONFIG-35 — A blank system opens on Settings > Profile until you save a profile
 
@@ -588,7 +588,7 @@ File: [`docs/engineering/manual-tests/room-messaging.md`](room-messaging.md#room
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `51f30fa2` |  | GET / redirected to /rooms/01a0a188f66e74d5be0d7890db5351d4 - 32 hex, matched by regex. h1 read `echo`, the muted line beneath it exactly `You, echo`, and an `Add teammate` button sat at the right of the header row. Sidebar children in order: new-chat, room-list (echo, alpha), sidebar-link `Teammates`, sidebar-link `Settings`. Pasting the URL into a second tab opened the same Room with the same h1 and the same transcript (`marker`). The open Room's entry carried class `active` with background rgb(47,61,87) against rgba(0,0,0,0) for the other. Clicking `alpha` changed the h1 to `alpha` and the id to 01a0a188f7057c639ca37ef5cfa0a030. |
+| 2026-09-14 | Pass *(earlier script)* | `51f30fa2` |  | GET / redirected to /rooms/01a0a188f66e74d5be0d7890db5351d4 - 32 hex, matched by regex. h1 read `echo`, the muted line beneath it exactly `You, echo`, and an `Add agent` button sat at the right of the header row. Sidebar children in order: new-chat, room-list (echo, alpha), sidebar-link `Agents`, sidebar-link `Settings`. Pasting the URL into a second tab opened the same Room with the same h1 and the same transcript (`marker`). The open Room's entry carried class `active` with background rgb(47,61,87) against rgba(0,0,0,0) for the other. Clicking `alpha` changed the h1 to `alpha` and the id to 01a0a188f7057c639ca37ef5cfa0a030. |
 
 ### ROOMMESSAGING-02 — Enter sends the Message, clears the textarea, and appends exactly one JSONL line
 
@@ -746,7 +746,7 @@ File: [`docs/engineering/manual-tests/room-messaging.md`](room-messaging.md#room
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `3dc675cf` |  | After switching from echo to alpha the composer STILL held `this was meant for echo`. Pressing Enter posted it into the Room whose id was in the address bar at that moment - alpha - and the text is in alpha's JSONL (1 match) and NOT in echo's (0 matches). Navigating away to a non-room page and back into a Room left the composer EMPTY. NOTE on procedure: immediately after a sidebar click, focus sits on the clicked link (SHELLNAV-15's FocusOnNavigate), so a bare Enter does nothing until you click into the composer - the first Enter posted nothing and that is not a defect. I used Settings rather than Teammates for the navigate-away leg; same substance. |
+| 2026-09-14 | Pass *(earlier script)* | `3dc675cf` |  | After switching from echo to alpha the composer STILL held `this was meant for echo`. Pressing Enter posted it into the Room whose id was in the address bar at that moment - alpha - and the text is in alpha's JSONL (1 match) and NOT in echo's (0 matches). Navigating away to a non-room page and back into a Room left the composer EMPTY. NOTE on procedure: immediately after a sidebar click, focus sits on the clicked link (SHELLNAV-15's FocusOnNavigate), so a bare Enter does nothing until you click into the composer - the first Enter posted nothing and that is not a defect. I used Settings rather than Agents for the navigate-away leg; same substance. |
 
 ### ROOMMESSAGING-24 — The JSONL Transcript: shape, append-only, and one file per Room
 
@@ -828,7 +828,7 @@ File: [`docs/engineering/manual-tests/streaming-turn.md`](streaming-turn.md#stre
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `e14a49de` |  | No `failed to start` line in O-LOG since startup. `document.querySelectorAll(".member-health-alert").length` was 0 in every Room, and a fetch of each of the four room URLs found the string nowhere in the served HTML either - so nothing is in the prerender being stripped by the interactive render. Invoke-WebRequest against each room printed 0 matches. Connecting `echo2` with tools/echo-bot.ps1 and then disconnecting it left the count at 0 - mere pipe absence stays silent in the Room, which is the point. /teammates showed `No Personas yet.` (no tiles at all), which the pass condition allows. Also checked the Room of a Persona whose file had been deleted - still no strip. |
+| 2026-09-14 | Pass *(earlier script)* | `e14a49de` |  | No `failed to start` line in O-LOG since startup. `document.querySelectorAll(".member-health-alert").length` was 0 in every Room, and a fetch of each of the four room URLs found the string nowhere in the served HTML either - so nothing is in the prerender being stripped by the interactive render. Invoke-WebRequest against each room printed 0 matches. Connecting `echo2` with tools/echo-bot.ps1 and then disconnecting it left the count at 0 - mere pipe absence stays silent in the Room, which is the point. /agents showed `No Personas yet.` (no tiles at all), which the pass condition allows. Also checked the Room of a Persona whose file had been deleted - still no strip. |
 
 ### STREAMINGTURN-02 — A Draft appears as a distinct live row while a Turn is being written
 
@@ -980,7 +980,7 @@ File: [`docs/engineering/manual-tests/streaming-turn.md`](streaming-turn.md#stre
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `01998e94` |  | Run against the CORRECTED steps 3-5 and 9 (same reset rule as ROOMMESSAGING-30 / STARTUPCONFIG-33; the written three-messages recipe left the note at `1 of 2` and never paused - observed). With alpha invited and ONE Message mentioning both, the Room showed exactly `Agents have sent 2 replies since you last spoke, and are paused.` with `Continue` and `Leave paused`, and `document.querySelectorAll(".member-health-alert").length` was 0 - no health strip alongside the pause. /teammates showed zero `Degraded` labels and does not list echo at all (a demo agent is not a Persona). Clicking Continue moved the note to `2 of 4` and the next `@echo hello four` was answered. Refusal captured on a separate budget-1 run in this same Room: `warn: Agency.Huddle.App.Services.ChatService` / `Room '01a0a19cc643771081fb96d9b9bf46eb' refused a message from 'echo': its budget of 1 agent messages since a human last spoke is spent.` - with no health line anywhere alongside it and still 0 member-health-alert elements. |
+| 2026-09-14 | Pass *(earlier script)* | `01998e94` |  | Run against the CORRECTED steps 3-5 and 9 (same reset rule as ROOMMESSAGING-30 / STARTUPCONFIG-33; the written three-messages recipe left the note at `1 of 2` and never paused - observed). With alpha invited and ONE Message mentioning both, the Room showed exactly `Agents have sent 2 replies since you last spoke, and are paused.` with `Continue` and `Leave paused`, and `document.querySelectorAll(".member-health-alert").length` was 0 - no health strip alongside the pause. /agents showed zero `Degraded` labels and does not list echo at all (a demo agent is not a Persona). Clicking Continue moved the note to `2 of 4` and the next `@echo hello four` was answered. Refusal captured on a separate budget-1 run in this same Room: `warn: Agency.Huddle.App.Services.ChatService` / `Room '01a0a19cc643771081fb96d9b9bf46eb' refused a message from 'echo': its budget of 1 agent messages since a human last spoke is spent.` - with no health line anywhere alongside it and still 0 member-health-alert elements. |
 
 ### STREAMINGTURN-21 — A failed Persona start surfaces as a role="alert" strip in every Room it is a Member of
 
@@ -988,15 +988,15 @@ File: [`docs/engineering/manual-tests/streaming-turn.md`](streaming-turn.md#stre
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `01998e94` |  | Nova created through the UI at Haiku/low came up Online with one adapter and NO strip in her Room. Relaunched with Team__Acp__Command=definitely-not-node: the Room showed a bordered DIV reading exactly `Nova is Offline: Failed to start 'definitely-not-node'.`, carrying class `member-health-alert` and `role="alert"`, border 0.8px solid, positioned by geometry BELOW the message list and ABOVE the composer. O-LOG carried `warn: Agency.Huddle.App.Acp.PersonaSupervisor` / `Persona 'Nova' failed to start.` with `AgentProcessStartException: Failed to start 'definitely-not-node'.` /teammates showed Nova **Offline** with a RED dot rgb(224,90,90), the same reason as the tile tooltip, a `Restart` button, and the exact hint `Like saving an edit, this restarts the teammate, which clears what it remembers.` Offline, not Degraded. |
+| 2026-09-14 | Pass *(earlier script)* | `01998e94` |  | Nova created through the UI at Haiku/low came up Online with one adapter and NO strip in her Room. Relaunched with Team__Acp__Command=definitely-not-node: the Room showed a bordered DIV reading exactly `Nova is Offline: Failed to start 'definitely-not-node'.`, carrying class `member-health-alert` and `role="alert"`, border 0.8px solid, positioned by geometry BELOW the message list and ABOVE the composer. O-LOG carried `warn: Agency.Huddle.App.Acp.PersonaSupervisor` / `Persona 'Nova' failed to start.` with `AgentProcessStartException: Failed to start 'definitely-not-node'.` /agents showed Nova **Offline** with a RED dot rgb(224,90,90), the same reason as the tile tooltip, a `Restart` button, and the exact hint `Like saving an edit, this restarts the agent, which clears what it remembers.` Offline, not Degraded. |
 
-### STREAMINGTURN-22 — Restart from the Teammate card clears the failure and the Room's strip goes with it
+### STREAMINGTURN-22 — Restart from the Agent card clears the failure and the Room's strip goes with it
 
-File: [`docs/engineering/manual-tests/streaming-turn.md`](streaming-turn.md#streamingturn-22--restart-from-the-teammate-card-clears-the-failure-and-the-rooms-strip-goes-with-it)
+File: [`docs/engineering/manual-tests/streaming-turn.md`](streaming-turn.md#streamingturn-22--restart-from-the-agent-card-clears-the-failure-and-the-rooms-strip-goes-with-it)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `01998e94` |  | A `Restart` button was offered for a Persona that had NEVER started. A MutationObserver caught the in-flight label: `Restart\|d=false` -> `Restarting…\|d=true` -> back to `Restart\|d=false`, so it is disabled while the request runs. With the broken command still set the card settled back to Offline with the same reason. After fixing the cause and relaunching, /teammates showed Nova **Online** with a green dot rgb(63,191,90) and NO reason tooltip, and the second Room tab - opened earlier and never reloaded - no longer had a `.member-health-alert` element. `src\Huddle.App\App_Data\work\Nova` exists. |
+| 2026-09-14 | Pass *(earlier script)* | `01998e94` |  | A `Restart` button was offered for a Persona that had NEVER started. A MutationObserver caught the in-flight label: `Restart\|d=false` -> `Restarting…\|d=true` -> back to `Restart\|d=false`, so it is disabled while the request runs. With the broken command still set the card settled back to Offline with the same reason. After fixing the cause and relaunching, /agents showed Nova **Online** with a green dot rgb(63,191,90) and NO reason tooltip, and the second Room tab - opened earlier and never reloaded - no longer had a `.member-health-alert` element. `src\Huddle.App\App_Data\work\Nova` exists. |
 
 ### STREAMINGTURN-23 — A stored Model the adapter does not advertise degrades the Persona but does not stop it
 
@@ -1110,7 +1110,7 @@ File: [`docs/engineering/manual-tests/reply-gate-budget.md`](reply-gate-budget.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `d34fde9e` |  | P-RESET-ROOMS then PROFILE A with budget 1. echo replied, then a .budget-prompt appeared between message-list and composer reading exactly 'Agents have sent 1 replies since you last spoke, and are paused.' with exactly two buttons, Continue and Leave paused. Script said 'red-bordered'; corrected - app.css gives .budget-prompt a neutral border-top 1px var(--border-default) (computed rgb(58,58,68)) and puts the red on .budget-prompt-text via var(--danger-fg) (computed rgb(255,138,138)). Zero member-health-alert elements and zero composer strips. Transcript senders were only You and echo - no system line. Log: 0 'refused a message from' and 0 warn lines at all. /teammates listed only the Nova Persona (the demo agents are not Personas), so echo was certainly not Degraded - the parenthetical the Pass-if allows. |
+| 2026-09-14 | Pass *(earlier script)* | `d34fde9e` |  | P-RESET-ROOMS then PROFILE A with budget 1. echo replied, then a .budget-prompt appeared between message-list and composer reading exactly 'Agents have sent 1 replies since you last spoke, and are paused.' with exactly two buttons, Continue and Leave paused. Script said 'red-bordered'; corrected - app.css gives .budget-prompt a neutral border-top 1px var(--border-default) (computed rgb(58,58,68)) and puts the red on .budget-prompt-text via var(--danger-fg) (computed rgb(255,138,138)). Zero member-health-alert elements and zero composer strips. Transcript senders were only You and echo - no system line. Log: 0 'refused a message from' and 0 warn lines at all. /agents listed only the Nova Persona (the demo agents are not Personas), so echo was certainly not Degraded - the parenthetical the Pass-if allows. |
 
 ### REPLYGATEBUDGET-08 — The write path refuses an over-Budget post: two Agents are woken, only one Message lands
 
@@ -1190,7 +1190,7 @@ File: [`docs/engineering/manual-tests/reply-gate-budget.md`](reply-gate-budget.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `28986944` |  | Test-Path hooks.json printed False before any save. Hooks tab selected by default, 22 hook fields. Chat rules default begins 'A Room with two members is a private conversation with the human: answer every message. A Room with three or more members is a group: answer only when you are @-mentioned.' (wrapped across lines). Help: budget contains 'A refusal that says the budget is spent is final: do not retry it, and do not work around it by posting to another Room.' Chat rules carries the badge 'Next session' with title 'Applies to teammates started after the change'; all four Help: fields carry no such badge. With nothing edited Save was disabled=true; appending ' TESTEDIT' added an 'Unsaved' badge and enabled it. After Save, hooks.json held ONLY systemPrompt.chatRules - one key, not the 22 defaults. Undid the edit and then used the field's Reset so the file went back to {}; deleted it afterwards to restore the first-run state. |
+| 2026-09-14 | Pass *(earlier script)* | `28986944` |  | Test-Path hooks.json printed False before any save. Hooks tab selected by default, 22 hook fields. Chat rules default begins 'A Room with two members is a private conversation with the human: answer every message. A Room with three or more members is a group: answer only when you are @-mentioned.' (wrapped across lines). Help: budget contains 'A refusal that says the budget is spent is final: do not retry it, and do not work around it by posting to another Room.' Chat rules carries the badge 'Next session' with title 'Applies to agents started after the change'; all four Help: fields carry no such badge. With nothing edited Save was disabled=true; appending ' TESTEDIT' added an 'Unsaved' badge and enabled it. After Save, hooks.json held ONLY systemPrompt.chatRules - one key, not the 22 defaults. Undid the edit and then used the field's Reset so the file went back to {}; deleted it afterwards to restore the first-run state. |
 
 ### REPLYGATEBUDGET-18 — The server labels a delivery correctly even when the client chooses to stay silent
 
@@ -1351,760 +1351,760 @@ File: [`docs/engineering/manual-tests/reply-gate-budget.md`](reply-gate-budget.m
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-## Teammates page: tiles, Teams grouping, filter and rejected files
+## Agents page: tiles, Teams grouping, filter and rejected files
 
-### TEAMMATESLIBRARY-01 — The page loads, is styled, and spawns nothing
+### AGENTSLIBRARY-01 — The page loads, is styled, and spawns nothing
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-01--the-page-loads-is-styled-and-spawns-nothing)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-01--the-page-loads-is-styled-and-spawns-nothing)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `a5bfb1a7` |  |  |
 
-### TEAMMATESLIBRARY-02 — A library of only the Chief of Staff reads as one tile, then as empty
+### AGENTSLIBRARY-02 — A library of only the Chief of Staff reads as one tile, then as empty
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-02--a-library-of-only-the-chief-of-staff-reads-as-one-tile-then-as-empty)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-02--a-library-of-only-the-chief-of-staff-reads-as-one-tile-then-as-empty)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `0d79f995` |  | Teams folder confirmed empty (Get-ChildItem -Recurse returned 0). After F5 the page showed exactly 'No Personas yet. Choose New teammate to add one.' with the HTML 'No Personas yet. Choose `<strong>`New teammate`</strong>` to add one.' - New teammate in bold. Zero select elements, zero labels, zero h2/h3 group headings and no 'Files that didn't load' section anywhere. The h1, the New teammate button and the .teammates-intro paragraph were all still present. |
+| 2026-09-14 | Pass *(earlier script)* | `0d79f995` |  | Teams folder confirmed empty (Get-ChildItem -Recurse returned 0). After F5 the page showed exactly 'No Personas yet. Choose New agent to add one.' with the HTML 'No Personas yet. Choose `<strong>`New agent`</strong>` to add one.' - New agent in bold. Zero select elements, zero labels, zero h2/h3 group headings and no 'Files that didn't load' section anywhere. The h1, the New agent button and the .agents-intro paragraph were all still present. |
 
-### TEAMMATESLIBRARY-03 — The fixture library loads, and a tile shows monogram, Name, Title, an @alias caption and status
+### AGENTSLIBRARY-03 — The fixture library loads, and a tile shows monogram, Name, Title, an @alias caption and status
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-03--the-fixture-library-loads-and-a-tile-shows-monogram-name-title-an-alias-caption-and-status)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-03--the-fixture-library-loads-and-a-tile-shows-monogram-name-title-an-alias-caption-and-status)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `0d79f995` |  | All six fixture tiles present: Chief of Staff, Emily Lee, Nova, Quill, Rune, Vale. Nova's second line is 'Research Lead · @nov' - codepoints confirm a real U+00B7 middle dot and a leading @ on the alias. Every second line matched its frontmatter (Ops Lead · @val, Home Steward · @run, Scribe · @qui, Analyst · @emi, Chief of Staff · @cos). Monograms: EL, CS, N, Q, R, V - 'Chief of Staff' gives CS, first-and-last, not CO. Tiles are real tiles: border-radius 8px, 1px solid rgb(58,58,68), with a monogram square. No 'this.cardName' literal anywhere. The 'Chief of Staff' tile exists and is headed by its frontmatter Name even though the file is cos.md. Every status read 'Offline'; the dot is RED (agent-dot offline, rgb(224,90,90)), not grey as the script said - corrected here and in two later tests. |
 
-### TEAMMATESLIBRARY-04 — One heading per Team, ordinal order, "No team" last, no empty groups
+### AGENTSLIBRARY-04 — One heading per Team, ordinal order, "No team" last, no empty groups
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-04--one-heading-per-team-ordinal-order-no-team-last-no-empty-groups)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-04--one-heading-per-team-ordinal-order-no-team-last-no-empty-groups)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `6b09c072` |  | Walking main in document order gave exactly three h2.teammates-group-heading elements in this order: Business, Household, No team. Business held Chief of Staff, Emily Lee, Nova, Vale; Household held Rune, Vale; No team held Quill and was the LAST heading. No section.teammates-group had an empty grid. Quill.md confirmed on disk to have no teams: line. |
+| 2026-09-14 | Pass *(earlier script)* | `6b09c072` |  | Walking main in document order gave exactly three h2.agents-group-heading elements in this order: Business, Household, No team. Business held Chief of Staff, Emily Lee, Nova, Vale; Household held Rune, Vale; No team held Quill and was the LAST heading. No section.agents-group had an empty grid. Quill.md confirmed on disk to have no teams: line. |
 
-### TEAMMATESLIBRARY-05 — A Persona in two Teams renders in full under both headings
+### AGENTSLIBRARY-05 — A Persona in two Teams renders in full under both headings
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-05--a-persona-in-two-teams-renders-in-full-under-both-headings)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-05--a-persona-in-two-teams-renders-in-full-under-both-headings)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `6b09c072` |  | A full Vale tile appears under BOTH Business and Household, and the two copies are identical: name 'Vale', second line 'Ops Lead · @val', monogram 'V', status 'Offline'. Clicking either copy opened the SAME card - Vale / Ops Lead / Offline / 'Alias: val' / 'Teams: Business, Household' - so the click target is bound to the Persona, not the group index. |
 
-### TEAMMATESLIBRARY-06 — A Persona's Team comes from its field, never from its folder
+### AGENTSLIBRARY-06 — A Persona's Team comes from its field, never from its folder
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-06--a-personas-team-comes-from-its-field-never-from-its-folder)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-06--a-personas-team-comes-from-its-field-never-from-its-folder)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `6b09c072` |  | Household\zzz-misfiled.md (name 'Orin', teams ['Business']) appeared WITHOUT a refresh - the watcher caught it. Orin sits under the Business heading (Business: Chief of Staff, Emily Lee, Nova, Orin, Vale) and appears nowhere under Household; Household still holds only Rune and Vale. The word Household does not occur on Orin's tile or its group heading. The card reads 'Orin / Strategy Lead / Teams: Business' while its PERSONA FILE line prints E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Household\zzz-misfiled.md - folder and filename are both cosmetic. The tile is headed 'Orin', not 'zzz-misfiled'. |
 
-### TEAMMATESLIBRARY-07 — The Team filter's label, options, order and de-duplication
+### AGENTSLIBRARY-07 — The Team filter's label, options, order and de-duplication
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-07--the-team-filters-label-options-order-and-de-duplication)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-07--the-team-filters-label-options-order-and-de-duplication)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `6b09c072` |  | With Zed (Zulu) and Ada (admin) added to the core fixtures, a label reading exactly 'Team' wraps the dropdown and sits above the first group heading (verified by compareDocumentPosition). Options in order: All teams, Business, Household, Zulu, admin - 'All teams' first and selected, upper-case Zulu before lower-case admin, so the sort is ordinal as documented. Business appears exactly once although four Personas name it, and no option exists for a Team no Persona names. |
 
-### TEAMMATESLIBRARY-08 — Choosing a Team narrows to one heading and drops the no-team Personas
+### AGENTSLIBRARY-08 — Choosing a Team narrows to one heading and drops the no-team Personas
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-08--choosing-a-team-narrows-to-one-heading-and-drops-the-no-team-personas)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-08--choosing-a-team-narrows-to-one-heading-and-drops-the-no-team-personas)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `6b09c072` |  | Selecting Business narrowed the page immediately with no reload (a beforeunload listener never fired, and no F5 was pressed) to exactly ONE heading, 'Business', holding Chief of Staff, Emily Lee, Nova and Vale - no Household, Zulu, admin or No team heading, and Quill gone. Household gave exactly one heading holding Rune and Vale. 'All teams' restored the full grouped view: Business, Household, Zulu, admin, No team with Quill last. |
 
-### TEAMMATESLIBRARY-09 — A Team whose membership drops to zero says so
+### AGENTSLIBRARY-09 — A Team whose membership drops to zero says so
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-09--a-team-whose-membership-drops-to-zero-says-so)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-09--a-team-whose-membership-drops-to-zero-says-so)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `f13ff522` |  | With Zulu selected the page showed one heading 'Zulu' holding Zed. Editing Zed.md on disk to teams ['Business'] repainted the page on its own with no refresh: it then showed exactly 'No teammates in this team.' with ZERO .teammates-group sections - no empty Zulu heading - and never the 'No Personas yet' sentence. The #blazor-error-ui banner stayed display:none. Zulu had already vanished from the dropdown (All teams, Business, Household, admin). Choosing All teams brought the library back intact with Zed now under Business. |
+| 2026-09-14 | Pass *(earlier script)* | `f13ff522` |  | With Zulu selected the page showed one heading 'Zulu' holding Zed. Editing Zed.md on disk to teams ['Business'] repainted the page on its own with no refresh: it then showed exactly 'No agents in this team.' with ZERO .agents-group sections - no empty Zulu heading - and never the 'No Personas yet' sentence. The #blazor-error-ui banner stayed display:none. Zulu had already vanished from the dropdown (All teams, Business, Household, admin). Choosing All teams brought the library back intact with Zed now under Business. |
 
-### TEAMMATESLIBRARY-10 — Team names match case-insensitively and appear once
+### AGENTSLIBRARY-10 — Team names match case-insensitively and appear once
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-10--team-names-match-case-insensitively-and-appear-once)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-10--team-names-match-case-insensitively-and-appear-once)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `f13ff522` |  | Casey declares teams ['Nightshift'] and Dana declares ['nightshift']. Exactly ONE heading matched in any casing - 'Nightshift', Casey's casing (first Persona by Name) - out of headings Business, Household, Nightshift, No team. Both Casey and Dana sit under that single heading. The dropdown offered it exactly once (All teams, Business, Household, Nightshift) and selecting it showed both Casey and Dana. |
 
-### TEAMMATESLIBRARY-11 — All three YAML shapes of `teams` group identically, and the documented comma cost
+### AGENTSLIBRARY-11 — All three YAML shapes of `teams` group identically, and the documented comma cost
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-11--all-three-yaml-shapes-of-teams-group-identically-and-the-documented-comma-cost)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-11--all-three-yaml-shapes-of-teams-group-identically-and-the-documented-comma-cost)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `f13ff522` |  | ShapeA (comma scalar), ShapeB (flow list) and ShapeC (block list) all appear under BOTH Business and Household - the three shapes group identically. ShapeD's teams ['Sales, EMEA'] produced two headings, Sales and EMEA, each holding ShapeD: the documented cost, recorded as a pass. No heading read 'Business, Household' or 'Business; Household'. Nothing from ShapeD's role: line leaked - no Router, triage or continuity heading, and the dropdown held only All teams, Business, EMEA, Household, Ops, Sales. ShapeE (teams ['Ops','ops']) appeared under exactly one heading, Ops, and its card's Teams: line read 'Ops' once. No 'Files that didn't load' section. |
 
-### TEAMMATESLIBRARY-12 — A rejected file is named by path and reason, above the tiles, live
+### AGENTSLIBRARY-12 — A rejected file is named by path and reason, above the tiles, live
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-12--a-rejected-file-is-named-by-path-and-reason-above-the-tiles-live)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-12--a-rejected-file-is-named-by-path-and-reason-above-the-tiles-live)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `492a9445` |  | Deleting Nova's title line made the Nova tile vanish and a section appear WITHOUT a refresh. Heading reads exactly 'Files that didn't load' (an h2) and sits above BOTH the Team filter label and the first tile (compareDocumentPosition). The block lists 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md' on one line and under it 'Persona frontmatter is missing required field ''Title''.' It is visually distinct - .teammates-rejected, 1px solid rgb(107,53,53) on background rgb(58,31,31), radius 6px - not a bare sentence. Zero exceptions or stack traces in the app log and #blazor-error-ui stayed display:none. Restoring the line made the block disappear on its own and brought Nova back with 'Research Lead · @nov'. |
+| 2026-09-14 | Pass *(earlier script)* | `492a9445` |  | Deleting Nova's title line made the Nova tile vanish and a section appear WITHOUT a refresh. Heading reads exactly 'Files that didn't load' (an h2) and sits above BOTH the Team filter label and the first tile (compareDocumentPosition). The block lists 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md' on one line and under it 'Persona frontmatter is missing required field ''Title''.' It is visually distinct - .agents-rejected, 1px solid rgb(107,53,53) on background rgb(58,31,31), radius 6px - not a bare sentence. Zero exceptions or stack traces in the app log and #blazor-error-ui stayed display:none. Restoring the line made the block disappear on its own and brought Nova back with 'Research Lead · @nov'. |
 
-### TEAMMATESLIBRARY-13 — Every distinct rejection reason, word for word
+### AGENTSLIBRARY-13 — Every distinct rejection reason, word for word
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-13--every-distinct-rejection-reason-word-for-word)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-13--every-distinct-rejection-reason-word-for-word)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `492a9445` |  | All six reasons word for word, each under that file's own absolute path. bad1 (no name) and bad2 (no frontmatter at all) both gave 'Persona frontmatter is missing required field ''Name''.' and bad2 produced no tile. bad3 (blank title) gave 'Persona frontmatter is missing required field ''Title''.' - blank and missing are the same failure. bad4 gave 'Persona frontmatter has a duplicate ''Name'' field.' bad5 gave 'Persona frontmatter field ''Name'' has an invalid value: ''Emily  Lee''.' - textContent codepoints confirm BOTH spaces survive (20 20); HTML merely collapses them on screen. bad6 gave 'Persona frontmatter field ''Alias'' has an invalid value: ''-nope''.' The six valid fixtures kept rendering as tiles throughout, the rejected block cleared once the last bad file was deleted, and the app log held 0 unhandled/stack-trace lines with #blazor-error-ui display:none. |
 
-### TEAMMATESLIBRARY-14 — A duplicate Alias rejects BOTH files, each naming the other
+### AGENTSLIBRARY-14 — A duplicate Alias rejects BOTH files, each naming the other
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-14--a-duplicate-alias-rejects-both-files-each-naming-the-other)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-14--a-duplicate-alias-rejects-both-files-each-naming-the-other)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `2bf871c4` |  | Twin.md declaring alias 'nov' made BOTH tiles disappear with no refresh - Nova and Twin - while the other five fixtures stayed. The rejected block listed both absolute paths, and each reason named the OTHER file: under Nova.md 'Persona Alias ''nov'' is also used by ''...\Teams\Twin.md''.' and under Twin.md 'Persona Alias ''nov'' is also used by ''...\Teams\Nova.md''.' Nova.md's md5 was identical before and after (9ece8a6c269edcf994025c8abc91ac13), so rejection never wrote to disk. Changing Twin's alias to 'twi' brought both tiles back on their own. |
 
-### TEAMMATESLIBRARY-15 — A duplicate Name — including one differing only in case — rejects both
+### AGENTSLIBRARY-15 — A duplicate Name — including one differing only in case — rejects both
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-15--a-duplicate-name--including-one-differing-only-in-case--rejects-both)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-15--a-duplicate-name--including-one-differing-only-in-case--rejects-both)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `2bf871c4` |  | jarvis-a.md (name 'Jarvis') and jarvis-b.md (name 'jarvis') produced NO tile for either - not two, not one; the six valid fixtures were untouched. The rejected block listed both absolute paths with each naming the other: 'Persona Name ''Jarvis'' is also used by ''...\jarvis-b.md''.' and 'Persona Name ''jarvis'' is also used by ''...\jarvis-a.md''.' O-DB: select count(*) from persona_models where lower(persona_name)='jarvis' returned 0, and the table was empty overall - a rejected file wrote no row. |
 
-### TEAMMATESLIBRARY-16 — One file's Alias equal to another file's Name rejects both, with two different sentences — and a self-matching alias is legal
+### AGENTSLIBRARY-16 — One file's Alias equal to another file's Name rejects both, with two different sentences — and a self-matching alias is legal
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-16--one-files-alias-equal-to-another-files-name-rejects-both-with-two-different-sentences--and-a-self-matching-alias-is-legal)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-16--one-files-alias-equal-to-another-files-name-rejects-both-with-two-different-sentences--and-a-self-matching-alias-is-legal)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `1497225c` |  | shadow.md (alias 'Nova') removed BOTH the Nova and Shadow tiles and listed both paths, with DIFFERENT direction-specific sentences: under Nova.md "Persona Name 'Nova' matches the Alias used by '`<path>`\shadow.md'." and under shadow.md "Persona Alias 'Nova' matches the Name used by '`<path>`\Nova.md'." Deleting shadow.md brought Nova back. selfsame.md (name 'Echoic', alias 'Echoic') was NOT rejected - no rejected block at all - and rendered a tile whose second line reads 'Self Named @Echoic', so a self-matching alias is legal. |
 
-### TEAMMATESLIBRARY-17 — The rejected block is ordered, survives the filter, and coexists with the empty-library sentence
+### AGENTSLIBRARY-17 — The rejected block is ordered, survives the filter, and coexists with the empty-library sentence
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-17--the-rejected-block-is-ordered-survives-the-filter-and-coexists-with-the-empty-library-sentence)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-17--the-rejected-block-is-ordered-survives-the-filter-and-coexists-with-the-empty-library-sentence)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `1497225c` |  | Three broken files listed sorted by full path: aaa-broken.md, mmm-broken.md, zzz-broken.md. Selecting Business left the rejected block fully visible and still listing all three while the tiles narrowed to the four Business ones - the filter does not touch it. With every title line stripped (9 .md files on disk, all invalid) the page showed BOTH the rejected block, with 9 entries, AND 'No Personas yet. Choose New teammate to add one.', with zero tiles and NO Team dropdown rendered (0 select elements). Entry order in that state was ordinal by full path: Emily Lee.md, Household\Rune.md, Nova.md, Quill.md, Vale.md, aaa-broken.md, cos.md, mmm-broken.md, zzz-broken.md. Disk count equalled tiles + rejected entries at every point (9 = 0 + 9, then 6 = 6 + 0 after restoring). #blazor-error-ui stayed display:none. |
+| 2026-09-14 | Pass *(earlier script)* | `1497225c` |  | Three broken files listed sorted by full path: aaa-broken.md, mmm-broken.md, zzz-broken.md. Selecting Business left the rejected block fully visible and still listing all three while the tiles narrowed to the four Business ones - the filter does not touch it. With every title line stripped (9 .md files on disk, all invalid) the page showed BOTH the rejected block, with 9 entries, AND 'No Personas yet. Choose New agent to add one.', with zero tiles and NO Team dropdown rendered (0 select elements). Entry order in that state was ordinal by full path: Emily Lee.md, Household\Rune.md, Nova.md, Quill.md, Vale.md, aaa-broken.md, cos.md, mmm-broken.md, zzz-broken.md. Disk count equalled tiles + rejected entries at every point (9 = 0 + 9, then 6 = 6 + 0 after restoring). #blazor-error-ui stayed display:none. |
 
-### TEAMMATESLIBRARY-18 — Non-markdown files are ignored entirely — not loaded, not rejected
+### AGENTSLIBRARY-18 — Non-markdown files are ignored entirely — not loaded, not rejected
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-18--non-markdown-files-are-ignored-entirely--not-loaded-not-rejected)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-18--non-markdown-files-are-ignored-entirely--not-loaded-not-rejected)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `3617fa79` |  | Created notes.txt, an empty .gitkeep and Household\readme.rst while a MutationObserver watched main. Over six seconds it recorded ZERO mutations - no repaint at all. Tiles were identical before and after, no 'Files that didn't load' block appeared, and none of the three filenames occurs anywhere on the page. The app log gained 0 lines across the whole step - no reload or restart was triggered. |
 
-### TEAMMATESLIBRARY-19 — The watcher is live: an edit to a Teammate's definition reloads it, and a write under work\ does not
+### AGENTSLIBRARY-19 — The watcher is live: an edit to an Agent's definition reloads it, and a write under work\ does not
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-19--the-watcher-is-live-an-edit-to-a-teammates-definition-reloads-it-and-a-write-under-work-does-not)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-19--the-watcher-is-live-an-edit-to-an-agents-definition-reloads-it-and-a-write-under-work-does-not)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `3617fa79` |  | No F5 and no restart at any point. NESTED Household\Rune.md: title edit gave 'House Captain @run' within ~1 s; alias edit then gave 'House Captain @rn'; teams edit moved the tile from under Household to under Business on its own. The card's Persona block showed the whole raw file, frontmatter included, matching the buffer exactly (name Rune / title House Captain / alias rn / teams Business). ROOT Nova.md reloaded the same way - 'Research Chief @nov'. IncludeSubdirectories is clearly on. All four values restored afterwards. |
 
-### TEAMMATESLIBRARY-20 — The watcher notices creations and deletions while the page is open
+### AGENTSLIBRARY-20 — The watcher notices creations and deletions while the page is open
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-20--the-watcher-notices-creations-and-deletions-while-the-page-is-open)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-20--the-watcher-notices-creations-and-deletions-while-the-page-is-open)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `3617fa79` |  | No refresh at any point. Copying Pike.md in added a Pike tile under a new Logistics heading within about a second, and the Team dropdown gained a Logistics option in the same repaint (headings Business/Household/Logistics/No team, options All teams/Business/Household/Logistics). Deleting the file removed the Pike tile, the Logistics heading (its only member) and the Logistics option together - headings and options both back to Business/Household/No team. The grid and the filter never disagreed. |
 
-### TEAMMATESLIBRARY-21 — Renaming or deleting a Teammate folder from outside is noticed, and the card follows the file
+### AGENTSLIBRARY-21 — Renaming or deleting an Agent folder from outside is noticed, and the card follows the file
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-21--renaming-or-deleting-a-teammate-folder-from-outside-is-noticed-and-the-card-follows-the-file)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-21--renaming-or-deleting-an-agent-folder-from-outside-is-noticed-and-the-card-follows-the-file)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `13f2c690` |  | PART A - renaming Household to HouseholdOps left both the Rune and Bram tiles on the page with identity intact ('Home Steward @run', 'Home Second @bra'), and the card's Persona file line updated to the NEW folder, ...\Teams\HouseholdOps\Rune.md. Edit then Save succeeded with zero error elements on the card, and the trailing space landed on disk at the new path (verified with cat -A). PART B - moving the folder out of the tree made BOTH tiles vanish on their own within a second, with 0 new log lines and #blazor-error-ui display:none. The Household heading correctly REMAINED, holding only Vale, because Vale.md declares teams ['Business','Household'] - the script's pass line said the heading disappears, which contradicts its own core fixture set; corrected. Step 6 (Open launching an external editor) not exercised - it is TEAMMATESLIBRARY-33's subject and needs a GUI editor. |
+| 2026-09-14 | Pass *(earlier script)* | `13f2c690` |  | PART A - renaming Household to HouseholdOps left both the Rune and Bram tiles on the page with identity intact ('Home Steward @run', 'Home Second @bra'), and the card's Persona file line updated to the NEW folder, ...\Teams\HouseholdOps\Rune.md. Edit then Save succeeded with zero error elements on the card, and the trailing space landed on disk at the new path (verified with cat -A). PART B - moving the folder out of the tree made BOTH tiles vanish on their own within a second, with 0 new log lines and #blazor-error-ui display:none. The Household heading correctly REMAINED, holding only Vale, because Vale.md declares teams ['Business','Household'] - the script's pass line said the heading disappears, which contradicts its own core fixture set; corrected. Step 6 (Open launching an external editor) not exercised - it is AGENTSLIBRARY-33's subject and needs a GUI editor. |
 
-### TEAMMATESLIBRARY-22 — A burst of file writes becomes one update, not five
+### AGENTSLIBRARY-22 — A burst of file writes becomes one update, not five
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-22--a-burst-of-file-writes-becomes-one-update-not-five)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-22--a-burst-of-file-writes-becomes-one-update-not-five)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `13f2c690` |  | Five valid Personas prepared outside App_Data and copied in as ONE operation, with ACP off. A MutationObserver recording only distinct tile-set changes saw exactly ONE repaint - straight from 7 tiles to 12, all five Burst tiles appearing together about half a second after the copy settled. No further repaints followed. The app log gained 0 lines for the whole burst, so no per-file churn was logged either. |
 
-### TEAMMATESLIBRARY-23 — A dropped-event storm still converges on what is on disk
+### AGENTSLIBRARY-23 — A dropped-event storm still converges on what is on disk
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-23--a-dropped-event-storm-still-converges-on-what-is-on-disk)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-23--a-dropped-event-storm-still-converges-on-what-is-on-disk)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `13f2c690` |  | PASS-with-note: could not provoke a dropped-event storm; convergence verified for a 50-file burst. Writing 50 Personas at once gave 56 .md on disk and, with no refresh, a Storm heading holding exactly 50 tiles, 56 unique Personas on screen and 0 rejected entries - 56 = 56 + 0, so the page agreed exactly with the disk. (57 tile elements because Vale renders under two Teams.) Deleting all 50 at once brought it back to 6 .md on disk, 6 unique tiles, 0 rejected, and the Storm heading gone. The overflow warning 'PersonaStore's FileSystemWatcher reported an error...' never appeared - the 64 KB buffer makes it rare by design - so that specific backstop path was NOT exercised and is not being reported as verified. |
 
-### TEAMMATESLIBRARY-24 — A tile click opens the card, and the card shows the real file path
+### AGENTSLIBRARY-24 — A tile click opens the card, and the card shows the real file path
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-24--a-tile-click-opens-the-card-and-the-card-shows-the-real-file-path)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `4823bf5c` |  | Clicking the monogram square and clicking the status line both opened the card. Header reads exactly 'Teammate'. Nova's card: Name Nova, Title Research Lead, a status line with a dot and 'Offline', 'Alias: nov', 'Teams: Business'; section headings in order PERSONA, MODEL, EFFORT, PERSONA FILE; the Persona block held the whole raw file including the --- frontmatter; MODEL 'Agent default', EFFORT 'Model default'. Clicking inside .teammate-card-panel did NOT close it; clicking the .teammate-overlay backdrop DID. Quill's card has no Teams: line at all, not an empty one. Switching Quill to Rune showed no leftover Nova text. Rune's card printed ...\App_Data\Teams\Household\Rune.md and Test-Path on it returned True. O-ADAPTERS stayed 0 across every card open. |
-
-### TEAMMATESLIBRARY-25 — Offline is the honest default, with no invented reason
-
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-25--offline-is-the-honest-default-with-no-invented-reason)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-24--a-tile-click-opens-the-card-and-the-card-shows-the-real-file-path)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `4823bf5c` |  | App started without --Team:Acp:Enabled=true. All seven tile elements read 'Offline' with agent-dot offline, computed rgb(224,90,90) - red, not grey. Neither the status line nor the dot carries a title attribute, so hovering shows no tooltip and no reason is invented. Nova's card showed the same Offline status line with no reason paragraph, and an action row of exactly Edit, Open, Restart, Remove followed by the hint 'Like saving an edit, this restarts the teammate, which clears what it remembers.' O-ADAPTERS printed 0. In users the only agent rows are the demo agents echo and alpha. |
+| 2026-09-14 | Pass *(earlier script)* | `4823bf5c` |  | Clicking the monogram square and clicking the status line both opened the card. Header reads exactly 'Agent'. Nova's card: Name Nova, Title Research Lead, a status line with a dot and 'Offline', 'Alias: nov', 'Teams: Business'; section headings in order PERSONA, MODEL, EFFORT, PERSONA FILE; the Persona block held the whole raw file including the --- frontmatter; MODEL 'Agent default', EFFORT 'Model default'. Clicking inside .agent-profile-card-panel did NOT close it; clicking the .agent-overlay backdrop DID. Quill's card has no Teams: line at all, not an empty one. Switching Quill to Rune showed no leftover Nova text. Rune's card printed ...\App_Data\Teams\Household\Rune.md and Test-Path on it returned True. O-ADAPTERS stayed 0 across every card open. |
 
-### TEAMMATESLIBRARY-27 — Badges repaint live on connect and disconnect, with no refresh
+### AGENTSLIBRARY-25 — Offline is the honest default, with no invented reason
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-27--badges-repaint-live-on-connect-and-disconnect-with-no-refresh)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `663a2416` |  | Scout Persona plus a pipe client of the same name. One F5 (the documented first-connection refresh) gave tile Online with a green dot and card Online. Stopping the bot flipped BOTH the tile (agent-dot offline) AND the open card to Offline on their own with no refresh; the two never disagreed. Restarting the bot took both back to Online by themselves. Navigating Teammates then Settings then Teammates produced zero new log lines, zero exceptions, and the error banner stayed display none - nothing leaked a subscription. |
-
-### TEAMMATESLIBRARY-41 — A definition file at the Teammates root is rejected, naming its path
-
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-41--a-definition-file-at-the-teammates-root-is-rejected-naming-its-path)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-25--offline-is-the-honest-default-with-no-invented-reason)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-09-14 | Pass *(earlier script)* | `4823bf5c` |  | App started without --Team:Acp:Enabled=true. All seven tile elements read 'Offline' with agent-dot offline, computed rgb(224,90,90) - red, not grey. Neither the status line nor the dot carries a title attribute, so hovering shows no tooltip and no reason is invented. Nova's card showed the same Offline status line with no reason paragraph, and an action row of exactly Edit, Open, Restart, Remove followed by the hint 'Like saving an edit, this restarts the agent, which clears what it remembers.' O-ADAPTERS printed 0. In users the only agent rows are the demo agents echo and alpha. |
 
-### TEAMMATESLIBRARY-42 — A second .md in a Teammate folder is rejected, and work\ is the place for notes
+### AGENTSLIBRARY-27 — Badges repaint live on connect and disconnect, with no refresh
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-42--a-second-md-in-a-teammate-folder-is-rejected-and-work-is-the-place-for-notes)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-27--badges-repaint-live-on-connect-and-disconnect-with-no-refresh)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-09-14 | Pass *(earlier script)* | `663a2416` |  | Scout Persona plus a pipe client of the same name. One F5 (the documented first-connection refresh) gave tile Online with a green dot and card Online. Stopping the bot flipped BOTH the tile (agent-dot offline) AND the open card to Offline on their own with no refresh; the two never disagreed. Restarting the bot took both back to Online by themselves. Navigating Agents then Settings then Agents produced zero new log lines, zero exceptions, and the error banner stayed display none - nothing leaked a subscription. |
+
+### AGENTSLIBRARY-41 — A definition file at the Agents root is rejected, naming its path
+
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-41--a-definition-file-at-the-agents-root-is-rejected-naming-its-path)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### TEAMMATESLIBRARY-43 — Files in _unsorted are rejected as migrated leftovers; other underscore folders are skipped
+### AGENTSLIBRARY-42 — A second .md in an Agent folder is rejected, and work\ is the place for notes
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-43--files-in-_unsorted-are-rejected-as-migrated-leftovers-other-underscore-folders-are-skipped)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-42--a-second-md-in-an-agent-folder-is-rejected-and-work-is-the-place-for-notes)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### TEAMMATESLIBRARY-28 — An edit to a Teammate's file from outside changes only what the file says; the stored Model and Effort stay
+### AGENTSLIBRARY-43 — Files in _unsorted are rejected as migrated leftovers; other underscore folders are skipped
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-28--an-edit-to-a-teammates-file-from-outside-changes-only-what-the-file-says-the-stored-model-and-effort-stay)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-43--files-in-_unsorted-are-rejected-as-migrated-leftovers-other-underscore-folders-are-skipped)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### AGENTSLIBRARY-28 — An edit to an Agent's file from outside changes only what the file says; the stored Model and Effort stay
+
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-28--an-edit-to-an-agents-file-from-outside-changes-only-what-the-file-says-the-stored-model-and-effort-stay)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `663a2416` |  | Mira created in Teams\Business\, set to Haiku / low through the card. Baseline: Name Mira, Title Field Analyst, alias mir, heading Business, MODEL haiku, EFFORT low, path ...\Teams\Business\Mira.md, and persona_models/persona_efforts rows keyed 'Mira' = haiku / low. Moved to the Teams ROOT: page repainted on its own, all six facts identical, only the path changed to ...\Teams\Mira.md. Moved into Household\: same again - still under the Business heading while its file sits in the Household folder, MODEL still haiku, EFFORT still low, path ...\Teams\Household\Mira.md. Database rows unchanged after both moves, still keyed by the frontmatter Name. No path-derived key. (Immediately after Save the card renders the catalog's display name 'Haiku'; on any later open it shows the raw stored id 'haiku'. That is the probe catalog being in memory or not, identical before and after each move, not a move effect.) |
 
-### TEAMMATESLIBRARY-29 — New teammate writes its own folder and file under Teammates, with the Teams field it was given
+### AGENTSLIBRARY-29 — New agent writes its own folder and file under Agents, with the Teams field it was given
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-29--new-teammate-writes-its-own-folder-and-file-under-teammates-with-the-teams-field-it-was-given)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-29--new-agent-writes-its-own-folder-and-file-under-agents-with-the-teams-field-it-was-given)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `e628f811` |  | Teams field hint reads exactly 'Comma-separated. Leave blank for no team.' After Add teammate the card switched to View mode: header 'Teammate', Name Wren, and a line reading 'Teams: Business, Household'. A Wren tile appeared under BOTH the Business and Household headings. The file is at src\Huddle.App\App_Data\Teams\Wren.md - at the ROOT, the only Wren.md in the tree, not inside Household\ even though that folder exists. Contents are lowercase single-quoted frontmatter: name 'Wren', title 'Ops Lead', alias 'wre', teams ['Business', 'Household'], then --- then the body - the comma list was split into two Teams, not one. No 'Files that didn't load' entry. The Model dropdown did offer real models (the probe runs with Acp off by design) so Haiku / low were selected as the convention requires. |
+| 2026-09-14 | Pass *(earlier script)* | `e628f811` |  | Teams field hint reads exactly 'Comma-separated. Leave blank for no team.' After Add agent the card switched to View mode: header 'Agent', Name Wren, and a line reading 'Teams: Business, Household'. A Wren tile appeared under BOTH the Business and Household headings. The file is at src\Huddle.App\App_Data\Teams\Wren.md - at the ROOT, the only Wren.md in the tree, not inside Household\ even though that folder exists. Contents are lowercase single-quoted frontmatter: name 'Wren', title 'Ops Lead', alias 'wre', teams ['Business', 'Household'], then --- then the body - the comma list was split into two Teams, not one. No 'Files that didn't load' entry. The Model dropdown did offer real models (the probe runs with Acp off by design) so Haiku / low were selected as the convention requires. |
 
-### TEAMMATESLIBRARY-30 — A save that would create a rejected file is refused before anything is written
+### AGENTSLIBRARY-30 — A save that would create a rejected file is refused before anything is written
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-30--a-save-that-would-create-a-rejected-file-is-refused-before-anything-is-written)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-30--a-save-that-would-create-a-rejected-file-is-refused-before-anything-is-written)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `198e8078` |  | Every one of the seven attempts kept the card open, kept every typed field intact, and showed the message in red (.composer-error, rgb(255,138,138)) - nothing was ever written. Wording word for word: Name Nova -> "Persona 'Nova' already exists."; Name Rune -> "Persona Name 'Rune' is also used by '`<path>`\Household\Rune.md'." - the sub-folder collision is caught with no Rune.md at the root; Name rune -> the same sentence with 'rune', so a case-only difference still collides; Alias nov -> "Persona Alias 'nov' is also used by '`<path>`\Nova.md'."; blank body -> "Persona text must not be blank."; Name with two spaces -> "'Emily  Lee' is not a valid Persona name."; Alias -nope -> "'-nope' is not a valid Persona alias." The .md count was 8 before and 8 after all seven refusals, and no entry ever appeared in the rejected block. Cancel closed the card. |
 
-### TEAMMATESLIBRARY-31 — Renaming through the frontmatter: the tile renames, Model and Effort follow, and the folder and file are renamed with it
+### AGENTSLIBRARY-31 — Renaming through the frontmatter: the tile renames, Model and Effort follow, and the folder and file are renamed with it
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-31--renaming-through-the-frontmatter-the-tile-renames-model-and-effort-follow-and-the-folder-and-file-are-renamed-with-it)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-31--renaming-through-the-frontmatter-the-tile-renames-model-and-effort-follow-and-the-folder-and-file-are-renamed-with-it)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `198e8078` |  | Edit hint reads exactly 'Markdown. This is the whole Persona file, front matter included, and becomes the teammate's system prompt. Saving restarts it, which clears what it remembers.' Changing only name 'Mira' to 'Mira Prime' in the textarea and saving: a tile now reads 'Mira Prime' with monogram MP and no tile reads 'Mira'. The card shows the SAME MODEL haiku and EFFORT low as before. On disk the file is STILL Mira.md and the card's PERSONA FILE line still ends Mira.md - identity is frontmatter, not filename. persona_models and persona_efforts hold rows keyed 'Mira Prime' = haiku / low and NO row keyed 'Mira'. Mira never had a Room so the documented ghost could not be observed here; the sidebar holds only echo, alpha and Scout. |
+| 2026-09-14 | Pass *(earlier script)* | `198e8078` |  | Edit hint reads exactly 'Markdown. This is the whole Persona file, front matter included, and becomes the agent's system prompt. Saving restarts it, which clears what it remembers.' Changing only name 'Mira' to 'Mira Prime' in the textarea and saving: a tile now reads 'Mira Prime' with monogram MP and no tile reads 'Mira'. The card shows the SAME MODEL haiku and EFFORT low as before. On disk the file is STILL Mira.md and the card's PERSONA FILE line still ends Mira.md - identity is frontmatter, not filename. persona_models and persona_efforts hold rows keyed 'Mira Prime' = haiku / low and NO row keyed 'Mira'. Mira never had a Room so the documented ghost could not be observed here; the sidebar holds only echo, alpha and Scout. |
 
-### TEAMMATESLIBRARY-32 — Remove takes the file, the Model and the Effort — and not the chats
+### AGENTSLIBRARY-32 — Remove takes the file, the Model and the Effort — and not the chats
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-32--remove-takes-the-file-the-model-and-the-effort--and-not-the-chats)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-32--remove-takes-the-file-the-model-and-the-effort--and-not-the-chats)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `198e8078` |  | echo set up as the sole member of a Demo team, with Model Haiku / Effort low, and a Room holding two messages. Remove did NOT delete on the first click: the row swapped from x/Message/Edit/Open/Remove to x/Message/Edit/Open/Confirm/Cancel. Cancel restored the original row and deleted nothing. Confirm closed the card, removed the tile, removed the Demo heading (its last member) and removed Demo from the Team dropdown. echo.md is gone from disk and persona_models / persona_efforts hold no row for it (only Wren and Mira Prime remain). The echo Room is still in the sidebar, still in the rooms table, and its .jsonl still holds both messages - removal did not cascade. Recreating a Persona with the same Name, Title and Alias gave MODEL 'Agent default' and EFFORT 'Model default' - no resurrected setting. |
 
-### TEAMMATESLIBRARY-33 — Open launches the Persona file on the SERVER, from its Teammate folder
+### AGENTSLIBRARY-33 — Open launches the Persona file on the SERVER, from its Agent folder
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-33--open-launches-the-persona-file-on-the-server-from-its-teammate-folder)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-| 2026-09-14 | Inconclusive *(earlier script)* | `40d6e47a` | #20 | Inconclusive - this machine has no .md handler (assoc .md reports 'File association not found'), so the test's main assertion, that Open launches the NESTED file rather than a reconstructed root path, cannot be exercised at all. What was observed: clicking Open on Nova launched nothing, opened no shell dialog, and showed NO message - the card was unchanged, the error banner stayed display none and the log gained no line. That is the Fail-if wording, but not the branch the Inconclusive clause expects (it assumes a handled 'Could not open ...' line). Root cause found and filed as #20: with UseShellExecute true and no association Process.Start RETURNS NULL rather than throwing, so Teammates.razor's catch never runs and cardError is set to null. Reproduced directly in PowerShell. |
-
-### TEAMMATESLIBRARY-34 — Neither a page load, a filter change, nor a View card ever spawns an adapter
-
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-34--neither-a-page-load-a-filter-change-nor-a-view-card-ever-spawns-an-adapter)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-33--open-launches-the-persona-file-on-the-server-from-its-agent-folder)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `1070222e` |  | Adapter installed (tools\acp\node_modules present); app restarted first so the catalog cache was cold. O-ADAPTERS stayed 0 and the log stayed at 14 lines through: the /teammates page load, cycling the Team filter through every option and back to All teams, and opening a View card. Clicking Edit changed it - sampling every 0.9 s caught exactly ONE claude-agent-acp node process at t+1s, gone by t+2s, and the log jumped from 14 to 40 lines with AgentProcessLauncher and DotAcpClientAdapter entries. The probe is confined to the Create/Edit card. (A first pass showed 0 even at Edit because the catalog was already cached from earlier tests; the restart is what made this observable.) |
+| 2026-09-14 | Inconclusive *(earlier script)* | `40d6e47a` | #20 | Inconclusive - this machine has no .md handler (assoc .md reports 'File association not found'), so the test's main assertion, that Open launches the NESTED file rather than a reconstructed root path, cannot be exercised at all. What was observed: clicking Open on Nova launched nothing, opened no shell dialog, and showed NO message - the card was unchanged, the error banner stayed display none and the log gained no line. That is the Fail-if wording, but not the branch the Inconclusive clause expects (it assumes a handled 'Could not open ...' line). Root cause found and filed as #20: with UseShellExecute true and no association Process.Start RETURNS NULL rather than throwing, so Agents.razor's catch never runs and cardError is set to null. Reproduced directly in PowerShell. |
 
-### TEAMMATESLIBRARY-35 — Restart with ACP switched off reports why and starts nothing
+### AGENTSLIBRARY-34 — Neither a page load, a filter change, nor a View card ever spawns an adapter
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-35--restart-with-acp-switched-off-reports-why-and-starts-nothing)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-34--neither-a-page-load-a-filter-change-nor-a-view-card-ever-spawns-an-adapter)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `1070222e` | #21 | Recorded precisely, as the test asks. App started with Team__Acp__Enabled false; O-ADAPTERS 0 and every tile Offline. Clicking Restart once on Nova started a claude-agent-acp adapter that STAYED UP - sampled every 0.9 s for 12 s, present throughout, so not the short-lived catalog probe of -34 - and the badge walked Offline, 'Restarting...' (button disabled), Starting, Online on both the card and the tile. No crash, no error line, error banner display none. The hint read exactly 'Like saving an edit, this restarts the teammate, which clears what it remembers.' App_Data\work\Nova already existed from earlier tests so its creation could not be attributed to this click. Restart is NOT gated by the cost guard; flagged as #21. No message was sent and the adapter was stopped immediately, so nothing was spent. |
+| 2026-09-14 | Pass *(earlier script)* | `1070222e` |  | Adapter installed (tools\acp\node_modules present); app restarted first so the catalog cache was cold. O-ADAPTERS stayed 0 and the log stayed at 14 lines through: the /agents page load, cycling the Team filter through every option and back to All teams, and opening a View card. Clicking Edit changed it - sampling every 0.9 s caught exactly ONE claude-agent-acp node process at t+1s, gone by t+2s, and the log jumped from 14 to 40 lines with AgentProcessLauncher and DotAcpClientAdapter entries. The probe is confined to the Create/Edit card. (A first pass showed 0 even at Edit because the catalog was already cached from earlier tests; the restart is what made this observable.) |
 
-### TEAMMATESLIBRARY-36 — Restart is busy-flagged and cannot be double-fired
+### AGENTSLIBRARY-35 — Restart with ACP switched off reports why and starts nothing
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-36--restart-is-busy-flagged-and-cannot-be-double-fired)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-35--restart-with-acp-switched-off-reports-why-and-starts-nothing)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-09-14 | Pass *(earlier script)* | `1070222e` | #21 | Recorded precisely, as the test asks. App started with Team__Acp__Enabled false; O-ADAPTERS 0 and every tile Offline. Clicking Restart once on Nova started a claude-agent-acp adapter that STAYED UP - sampled every 0.9 s for 12 s, present throughout, so not the short-lived catalog probe of -34 - and the badge walked Offline, 'Restarting...' (button disabled), Starting, Online on both the card and the tile. No crash, no error line, error banner display none. The hint read exactly 'Like saving an edit, this restarts the agent, which clears what it remembers.' App_Data\work\Nova already existed from earlier tests so its creation could not be attributed to this click. Restart is NOT gated by the cost guard; flagged as #21. No message was sent and the adapter was stopped immediately, so nothing was spent. |
+
+### AGENTSLIBRARY-36 — Restart is busy-flagged and cannot be double-fired
+
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-36--restart-is-busy-flagged-and-cannot-be-double-fired)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `821f02b6` |  | O-ADAPTERS 0 before. Clicked Restart on the Offline Vale card and immediately clicked twice more. A MutationObserver caught the button as 'Restarting...' AND disabled - the extra clicks did nothing - and the adapter count rose by exactly ONE, holding at 1 across ten samples over nine seconds, never 2 or 3. When it settled the Restart button was gone entirely because Vale is now Online, and the row read x/Message/Edit/Open/Remove. No error banner. Adapter stopped immediately afterwards by stopping the app; no message was sent, so nothing was spent. |
 
-### TEAMMATESLIBRARY-37 — Offline WITH a reason, in both of its homes
+### AGENTSLIBRARY-37 — Offline WITH a reason, in both of its homes
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-37--offline-with-a-reason-in-both-of-its-homes)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `821f02b6` |  | node_modules renamed aside, app started with -- --Team:Acp:Enabled=true. Every tile read Offline. Each tile's status line carried the tooltip verbatim, e.g. for Nova: "No ACP adapter is installed for Persona 'Nova'. Run tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona." The card showed that SAME text as a full paragraph, P.teammate-card-reason, under the status line - not as a tooltip. Console logged "Persona 'Nova' failed to start." at warn with the matching InvalidOperationException. No banned vocabulary (bot / backend / LLM / rate limit / quota). O-ADAPTERS stayed 0 while the adapter was renamed aside, so nothing was spent. After restoring node_modules and clicking Restart on the open card, a MutationObserver caught Offline then Starting then Online, and the reason vanished from BOTH the card paragraph and the tile tooltip (title attribute now null). |
-
-### TEAMMATESLIBRARY-38 — Health outranks pipe liveness: a live pipe with a failed start must read Offline
-
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-38--health-outranks-pipe-liveness-a-live-pipe-with-a-failed-start-must-read-offline)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-37--offline-with-a-reason-in-both-of-its-homes)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `821f02b6` |  | Observed in the same run as TEAMMATESLIBRARY-37: node_modules renamed aside, app started with -- --Team:Acp:Enabled=true, echo.md present with name 'echo'. BOTH console lines were there at once - "Demo agent echo connected." (the pipe is live) and "Persona 'echo' failed to start." with the InvalidOperationException naming echo. The echo tile read Offline, NOT Online, and its status line carried the tooltip "No ACP adapter is installed for Persona 'echo'. Run tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona." The users table still holds the connected echo agent row (id 01a0a3213d987cf794ec599fb9cae5b9, kind agent), so the pipe genuinely was up. Health outranks pipe liveness. Entirely free - O-ADAPTERS stayed 0 throughout. |
+| 2026-09-14 | Pass *(earlier script)* | `821f02b6` |  | node_modules renamed aside, app started with -- --Team:Acp:Enabled=true. Every tile read Offline. Each tile's status line carried the tooltip verbatim, e.g. for Nova: "No ACP adapter is installed for Persona 'Nova'. Run tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona." The card showed that SAME text as a full paragraph, P.agent-profile-card-reason, under the status line - not as a tooltip. Console logged "Persona 'Nova' failed to start." at warn with the matching InvalidOperationException. No banned vocabulary (bot / backend / LLM / rate limit / quota). O-ADAPTERS stayed 0 while the adapter was renamed aside, so nothing was spent. After restoring node_modules and clicking Restart on the open card, a MutationObserver caught Offline then Starting then Online, and the reason vanished from BOTH the card paragraph and the tile tooltip (title attribute now null). |
 
-### TEAMMATESLIBRARY-39 — The whole page in Dark mode, with a card open and a rejected file present
+### AGENTSLIBRARY-38 — Health outranks pipe liveness: a live pipe with a failed start must read Offline
 
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-39--the-whole-page-in-dark-mode-with-a-card-open-and-a-rejected-file-present)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `1dbda99b` |  | Theme set to Dark (appearance.json written with theme huddle-dark) with Quill broken so the rejected block was on screen. Every surface measured dark, computed: body bg rgb(27,27,31) text rgb(230,230,234); .teammates-rejected bg rgb(58,31,31) border rgb(107,53,53) - a clearly distinct red-family danger treatment against the dark page, still obviously a warning; Team label rgb(195,195,204) and select bg rgb(59,59,59) on white text; group heading rgb(195,195,204) with underline rgb(48,48,58); tile bg rgb(42,42,49) border rgb(58,58,68); monogram bg rgb(94,43,96) white text; status dot rgb(224,90,90). Card: backdrop rgba(0,0,0,0.6), panel bg rgb(42,42,49), the pre Persona block rgb(23,23,27), all with light text. Edit: textarea and both Model and Effort dropdowns rgb(59,59,59) on white. Tile hover resolves --surface-hover to the dark branch #32323b (from light-dark(#eef3ff, #32323b)) - a visible dark change, not a white flash. Nothing stayed light and no text was dark-on-dark. Note: this machine's System theme already resolves dark, so the Dark choice looked identical; appearance.json confirms the choice was written, which the Inconclusive clause accepts. Theme returned to System and Quill's title restored. |
-
-### TEAMMATESLIBRARY-40 — Degraded, with the reason — and the two things that must NOT badge
-
-File: [`docs/engineering/manual-tests/teammates-library.md`](teammates-library.md#teammateslibrary-40--degraded-with-the-reason--and-the-two-things-that-must-not-badge)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-38--health-outranks-pipe-liveness-a-live-pipe-with-a-failed-start-must-read-offline)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Inconclusive *(earlier script)* | `72496a5a` |  | Inconclusive - NOT EXECUTED, per the test's own Inconclusive clause. The Degraded half needs three consecutive GENUINE Turn failures, and this provider cannot be interrupted mid-Turn by any non-destructive means available here: STREAMINGTURN-29 established that pointing ANTHROPIC_BASE_URL at a dead port and then at a local endpoint answering 401 both make the agent SDK retry and hang rather than fail the Turn (the endpoint was confirmed reached via Get-NetTCPConnection). Disabling the network adapter or revoking the claude CLI login are destructive to this machine and were not attempted, so the failures never land as failures and no money was spent here. The two negatives are already verified on this exact surface by earlier tests and were not re-bought: STREAMINGTURN-25 showed the /teammates tile and card staying Online with a green dot and no reason line through THREE consecutive Human-clicked Stops, and REPLYGATEBUDGET-07 showed /teammates not marking an Agent Degraded when its Room Budget was spent. |
+| 2026-09-14 | Pass *(earlier script)* | `821f02b6` |  | Observed in the same run as AGENTSLIBRARY-37: node_modules renamed aside, app started with -- --Team:Acp:Enabled=true, echo.md present with name 'echo'. BOTH console lines were there at once - "Demo agent echo connected." (the pipe is live) and "Persona 'echo' failed to start." with the InvalidOperationException naming echo. The echo tile read Offline, NOT Online, and its status line carried the tooltip "No ACP adapter is installed for Persona 'echo'. Run tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona." The users table still holds the connected echo agent row (id 01a0a3213d987cf794ec599fb9cae5b9, kind agent), so the pipe genuinely was up. Health outranks pipe liveness. Entirely free - O-ADAPTERS stayed 0 throughout. |
 
-## Teammate card: view, edit, create, delete
+### AGENTSLIBRARY-39 — The whole page in Dark mode, with a card open and a rejected file present
 
-### TEAMMATECARD-01 — Empty Teammates page and the New teammate entry point
-
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-01--empty-teammates-page-and-the-new-teammate-entry-point)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-39--the-whole-page-in-dark-mode-with-a-card-open-and-a-rejected-file-present)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | h1 `Teammates`, button `New teammate`, intro opens with the exact sentence, body reads `No Personas yet. Choose New teammate to add one.` with `New teammate` in <strong>. document.querySelectorAll('select').length was 0 - the Team filter is ABSENT from the DOM, not merely empty. Neither `echo` nor `alpha` is in <main>; both appear only in the sidebar room list, which P-RESET-TEAMS deliberately keeps (team.db is not deleted). |
+| 2026-09-14 | Pass *(earlier script)* | `1dbda99b` |  | Theme set to Dark (appearance.json written with theme huddle-dark) with Quill broken so the rejected block was on screen. Every surface measured dark, computed: body bg rgb(27,27,31) text rgb(230,230,234); .agents-rejected bg rgb(58,31,31) border rgb(107,53,53) - a clearly distinct red-family danger treatment against the dark page, still obviously a warning; Team label rgb(195,195,204) and select bg rgb(59,59,59) on white text; group heading rgb(195,195,204) with underline rgb(48,48,58); tile bg rgb(42,42,49) border rgb(58,58,68); monogram bg rgb(94,43,96) white text; status dot rgb(224,90,90). Card: backdrop rgba(0,0,0,0.6), panel bg rgb(42,42,49), the pre Persona block rgb(23,23,27), all with light text. Edit: textarea and both Model and Effort dropdowns rgb(59,59,59) on white. Tile hover resolves --surface-hover to the dark branch #32323b (from light-dark(#eef3ff, #32323b)) - a visible dark change, not a white flash. Nothing stayed light and no text was dark-on-dark. Note: this machine's System theme already resolves dark, so the Dark choice looked identical; appearance.json confirms the choice was written, which the Inconclusive clause accepts. Theme returned to System and Quill's title restored. |
 
-### TEAMMATECARD-02 — Clicking New teammate opens a card at all (blank-name crash probe)
+### AGENTSLIBRARY-40 — Degraded, with the reason — and the two things that must NOT badge
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-02--clicking-new-teammate-opens-a-card-at-all-blank-name-crash-probe)
+File: [`docs/engineering/manual-tests/agents-library.md`](agents-library.md#agentslibrary-40--degraded-with-the-reason--and-the-two-things-that-must-not-badge)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-09-14 | Inconclusive *(earlier script)* | `72496a5a` |  | Inconclusive - NOT EXECUTED, per the test's own Inconclusive clause. The Degraded half needs three consecutive GENUINE Turn failures, and this provider cannot be interrupted mid-Turn by any non-destructive means available here: STREAMINGTURN-29 established that pointing ANTHROPIC_BASE_URL at a dead port and then at a local endpoint answering 401 both make the agent SDK retry and hang rather than fail the Turn (the endpoint was confirmed reached via Get-NetTCPConnection). Disabling the network adapter or revoking the claude CLI login are destructive to this machine and were not attempted, so the failures never land as failures and no money was spent here. The two negatives are already verified on this exact surface by earlier tests and were not re-bought: STREAMINGTURN-25 showed the /agents tile and card staying Online with a green dot and no reason line through THREE consecutive Human-clicked Stops, and REPLYGATEBUDGET-07 showed /agents not marking an Agent Degraded when its Room Budget was spent. |
+
+## Agent card: view, edit, create, delete
+
+### AGENTPROFILECARD-01 — Empty Agents page and the New agent entry point
+
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-01--empty-agents-page-and-the-new-agent-entry-point)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | h1 `Agents`, button `New agent`, intro opens with the exact sentence, body reads `No Personas yet. Choose New agent to add one.` with `New agent` in <strong>. document.querySelectorAll('select').length was 0 - the Team filter is ABSENT from the DOM, not merely empty. Neither `echo` nor `alpha` is in <main>; both appear only in the sidebar room list, which P-RESET-TEAMS deliberately keeps (team.db is not deleted). |
+
+### AGENTPROFILECARD-02 — Clicking New agent opens a card at all (blank-name crash probe)
+
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-02--clicking-new-agent-opens-a-card-at-all-blank-name-crash-probe)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `f034c32a` |  | Re-run 2026-09-14: card opens on both attempts and survives an empty Name and a single-space Name; no exception in the console. Fix confirmed. Unblocks the Create tests 05-11, 18-21, 27, 28, 33. |
 
-### TEAMMATECARD-03 — Create card: every label, placeholder and hint
+### AGENTPROFILECARD-03 — Create card: every label, placeholder and hint
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-03--create-card-every-label-placeholder-and-hint)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Header `New teammate`; close button `x` with title AND aria-label `Close`. Four inputs in order Name/Title/Alias/Teams with the exact placeholders (`Chief of Staff`, `Chief of Staff`, `coo`, `Business, Household`) and all four hints verbatim. Textarea labelled `Persona body`, placeholder `You are the Chief of Staff. You keep the team honest.`, hint verbatim including `no front matter needed here.` Selects `Model` then `Effort`. Buttons `Add teammate` (type=submit, .teammate-card-primary) and `Cancel` (type=button). Zero status dots, zero status words. SCRIPT WORDING: the avatar is a 64px ROUNDED SQUARE (border-radius 10px), not circular - app.css calls it a stand-in for Slack's avatar and tiles use 8px; deliberate, and no Fail-if line covers shape. |
-
-### TEAMMATECARD-04 — Monogram tracks the Name as you type
-
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-04--monogram-tracks-the-name-as-you-type)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-03--create-card-every-label-placeholder-and-hint)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | empty -> `?`, `echo` -> `E`, `Emily Lee` -> `EL`, `Chief of Staff` -> `CS`. Clearing the Name back to empty left the card alive and returned the monogram to `?`, which re-confirms TEAMMATECARD-02. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Header `New agent`; close button `x` with title AND aria-label `Close`. Four inputs in order Name/Title/Alias/Teams with the exact placeholders (`Chief of Staff`, `Chief of Staff`, `coo`, `Business, Household`) and all four hints verbatim. Textarea labelled `Persona body`, placeholder `You are the Chief of Staff. You keep the team honest.`, hint verbatim including `no front matter needed here.` Selects `Model` then `Effort`. Buttons `Add agent` (type=submit, .agent-profile-card-primary) and `Cancel` (type=button). Zero status dots, zero status words. SCRIPT WORDING: the avatar is a 64px ROUNDED SQUARE (border-radius 10px), not circular - app.css calls it a stand-in for Slack's avatar and tiles use 8px; deliberate, and no Fail-if line covers shape. |
 
-### TEAMMATECARD-05 — Create: the exact Name accept/reject set
+### AGENTPROFILECARD-04 — Monogram tracks the Name as you type
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-05--create-the-exact-name-acceptreject-set)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-04--monogram-tracks-the-name-as-you-type)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | empty -> `?`, `echo` -> `E`, `Emily Lee` -> `EL`, `Chief of Staff` -> `CS`. Clearing the Name back to empty left the card alive and returned the monogram to `?`, which re-confirms AGENTPROFILECARD-02. |
+
+### AGENTPROFILECARD-05 — Create: the exact Name accept/reject set
+
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-05--create-the-exact-name-acceptreject-set)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | All ten rejects produced exactly one red .composer-error line quoting the raw input back verbatim, e.g. `' Nova' is not a valid Persona name.` and `'Emily  Lee' is not a valid Persona name.`; the card stayed open every time; 0 .md files after the whole reject set. All six accepts saved and switched to View, each writing one file at the Teams root: Nova.md, Emily Lee.md, 1Nova.md, nova-2.md, nova_2.md and the 64-char AAAA...GGGG.md. Teams empty again at the end. |
 
-### TEAMMATECARD-06 — Create: Alias validation uses the same rules and its own wording
+### AGENTPROFILECARD-06 — Create: Alias validation uses the same rules and its own wording
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-06--create-alias-validation-uses-the-same-rules-and-its-own-wording)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-06--create-alias-validation-uses-the-same-rules-and-its-own-wording)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | All five invalid aliases produced `'<input>' is not a valid Persona alias.` - the word is alias, not name: '', ' jar', 'jar jar ', 'jar.1', '-jar'. 0 .md files after the reject set. `jar`, `Jar Jar` and `jar-1` all saved, each showing `Alias: <value>` on the View card. |
 
-### TEAMMATECARD-07 — Create: validation precedence — which error wins
+### AGENTPROFILECARD-07 — Create: validation precedence — which error wins
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-07--create-validation-precedence--which-error-wins)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-07--create-validation-precedence--which-error-wins)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Exactly one error at each step, in the stated order: `'' is not a valid Persona name.` then `'' is not a valid Persona alias.` then `Persona text must not be blank.` then `Persona frontmatter is missing required field 'Title'.` errCount was 1 at every step and Teams held 0 .md files throughout. |
 
-### TEAMMATECARD-08 — Create: the Title is prose — blank rejected, commas preserved
+### AGENTPROFILECARD-08 — Create: the Title is prose — blank rejected, commas preserved
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-08--create-the-title-is-prose--blank-rejected-commas-preserved)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-08--create-the-title-is-prose--blank-rejected-commas-preserved)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Empty Title and a three-space Title both gave `Persona frontmatter is missing required field 'Title'.` `Router, triage, and cross-workstation continuity` saved; the View card's second line read it back with both commas intact. Nova.md line 3 is exactly `title: 'Router, triage, and cross-workstation continuity'` - one line, single-quoted. File is 105 bytes, LF endings, no BOM. |
 
-### TEAMMATECARD-09 — Create: a failed save never throws away what you typed
+### AGENTPROFILECARD-09 — Create: a failed save never throws away what you typed
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-09--create-a-failed-save-never-throws-away-what-you-typed)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-09--create-a-failed-save-never-throws-away-what-you-typed)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | After the `'jar.1' is not a valid Persona alias.` error the card stayed open and every field was identical to what was left: Name `Atlas`, Title `Ops Lead`, Teams `Business, Household`, the full three-line body ending `MARKER-9F3A.`, Model still haiku and Effort still low (the selects did NOT snap back). Changing Alias to `atl` then saved, and the View card's Persona block still carried `MARKER-9F3A.`, with Model `Haiku` / Effort `low`. |
 
-### TEAMMATECARD-10 — Enter in an identity field does not submit, and saving never reloads the page
+### AGENTPROFILECARD-10 — Enter in an identity field does not submit, and saving never reloads the page
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-10--enter-in-an-identity-field-does-not-submit-and-saving-never-reloads-the-page)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Enter in Name, Title, Alias and Teams did nothing at all - card still open, no error, no navigation, fields unchanged, performance.getEntriesByType('navigation').length stayed 1. `Add teammate` saved with no page reload: two JS markers set beforehand survived, navigation entries stayed 1 and the URL was unchanged. HARNESS NOTE: this browser's synthetic Enter never inserts text into ANY textarea - proved with a plain probe textarea appended to the page, which also stayed `abc`. The newline check was therefore made the SHELLNAV-19 way instead: a window-level keydown listener recorded key `Enter` on the Persona body TEXTAREA with defaultPrevented false, so nothing intercepts it and the browser's own newline applies. |
-
-### TEAMMATECARD-11 — A successful create lands on the new teammate's View card
-
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-11--a-successful-create-lands-on-the-new-teammates-view-card)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-10--enter-in-an-identity-field-does-not-submit-and-saving-never-reloads-the-page)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Card stayed open and the header switched to `Teammate`. Identity block read `Nova` / `Ops Lead` / dot + `Offline` / `Alias: nov` / `Teams: Business`; sections `Persona`, `Model`, `Effort`, `Persona file`. Behind the overlay a `Nova` tile appeared under a `Business` heading (`Ops Lead - @nov`, `Offline`) and the Team filter appeared with `All teams` + `Business`. App_Data\Teams\Nova.md written. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Enter in Name, Title, Alias and Teams did nothing at all - card still open, no error, no navigation, fields unchanged, performance.getEntriesByType('navigation').length stayed 1. `Add agent` saved with no page reload: two JS markers set beforehand survived, navigation entries stayed 1 and the URL was unchanged. HARNESS NOTE: this browser's synthetic Enter never inserts text into ANY textarea - proved with a plain probe textarea appended to the page, which also stayed `abc`. The newline check was therefore made the SHELLNAV-19 way instead: a window-level keydown listener recorded key `Enter` on the Persona body TEXTAREA with defaultPrevented false, so nothing intercepts it and the browser's own newline applies. |
 
-### TEAMMATECARD-12 — View card: every section and action, in order
+### AGENTPROFILECARD-11 — A successful create lands on the new agent's View card
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-12--view-card-every-section-and-action-in-order)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-11--a-successful-create-lands-on-the-new-agents-view-card)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Run against `Nova2`, not `Nova`: a Room named `Nova` already exists in team.db from the teammates-library area (P-RESET-TEAMS keeps team.db), so Nova's card correctly showed a `Message` link per TEAMMATECARD-44 and could not satisfy this test's `Message is absent` line. Common procedures' standing convention - append a digit when the Name is already in the sidebar - was applied. With Nova2: header exactly `Teammate`; identity `Nova2` / `Ops Lead` / agent-dot offline + `Offline` / `Alias: nov` / `Teams: Business`; actions exactly `Edit`, `Open`, `Restart`, `Remove` with no `Message`; the hint under them reads `Like saving an edit, this restarts the teammate, which clears what it remembers.`; sections in order Persona/Model/Effort/Persona file; the Persona block equals the file character for character (86 bytes, both --- lines and the name/title/alias/teams lines present); path `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova2.md`. No literal `this.card...` text anywhere. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Card stayed open and the header switched to `Agent`. Identity block read `Nova` / `Ops Lead` / dot + `Offline` / `Alias: nov` / `Teams: Business`; sections `Persona`, `Model`, `Effort`, `Persona file`. Behind the overlay a `Nova` tile appeared under a `Business` heading (`Ops Lead - @nov`, `Offline`) and the Team filter appeared with `All teams` + `Business`. App_Data\Teams\Nova.md written. |
 
-### TEAMMATECARD-13 — View card: 'Agent default' and 'Model default' when nothing is stored
+### AGENTPROFILECARD-12 — View card: every section and action, in order
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-13--view-card-agent-default-and-model-default-when-nothing-is-stored)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-12--view-card-every-section-and-action-in-order)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Run against `Nova2`, not `Nova`: a Room named `Nova` already exists in team.db from the agents-library area (P-RESET-TEAMS keeps team.db), so Nova's card correctly showed a `Message` link per AGENTPROFILECARD-44 and could not satisfy this test's `Message is absent` line. Common procedures' standing convention - append a digit when the Name is already in the sidebar - was applied. With Nova2: header exactly `Agent`; identity `Nova2` / `Ops Lead` / agent-dot offline + `Offline` / `Alias: nov` / `Teams: Business`; actions exactly `Edit`, `Open`, `Restart`, `Remove` with no `Message`; the hint under them reads `Like saving an edit, this restarts the agent, which clears what it remembers.`; sections in order Persona/Model/Effort/Persona file; the Persona block equals the file character for character (86 bytes, both --- lines and the name/title/alias/teams lines present); path `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova2.md`. No literal `this.card...` text anywhere. |
+
+### AGENTPROFILECARD-13 — View card: 'Agent default' and 'Model default' when nothing is stored
+
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-13--view-card-agent-default-and-model-default-when-nothing-is-stored)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Model section reads exactly `Agent default`, Effort section exactly `Model default`. Neither blank and the two differ. Confirms the known wording gap the NOTE flags: the Effort SELECT's blank option is labelled `Use the agent's default` while the View section says `Model default`. |
 
-### TEAMMATECARD-14 — Closing the dialog: focus trap on open, Escape, the close icon, Cancel, scroll locking, and focus return
+### AGENTPROFILECARD-14 — Closing the dialog: focus trap on open, Escape, the close icon, Cancel, scroll locking, and focus return
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-14--closing-the-dialog-focus-trap-on-open-escape-the-close-icon-cancel-scroll-locking-and-focus-return)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-14--closing-the-dialog-focus-trap-on-open-escape-the-close-icon-cancel-scroll-locking-and-focus-return)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Real clicks throughout. Backdrop click closed the card; clicks on the header text, the avatar and the hint line each left it open; `x` closed it; `Edit` then `Cancel` closed it and wrote nothing. Panel carries role=dialog, aria-modal=true, and an aria-label tracking the header - `Teammate` in View and `Edit Nova2` in Edit. Both deliberate absences observed and NOT filed: Escape left the card open, and Tab walked straight out of the panel into the sidebar (focus landed on the `echo` room link after six Tabs, `Wren` after six more) - no focus trap. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Real clicks throughout. Backdrop click closed the card; clicks on the header text, the avatar and the hint line each left it open; `x` closed it; `Edit` then `Cancel` closed it and wrote nothing. Panel carries role=dialog, aria-modal=true, and an aria-label tracking the header - `Agent` in View and `Edit Nova2` in Edit. Both deliberate absences observed and NOT filed: Escape left the card open, and Tab walked straight out of the panel into the sidebar (focus landed on the `echo` room link after six Tabs, `Wren` after six more) - no focus trap. |
 
-### TEAMMATECARD-15 — Closing a card clears every bit of its state
+### AGENTPROFILECARD-15 — Closing a card clears every bit of its state
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-15--closing-a-card-clears-every-bit-of-its-state)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-15--closing-a-card-clears-every-bit-of-its-state)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Reopened Create after Cancel had all four inputs and the body empty, both selects back on `Use the agent's default` (the Haiku/low choices did NOT survive) and no error line. A pending Remove closed via the backdrop reopened as a single `Remove`, not `Confirm`. Clearing the Edit textarea (86 chars to 0) and pressing Save produced `Persona text must not be blank.`; closing with `x` and reopening showed no error line at all. |
 
-### TEAMMATECARD-16 — Remove is a two-step confirm and Cancel backs out cleanly
+### AGENTPROFILECARD-16 — Remove is a two-step confirm and Cancel backs out cleanly
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-16--remove-is-a-two-step-confirm-and-cancel-backs-out-cleanly)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-16--remove-is-a-two-step-confirm-and-cancel-backs-out-cleanly)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Run against `Nova2` (see TEAMMATECARD-12 for why). `Remove` is itself the danger-styled button; clicking it swapped it for `Confirm` (class `teammate-card-action teammates-danger`) plus `Cancel`, leaving Edit/Open/Restart in place. `Cancel` collapsed them back to the single `Remove` with the card still open, and Nova2.md was untouched - 86 bytes, LastWriteTimeUtc 2026-09-15T04:51:22.2598438Z before and after. `Remove` then `Confirm` closed the card, the tile vanished and the page fell back to `No Personas yet.`; Nova2.md no longer exists. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Run against `Nova2` (see AGENTPROFILECARD-12 for why). `Remove` is itself the danger-styled button; clicking it swapped it for `Confirm` (class `agent-profile-card-action agents-danger`) plus `Cancel`, leaving Edit/Open/Restart in place. `Cancel` collapsed them back to the single `Remove` with the card still open, and Nova2.md was untouched - 86 bytes, LastWriteTimeUtc 2026-09-15T04:51:22.2598438Z before and after. `Remove` then `Confirm` closed the card, the tile vanished and the page fell back to `No Personas yet.`; Nova2.md no longer exists. |
 
-### TEAMMATECARD-17 — Team headings and the Team filter come from the teams field, not the folder
+### AGENTPROFILECARD-17 — Team headings and the Team filter come from the teams field, not the folder
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-17--team-headings-and-the-team-filter-come-from-the-teams-field-not-the-folder)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-17--team-headings-and-the-team-filter-come-from-the-teams-field-not-the-folder)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Headings and membership came only from frontmatter: Business held Iris + Nova, Household held Iris, No team held Atlas - Iris appears once under each of her two teams. Team select offered exactly `All teams`, `Business`, `Household`. Business narrowed to one heading, Household to one, `All teams` restored all three. O-ADAPTERS printed 0 before AND after the filter changes - no adapter spawned. Moving Nova.md into App_Data\Teams\Household without editing it left Nova STILL under the `Business` heading after the repaint. |
 
-### TEAMMATECARD-18 — Create: exactly what lands on disk
+### AGENTPROFILECARD-18 — Create: exactly what lands on disk
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-18--create-exactly-what-lands-on-disk)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-18--create-exactly-what-lands-on-disk)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | File written at the Teams root as Nova.md. Content is exactly ---, name: 'Nova', title: 'Ops Lead', alias: 'nov', teams: ['Business'], ---, You are Nova., You keep the team honest. All keys lowercase, all scalars single-quoted, teams a bracketed flow list. 0 CR and 7 LF characters, so LF endings with no BOM. No `model:`, `effort:` or model id anywhere in the file - `haiku` and `low` went to team.db instead (persona_models `Nova \| haiku`, persona_efforts `Nova \| low` confirmed via O-DB). |
 
-### TEAMMATECARD-19 — Create: an apostrophe in the Title round-trips through YAML quoting
+### AGENTPROFILECARD-19 — Create: an apostrophe in the Title round-trips through YAML quoting
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-19--create-an-apostrophe-in-the-title-round-trips-through-yaml-quoting)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-19--create-an-apostrophe-in-the-title-round-trips-through-yaml-quoting)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Typed one U+0027. Save succeeded with no error. The View card's second line read `Chief of Staff's deputy` with exactly one apostrophe (char code 39, not 8217). File line 3 is exactly `title: 'Chief of Staff''s deputy'` - codes ...,39,39,... confirm TWO consecutive apostrophes on disk. After a full document reload the reopened card still showed one apostrophe, and the Persona block showed the doubled form as it appears in the file. |
 
-### TEAMMATECARD-20 — Create: the Teams field trims, drops blanks and collapses duplicates on read-back
+### AGENTPROFILECARD-20 — Create: the Teams field trims, drops blanks and collapses duplicates on read-back
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-20--create-the-teams-field-trims-drops-blanks-and-collapses-duplicates-on-read-back)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-20--create-the-teams-field-trims-drops-blanks-and-collapses-duplicates-on-read-back)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | ` Business ,, Household , ` gave card `Teams: Business, Household` and file `teams: ['Business', 'Household']` - no blank entry, no stray space. `Ops, ops` gave card `Teams: Ops` (one entry) and file `teams: ['Ops', 'ops']` (both) - the deliberate write/read asymmetry, not filed. An empty Teams field gave a card with NO `Teams:` line (metas were just `Alias: iri`) and a file with no `teams:` key at all - not `teams: []`. |
 
-### TEAMMATECARD-21 — Create: a duplicate filename is caught before anything is written
+### AGENTPROFILECARD-21 — Create: a duplicate filename is caught before anything is written
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-21--create-a-duplicate-filename-is-caught-before-anything-is-written)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-21--create-a-duplicate-filename-is-caught-before-anything-is-written)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | `Nova` gave `Persona 'Nova' already exists.` and `nova` gave `Persona 'nova' already exists.` - each naming exactly what was typed. Card stayed open in Create mode with Title `Different`, Alias `zzz` and body `Different body.` intact after both. Nova.md was untouched: 65 bytes, mtime 2026-09-15T04:55:51.0285023Z and SHA256 B12953A3...07747 identical before and after. No nova.md or any second file appeared. |
 
-### TEAMMATECARD-22 — Edit card: what is editable, and what a rename announces
+### AGENTPROFILECARD-22 — Edit card: what is editable, and what a rename announces
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-22--edit-card-what-is-editable-and-what-a-rename-announces)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-22--edit-card-what-is-editable-and-what-a-rename-announces)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Header `Edit Nova`. Identity area is a read-only h3 `Nova` plus `agent-dot offline` and the word `Offline` - zero inputs inside it and no Alias:/Teams: lines at all. Text box labelled `Persona text` with the hint verbatim: `Markdown. This is the whole Persona file, front matter included, and becomes the teammate's system prompt. Saving restarts it, which clears what it remembers.` Its value equals the whole 65-byte file including both --- lines. Buttons `Save` and `Cancel`. The card contains zero <input> elements, so there is no rename control - the deliberate absence. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Header `Edit Nova`. Identity area is a read-only h3 `Nova` plus `agent-dot offline` and the word `Offline` - zero inputs inside it and no Alias:/Teams: lines at all. Text box labelled `Persona text` with the hint verbatim: `Markdown. This is the whole Persona file, front matter included, and becomes the agent's system prompt. Saving restarts it, which clears what it remembers.` Its value equals the whole 65-byte file including both --- lines. Buttons `Save` and `Cancel`. The card contains zero <input> elements, so there is no rename control - the deliberate absence. |
 
-### TEAMMATECARD-23 — Edit save writes back to the SAME file path — never a rename, never a move
+### AGENTPROFILECARD-23 — Edit save writes back to the SAME file path — never a rename, never a move
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-23--edit-save-writes-back-to-the-same-file-path--never-a-rename-never-a-move)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-23--edit-save-writes-back-to-the-same-file-path--never-a-rename-never-a-move)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Hand-placed Business\ops-lead.md with CRLF (6 CRLF, 105 bytes) appeared as a `Nova` tile under `Business` within ~1.5s. Card showed `Persona file` = ...\Teams\Business\ops-lead.md. Edit changed ORIGINALWORD to CHANGEDWORD and Save landed in View with CHANGEDWORD in the Persona block. Afterwards the Teams tree held exactly ONE .md - still Business\ops-lead.md - with a fresh mtime (04:56:17 -> 04:56:29) and the new word; no Nova.md anywhere, no rename, no move, no duplicate, and the card still showed the Business\ops-lead.md path. EXPECTED, recorded not filed: the file came back LF (0 CR, 6 LF) after the save; content otherwise intact with no doubled blank lines. |
 
-### TEAMMATECARD-24 — Edit: breaking the frontmatter is refused with the file untouched
+### AGENTPROFILECARD-24 — Edit: breaking the frontmatter is refused with the file untouched
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-24--edit-breaking-the-frontmatter-is-refused-with-the-file-untouched)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-24--edit-breaking-the-frontmatter-is-refused-with-the-file-untouched)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | All five rejected saves gave exactly the stated message: missing title -> `Persona frontmatter is missing required field 'Title'.`; body only -> `Persona frontmatter is missing required field 'Name'.`; duplicate alias -> `Persona frontmatter has a duplicate 'Alias' field.`; `name: 'Emily  Lee'` -> `Persona frontmatter field 'Name' has an invalid value: 'Emily  Lee'.`; empty box -> `Persona text must not be blank.` The card stayed in `Edit Nova [form]` with the typed text still in the box every time. The file was byte-identical throughout - 98 bytes, mtime 2026-09-15T04:56:29.7394801Z before and after all five. |
 
-### TEAMMATECARD-25 — Edit: renaming into a collision is refused with the file untouched
+### AGENTPROFILECARD-25 — Edit: renaming into a collision is refused with the file untouched
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-25--edit-renaming-into-a-collision-is-refused-with-the-file-untouched)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-25--edit-renaming-into-a-collision-is-refused-with-the-file-untouched)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | All four messages named the real absolute path of the other file (...\Teams\Business\ops-lead.md): `Persona Name 'Nova' is also used by '<path>'.`, `Persona Name 'nova' is also used by '<path>'.` (so case-insensitive), `Persona Alias 'nov' is also used by '<path>'.`, and `Persona Alias 'Nova' matches the Name used by '<path>'.` Card stayed in `Edit Atlas [form]` with the typed text after every attempt. Atlas.md unchanged - 60 bytes, mtime 2026-09-15T04:56:55.3532801Z before and after - and both the Nova and Atlas tiles were still in the list. |
 
-### TEAMMATECARD-26 — Edit: renaming moves the folder and keeps the teammate whole (ADR-0011)
+### AGENTPROFILECARD-26 — Edit: renaming moves the folder and keeps the agent whole (ADR-0011)
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-26--edit-renaming-moves-the-folder-and-keeps-the-teammate-whole-adr-0011)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-26--edit-renaming-moves-the-folder-and-keeps-the-agent-whole-adr-0011)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | All four pass lines held. The list behind showed `Aria` and no `Nova`. The file KEPT its original name (Business\ops-lead.md) and now reads `name: 'Aria'`. The Aria tile opens a complete card - title, Alias: nov, Teams: Business, full Persona block, Model `haiku`, Effort `low`, correct path. O-DB: persona_models and persona_efforts MOVED from `Nova \| haiku` / `Nova \| low` to `Aria \| haiku` / `Aria \| low`, same values, nothing left under Nova. KNOWN ROUGH EDGE reproduced exactly and recorded, not filed: the card left open after the save still headed `Teammate` for the OLD name showed `Nova` with an empty Persona block, blank Title, an empty `Alias: ` line, `Agent default`, `Model default` and NO `Persona file` section; the `Message` action that was there before the rename was also gone. JUDGEMENT: yes, this reads to a user as `my save wiped the teammate` - every field the user can see is blank and the file path is missing, which is precisely the shape of a destroyed record. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | All four pass lines held. The list behind showed `Aria` and no `Nova`. The file KEPT its original name (Business\ops-lead.md) and now reads `name: 'Aria'`. The Aria tile opens a complete card - title, Alias: nov, Teams: Business, full Persona block, Model `haiku`, Effort `low`, correct path. O-DB: persona_models and persona_efforts MOVED from `Nova \| haiku` / `Nova \| low` to `Aria \| haiku` / `Aria \| low`, same values, nothing left under Nova. KNOWN ROUGH EDGE reproduced exactly and recorded, not filed: the card left open after the save still headed `Agent` for the OLD name showed `Nova` with an empty Persona block, blank Title, an empty `Alias: ` line, `Agent default`, `Model default` and NO `Persona file` section; the `Message` action that was there before the rename was also gone. JUDGEMENT: yes, this reads to a user as `my save wiped the agent` - every field the user can see is blank and the file path is missing, which is precisely the shape of a destroyed record. |
 
-### TEAMMATECARD-27 — Create: a Name colliding with a Persona whose folder has another name
+### AGENTPROFILECARD-27 — Create: a Name colliding with a Persona whose folder has another name
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-27--create-a-name-colliding-with-a-persona-whose-folder-has-another-name)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-27--create-a-name-colliding-with-a-persona-whose-folder-has-another-name)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Business\anything.md (name: 'Nova') appeared as one `Nova` tile under `Business`. Both Create attempts were refused naming the REAL discovered path: `Persona Name 'Nova' is also used by 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Business\anything.md'.` and the same with 'nova', so the comparison is case-insensitive and reaches into sub-folders. No Nova.md or nova.md at the Teams root - the only .md in the tree was still Business\anything.md. Exactly one Nova tile and no `Files that didn't load` section. |
 
-### TEAMMATECARD-28 — Create: Alias collisions, and the one that is legal
+### AGENTPROFILECARD-28 — Create: Alias collisions, and the one that is legal
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-28--create-alias-collisions-and-the-one-that-is-legal)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-28--create-alias-collisions-and-the-one-that-is-legal)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | `nov` and `NOV` both gave `Persona Alias '<typed>' is also used by '...\Teams\Business\anything.md'.` - case-insensitive. `Nova` gave `Persona Alias 'Nova' matches the Name used by '...\Teams\Business\anything.md'.` `Atlas` (its own Name) SAVED with no error and Atlas.md contains `alias: 'Atlas'`; the card read `Alias: Atlas`. Nova's file was unchanged through steps 1-3 (85 bytes, mtime 04:57:57) and no file was written for any of them - Atlas.md first appeared at 04:58:21 with the successful save. |
 
-### TEAMMATECARD-29 — 'Files that didn't load' names the path and the reason, above the list
+### AGENTPROFILECARD-29 — 'Files that didn't load' names the path and the reason, above the list
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-29--files-that-didnt-load-names-the-path-and-the-reason-above-the-list)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | `Files that didn't load` renders as the THIRD child of .teammates-page - after the header and intro, ABOVE the list/empty-state. broken.md listed by real absolute path with `Persona frontmatter is missing required field 'Title'.` and no tile. With the twins added, the section listed all three, and twin-a.md and twin-b.md each named the OTHER's absolute path - `Persona Name 'Twin' is also used by '...\twin-b.md'.` and `...\twin-a.md'.` - with NEITHER getting a tile (tiles array was empty). |
-
-### TEAMMATECARD-30 — An external file edit repaints the page — including inside teammate folders
-
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-30--an-external-file-edit-repaints-the-page--including-inside-teammate-folders)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-29--files-that-didnt-load-names-the-path-and-the-reason-above-the-list)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Latencies measured against the file's own write timestamp. Root title edit: written 04:59:02.521, on screen 04:59:03.029 = 508ms. Sub-folder edit: written 04:59:08.387, on screen 04:59:08.924 = 537ms. Both with navigation entries still 1, so no browser reload. Business -> BusinessOps rename: no error, no teammate lost (2 tiles, no rejected section) and the card's `Persona file` showed the NEW ...\BusinessOps\Nested.md path, so nothing went stale; the rename itself produced 0 DOM mutations only because nothing visible changes (folders carry no display meaning - TEAMMATECARD-17). Proved the watcher survived it by editing a file INSIDE the renamed folder: detected in 526ms. Rename back likewise clean, path back to ...\Business\Nested.md. Moving Rooty.md from the root into Business repainted and left it under the `Business` heading, unchanged. Deleting Nested.md removed its tile in 523ms. With a View card open the TILE behind updated (`Card Open Edit` within 540ms). O-LOG carries zero `FileSystemWatcher` lines and zero exception lines across the whole area. EXPECTED ROUGH EDGE recorded not filed: the open card kept the OLD Title and Persona block (`Root Changed`) while the tile behind read `Card Open Edit`. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | `Files that didn't load` renders as the THIRD child of .agents-page - after the header and intro, ABOVE the list/empty-state. broken.md listed by real absolute path with `Persona frontmatter is missing required field 'Title'.` and no tile. With the twins added, the section listed all three, and twin-a.md and twin-b.md each named the OTHER's absolute path - `Persona Name 'Twin' is also used by '...\twin-b.md'.` and `...\twin-a.md'.` - with NEITHER getting a tile (tiles array was empty). |
 
-### TEAMMATECARD-31 — A card whose file vanished underneath it reports it instead of crashing
+### AGENTPROFILECARD-30 — An external file edit repaints the page — including inside agent folders
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-31--a-card-whose-file-vanished-underneath-it-reports-it-instead-of-crashing)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | With the card open and Nova.md deleted underneath it: the list behind emptied but the card stayed open with Edit/Open/Restart/Remove. `Remove` then `Confirm` gave `Persona 'Nova' does not exist.` and the pair collapsed straight back to a single `Remove`. `Open` gave the same message. `Edit` opened with the last-known text still in the box and `Save` gave the same message again, staying in `Edit Nova [form]` with the typed text. O-LOG held 64 lines with ZERO Unhandled/Exception lines, and #blazor-error-ui stayed computed display:none throughout. Note this `Open` path errors correctly because the does-not-exist guard runs before Process.Start - which is why TEAMMATECARD-32's silent case needs the file to be present. |
-
-### TEAMMATECARD-32 — 'Open' launches the OS editor on the server
-
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-32--open-launches-the-os-editor-on-the-server)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-30--an-external-file-edit-repaints-the-page--including-inside-agent-folders)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Fail *(earlier script)* | `af564cca` | #20 | SILENT FAILURE - the exact Fail-if line. `assoc .md` reports `File association not found for extension .md` and HKCU\...\FileExts\.md has no UserChoice, so no handler exists. Clicking `Open` on a teammate whose file IS present produced NOTHING: no window (the set of processes with a MainWindowTitle was identical before and after), no red line on the card (.composer-error empty before and after), no new O-LOG line (64 before, 64 after) and #blazor-error-ui still display:none. Neither of the two allowed outcomes happened. Same root cause as the already-open issue #20 from TEAMMATESLIBRARY-33 (Process.Start returns null instead of throwing when there is no handler), so this was recorded as a second test hitting that issue rather than a duplicate. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Latencies measured against the file's own write timestamp. Root title edit: written 04:59:02.521, on screen 04:59:03.029 = 508ms. Sub-folder edit: written 04:59:08.387, on screen 04:59:08.924 = 537ms. Both with navigation entries still 1, so no browser reload. Business -> BusinessOps rename: no error, no agent lost (2 tiles, no rejected section) and the card's `Persona file` showed the NEW ...\BusinessOps\Nested.md path, so nothing went stale; the rename itself produced 0 DOM mutations only because nothing visible changes (folders carry no display meaning - AGENTPROFILECARD-17). Proved the watcher survived it by editing a file INSIDE the renamed folder: detected in 526ms. Rename back likewise clean, path back to ...\Business\Nested.md. Moving Rooty.md from the root into Business repainted and left it under the `Business` heading, unchanged. Deleting Nested.md removed its tile in 523ms. With a View card open the TILE behind updated (`Card Open Edit` within 540ms). O-LOG carries zero `FileSystemWatcher` lines and zero exception lines across the whole area. EXPECTED ROUGH EDGE recorded not filed: the open card kept the OLD Title and Persona block (`Root Changed`) while the tile behind read `Card Open Edit`. |
 
-### TEAMMATECARD-33 — A Windows reserved device name as a Name (documented limit — record the outcome)
+### AGENTPROFILECARD-31 — A card whose file vanished underneath it reports it instead of crashing
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-33--a-windows-reserved-device-name-as-a-name-documented-limit--record-the-outcome)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-31--a-card-whose-file-vanished-underneath-it-reports-it-instead-of-crashing)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | With the card open and Nova.md deleted underneath it: the list behind emptied but the card stayed open with Edit/Open/Restart/Remove. `Remove` then `Confirm` gave `Persona 'Nova' does not exist.` and the pair collapsed straight back to a single `Remove`. `Open` gave the same message. `Edit` opened with the last-known text still in the box and `Save` gave the same message again, staying in `Edit Nova [form]` with the typed text. O-LOG held 64 lines with ZERO Unhandled/Exception lines, and #blazor-error-ui stayed computed display:none throughout. Note this `Open` path errors correctly because the does-not-exist guard runs before Process.Start - which is why AGENTPROFILECARD-32's silent case needs the file to be present. |
+
+### AGENTPROFILECARD-32 — 'Open' launches the OS editor on the server
+
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-32--open-launches-the-os-editor-on-the-server)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-09-14 | Fail *(earlier script)* | `af564cca` | #20 | SILENT FAILURE - the exact Fail-if line. `assoc .md` reports `File association not found for extension .md` and HKCU\...\FileExts\.md has no UserChoice, so no handler exists. Clicking `Open` on an agent whose file IS present produced NOTHING: no window (the set of processes with a MainWindowTitle was identical before and after), no red line on the card (.composer-error empty before and after), no new O-LOG line (64 before, 64 after) and #blazor-error-ui still display:none. Neither of the two allowed outcomes happened. Same root cause as the already-open issue #20 from AGENTSLIBRARY-33 (Process.Start returns null instead of throwing when there is no handler), so this was recorded as a second test hitting that issue rather than a duplicate. |
+
+### AGENTPROFILECARD-33 — A Windows reserved device name as a Name (documented limit — record the outcome)
+
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-33--a-windows-reserved-device-name-as-a-name-documented-limit--record-the-outcome)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | OUTCOME RECORDED: none of the feared results occurred - on Windows 10.0.26200 all three reserved names saved cleanly. `CON`/cn1, `NUL`/nl1 and `COM1`/cm1 each switched the card to View mode with no red line, no yellow `An unhandled error has occurred.` bar and zero Unhandled/Exception lines in O-LOG (still 64). Real files landed at the Teams root - CON.md 45 bytes, NUL.md 45, COM1.md 46 - readable back with their exact composed content, and all three rendered as tiles under `No team` with no `Files that didn't load` section. No other Persona file was changed or removed (the folder was empty beforehand). |
 
-### TEAMMATECARD-34 — Two browser tabs on /teammates stay in step
+### AGENTPROFILECARD-34 — Two browser tabs on /agents stay in step
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-34--two-browser-tabs-on-teammates-stay-in-step)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Tab B, untouched on /teammates, gained the `Sync` tile 4.7s after tab A's create and lost it 5.3s after tab A's Remove+Confirm - both with performance.getEntriesByType('navigation').length still 1, so no reload in either direction. With an Edit card open in BOTH tabs on the same teammate, O-ADAPTERS sampled eight times over 3.2s read 0 every time - never more than one (the catalog was already probed and cached for this app run, so neither card open re-probed). Closing tab B with its Edit card still open added ZERO lines to the console (64 before, 64 after four seconds) and zero ObjectDisposedException/InvalidOperationException lines. |
-
-### TEAMMATECARD-52 — The Chief of Staff offers Reset to default and no Remove
-
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-52--the-chief-of-staff-offers-reset-to-default-and-no-remove)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-34--two-browser-tabs-on-agents-stay-in-step)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Tab B, untouched on /agents, gained the `Sync` tile 4.7s after tab A's create and lost it 5.3s after tab A's Remove+Confirm - both with performance.getEntriesByType('navigation').length still 1, so no reload in either direction. With an Edit card open in BOTH tabs on the same agent, O-ADAPTERS sampled eight times over 3.2s read 0 every time - never more than one (the catalog was already probed and cached for this app run, so neither card open re-probed). Closing tab B with its Edit card still open added ZERO lines to the console (64 before, 64 after four seconds) and zero ObjectDisposedException/InvalidOperationException lines. |
 
-### TEAMMATECARD-35 — Remove deletes the file and ALL THREE stored settings
+### AGENTPROFILECARD-52 — The Chief of Staff offers Reset to default and no Remove
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-35--remove-deletes-the-file-and-all-three-stored-settings)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-52--the-chief-of-staff-offers-reset-to-default-and-no-remove)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### AGENTPROFILECARD-35 — Remove deletes the file and ALL THREE stored settings
+
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-35--remove-deletes-the-file-and-all-three-stored-settings)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Route used: rows seeded directly in team.db (no sqlite3 on PATH - a small read/write helper built on the app's own Microsoft.Data.Sqlite was used instead, see the run notes). Before: persona_models `Nova \| claude-haiku-test`, persona_efforts `Nova \| low`, and the View card's sections read `MODEL \| claude-haiku-test` and `EFFORT \| low`. After Remove then Confirm: Nova.md is gone, and SELECT COUNT(*) returns 0 for BOTH tables - no row, not a blank row. |
 
-### TEAMMATECARD-36 — A stored Model or Effort the catalog does not advertise survives an edit
+### AGENTPROFILECARD-36 — A stored Model or Effort the catalog does not advertise survives an edit
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-36--a-stored-model-or-effort-the-catalog-does-not-advertise-survives-an-edit)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-36--a-stored-model-or-effort-the-catalog-does-not-advertise-survives-an-edit)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | With persona_models `Nova \| claude-ghost-9` and persona_efforts `Nova \| ghost-effort` seeded and the page reloaded, the View card read `MODEL \| claude-ghost-9` and `EFFORT \| ghost-effort` - the raw ids. In Edit the Model select had `claude-ghost-9` SELECTED as a synthesised entry inserted directly after the blank option and BEFORE the real catalog (`` , claude-ghost-9, default, opus[1m], claude-fable-5-1[1m], sonnet, haiku``), and the Effort select had `ghost-effort` selected. Changing one word of the body and saving WITHOUT touching either select left both rows intact - still `claude-ghost-9` and `ghost-effort` - and the View card still showed them. Card opened normally with no error. |
 
-### TEAMMATECARD-37 — The model probe never runs on a plain page load
+### AGENTPROFILECARD-37 — The model probe never runs on a plain page load
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-37--the-model-probe-never-runs-on-a-plain-page-load)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Run from a freshly restarted app so the catalog cache was cold. Baseline 0 adapters, 14 log lines. After four full document loads of /teammates: still 0 adapters, still 14 log lines, zero `Model catalog probe` lines. After filtering to `Business` and back to `All teams`: still 0 adapters, still 14 lines. After opening the VIEW card: still 0 adapters, still 14 lines. Only on clicking `Edit` did it move - the log jumped 14 -> 40 lines with a full AgentProcessLauncher spawn sequence (`[agent stderr] [session/create] ... phase=validate-cwd` through `phase=register`, then `The agent process disconnected.`) and the Model hint changed to `Reading the models this agent offers…` before settling. The process is short-lived, so an O-ADAPTERS sample taken afterwards reads 0; the log is the reliable oracle for it. |
-
-### TEAMMATECARD-38 — Model and Effort pickers: labels, loading text and the empty-catalog text
-
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-38--model-and-effort-pickers-labels-loading-text-and-the-empty-catalog-text)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-37--the-model-probe-never-runs-on-a-plain-page-load)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Model loading hint observed verbatim on the cold-cache Edit open: `Reading the models this agent offers…` at 05:08:01.926, settling 4.4s later to `Which model this teammate thinks with. Changing it restarts the teammate, which clears what it remembers.` The Effort loading hint `Reading the effort levels this model offers…` was captured on a model change rather than on the Edit open - with no model stored there is no ladder to probe, so Effort went straight to `This model offers no effort choice, so it will think as it normally does.` Both hints always settled well inside 25s and no `timed out` line was ever logged. Both selects' first option is `Use the agent's default`. The Effort list contained NO option valued or labelled `default` - for Sonnet it was exactly [``, low, medium, high, xhigh, max] - while the Model list legitimately does carry `default::Default (recommended)`. Wording inconsistency recorded once as agreed: Effort's blank option says `Use the agent's default` while the View card calls the same state `Model default`. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Run from a freshly restarted app so the catalog cache was cold. Baseline 0 adapters, 14 log lines. After four full document loads of /agents: still 0 adapters, still 14 log lines, zero `Model catalog probe` lines. After filtering to `Business` and back to `All teams`: still 0 adapters, still 14 lines. After opening the VIEW card: still 0 adapters, still 14 lines. Only on clicking `Edit` did it move - the log jumped 14 -> 40 lines with a full AgentProcessLauncher spawn sequence (`[agent stderr] [session/create] ... phase=validate-cwd` through `phase=register`, then `The agent process disconnected.`) and the Model hint changed to `Reading the models this agent offers…` before settling. The process is short-lived, so an O-ADAPTERS sample taken afterwards reads 0; the log is the reliable oracle for it. |
 
-### TEAMMATECARD-39 — Changing the Model clears the Effort and re-probes the ladder (Haiku -> Sonnet)
+### AGENTPROFILECARD-38 — Model and Effort pickers: labels, loading text and the empty-catalog text
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-39--changing-the-model-clears-the-effort-and-re-probes-the-ladder-haiku---sonnet)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-38--model-and-effort-pickers-labels-loading-text-and-the-empty-catalog-text)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | All five lines held. Switching Haiku -> Sonnet cleared the Effort select from `low` to the blank `Use the agent's default` within ~120ms (it is still `low` in the same synchronous tick, which is the render round trip, not a carry-over - the Fail-if is about it STAYING on low, which it did not). The Effort hint showed `Reading the effort levels this model offers…` and then settled to `How hard this teammate thinks…`. The Model select stayed on Sonnet throughout. Probe accounting from the console: exactly 3 adapter sessions this app run - one catalog probe on Edit-open, one for haiku's ladder, one for sonnet's - i.e. one the first time each model id was chosen, and the later repeat switches spawned none (cached). After the rapid Haiku -> Sonnet double switch the list that FINALLY landed was Sonnet's [``, low, medium, high, xhigh, max]; a transient intermediate state showing Haiku's empty ladder was visible for a few seconds first, but the abandoned model's answer did not win. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Model loading hint observed verbatim on the cold-cache Edit open: `Reading the models this agent offers…` at 05:08:01.926, settling 4.4s later to `Which model this agent thinks with. Changing it restarts the agent, which clears what it remembers.` The Effort loading hint `Reading the effort levels this model offers…` was captured on a model change rather than on the Edit open - with no model stored there is no ladder to probe, so Effort went straight to `This model offers no effort choice, so it will think as it normally does.` Both hints always settled well inside 25s and no `timed out` line was ever logged. Both selects' first option is `Use the agent's default`. The Effort list contained NO option valued or labelled `default` - for Sonnet it was exactly [``, low, medium, high, xhigh, max] - while the Model list legitimately does carry `default::Default (recommended)`. Wording inconsistency recorded once as agreed: Effort's blank option says `Use the agent's default` while the View card calls the same state `Model default`. |
 
-### TEAMMATECARD-40 — Model is stored as an id, in team.db only
+### AGENTPROFILECARD-39 — Changing the Model clears the Effort and re-probes the ladder (Haiku -> Sonnet)
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-40--model-is-stored-as-an-id-in-teamdb-only)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-39--changing-the-model-clears-the-effort-and-re-probes-the-ladder-haiku---sonnet)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | All five lines held. Switching Haiku -> Sonnet cleared the Effort select from `low` to the blank `Use the agent's default` within ~120ms (it is still `low` in the same synchronous tick, which is the render round trip, not a carry-over - the Fail-if is about it STAYING on low, which it did not). The Effort hint showed `Reading the effort levels this model offers…` and then settled to `How hard this agent thinks…`. The Model select stayed on Sonnet throughout. Probe accounting from the console: exactly 3 adapter sessions this app run - one catalog probe on Edit-open, one for haiku's ladder, one for sonnet's - i.e. one the first time each model id was chosen, and the later repeat switches spawned none (cached). After the rapid Haiku -> Sonnet double switch the list that FINALLY landed was Sonnet's [``, low, medium, high, xhigh, max]; a transient intermediate state showing Haiku's empty ladder was visible for a few seconds first, but the abandoned model's answer did not win. |
+
+### AGENTPROFILECARD-40 — Model is stored as an id, in team.db only
+
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-40--model-is-stored-as-an-id-in-teamdb-only)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | View card `Model` section reads the display name `Haiku`; the database row is `Modelcheck \| haiku` - the catalog id, lowercase, not the display name. Modelcheck.md is exactly `---/name: 'Modelcheck'/title: 'T'/alias: 'mdc'/---/x` with no `model:` line and neither `haiku` nor `Haiku` anywhere (case-sensitive check). No persona_efforts row was written for the blank Effort - COUNT(*) was 0, not a row holding ''. NOTE on the example in the script: this catalog advertises short alias ids (`haiku`, `sonnet`, `opus[1m]`), so the stored id is `haiku` rather than a hyphenated `claude-haiku-4-5-...`; the assertion that matters - id stored, display name shown - holds. |
 
-### TEAMMATECARD-41 — Effort low -> medium is stored as an id, and the blank option deletes the row
+### AGENTPROFILECARD-41 — Effort low -> medium is stored as an id, and the blank option deletes the row
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-41--effort-low---medium-is-stored-as-an-id-and-the-blank-option-deletes-the-row)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-| 2026-09-14 | Blocked *(earlier script)* | `af564cca` |  | BLOCKED by the test's own Inconclusive clause. With Model = Haiku the Effort select offers ONLY the blank option and the hint reads `This model offers no effort choice, so it will think as it normally does.` - Haiku advertises no effort ladder on this adapter, so the low -> medium switch this test requires cannot be performed on Haiku, and the script forbids reaching for a populated ladder. SCRIPT GAP worth recording: TEAMMATECARD-41 requires a teammate on Haiku, but Haiku has no ladder, so the test as written is unrunnable here. SUPPLEMENTARY (not the verdict, gathered because the row-deletion behaviour is otherwise untested anywhere): the same mechanics were exercised on Sonnet, which does advertise a ladder. Effort low -> card `Low`, row `Modelcheck \| low`. Effort medium -> card `Medium`, row `Modelcheck \| medium` (the lowercase id, never the display name). Modelcheck.md contained no `effort`, `low`, `medium` or `sonnet` at any point. Setting Effort back to the blank option -> SELECT COUNT(*) returns 0, the row is DELETED not blanked, and the card's Effort section reads `Model default`. Model restored to Haiku afterwards per section 0.3. |
-
-### TEAMMATECARD-42 — Restart with Team:Acp:Enabled=false reports Offline and starts nothing
-
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-42--restart-with-teamacpenabledfalse-reports-offline-and-starts-nothing)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-41--effort-low---medium-is-stored-as-an-id-and-the-blank-option-deletes-the-row)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Its own pass lines all held: the button label changed to `Restarting…` with disabled=true (visible for about 10ms before the status flips - a 10ms sampling loop was needed to catch it), the outcome was reported, a double-click produced exactly ONE adapter, and #blazor-error-ui stayed display:none. HEADLINE CHARACTERISATION, exactly as observed: with `Team__Acp__Enabled=false` and 0 adapters at rest, ONE click of `Restart` took Modelcheck Offline -> Starting -> **Online**, spawned a real adapter (pid 68236), wrote a `users` row (`Modelcheck \| agent`) and created a Room - console line `Created direct room '01a0a379dfbd7508ac9335e592db0527' for agent 'Modelcheck'.` So Restart IS a route around the money guard: the teammate would take real billed Turns the moment anyone messaged it. This is the already-open issue #21 (TEAMMATESLIBRARY-35), reproduced from a second test rather than filed again. Double-click detail: once the first click lands the button is REMOVED (status goes Starting, and TEAMMATECARD-45 hides Restart while Starting), so a second click cannot even reach it - adapter count held at 1 across six samples over 4.2s. |
+| 2026-09-14 | Blocked *(earlier script)* | `af564cca` |  | BLOCKED by the test's own Inconclusive clause. With Model = Haiku the Effort select offers ONLY the blank option and the hint reads `This model offers no effort choice, so it will think as it normally does.` - Haiku advertises no effort ladder on this adapter, so the low -> medium switch this test requires cannot be performed on Haiku, and the script forbids reaching for a populated ladder. SCRIPT GAP worth recording: AGENTPROFILECARD-41 requires an agent on Haiku, but Haiku has no ladder, so the test as written is unrunnable here. SUPPLEMENTARY (not the verdict, gathered because the row-deletion behaviour is otherwise untested anywhere): the same mechanics were exercised on Sonnet, which does advertise a ladder. Effort low -> card `Low`, row `Modelcheck \| low`. Effort medium -> card `Medium`, row `Modelcheck \| medium` (the lowercase id, never the display name). Modelcheck.md contained no `effort`, `low`, `medium` or `sonnet` at any point. Setting Effort back to the blank option -> SELECT COUNT(*) returns 0, the row is DELETED not blanked, and the card's Effort section reads `Model default`. Model restored to Haiku afterwards per section 0.3. |
 
-### TEAMMATECARD-43 — A newly created teammate comes online by itself when ACP is on
+### AGENTPROFILECARD-42 — Restart with Team:Acp:Enabled=false reports Offline and starts nothing
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-43--a-newly-created-teammate-comes-online-by-itself-when-acp-is-on)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | App restarted WITHOUT the flag (Development turns ACP on) with Teams empty; 0 adapters at rest. Creating `Live` moved the status `` -> `Starting` at 151ms -> `Online` at 1701ms, identically on the open card AND the tile behind it, with performance.getEntriesByType('navigation').length still 1 - no reload. Exactly ONE new node process appeared for the one teammate (pid 83988), and the console carried `Created direct room '01a0a37bc8177b79855c4670c174cd59' for agent 'Live'.` After Remove + Confirm the adapter was gone within 10 seconds (O-ADAPTERS back to 0) and Live.md was deleted. HARNESS NOTE: the Model select is populated by the probe, so a value set too soon after the card opens is silently dropped - the first create landed on `Agent default`; waiting for the catalog before choosing Haiku fixed it, and the recreate stored `Live \| haiku` / `Live \| low`. |
-
-### TEAMMATECARD-44 — The Message action is read once, when the card opens
-
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-44--the-message-action-is-read-once-when-the-card-opens)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-42--restart-with-teamacpenabledfalse-reports-offline-and-starts-nothing)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | App restarted with `Team__Acp__Enabled=false` and Teams empty. Creating the never-before-seen `Freshone` gave a card reading `Offline` with an action row of exactly `Edit`, `Open`, `Restart`, `Remove` - NO `Message` - and team.db held COUNT 0 in both `users` and `rooms` for that name, so the link was absent rather than broken. The card was then left OPEN and `Restart` clicked: 153ms later, with the status still `Starting` and WITHOUT the card being closed or reopened, a `Message` link appeared with href `/rooms/01a0a384a42777ad9d5b1d9ccaff291e`. Clicking it navigated to that Room, which opened with h1 `Freshone` and member line `You, Freshone`. team.db then held users `01a0a384a41f749cadc0d13b34511e3c \| Freshone \| agent`, rooms `01a0a384a42777ad9d5b1d9ccaff291e \| Freshone`, and a two-member room_members join of `You \| human` + `Freshone \| agent`. (Restart was the route used to bring it online, which is itself the issue #21 bypass characterised in TEAMMATECARD-42.) |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Its own pass lines all held: the button label changed to `Restarting…` with disabled=true (visible for about 10ms before the status flips - a 10ms sampling loop was needed to catch it), the outcome was reported, a double-click produced exactly ONE adapter, and #blazor-error-ui stayed display:none. HEADLINE CHARACTERISATION, exactly as observed: with `Team__Acp__Enabled=false` and 0 adapters at rest, ONE click of `Restart` took Modelcheck Offline -> Starting -> **Online**, spawned a real adapter (pid 68236), wrote a `users` row (`Modelcheck \| agent`) and created a Room - console line `Created direct room '01a0a379dfbd7508ac9335e592db0527' for agent 'Modelcheck'.` So Restart IS a route around the money guard: the agent would take real billed Turns the moment anyone messaged it. This is the already-open issue #21 (AGENTSLIBRARY-35), reproduced from a second test rather than filed again. Double-click detail: once the first click lands the button is REMOVED (status goes Starting, and AGENTPROFILECARD-45 hides Restart while Starting), so a second click cannot even reach it - adapter count held at 1 across six samples over 4.2s. |
 
-### TEAMMATECARD-45 — Restart is offered in every state except Starting
+### AGENTPROFILECARD-43 — A newly created agent comes online by itself when ACP is on
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-45--restart-is-offered-in-every-state-except-starting)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-43--a-newly-created-agent-comes-online-by-itself-when-acp-is-on)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | ONLINE half: with Live `Online` the action row was exactly `Message`, `Edit`, `Open`, `Remove` - no `Restart` - and the element immediately after the row was the `Persona` section, i.e. no hint at all; the string `Like saving an edit` appeared nowhere on the card. STARTING half caught by sampling the row every 60ms through a save-triggered restart: from 566ms to 2140ms the status read `Starting` and the row was still `Message`, `Edit`, `Open`, `Remove` with no `Restart` and no hint. OFFLINE half: covered under TEAMMATECARD-42, where the same card with the teammate `Offline` showed `Restart` present AND the hint `Like saving an edit, this restarts the teammate, which clears what it remembers.` directly beneath the row - button and hint move together in both directions. Also seen at TEAMMATECARD-42: Restart is removed the instant the status reaches `Starting`, which is why the `Restarting…` label only exists for about 10ms. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | App restarted WITHOUT the flag (Development turns ACP on) with Teams empty; 0 adapters at rest. Creating `Live` moved the status `` -> `Starting` at 151ms -> `Online` at 1701ms, identically on the open card AND the tile behind it, with performance.getEntriesByType('navigation').length still 1 - no reload. Exactly ONE new node process appeared for the one agent (pid 83988), and the console carried `Created direct room '01a0a37bc8177b79855c4670c174cd59' for agent 'Live'.` After Remove + Confirm the adapter was gone within 10 seconds (O-ADAPTERS back to 0) and Live.md was deleted. HARNESS NOTE: the Model select is populated by the probe, so a value set too soon after the card opens is silently dropped - the first create landed on `Agent default`; waiting for the catalog before choosing Haiku fixed it, and the recreate stored `Live \| haiku` / `Live \| low`. |
 
-### TEAMMATECARD-46 — A save that changes nothing does not restart the teammate
+### AGENTPROFILECARD-44 — The Message action is read once, when the card opens
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-46--a-save-that-changes-nothing-does-not-restart-the-teammate)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-44--the-message-action-is-read-once-when-the-card-opens)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | App restarted with `Team__Acp__Enabled=false` and Teams empty. Creating the never-before-seen `Freshone` gave a card reading `Offline` with an action row of exactly `Edit`, `Open`, `Restart`, `Remove` - NO `Message` - and team.db held COUNT 0 in both `users` and `rooms` for that name, so the link was absent rather than broken. The card was then left OPEN and `Restart` clicked: 153ms later, with the status still `Starting` and WITHOUT the card being closed or reopened, a `Message` link appeared with href `/rooms/01a0a384a42777ad9d5b1d9ccaff291e`. Clicking it navigated to that Room, which opened with h1 `Freshone` and member line `You, Freshone`. team.db then held users `01a0a384a41f749cadc0d13b34511e3c \| Freshone \| agent`, rooms `01a0a384a42777ad9d5b1d9ccaff291e \| Freshone`, and a two-member room_members join of `You \| human` + `Freshone \| agent`. (Restart was the route used to bring it online, which is itself the issue #21 bypass characterised in AGENTPROFILECARD-42.) |
+
+### AGENTPROFILECARD-45 — Restart is offered in every state except Starting
+
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-45--restart-is-offered-in-every-state-except-starting)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | ONLINE half: with Live `Online` the action row was exactly `Message`, `Edit`, `Open`, `Remove` - no `Restart` - and the element immediately after the row was the `Persona` section, i.e. no hint at all; the string `Like saving an edit` appeared nowhere on the card. STARTING half caught by sampling the row every 60ms through a save-triggered restart: from 566ms to 2140ms the status read `Starting` and the row was still `Message`, `Edit`, `Open`, `Remove` with no `Restart` and no hint. OFFLINE half: covered under AGENTPROFILECARD-42, where the same card with the agent `Offline` showed `Restart` present AND the hint `Like saving an edit, this restarts the agent, which clears what it remembers.` directly beneath the row - button and hint move together in both directions. Also seen at AGENTPROFILECARD-42: Restart is removed the instant the status reaches `Starting`, which is why the `Restarting…` label only exists for about 10ms. |
+
+### AGENTPROFILECARD-46 — A save that changes nothing does not restart the agent
+
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-46--a-save-that-changes-nothing-does-not-restart-the-agent)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Adapter pid before: 83988. Opening Edit, touching NOTHING and clicking Save left the badge on `Online` for the whole 15-second watch - it never showed `Starting` - and the adapter pid was still 83988 afterwards, with no fresh launch sequence in the console. Then adding a single trailing space to the body and saving DID restart it: `Online` -> `Starting` at 619ms -> `Online` at 2119ms, and the pid changed 83988 -> 10128. The View card's Persona block shows the trailing space preserved. |
 
-### TEAMMATECARD-47 — Changing only the Model or only the Effort restarts the session
+### AGENTPROFILECARD-47 — Changing only the Model or only the Effort restarts the session
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-47--changing-only-the-model-or-only-the-effort-restarts-the-session)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | MODEL half: adapter pid 10128 before. Changing ONLY Model Haiku -> Sonnet and saving moved the badge `Online` -> `Starting` at 619ms -> `Online` at 2111ms, replaced the process (10128 -> 44812) and left persona_models holding `Live \| sonnet`. The change also cleared the Effort, exactly as TEAMMATECARD-39 requires (persona_efforts COUNT 0, card `Model default`). EFFORT half: changing ONLY Effort from the blank option to `low` and saving moved the badge `Online` -> `Starting` at 624ms -> `Online` at 2366ms, replaced the process again (44812 -> 64640) and left persona_efforts holding `Live \| low` - the lowercase id. Card read `Sonnet` / `Low`. RESTORE, and a real finding about section 0.3: setting the Model back to Haiku cleared the Effort again, and `low` could NOT be re-selected because Haiku advertises NO effort ladder on this adapter (the Effort select collapses to the blank option alone). Live therefore ends this test on Model `Haiku` / Effort `Model default`, which is the only reachable Haiku state here - section 0.3's `restore to Haiku and low` is unachievable for this model, the same script gap recorded under TEAMMATECARD-41. |
-
-### TEAMMATECARD-48 — Remove does NOT cascade: the Agent and its Room survive
-
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-48--remove-does-not-cascade-the-agent-and-its-room-survive)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-47--changing-only-the-model-or-only-the-effort-restarts-the-session)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Run with a REAL transcript present, because TEAMMATECARD-50 was run first on purpose - Room 01a0a37bc8177b79855c4670c174cd59 held four messages (1561-byte .jsonl). After Remove + Confirm on `Live`: the tile is gone and Live.md is gone from disk, but the Room is STILL in the sidebar at the same href and STILL opens at its URL with h1 `Live`, member line `You, Live`, and ALL FOUR messages intact - both PELICAN exchanges and the post-restart `I don't have context...` reply. team.db still holds users `01a0a37bc8137fd99d2d3fd3ed469af9 \| Live \| agent` AND rooms `01a0a37bc8177b79855c4670c174cd59 \| Live`. The transcript file is untouched at 1561 bytes. Only the settings went: persona_models and persona_efforts both COUNT 0. Adapter stopped (0). ONE PASS LINE WAS NOT OBSERVABLE, recorded rather than counted against the app: `The removed teammate shows as permanently Offline inside the Room.` The Room surface carries NO per-member status at all - `p.chat-members` is the plain text `You, Live`, message senders are bare `span.message-sender`, and the only .agent-dot elements in <main> belong to the invite panel, which does not list Live because it is already a member. So no member, online or offline, has a status indicator in a Room; this is a script expectation that does not match the current Room UI (room-messaging's surface, not Remove's), and none of this test's Fail-if lines was triggered. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | MODEL half: adapter pid 10128 before. Changing ONLY Model Haiku -> Sonnet and saving moved the badge `Online` -> `Starting` at 619ms -> `Online` at 2111ms, replaced the process (10128 -> 44812) and left persona_models holding `Live \| sonnet`. The change also cleared the Effort, exactly as AGENTPROFILECARD-39 requires (persona_efforts COUNT 0, card `Model default`). EFFORT half: changing ONLY Effort from the blank option to `low` and saving moved the badge `Online` -> `Starting` at 624ms -> `Online` at 2366ms, replaced the process again (44812 -> 64640) and left persona_efforts holding `Live \| low` - the lowercase id. Card read `Sonnet` / `Low`. RESTORE, and a real finding about section 0.3: setting the Model back to Haiku cleared the Effort again, and `low` could NOT be re-selected because Haiku advertises NO effort ladder on this adapter (the Effort select collapses to the blank option alone). Live therefore ends this test on Model `Haiku` / Effort `Model default`, which is the only reachable Haiku state here - section 0.3's `restore to Haiku and low` is unachievable for this model, the same script gap recorded under AGENTPROFILECARD-41. |
 
-### TEAMMATECARD-49 — Delete then recreate under the same Name: fresh settings, old Room
+### AGENTPROFILECARD-48 — Remove does NOT cascade: the Agent and its Room survive
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-49--delete-then-recreate-under-the-same-name-fresh-settings-old-room)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-48--remove-does-not-cascade-the-agent-and-its-room-survive)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Run with a REAL transcript present, because AGENTPROFILECARD-50 was run first on purpose - Room 01a0a37bc8177b79855c4670c174cd59 held four messages (1561-byte .jsonl). After Remove + Confirm on `Live`: the tile is gone and Live.md is gone from disk, but the Room is STILL in the sidebar at the same href and STILL opens at its URL with h1 `Live`, member line `You, Live`, and ALL FOUR messages intact - both PELICAN exchanges and the post-restart `I don't have context...` reply. team.db still holds users `01a0a37bc8137fd99d2d3fd3ed469af9 \| Live \| agent` AND rooms `01a0a37bc8177b79855c4670c174cd59 \| Live`. The transcript file is untouched at 1561 bytes. Only the settings went: persona_models and persona_efforts both COUNT 0. Adapter stopped (0). ONE PASS LINE WAS NOT OBSERVABLE, recorded rather than counted against the app: `The removed agent shows as permanently Offline inside the Room.` The Room surface carries NO per-member status at all - `p.chat-members` is the plain text `You, Live`, message senders are bare `span.message-sender`, and the only .agent-dot elements in <main> belong to the invite panel, which does not list Live because it is already a member. So no member, online or offline, has a status indicator in a Room; this is a script expectation that does not match the current Room UI (room-messaging's surface, not Remove's), and none of this test's Fail-if lines was triggered. |
+
+### AGENTPROFILECARD-49 — Delete then recreate under the same Name: fresh settings, old Room
+
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-49--delete-then-recreate-under-the-same-name-fresh-settings-old-room)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Before the recreate: persona_models and persona_efforts both COUNT 0 for `Live`, while the users row `01a0a37bc8137fd99d2d3fd3ed469af9 \| Live` was still present - the delete took the settings and left the identity. Recreated the same Name/Title/Alias with BOTH selects verified blank ('' and '') at submit time: the View card reads `Agent default` and `Model default`, so the Haiku (and earlier Sonnet/low) choices did NOT come back. Both settings queries still return 0 after the recreate. The card's `Message` href is the SAME Room id 01a0a37bc8177b79855c4670c174cd59 as before the delete, the users id is unchanged, and opening it shows the earlier conversation intact - both PELICAN exchanges still there. Both opposite regressions absent: settings did not survive, chat facts did. |
 
-### TEAMMATECARD-50 — Editing a teammate really does lose its conversation memory (COSTS MONEY)
+### AGENTPROFILECARD-50 — Editing an agent really does lose its conversation memory (COSTS MONEY)
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-50--editing-a-teammate-really-does-lose-its-conversation-memory-costs-money)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Run once for the whole area, with the user's explicit go-ahead. Cost confirmed first: card read Model `Haiku`; Effort read `Model default` rather than `low` because Haiku advertises no effort ladder at all on this adapter (see TEAMMATECARD-41/47), so there is no effort level to raise and the cost is Haiku's own default. Guards in place: Team__AgentMessageBudget=4, Team__Acp__TokenBudget=200000, no ANTHROPIC_API_KEY set in any scope, TEAM_E2E unset. BEFORE the edit: `Remember the codeword is PELICAN.` -> `I've got it - codeword noted as PELICAN.`; `What is the codeword?` -> `The codeword is PELICAN.` AFTER changing one word of the Persona body (`You are Live.` -> `You are Alive.`) and saving: badge `Online` -> `Starting` at 616ms -> `Online` at 2238ms, and the adapter process was replaced, pid 91408 -> 22040. The same question then returned `I don't have context for what codeword you're referring to. Could you provide more details?` - the session had forgotten, so the card's promise holds. Three Turns spent. METHOD NOTE, important for anyone re-running this: on the FIRST Turn the Live agent used its Write tool to persist the codeword to a file OUTSIDE its Work Dir - filed as issue #22 and said `The codeword PELICAN is saved to memory`. That file was removed before the edit; had it been left, the restarted session could have read it back and answered PELICAN, which would have produced a false Fail on a test about session memory. |
-
-### TEAMMATECARD-51 — The Edit card's Name, Title and Alias boxes write into the frontmatter and preserve every other field
-
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-51--the-edit-cards-name-title-and-alias-boxes-write-into-the-frontmatter-and-preserve-every-other-field)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-50--editing-an-agent-really-does-lose-its-conversation-memory-costs-money)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Run once for the whole area, with the user's explicit go-ahead. Cost confirmed first: card read Model `Haiku`; Effort read `Model default` rather than `low` because Haiku advertises no effort ladder at all on this adapter (see AGENTPROFILECARD-41/47), so there is no effort level to raise and the cost is Haiku's own default. Guards in place: Team__AgentMessageBudget=4, Team__Acp__TokenBudget=200000, no ANTHROPIC_API_KEY set in any scope, TEAM_E2E unset. BEFORE the edit: `Remember the codeword is PELICAN.` -> `I've got it - codeword noted as PELICAN.`; `What is the codeword?` -> `The codeword is PELICAN.` AFTER changing one word of the Persona body (`You are Live.` -> `You are Alive.`) and saving: badge `Online` -> `Starting` at 616ms -> `Online` at 2238ms, and the adapter process was replaced, pid 91408 -> 22040. The same question then returned `I don't have context for what codeword you're referring to. Could you provide more details?` - the session had forgotten, so the card's promise holds. Three Turns spent. METHOD NOTE, important for anyone re-running this: on the FIRST Turn the Live agent used its Write tool to persist the codeword to a file OUTSIDE its Work Dir - filed as issue #22 and said `The codeword PELICAN is saved to memory`. That file was removed before the edit; had it been left, the restarted session could have read it back and answered PELICAN, which would have produced a false Fail on a test about session memory. |
 
-### TEAMMATECARD-53 — An avatar-only Save does not restart the teammate
+### AGENTPROFILECARD-51 — The Edit card's Name, Title and Alias boxes write into the frontmatter and preserve every other field
 
-File: [`docs/engineering/manual-tests/teammate-card.md`](teammate-card.md#teammatecard-53--an-avatar-only-save-does-not-restart-the-teammate)
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-51--the-edit-cards-name-title-and-alias-boxes-write-into-the-frontmatter-and-preserve-every-other-field)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### AGENTPROFILECARD-53 — An avatar-only Save does not restart the agent
+
+File: [`docs/engineering/manual-tests/agent-profile-card.md`](agent-profile-card.md#agentprofilecard-53--an-avatar-only-save-does-not-restart-the-agent)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -2223,9 +2223,9 @@ File: [`docs/engineering/manual-tests/library.md`](library.md#l15--pop-out-opens
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### L16 — Old Teams/*.md + work/ install is migrated to the Teammates/ folder layout on startup
+### L16 — Old Teams/*.md + work/ install is migrated to the Agents/ folder layout on startup
 
-File: [`docs/engineering/manual-tests/library.md`](library.md#l16--old-teamsmd--work-install-is-migrated-to-the-teammates-folder-layout-on-startup)
+File: [`docs/engineering/manual-tests/library.md`](library.md#l16--old-teamsmd--work-install-is-migrated-to-the-agents-folder-layout-on-startup)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -2237,9 +2237,9 @@ File: [`docs/engineering/manual-tests/library.md`](library.md#l17--a-real-obsidi
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### L18 — run.ps1 -CleanOnly deletes the database and Teammate definitions, and keeps everything else
+### L18 — run.ps1 -CleanOnly deletes the database and Agent definitions, and keeps everything else
 
-File: [`docs/engineering/manual-tests/library.md`](library.md#l18--runps1--cleanonly-deletes-the-database-and-teammate-definitions-and-keeps-everything-else)
+File: [`docs/engineering/manual-tests/library.md`](library.md#l18--runps1--cleanonly-deletes-the-database-and-agent-definitions-and-keeps-everything-else)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -2273,7 +2273,7 @@ File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleff
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | First card open of a freshly restarted app, with App_Data\work deleted first (Test-Path False). Model select's first option is exactly `Use the agent's default`, followed by five real entries reading as human labels - `Default (recommended)`, `Opus (1M context)`, `Fable`, `Sonnet`, `Haiku` - not raw ids of the `claude-sonnet-4-5` shape. The loading state was captured by sampling inside the same call as the click: at 185ms the Model hint read exactly `Reading the models this agent offers…` with only the blank option present; at 4775ms both lists arrived and the Model hint read exactly `Which model this teammate thinks with. Changing it restarts the teammate, which clears what it remembers.` The continuous 100ms spawn watcher recorded EXACTLY ONE rise for the whole card open - 0 -> 1 (pid 88068) at 22:30:42.500, back to 0 at 22:30:47.214 - never 2, and never two rises in sequence. App_Data\work exists again afterwards. The app log carries no `No ACP adapter is installed; the model catalog is empty.` line and no line beginning `Model catalog probe `. SECOND card open after Cancel: the watcher logged nothing at all for the full 15 seconds (still 0) and both selects were populated 58ms after the click. NOTE on the Effort hint during loading: it read `This model offers no effort choice, so it will think as it normally does.` rather than `Reading the effort levels this model offers…`, which is correct - no model is selected yet, so there is no ladder to probe. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | First card open of a freshly restarted app, with App_Data\work deleted first (Test-Path False). Model select's first option is exactly `Use the agent's default`, followed by five real entries reading as human labels - `Default (recommended)`, `Opus (1M context)`, `Fable`, `Sonnet`, `Haiku` - not raw ids of the `claude-sonnet-4-5` shape. The loading state was captured by sampling inside the same call as the click: at 185ms the Model hint read exactly `Reading the models this agent offers…` with only the blank option present; at 4775ms both lists arrived and the Model hint read exactly `Which model this agent thinks with. Changing it restarts the agent, which clears what it remembers.` The continuous 100ms spawn watcher recorded EXACTLY ONE rise for the whole card open - 0 -> 1 (pid 88068) at 22:30:42.500, back to 0 at 22:30:47.214 - never 2, and never two rises in sequence. App_Data\work exists again afterwards. The app log carries no `No ACP adapter is installed; the model catalog is empty.` line and no line beginning `Model catalog probe `. SECOND card open after Cancel: the watcher logged nothing at all for the full 15 seconds (still 0) and both selects were populated 58ms after the click. NOTE on the Effort hint during loading: it read `This model offers no effort choice, so it will think as it normally does.` rather than `Reading the effort levels this model offers…`, which is correct - no model is selected yet, so there is no ladder to probe. |
 
 ### MODELEFFORT-02 — Fixture walk: record every model's effort ladder, and one spawn per newly seen model
 
@@ -2281,15 +2281,15 @@ File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleff
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | FIXTURE TABLE (the reference later tests use). `Default (recommended)` / id `default` -> Low, Medium, High, Xhigh, Max; hint `How hard this teammate thinks…`. `Fable` / id `claude-fable-5-1[1m]` -> same five levels; same hint. `Sonnet` / id `sonnet` -> same five levels; same hint. `Haiku` / id `haiku` -> BLANK OPTION ONLY, hint `This model offers no effort choice, so it will think as it normally does.` `Opus (1M context)` / id `opus[1m]` was NOT walked - section 0.3 forbids selecting Opus anywhere, including on a walk-every-entry instruction. So: **LADDER-MODEL = Sonnet**, **NO-LADDER-MODEL = Haiku**, HAIKU = `haiku`, SONNET = `sonnet`. No model left its hint stuck on `Reading the effort levels this model offers…` - each settled in 5.3-5.4s. SPAWNS: the watcher recorded exactly one rise to 1 and back to 0 per newly-seen model id, timestamps matching each selection to within ~0.6s (default 22:31:34.328, fable 22:31:39.806, sonnet 22:31:45.438, haiku 22:31:50.952), and the count never exceeded 1. Re-selecting Sonnet, already walked, spawned NOTHING in 10 seconds and returned its ladder from cache in 84ms. This is also the runtime fact behind TEAMMATECARD-41's block: Haiku genuinely has no effort ladder on this adapter. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | FIXTURE TABLE (the reference later tests use). `Default (recommended)` / id `default` -> Low, Medium, High, Xhigh, Max; hint `How hard this agent thinks…`. `Fable` / id `claude-fable-5-1[1m]` -> same five levels; same hint. `Sonnet` / id `sonnet` -> same five levels; same hint. `Haiku` / id `haiku` -> BLANK OPTION ONLY, hint `This model offers no effort choice, so it will think as it normally does.` `Opus (1M context)` / id `opus[1m]` was NOT walked - section 0.3 forbids selecting Opus anywhere, including on a walk-every-entry instruction. So: **LADDER-MODEL = Sonnet**, **NO-LADDER-MODEL = Haiku**, HAIKU = `haiku`, SONNET = `sonnet`. No model left its hint stuck on `Reading the effort levels this model offers…` - each settled in 5.3-5.4s. SPAWNS: the watcher recorded exactly one rise to 1 and back to 0 per newly-seen model id, timestamps matching each selection to within ~0.6s (default 22:31:34.328, fable 22:31:39.806, sonnet 22:31:45.438, haiku 22:31:50.952), and the count never exceeded 1. Re-selecting Sonnet, already walked, spawned NOTHING in 10 seconds and returned its ladder from cache in 84ms. This is also the runtime fact behind AGENTPROFILECARD-41's block: Haiku genuinely has no effort ladder on this adapter. |
 
-### MODELEFFORT-03 — Saving a new teammate stores wire ids, never display names
+### MODELEFFORT-03 — Saving a new agent stores wire ids, never display names
 
-File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleffort-03--saving-a-new-teammate-stores-wire-ids-never-display-names)
+File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleffort-03--saving-a-new-agent-stores-wire-ids-never-display-names)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Run on SONNET, not Haiku, exactly as step 9 and MODELEFFORT-02's Inconclusive clause direct: Haiku is NO-LADDER-MODEL here, so `Low` is unselectable on it. Baseline rows were only Wren/Mira Prime. After saving `Probe One` (Model Sonnet, Effort Low) the card did NOT close - it showed the saved teammate with Persona, Model and Effort sections. persona_models gained exactly one row `Probe One \| sonnet` and persona_efforts exactly one row `Probe One \| low` - both lowercase wire ids, NOT the select labels `Sonnet` and `Low`, and neither is an empty string. App_Data\Teams\`Probe One.md` reads exactly `---/name: 'Probe One'/title: 'Tester'/alias: 'p1'/---/You are a tester.`; the CRLF check printed False (LF-only) and there is no `teams:` line despite Teams being left empty. NOTE on the pass example: this adapter advertises short alias ids, so the stored id is `sonnet` rather than a hyphenated `claude-sonnet-4-5`; the assertion that matters - id stored, never the display name - holds. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Run on SONNET, not Haiku, exactly as step 9 and MODELEFFORT-02's Inconclusive clause direct: Haiku is NO-LADDER-MODEL here, so `Low` is unselectable on it. Baseline rows were only Wren/Mira Prime. After saving `Probe One` (Model Sonnet, Effort Low) the card did NOT close - it showed the saved agent with Persona, Model and Effort sections. persona_models gained exactly one row `Probe One \| sonnet` and persona_efforts exactly one row `Probe One \| low` - both lowercase wire ids, NOT the select labels `Sonnet` and `Low`, and neither is an empty string. App_Data\Teams\`Probe One.md` reads exactly `---/name: 'Probe One'/title: 'Tester'/alias: 'p1'/---/You are a tester.`; the CRLF check printed False (LF-only) and there is no `teams:` line despite Teams being left empty. NOTE on the pass example: this adapter advertises short alias ids, so the stored id is `sonnet` rather than a hyphenated `claude-sonnet-4-5`; the assertion that matters - id stored, never the display name - holds. |
 
 ### MODELEFFORT-04 — Two different 'default' choices in the Model select, and none in the Effort select
 
@@ -2305,7 +2305,7 @@ File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleff
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Searched the whole rendered page, not just the card: `document.body.innerText.match(/this\.card\w*/g)` returned an EMPTY array in View mode and again in Edit mode - zero matches for `this.card`, so none of this.cardName/Model/Effort/Title/Alias/Teams/Text/RoomId/FilePath/Error is leaking as a literal. View heading reads `Teammate` with the name line `Probe One`, `Alias: p1`, and the Persona section showing the real file text `---/name: 'Probe One'/title: 'Tester'/alias: 'p1'/---/You are a tester.` Edit heading reads `Edit Probe One`, its textarea holds that same real file text, and both selects come up preselected on the stored values (Sonnet / Low). OBSERVATION carried to MODELEFFORT-15: a View card reopened from its tile shows the Model and Effort sections as the RAW IDS `sonnet` and `low`, whereas the card shown immediately after a save reads `Sonnet` and `Low` - the label mapping is only available when a catalog has been probed in that card, and a View card deliberately probes nothing. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Searched the whole rendered page, not just the card: `document.body.innerText.match(/this\.card\w*/g)` returned an EMPTY array in View mode and again in Edit mode - zero matches for `this.card`, so none of this.cardName/Model/Effort/Title/Alias/Teams/Text/RoomId/FilePath/Error is leaking as a literal. View heading reads `Agent` with the name line `Probe One`, `Alias: p1`, and the Persona section showing the real file text `---/name: 'Probe One'/title: 'Tester'/alias: 'p1'/---/You are a tester.` Edit heading reads `Edit Probe One`, its textarea holds that same real file text, and both selects come up preselected on the stored values (Sonnet / Low). OBSERVATION carried to MODELEFFORT-15: a View card reopened from its tile shows the Model and Effort sections as the RAW IDS `sonnet` and `low`, whereas the card shown immediately after a save reads `Sonnet` and `Low` - the label mapping is only available when a catalog has been probed in that card, and a View card deliberately probes nothing. |
 
 ### MODELEFFORT-06 — Neither catalog is probed on a plain page load or a tile click
 
@@ -2321,7 +2321,7 @@ File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleff
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Cold app restart first, so spawn counts are unambiguous. HAIKU ladder recorded: blank option only, hint `This model offers no effort choice, so it will think as it normally does.` HAIKU -> SONNET: the Effort hint read exactly `Reading the effort levels this model offers…` from 80ms through 4.4s, then settled to Sonnet's ladder `::Use the agent's default, low::Low, medium::Medium, high::High, xhigh::Xhigh, max::Max` with the hint `How hard this teammate thinks…`; the Model select stayed on `sonnet` throughout. The two ladders DIFFER as required - one model offers five levels where the other offers none. RESET HALF run in the SONNET -> HAIKU direction, as MODELEFFORT-02's Inconclusive clause directs (Haiku is NO-LADDER-MODEL, so `Low` cannot be chosen on it): with Sonnet + `Low` selected, switching the Model to Haiku cleared the Effort select to `Use the agent's default` within 80ms - the `Low` was NOT carried over. Switching back to HAIKU restored exactly the list recorded at step 3 (blank only, same hint) in 712ms. SPAWNS: exactly two rises this run, never above 1 - 22:38:17.930-22:38:27.680 for the card open (Haiku was selected at 22:38:22, INSIDE that window, so its ladder came from the same probe session rather than a second spawn, which is the efficient path MODELEFFORT-01's Fail-if exists to protect) and 22:38:33.094-22:38:37.810 for the newly-seen `sonnet`. Switching back to the already-probed Haiku spawned NOTHING - the watcher logged no further entry. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Cold app restart first, so spawn counts are unambiguous. HAIKU ladder recorded: blank option only, hint `This model offers no effort choice, so it will think as it normally does.` HAIKU -> SONNET: the Effort hint read exactly `Reading the effort levels this model offers…` from 80ms through 4.4s, then settled to Sonnet's ladder `::Use the agent's default, low::Low, medium::Medium, high::High, xhigh::Xhigh, max::Max` with the hint `How hard this agent thinks…`; the Model select stayed on `sonnet` throughout. The two ladders DIFFER as required - one model offers five levels where the other offers none. RESET HALF run in the SONNET -> HAIKU direction, as MODELEFFORT-02's Inconclusive clause directs (Haiku is NO-LADDER-MODEL, so `Low` cannot be chosen on it): with Sonnet + `Low` selected, switching the Model to Haiku cleared the Effort select to `Use the agent's default` within 80ms - the `Low` was NOT carried over. Switching back to HAIKU restored exactly the list recorded at step 3 (blank only, same hint) in 712ms. SPAWNS: exactly two rises this run, never above 1 - 22:38:17.930-22:38:27.680 for the card open (Haiku was selected at 22:38:22, INSIDE that window, so its ladder came from the same probe session rather than a second spawn, which is the efficient path MODELEFFORT-01's Fail-if exists to protect) and 22:38:33.094-22:38:37.810 for the newly-seen `sonnet`. Switching back to the already-probed Haiku spawned NOTHING - the watcher logged no further entry. |
 
 ### MODELEFFORT-08 — A superseded effort probe never lands on the model the user ended up with
 
@@ -2329,7 +2329,7 @@ File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleff
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | The race WAS forced in both runs - each switch was made while the previous Effort hint still read `Reading the effort levels this model offers…`, confirmed by sampling the hint at every step, so this is not the Inconclusive `probes answered too fast` case. RUN 1, HAIKU last (haiku -> +1s -> sonnet -> +1s -> haiku, all mid-probe): after a 30-second settle the Effort select held exactly HAIKU's ladder - the blank option alone, hint `This model offers no effort choice, so it will think as it normally does.` - and the Model select still read `haiku`/`Haiku`. RUN 2 after another cold restart, SONNET last (sonnet -> haiku -> sonnet): after 30 seconds the Effort select held exactly SONNET's ladder `::Use the agent's default, low, medium, high, xhigh, max` with the hint `How hard this teammate thinks…`, and the Model select still read `sonnet`/`Sonnet`. Neither run ended stuck on `Reading…`, and in neither did the abandoned model's answer win. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | The race WAS forced in both runs - each switch was made while the previous Effort hint still read `Reading the effort levels this model offers…`, confirmed by sampling the hint at every step, so this is not the Inconclusive `probes answered too fast` case. RUN 1, HAIKU last (haiku -> +1s -> sonnet -> +1s -> haiku, all mid-probe): after a 30-second settle the Effort select held exactly HAIKU's ladder - the blank option alone, hint `This model offers no effort choice, so it will think as it normally does.` - and the Model select still read `haiku`/`Haiku`. RUN 2 after another cold restart, SONNET last (sonnet -> haiku -> sonnet): after 30 seconds the Effort select held exactly SONNET's ladder `::Use the agent's default, low, medium, high, xhigh, max` with the hint `How hard this agent thinks…`, and the Model select still read `sonnet`/`Sonnet`. Neither run ended stuck on `Reading…`, and in neither did the abandoned model's answer win. |
 
 ### MODELEFFORT-09 — Closing the card mid-probe leaves no stuck state
 
@@ -2337,7 +2337,7 @@ File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleff
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | All three close gestures exercised mid-probe against a model not yet probed in that app run, each confirmed by reading the Effort hint as `Reading the effort levels this model offers…` at the instant of the close: Cancel (on `sonnet`), the x button (on `claude-fable-5-1[1m]`) and the dark backdrop (on `haiku`). Every gesture closed the card immediately. A MutationObserver on .teammates-page counted ZERO mutations across the full 30-second wait after each close - no flicker, no repaint from a superseded probe. On each re-open the Model select was populated instantly from cache (6 options, no fresh spawn) and showed `Use the agent's default`; the Effort select showed `Use the agent's default`; and the Effort hint was the normal `How hard this teammate thinks…`, never `Reading…`. NOTE so this is not misread: the re-opened Effort select legitimately lists low/medium/high/xhigh/max. That is the blank/agent-default model's own ladder, seeded by the catalog probe exactly as seen on the very first card open in MODELEFFORT-01 - it is NOT Sonnet's ladder surviving the close. Had Haiku's state leaked from the third run, the select would have shown the blank option alone. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | All three close gestures exercised mid-probe against a model not yet probed in that app run, each confirmed by reading the Effort hint as `Reading the effort levels this model offers…` at the instant of the close: Cancel (on `sonnet`), the x button (on `claude-fable-5-1[1m]`) and the dark backdrop (on `haiku`). Every gesture closed the card immediately. A MutationObserver on .agents-page counted ZERO mutations across the full 30-second wait after each close - no flicker, no repaint from a superseded probe. On each re-open the Model select was populated instantly from cache (6 options, no fresh spawn) and showed `Use the agent's default`; the Effort select showed `Use the agent's default`; and the Effort hint was the normal `How hard this agent thinks…`, never `Reading…`. NOTE so this is not misread: the re-opened Effort select legitimately lists low/medium/high/xhigh/max. That is the blank/agent-default model's own ladder, seeded by the catalog probe exactly as seen on the very first card open in MODELEFFORT-01 - it is NOT Sonnet's ladder surviving the close. Had Haiku's state leaked from the third run, the select would have shown the blank option alone. |
 
 ### MODELEFFORT-10 — A model with no effort support says so, and the log proves it was not a failed probe
 
@@ -2353,7 +2353,7 @@ File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleff
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Fail *(earlier script)* | `af564cca` | #23 | The Model select LOSES the stored model when the real catalog lands. Reproduced twice from a cold restart, deterministically. Stored: persona_models `Probe One \| sonnet`, persona_efforts `Probe One \| low`. While the Model hint read `Reading the models this agent offers…` (185ms) the select correctly showed the stored value as a synthesised entry - value `sonnet`, label rendered as the raw id `sonnet` exactly as the first pass line predicts. When the catalog arrived 9.3s later and replaced the option list, the Model select jumped to value `default`, label `Default (recommended)` - NOT `Sonnet`, which is present in the list as `sonnet::Sonnet`. That breaks the second pass line. The Effort select behaved correctly throughout, holding `low` before and after. NOT the catastrophic consequence the Fail-if describes, and this is the important qualifier: the DATABASE SURVIVED BOTH SAVES. A no-op Save left `sonnet`/`low` untouched, and a real Save (Effort low -> medium made from the mis-displayed state) wrote `medium` while LEAVING model at `sonnet`; the resulting View card read `Sonnet` / `Medium` correctly. So the `<select>`'s DOM selection is out of sync with Blazor's bound field, not the bound field itself - display-only, but it tells the user their teammate is on `Default (recommended)` when it is on Sonnet. DISCRIMINATOR: with a WARM catalog the same Edit card is correct - it renders `sonnet`/`Sonnet` within 66ms and never shows `default`. The fault is specific to the option list being replaced late. |
+| 2026-09-14 | Fail *(earlier script)* | `af564cca` | #23 | The Model select LOSES the stored model when the real catalog lands. Reproduced twice from a cold restart, deterministically. Stored: persona_models `Probe One \| sonnet`, persona_efforts `Probe One \| low`. While the Model hint read `Reading the models this agent offers…` (185ms) the select correctly showed the stored value as a synthesised entry - value `sonnet`, label rendered as the raw id `sonnet` exactly as the first pass line predicts. When the catalog arrived 9.3s later and replaced the option list, the Model select jumped to value `default`, label `Default (recommended)` - NOT `Sonnet`, which is present in the list as `sonnet::Sonnet`. That breaks the second pass line. The Effort select behaved correctly throughout, holding `low` before and after. NOT the catastrophic consequence the Fail-if describes, and this is the important qualifier: the DATABASE SURVIVED BOTH SAVES. A no-op Save left `sonnet`/`low` untouched, and a real Save (Effort low -> medium made from the mis-displayed state) wrote `medium` while LEAVING model at `sonnet`; the resulting View card read `Sonnet` / `Medium` correctly. So the `<select>`'s DOM selection is out of sync with Blazor's bound field, not the bound field itself - display-only, but it tells the user their agent is on `Default (recommended)` when it is on Sonnet. DISCRIMINATOR: with a WARM catalog the same Edit card is correct - it renders `sonnet`/`Sonnet` within 66ms and never shows `default`. The fault is specific to the option list being replaced late. |
 
 ### MODELEFFORT-12 — A stored value the adapter no longer advertises is still offered and still saved
 
@@ -2363,9 +2363,9 @@ File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleff
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | App stopped, rows set to persona_models `Probe One \| claude-nonexistent-9` and persona_efforts `Probe One \| vintage`, app restarted. The View card read the raw stored values `claude-nonexistent-9` and `vintage`, and the card opened normally with no error. In Edit, after the catalog settled (10.2s), the Model select offered `claude-nonexistent-9::claude-nonexistent-9` as its own entry inserted directly after the blank option and ahead of the real catalog, WITH IT SELECTED; the Effort select likewise offered `vintage::vintage` selected, ahead of low/medium/high/xhigh/max. Saving without changing anything left both rows exactly as they were - still `claude-nonexistent-9` and `vintage` - and the card returned to View mode showing both raw values. IMPORTANT DISCRIMINATOR for issue #23: here the synthesised entry KEEPS its selection when the real catalog lands, whereas in MODELEFFORT-11 a stored value that also exists in the catalog (`sonnet`) loses it. So #23 is specifically about the synthesised option being removed once the real list contains an equivalent, with the DOM selection then falling to `default` - not about synthesised options in general. Posted as a comment on #23. |
 
-### MODELEFFORT-13 — Remove a teammate and recreate it with the same Name - nothing resurrects
+### MODELEFFORT-13 — Remove an agent and recreate it with the same Name - nothing resurrects
 
-File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleffort-13--remove-a-teammate-and-recreate-it-with-the-same-name---nothing-resurrects)
+File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleffort-13--remove-an-agent-and-recreate-it-with-the-same-name---nothing-resurrects)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -2377,7 +2377,7 @@ File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleff
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | `Probe Three` created with Sonnet + Low: rows `Probe Three \| sonnet` and `Probe Three \| low`. The Edit textarea carried the whole file with the expected hint, and only the `name:` line was changed to `Probe Four`. After Save the tile list showed `Probe Four` and no `Probe Three`. THE ROWS MOVED AND ONLY THEY MOVED: persona_models holds exactly one row `Probe Four \| sonnet`, persona_efforts exactly one row `Probe Four \| low`, and a COUNT for `Probe Three` returned 0 in BOTH tables - moved, not copied, nothing left behind. Reopening the `Probe Four` tile showed Model `sonnet` and Effort `low` (raw ids, per MODELEFFORT-15's tile path), i.e. the choice survived the rename. The filename correctly did NOT change - the file is still `Probe Three.md` holding `name: 'Probe Four'`, exactly as the NOTE says it should be. ONE STEP NOT OBSERVABLE AS WRITTEN: step 8 reads `the card now showing` immediately after Save, and the pass line expects it to show the Sonnet/Low choice. It does not - it is the ghost card on the OLD name, with an empty Persona block and `Agent default` / `Model default`. That is the known rough edge already characterised and recorded under TEAMMATECARD-26, which its NOTE says to record rather than file, and it is a property of the rename flow rather than of the row move. Every Fail-if line here is about the rows, and none was triggered. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | `Probe Three` created with Sonnet + Low: rows `Probe Three \| sonnet` and `Probe Three \| low`. The Edit textarea carried the whole file with the expected hint, and only the `name:` line was changed to `Probe Four`. After Save the tile list showed `Probe Four` and no `Probe Three`. THE ROWS MOVED AND ONLY THEY MOVED: persona_models holds exactly one row `Probe Four \| sonnet`, persona_efforts exactly one row `Probe Four \| low`, and a COUNT for `Probe Three` returned 0 in BOTH tables - moved, not copied, nothing left behind. Reopening the `Probe Four` tile showed Model `sonnet` and Effort `low` (raw ids, per MODELEFFORT-15's tile path), i.e. the choice survived the rename. The filename correctly did NOT change - the file is still `Probe Three.md` holding `name: 'Probe Four'`, exactly as the NOTE says it should be. ONE STEP NOT OBSERVABLE AS WRITTEN: step 8 reads `the card now showing` immediately after Save, and the pass line expects it to show the Sonnet/Low choice. It does not - it is the ghost card on the OLD name, with an empty Persona block and `Agent default` / `Model default`. That is the known rough edge already characterised and recorded under AGENTPROFILECARD-26, which its NOTE says to record rather than file, and it is a property of the rename flow rather than of the row move. Every Fail-if line here is about the rows, and none was triggered. |
 
 ### MODELEFFORT-15 — The View card's Model and Effort sections, and the label-versus-id inconsistency
 
@@ -2385,11 +2385,11 @@ File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleff
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Probe One restored through the UI to Sonnet + Low first (MODELEFFORT-12 had left it stale), stored as `Probe One \| sonnet` and `Probe One \| low`. RIGHT AFTER SAVE the View card read the friendly labels - `MODEL \| Sonnet`, `EFFORT \| Low`. CLOSED with the x and REOPENED FROM THE TILE, the same card read the raw stored ids - `MODEL \| sonnet`, `EFFORT \| low`. All four values are therefore either the exact stored id or that id's catalog label; none is a third string, and neither section ever showed `Agent default` / `Model default` for a teammate that has stored values. The switch is the documented consequence of the tile path never probing (MODELEFFORT-06), so the catalogs are empty there and only the raw id is available - recorded as a copy observation, not a defect. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Probe One restored through the UI to Sonnet + Low first (MODELEFFORT-12 had left it stale), stored as `Probe One \| sonnet` and `Probe One \| low`. RIGHT AFTER SAVE the View card read the friendly labels - `MODEL \| Sonnet`, `EFFORT \| Low`. CLOSED with the x and REOPENED FROM THE TILE, the same card read the raw stored ids - `MODEL \| sonnet`, `EFFORT \| low`. All four values are therefore either the exact stored id or that id's catalog label; none is a third string, and neither section ever showed `Agent default` / `Model default` for an agent that has stored values. The switch is the documented consequence of the tile path never probing (MODELEFFORT-06), so the catalogs are empty there and only the raw id is available - recorded as a copy observation, not a defect. |
 
-### MODELEFFORT-16 — The probe runs in App_Data\Teammates, never in the repository root
+### MODELEFFORT-16 — The probe runs in App_Data\Agents, never in the repository root
 
-File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleffort-16--the-probe-runs-in-app_datateammates-never-in-the-repository-root)
+File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleffort-16--the-probe-runs-in-app_dataagents-never-in-the-repository-root)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -2401,7 +2401,7 @@ File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleff
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Both catalogs cold (app restarted, no card opened in the run). Two tabs on /teammates; `New teammate` clicked in each 6 MILLISECONDS apart (05:53:11.776Z and 05:53:11.782Z), so the overlap definitely happened. Across the full 45 seconds the 100ms watcher recorded exactly one rise - 0 -> 1 (pid 62976) at 22:53:12.453, back to 0 at 22:53:17.270 - PEAK 1, never 2. Both tabs ended with the identical 6-entry Model list (`::Use the agent's default, default, opus[1m], claude-fable-5-1[1m], sonnet, haiku`) and the identical 6-entry Effort list, both hints settled to the normal wording, neither stuck on `Reading…`. The app log has zero error-level lines and no stack trace, and #blazor-error-ui was computed display:none in BOTH tabs. No cross-circuit bleed - the two Effort lists matched because both selects were on the same blank model, not because one leaked. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Both catalogs cold (app restarted, no card opened in the run). Two tabs on /agents; `New agent` clicked in each 6 MILLISECONDS apart (05:53:11.776Z and 05:53:11.782Z), so the overlap definitely happened. Across the full 45 seconds the 100ms watcher recorded exactly one rise - 0 -> 1 (pid 62976) at 22:53:12.453, back to 0 at 22:53:17.270 - PEAK 1, never 2. Both tabs ended with the identical 6-entry Model list (`::Use the agent's default, default, opus[1m], claude-fable-5-1[1m], sonnet, haiku`) and the identical 6-entry Effort list, both hints settled to the normal wording, neither stuck on `Reading…`. The app log has zero error-level lines and no stack trace, and #blazor-error-ui was computed display:none in BOTH tabs. No cross-circuit bleed - the two Effort lists matched because both selects were on the same blank model, not because one leaked. |
 
 ### MODELEFFORT-18 — The model catalog is cached for the whole app run, and goes fresh on restart
 
@@ -2417,7 +2417,7 @@ File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleff
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Adapter renamed aside while the app was STOPPED, then started, and the observed card open was the FIRST of that run - the false-pass trap avoided. /teammates rendered normally: 12 tiles, intro paragraph present, #blazor-error-ui display:none. The card opened; Model hint read exactly `This agent advertises no models, so it will use its own default.` and Effort hint exactly `This model offers no effort choice, so it will think as it normally does.`, with BOTH selects containing only `::Use the agent's default`. The log carries `No ACP adapter is installed; the model catalog is empty.` at Information from category `Agency.Huddle.App.Acp.ModelCatalogProbe`. The watcher never left 0 - nothing is spawned when there is nothing to spawn. `Probe NoAdapter` saved successfully with COUNT 0 in BOTH persona_models and persona_efforts. THE KEY GUARANTEE: after restoring node_modules and re-opening the card WITHOUT any app restart, the real 6-entry model list appeared - a failed probe is never cached, the deliberate opposite of MODELEFFORT-18. Cleaned up. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Adapter renamed aside while the app was STOPPED, then started, and the observed card open was the FIRST of that run - the false-pass trap avoided. /agents rendered normally: 12 tiles, intro paragraph present, #blazor-error-ui display:none. The card opened; Model hint read exactly `This agent advertises no models, so it will use its own default.` and Effort hint exactly `This model offers no effort choice, so it will think as it normally does.`, with BOTH selects containing only `::Use the agent's default`. The log carries `No ACP adapter is installed; the model catalog is empty.` at Information from category `Agency.Huddle.App.Acp.ModelCatalogProbe`. The watcher never left 0 - nothing is spawned when there is nothing to spawn. `Probe NoAdapter` saved successfully with COUNT 0 in BOTH persona_models and persona_efforts. THE KEY GUARANTEE: after restoring node_modules and re-opening the card WITHOUT any app restart, the real 6-entry model list appeared - a failed probe is never cached, the deliberate opposite of MODELEFFORT-18. Cleaned up. |
 
 ### MODELEFFORT-20 — Adapter present but broken: launch failure and auth failure degrade to the same picker, with distinct log lines
 
@@ -2433,7 +2433,7 @@ File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleff
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | team.db backed up first. Before the drop: users COUNT 12, rooms COUNT 11. Both persona tables dropped and confirmed gone - sqlite_master listed only room_members, rooms, users. The app then started with NO exception (error-level log empty) and /teammates rendered with the SAME 12 teammate tiles as before. After startup sqlite_master lists BOTH `persona_models` and `persona_efforts` again, recreated in place. Nothing was wiped: users is still 12 and rooms is still 11. Creating `Probe Migrate` with Sonnet + Low wrote straight into the freshly created tables - `Probe Migrate \| sonnet` and `Probe Migrate \| low` - so the stores are writing into them, not just creating them. Cleaned up through the card; team.db.backup left in App_Data and removed after the pass. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | team.db backed up first. Before the drop: users COUNT 12, rooms COUNT 11. Both persona tables dropped and confirmed gone - sqlite_master listed only room_members, rooms, users. The app then started with NO exception (error-level log empty) and /agents rendered with the SAME 12 agent tiles as before. After startup sqlite_master lists BOTH `persona_models` and `persona_efforts` again, recreated in place. Nothing was wiped: users is still 12 and rooms is still 11. Creating `Probe Migrate` with Sonnet + Low wrote straight into the freshly created tables - `Probe Migrate \| sonnet` and `Probe Migrate \| low` - so the stores are writing into them, not just creating them. Cleaned up through the card; team.db.backup left in App_Data and removed after the pass. |
 
 ### MODELEFFORT-22 — RESTART LANE: changing the Model restarts the runner, exactly once
 
@@ -2459,21 +2459,21 @@ File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleff
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | False-defect trap checked FIRST: `Probe One.md` is UI-created and the CRLF test printed False, so the file is LF-only and a no-op save genuinely has nothing to write. Two consecutive no-op saves (Edit opened, both selects left settled and untouched, Save clicked) each produced: status `Online` continuously for the full 15+ second watch with no `Starting`, `Offline` or `Degraded` flicker on card or tile; ZERO `The agent process disconnected.` lines; ZERO new `[agent stderr]` lines; in fact ZERO new log lines at all; and the adapter PID list byte-identical before and after both saves (27404,50448,51760,60888,78016,81504,92336,93756,100976,101864). The 100ms watcher logged nothing new either, so the 500ms-debounced watcher event that the file write also fires likewise decided `no change`. The second save behaved identically to the first. |
 
-### MODELEFFORT-25 — RESTART LANE: a stale stored Model or Effort warns but never blocks the teammate
+### MODELEFFORT-25 — RESTART LANE: a stale stored Model or Effort warns but never blocks the agent
 
-File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleffort-25--restart-lane-a-stale-stored-model-or-effort-warns-but-never-blocks-the-teammate)
+File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleffort-25--restart-lane-a-stale-stored-model-or-effort-warns-but-never-blocks-the-agent)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | App stopped, persona_models set to `claude-nonexistent-9` and persona_efforts to `vintage` for Probe One, then started in the restart lane. The log carries BOTH warnings verbatim: `Requested model 'claude-nonexistent-9' is not in the agent's advertised model catalog; continuing on the agent's default.` and `Requested effort 'vintage' is not in the agent's advertised effort catalog for the current model; continuing on the model's default.` Despite both, the `Probe One` tile reached `Online` and all 10 runners started - a stale value warns, it does not brick. Zero startup exceptions. The card showed the STORED values, `MODEL \| claude-nonexistent-9` and `EFFORT \| vintage`, not defaults. Fixture restored afterwards through the UI. |
 
-### MODELEFFORT-26 — RESTART LANE: the manual Restart button is offered in every state except Starting, and works on an Offline or Degraded teammate
+### MODELEFFORT-26 — RESTART LANE: the manual Restart button is offered in every state except Starting, and works on an Offline or Degraded agent
 
-File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleffort-26--restart-lane-the-manual-restart-button-is-offered-in-every-state-except-starting-and-works-on-an-offline-or-degraded-teammate)
+File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleffort-26--restart-lane-the-manual-restart-button-is-offered-in-every-state-except-starting-and-works-on-an-offline-or-degraded-agent)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | HEALTHY HALF: an `Online` teammate's action row is exactly `Message`, `Edit`, `Open`, `Remove` - no `Restart` - and the element immediately after the row is the Persona section, so no hint; the string `Like saving an edit` appears nowhere on the card. UNHEALTHY FIXTURE made by `Stop-Process` on one adapter (pid 73352); `Quill` went `Offline` and stayed there - no self-recovery, which is documented and correct. Its card's action row gained `Restart` and the hint below read exactly `Like saving an edit, this restarts the teammate, which clears what it remembers.` Clicking `Restart` removed the button within 10ms as the status went `Starting` (the `Restarting…` + disabled state is the same one captured at 10ms granularity in TEAMMATECARD-42; here the transition was faster than the 10ms sample). The immediate SECOND click found no button at all, so only one restart ran - stronger than `does nothing`. NOT a no-op where it matters most: the status reached `Online`, the adapter count returned to 10 with a NEW pid 77724 while the killed 73352 stayed dead, the log gained 30 lines including a fresh 9-line `[agent stderr]` burst, and zero `failed to start` lines. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | HEALTHY HALF: an `Online` agent's action row is exactly `Message`, `Edit`, `Open`, `Remove` - no `Restart` - and the element immediately after the row is the Persona section, so no hint; the string `Like saving an edit` appears nowhere on the card. UNHEALTHY FIXTURE made by `Stop-Process` on one adapter (pid 73352); `Quill` went `Offline` and stayed there - no self-recovery, which is documented and correct. Its card's action row gained `Restart` and the hint below read exactly `Like saving an edit, this restarts the agent, which clears what it remembers.` Clicking `Restart` removed the button within 10ms as the status went `Starting` (the `Restarting…` + disabled state is the same one captured at 10ms granularity in AGENTPROFILECARD-42; here the transition was faster than the 10ms sample). The immediate SECOND click found no button at all, so only one restart ran - stronger than `does nothing`. NOT a no-op where it matters most: the status reached `Online`, the adapter count returned to 10 with a NEW pid 77724 while the killed 73352 stayed dead, the log gained 30 lines including a fresh 9-line `[agent stderr]` burst, and zero `failed to start` lines. |
 
 ### MODELEFFORT-27 — MONEY: the chosen Model and Effort actually reach the model - ask it
 
@@ -2481,7 +2481,7 @@ File: [`docs/engineering/manual-tests/model-effort.md`](model-effort.md#modeleff
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | PAID - three prompt turns on a tight `Team__AgentMessageBudget=6`, roughly single-digit cents. The load-bearing half is decisive: with Model = Haiku the teammate replied `I'm running as Claude Haiku 4.5 (model ID: claude-haiku-4-5-20251001).`; after switching ONLY the Model to Sonnet and saving, the identical message returned `I'm running as Sonnet 5 (model ID claude-sonnet-5)`. The two answers name DIFFERENT models, so the picker's value reaches session/new rather than stopping at the database. Restart evidence between turns: `The agent process disconnected.` lines with fresh `[agent stderr]` bursts, and the tile returned to `Online` each time. CATALOG WARNINGS: the run's log holds three, at lines 280, 282 and 407, and every one names `claude-nonexistent-9` or `vintage` - the MODELEFFORT-25 fixture seeded earlier in the same app run. NONE names haiku, sonnet or medium, so there is no warning for any value under test here. Database ends holding `Probe One \| sonnet` and `Probe One \| medium`. EFFORT SELF-REPORT INCONCLUSIVE, exactly as the test directs: the model said `thinking effort is not something I have visibility into from inside the session - that's a harness-level setting`, so the absent effort-catalog warning is the oracle for that half. DEVIATION: step 9 asks to change Effort Low -> Medium, but the step-6 model switch clears the effort (MODELEFFORT-07), so the change made was blank -> Medium on Sonnet. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | PAID - three prompt turns on a tight `Team__AgentMessageBudget=6`, roughly single-digit cents. The load-bearing half is decisive: with Model = Haiku the agent replied `I'm running as Claude Haiku 4.5 (model ID: claude-haiku-4-5-20251001).`; after switching ONLY the Model to Sonnet and saving, the identical message returned `I'm running as Sonnet 5 (model ID claude-sonnet-5)`. The two answers name DIFFERENT models, so the picker's value reaches session/new rather than stopping at the database. Restart evidence between turns: `The agent process disconnected.` lines with fresh `[agent stderr]` bursts, and the tile returned to `Online` each time. CATALOG WARNINGS: the run's log holds three, at lines 280, 282 and 407, and every one names `claude-nonexistent-9` or `vintage` - the MODELEFFORT-25 fixture seeded earlier in the same app run. NONE names haiku, sonnet or medium, so there is no warning for any value under test here. Database ends holding `Probe One \| sonnet` and `Probe One \| medium`. EFFORT SELF-REPORT INCONCLUSIVE, exactly as the test directs: the model said `thinking effort is not something I have visibility into from inside the session - that's a harness-level setting`, so the absent effort-catalog warning is the oracle for that half. DEVIATION: step 9 asks to change Effort Low -> Medium, but the step-6 model switch clears the effort (MODELEFFORT-07), so the change made was blank -> Medium on Sonnet. |
 
 ### MODELEFFORT-28 — Both pickers are inert while their own catalog is being probed, and the Model list lands without waiting on the Effort one
 
@@ -2564,13 +2564,13 @@ File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#invitero
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | ROOM-EA1 = /rooms/01a0a3b1aba9766a96530559380fbcb5. Ticking the identical pair in the identical order again navigated to /rooms/01a0a3b1d85b75ebba9fe97efcaf5a43 - a DIFFERENT id. The sidebar now shows TWO links both reading `echo, alpha` pointing at the two different ids (the new one carrying `active`), total links 5, with no reload. T-A printed exactly one new `Created room '01a0a3b1d85b75ebba9fe97efcaf5a43' (echo, alpha) with 3 members.` The duplicate NAME is correct behaviour and is not filed; what this test hunts - the second click doing nothing - did not happen. |
 
-### INVITEROOMS-11 — Invite teammate on the Room header offers only Agents that are not already Members, and starts closed
+### INVITEROOMS-11 — Invite agent on the Room header offers only Agents that are not already Members, and starts closed
 
-File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#inviterooms-11--invite-teammate-on-the-room-header-offers-only-agents-that-are-not-already-members-and-starts-closed)
+File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#inviterooms-11--invite-agent-on-the-room-header-offers-only-agents-that-are-not-already-members-and-starts-closed)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | In mybot's Room (h1 `mybot`, no comma, so the Direct Room was still unconverted). Before any click `div.invite-panel` carried the `hidden` attribute and no candidate list was visible. The button clicked carries class `invite-toggle` and reads `Add teammate` - the Room-header control, not the /teammates submit button. After the click the panel showed a `<select>` labelled `Team` whose first option is `All teams`, and the candidate list contained exactly `echo` and `alpha` - the two Agents not already in this Room. `mybot` itself is ABSENT and `You` is ABSENT. Each entry carries a status dot with class `agent-dot online` and title `online`. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | In mybot's Room (h1 `mybot`, no comma, so the Direct Room was still unconverted). Before any click `div.invite-panel` carried the `hidden` attribute and no candidate list was visible. The button clicked carries class `invite-toggle` and reads `Add agent` - the Room-header control, not the /agents submit button. After the click the panel showed a `<select>` labelled `Team` whose first option is `All teams`, and the candidate list contained exactly `echo` and `alpha` - the two Agents not already in this Room. `mybot` itself is ABSENT and `You` is ABSENT. Each entry carries a status dot with class `agent-dot online` and title `online`. |
 
 ### INVITEROOMS-12 — Clicking a candidate invites it, renames the Room, and repaints all four surfaces with no reload
 
@@ -2580,9 +2580,9 @@ File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#invitero
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | All four live surfaces repainted with no reload. Seeded the Transcript first: `hi @mybot` -> `mybot: hi mybot`, giving a 2-line rooms/01a0a3aeea2f77f98be45eb4cabde6b0.jsonl. Clicking `alpha` in the candidate list produced the panel line reading EXACTLY `Invited alpha. Room is now "mybot, alpha".` (class composer-info, straight double quotes as specified). `alpha` disappeared from the candidate list, leaving only `echo`. The h1 changed `mybot` -> `mybot, alpha`; the grey members line changed to `You, mybot, alpha`; the sidebar link RENAMED IN PLACE from `mybot` to `mybot, alpha` with no new link added (still 5 links, room count still 5). The address bar was unchanged and navigation entries stayed at 1 - no reload. T-A printed `Invited agent 'alpha' (01a0a3ae26d673fda244a3e29b9f1a62) into room '01a0a3aeea2f77f98be45eb4cabde6b0'.` THE PINNED BEHAVIOUR HOLDS: the .jsonl line count is IDENTICAL at 2 before and after - an Invitation persists no Message. mybot's Direct Room is now a group Room, which is what INVITEROOMS-21 needs. |
 
-### INVITEROOMS-13 — Invite teammate says so when every Agent is already a Member, and hides the Team filter in that state
+### INVITEROOMS-13 — Invite agent says so when every Agent is already a Member, and hides the Team filter in that state
 
-File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#inviterooms-13--invite-teammate-says-so-when-every-agent-is-already-a-member-and-hides-the-team-filter-in-that-state)
+File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#inviterooms-13--invite-agent-says-so-when-every-agent-is-already-a-member-and-hides-the-team-filter-in-that-state)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -2594,7 +2594,7 @@ File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#invitero
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Room A (`mybot, alpha, echo`) had its panel OPEN carrying the leftover line `Invited echo. Room is now "mybot, alpha, echo".` plus `Every agent is already in this room.` Navigating to Room B (an `echo, alpha` Room) arrived with the panel CLOSED - .invite-panel carries the `hidden` attribute and hidden=true - and nothing visible beneath Add teammate. Opening Room B's panel showed NO carried-over info or error line (composer-info/composer-error both empty) and a candidate list containing only `mybot` - correct, since echo and alpha are Members of Room B and were therefore excluded even though they had been offered in Room A. Returning to Room A showed its panel closed again AND the stale `Invited echo…` line gone; the panel text was just `Every agent is already in this room.` |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Room A (`mybot, alpha, echo`) had its panel OPEN carrying the leftover line `Invited echo. Room is now "mybot, alpha, echo".` plus `Every agent is already in this room.` Navigating to Room B (an `echo, alpha` Room) arrived with the panel CLOSED - .invite-panel carries the `hidden` attribute and hidden=true - and nothing visible beneath Add agent. Opening Room B's panel showed NO carried-over info or error line (composer-info/composer-error both empty) and a candidate list containing only `mybot` - correct, since echo and alpha are Members of Room B and were therefore excluded even though they had been offered in Room A. Returning to Room A showed its panel closed again AND the stale `Invited echo…` line gone; the panel text was just `Every agent is already in this room.` |
 
 ### INVITEROOMS-15 — /invite @name in the composer does the same thing as the header control
 
@@ -2692,9 +2692,9 @@ File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#invitero
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Ran with Team__Acp__Enabled=true. Persona `Jarvis` (Title Butler, Alias jar, Model Haiku) created through the Create card; it reached `Online` and registered as an Agent - T-A logged `Created direct room '01a0a3b96fb57d8b83e2f250ab0d7ddc' for agent 'Jarvis'.` and a `Jarvis` sidebar link appeared. BOTH alias forms resolved to a BLUE composer-info line, never red. Lower case in the `echo, alpha, Emily Lee` Room: `Invited jar. Room is now "echo, alpha, Emily Lee, Jarvis".` Upper case in the `echo, alpha, gamma` Room: `Invited JAR. Room is now "echo, alpha, gamma, Jarvis".` Both halves behave as specified - the first half echoes the handle typed (`jar` / `JAR`) while the second half quotes the real Room name containing `Jarvis`. Both h1s and both sidebar links end in `Jarvis`, never `jar` or `JAR`. T-A printed `Invited agent 'Jarvis' (01a0a3b96fb375748099b67a30551566) into room '<id>'.` for EACH invite - naming the Persona, not the alias - and zero lines naming 'jar'. DB: rooms are named `echo, alpha, Emily Lee, Jarvis`, `echo, alpha, gamma, Jarvis` and `Jarvis`; no room is named `jar`. DEVIATION: step 11 asks for Effort `low`, but Haiku advertises no effort ladder on this adapter (MODELEFFORT-02), so Effort was left at the model default. No tokens spent - starting a Persona opens a session and never prompts. |
 
-### INVITEROOMS-27 — The Teammate card's Message action disappears once that Persona's Direct Room has been invited into
+### INVITEROOMS-27 — The Agent card's Message action disappears once that Persona's Direct Room has been invited into
 
-File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#inviterooms-27--the-teammate-cards-message-action-disappears-once-that-personas-direct-room-has-been-invited-into)
+File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#inviterooms-27--the-agent-cards-message-action-disappears-once-that-personas-direct-room-has-been-invited-into)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -2774,9 +2774,9 @@ File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#invitero
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### INVITEROOMS-38 — An archived two-Member Room is not reused: starting a chat with that Teammate mints a second one
+### INVITEROOMS-38 — An archived two-Member Room is not reused: starting a chat with that Agent mints a second one
 
-File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#inviterooms-38--an-archived-two-member-room-is-not-reused-starting-a-chat-with-that-teammate-mints-a-second-one)
+File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#inviterooms-38--an-archived-two-member-room-is-not-reused-starting-a-chat-with-that-agent-mints-a-second-one)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -2818,9 +2818,9 @@ File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### PROMPTSSETTINGS-05 — The "Next session" badge appears on exactly the prompts whose edits cannot reach a running teammate
+### PROMPTSSETTINGS-05 — The "Next session" badge appears on exactly the prompts whose edits cannot reach a running agent
 
-File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#promptssettings-05--the-next-session-badge-appears-on-exactly-the-prompts-whose-edits-cannot-reach-a-running-teammate)
+File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#promptssettings-05--the-next-session-badge-appears-on-exactly-the-prompts-whose-edits-cannot-reach-a-running-agent)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -3042,9 +3042,9 @@ File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### PROMPTSSETTINGS-37 — Saving a Prompt must NOT restart any teammate's session
+### PROMPTSSETTINGS-37 — Saving a Prompt must NOT restart any agent's session
 
-File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#promptssettings-37--saving-a-prompt-must-not-restart-any-teammates-session)
+File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#promptssettings-37--saving-a-prompt-must-not-restart-any-agents-session)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -3056,9 +3056,9 @@ File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### PROMPTSSETTINGS-39 — COSTS MONEY: a "Next session" prompt edit is silently inert on a running teammate until it restarts
+### PROMPTSSETTINGS-39 — COSTS MONEY: a "Next session" prompt edit is silently inert on a running agent until it restarts
 
-File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#promptssettings-39--costs-money-a-next-session-prompt-edit-is-silently-inert-on-a-running-teammate-until-it-restarts)
+File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#promptssettings-39--costs-money-a-next-session-prompt-edit-is-silently-inert-on-a-running-agent-until-it-restarts)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -3125,7 +3125,7 @@ File: [`docs/engineering/manual-tests/appearance-theme.md`](appearance-theme.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Judged structurally rather than by eye, because this harness cannot capture a first-paint filmstrip - and the structural oracle is exactly what the Fail-if names. Both mechanisms that would cause a flash are ruled out. (1) THE LINK IS EMITTED AND EARLY: with `{ "theme": "huddle-dark" }`, the raw server HTML for /, /teammates and /settings/appearance all carry `themes/huddle-dark.css` inside <head>, and on every one of the three routes NO <script> tag precedes it - so it is a render-blocking stylesheet applied before first paint by definition. (2) IT IS NOT 404ing: APPEARANCETHEME-05 confirmed themes/huddle-dark.css returns 200. (3) NO CLIENT-SIDE LOADER EXISTS: grepping every .js under wwwroot for `localStorage`, `prefers-color-scheme`, `color-scheme` or `theme` returned ZERO hits, so nothing applies the theme after paint - the signature of the flash this test hunts. Recorded honestly: the frame-by-frame visual confirmation and the Slow-4G throttled reload were not performed. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Judged structurally rather than by eye, because this harness cannot capture a first-paint filmstrip - and the structural oracle is exactly what the Fail-if names. Both mechanisms that would cause a flash are ruled out. (1) THE LINK IS EMITTED AND EARLY: with `{ "theme": "huddle-dark" }`, the raw server HTML for /, /agents and /settings/appearance all carry `themes/huddle-dark.css` inside <head>, and on every one of the three routes NO <script> tag precedes it - so it is a render-blocking stylesheet applied before first paint by definition. (2) IT IS NOT 404ing: APPEARANCETHEME-05 confirmed themes/huddle-dark.css returns 200. (3) NO CLIENT-SIDE LOADER EXISTS: grepping every .js under wwwroot for `localStorage`, `prefers-color-scheme`, `color-scheme` or `theme` returned ZERO hits, so nothing applies the theme after paint - the signature of the flash this test hunts. Recorded honestly: the frame-by-frame visual confirmation and the Slow-4G throttled reload were not performed. |
 
 ### APPEARANCETHEME-09 — The choice is per installation, not per browser
 
@@ -3173,7 +3173,7 @@ File: [`docs/engineering/manual-tests/appearance-theme.md`](appearance-theme.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | THE TAB UPDATES LIVE, THE COLOURS DO NOT. Starting light with the dropdown on huddle-light: hand-editing the file to huddle-dark WITHOUT touching the browser flipped the dropdown to `huddle-dark` by itself (detected on the first 50ms poll, so well inside half a second) while the page's colours stayed LIGHT at rgb(255,255,255) - and the JS marker survived with navigation entries still 1, proving no reload. Clicking `Teammates` in the sidebar (in-app navigation) still left the colours light at rgb(255,255,255) with the marker alive. Only a full document load turned it dark: body rgb(27,27,31) and the marker gone. THE REJECTED SECTION IS ALSO LIVE: hand-adding `"overrides": { "nope": "x" }` made an `Overrides that didn't load` section appear BY ITSELF reading `'nope' is not a theme token; it was left in the file and ignored.`, again with no reload (marker alive, nav 1); replacing it with a valid `--accent` made the section disappear by itself, still with no colour change; and only after a full load did the magenta apply (button background rgb(193,75,208)). Zero unhandled exceptions. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | THE TAB UPDATES LIVE, THE COLOURS DO NOT. Starting light with the dropdown on huddle-light: hand-editing the file to huddle-dark WITHOUT touching the browser flipped the dropdown to `huddle-dark` by itself (detected on the first 50ms poll, so well inside half a second) while the page's colours stayed LIGHT at rgb(255,255,255) - and the JS marker survived with navigation entries still 1, proving no reload. Clicking `Agents` in the sidebar (in-app navigation) still left the colours light at rgb(255,255,255) with the marker alive. Only a full document load turned it dark: body rgb(27,27,31) and the marker gone. THE REJECTED SECTION IS ALSO LIVE: hand-adding `"overrides": { "nope": "x" }` made an `Overrides that didn't load` section appear BY ITSELF reading `'nope' is not a theme token; it was left in the file and ignored.`, again with no reload (marker alive, nav 1); replacing it with a valid `--accent` made the section disappear by itself, still with no colour change; and only after a full load did the magenta apply (button background rgb(193,75,208)). Zero unhandled exceptions. |
 
 ### APPEARANCETHEME-20 — Two browser windows stay in step, colours included — the change propagates through the file to every open circuit
 
@@ -3189,7 +3189,7 @@ File: [`docs/engineering/manual-tests/appearance-theme.md`](appearance-theme.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | With `{ "theme": "huddle-dark", "overrides": { "--accent": "#c14bd0" } }` in place, re-selecting the ALREADY-SELECTED `Dark` was harmless: over a 6-second watch the navigation entry count stayed at 1 (no reload at all, which the test accepts as one of the two valid outcomes - and definitively NO reload loop), the dropdown still read huddle-dark, the page stayed dark at rgb(27,27,31), and #blazor-error-ui stayed display:none. THE OVERRIDE SURVIVED: the file still reads the theme AND the `--accent` block, and /teammates still emits `--accent: #c14bd0`, so the no-op save edited only the theme key rather than clobbering the file. Zero unhandled exceptions in the log. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | With `{ "theme": "huddle-dark", "overrides": { "--accent": "#c14bd0" } }` in place, re-selecting the ALREADY-SELECTED `Dark` was harmless: over a 6-second watch the navigation entry count stayed at 1 (no reload at all, which the test accepts as one of the two valid outcomes - and definitively NO reload loop), the dropdown still read huddle-dark, the page stayed dark at rgb(27,27,31), and #blazor-error-ui stayed display:none. THE OVERRIDE SURVIVED: the file still reads the theme AND the `--accent` block, and /agents still emits `--accent: #c14bd0`, so the no-op save edited only the theme key rather than clobbering the file. Zero unhandled exceptions in the log. |
 
 ### APPEARANCETHEME-22 — Dark mode walked across every page and every state - the acceptance test for the whole item
 
@@ -3197,7 +3197,7 @@ File: [`docs/engineering/manual-tests/appearance-theme.md`](appearance-theme.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Acceptance walk with `{ "theme": "huddle-dark" }` (no overrides, so this judges the built-in dark palette) against a LIGHT OS. Method: rather than eyeballing, every element on each page was scanned programmatically and any element whose computed background-color averages >140 per channel at >=0.2 alpha AND has a client rect was reported. THE KEY STRUCTURAL FACT: `color-scheme` computes to `dark` on :root, which is what makes the browser paint dark scrollbars and dark native <select> popups. RESULTS - Room: body and html rgb(27,27,31), sidebar rgb(35,35,40), New chat button rgb(42,42,49), composer textarea rgb(59,59,59), chat header/message body/message sender all on the dark foreground rgb(230,230,234). New chat panel open: transparent ground on dark, status dots rgb(63,191,90) online and rgb(224,90,90) offline, Start chat rgb(53,53,61). /teammates: ZERO visible light surfaces; tile rgb(42,42,49), avatar rgb(94,43,96), New teammate button rgb(94,43,96), and the `Files that didn't load` block rgb(58,31,31) on rgb(230,230,234). Teammate card: scrim rgba(0,0,0,0.6) - dark, not a light scrim - panel rgb(42,42,49), Persona block rgb(23,23,27); ZERO visible light surfaces. /settings/hooks: zero visible light surfaces, textarea rgb(23,23,27). /settings/appearance: zero visible light surfaces, select rgb(59,59,59). NOTHING rendered blank or with no colour. No pale yellow error banner on any page. THE ONLY TWO LIGHT ELEMENTS IN THE WHOLE DOM ARE BOTH HIDDEN AND BOTH EXPECTED: #blazor-error-ui at lightyellow rgb(255,255,224) - documented exemption (1), deliberately a literal so it stays readable when the app has already failed - and #components-reconnect-modal at white; both compute display:none with zero client rects, so neither APPEARS. Documented exemption (2) also confirmed present rather than treated as a defect: the card's Persona markdown keeps the inherited sans-serif stack rather than the monospace token. NOT OBSERVED, recorded honestly: the genuinely visual sub-checks this harness cannot make - the native <select> POPUP menu being dark, and scrollbar rendering - are covered only indirectly, by color-scheme:dark reaching :root. |
+| 2026-09-14 | Pass *(earlier script)* | `af564cca` |  | Acceptance walk with `{ "theme": "huddle-dark" }` (no overrides, so this judges the built-in dark palette) against a LIGHT OS. Method: rather than eyeballing, every element on each page was scanned programmatically and any element whose computed background-color averages >140 per channel at >=0.2 alpha AND has a client rect was reported. THE KEY STRUCTURAL FACT: `color-scheme` computes to `dark` on :root, which is what makes the browser paint dark scrollbars and dark native <select> popups. RESULTS - Room: body and html rgb(27,27,31), sidebar rgb(35,35,40), New chat button rgb(42,42,49), composer textarea rgb(59,59,59), chat header/message body/message sender all on the dark foreground rgb(230,230,234). New chat panel open: transparent ground on dark, status dots rgb(63,191,90) online and rgb(224,90,90) offline, Start chat rgb(53,53,61). /agents: ZERO visible light surfaces; tile rgb(42,42,49), avatar rgb(94,43,96), New agent button rgb(94,43,96), and the `Files that didn't load` block rgb(58,31,31) on rgb(230,230,234). Agent card: scrim rgba(0,0,0,0.6) - dark, not a light scrim - panel rgb(42,42,49), Persona block rgb(23,23,27); ZERO visible light surfaces. /settings/hooks: zero visible light surfaces, textarea rgb(23,23,27). /settings/appearance: zero visible light surfaces, select rgb(59,59,59). NOTHING rendered blank or with no colour. No pale yellow error banner on any page. THE ONLY TWO LIGHT ELEMENTS IN THE WHOLE DOM ARE BOTH HIDDEN AND BOTH EXPECTED: #blazor-error-ui at lightyellow rgb(255,255,224) - documented exemption (1), deliberately a literal so it stays readable when the app has already failed - and #components-reconnect-modal at white; both compute display:none with zero client rects, so neither APPEARS. Documented exemption (2) also confirmed present rather than treated as a defect: the card's Persona markdown keeps the inherited sans-serif stack rather than the monospace token. NOT OBSERVED, recorded honestly: the genuinely visual sub-checks this harness cannot make - the native <select> POPUP menu being dark, and scrollbar rendering - are covered only indirectly, by color-scheme:dark reaching :root. |
 
 ### APPEARANCETHEME-23 — Hover, selection and focus surfaces all switch, and the four old hover colours are still one
 
@@ -3205,7 +3205,7 @@ File: [`docs/engineering/manual-tests/appearance-theme.md`](appearance-theme.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Fail *(earlier script)* | `af564cca` | #25 | TWO OF THREE PASS CONDITIONS HOLD; THE FOCUS ONE DOES NOT. (1) HOVER IS ONE TOKEN: enumerating every :hover rule that sets a background across all loaded stylesheets, EVERY app-authored one reads a token, never a literal - .room-list li a:hover, .invite-agent:hover and .teammate-tile:hover (the three this test names) all read the SAME `var(--surface-hover)`, as do .new-chat-toggle, .sidebar-link, .invite-toggle, .draft-stop, .teammate-card-action and .settings-tab. That token resolves to rgb(50,50,59) in dark - a dark value, and none of the four pale literals the Fail-if lists. The only non-token hover backgrounds are a transparent rgba(0,0,0,0) in third-party MudBlazor.min.css and a ::-webkit-scrollbar-thumb:hover grey; neither is a row highlight. (2) SELECTED IS DISTINCT AND DARK: --surface-selected resolves to rgb(47,61,87) and the active room row computes exactly that - dark, and different from the hover value. (3) FOCUS OUTLINE IS NOT VISIBLE - THIS IS THE FAILURE. After a REAL keyboard Tab, the focused element matches :focus-visible yet computes `outline-style: none`, so no ring is drawn: anchors and buttons both. Cause located precisely: `a:focus-visible { outline: none }` in the THIRD-PARTY MudBlazor.min.css; the app's own app.css and theme.css contain zero `outline` and zero `:focus` rules. The composer textarea is the exception and does get a visible ring (outline-style `auto`, rgb(238,238,238) against the rgb(27,27,31) ground). THE CAUSE IS NOT THE ONE THE FAIL-IF PREDICTS: it is not a colour that fails to switch - the outline COLOUR resolves to a high-contrast light value in dark. It is the outline being suppressed outright, and it is THEME-INDEPENDENT: re-checked under huddle-light on a white ground, links and buttons still compute outline-style `none`. So this is an accessibility defect in the shell rather than a tokenisation regression, which is why it is filed separately rather than against the theme layer. |
+| 2026-09-14 | Fail *(earlier script)* | `af564cca` | #25 | TWO OF THREE PASS CONDITIONS HOLD; THE FOCUS ONE DOES NOT. (1) HOVER IS ONE TOKEN: enumerating every :hover rule that sets a background across all loaded stylesheets, EVERY app-authored one reads a token, never a literal - .room-list li a:hover, .invite-agent:hover and .agent-tile:hover (the three this test names) all read the SAME `var(--surface-hover)`, as do .new-chat-toggle, .sidebar-link, .invite-toggle, .draft-stop, .agent-profile-card-action and .settings-tab. That token resolves to rgb(50,50,59) in dark - a dark value, and none of the four pale literals the Fail-if lists. The only non-token hover backgrounds are a transparent rgba(0,0,0,0) in third-party MudBlazor.min.css and a ::-webkit-scrollbar-thumb:hover grey; neither is a row highlight. (2) SELECTED IS DISTINCT AND DARK: --surface-selected resolves to rgb(47,61,87) and the active room row computes exactly that - dark, and different from the hover value. (3) FOCUS OUTLINE IS NOT VISIBLE - THIS IS THE FAILURE. After a REAL keyboard Tab, the focused element matches :focus-visible yet computes `outline-style: none`, so no ring is drawn: anchors and buttons both. Cause located precisely: `a:focus-visible { outline: none }` in the THIRD-PARTY MudBlazor.min.css; the app's own app.css and theme.css contain zero `outline` and zero `:focus` rules. The composer textarea is the exception and does get a visible ring (outline-style `auto`, rgb(238,238,238) against the rgb(27,27,31) ground). THE CAUSE IS NOT THE ONE THE FAIL-IF PREDICTS: it is not a colour that fails to switch - the outline COLOUR resolves to a high-contrast light value in dark. It is the outline being suppressed outright, and it is THEME-INDEPENDENT: re-checked under huddle-light on a white ground, links and buttons still compute outline-style `none`. So this is an accessibility defect in the shell rather than a tokenisation regression, which is why it is filed separately rather than against the theme layer. |
 
 ### APPEARANCETHEME-24 — The reconnect modal shows one themed state paragraph over a dimmed backdrop, in both light and dark
 
@@ -3351,13 +3351,13 @@ File: [`docs/engineering/manual-tests/pipe-external.md`](pipe-external.md#pipeex
 | --- | --- | --- | --- | --- |
 | 2026-09-14 | Fail *(earlier script)* | `44be4908` | #27 | FIVE OF THE SIX PASS CONDITIONS HOLD; THE LOG ONE DOES NOT. HOLDS: the page is byte-for-byte unchanged across the disconnect - the sidebar Room list compares equal element-by-element (21 entries, `mybot2` still listed), the heading still reads `mybot2`, the members line still reads `You, mybot2`, and the only thing between the transcript and the message box is the same P.budget-note reading `1 of 40 agent replies since you last spoke.` NO ALERT ANYWHERE: a regex over the whole rendered document HTML finds ZERO occurrences of role="alert", document.querySelectorAll('[role="alert"]') is empty, and no visible element matching .alert/.banner/.badge exists - so the always-on-offline-banner failure this test exists to catch is absent. POSTING IS NOT GATED ON PRESENCE: `hi @mybot2` posted normally, appeared in the transcript, was never answered over 15 seconds, and produced no error strip; the Room's .jsonl ends with that human line and NO agent line after it. THE FAILURE: the app logs NOTHING AT ALL on disconnect. No `Agent connection <id> ended.` at Warning or any level, stderr empty, and the log is 20 lines total across THIRTEEN disconnects this process (ten ordercheck cycles plus three mybot2). Logging config is not the cause - appsettings.Development.json sets Agency.Huddle to Debug. BUT THE TEST'S STATED CONSEQUENCE IS DISPROVEN, which is why this is filed narrowly as an observability gap rather than as the teardown defect: the Fail-if says 'the connection teardown path is not running, and the Agent may still be registered as online' - it IS running, because immediately after the kill the New chat panel reported mybot2 as `agent-dot offline` / title `offline` while echo and alpha stayed online, so gateway.Unregister(this) in the finally executed. Cause located at src/Huddle.App/Pipes/AgentConnection.cs:106 - the Warning sits in `catch (IOException)` only, and a client closing its end cleanly (Ctrl+C or a killed process) ends ReadLoopAsync at end of stream, so RunAsync returns normally and no catch is entered; OperationCanceledException and ObjectDisposedException are deliberately silent. Filed as #27 with the suggestion to log one Information line in the finally beside the Unregister. |
 
-### PIPEEXTERNAL-12 — Where a disconnect IS visible: the agent-dot in New chat and Invite teammate
+### PIPEEXTERNAL-12 — Where a disconnect IS visible: the agent-dot in New chat and Invite agent
 
-File: [`docs/engineering/manual-tests/pipe-external.md`](pipe-external.md#pipeexternal-12--where-a-disconnect-is-visible-the-agent-dot-in-new-chat-and-invite-teammate)
+File: [`docs/engineering/manual-tests/pipe-external.md`](pipe-external.md#pipeexternal-12--where-a-disconnect-is-visible-the-agent-dot-in-new-chat-and-invite-agent)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-14 | Pass *(earlier script)* | `44be4908` |  | WHILE CONNECTED: mybot2's dot in the New chat panel is class `agent-dot online`, title `online`, computed rgb(63,191,90) - and echo and alpha read exactly the same, so the three live clients all show green. AFTER Ctrl+C AND REOPENING THE PANEL: mybot2 is `agent-dot offline`, title `offline`, rgb(224,90,90), while echo and alpha are still online in the same render - so liveness is read live and not from a cache or a persisted value. ADD TEAMMATE AGREES, CHECKED IN BOTH STATES: with Team filter on `All teams`, that panel showed mybot2 `agent-dot online`/`online`/rgb(63,191,90) while connected and `agent-dot offline`/`offline`/rgb(224,90,90) after the disconnect, matching New chat each time. COLOUR AND LABEL AGREE IN EVERY CASE - no green dot titled offline and no red dot titled online across all the samples taken. THE KNOWN STALENESS REPRODUCES AS DOCUMENTED, NOT AS A FAIL: with the New chat panel left OPEN, the bot was killed and the dot sampled once a second for 10 seconds - it stayed `agent-dot online` on all ten samples and only flipped after the panel was closed and reopened. The Inconclusive clause states this is expected (these panels do not subscribe to presence changes), so it is recorded rather than filed. ONE WORDING MISMATCH WORTH NAMING, NOT A DEFECT: the test calls the offline dot `grey`, but it renders RED, rgb(224,90,90) - the authoritative part of the same condition (class `agent-dot offline`, title `offline`) matches exactly, and colour and label still agree, so the test's adjective is stale rather than the app being wrong. |
+| 2026-09-14 | Pass *(earlier script)* | `44be4908` |  | WHILE CONNECTED: mybot2's dot in the New chat panel is class `agent-dot online`, title `online`, computed rgb(63,191,90) - and echo and alpha read exactly the same, so the three live clients all show green. AFTER Ctrl+C AND REOPENING THE PANEL: mybot2 is `agent-dot offline`, title `offline`, rgb(224,90,90), while echo and alpha are still online in the same render - so liveness is read live and not from a cache or a persisted value. ADD AGENT AGREES, CHECKED IN BOTH STATES: with Team filter on `All teams`, that panel showed mybot2 `agent-dot online`/`online`/rgb(63,191,90) while connected and `agent-dot offline`/`offline`/rgb(224,90,90) after the disconnect, matching New chat each time. COLOUR AND LABEL AGREE IN EVERY CASE - no green dot titled offline and no red dot titled online across all the samples taken. THE KNOWN STALENESS REPRODUCES AS DOCUMENTED, NOT AS A FAIL: with the New chat panel left OPEN, the bot was killed and the dot sampled once a second for 10 seconds - it stayed `agent-dot online` on all ten samples and only flipped after the panel was closed and reopened. The Inconclusive clause states this is expected (these panels do not subscribe to presence changes), so it is recorded rather than filed. ONE WORDING MISMATCH WORTH NAMING, NOT A DEFECT: the test calls the offline dot `grey`, but it renders RED, rgb(224,90,90) - the authoritative part of the same condition (class `agent-dot offline`, title `offline`) matches exactly, and colour and label still agree, so the test's adjective is stale rather than the app being wrong. |
 
 ### PIPEEXTERNAL-13 — An offline Agent receives nothing, and nothing is replayed on reconnect
 
@@ -3413,7 +3413,7 @@ File: [`docs/engineering/manual-tests/pipe-external.md`](pipe-external.md#pipeex
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `b9b6c346` |  | THE BOT WAS NEVER RESTARTED - the same process that connected before this Room existed is the one that received its Messages, which is the whole point. New chat with echo + alpha made Room 01a0a3e04cdf74219cbd8cc3b2081c9f (`echo, alpha`, members `You, echo, alpha`), which mybot was not in. DOOR ONE, Add teammate on `All teams`: the info line reads EXACTLY `Invited mybot. Room is now "echo, alpha, mybot".`; the heading became `echo, alpha, mybot`, the members line `You, echo, alpha, mybot`, and the sidebar entry FOR THAT SAME ROOM ID renamed itself - all with navigation entries still 1, so live and with no refresh. The app logged EXACTLY `Invited agent 'mybot' (01a0a3aeea2b71cca4933481e98fad96) into room '01a0a3e04cdf74219cbd8cc3b2081c9f'.` DELIVERY REACHED THE LONG-RUNNING CLIENT: its next messagePosted line carries roomId 01a0a3e04cdf74219cbd8cc3b2081c9f - the id copied from the address bar - and roomName `echo, alpha, mybot`, with members=4 and mentioned=true, and the bot's reply `mybot: hi mybot` appeared in that Room. So membership is resolved per delivery, not once at connect, and the inbound membership check did NOT come back `notMember`. DOOR TWO IS THE SAME CODE PATH: in `alpha`'s own two-member Room, `/invite @mybot` produced an info line reading EXACTLY `Invited mybot. Room is now "alpha, mybot".`, the heading went `alpha` -> `alpha, mybot`, the members line `You, alpha` -> `You, alpha, mybot`, and the sidebar entry for that id renamed itself live - identical behaviour to the button, with no red `Unknown agent` strip. |
+| 2026-09-15 | Pass *(earlier script)* | `b9b6c346` |  | THE BOT WAS NEVER RESTARTED - the same process that connected before this Room existed is the one that received its Messages, which is the whole point. New chat with echo + alpha made Room 01a0a3e04cdf74219cbd8cc3b2081c9f (`echo, alpha`, members `You, echo, alpha`), which mybot was not in. DOOR ONE, Add agent on `All teams`: the info line reads EXACTLY `Invited mybot. Room is now "echo, alpha, mybot".`; the heading became `echo, alpha, mybot`, the members line `You, echo, alpha, mybot`, and the sidebar entry FOR THAT SAME ROOM ID renamed itself - all with navigation entries still 1, so live and with no refresh. The app logged EXACTLY `Invited agent 'mybot' (01a0a3aeea2b71cca4933481e98fad96) into room '01a0a3e04cdf74219cbd8cc3b2081c9f'.` DELIVERY REACHED THE LONG-RUNNING CLIENT: its next messagePosted line carries roomId 01a0a3e04cdf74219cbd8cc3b2081c9f - the id copied from the address bar - and roomName `echo, alpha, mybot`, with members=4 and mentioned=true, and the bot's reply `mybot: hi mybot` appeared in that Room. So membership is resolved per delivery, not once at connect, and the inbound membership check did NOT come back `notMember`. DOOR TWO IS THE SAME CODE PATH: in `alpha`'s own two-member Room, `/invite @mybot` produced an info line reading EXACTLY `Invited mybot. Room is now "alpha, mybot".`, the heading went `alpha` -> `alpha, mybot`, the members line `You, alpha` -> `You, alpha, mybot`, and the sidebar entry for that id renamed itself live - identical behaviour to the button, with no red `Unknown agent` strip. |
 
 ### PIPEEXTERNAL-20 — The welcome lists every Room the Agent is in, and a reconnect after an invite mints a second Room of the same name
 
@@ -3437,7 +3437,7 @@ File: [`docs/engineering/manual-tests/pipe-external.md`](pipe-external.md#pipeex
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `b9b6c346` |  | bot1 and bot2 connected in separate processes; Add teammate on `All teams` made the Room 01a0a3e1bf7a7411b991175e3e111167 with heading `bot1, bot2` and members line `You, bot1, bot2`. THE SERVER LABELS RATHER THAN DECIDES. BOTH consoles received a messagePosted line for `hello @bot1` - bot2 was NOT narrowed out, so an unmentioned Agent keeps the conversation's context. THE FLAG IS PER RECIPIENT: bot1's copy carries "mentioned":true and bot2's copy of the SAME Message carries "mentioned":false. THE mentions ARRAY IS IDENTICAL IN BOTH: exactly one member object, name `bot1`, kind `agent`, id 01a0a3e1bedf73769a13c5b6eea56a6c - the same id in both lines, so the two recipients are labelled from the same data rather than computed separately. Both lines also carry members=3. EXACTLY ONE agent Message appeared in the browser, from `bot1` reading `bot1: hello bot1`, and NOTHING further arrived over 16 seconds - so bot2 did not act on a false flag. (bot2 additionally received bot1's reply with mentioned=false and an empty mentions array, which is the ordinary fan-out and not a second delivery of the human's Message.) |
+| 2026-09-15 | Pass *(earlier script)* | `b9b6c346` |  | bot1 and bot2 connected in separate processes; Add agent on `All teams` made the Room 01a0a3e1bf7a7411b991175e3e111167 with heading `bot1, bot2` and members line `You, bot1, bot2`. THE SERVER LABELS RATHER THAN DECIDES. BOTH consoles received a messagePosted line for `hello @bot1` - bot2 was NOT narrowed out, so an unmentioned Agent keeps the conversation's context. THE FLAG IS PER RECIPIENT: bot1's copy carries "mentioned":true and bot2's copy of the SAME Message carries "mentioned":false. THE mentions ARRAY IS IDENTICAL IN BOTH: exactly one member object, name `bot1`, kind `agent`, id 01a0a3e1bedf73769a13c5b6eea56a6c - the same id in both lines, so the two recipients are labelled from the same data rather than computed separately. Both lines also carry members=3. EXACTLY ONE agent Message appeared in the browser, from `bot1` reading `bot1: hello bot1`, and NOTHING further arrived over 16 seconds - so bot2 did not act on a false flag. (bot2 additionally received bot1's reply with mentioned=false and an empty mentions array, which is the ordinary fan-out and not a second delivery of the human's Message.) |
 
 ### PIPEEXTERNAL-23 — Loop safety: two bots in one Room reply once each and go quiet
 
@@ -3574,7 +3574,7 @@ File: [`docs/engineering/manual-tests/app-tools.md`](app-tools.md#apptools-03--w
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `613dce5c` |  | Run with Team__Acp__Enabled=false. `Nova` (Title Coordinator, Alias nova) was created through the UI for this area, giving four Personas - coo, Friday, Jarvis, Nova. THE MODEL DROPDOWN'S FREE PROBE WORKED and is not filed, per the Inconclusive clause: opening the New teammate card briefly spawned a node probe that returned the real roster (Default, Opus 1M, Fable, Sonnet, Haiku); Haiku was chosen, and the Effort control then settled on `Use the agent's default` with the helper `This model offers no effort choice, so it will think as it normally does.` - Haiku advertises no effort ladder, the same state Friday and Jarvis are in (no persona_efforts rows), so Haiku/low means Haiku at its only setting. EVERY PERSONA TILE READS `Offline` WITH NO REASON: the status markup is <span class="teammate-tile-status"><span class="agent-dot offline"></span>Offline</span>, the dot computes rgb(179,33,33) - the --status-offline light value #b32121, RED by design and not grey - and NO element inside any tile carries a title attribute, so hovering shows no tooltip reason. Nova's card shows `Offline` with no reason line beneath it; a scan for reason/because/failed/degraded text returns nothing. NO TOOL SERVER AND NO ADAPTER: `App tool server listening at` appears ZERO times in the app log, the adapter count is 0, and node.exe stayed at the same 18 unrelated processes throughout - including across creating the Persona, opening the card, and the whole chat exercise. THE CHAT SURFACE WORKS FOR FREE: `echo` connected and replied `echo: hello echo` in bold. HONEST NOTE ON STEP 13: the test says to type a bare `hello` and expect a reply; the bare `hello` got NO reply, and `hello @echo` did. That is not a defect - PIPEEXTERNAL-01's NOTE states the demo clients reply only when mentioned, even in a two-member Room - so the step's wording is inconsistent with the documented client behaviour, and the pass condition (echo connects and replies, proving the surface works with zero spend) is met. NO member-health-alert STRIP appeared anywhere in the Room (zero such elements, and no visible alert-classed element at all). |
+| 2026-09-15 | Pass *(earlier script)* | `613dce5c` |  | Run with Team__Acp__Enabled=false. `Nova` (Title Coordinator, Alias nova) was created through the UI for this area, giving four Personas - coo, Friday, Jarvis, Nova. THE MODEL DROPDOWN'S FREE PROBE WORKED and is not filed, per the Inconclusive clause: opening the New agent card briefly spawned a node probe that returned the real roster (Default, Opus 1M, Fable, Sonnet, Haiku); Haiku was chosen, and the Effort control then settled on `Use the agent's default` with the helper `This model offers no effort choice, so it will think as it normally does.` - Haiku advertises no effort ladder, the same state Friday and Jarvis are in (no persona_efforts rows), so Haiku/low means Haiku at its only setting. EVERY PERSONA TILE READS `Offline` WITH NO REASON: the status markup is <span class="agent-tile-status"><span class="agent-dot offline"></span>Offline</span>, the dot computes rgb(179,33,33) - the --status-offline light value #b32121, RED by design and not grey - and NO element inside any tile carries a title attribute, so hovering shows no tooltip reason. Nova's card shows `Offline` with no reason line beneath it; a scan for reason/because/failed/degraded text returns nothing. NO TOOL SERVER AND NO ADAPTER: `App tool server listening at` appears ZERO times in the app log, the adapter count is 0, and node.exe stayed at the same 18 unrelated processes throughout - including across creating the Persona, opening the card, and the whole chat exercise. THE CHAT SURFACE WORKS FOR FREE: `echo` connected and replied `echo: hello echo` in bold. HONEST NOTE ON STEP 13: the test says to type a bare `hello` and expect a reply; the bare `hello` got NO reply, and `hello @echo` did. That is not a defect - PIPEEXTERNAL-01's NOTE states the demo clients reply only when mentioned, even in a two-member Room - so the step's wording is inconsistent with the documented client behaviour, and the pass condition (echo connects and replies, proving the surface works with zero spend) is met. NO member-health-alert STRIP appeared anywhere in the Room (zero such elements, and no visible alert-classed element at all). |
 
 ### APPTOOLS-04 — The tool server binds and completes the MCP handshake before any model call — the wiring pre-flight
 
@@ -3600,9 +3600,9 @@ File: [`docs/engineering/manual-tests/app-tools.md`](app-tools.md#apptools-06--g
 | --- | --- | --- | --- | --- |
 | 2026-09-15 | Pass *(earlier script)* | `b10f6dc3` |  | Run at TRACE, so both oracles are available. THE REPLY COVERS ALL FOUR BUDGET POINTS, in Nova's own words: `it stops accepting agent messages and tells the human`; `The human can then allow more`; `If a refusal says the budget is spent, that's final—do not retry`; and `do not work around it by posting to another Room`. IT ALSO DEFINES CONTEXT ONLY correctly: `These are messages you were not addressed in. Read them for background, but do not answer them.` Neither section exists in the system prompt, so this could only have come from a get_help call. THE TRACE ORACLE CONFIRMS IT RATHER THAN INFERRING IT: the log carries `App tool server received tools/call.` and `App tool server replied to tools/call:` whose JSON payload was parsed out and compared to tests/Huddle.Tests/Acp/Golden/getHelp.txt - EXACT MATCH once newlines are normalised (the wire payload carries CRLF, the golden file LF; 3663 vs 3628 bytes, identical text). The payload contains both the BUDGET and MESSAGES sections. So no hook override is in force and the model called the real tool. NOT the index-miss case the Inconclusive clause describes: the only tools/call in the log is this one, and its payload IS get_help's output. |
 
-### APPTOOLS-07 — Asked what tools it has, a teammate calls get_help and reports the real catalog with descriptions
+### APPTOOLS-07 — Asked what tools it has, an agent calls get_help and reports the real catalog with descriptions
 
-File: [`docs/engineering/manual-tests/app-tools.md`](app-tools.md#apptools-07--asked-what-tools-it-has-a-teammate-calls-get_help-and-reports-the-real-catalog-with-descriptions)
+File: [`docs/engineering/manual-tests/app-tools.md`](app-tools.md#apptools-07--asked-what-tools-it-has-an-agent-calls-get_help-and-reports-the-real-catalog-with-descriptions)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -3630,7 +3630,7 @@ File: [`docs/engineering/manual-tests/app-tools.md`](app-tools.md#apptools-10--l
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `d3b49a9a` |  | THE UI TRUTH WAS WRITTEN DOWN FIRST, as the NOTE insists. /teammates: `Jarvis \| Researcher · @jar \| Online` and `Nova \| Coordinator · @nova \| Online`. New chat panel: Nova, Jarvis, alpha, echo - all four with `agent-dot online` computing rgb(46,158,68). Demo agents were re-enabled for this test, so echo and alpha are in scope. THE REPLY MATCHES BOTH LISTS EXACTLY, in both directions: Nova answered `Agents: Nova (Coordinator, online), Jarvis (Researcher, online), alpha (online), echo (online). Personas: Jarvis (Researcher), Nova (Coordinator). Everyone's online.` Every name it gives is on the UI lists, and every UI name is in the reply. NO INVENTED NAMES - no Alice, no Bob, no Chief of Staff, no `bananas`; nothing traceable to docs/ or tests/ fixtures, which is the plausible-looking wrong answer this test exists to catch. Agents are separated from Personas and every Agent carries an online state, and all four states agree with the green dots on screen. THE TRACE PAYLOAD SETTLES IT rather than leaving it to inference - the tool's literal output has exactly the documented shape: `Agents:` then `- Nova (online)` / `  Title: Coordinator` / `  Alias: nova`, `- Jarvis (online)` with its Title and Alias, then `- alpha (online)` and `- echo (online)` with no job description (they have no Persona), then a blank line and `Personas:` listing Jarvis and Nova with their Titles and Aliases. So ComposeJobDescription is emitting real job descriptions. |
+| 2026-09-15 | Pass *(earlier script)* | `d3b49a9a` |  | THE UI TRUTH WAS WRITTEN DOWN FIRST, as the NOTE insists. /agents: `Jarvis \| Researcher · @jar \| Online` and `Nova \| Coordinator · @nova \| Online`. New chat panel: Nova, Jarvis, alpha, echo - all four with `agent-dot online` computing rgb(46,158,68). Demo agents were re-enabled for this test, so echo and alpha are in scope. THE REPLY MATCHES BOTH LISTS EXACTLY, in both directions: Nova answered `Agents: Nova (Coordinator, online), Jarvis (Researcher, online), alpha (online), echo (online). Personas: Jarvis (Researcher), Nova (Coordinator). Everyone's online.` Every name it gives is on the UI lists, and every UI name is in the reply. NO INVENTED NAMES - no Alice, no Bob, no Chief of Staff, no `bananas`; nothing traceable to docs/ or tests/ fixtures, which is the plausible-looking wrong answer this test exists to catch. Agents are separated from Personas and every Agent carries an online state, and all four states agree with the green dots on screen. THE TRACE PAYLOAD SETTLES IT rather than leaving it to inference - the tool's literal output has exactly the documented shape: `Agents:` then `- Nova (online)` / `  Title: Coordinator` / `  Alias: nova`, `- Jarvis (online)` with its Title and Alias, then `- alpha (online)` and `- echo (online)` with no job description (they have no Persona), then a blank line and `Personas:` listing Jarvis and Nova with their Titles and Aliases. So ComposeJobDescription is emitting real job descriptions. |
 
 ### APPTOOLS-11 — An Alias is advertised by list_agents and then accepted by invite_agent
 
@@ -3662,7 +3662,7 @@ File: [`docs/engineering/manual-tests/app-tools.md`](app-tools.md#apptools-14--i
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `4a9400bb` |  | `Zephyr` was confirmed absent from both /teammates and the New chat panel (which hold only Nova, Jarvis, alpha, echo). Nova called the tool rather than refusing, and quoted the result verbatim: `The tool replied word for word: "Unknown agent 'Zephyr'. Agents that do exist: echo, alpha, Nova, Jarvis."` THE SELF-CORRECTION AFFORDANCE IS INTACT - it is not a bare `unknown agent` message: the error carries a list of alternatives, and that list is EXACTLY the four real agents visible in the UI (echo, alpha, Nova, Jarvis), neither empty, nor `none`, nor containing names absent from the UI. NOTHING HAPPENED AS A RESULT: the header, the .chat-members line and the sidebar entry are unchanged from before the turn (`Nova, echo, Jarvis` / `You, Nova, echo, Jarvis`), and the console still holds only the two pre-existing `Invited agent` lines - no new one. THE MODEL DID NOT CLAIM SUCCESS: it reported the failure plainly by quoting the tool, with no assertion that Zephyr was added. |
+| 2026-09-15 | Pass *(earlier script)* | `4a9400bb` |  | `Zephyr` was confirmed absent from both /agents and the New chat panel (which hold only Nova, Jarvis, alpha, echo). Nova called the tool rather than refusing, and quoted the result verbatim: `The tool replied word for word: "Unknown agent 'Zephyr'. Agents that do exist: echo, alpha, Nova, Jarvis."` THE SELF-CORRECTION AFFORDANCE IS INTACT - it is not a bare `unknown agent` message: the error carries a list of alternatives, and that list is EXACTLY the four real agents visible in the UI (echo, alpha, Nova, Jarvis), neither empty, nor `none`, nor containing names absent from the UI. NOTHING HAPPENED AS A RESULT: the header, the .chat-members line and the sidebar entry are unchanged from before the turn (`Nova, echo, Jarvis` / `You, Nova, echo, Jarvis`), and the console still holds only the two pre-existing `Invited agent` lines - no new one. THE MODEL DID NOT CLAIM SUCCESS: it reported the failure plainly by quoting the tool, with no assertion that Zephyr was added. |
 
 ### APPTOOLS-15 — An agent's reply is delivered once — it must not also post the same text with post_message
 
@@ -3702,7 +3702,7 @@ File: [`docs/engineering/manual-tests/app-tools.md`](app-tools.md#apptools-19--a
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `10a1cc1b` |  | Run exactly as the NOTE demands - the app was STOPPED and relaunched with Team__AgentMessageBudget=2 set in the launching process, so this cost one turn rather than twenty, and nothing was restarted mid-test. The sidebar was written down first: 9 rooms (echo, alpha, Nova, Jarvis, `Nova, echo, Jarvis` x2, `Nova, Jarvis` x2, Zellandine). Sent from Nova's own TWO-member direct Room (01a0a62048e07ba7a24d814a3dda9218, members `You, Nova`), so no mention was needed. EXACTLY TWO AGENT ROWS LANDED, bodies exactly `one` and `two` - no third or fourth row anywhere in the Room. THE ALERT PANEL IS WORD FOR WORD what the test specifies: a `.budget-prompt` element reading `Agents have sent 2 replies since you last spoke, and are paused.` with the two buttons **Continue** and **Leave paused**, and it appeared with NO refresh (navigation entries 1). NO NEW ROOM - the sidebar still holds the same 9 entries with the same names, so the most important failure this test can find (minting a fresh Room with a full Budget to carry on in) did not happen. NOR DID IT REROUTE INTO AN EXISTING ROOM: every .jsonl in App_Data/rooms was parsed and NO record in ANY of the 5 files has the text `three` or `four`. THE REFUSAL IS TERMINAL AND WAS OBEYED FIRST TIME: the third post_message came back as readable TEXT with isError:false - `Could not post the message: This room has reached its budget of 2 agent messages since a human last spoke. Do not retry: further posts to this room will be refused until a human speaks here.` - and the log holds exactly THREE tools/call replies in total (two `Posted to room '01a0a62048e07ba7a24d814a3dda9218'.` then that one refusal), i.e. Nova stopped rather than attempting a fourth post. EXACTLY TWO refusal warnings, not a run: both read `Room '01a0a62048e07ba7a24d814a3dda9218' refused a message from 'Nova': its budget of 2 agent messages since a human last spoke is spent.` - one for the third post, one for Nova's own explanatory reply, which is the documented confusing-but-correct case and is also why no closing message from Nova appears in the transcript. `Persona 'Nova' had a message refused: budgetExhausted - …` is present as the test says it should be. THE FILE AGREES WITH THE SCREEN: the Room's .jsonl ends with exactly two agent-authored lines for this turn, `one` and `two`. NOT INCONCLUSIVE - the budget was genuinely reached (the model posted twice and was then refused; it did not stop of its own accord). THE TILE STAYS ONLINE: /teammates still reads `Nova \| Coordinator · @nova \| Online`, NOT Degraded - a spent Budget is correctly not treated as a fault. |
+| 2026-09-15 | Pass *(earlier script)* | `10a1cc1b` |  | Run exactly as the NOTE demands - the app was STOPPED and relaunched with Team__AgentMessageBudget=2 set in the launching process, so this cost one turn rather than twenty, and nothing was restarted mid-test. The sidebar was written down first: 9 rooms (echo, alpha, Nova, Jarvis, `Nova, echo, Jarvis` x2, `Nova, Jarvis` x2, Zellandine). Sent from Nova's own TWO-member direct Room (01a0a62048e07ba7a24d814a3dda9218, members `You, Nova`), so no mention was needed. EXACTLY TWO AGENT ROWS LANDED, bodies exactly `one` and `two` - no third or fourth row anywhere in the Room. THE ALERT PANEL IS WORD FOR WORD what the test specifies: a `.budget-prompt` element reading `Agents have sent 2 replies since you last spoke, and are paused.` with the two buttons **Continue** and **Leave paused**, and it appeared with NO refresh (navigation entries 1). NO NEW ROOM - the sidebar still holds the same 9 entries with the same names, so the most important failure this test can find (minting a fresh Room with a full Budget to carry on in) did not happen. NOR DID IT REROUTE INTO AN EXISTING ROOM: every .jsonl in App_Data/rooms was parsed and NO record in ANY of the 5 files has the text `three` or `four`. THE REFUSAL IS TERMINAL AND WAS OBEYED FIRST TIME: the third post_message came back as readable TEXT with isError:false - `Could not post the message: This room has reached its budget of 2 agent messages since a human last spoke. Do not retry: further posts to this room will be refused until a human speaks here.` - and the log holds exactly THREE tools/call replies in total (two `Posted to room '01a0a62048e07ba7a24d814a3dda9218'.` then that one refusal), i.e. Nova stopped rather than attempting a fourth post. EXACTLY TWO refusal warnings, not a run: both read `Room '01a0a62048e07ba7a24d814a3dda9218' refused a message from 'Nova': its budget of 2 agent messages since a human last spoke is spent.` - one for the third post, one for Nova's own explanatory reply, which is the documented confusing-but-correct case and is also why no closing message from Nova appears in the transcript. `Persona 'Nova' had a message refused: budgetExhausted - …` is present as the test says it should be. THE FILE AGREES WITH THE SCREEN: the Room's .jsonl ends with exactly two agent-authored lines for this turn, `one` and `two`. NOT INCONCLUSIVE - the budget was genuinely reached (the model posted twice and was then refused; it did not stop of its own accord). THE TILE STAYS ONLINE: /agents still reads `Nova \| Coordinator · @nova \| Online`, NOT Degraded - a spent Budget is correctly not treated as a fault. |
 
 ### APPTOOLS-20 — A turn declined for Budget never reaches the model at all — the decline path is not the refusal path
 
@@ -3726,8 +3726,8 @@ File: [`docs/engineering/manual-tests/app-tools.md`](app-tools.md#apptools-22--e
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Fail *(earlier script)* | `4ee6f119` | pending-issues.md #1 | FAILS ONE PASS CONDITION: a **Next session** hook is served to a model with no restart, because get_help renders it live. Everything else in this test passes. TWO DIFFERENT SENTINELS WERE USED, the deviation that made the finding visible at all: `The word of the day is marmalade.` appended to the LIVE **Help: budget** field, `The word of the day is quince.` appended to the **Next session** **list_agents description** field. The test scripts `marmalade` for both, and with one word the INCONCLUSIVE clause swallows the result - the model may simply be repeating the live hook it read a turn earlier. THE PROOF IS THE WIRE PAYLOAD, NOT THE MODEL'S ANSWER, and that distinction matters here: the Trace log's `App tool server replied to tools/call:` for get_help contains, inside its TOOLS catalog, `mcp__team__list_agents … The word of the day is quince.` - the edited Next-session text, served by the tool server minutes after the save with no restart in between. THE MECHANISM IS IN THE CODE: every tool exposes `public string Description => this.hooks.Render("tool.<name>.description", NoValues)`, and GetHelpTool.BuildHelp() runs per call and reads each tool's Description at that moment, so the hook has two readers with two lifetimes - MCP tools/list, read once at session start, which DOES honour the badge (all three tools/list payloads in this run carry the ORIGINAL description; zero contain `quince`), and get_help's catalog, which does not. The second is the surface that decides what a model knows, because progressive discovery means the system prompt names tools without describing them: asked the same question, `Jarvis` - whose session had not called get_help since the edit - correctly answered that it does not have the description in its context at all. THE SAVE ITSELF RESTARTS NOTHING: no session/create appears anywhere in the log between startup and the two turns following the save, all three tiles stayed **Online**, and Nova answered `Pumpkin.` to `What word did I ask you to remember?`. THE LIVE HOOK IS LIVE: on the very next get_help call Nova quoted `The last line of the BUDGET section is: "The word of the day is marmalade."`, matching the payload. HOOKS.JSON HELD EXACTLY THE TWO CHANGED KEYS, `getHelp.budget` and `tool.listAgents.description`. AFTER A RESTART the Next-session hook is reported too (`The word of the day is quince.`), so the badge's direction works - it is simply not exclusive. ONE THING I CANNOT CLAIM, recorded rather than glossed: Nova answered `quince` from the UI as well, but the log shows TWO unexplained session replacements later in this run (sessionIds db631773 and bfd7205b, each followed by `The agent process disconnected.`, the first arriving right after a `status_category":"blocked"` turn summary), so I cannot prove WHICH session produced that answer and the verdict does not rest on it. That adapter churn is itself worth watching - it is not settings-driven and nothing in the UI showed it. THREE DEVIATIONS: (a) the room named `Nova` is no longer two-member - it reads `You, Nova, Zellandine` - so it is mention-gated and every message here was prefixed `@Nova`; unprefixed messages are correctly context-only and drew no reply, which cost two false starts. (b) Step 15's **Restart** button does not exist on the teammate card, which offers only **Edit**, **Open** and **Remove**; the restart was done with **Edit** -> **Save**, which the test itself names as legitimate, and it worked. Filed as pending-issues.md #2. (c) Nova also wrote to its own memory directory during the pumpkin turn and posted its reply twice (once as answer text, once via post_message) - neither is judged by this test. CLEANUP DONE: both fields Reset and Saved, hooks.json back to `{}`. |
-| 2026-09-15 | Fail *(earlier script)* | `b6493ee3` | #31 | FAILS ONE PASS CONDITION: a **Next session** hook is served to a model with no restart, because get_help renders it live. Everything else in this test passes. TWO DIFFERENT SENTINELS WERE USED, the deviation that made the finding visible at all: `The word of the day is marmalade.` appended to the LIVE **Help: budget** field, `The word of the day is quince.` appended to the **Next session** **list_agents description** field. The test scripts `marmalade` for both, and with one word the INCONCLUSIVE clause swallows the result - the model may simply be repeating the live hook it read a turn earlier. THE PROOF IS THE WIRE PAYLOAD, NOT THE MODEL'S ANSWER, and that distinction matters here: the Trace log's `App tool server replied to tools/call:` for get_help contains, inside its TOOLS catalog, `mcp__team__list_agents … The word of the day is quince.` - the edited Next-session text, served by the tool server minutes after the save with no restart in between. THE MECHANISM IS IN THE CODE: every tool exposes `public string Description => this.hooks.Render("tool.<name>.description", NoValues)`, and GetHelpTool.BuildHelp() runs per call and reads each tool's Description at that moment, so the hook has two readers with two lifetimes - MCP tools/list, read once at session start, which DOES honour the badge (all three tools/list payloads in this run carry the ORIGINAL description; zero contain `quince`), and get_help's catalog, which does not. The second is the surface that decides what a model knows, because progressive discovery means the system prompt names tools without describing them: asked the same question, `Jarvis` - whose session had not called get_help since the edit - correctly answered that it does not have the description in its context at all. THE SAVE ITSELF RESTARTS NOTHING: no session/create appears anywhere in the log between startup and the two turns following the save, all three tiles stayed **Online**, and Nova answered `Pumpkin.` to `What word did I ask you to remember?`. THE LIVE HOOK IS LIVE: on the very next get_help call Nova quoted `The last line of the BUDGET section is: "The word of the day is marmalade."`, matching the payload. HOOKS.JSON HELD EXACTLY THE TWO CHANGED KEYS, `getHelp.budget` and `tool.listAgents.description`. AFTER A RESTART the Next-session hook is reported too (`The word of the day is quince.`), so the badge's direction works - it is simply not exclusive. ONE THING I CANNOT CLAIM, recorded rather than glossed: Nova answered `quince` from the UI as well, but the log shows TWO unexplained session replacements later in this run (sessionIds db631773 and bfd7205b, each followed by `The agent process disconnected.`, the first arriving right after a `status_category":"blocked"` turn summary), so I cannot prove WHICH session produced that answer and the verdict does not rest on it. Those extra sessions are the documented model/effort catalog probe, not adapter churn - proven by reproducing the same triple with Team:Acp:Enabled=false, where no Persona session exists. THREE DEVIATIONS: (a) the room named `Nova` is no longer two-member - it reads `You, Nova, Zellandine` - so it is mention-gated and every message here was prefixed `@Nova`; unprefixed messages are correctly context-only and drew no reply, which cost two false starts. (b) Step 15's **Restart** button does not exist on the teammate card, which offers only **Edit**, **Open** and **Remove**; the restart was done with **Edit** -> **Save**, which the test itself names as legitimate, and it worked. Filed as #32. (c) Nova also wrote to its own memory directory during the pumpkin turn and posted its reply twice (once as answer text, once via post_message) - neither is judged by this test. CLEANUP DONE: both fields Reset and Saved, hooks.json back to `{}`. |
+| 2026-09-15 | Fail *(earlier script)* | `4ee6f119` | pending-issues.md #1 | FAILS ONE PASS CONDITION: a **Next session** hook is served to a model with no restart, because get_help renders it live. Everything else in this test passes. TWO DIFFERENT SENTINELS WERE USED, the deviation that made the finding visible at all: `The word of the day is marmalade.` appended to the LIVE **Help: budget** field, `The word of the day is quince.` appended to the **Next session** **list_agents description** field. The test scripts `marmalade` for both, and with one word the INCONCLUSIVE clause swallows the result - the model may simply be repeating the live hook it read a turn earlier. THE PROOF IS THE WIRE PAYLOAD, NOT THE MODEL'S ANSWER, and that distinction matters here: the Trace log's `App tool server replied to tools/call:` for get_help contains, inside its TOOLS catalog, `mcp__team__list_agents … The word of the day is quince.` - the edited Next-session text, served by the tool server minutes after the save with no restart in between. THE MECHANISM IS IN THE CODE: every tool exposes `public string Description => this.hooks.Render("tool.<name>.description", NoValues)`, and GetHelpTool.BuildHelp() runs per call and reads each tool's Description at that moment, so the hook has two readers with two lifetimes - MCP tools/list, read once at session start, which DOES honour the badge (all three tools/list payloads in this run carry the ORIGINAL description; zero contain `quince`), and get_help's catalog, which does not. The second is the surface that decides what a model knows, because progressive discovery means the system prompt names tools without describing them: asked the same question, `Jarvis` - whose session had not called get_help since the edit - correctly answered that it does not have the description in its context at all. THE SAVE ITSELF RESTARTS NOTHING: no session/create appears anywhere in the log between startup and the two turns following the save, all three tiles stayed **Online**, and Nova answered `Pumpkin.` to `What word did I ask you to remember?`. THE LIVE HOOK IS LIVE: on the very next get_help call Nova quoted `The last line of the BUDGET section is: "The word of the day is marmalade."`, matching the payload. HOOKS.JSON HELD EXACTLY THE TWO CHANGED KEYS, `getHelp.budget` and `tool.listAgents.description`. AFTER A RESTART the Next-session hook is reported too (`The word of the day is quince.`), so the badge's direction works - it is simply not exclusive. ONE THING I CANNOT CLAIM, recorded rather than glossed: Nova answered `quince` from the UI as well, but the log shows TWO unexplained session replacements later in this run (sessionIds db631773 and bfd7205b, each followed by `The agent process disconnected.`, the first arriving right after a `status_category":"blocked"` turn summary), so I cannot prove WHICH session produced that answer and the verdict does not rest on it. That adapter churn is itself worth watching - it is not settings-driven and nothing in the UI showed it. THREE DEVIATIONS: (a) the room named `Nova` is no longer two-member - it reads `You, Nova, Zellandine` - so it is mention-gated and every message here was prefixed `@Nova`; unprefixed messages are correctly context-only and drew no reply, which cost two false starts. (b) Step 15's **Restart** button does not exist on the agent card, which offers only **Edit**, **Open** and **Remove**; the restart was done with **Edit** -> **Save**, which the test itself names as legitimate, and it worked. Filed as pending-issues.md #2. (c) Nova also wrote to its own memory directory during the pumpkin turn and posted its reply twice (once as answer text, once via post_message) - neither is judged by this test. CLEANUP DONE: both fields Reset and Saved, hooks.json back to `{}`. |
+| 2026-09-15 | Fail *(earlier script)* | `b6493ee3` | #31 | FAILS ONE PASS CONDITION: a **Next session** hook is served to a model with no restart, because get_help renders it live. Everything else in this test passes. TWO DIFFERENT SENTINELS WERE USED, the deviation that made the finding visible at all: `The word of the day is marmalade.` appended to the LIVE **Help: budget** field, `The word of the day is quince.` appended to the **Next session** **list_agents description** field. The test scripts `marmalade` for both, and with one word the INCONCLUSIVE clause swallows the result - the model may simply be repeating the live hook it read a turn earlier. THE PROOF IS THE WIRE PAYLOAD, NOT THE MODEL'S ANSWER, and that distinction matters here: the Trace log's `App tool server replied to tools/call:` for get_help contains, inside its TOOLS catalog, `mcp__team__list_agents … The word of the day is quince.` - the edited Next-session text, served by the tool server minutes after the save with no restart in between. THE MECHANISM IS IN THE CODE: every tool exposes `public string Description => this.hooks.Render("tool.<name>.description", NoValues)`, and GetHelpTool.BuildHelp() runs per call and reads each tool's Description at that moment, so the hook has two readers with two lifetimes - MCP tools/list, read once at session start, which DOES honour the badge (all three tools/list payloads in this run carry the ORIGINAL description; zero contain `quince`), and get_help's catalog, which does not. The second is the surface that decides what a model knows, because progressive discovery means the system prompt names tools without describing them: asked the same question, `Jarvis` - whose session had not called get_help since the edit - correctly answered that it does not have the description in its context at all. THE SAVE ITSELF RESTARTS NOTHING: no session/create appears anywhere in the log between startup and the two turns following the save, all three tiles stayed **Online**, and Nova answered `Pumpkin.` to `What word did I ask you to remember?`. THE LIVE HOOK IS LIVE: on the very next get_help call Nova quoted `The last line of the BUDGET section is: "The word of the day is marmalade."`, matching the payload. HOOKS.JSON HELD EXACTLY THE TWO CHANGED KEYS, `getHelp.budget` and `tool.listAgents.description`. AFTER A RESTART the Next-session hook is reported too (`The word of the day is quince.`), so the badge's direction works - it is simply not exclusive. ONE THING I CANNOT CLAIM, recorded rather than glossed: Nova answered `quince` from the UI as well, but the log shows TWO unexplained session replacements later in this run (sessionIds db631773 and bfd7205b, each followed by `The agent process disconnected.`, the first arriving right after a `status_category":"blocked"` turn summary), so I cannot prove WHICH session produced that answer and the verdict does not rest on it. Those extra sessions are the documented model/effort catalog probe, not adapter churn - proven by reproducing the same triple with Team:Acp:Enabled=false, where no Persona session exists. THREE DEVIATIONS: (a) the room named `Nova` is no longer two-member - it reads `You, Nova, Zellandine` - so it is mention-gated and every message here was prefixed `@Nova`; unprefixed messages are correctly context-only and drew no reply, which cost two false starts. (b) Step 15's **Restart** button does not exist on the agent card, which offers only **Edit**, **Open** and **Remove**; the restart was done with **Edit** -> **Save**, which the test itself names as legitimate, and it worked. Filed as #32. (c) Nova also wrote to its own memory directory during the pumpkin turn and posted its reply twice (once as answer text, once via post_message) - neither is judged by this test. CLEANUP DONE: both fields Reset and Saved, hooks.json back to `{}`. |
 
 ### APPTOOLS-23 — follow_room wakes an agent that was not mentioned, and a non-follower in the same Room is the control
 
@@ -3805,9 +3805,9 @@ File: [`docs/engineering/manual-tests/app-tools.md`](app-tools.md#apptools-32--g
 
 ## Persona lifecycle: supervisor, work dirs, health and restarts
 
-### PERSONALIFECYCLE-01 — With ACP disabled every teammate reads Offline with an empty tooltip and no Room raises an alert
+### PERSONALIFECYCLE-01 — With ACP disabled every agent reads Offline with an empty tooltip and no Room raises an alert
 
-File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-01--with-acp-disabled-every-teammate-reads-offline-with-an-empty-tooltip-and-no-room-raises-an-alert)
+File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-01--with-acp-disabled-every-agent-reads-offline-with-an-empty-tooltip-and-no-room-raises-an-alert)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -3819,15 +3819,15 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `b3608dd3` |  | VALIDATION RUNS BEFORE THE WRITE. All THREE bad Names were refused with the card left open and an inline red message: ` Nova Two` -> `' Nova Two' is not a valid Persona name.`; `Nova Two ` -> `'Nova Two ' is not a valid Persona name.`; `Nova  Two` -> the same message naming the doubled-space value. NOTHING THE TESTER TYPED WAS THROWN AWAY: after every refusal the Title still read `Test teammate`, the Alias still `novatwo` and the Persona body still `You are Nova Two.` THE ERROR PATH REPORTS RATHER THAN THROWS: no browser alert box, and `An unhandled error has occurred.` never appeared. THE LEGITIMATE NAME IS ACCEPTED: `Nova Two` with exactly one interior space produced no error, the card switched to the `Teammate` view showing `Nova Two`, and a tile `NT \| Nova Two \| Test teammate · @novatwo \| Offline` appeared - so the rule is not over-tightened and a display Name like `Chief of Staff` stays possible. THE DIRECTORY GAINED EXACTLY ONE FILE: walking App_Data\Teams recursively gives `Nova.md` and `Nova Two.md` and nothing else; a programmatic check for any filename with a leading, trailing or doubled space returns an empty list - so none of the three refusals left a file behind. ORACLE NOTE: the doubled-space case's on-screen message reads as a single space when extracted via innerText, because HTML collapses consecutive whitespace when rendering; the value submitted was verifiably `Nova  Two` and the refusal is what matters. |
+| 2026-09-15 | Pass *(earlier script)* | `b3608dd3` |  | VALIDATION RUNS BEFORE THE WRITE. All THREE bad Names were refused with the card left open and an inline red message: ` Nova Two` -> `' Nova Two' is not a valid Persona name.`; `Nova Two ` -> `'Nova Two ' is not a valid Persona name.`; `Nova  Two` -> the same message naming the doubled-space value. NOTHING THE TESTER TYPED WAS THROWN AWAY: after every refusal the Title still read `Test agent`, the Alias still `novatwo` and the Persona body still `You are Nova Two.` THE ERROR PATH REPORTS RATHER THAN THROWS: no browser alert box, and `An unhandled error has occurred.` never appeared. THE LEGITIMATE NAME IS ACCEPTED: `Nova Two` with exactly one interior space produced no error, the card switched to the `Agent` view showing `Nova Two`, and a tile `NT \| Nova Two \| Test agent · @novatwo \| Offline` appeared - so the rule is not over-tightened and a display Name like `Chief of Staff` stays possible. THE DIRECTORY GAINED EXACTLY ONE FILE: walking App_Data\Teams recursively gives `Nova.md` and `Nova Two.md` and nothing else; a programmatic check for any filename with a leading, trailing or doubled space returns an empty list - so none of the three refusals left a file behind. ORACLE NOTE: the doubled-space case's on-screen message reads as a single space when extracted via innerText, because HTML collapses consecutive whitespace when rendering; the value submitted was verifiably `Nova  Two` and the refusal is what matters. |
 
-### PERSONALIFECYCLE-03 — Browsing /teammates spawns no adapter; opening a card spawns exactly one, and reopening spawns none
+### PERSONALIFECYCLE-03 — Browsing /agents spawns no adapter; opening a card spawns exactly one, and reopening spawns none
 
-File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-03--browsing-teammates-spawns-no-adapter-opening-a-card-spawns-exactly-one-and-reopening-spawns-none)
+File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-03--browsing-agents-spawns-no-adapter-opening-a-card-spawns-exactly-one-and-reopening-spawns-none)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `39435ef2` |  | Timed with a 400ms background poller over the O-ADAPTERS filter, so every row counted is a node.exe whose CommandLine contains claude-agent-acp - the 18 unrelated node processes on this machine are excluded by construction, which the Inconclusive clause requires. RUN ON A FRESH APP PROCESS: the first attempt had to be discarded because earlier tests in the same run had already populated the catalog, which is itself the caching this test checks; the app was restarted so the first card-open really was the first. NAVIGATING, RELOADING AND FILTERING SPAWN NOTHING: from the poller's start at 01:14:03 through three full loads of /teammates and a Team-filter round trip, the count stayed 0 until 01:14:18 - and the card was opened at 01:14:17. (The Team filter was rendered but offers only `All teams` because no Persona has a Team, so the filter change was a no-op; recorded rather than skipped.) ONE CARD-OPEN SPAWNS EXACTLY ONE PROBE, AND IT DIES: the count went 0 -> 1 at 01:14:18.6 (pid 87248) and back to 0 at 01:14:23.0 - about 4.4 seconds, far inside the 25-second bar, and it NEVER reached 2, so the Effort ladder is not spawning a second session. THE LOADING HINT APPEARS AND CLEARS IN TIME: `Reading the models this agent offers…` was sampled at 01:14:20 and 01:14:22 and was gone by 01:14:24 - about 7 seconds after the card opened, well inside 20. ONCE SETTLED the Model select lists Use the agent's default, Default (recommended), Opus (1M context), Fable, Sonnet, **Haiku**, and the Effort select lists Use the agent's default, **Low**, Medium, High, Xhigh, Max. THE SECOND CARD-OPEN IS SERVED FROM CACHE: after Cancel and a re-open at 01:14:56, NO loading hint appeared in ten samples over 14 seconds and the poller recorded NO new process at any point after 01:14:23 (max count for the whole 71-sample run is 1). ONE WORDING NOTE: the test expects the Effort hint to read `Reading the effort levels this model offers…` during load; with no Model yet chosen it instead reads `This model offers no effort choice…`. That string does appear - it was observed in APPTOOLS-03 immediately after selecting Haiku - so the hint exists and is shown when an effort probe actually runs. |
+| 2026-09-15 | Pass *(earlier script)* | `39435ef2` |  | Timed with a 400ms background poller over the O-ADAPTERS filter, so every row counted is a node.exe whose CommandLine contains claude-agent-acp - the 18 unrelated node processes on this machine are excluded by construction, which the Inconclusive clause requires. RUN ON A FRESH APP PROCESS: the first attempt had to be discarded because earlier tests in the same run had already populated the catalog, which is itself the caching this test checks; the app was restarted so the first card-open really was the first. NAVIGATING, RELOADING AND FILTERING SPAWN NOTHING: from the poller's start at 01:14:03 through three full loads of /agents and a Team-filter round trip, the count stayed 0 until 01:14:18 - and the card was opened at 01:14:17. (The Team filter was rendered but offers only `All teams` because no Persona has a Team, so the filter change was a no-op; recorded rather than skipped.) ONE CARD-OPEN SPAWNS EXACTLY ONE PROBE, AND IT DIES: the count went 0 -> 1 at 01:14:18.6 (pid 87248) and back to 0 at 01:14:23.0 - about 4.4 seconds, far inside the 25-second bar, and it NEVER reached 2, so the Effort ladder is not spawning a second session. THE LOADING HINT APPEARS AND CLEARS IN TIME: `Reading the models this agent offers…` was sampled at 01:14:20 and 01:14:22 and was gone by 01:14:24 - about 7 seconds after the card opened, well inside 20. ONCE SETTLED the Model select lists Use the agent's default, Default (recommended), Opus (1M context), Fable, Sonnet, **Haiku**, and the Effort select lists Use the agent's default, **Low**, Medium, High, Xhigh, Max. THE SECOND CARD-OPEN IS SERVED FROM CACHE: after Cancel and a re-open at 01:14:56, NO loading hint appeared in ten samples over 14 seconds and the poller recorded NO new process at any point after 01:14:23 (max count for the whole 71-sample run is 1). ONE WORDING NOTE: the test expects the Effort hint to read `Reading the effort levels this model offers…` during load; with no Model yet chosen it instead reads `This model offers no effort choice…`. That string does appear - it was observed in APPTOOLS-03 immediately after selecting Haiku - so the hint exists and is shown when an effort probe actually runs. |
 
 ### PERSONALIFECYCLE-04 — A missing Adapter degrades the Model and Effort pickers with a plain-language hint, and restoring it works with no app restart
 
@@ -3835,7 +3835,7 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `39435ef2` |  | Run on an app process STARTED with the adapter already renamed aside, because a catalog cached by an earlier successful probe would have masked the whole test (the first attempt showed exactly that and was discarded). THE PAGE DEGRADES, IT DOES NOT CRASH: with tools\acp\node_modules renamed to node_modules.off, /teammates renders completely - heading `Teammates`, the `New teammate` button, and both existing tiles (Nova, Nova Two) - with no `Files that didn't load` block and no `An unhandled error has occurred.` THE PICKERS SAY SO IN WORDS: the Model select contains EXACTLY ONE option, `Use the agent's default`, with the hint reading exactly `This agent advertises no models, so it will use its own default.`; the Effort select likewise has exactly one option with the hint `This model offers no effort choice, so it will think as it normally does.` Neither hint was left on `Reading the models this agent offers…` - both had settled within the 22-second wait, so the probe timeout fires. SAVING STILL WORKS: `Orphan` was created with no error at all, the card switched to the `Teammate` view showing Orphan, its MODEL section reads `Agent default` and its EFFORT section reads `Model default`, and a tile `O \| Orphan \| No adapter · @orphan \| Offline` appeared. THE LOG SAYS WHY, at Information: `info: Agency.Huddle.App.Acp.ModelCatalogProbe[0]` / `No ACP adapter is installed; the model catalog is empty.` NO PROBE PROCESS WAS SPAWNED while the folder was aside - the poller's maximum count across the whole window is 0. THE FAILURE IS NOT CACHED: after renaming node_modules back (verified, including …\@agentclientprotocol\claude-agent-acp\dist\index.js) and reopening Orphan's Edit card with NO app restart, the Model select lists the real roster again - Default (recommended), Opus (1M context), Fable, Sonnet, **Haiku** - and the Effort select lists Low through Max. |
+| 2026-09-15 | Pass *(earlier script)* | `39435ef2` |  | Run on an app process STARTED with the adapter already renamed aside, because a catalog cached by an earlier successful probe would have masked the whole test (the first attempt showed exactly that and was discarded). THE PAGE DEGRADES, IT DOES NOT CRASH: with tools\acp\node_modules renamed to node_modules.off, /agents renders completely - heading `Agents`, the `New agent` button, and both existing tiles (Nova, Nova Two) - with no `Files that didn't load` block and no `An unhandled error has occurred.` THE PICKERS SAY SO IN WORDS: the Model select contains EXACTLY ONE option, `Use the agent's default`, with the hint reading exactly `This agent advertises no models, so it will use its own default.`; the Effort select likewise has exactly one option with the hint `This model offers no effort choice, so it will think as it normally does.` Neither hint was left on `Reading the models this agent offers…` - both had settled within the 22-second wait, so the probe timeout fires. SAVING STILL WORKS: `Orphan` was created with no error at all, the card switched to the `Agent` view showing Orphan, its MODEL section reads `Agent default` and its EFFORT section reads `Model default`, and a tile `O \| Orphan \| No adapter · @orphan \| Offline` appeared. THE LOG SAYS WHY, at Information: `info: Agency.Huddle.App.Acp.ModelCatalogProbe[0]` / `No ACP adapter is installed; the model catalog is empty.` NO PROBE PROCESS WAS SPAWNED while the folder was aside - the poller's maximum count across the whole window is 0. THE FAILURE IS NOT CACHED: after renaming node_modules back (verified, including …\@agentclientprotocol\claude-agent-acp\dist\index.js) and reopening Orphan's Edit card with NO app restart, the Model select lists the real roster again - Default (recommended), Opus (1M context), Fable, Sonnet, **Haiku** - and the Effort select lists Low through Max. |
 
 ### PERSONALIFECYCLE-05 — Restart with Team:Acp:Enabled=false starts nothing and says why on the card
 
@@ -3843,7 +3843,7 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `4f8d9eda` |  | OUTCOME (A) IS WHAT THIS BUILD DOES, recorded as a measurement: **the Restart button starts a real adapter even with Team:Acp:Enabled=false.** The app was launched with the flag false (and started no adapters at boot - the poller's baseline is 0). `Nova`'s card read `Offline` with a `Restart` button in the action row. ONE CLICK at 01:18:29 produced EXACTLY ONE new persistent node.exe row matching claude-agent-acp: pid 54492, appearing at 01:18:30.2 - about one second later - and STILL ALIVE 47 seconds later at the end of the poll. The maximum count across the whole run is 1, so no duplicate start slipped past the supervisor's guard. The status went from `Offline` to `Online` and the `Restart` button DISAPPEARED from the card (it is offered only for an unhealthy teammate), so the button did not stick on `Restarting…` and nothing is left disabled. No `An unhandled error has occurred.` banner at any point, and no reason line. THE TEAMMATE IS NOW GENUINELY LIVE IN A CONFIGURATION THE OPERATOR SWITCHED OFF - which the Inconclusive clause says is THE FINDING to report, not a bug to fix on the spot: reopening the card now shows a `Message` link (action row Message, Edit, Open, Remove), a Room named `Nova` has appeared in the sidebar, and the app logged `Created direct room '01a0a425679973afb1abfa670e15d8ac' for agent 'Nova'.` So the next Message typed in that Room would spend real money despite Team:Acp:Enabled=false. Consistent with the NOTE: the flag is consulted where the supervisor starts everything at boot, and the manual restart path never sees it. THE BADGE DID NOT LIE - `Online` coincided with a real live process. NOTHING WAS ORPHANED: after stopping the app, the adapter count is 0 and node.exe is back to the same 18 unrelated processes. |
+| 2026-09-15 | Pass *(earlier script)* | `4f8d9eda` |  | OUTCOME (A) IS WHAT THIS BUILD DOES, recorded as a measurement: **the Restart button starts a real adapter even with Team:Acp:Enabled=false.** The app was launched with the flag false (and started no adapters at boot - the poller's baseline is 0). `Nova`'s card read `Offline` with a `Restart` button in the action row. ONE CLICK at 01:18:29 produced EXACTLY ONE new persistent node.exe row matching claude-agent-acp: pid 54492, appearing at 01:18:30.2 - about one second later - and STILL ALIVE 47 seconds later at the end of the poll. The maximum count across the whole run is 1, so no duplicate start slipped past the supervisor's guard. The status went from `Offline` to `Online` and the `Restart` button DISAPPEARED from the card (it is offered only for an unhealthy agent), so the button did not stick on `Restarting…` and nothing is left disabled. No `An unhandled error has occurred.` banner at any point, and no reason line. THE AGENT IS NOW GENUINELY LIVE IN A CONFIGURATION THE OPERATOR SWITCHED OFF - which the Inconclusive clause says is THE FINDING to report, not a bug to fix on the spot: reopening the card now shows a `Message` link (action row Message, Edit, Open, Remove), a Room named `Nova` has appeared in the sidebar, and the app logged `Created direct room '01a0a425679973afb1abfa670e15d8ac' for agent 'Nova'.` So the next Message typed in that Room would spend real money despite Team:Acp:Enabled=false. Consistent with the NOTE: the flag is consulted where the supervisor starts everything at boot, and the manual restart path never sees it. THE BADGE DID NOT LIE - `Online` coincided with a real live process. NOTHING WAS ORPHANED: after stopping the app, the adapter count is 0 and node.exe is back to the same 18 unrelated processes. |
 
 ### PERSONALIFECYCLE-06 — A Persona added while the app is running comes Online and gets a Room named after it, with no page refresh
 
@@ -3851,15 +3851,15 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `cbe5c4da` |  | Run from a clean App_Data on a fresh app process with NO Team__ variables set, so nothing was inherited. Adapter baseline before the Persona existed: ZERO. THE FULL BADGE WALK WAS CAPTURED with a MutationObserver rather than by eye, timed from the `Add teammate` click: **Offline at +13ms, Starting at +14ms, Online at +1625ms** - all three states, in that order, reaching Online in 1.6 seconds against a 30-second bar. Seeing `Starting` at all proves both that the pipe registered and that health reported it. The card switched to the `Teammate` view showing `Nova` immediately, and the tile reads `N \| Nova \| Test teammate · @nova \| Online` with class `agent-dot online` computing rgb(46,158,68). THE ROOM APPEARED WITH NO REFRESH: the sidebar went from [alpha, echo] to [alpha, echo, **Nova**] with performance navigation entries still 1. EXACTLY ONE tile and EXACTLY ONE Room, and the adapter count went 0 -> 1 - one persistent node.exe matching claude-agent-acp, never two, so the duplicate-start race did not fire. THE FILE IS EXACTLY AS SPECIFIED: `---`, `name: 'Nova'`, `title: 'Test teammate'`, `alias: 'nova'`, `---`, then `You are Nova. Answer in one short sentence.` verbatim. THE LOG carries `Created direct room '01a0a4280a9171bfbaabf56914b0c092' for agent 'Nova'.` and contains NO `failed to start` line for any Persona. O-DB WAS CHECKED (a .NET helper stands in for the missing sqlite3): `users` holds `01a0a4280a8f7df1bd25d7b2e4afffd1 \| Nova \| agent`, `rooms` holds `01a0a4280a9171bfbaabf56914b0c092 \| Nova` - the same id as the log line - and `persona_models` holds `Nova \| haiku`. THAT IS THE ID, NOT THE LABEL: the picker's option value is `haiku` while its display label is `Haiku`, and this build's adapter advertises short slugs (haiku, sonnet, default, opus[1m], claude-fable-5-1[1m]) rather than the longer `claude-haiku-…` form the condition's example assumes. Empirically confirmed too - the start succeeded and the teammate is Online, so the stored string IS in the advertised catalog and no `not in the agent's advertised model catalog` line appears. (Step 7's Effort `low` could not be chosen: with Haiku selected the Effort control offers only `Use the agent's default`.) |
+| 2026-09-15 | Pass *(earlier script)* | `cbe5c4da` |  | Run from a clean App_Data on a fresh app process with NO Team__ variables set, so nothing was inherited. Adapter baseline before the Persona existed: ZERO. THE FULL BADGE WALK WAS CAPTURED with a MutationObserver rather than by eye, timed from the `Add agent` click: **Offline at +13ms, Starting at +14ms, Online at +1625ms** - all three states, in that order, reaching Online in 1.6 seconds against a 30-second bar. Seeing `Starting` at all proves both that the pipe registered and that health reported it. The card switched to the `Agent` view showing `Nova` immediately, and the tile reads `N \| Nova \| Test agent · @nova \| Online` with class `agent-dot online` computing rgb(46,158,68). THE ROOM APPEARED WITH NO REFRESH: the sidebar went from [alpha, echo] to [alpha, echo, **Nova**] with performance navigation entries still 1. EXACTLY ONE tile and EXACTLY ONE Room, and the adapter count went 0 -> 1 - one persistent node.exe matching claude-agent-acp, never two, so the duplicate-start race did not fire. THE FILE IS EXACTLY AS SPECIFIED: `---`, `name: 'Nova'`, `title: 'Test agent'`, `alias: 'nova'`, `---`, then `You are Nova. Answer in one short sentence.` verbatim. THE LOG carries `Created direct room '01a0a4280a9171bfbaabf56914b0c092' for agent 'Nova'.` and contains NO `failed to start` line for any Persona. O-DB WAS CHECKED (a .NET helper stands in for the missing sqlite3): `users` holds `01a0a4280a8f7df1bd25d7b2e4afffd1 \| Nova \| agent`, `rooms` holds `01a0a4280a9171bfbaabf56914b0c092 \| Nova` - the same id as the log line - and `persona_models` holds `Nova \| haiku`. THAT IS THE ID, NOT THE LABEL: the picker's option value is `haiku` while its display label is `Haiku`, and this build's adapter advertises short slugs (haiku, sonnet, default, opus[1m], claude-fable-5-1[1m]) rather than the longer `claude-haiku-…` form the condition's example assumes. Empirically confirmed too - the start succeeded and the agent is Online, so the stored string IS in the advertised catalog and no `not in the agent's advertised model catalog` line appears. (Step 7's Effort `low` could not be chosen: with Haiku selected the Effort control offers only `Use the agent's default`.) |
 
-### PERSONALIFECYCLE-07 — A definition that is renamed, or that sits outside its Teammate's folder, is rejected with a reason, and restoring it brings the Teammate back
+### PERSONALIFECYCLE-07 — A definition that is renamed, or that sits outside its Agent's folder, is rejected with a reason, and restoring it brings the Agent back
 
-File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-07--a-definition-that-is-renamed-or-that-sits-outside-its-teammates-folder-is-rejected-with-a-reason-and-restoring-it-brings-the-teammate-back)
+File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-07--a-definition-that-is-renamed-or-that-sits-outside-its-agents-folder-is-rejected-with-a-reason-and-restoring-it-brings-the-agent-back)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `cbe5c4da` |  | IDENTITY COMES FROM THE FRONTMATTER, NOT THE PATH. Before the rename, App_Data\work contained exactly one entry, a folder named exactly `Nova`, and it was EMPTY (checked with -Force, so hidden entries count). Renaming Teams\Nova.md to nova-renamed.md, then waiting 12 seconds without touching the browser: THE TILE IS STILL `N \| Nova \| Test teammate · @nova \| Online` - not renamed to `nova-renamed`, and it did not disappear, so the recursive watcher saw the rename and the Persona stayed visible. THE CARD FOLLOWED THE FILE: its PERSONA FILE section now reads `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\nova-renamed.md`, and that is the only .md path anywhere on the page - so the card shows the new path while the identity is unchanged. THE ROOM named `Nova` is still in the sidebar, and the page was never reloaded (navigation entries still 1). THE WORK DIR DID NOT FOLLOW THE FILENAME: after the rename App_Data\work still contains exactly `Nova` and NO folder named `nova-renamed` exists - checked both after the rename and again after the restore, including across the restart the rename triggers - so the Work Dir key is not path-derived and nothing the previous session wrote would be stranded. It is under App_Data, not the repository root or the bin folder. The frontmatter in the renamed file still reads `name: 'Nova'`, and the file was renamed back to Nova.md with the adapter still at exactly 1. |
+| 2026-09-15 | Pass *(earlier script)* | `cbe5c4da` |  | IDENTITY COMES FROM THE FRONTMATTER, NOT THE PATH. Before the rename, App_Data\work contained exactly one entry, a folder named exactly `Nova`, and it was EMPTY (checked with -Force, so hidden entries count). Renaming Teams\Nova.md to nova-renamed.md, then waiting 12 seconds without touching the browser: THE TILE IS STILL `N \| Nova \| Test agent · @nova \| Online` - not renamed to `nova-renamed`, and it did not disappear, so the recursive watcher saw the rename and the Persona stayed visible. THE CARD FOLLOWED THE FILE: its PERSONA FILE section now reads `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\nova-renamed.md`, and that is the only .md path anywhere on the page - so the card shows the new path while the identity is unchanged. THE ROOM named `Nova` is still in the sidebar, and the page was never reloaded (navigation entries still 1). THE WORK DIR DID NOT FOLLOW THE FILENAME: after the rename App_Data\work still contains exactly `Nova` and NO folder named `nova-renamed` exists - checked both after the rename and again after the restore, including across the restart the rename triggers - so the Work Dir key is not path-derived and nothing the previous session wrote would be stranded. It is under App_Data, not the repository root or the bin folder. The frontmatter in the renamed file still reads `name: 'Nova'`, and the file was renamed back to Nova.md with the adapter still at exactly 1. |
 
 ### PERSONALIFECYCLE-08 — A Name containing spaces works for the monogram, the Room and the Work Dir
 
@@ -3867,23 +3867,23 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `4ced2ca1` |  | NOTHING IN THE PIPELINE TRUNCATES AT A SPACE. `Chief of Staff` (Title `Keeps the team honest`, Alias `cos`, Haiku) was accepted without complaint - so the interior-space rule from PERSONALIFECYCLE-02 holds here too. THE MONOGRAM READS `CS` - the first letter of the FIRST word and of the LAST word, not `CO` from the first two words, so the connective `of` correctly gets no letter. The tile reads `CS \| Chief of Staff \| Keeps the team honest · @cos \| Online`, with the full name intact, and it reached Online on the same badge walk as Nova: **Offline at +19ms, Starting at +26ms, Online at +1687ms** - captured with a MutationObserver from the `Add teammate` click, so it neither stalled at Starting nor skipped it. THE FULL NAME SURVIVES EVERY SURFACE, spaces intact and nothing cut at `Chief`: the sidebar gained a Room named exactly `Chief of Staff` (with NO page refresh - navigation entries still 1); App_Data\work gained a folder named exactly `Chief of Staff` (alongside `Nova`); App_Data\Teams gained a file named exactly `Chief of Staff.md`; and the database's `rooms` table holds the row `Chief of Staff` in full. O-DB was checked with a .NET helper standing in for sqlite3. NOVA WAS NOT DISTURBED: it is still Online, and the adapter count is now exactly 2 - one per Persona - so the spaces in the Work Dir path were passed to the adapter process correctly rather than splitting the command line. |
+| 2026-09-15 | Pass *(earlier script)* | `4ced2ca1` |  | NOTHING IN THE PIPELINE TRUNCATES AT A SPACE. `Chief of Staff` (Title `Keeps the team honest`, Alias `cos`, Haiku) was accepted without complaint - so the interior-space rule from PERSONALIFECYCLE-02 holds here too. THE MONOGRAM READS `CS` - the first letter of the FIRST word and of the LAST word, not `CO` from the first two words, so the connective `of` correctly gets no letter. The tile reads `CS \| Chief of Staff \| Keeps the team honest · @cos \| Online`, with the full name intact, and it reached Online on the same badge walk as Nova: **Offline at +19ms, Starting at +26ms, Online at +1687ms** - captured with a MutationObserver from the `Add agent` click, so it neither stalled at Starting nor skipped it. THE FULL NAME SURVIVES EVERY SURFACE, spaces intact and nothing cut at `Chief`: the sidebar gained a Room named exactly `Chief of Staff` (with NO page refresh - navigation entries still 1); App_Data\work gained a folder named exactly `Chief of Staff` (alongside `Nova`); App_Data\Teams gained a file named exactly `Chief of Staff.md`; and the database's `rooms` table holds the row `Chief of Staff` in full. O-DB was checked with a .NET helper standing in for sqlite3. NOVA WAS NOT DISTURBED: it is still Online, and the adapter count is now exactly 2 - one per Persona - so the spaces in the Work Dir path were passed to the adapter process correctly rather than splitting the command line. |
 
-### PERSONALIFECYCLE-09 — A missing Adapter reports the same actionable reason on the tile, the card and the Room strip, and harms no other teammate
+### PERSONALIFECYCLE-09 — A missing Adapter reports the same actionable reason on the tile, the card and the Room strip, and harms no other agent
 
-File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-09--a-missing-adapter-reports-the-same-actionable-reason-on-the-tile-the-card-and-the-room-strip-and-harms-no-other-teammate)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `1ccc7a0e` |  | ROUTE NOTE FIRST, because step 2 could not be followed literally: with `Nova` HEALTHY the card offers no `Restart` button at all (Message, Edit, Open, Remove only) - that is PERSONALIFECYCLE-11's rule - so the teammate was first made unhealthy by killing its adapter process, which put `Restart` on the card, and THEN Restart was clicked with tools\acp\node_modules renamed aside. That reaches exactly the state this test describes. ALL THREE SURFACES AGREE, WORD FOR WORD. The `Nova` card reads `Offline` and the reason on the page is exactly `No ACP adapter is installed for Persona 'Nova'. Run tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.` The `Nova` TILE reads `Offline` and its status tooltip carries that IDENTICAL string (read from the title attribute). The `Nova` ROOM shows a red strip above the composer whose text is `Nova is Offline: No ACP adapter is installed for Persona 'Nova'. Run tools/acp/install.ps1 …`, rendered as .member-health-alert / -list / -item. The reason names an action, not an exception type. THE FAILURE IS CONTAINED: `Chief of Staff` is still `Online`, its Room shows ZERO alert strips and zero visible alert-classed elements, and its node.exe row is still in the adapter list (count 1). The `echo` Room - which Nova is not a member of - also shows NO strip, so the strip is listing by membership. `An unhandled error has occurred.` never appeared, and the Restart button came back enabled rather than sticking. THE WORK DIR SURVIVES: App_Data\work still holds both `Nova` and `Chief of Staff`, so the directory really is created before the adapter is located and a tester can still tell `the adapter is missing` from `the Persona never started`. THE LOG names ONE Persona only: exactly ONE `Persona 'Nova' failed to start.` warning. O-DB confirms registration happened - `users` still lists alpha, Chief of Staff, echo, Nova, You - so only the adapter launch failed. Adapter folder left renamed aside for PERSONALIFECYCLE-10. |
-
-### PERSONALIFECYCLE-10 — Restart on the Teammate card recovers a failed Persona with no app restart, and one click starts one adapter
-
-File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-10--restart-on-the-teammate-card-recovers-a-failed-persona-with-no-app-restart-and-one-click-starts-one-adapter)
+File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-09--a-missing-adapter-reports-the-same-actionable-reason-on-the-tile-the-card-and-the-room-strip-and-harms-no-other-agent)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `1ccc7a0e` |  | THE FAILED ATTEMPT IS HARMLESS: clicking `Restart` while tools\acp\node_modules was still renamed aside left the card on `Offline` with the SAME reason, unchanged word for word - `No ACP adapter is installed for Persona 'Nova'. Run tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.` on both the card and the tile tooltip - produced NO error banner (`An unhandled error has occurred.` absent), and left the button ENABLED rather than stuck. THE SUCCESSFUL ATTEMPT, after renaming node_modules back and confirming …\claude-agent-acp\dist\index.js is present. Captured with a MutationObserver rather than by eye: the button read **`Restarting…` and was DISABLED** 3ms after the click, then vanished from the card 1ms later as the teammate recovered. THE STATUS WALKED `Offline` -> `Starting` (at +5ms) -> `Online` (at +1548ms) - about 1.5 seconds against a 40-second bar - and the reason line disappeared at the same moment (tracked as a separate flag in the timeline; it goes false and stays false once Online). EXACTLY ONE NEW ADAPTER: before the click the list held only Chief of Staff's pid 13592 (created 01:24:31); afterwards it holds 13592 plus ONE new row, pid 48356 with a fresh CreationDate of 01:27:37. Never two, so the restart guard serialised. THE ROOM STRIP CLEARED WITHOUT NAVIGATION: the `Nova` Room now shows ZERO .member-health-alert elements and no visible alert-classed element at all, with performance navigation entries still 1 before and after - no reload. NO NEW FAILURE WARNING after the successful click: the log holds exactly two `Persona 'Nova' failed to start.` lines, one from PERSONALIFECYCLE-09 and one from this test's deliberate step-1 click, both before the success, and none after. |
+| 2026-09-15 | Pass *(earlier script)* | `1ccc7a0e` |  | ROUTE NOTE FIRST, because step 2 could not be followed literally: with `Nova` HEALTHY the card offers no `Restart` button at all (Message, Edit, Open, Remove only) - that is PERSONALIFECYCLE-11's rule - so the agent was first made unhealthy by killing its adapter process, which put `Restart` on the card, and THEN Restart was clicked with tools\acp\node_modules renamed aside. That reaches exactly the state this test describes. ALL THREE SURFACES AGREE, WORD FOR WORD. The `Nova` card reads `Offline` and the reason on the page is exactly `No ACP adapter is installed for Persona 'Nova'. Run tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.` The `Nova` TILE reads `Offline` and its status tooltip carries that IDENTICAL string (read from the title attribute). The `Nova` ROOM shows a red strip above the composer whose text is `Nova is Offline: No ACP adapter is installed for Persona 'Nova'. Run tools/acp/install.ps1 …`, rendered as .member-health-alert / -list / -item. The reason names an action, not an exception type. THE FAILURE IS CONTAINED: `Chief of Staff` is still `Online`, its Room shows ZERO alert strips and zero visible alert-classed elements, and its node.exe row is still in the adapter list (count 1). The `echo` Room - which Nova is not a member of - also shows NO strip, so the strip is listing by membership. `An unhandled error has occurred.` never appeared, and the Restart button came back enabled rather than sticking. THE WORK DIR SURVIVES: App_Data\work still holds both `Nova` and `Chief of Staff`, so the directory really is created before the adapter is located and a tester can still tell `the adapter is missing` from `the Persona never started`. THE LOG names ONE Persona only: exactly ONE `Persona 'Nova' failed to start.` warning. O-DB confirms registration happened - `users` still lists alpha, Chief of Staff, echo, Nova, You - so only the adapter launch failed. Adapter folder left renamed aside for PERSONALIFECYCLE-10. |
+
+### PERSONALIFECYCLE-10 — Restart on the Agent card recovers a failed Persona with no app restart, and one click starts one adapter
+
+File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-10--restart-on-the-agent-card-recovers-a-failed-persona-with-no-app-restart-and-one-click-starts-one-adapter)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-09-15 | Pass *(earlier script)* | `1ccc7a0e` |  | THE FAILED ATTEMPT IS HARMLESS: clicking `Restart` while tools\acp\node_modules was still renamed aside left the card on `Offline` with the SAME reason, unchanged word for word - `No ACP adapter is installed for Persona 'Nova'. Run tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.` on both the card and the tile tooltip - produced NO error banner (`An unhandled error has occurred.` absent), and left the button ENABLED rather than stuck. THE SUCCESSFUL ATTEMPT, after renaming node_modules back and confirming …\claude-agent-acp\dist\index.js is present. Captured with a MutationObserver rather than by eye: the button read **`Restarting…` and was DISABLED** 3ms after the click, then vanished from the card 1ms later as the agent recovered. THE STATUS WALKED `Offline` -> `Starting` (at +5ms) -> `Online` (at +1548ms) - about 1.5 seconds against a 40-second bar - and the reason line disappeared at the same moment (tracked as a separate flag in the timeline; it goes false and stays false once Online). EXACTLY ONE NEW ADAPTER: before the click the list held only Chief of Staff's pid 13592 (created 01:24:31); afterwards it holds 13592 plus ONE new row, pid 48356 with a fresh CreationDate of 01:27:37. Never two, so the restart guard serialised. THE ROOM STRIP CLEARED WITHOUT NAVIGATION: the `Nova` Room now shows ZERO .member-health-alert elements and no visible alert-classed element at all, with performance navigation entries still 1 before and after - no reload. NO NEW FAILURE WARNING after the successful click: the log holds exactly two `Persona 'Nova' failed to start.` lines, one from PERSONALIFECYCLE-09 and one from this test's deliberate step-1 click, both before the success, and none after. |
 
 ### PERSONALIFECYCLE-11 — Restart is offered in every state except Starting, and is accompanied by the memory-loss warning
 
@@ -3891,7 +3891,7 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `be0b3375` |  | FOR THE HEALTHY TEAMMATE the action row is EXACTLY `Message, Edit, Open, Remove` - no `Restart` button anywhere on the card - and there is NO hint line under the row (a search for `Like saving an edit…` returns nothing). So a working session's memory cannot be thrown away for no reason. AFTER KILLING Nova's adapter process by pid (route recorded: killed the process directly, having attributed it by CreationDate - the newest row, created at the moment Nova came Online - rather than using the rename-aside fallback), the SAME card shows `Message, Edit, Open, Restart, Remove` with **Restart between Open and Remove**, and the line under the action row reads EXACTLY `Like saving an edit, this restarts the teammate, which clears what it remembers.` THE GATE AND THE BADGE AGREE: Restart appears only while the status reads `Offline`, never alongside `Online`, judged from the text label rather than the dot colour as the NOTE advises. `Message` is present because this teammate HAS connected and has a Room - it is not being offered for a Room that does not exist. |
+| 2026-09-15 | Pass *(earlier script)* | `be0b3375` |  | FOR THE HEALTHY AGENT the action row is EXACTLY `Message, Edit, Open, Remove` - no `Restart` button anywhere on the card - and there is NO hint line under the row (a search for `Like saving an edit…` returns nothing). So a working session's memory cannot be thrown away for no reason. AFTER KILLING Nova's adapter process by pid (route recorded: killed the process directly, having attributed it by CreationDate - the newest row, created at the moment Nova came Online - rather than using the rename-aside fallback), the SAME card shows `Message, Edit, Open, Restart, Remove` with **Restart between Open and Remove**, and the line under the action row reads EXACTLY `Like saving an edit, this restarts the agent, which clears what it remembers.` THE GATE AND THE BADGE AGREE: Restart appears only while the status reads `Offline`, never alongside `Online`, judged from the text label rather than the dot colour as the NOTE advises. `Message` is present because this agent HAS connected and has a Room - it is not being offered for a Room that does not exist. |
 
 ### PERSONALIFECYCLE-12 — Killing the adapter process flips the badge to Offline with a loop reason, even though the pipe stays open
 
@@ -3899,7 +3899,7 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `be0b3375` |  | THE HEADLINE SILENT FAILURE IS ABSENT - killing the adapter does NOT leave the badge reading Online. With /teammates in one tab and the `Nova` Room in another, both instrumented with MutationObservers and neither touched afterwards: **3.14 seconds** after `Stop-Process` the Nova tile changed from `Online` to `Offline` with no interaction at all, and 3.54s after the kill the Nova Room grew a red strip - so the health event repaints open surfaces live, in both tabs, with navigation entries still 1 (no reload). THE REASON NAMES THE LOOP, on every surface: the tile's status tooltip and the card both read `Its event reader ended unexpectedly: The agent process disconnected.`, and the Room strip reads `Nova is Offline: Its event reader ended unexpectedly: The agent process disconnected.` (it later settles to `The Adapter process disconnected.`). So a killed adapter is distinguishable from a never-started one. THE LOG AGREES: `warn: Agency.Huddle.Acp.DotAcp.DotAcpAgentHost` / `The agent process disconnected.` and `warn: Agency.Huddle.App.Acp.PersonaRunner` / `Persona 'Nova' agent event stream ended unexpectedly.` with an AgentDisconnectedException beneath. CONTAINED: `Chief of Staff` stayed `Online` throughout and its Room shows ZERO alert strips. THE DEAD ROOM DOES NOT HANG - the bug that has shipped once before: typing `are you there` posted the human row normally and then, over a full 35 seconds, produced NO reply, ZERO `.message-row.streaming` rows (no draft spinning forever), no error text, and the page stayed responsive. RESTART RECOVERS IT: the tile went back to `Online` and the adapter list gained a fresh row, pid 98588 created 01:30:18, alongside Chief of Staff's unchanged pid 13592. THE ROOM AND TRANSCRIPT SURVIVED the whole test - the .jsonl holds the `are you there` line - which the NOTE says is deliberate and not to be filed. |
+| 2026-09-15 | Pass *(earlier script)* | `be0b3375` |  | THE HEADLINE SILENT FAILURE IS ABSENT - killing the adapter does NOT leave the badge reading Online. With /agents in one tab and the `Nova` Room in another, both instrumented with MutationObservers and neither touched afterwards: **3.14 seconds** after `Stop-Process` the Nova tile changed from `Online` to `Offline` with no interaction at all, and 3.54s after the kill the Nova Room grew a red strip - so the health event repaints open surfaces live, in both tabs, with navigation entries still 1 (no reload). THE REASON NAMES THE LOOP, on every surface: the tile's status tooltip and the card both read `Its event reader ended unexpectedly: The agent process disconnected.`, and the Room strip reads `Nova is Offline: Its event reader ended unexpectedly: The agent process disconnected.` (it later settles to `The Adapter process disconnected.`). So a killed adapter is distinguishable from a never-started one. THE LOG AGREES: `warn: Agency.Huddle.Acp.DotAcp.DotAcpAgentHost` / `The agent process disconnected.` and `warn: Agency.Huddle.App.Acp.PersonaRunner` / `Persona 'Nova' agent event stream ended unexpectedly.` with an AgentDisconnectedException beneath. CONTAINED: `Chief of Staff` stayed `Online` throughout and its Room shows ZERO alert strips. THE DEAD ROOM DOES NOT HANG - the bug that has shipped once before: typing `are you there` posted the human row normally and then, over a full 35 seconds, produced NO reply, ZERO `.message-row.streaming` rows (no draft spinning forever), no error text, and the page stayed responsive. RESTART RECOVERS IT: the tile went back to `Online` and the adapter list gained a fresh row, pid 98588 created 01:30:18, alongside Chief of Staff's unchanged pid 13592. THE ROOM AND TRANSCRIPT SURVIVED the whole test - the .jsonl holds the `are you there` line - which the NOTE says is deliberate and not to be filed. |
 
 ### PERSONALIFECYCLE-13 — One Persona failing leaves every other Persona Online and messageable
 
@@ -3907,23 +3907,23 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `67b5fa28` |  | BOTH HALVES RUN, with three Personas Online first - Nova, Chief of Staff and a new `Ada` (Third teammate, @ada, Haiku) - and exactly THREE claude-agent-acp rows (13592, 98588, 77196). HALF ONE, A KILLED ADAPTER: stopping Ada's process (attributed by CreationDate as the newest) left ONLY Ada changed - the tiles read `Ada => Offline`, `Chief of Staff => Online`, `Nova => Online` - with no page reload (navigation entries still 1). Nova's and Chief of Staff's Rooms show ZERO alert strips. THE LOG NAMES EXACTLY ONE PERSONA: grouping every `Persona '<name>'` occurrence in the new warning lines gives `1 Persona 'Ada'` and nothing else - `The agent process disconnected.` and `Persona 'Ada' agent event stream ended unexpectedly.` The adapter list keeps exactly TWO rows, the two healthy ones. HALF TWO, A FAILED START: with tools\acp\node_modules renamed aside, adding `Ghost` (Fourth, @ghost) completed in about 23 seconds and the page stayed fully responsive - the tile list rendered throughout, so the failed start was not awaited on a blocking path. Ghost came up `Offline` with the actionable tooltip `No ACP adapter is installed for Persona 'Ghost'. Run tools/acp/install.ps1 …`, while `Chief of Staff => Online` and `Nova => Online` were untouched, both with a null status tooltip and no alert strips in their Rooms. So a second, different failure was also contained. RESTORING THE ADAPTER FOLDER RESTARTED NOBODY: the two healthy adapter pids and their CreationDates are byte-identical before and after the rename back (13592@01:24:31, 98588@01:30:18) - nothing was restarted on an unrelated filesystem event, so no memory was destroyed across the board. Rooms exist for all four Personas. |
+| 2026-09-15 | Pass *(earlier script)* | `67b5fa28` |  | BOTH HALVES RUN, with three Personas Online first - Nova, Chief of Staff and a new `Ada` (Third agent, @ada, Haiku) - and exactly THREE claude-agent-acp rows (13592, 98588, 77196). HALF ONE, A KILLED ADAPTER: stopping Ada's process (attributed by CreationDate as the newest) left ONLY Ada changed - the tiles read `Ada => Offline`, `Chief of Staff => Online`, `Nova => Online` - with no page reload (navigation entries still 1). Nova's and Chief of Staff's Rooms show ZERO alert strips. THE LOG NAMES EXACTLY ONE PERSONA: grouping every `Persona '<name>'` occurrence in the new warning lines gives `1 Persona 'Ada'` and nothing else - `The agent process disconnected.` and `Persona 'Ada' agent event stream ended unexpectedly.` The adapter list keeps exactly TWO rows, the two healthy ones. HALF TWO, A FAILED START: with tools\acp\node_modules renamed aside, adding `Ghost` (Fourth, @ghost) completed in about 23 seconds and the page stayed fully responsive - the tile list rendered throughout, so the failed start was not awaited on a blocking path. Ghost came up `Offline` with the actionable tooltip `No ACP adapter is installed for Persona 'Ghost'. Run tools/acp/install.ps1 …`, while `Chief of Staff => Online` and `Nova => Online` were untouched, both with a null status tooltip and no alert strips in their Rooms. So a second, different failure was also contained. RESTORING THE ADAPTER FOLDER RESTARTED NOBODY: the two healthy adapter pids and their CreationDates are byte-identical before and after the rename back (13592@01:24:31, 98588@01:30:18) - nothing was restarted on an unrelated filesystem event, so no memory was destroyed across the board. Rooms exist for all four Personas. |
 
-### PERSONALIFECYCLE-14 — An external edit to a Teammate's definition restarts it once per save, and a non-.md file restarts nobody
+### PERSONALIFECYCLE-14 — An external edit to an Agent's definition restarts it once per save, and a non-.md file restarts nobody
 
-File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-14--an-external-edit-to-a-teammates-definition-restarts-it-once-per-save-and-a-non-md-file-restarts-nobody)
+File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-14--an-external-edit-to-an-agents-definition-restarts-it-once-per-save-and-a-non-md-file-restarts-nobody)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-09-15 | Pass *(earlier script)* | `7b4bb99c` |  | THE WATCHER IS RECURSIVE - the highest-value defect in this area is absent. Moving Nova.md into Teams\Business\ changed nothing visible: the tile is still `Nova`, still `Online`, its Room is still in the sidebar, and the card's PERSONA FILE now reads `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Business\Nova.md` - all with performance navigation entries still 1. EDITING THE NESTED FILE RESTARTS IT: appending `Always mention that you are Nova.` (one write, via a shell append) made the tile walk `Offline` -> `Starting` -> `Online`, captured by MutationObserver, beginning about 3.5 seconds after the save and complete about 5.1 seconds after, with NO page reload. Timing note, recorded rather than smoothed over: the test says `within about a second`; the measured first visible change is ~3.5s, which is the ~500ms debounce plus adapter teardown and restart. THE ADAPTER WAS REPLACED: Nova's pid 98588 is gone and a new row 60164 (created 01:34:10) took its place, with the total staying at 3. THE CARD SHOWS THE NEW TEXT: its PERSONA section reads `You are Nova. Answer in one short sentence.Always mention that you are Nova.` THE DEBOUNCE HOLDS - tested twice, and the first attempt is reported too because it is informative. (a) Two writes 89ms apart whose NET content equalled what was already loaded (add a space, remove it) produced ZERO restarts and ZERO new processes over 33 seconds - better than the expected one, since a no-op edit does not destroy memory. (b) Two CONTENT-CHANGING writes 1ms apart (append ` X`, then ` XY`) produced EXACTLY ONE restart cycle - a single Offline -> Starting -> Online pass, no second cycle in 33 seconds - and EXACTLY ONE new adapter process: pid 60164 replaced by 21196, total still 3. So the debounce coalesces rather than restarting twice. A NON-.md FILE RESTARTS NOBODY: creating Teams\notes.txt produced ZERO status changes across all four tiles over 17 seconds (the observer's timeline is empty) - Chief of Staff, Ghost and Nova all stayed Online and Ada stayed Offline - and the file was then removed. No watcher buffer-overflow line appears in the log, so the page is not stale. Nova.md is left in Teams\Business\ for PERSONALIFECYCLE-15. |
 
-### PERSONALIFECYCLE-15 — A write under a Teammate's work folder restarts nothing
+### PERSONALIFECYCLE-15 — A write under an Agent's work folder restarts nothing
 
-File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-15--a-write-under-a-teammates-work-folder-restarts-nothing)
+File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-15--a-write-under-an-agents-work-folder-restarts-nothing)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `30c6d050` |  | THE SECOND SILENT WATCHER FAILURE IS ABSENT - a directory rename IS seen, even though a directory name has no .md extension. After renaming Teams\Business to Teams\BusinessOps, with no page reload (navigation entries still 1): `Nova` is still listed, still named `Nova`, still `Test teammate · @nova`, still `Online`, still grouped under `No team`, and its Room is still in the sidebar. THE CARD FOLLOWED THE FOLDER: its PERSONA FILE section reads `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\BusinessOps\Nova.md` - the NEW path - and its MODEL section still reads `haiku`, so the stored Model is keyed on the Name and not on the path. No `An unhandled error has occurred.` after the directory event. THE CACHE IS NOT STALE - the decisive check: appending `Renamed folder marker.` to the file AT ITS NEW PATH reached the card within 13 seconds, whose PERSONA section now ends `XYRenamed folder marker.` So the watcher is still following the file after the folder rename rather than serving cached prompt text forever. MOVING THE FOLDER OUT OF Teams\ ENTIRELY IS CLEAN: the `Nova` tile DISAPPEARED from the list (tiles are now Ada, Chief of Staff, Ghost), and its adapter row left the process list - pid 21196 is gone and the count dropped from 3 to 2 - so a Persona whose file is gone is not left live and able to spend money. THE ROOM REMAINS in the sidebar, which is the deliberate no-cascade behaviour, and opening that orphaned `Nova` Room shows ZERO alert strips - a teammate that is merely not running is not reported as a failure. Restored afterwards: Nova.md moved back to the Teams root, BusinessOps removed, and the adapter count is back to 3. |
+| 2026-09-15 | Pass *(earlier script)* | `30c6d050` |  | THE SECOND SILENT WATCHER FAILURE IS ABSENT - a directory rename IS seen, even though a directory name has no .md extension. After renaming Teams\Business to Teams\BusinessOps, with no page reload (navigation entries still 1): `Nova` is still listed, still named `Nova`, still `Test agent · @nova`, still `Online`, still grouped under `No team`, and its Room is still in the sidebar. THE CARD FOLLOWED THE FOLDER: its PERSONA FILE section reads `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\BusinessOps\Nova.md` - the NEW path - and its MODEL section still reads `haiku`, so the stored Model is keyed on the Name and not on the path. No `An unhandled error has occurred.` after the directory event. THE CACHE IS NOT STALE - the decisive check: appending `Renamed folder marker.` to the file AT ITS NEW PATH reached the card within 13 seconds, whose PERSONA section now ends `XYRenamed folder marker.` So the watcher is still following the file after the folder rename rather than serving cached prompt text forever. MOVING THE FOLDER OUT OF Teams\ ENTIRELY IS CLEAN: the `Nova` tile DISAPPEARED from the list (tiles are now Ada, Chief of Staff, Ghost), and its adapter row left the process list - pid 21196 is gone and the count dropped from 3 to 2 - so a Persona whose file is gone is not left live and able to spend money. THE ROOM REMAINS in the sidebar, which is the deliberate no-cascade behaviour, and opening that orphaned `Nova` Room shows ZERO alert strips - an agent that is merely not running is not reported as a failure. Restored afterwards: Nova.md moved back to the Teams root, BusinessOps removed, and the adapter count is back to 3. |
 
 ### PERSONALIFECYCLE-16 — A Persona file that becomes malformed is named in "Files that didn't load", and an Alias collision names BOTH files
 
@@ -3931,7 +3931,7 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `28085c54` |  | A FILE THAT FAILS TO BECOME A TEAMMATE IS IMPOSSIBLE TO MISS. Deleting the `title:` line from Nova.md removed the `Nova` tile from the list within the 11-second watch, with no page reload (navigation entries 1), and a `Files that didn't load` block appeared listing the exact path `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md` with the reason `Persona frontmatter is missing required field 'Title'.` - naming the MISSING FIELD, not an exception type and not a line number. THE BLOCK IS AT THE TOP: measured by geometry, its top edge is at y=116 against the first tile at y=335, so it sits above the tile list. THE ROOM SURVIVES AND STAYS QUIET: `Nova` is still in the sidebar and opening it shows ZERO alert strips - a teammate that did not load is not alarmed about. THE REJECTED PERSONA'S ADAPTER IS STOPPED: the process list dropped from 3 rows to 2, so nothing rejected is left live and able to spend money. RESTORING `title:` brought the tile back and it reached `Online` again, with the `Files that didn't load` block gone. THE COLLISION REJECTS BOTH SIDES - no silent winner. Setting Chief of Staff's alias to `nova`, matching Nova's alias AND Name, made BOTH tiles vanish (leaving only Ada and Ghost) and listed BOTH files in the block, each reason naming the OTHER file's path: for Chief of Staff.md, `Persona Alias 'nova' is also used by '…\Nova.md'. Persona Alias 'nova' matches the Name used by '…\Nova.md'.`; for Nova.md, `Persona Alias 'nova' is also used by '…\Chief of Staff.md'. Persona Name 'Nova' matches the Alias used by '…\Chief of Staff.md'.` So the alias-versus-Name case the NOTE mentions is covered in the same run. Restoring the alias brought both back Online with the block gone. |
+| 2026-09-15 | Pass *(earlier script)* | `28085c54` |  | A FILE THAT FAILS TO BECOME A AGENT IS IMPOSSIBLE TO MISS. Deleting the `title:` line from Nova.md removed the `Nova` tile from the list within the 11-second watch, with no page reload (navigation entries 1), and a `Files that didn't load` block appeared listing the exact path `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md` with the reason `Persona frontmatter is missing required field 'Title'.` - naming the MISSING FIELD, not an exception type and not a line number. THE BLOCK IS AT THE TOP: measured by geometry, its top edge is at y=116 against the first tile at y=335, so it sits above the tile list. THE ROOM SURVIVES AND STAYS QUIET: `Nova` is still in the sidebar and opening it shows ZERO alert strips - an agent that did not load is not alarmed about. THE REJECTED PERSONA'S ADAPTER IS STOPPED: the process list dropped from 3 rows to 2, so nothing rejected is left live and able to spend money. RESTORING `title:` brought the tile back and it reached `Online` again, with the `Files that didn't load` block gone. THE COLLISION REJECTS BOTH SIDES - no silent winner. Setting Chief of Staff's alias to `nova`, matching Nova's alias AND Name, made BOTH tiles vanish (leaving only Ada and Ghost) and listed BOTH files in the block, each reason naming the OTHER file's path: for Chief of Staff.md, `Persona Alias 'nova' is also used by '…\Nova.md'. Persona Alias 'nova' matches the Name used by '…\Nova.md'.`; for Nova.md, `Persona Alias 'nova' is also used by '…\Chief of Staff.md'. Persona Name 'Nova' matches the Alias used by '…\Chief of Staff.md'.` So the alias-versus-Name case the NOTE mentions is covered in the same run. Restoring the alias brought both back Online with the block gone. |
 
 ### PERSONALIFECYCLE-17 — A stored Model the Adapter no longer advertises is Degraded with a reason, never a failed start
 
@@ -3939,15 +3939,15 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Fail *(earlier script)* | `c43ee00c` | #30 | O-DB WAS AVAILABLE (a .NET helper stands in for sqlite3), so the test ran. HALF THE DESIGN HOLDS: with `persona_models` set to `claude-does-not-exist` for Nova, the Persona did NOT fail to start - it reached a live adapter process and a settled state, so a stale stored Model does not brick a teammate, and any adapter upgrade that renames a model would not take the team down. THE LOG CARRIES THE WARNING, exactly as specified: `Requested model 'claude-does-not-exist' is not in the agent's advertised model catalog; continuing on the agent's default.` THE FAILURE: the settled state is `Online`, NOT `Degraded`, and the reason reaches NO surface at all - the tile status tooltip is null (no title attribute), the card has no reason line, the Room has no strip, and the word `Degraded` appears nowhere on the page. That is this test's named Fail condition: the mismatch reached only the log, so a teammate is silently running on a model nobody chose - and the card actively asserts the wrong one, still showing `claude-does-not-exist` under MODEL. NOT A FLASH THAT WAS MISSED: re-run with Nova as the ONLY Persona on disk (the other three parked aside) and a MutationObserver watching /teammates from page load through Nova coming up, across 30 seconds - ZERO `Degraded` states recorded, and zero occurrences of the reason text. NOT THE DOCUMENTED EMPTY-CATALOG EXEMPTION EITHER, which is why this is a Fail rather than the Inconclusive the clause allows: storing `sonnet` instead - a model the adapter DOES advertise - on the same machine and the same session path produced ZERO `not in the agent's advertised model catalog` warnings and ZERO `Failed to set model` warnings, so the id resolved against a POPULATED ConfigOptions list. PersonaRunner builds session.Models from that same response.ConfigOptions and guards on `Models.Count > 0`, so the guard was satisfied and the Degraded report should have fired. Filed as #30. RESTORED: persona_models back to `haiku` for Nova, the three parked Persona files returned, app restarted with zero catalog warnings and four adapters running. |
+| 2026-09-15 | Fail *(earlier script)* | `c43ee00c` | #30 | O-DB WAS AVAILABLE (a .NET helper stands in for sqlite3), so the test ran. HALF THE DESIGN HOLDS: with `persona_models` set to `claude-does-not-exist` for Nova, the Persona did NOT fail to start - it reached a live adapter process and a settled state, so a stale stored Model does not brick an agent, and any adapter upgrade that renames a model would not take the team down. THE LOG CARRIES THE WARNING, exactly as specified: `Requested model 'claude-does-not-exist' is not in the agent's advertised model catalog; continuing on the agent's default.` THE FAILURE: the settled state is `Online`, NOT `Degraded`, and the reason reaches NO surface at all - the tile status tooltip is null (no title attribute), the card has no reason line, the Room has no strip, and the word `Degraded` appears nowhere on the page. That is this test's named Fail condition: the mismatch reached only the log, so an agent is silently running on a model nobody chose - and the card actively asserts the wrong one, still showing `claude-does-not-exist` under MODEL. NOT A FLASH THAT WAS MISSED: re-run with Nova as the ONLY Persona on disk (the other three parked aside) and a MutationObserver watching /agents from page load through Nova coming up, across 30 seconds - ZERO `Degraded` states recorded, and zero occurrences of the reason text. NOT THE DOCUMENTED EMPTY-CATALOG EXEMPTION EITHER, which is why this is a Fail rather than the Inconclusive the clause allows: storing `sonnet` instead - a model the adapter DOES advertise - on the same machine and the same session path produced ZERO `not in the agent's advertised model catalog` warnings and ZERO `Failed to set model` warnings, so the id resolved against a POPULATED ConfigOptions list. PersonaRunner builds session.Models from that same response.ConfigOptions and guards on `Models.Count > 0`, so the guard was satisfied and the Degraded report should have fired. Filed as #30. RESTORED: persona_models back to `haiku` for Nova, the three parked Persona files returned, app restarted with zero catalog warnings and four adapters running. |
 
-### PERSONALIFECYCLE-18 — Editing a Prompt at /settings does not restart a running Teammate
+### PERSONALIFECYCLE-18 — Editing a Prompt at /settings does not restart a running Agent
 
-File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-18--editing-a-prompt-at-settings-does-not-restart-a-running-teammate)
+File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-18--editing-a-prompt-at-settings-does-not-restart-a-running-agent)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `5294433c` |  | Four teammates Online before the save - Ada, Chief of Staff, Ghost, Nova - with four adapter processes recorded to the millisecond: 71580@01:45:45.313, 21224@01:45:45.323, 100824@01:45:45.329, 16408@01:45:45.422. hooks.json was ABSENT beforehand, which is the expected pre-first-save state. THE EDIT: /settings opened on the `Hooks` tab by default; the first field is `Orientation`, which DOES carry a `Next session` badge - the app saying in advance that this edit will not reach a running teammate. Appending ` (edited)` raised `Modified` + `Unsaved` on that field and enabled `Save`. AFTER SAVING, NOTHING RESTARTED: a MutationObserver watched all four tiles for 32 seconds and recorded ZERO status changes - no flicker through Offline or Starting, every tile still `Online`. THE PROCESSES ARE THE SAME ONES, not merely the same count: all four ProcessIds AND their CreationDates (to the millisecond) are identical before and after the save. The field now shows `Modified` (Unsaved cleared), `Save` went disabled, and no `An unhandled error has occurred.` appeared. hooks.json EXISTS after the first save, holding only `systemPrompt.orientation` with the edited text. RESETTING RESTARTS NOTHING EITHER: clicking that field's `Reset` and saving again left the four adapter pids and CreationDates unchanged once more, cleared both badges, and returned hooks.json to `{}`. The inertness of a reworded system-prompt Hook on an already-running teammate is the documented trade and is not filed. |
+| 2026-09-15 | Pass *(earlier script)* | `5294433c` |  | Four agents Online before the save - Ada, Chief of Staff, Ghost, Nova - with four adapter processes recorded to the millisecond: 71580@01:45:45.313, 21224@01:45:45.323, 100824@01:45:45.329, 16408@01:45:45.422. hooks.json was ABSENT beforehand, which is the expected pre-first-save state. THE EDIT: /settings opened on the `Hooks` tab by default; the first field is `Orientation`, which DOES carry a `Next session` badge - the app saying in advance that this edit will not reach a running agent. Appending ` (edited)` raised `Modified` + `Unsaved` on that field and enabled `Save`. AFTER SAVING, NOTHING RESTARTED: a MutationObserver watched all four tiles for 32 seconds and recorded ZERO status changes - no flicker through Offline or Starting, every tile still `Online`. THE PROCESSES ARE THE SAME ONES, not merely the same count: all four ProcessIds AND their CreationDates (to the millisecond) are identical before and after the save. The field now shows `Modified` (Unsaved cleared), `Save` went disabled, and no `An unhandled error has occurred.` appeared. hooks.json EXISTS after the first save, holding only `systemPrompt.orientation` with the edited text. RESETTING RESTARTS NOTHING EITHER: clicking that field's `Reset` and saving again left the four adapter pids and CreationDates unchanged once more, cleared both badges, and returned hooks.json to `{}`. The inertness of a reworded system-prompt Hook on an already-running agent is the documented trade and is not filed. |
 
 ### PERSONALIFECYCLE-19 — Removing a Persona takes it offline but leaves its Agent, Room and Transcript, and raises no alert
 
@@ -3955,7 +3955,7 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `1fe512cc` |  | REMOVAL IS A DELIBERATE NO-CASCADE. The inline confirm works and uses no native dialog: the action row went `Message, Edit, Open, Remove` -> `Message, Edit, Open, Confirm, Cancel` (an in-place swap) -> back to `Message, Edit, Open, Remove` after `Cancel`, with nothing removed and all four tiles still present; window.confirm was stubbed to record a call and NEVER fired. AFTER `Remove` -> `Confirm`: the card closed and the `Chief of Staff` tile is gone from /teammates, leaving Ada, Ghost and Nova - the page did not need a reload (navigation entries still 1). WHAT SURVIVES, all of it deliberate: the Room named `Chief of Staff` is still in the sidebar, opens with heading `Chief of Staff` and its member list intact (`You, Chief of Staff`), and shows ZERO alert strips; the rooms directory is unchanged (still just the one .jsonl); App_Data\work\Chief of Staff is LEFT BEHIND alongside Ada, Ghost and Nova; and O-DB still holds the `users` row and the `rooms` row for that Name. WHAT GOES: App_Data\Teams\Chief of Staff.md is gone (Teams now holds Ada.md, Ghost.md, Nova.md), the adapter count dropped by exactly one (4 -> 3) so the removed teammate is not still live and able to spend money, and - the part that IS a bug if it survives - the `persona_models` row for `Chief of Staff` is GONE (the table now holds only Nova and Ada; persona_efforts was empty throughout, since Haiku advertises no effort ladder). |
+| 2026-09-15 | Pass *(earlier script)* | `1fe512cc` |  | REMOVAL IS A DELIBERATE NO-CASCADE. The inline confirm works and uses no native dialog: the action row went `Message, Edit, Open, Remove` -> `Message, Edit, Open, Confirm, Cancel` (an in-place swap) -> back to `Message, Edit, Open, Remove` after `Cancel`, with nothing removed and all four tiles still present; window.confirm was stubbed to record a call and NEVER fired. AFTER `Remove` -> `Confirm`: the card closed and the `Chief of Staff` tile is gone from /agents, leaving Ada, Ghost and Nova - the page did not need a reload (navigation entries still 1). WHAT SURVIVES, all of it deliberate: the Room named `Chief of Staff` is still in the sidebar, opens with heading `Chief of Staff` and its member list intact (`You, Chief of Staff`), and shows ZERO alert strips; the rooms directory is unchanged (still just the one .jsonl); App_Data\work\Chief of Staff is LEFT BEHIND alongside Ada, Ghost and Nova; and O-DB still holds the `users` row and the `rooms` row for that Name. WHAT GOES: App_Data\Teams\Chief of Staff.md is gone (Teams now holds Ada.md, Ghost.md, Nova.md), the adapter count dropped by exactly one (4 -> 3) so the removed agent is not still live and able to spend money, and - the part that IS a bug if it survives - the `persona_models` row for `Chief of Staff` is GONE (the table now holds only Nova and Ada; persona_efforts was empty throughout, since Haiku advertises no effort ladder). |
 
 ### PERSONALIFECYCLE-20 — Re-creating a removed Persona under the same Name does not resurrect its old Model or Effort
 
@@ -3963,15 +3963,15 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `1fe512cc` |  | Run immediately after PERSONALIFECYCLE-19 removed `Chief of Staff`, which had Model = Haiku stored (persona_models held `Chief of Staff \| haiku` before the removal), so the Name really did have a stored Model to resurrect. Re-created with the SAME Name, Title `Keeps the team honest`, Alias `cos` and the same body, with BOTH selects left untouched at `Use the agent's default` (confirmed: both select values are the empty string at submit time). NOTHING WAS RESURRECTED: the resulting Teammate card's MODEL section reads exactly `Agent default` and its EFFORT section reads exactly `Model default` - not `Haiku`, not `low`, and not a blank where the default sentinel should be, so `no choice` is distinguishable from `a choice that failed to display`. O-DB AGREES: querying persona_models and persona_efforts for `Chief of Staff` returns NO ROW at all - not a row holding an empty string, which would never resolve and would warn on every restart. The teammate came back `Online` alongside the other three. |
+| 2026-09-15 | Pass *(earlier script)* | `1fe512cc` |  | Run immediately after PERSONALIFECYCLE-19 removed `Chief of Staff`, which had Model = Haiku stored (persona_models held `Chief of Staff \| haiku` before the removal), so the Name really did have a stored Model to resurrect. Re-created with the SAME Name, Title `Keeps the team honest`, Alias `cos` and the same body, with BOTH selects left untouched at `Use the agent's default` (confirmed: both select values are the empty string at submit time). NOTHING WAS RESURRECTED: the resulting Agent card's MODEL section reads exactly `Agent default` and its EFFORT section reads exactly `Model default` - not `Haiku`, not `low`, and not a blank where the default sentinel should be, so `no choice` is distinguishable from `a choice that failed to display`. O-DB AGREES: querying persona_models and persona_efforts for `Chief of Staff` returns NO ROW at all - not a row holding an empty string, which would never resolve and would warn on every restart. The agent came back `Online` alongside the other three. |
 
-### PERSONALIFECYCLE-21 — Editing the frontmatter name renames the Teammate in place: its folder, file, Room, Model and Effort all follow
+### PERSONALIFECYCLE-21 — Editing the frontmatter name renames the Agent in place: its folder, file, Room, Model and Effort all follow
 
-File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-21--editing-the-frontmatter-name-renames-the-teammate-in-place-its-folder-file-room-model-and-effort-all-follow)
+File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-21--editing-the-frontmatter-name-renames-the-agent-in-place-its-folder-file-room-model-and-effort-all-follow)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `30d26bee` |  | IDENTITY MOVED, STORAGE DID NOT. Editing only the frontmatter line `name: 'Nova'` to `name: 'Nova Prime'` in the Edit card and saving: the `Nova` tile was REPLACED by `NP \| Nova Prime \| Test teammate · @nova \| Online`, with no `An unhandled error has occurred.` and no refusal message. THE MODEL AND EFFORT CARRIED ACROSS: the card shows MODEL `haiku` (the same choice the old Name had - it read `Haiku` before) and EFFORT `Model default` (unchanged; no effort was ever stored, since Haiku advertises no ladder). O-DB CONFIRMS THE ROW MOVED RATHER THAN BEING DROPPED OR DUPLICATED: persona_models now holds `Nova Prime \| haiku` and `Ada \| haiku`, with NO row left under `Nova`. `users` lists BOTH `Nova` and `Nova Prime`, which is the documented ghost. A NEW Room named `Nova Prime` appeared in the sidebar and a NEW App_Data\work\Nova Prime\ folder was created, alongside the old ones. THE FILE ON DISK KEPT ITS ORIGINAL NAME: Teams still holds `Nova.md` (with Ada.md, Chief of Staff.md, Ghost.md) - no file was renamed, so identity and storage are not conflated (the mirror of PERSONALIFECYCLE-07). THE TEAMMATE RESTARTED UNDER ITS NEW IDENTITY: a fresh adapter row exists, pid 80140 created 01:50:16, replacing the previous one - so the new system prompt really takes effect. THE OLD ROOM IS INTACT AND QUIET: `Nova` is still in the sidebar, opens with members `You, Nova`, still holds its `are you there` message, and shows ZERO alert strips - the documented no-cascade limit, not filed. ONE TRANSIENT OBSERVATION worth recording: the card rendered immediately after Save briefly showed MODEL `Agent default`; reopening the card shows `haiku`. The stored row was correct throughout, so this is a stale render of the just-saved card rather than a lost setting - it would read as data loss to a user who did not reopen the card. |
+| 2026-09-15 | Pass *(earlier script)* | `30d26bee` |  | IDENTITY MOVED, STORAGE DID NOT. Editing only the frontmatter line `name: 'Nova'` to `name: 'Nova Prime'` in the Edit card and saving: the `Nova` tile was REPLACED by `NP \| Nova Prime \| Test agent · @nova \| Online`, with no `An unhandled error has occurred.` and no refusal message. THE MODEL AND EFFORT CARRIED ACROSS: the card shows MODEL `haiku` (the same choice the old Name had - it read `Haiku` before) and EFFORT `Model default` (unchanged; no effort was ever stored, since Haiku advertises no ladder). O-DB CONFIRMS THE ROW MOVED RATHER THAN BEING DROPPED OR DUPLICATED: persona_models now holds `Nova Prime \| haiku` and `Ada \| haiku`, with NO row left under `Nova`. `users` lists BOTH `Nova` and `Nova Prime`, which is the documented ghost. A NEW Room named `Nova Prime` appeared in the sidebar and a NEW App_Data\work\Nova Prime\ folder was created, alongside the old ones. THE FILE ON DISK KEPT ITS ORIGINAL NAME: Teams still holds `Nova.md` (with Ada.md, Chief of Staff.md, Ghost.md) - no file was renamed, so identity and storage are not conflated (the mirror of PERSONALIFECYCLE-07). THE AGENT RESTARTED UNDER ITS NEW IDENTITY: a fresh adapter row exists, pid 80140 created 01:50:16, replacing the previous one - so the new system prompt really takes effect. THE OLD ROOM IS INTACT AND QUIET: `Nova` is still in the sidebar, opens with members `You, Nova`, still holds its `are you there` message, and shows ZERO alert strips - the documented no-cascade limit, not filed. ONE TRANSIENT OBSERVATION worth recording: the card rendered immediately after Save briefly showed MODEL `Agent default`; reopening the card shows `haiku`. The stored row was correct throughout, so this is a stale render of the just-saved card rather than a lost setting - it would read as data loss to a user who did not reopen the card. |
 
 ### PERSONALIFECYCLE-22 — Health and presence repaint every open surface live, in every browser tab
 
@@ -3979,7 +3979,7 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `bd762d83` |  | THREE TABS, NONE RELOADED THROUGHOUT (navigation entries stayed at 1 in all three). Tab 1 and tab 2 on /teammates, tab 3 on the `Nova Prime` Room, each instrumented with a MutationObserver. KILLING THE ADAPTER REPAINTED ALL THREE WITHOUT ANY INTERACTION: tab 1's tile went to `Offline` carrying the reason `Its event reader ended unexpectedly: The agent process disconnected.`; tab 3's Room grew the red strip `Nova Prime is Offline: Its event reader ended unexpectedly: The agent process disconnected.` about 4.1 seconds after its observer armed; and TAB 2 - brought forward for the first time afterwards, with its JS marker still alive and no reload - read `Nova Prime:Offline` with the IDENTICAL tooltip text. So both surfaces and every tab agree; neither the tile nor the strip lags the other. THE RESTART, DRIVEN FROM TAB 1, WAS FOLLOWED BY THE UNTOUCHED TABS: tab 2's observer recorded the full sequence `Offline` (+4624ms) -> `Starting` (+4625ms) -> `Online` (+6143ms) without the tab being clicked, and tab 3's strip timeline shows it clearing to empty at +3831ms, ending with zero .member-health-alert elements. NO SUBSCRIPTION LEAK: navigating tab 3 away to /teammates and back to the Room TWICE, then waiting 20 seconds, produced no error in ANY tab - #blazor-error-ui computes display:none and the text `An unhandled error has occurred` appears in none of the three, with all three still at navigation entry 1. |
+| 2026-09-15 | Pass *(earlier script)* | `bd762d83` |  | THREE TABS, NONE RELOADED THROUGHOUT (navigation entries stayed at 1 in all three). Tab 1 and tab 2 on /agents, tab 3 on the `Nova Prime` Room, each instrumented with a MutationObserver. KILLING THE ADAPTER REPAINTED ALL THREE WITHOUT ANY INTERACTION: tab 1's tile went to `Offline` carrying the reason `Its event reader ended unexpectedly: The agent process disconnected.`; tab 3's Room grew the red strip `Nova Prime is Offline: Its event reader ended unexpectedly: The agent process disconnected.` about 4.1 seconds after its observer armed; and TAB 2 - brought forward for the first time afterwards, with its JS marker still alive and no reload - read `Nova Prime:Offline` with the IDENTICAL tooltip text. So both surfaces and every tab agree; neither the tile nor the strip lags the other. THE RESTART, DRIVEN FROM TAB 1, WAS FOLLOWED BY THE UNTOUCHED TABS: tab 2's observer recorded the full sequence `Offline` (+4624ms) -> `Starting` (+4625ms) -> `Online` (+6143ms) without the tab being clicked, and tab 3's strip timeline shows it clearing to empty at +3831ms, ending with zero .member-health-alert elements. NO SUBSCRIPTION LEAK: navigating tab 3 away to /agents and back to the Room TWICE, then waiting 20 seconds, produced no error in ANY tab - #blazor-error-ui computes display:none and the text `An unhandled error has occurred` appears in none of the three, with all three still at navigation entry 1. |
 
 ### PERSONALIFECYCLE-23 — An app restart brings every Persona back, orphans no process, and deliberately loses only in-memory state
 
@@ -3987,7 +3987,7 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `76e4662c` |  | SHUTDOWN ORPHANS NOTHING: with four adapters running (57616, 71580, 89084, 100824), stopping the app left ZERO rows matching claude-agent-acp immediately afterwards AND still zero ten seconds later, with node.exe back to the same 18 unrelated processes - so no adapter survives to hold a session open and keep spending. STARTUP IS COMPLETE AND AUTOMATIC: on restart all four Personas came back with NO human action - Ada, Chief of Staff, Ghost and Nova Prime all read `Online`, and the adapter count is 4 again. (The Offline -> Starting -> Online walk itself was not re-sampled here because the page could only be loaded after the server was listening, by which time the tiles had settled; that exact walk was captured directly in PERSONALIFECYCLE-06, -08, -10 and -22.) THE SIDEBAR IS IDENTICAL AND HAS NO DUPLICATES: alpha, echo, Nova, Chief of Staff, Ada, Ghost, Nova Prime - the same seven Rooms in the same order as before the restart - and the log contains ZERO `Created direct room` lines for this run, so Rooms were FOUND rather than minted again. THE TRANSCRIPT IS INTACT: the `Nova` Room still shows `You: are you there` as its only message, and App_Data\rooms holds the same single .jsonl at the same 151 bytes - no shrinkage, so no real data loss. NO `failed to start` WARNINGS for any teammate that was healthy before. |
+| 2026-09-15 | Pass *(earlier script)* | `76e4662c` |  | SHUTDOWN ORPHANS NOTHING: with four adapters running (57616, 71580, 89084, 100824), stopping the app left ZERO rows matching claude-agent-acp immediately afterwards AND still zero ten seconds later, with node.exe back to the same 18 unrelated processes - so no adapter survives to hold a session open and keep spending. STARTUP IS COMPLETE AND AUTOMATIC: on restart all four Personas came back with NO human action - Ada, Chief of Staff, Ghost and Nova Prime all read `Online`, and the adapter count is 4 again. (The Offline -> Starting -> Online walk itself was not re-sampled here because the page could only be loaded after the server was listening, by which time the tiles had settled; that exact walk was captured directly in PERSONALIFECYCLE-06, -08, -10 and -22.) THE SIDEBAR IS IDENTICAL AND HAS NO DUPLICATES: alpha, echo, Nova, Chief of Staff, Ada, Ghost, Nova Prime - the same seven Rooms in the same order as before the restart - and the log contains ZERO `Created direct room` lines for this run, so Rooms were FOUND rather than minted again. THE TRANSCRIPT IS INTACT: the `Nova` Room still shows `You: are you there` as its only message, and App_Data\rooms holds the same single .jsonl at the same 151 bytes - no shrinkage, so no real data loss. NO `failed to start` WARNINGS for any agent that was healthy before. |
 
 ### PERSONALIFECYCLE-24 — Five Personas (the Chief of Staff and four more) cost five adapter processes, all reach Online, and all exit on shutdown
 
@@ -3995,7 +3995,7 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `be5ab262` |  | Measured from a genuinely fresh start (app stopped, zero adapters, then launched). FOUR PERSONAS ON DISK - Ada.md, Chief of Staff.md, Ghost.md, Nova.md - whose frontmatter Names are Ada, Chief of Staff, Ghost and Nova Prime (the last renamed in PERSONALIFECYCLE-21). These stand in for the test's Nova/Ada/Bram/Cleo; the count and the per-Persona cost are what it measures. ALL FOUR REACHED `Online` VERY FAST: the server answered /teammates 5.8 seconds after launch, and by the time the page rendered all four tiles already read Online - so the last one settled within roughly 8 seconds against a 120-second bar, and none was stuck on `Starting`. EXACTLY FOUR ADAPTERS, one per Online Persona and no more, and FOUR tool servers on distinct loopback ports - 127.0.0.1:58861, :58862, :63925, :63926 - with ZERO bind/port/EADDRINUSE errors and ZERO `failed to start` warnings, so the per-Persona loopback server is not exhausting anything at this scale. THE UI STAYED USABLE: five navigations timed in the page (Nova Room, Chief of Staff Room, Teammates, Ada Room, Teammates) took 628, 1002, 998, 1005 and 992 ms - none over two seconds, and no stalls. SHUTDOWN LEAKS NOTHING: after stopping the app, zero claude-agent-acp rows immediately AND zero ten seconds later. ONE COUNT TO EXPLAIN: App_Data\work holds FIVE subfolders - Ada, Chief of Staff, Ghost, Nova and Nova Prime - not four. Each of the four CURRENT frontmatter Names has one; the extra `Nova` is the deliberate leftover from the rename in PERSONALIFECYCLE-21, and the same no-cascade rule that PERSONALIFECYCLE-19 states explicitly (a removed teammate's Work Dir is left behind). So it is not the `a host factory never ran` failure this condition guards against - that would show as FEWER folders than Personas. |
+| 2026-09-15 | Pass *(earlier script)* | `be5ab262` |  | Measured from a genuinely fresh start (app stopped, zero adapters, then launched). FOUR PERSONAS ON DISK - Ada.md, Chief of Staff.md, Ghost.md, Nova.md - whose frontmatter Names are Ada, Chief of Staff, Ghost and Nova Prime (the last renamed in PERSONALIFECYCLE-21). These stand in for the test's Nova/Ada/Bram/Cleo; the count and the per-Persona cost are what it measures. ALL FOUR REACHED `Online` VERY FAST: the server answered /agents 5.8 seconds after launch, and by the time the page rendered all four tiles already read Online - so the last one settled within roughly 8 seconds against a 120-second bar, and none was stuck on `Starting`. EXACTLY FOUR ADAPTERS, one per Online Persona and no more, and FOUR tool servers on distinct loopback ports - 127.0.0.1:58861, :58862, :63925, :63926 - with ZERO bind/port/EADDRINUSE errors and ZERO `failed to start` warnings, so the per-Persona loopback server is not exhausting anything at this scale. THE UI STAYED USABLE: five navigations timed in the page (Nova Room, Chief of Staff Room, Agents, Ada Room, Agents) took 628, 1002, 998, 1005 and 992 ms - none over two seconds, and no stalls. SHUTDOWN LEAKS NOTHING: after stopping the app, zero claude-agent-acp rows immediately AND zero ten seconds later. ONE COUNT TO EXPLAIN: App_Data\work holds FIVE subfolders - Ada, Chief of Staff, Ghost, Nova and Nova Prime - not four. Each of the four CURRENT frontmatter Names has one; the extra `Nova` is the deliberate leftover from the rename in PERSONALIFECYCLE-21, and the same no-cascade rule that PERSONALIFECYCLE-19 states explicitly (a removed agent's Work Dir is left behind). So it is not the `a host factory never ran` failure this condition guards against - that would show as FEWER folders than Personas. |
 
 ### PERSONALIFECYCLE-25 — An Adapter that needs authentication reports that as its own distinct reason
 
@@ -4005,9 +4005,9 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 | --- | --- | --- | --- | --- |
 | 2026-09-15 | Not run *(earlier script)* | `be5ab262` |  | NOT TESTED - recorded explicitly rather than passed, exactly as the Inconclusive clause requires. The test needs an adapter that is INSTALLED but whose Claude login is absent or expired. The only ways to produce that on this machine would be to log the operator out of their own Claude session or to move/delete their credential files, both of which the test forbids in terms (`Never log the tester out of their own Claude session to provoke it, and never move or delete credential files`), and no second OS user or never-logged-in machine is available in this harness. The adapter here is installed AND authenticated - four Personas start and reach Online, and the model catalog probe returns a real roster - so the precondition is the opposite of what the test needs. WHAT IS ALREADY KNOWN FROM THE ADJACENT TESTS, and is why this is a gap rather than a blind spot: the MISSING-adapter reason is verified word for word in PERSONALIFECYCLE-04 and -09 (`No ACP adapter is installed for Persona 'X'. Run tools/acp/install.ps1 …`) on the tile tooltip, the card and the Room strip, and the killed-adapter reason is verified in -12 (`Its event reader ended unexpectedly: …`). So two of the three failure classes are confirmed to be narrowed apart and to carry actionable text; only the authentication class is unverified. NOT MARKED PASS: the authentication reason string, its log Warning, and the `Model catalog probe skipped: the adapter needs authentication.` line have not been observed. |
 
-### PERSONALIFECYCLE-26 — MONEY: saving the Edit card with nothing changed does NOT restart the Teammate
+### PERSONALIFECYCLE-26 — MONEY: saving the Edit card with nothing changed does NOT restart the Agent
 
-File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-26--money-saving-the-edit-card-with-nothing-changed-does-not-restart-the-teammate)
+File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-26--money-saving-the-edit-card-with-nothing-changed-does-not-restart-the-agent)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -4019,11 +4019,11 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `63264ea7` |  | THE LABEL AND HINT ARE WORD FOR WORD what the test specifies: the textarea is labelled **Persona text** and the `.teammate-card-hint` under it reads `Markdown. This is the whole Persona file, front matter included, and becomes the teammate's system prompt. Saving restarts it, which clears what it remembers.` THE TEXTAREA HOLDS THE WHOLE FILE, frontmatter included - it opens with `---`, `name: 'Nova'`, `title: 'Coordinator'`, `alias: 'nova'`, `---`, then the body. THE RESTART IS REAL AND SINGULAR, confirmed on both oracles. Tile, sampled every 1.2s for 40 seconds (31 samples): `Starting` then back to `Online`, exactly that sequence and nothing else. Adapter processes BEFORE: 49796, 9784, 5632, all CreationDate 12:30:28. AFTER: 49796, 5632 unchanged and 9784 REPLACED by 34668 at 12:36:32 - exactly ONE new ProcessId, the old one gone, the other two Personas untouched. Session count went 5 -> 6: exactly ONE new `[session/create] … phase=register`, so this is NOT the `Two restarts from one Save` failure. THIS ALSO CALIBRATES THE ORACLE for -26 and -28: a genuine restart DOES replace the adapter process, so -26's unchanged ProcessIds are real evidence that a no-op save restarts nothing, rather than an artefact of a process that never changes. THE FILE ROUND-TRIPS: `App_Data/Teams/Nova.md` still carries its complete frontmatter block (`---`, name, title, alias, `---`), the original body line, and now ends with `Always begin every reply with the word PLUM.` THE INSTRUCTION TOOK EFFECT WITH NO APP RESTART: asked `Say hello in one sentence.` BEFORE the edit Nova answered `Hello! How can I help you today?` - no PLUM; asked the identical question AFTER, it answered `PLUM Hello, I'm Nova, your coordinator for this chat room.` So both halves pass - the restart half and the obedience half - and no INCONCLUSIVE fallback was needed. THE FRONTMATTER-GUARD CHECK THE TEST ASKS FOR WAS ALSO RUN: deleting the `title:` line and clicking **Save** was REFUSED INLINE with the parser's own reason - a `.composer-error` reading `Persona frontmatter is missing required field 'Title'.` The card stayed open with the text still in it, `Nova.md` on disk was left completely untouched (its `title:` line is still there), the session count stayed at 6 so nothing restarted, and there was no `An unhandled error has occurred.` The edit was then cancelled. |
+| 2026-09-15 | Pass *(earlier script)* | `63264ea7` |  | THE LABEL AND HINT ARE WORD FOR WORD what the test specifies: the textarea is labelled **Persona text** and the `.agent-profile-card-hint` under it reads `Markdown. This is the whole Persona file, front matter included, and becomes the agent's system prompt. Saving restarts it, which clears what it remembers.` THE TEXTAREA HOLDS THE WHOLE FILE, frontmatter included - it opens with `---`, `name: 'Nova'`, `title: 'Coordinator'`, `alias: 'nova'`, `---`, then the body. THE RESTART IS REAL AND SINGULAR, confirmed on both oracles. Tile, sampled every 1.2s for 40 seconds (31 samples): `Starting` then back to `Online`, exactly that sequence and nothing else. Adapter processes BEFORE: 49796, 9784, 5632, all CreationDate 12:30:28. AFTER: 49796, 5632 unchanged and 9784 REPLACED by 34668 at 12:36:32 - exactly ONE new ProcessId, the old one gone, the other two Personas untouched. Session count went 5 -> 6: exactly ONE new `[session/create] … phase=register`, so this is NOT the `Two restarts from one Save` failure. THIS ALSO CALIBRATES THE ORACLE for -26 and -28: a genuine restart DOES replace the adapter process, so -26's unchanged ProcessIds are real evidence that a no-op save restarts nothing, rather than an artefact of a process that never changes. THE FILE ROUND-TRIPS: `App_Data/Teams/Nova.md` still carries its complete frontmatter block (`---`, name, title, alias, `---`), the original body line, and now ends with `Always begin every reply with the word PLUM.` THE INSTRUCTION TOOK EFFECT WITH NO APP RESTART: asked `Say hello in one sentence.` BEFORE the edit Nova answered `Hello! How can I help you today?` - no PLUM; asked the identical question AFTER, it answered `PLUM Hello, I'm Nova, your coordinator for this chat room.` So both halves pass - the restart half and the obedience half - and no INCONCLUSIVE fallback was needed. THE FRONTMATTER-GUARD CHECK THE TEST ASKS FOR WAS ALSO RUN: deleting the `title:` line and clicking **Save** was REFUSED INLINE with the parser's own reason - a `.composer-error` reading `Persona frontmatter is missing required field 'Title'.` The card stayed open with the text still in it, `Nova.md` on disk was left completely untouched (its `title:` line is still there), the session count stayed at 6 so nothing restarted, and there was no `An unhandled error has occurred.` The edit was then cancelled. |
 
-### PERSONALIFECYCLE-28 — MONEY: changing the Model from Haiku to Sonnet restarts the session and clears what the Teammate remembers
+### PERSONALIFECYCLE-28 — MONEY: changing the Model from Haiku to Sonnet restarts the session and clears what the Agent remembers
 
-File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-28--money-changing-the-model-from-haiku-to-sonnet-restarts-the-session-and-clears-what-the-teammate-remembers)
+File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-28--money-changing-the-model-from-haiku-to-sonnet-restarts-the-session-and-clears-what-the-agent-remembers)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -4035,15 +4035,15 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `e36f75c0` |  | RUN ON SONNET, NOT HAIKU, which the test's own INCONCLUSIVE clause directs: Haiku advertises NO effort ladder on this adapter (the select offers only `Use the agent's default`, hint `This model offers no effort choice, so it will think as it normally does.`), so the test is not applicable there. On Sonnet the select offers Low, Medium, High, Xhigh, Max. Nothing above medium was ever selected. THE LADDER IS READ PER MODEL, NOT CACHED PER APP RUN - the same select, same app run, offers 6 entries under Sonnet and 1 under Haiku. EXACTLY ONE WAY TO SAY DEFAULT: the Effort options are `Use the agent's default`, Low, Medium, High, Xhigh, Max - the adapter's own `default` entry is NOT offered alongside the blank one (the Model select does carry both `Use the agent's default` and `Default (recommended)`, but this condition is about Effort). AN EFFORT CHANGE RESTARTS, exactly once: Effort was first saved as `low` to establish the precondition (the stored value was the blank default), then `Low` -> `Medium`. Tile sampled every 1.2s for 40s (38 samples): `Starting` then `Online`. Nova's adapter 19904 (12:45:00) GONE, replaced by 24636 (12:46:34) - ONE new ProcessId, Jarvis's and Zellandine's untouched - and `phase=register` went 9 -> 10, a clean 1:1. THE CARD READS THE STORED VALUE: `MODEL Sonnet` / `EFFORT Medium`. THE SESSION WAS REPLACED: `What word did I ask you to remember?` -> `PLUM I have no record of you asking me to remember a word.` A MODEL CHANGE CLEARS THE EFFORT SELECTION: with `Medium` selected (6 options), changing the Model reset the select to `Use the agent's default` - the level did not survive, so the human is not left holding a level they never chose for the new model. THE TRANSIENT PROBE HINT WAS CAUGHT VERBATIM, and catching it needed thought: switching Sonnet -> Haiku showed nothing because Haiku's catalog was already probed in this run and the swap was instant. Switching to an UNPROBED model instead and sampling every 150ms captured the whole sequence - at t=164ms the hint read exactly `Reading the effort levels this model offers…`, and at t=4382ms the ladder arrived (6 options) with the steady hint `How hard this teammate thinks. Changing it restarts the teammate, which clears what it remembers.` A 4.2-second probe, which is why it is invisible against a cached model. THE ABANDONED-PROBE RACE THE TEST ASKS ABOUT IS HANDLED: switching models twice within 400ms (an unprobed entry, then Haiku) settled on HAIKU's ladder - 1 option, `This model offers no effort choice…` - and stayed there for the full 11.5 seconds sampled. The superseded probe never landed on the current selection. NO WARNING: zero lines matching `not in the agent's advertised effort catalog`. O-DB: `persona_efforts` held `Nova \| medium` - a lowercase effort ID, not the display label `Medium`. **Cancel** was verified to discard: after cancelling the model change the card still read `MODEL sonnet` / `EFFORT medium`. TWO DEVIATIONS: (a) the remembered word used the no-persist wording from -28 (`…for this conversation only. Do NOT write it to any file and do NOT save it to your memory.`), without which Nova writes the word into the human's own memory directory and a fresh session recalls it from disk. (b) Step 17's restore sets Effort back to the blank default rather than `low`, because the same restore returns the Model to Haiku, which has no ladder at all - `persona_efforts` is now EMPTY and `persona_models` reads haiku for all three Personas, which is the correct precondition for every later test. That empty table is also independent confirmation at the storage layer that a Model change clears the Effort. The `PLUM` line added in -27 was removed in the same save, so `Nova.md` is back to its original text with its frontmatter intact. |
+| 2026-09-15 | Pass *(earlier script)* | `e36f75c0` |  | RUN ON SONNET, NOT HAIKU, which the test's own INCONCLUSIVE clause directs: Haiku advertises NO effort ladder on this adapter (the select offers only `Use the agent's default`, hint `This model offers no effort choice, so it will think as it normally does.`), so the test is not applicable there. On Sonnet the select offers Low, Medium, High, Xhigh, Max. Nothing above medium was ever selected. THE LADDER IS READ PER MODEL, NOT CACHED PER APP RUN - the same select, same app run, offers 6 entries under Sonnet and 1 under Haiku. EXACTLY ONE WAY TO SAY DEFAULT: the Effort options are `Use the agent's default`, Low, Medium, High, Xhigh, Max - the adapter's own `default` entry is NOT offered alongside the blank one (the Model select does carry both `Use the agent's default` and `Default (recommended)`, but this condition is about Effort). AN EFFORT CHANGE RESTARTS, exactly once: Effort was first saved as `low` to establish the precondition (the stored value was the blank default), then `Low` -> `Medium`. Tile sampled every 1.2s for 40s (38 samples): `Starting` then `Online`. Nova's adapter 19904 (12:45:00) GONE, replaced by 24636 (12:46:34) - ONE new ProcessId, Jarvis's and Zellandine's untouched - and `phase=register` went 9 -> 10, a clean 1:1. THE CARD READS THE STORED VALUE: `MODEL Sonnet` / `EFFORT Medium`. THE SESSION WAS REPLACED: `What word did I ask you to remember?` -> `PLUM I have no record of you asking me to remember a word.` A MODEL CHANGE CLEARS THE EFFORT SELECTION: with `Medium` selected (6 options), changing the Model reset the select to `Use the agent's default` - the level did not survive, so the human is not left holding a level they never chose for the new model. THE TRANSIENT PROBE HINT WAS CAUGHT VERBATIM, and catching it needed thought: switching Sonnet -> Haiku showed nothing because Haiku's catalog was already probed in this run and the swap was instant. Switching to an UNPROBED model instead and sampling every 150ms captured the whole sequence - at t=164ms the hint read exactly `Reading the effort levels this model offers…`, and at t=4382ms the ladder arrived (6 options) with the steady hint `How hard this agent thinks. Changing it restarts the agent, which clears what it remembers.` A 4.2-second probe, which is why it is invisible against a cached model. THE ABANDONED-PROBE RACE THE TEST ASKS ABOUT IS HANDLED: switching models twice within 400ms (an unprobed entry, then Haiku) settled on HAIKU's ladder - 1 option, `This model offers no effort choice…` - and stayed there for the full 11.5 seconds sampled. The superseded probe never landed on the current selection. NO WARNING: zero lines matching `not in the agent's advertised effort catalog`. O-DB: `persona_efforts` held `Nova \| medium` - a lowercase effort ID, not the display label `Medium`. **Cancel** was verified to discard: after cancelling the model change the card still read `MODEL sonnet` / `EFFORT medium`. TWO DEVIATIONS: (a) the remembered word used the no-persist wording from -28 (`…for this conversation only. Do NOT write it to any file and do NOT save it to your memory.`), without which Nova writes the word into the human's own memory directory and a fresh session recalls it from disk. (b) Step 17's restore sets Effort back to the blank default rather than `low`, because the same restore returns the Model to Haiku, which has no ladder at all - `persona_efforts` is now EMPTY and `persona_models` reads haiku for all three Personas, which is the correct precondition for every later test. That empty table is also independent confirmation at the storage layer that a Model change clears the Effort. The `PLUM` line added in -27 was removed in the same save, so `Nova.md` is back to its original text with its frontmatter intact. |
 
-### PERSONALIFECYCLE-30 — MONEY: what a Teammate was told in one Room does not leak into another, one process serves both, and replies land in the right Room
+### PERSONALIFECYCLE-30 — MONEY: what an Agent was told in one Room does not leak into another, one process serves both, and replies land in the right Room
 
-File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-30--money-what-a-teammate-was-told-in-one-room-does-not-leak-into-another-one-process-serves-both-and-replies-land-in-the-right-room)
+File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.md#personalifecycle-30--money-what-an-agent-was-told-in-one-room-does-not-leak-into-another-one-process-serves-both-and-replies-land-in-the-right-room)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `4f2c714d` |  | THE KNOWN LIMIT IS CONFIRMED AND IS **NOT** FILED, as the NOTE insists. In the two-member Room `You, Nova` the human said `My favourite fruit is a quince. Reply with just OK.` and Nova answered `OK`. Asked in a SEPARATE group Room (`You, echo, Nova`) `@Nova what is my favourite fruit?`, Nova answered `Your favourite fruit is a quince.` - knowledge carried from a Room the question was not asked in. That is the documented one-session-per-Persona design (a session per Persona-and-Room was rejected on cost), so it is recorded as the KNOWN LIMIT and no issue was raised. Nova's session had been restarted moments earlier by -29's restore, so the answer came from the new statement rather than from `QUINCE` earlier in that Room's transcript - a restart clears session memory and there is no transcript replay, which -28 established directly. EVERY ROUTING CONDITION - the part that actually decides this test - PASSES. The reply appeared in the GROUP Room where the question was asked. NO STRAY REPLY reached the two-member Room: it held 26 rows before the group question and 26 after, still ending `You :: My favourite fruit is a quince. Reply with just OK.` / `Nova :: OK`. NO REPLY LANDED IN ANY ROOM NOVA IS NOT A MEMBER OF: every one of the 11 `.jsonl` transcripts was parsed for `quince`, and it appears in exactly three - the two-member Room (the human's own two messages), the group Room (Nova's one reply, filed there and nowhere else), and one older Room where `quince` was the APPTOOLS-22 hook sentinel, unrelated to this test. So the Transcript and the UI agree about where every message lives. ONE SESSION PER PERSONA HOLDS: exactly THREE `claude-agent-acp` node.exe processes for the three Personas (Nova, Jarvis, Zellandine) while Nova is a member of several Rooms - the cost per teammate does not scale with Rooms. Each of the 11 Rooms has its own `.jsonl`. |
+| 2026-09-15 | Pass *(earlier script)* | `4f2c714d` |  | THE KNOWN LIMIT IS CONFIRMED AND IS **NOT** FILED, as the NOTE insists. In the two-member Room `You, Nova` the human said `My favourite fruit is a quince. Reply with just OK.` and Nova answered `OK`. Asked in a SEPARATE group Room (`You, echo, Nova`) `@Nova what is my favourite fruit?`, Nova answered `Your favourite fruit is a quince.` - knowledge carried from a Room the question was not asked in. That is the documented one-session-per-Persona design (a session per Persona-and-Room was rejected on cost), so it is recorded as the KNOWN LIMIT and no issue was raised. Nova's session had been restarted moments earlier by -29's restore, so the answer came from the new statement rather than from `QUINCE` earlier in that Room's transcript - a restart clears session memory and there is no transcript replay, which -28 established directly. EVERY ROUTING CONDITION - the part that actually decides this test - PASSES. The reply appeared in the GROUP Room where the question was asked. NO STRAY REPLY reached the two-member Room: it held 26 rows before the group question and 26 after, still ending `You :: My favourite fruit is a quince. Reply with just OK.` / `Nova :: OK`. NO REPLY LANDED IN ANY ROOM NOVA IS NOT A MEMBER OF: every one of the 11 `.jsonl` transcripts was parsed for `quince`, and it appears in exactly three - the two-member Room (the human's own two messages), the group Room (Nova's one reply, filed there and nowhere else), and one older Room where `quince` was the APPTOOLS-22 hook sentinel, unrelated to this test. So the Transcript and the UI agree about where every message lives. ONE SESSION PER PERSONA HOLDS: exactly THREE `claude-agent-acp` node.exe processes for the three Personas (Nova, Jarvis, Zellandine) while Nova is a member of several Rooms - the cost per agent does not scale with Rooms. Each of the 11 Rooms has its own `.jsonl`. |
 
 ### PERSONALIFECYCLE-31 — MONEY: the per-Persona token Budget shows as Degraded with its reason, and any Human Message clears it
 
@@ -4051,7 +4051,7 @@ File: [`docs/engineering/manual-tests/persona-lifecycle.md`](persona-lifecycle.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-09-15 | Pass *(earlier script)* | `4f2c714d` |  | Run on a FRESH app started with `Team__Acp__TokenBudget=1` and `Team__AgentMessageBudget=4` - the cap the NOTE calls mandatory was in force throughout. DEVIATION: the second Persona is `Jarvis`, not `Ada`; the test needs two Personas in one Room at Haiku/low and names Ada only as an example. THE BADGE IS DEGRADED, NOT OFFLINE, AND IT CARRIES ITS REASON ON ALL THREE SURFACES, word for word as specified. Tile: `Jarvis Researcher · @jar Degraded`, reached 12 seconds into the exchange (sampled every 2s from the moment the human spoke; both tiles were Online at 2s, 6s and 8s, so the flip is real and observed, not inferred). Tooltip (the tile's `title`): `The per-Persona token Budget of 1 is spent; no more Turns until a Human speaks.` Card: a `.teammate-card-reason` element with exactly that same sentence. Room strip: a `.member-health-alert-item` reading `Jarvis is Degraded: The per-Persona token Budget of 1 is spent; no more Turns until a Human speaks.` - the `<Name> is Degraded: …` form the test specifies. THE NUMBER IS THE CONFIGURED 1, so the double-underscore override was read correctly. THE CONSOLE WARNING IS EXACT AND AT WARNING LEVEL: `warn: Agency.Huddle.App.Acp.PersonaRunner` / `Persona 'Jarvis' has spent its token budget of 1 and is taking no more turns until a human speaks to it.` THE AGENT DID NOT GO SILENT WITHOUT A BADGE - which is the whole point of the test - and it did NOT read Offline, so no pointless Restart is invited. A HUMAN MESSAGE CLEARS IT, fast and completely: typing `hello` in the Room returned the tile to **Online** within 2 seconds, the tooltip reason became null, the `.teammate-card-reason` element disappeared entirely, and the Room's health strip emptied - no element anywhere on /teammates still contained the phrase `token Budget`. Sampled for a further 66 seconds with no relapse. So the cap is per unattended run, not permanent. THE DEGRADED BADGE WAS NEVER RAISED FOR A SPENT ROOM BUDGET: at the moment Jarvis went Degraded the Room's own note read `3 of 4 agent replies since you last spoke.` - the Room Budget was NOT spent, so the two states are cleanly separated and the badge is not being conflated with the pause. ONE PASS CONDITION WAS NOT REACHABLE IN THIS RUN, recorded rather than glossed: the exchange never hit the per-Room Budget of 4, because a token Budget of 1 bites first by design - it stopped at 3 replies. The `Agents have sent 4 replies since you last spoke, and are paused.` prompt is therefore not observed here. That same pause, and the fact that it leaves every member HEALTHY, was proven directly in APPTOOLS-19 (the tile stayed **Online** at a fully spent Room Budget) and is exercised again in PERSONALIFECYCLE-32, where the token cap is disabled and the Room Budget is the only backstop. |
+| 2026-09-15 | Pass *(earlier script)* | `4f2c714d` |  | Run on a FRESH app started with `Team__Acp__TokenBudget=1` and `Team__AgentMessageBudget=4` - the cap the NOTE calls mandatory was in force throughout. DEVIATION: the second Persona is `Jarvis`, not `Ada`; the test needs two Personas in one Room at Haiku/low and names Ada only as an example. THE BADGE IS DEGRADED, NOT OFFLINE, AND IT CARRIES ITS REASON ON ALL THREE SURFACES, word for word as specified. Tile: `Jarvis Researcher · @jar Degraded`, reached 12 seconds into the exchange (sampled every 2s from the moment the human spoke; both tiles were Online at 2s, 6s and 8s, so the flip is real and observed, not inferred). Tooltip (the tile's `title`): `The per-Persona token Budget of 1 is spent; no more Turns until a Human speaks.` Card: a `.agent-profile-card-reason` element with exactly that same sentence. Room strip: a `.member-health-alert-item` reading `Jarvis is Degraded: The per-Persona token Budget of 1 is spent; no more Turns until a Human speaks.` - the `<Name> is Degraded: …` form the test specifies. THE NUMBER IS THE CONFIGURED 1, so the double-underscore override was read correctly. THE CONSOLE WARNING IS EXACT AND AT WARNING LEVEL: `warn: Agency.Huddle.App.Acp.PersonaRunner` / `Persona 'Jarvis' has spent its token budget of 1 and is taking no more turns until a human speaks to it.` THE AGENT DID NOT GO SILENT WITHOUT A BADGE - which is the whole point of the test - and it did NOT read Offline, so no pointless Restart is invited. A HUMAN MESSAGE CLEARS IT, fast and completely: typing `hello` in the Room returned the tile to **Online** within 2 seconds, the tooltip reason became null, the `.agent-profile-card-reason` element disappeared entirely, and the Room's health strip emptied - no element anywhere on /agents still contained the phrase `token Budget`. Sampled for a further 66 seconds with no relapse. So the cap is per unattended run, not permanent. THE DEGRADED BADGE WAS NEVER RAISED FOR A SPENT ROOM BUDGET: at the moment Jarvis went Degraded the Room's own note read `3 of 4 agent replies since you last spoke.` - the Room Budget was NOT spent, so the two states are cleanly separated and the badge is not being conflated with the pause. ONE PASS CONDITION WAS NOT REACHABLE IN THIS RUN, recorded rather than glossed: the exchange never hit the per-Room Budget of 4, because a token Budget of 1 bites first by design - it stopped at 3 replies. The `Agents have sent 4 replies since you last spoke, and are paused.` prompt is therefore not observed here. That same pause, and the fact that it leaves every member HEALTHY, was proven directly in APPTOOLS-19 (the tile stayed **Online** at a fully spent Room Budget) and is exercised again in PERSONALIFECYCLE-32, where the token cap is disabled and the Room Budget is the only backstop. |
 
 ### PERSONALIFECYCLE-32 — MONEY: a token Budget of zero disables the per-Persona cap, and the per-Room Budget still stops the exchange
 
@@ -4212,16 +4212,16 @@ File: [`docs/engineering/manual-tests/adapters.md`](adapters.md#adapters-01--two
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### ADAPTERS-02 — A mock Adapter's reply lands whole in the Room and the Transcript, and the other Teammate is unaffected
+### ADAPTERS-02 — A mock Adapter's reply lands whole in the Room and the Transcript, and the other Agent is unaffected
 
-File: [`docs/engineering/manual-tests/adapters.md`](adapters.md#adapters-02--a-mock-adapters-reply-lands-whole-in-the-room-and-the-transcript-and-the-other-teammate-is-unaffected)
+File: [`docs/engineering/manual-tests/adapters.md`](adapters.md#adapters-02--a-mock-adapters-reply-lands-whole-in-the-room-and-the-transcript-and-the-other-agent-is-unaffected)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### ADAPTERS-03 — Changing a Teammate's Adapter resets Model and Effort, says so, and restarts the session
+### ADAPTERS-03 — Changing an Agent's Adapter resets Model and Effort, says so, and restarts the session
 
-File: [`docs/engineering/manual-tests/adapters.md`](adapters.md#adapters-03--changing-a-teammates-adapter-resets-model-and-effort-says-so-and-restarts-the-session)
+File: [`docs/engineering/manual-tests/adapters.md`](adapters.md#adapters-03--changing-an-agents-adapter-resets-model-and-effort-says-so-and-restarts-the-session)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -4243,9 +4243,9 @@ File: [`docs/engineering/manual-tests/skills.md`](skills.md#skills-01--the-chief
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### SKILLS-02 — Approve creates the Teammates, wakes the Chief of Staff, and it opens a seeded Room
+### SKILLS-02 — Approve creates the Agents, wakes the Chief of Staff, and it opens a seeded Room
 
-File: [`docs/engineering/manual-tests/skills.md`](skills.md#skills-02--approve-creates-the-teammates-wakes-the-chief-of-staff-and-it-opens-a-seeded-room)
+File: [`docs/engineering/manual-tests/skills.md`](skills.md#skills-02--approve-creates-the-agents-wakes-the-chief-of-staff-and-it-opens-a-seeded-room)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -4287,9 +4287,9 @@ File: [`docs/engineering/manual-tests/skill-packs.md`](skill-packs.md#skillpacks
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### SKILLPACKS-02 — Choosing a Pack copies its Skills, then changes the Teammate
+### SKILLPACKS-02 — Choosing a Pack copies its Skills, then changes the Agent
 
-File: [`docs/engineering/manual-tests/skill-packs.md`](skill-packs.md#skillpacks-02--choosing-a-pack-copies-its-skills-then-changes-the-teammate)
+File: [`docs/engineering/manual-tests/skill-packs.md`](skill-packs.md#skillpacks-02--choosing-a-pack-copies-its-skills-then-changes-the-agent)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -4301,9 +4301,9 @@ File: [`docs/engineering/manual-tests/skill-packs.md`](skill-packs.md#skillpacks
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### SKILLPACKS-04 — The move turns a copy of a real data folder into SKILLS.md and changes no Teammate
+### SKILLPACKS-04 — The move turns a copy of a real data folder into SKILLS.md and changes no Agent
 
-File: [`docs/engineering/manual-tests/skill-packs.md`](skill-packs.md#skillpacks-04--the-move-turns-a-copy-of-a-real-data-folder-into-skillsmd-and-changes-no-teammate)
+File: [`docs/engineering/manual-tests/skill-packs.md`](skill-packs.md#skillpacks-04--the-move-turns-a-copy-of-a-real-data-folder-into-skillsmd-and-changes-no-agent)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -4315,9 +4315,9 @@ File: [`docs/engineering/manual-tests/skill-packs.md`](skill-packs.md#skillpacks
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### SKILLPACKS-06 — A pointer on an unplugged drive shows Not downloaded, and Teammates keep working
+### SKILLPACKS-06 — A pointer on an unplugged drive shows Not downloaded, and Agents keep working
 
-File: [`docs/engineering/manual-tests/skill-packs.md`](skill-packs.md#skillpacks-06--a-pointer-on-an-unplugged-drive-shows-not-downloaded-and-teammates-keep-working)
+File: [`docs/engineering/manual-tests/skill-packs.md`](skill-packs.md#skillpacks-06--a-pointer-on-an-unplugged-drive-shows-not-downloaded-and-agents-keep-working)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -4388,7 +4388,7 @@ File: [`docs/engineering/manual-tests/work-mode.md`](work-mode.md#workmode-08--a
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-10-01 | Pass *(earlier script)* | `3bf2640d` |  | 2026-10-01, in the app, Haiku, Accept edits, on `017d684` (the `SerializeRaw` fix). One `session/request_permission` for the real `~/.claude/huddle-wm-test.txt`; the app logged "Refused a tool call writing to …", answered `reject`, the tool call failed, the file does not exist and the Teammate said permission was denied. **The first two runs failed** (Accept edits, then the Adapter's default): the app answered `allow-once` and the file was created, because `SerializeRaw` turned `rawInput` into `{"file_path":[]}`, so the guard never saw a path. That bug predates Work Modes and is fixed on this branch |
+| 2026-10-01 | Pass *(earlier script)* | `3bf2640d` |  | 2026-10-01, in the app, Haiku, Accept edits, on `017d684` (the `SerializeRaw` fix). One `session/request_permission` for the real `~/.claude/huddle-wm-test.txt`; the app logged "Refused a tool call writing to …", answered `reject`, the tool call failed, the file does not exist and the Agent said permission was denied. **The first two runs failed** (Accept edits, then the Adapter's default): the app answered `allow-once` and the file was created, because `SerializeRaw` turned `rawInput` into `{"file_path":[]}`, so the guard never saw a path. That bug predates Work Modes and is fixed on this branch |
 
 ### WORKMODE-09 — A mode is applied again after an app restart
 
@@ -4424,9 +4424,9 @@ File: [`docs/engineering/manual-tests/questions.md`](questions.md#questions-03--
 | --- | --- | --- | --- | --- |
 | 2026-10-01 | Pass *(earlier script)* | `c83491ea` |  | | 2026-10-01, in the app, Haiku. Sable answered Paris and the Python/JavaScript question directly, no card. Weak evidence: with the description deferred (QUESTIONS-01) the model could not have been restrained by it |
 
-### QUESTIONS-04 — The same on a Teammate running on `agency-acp`
+### QUESTIONS-04 — The same on an Agent running on `agency-acp`
 
-File: [`docs/engineering/manual-tests/questions.md`](questions.md#questions-04--the-same-on-a-teammate-running-on-agency-acp)
+File: [`docs/engineering/manual-tests/questions.md`](questions.md#questions-04--the-same-on-an-agent-running-on-agency-acp)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -4439,9 +4439,9 @@ File: [`docs/engineering/manual-tests/questions.md`](questions.md#questions-05--
 | --- | --- | --- | --- | --- |
 | 2026-10-01 | Pass *(earlier script)* | `c83491ea` |  | | 2026-10-01, in the app, Room of Coach, Nova, Sable. One tap on Blue posted `> What's your favourite colour?`, a blank line, `Blue`, `@Coach`; only Coach replied (Nova's and Sable's Transcripts hold nothing from it), and Nova, asked next, read the answer from the Transcript. A multi-select and ranking card also posted `Mon, Fri` and `1. Speed · 2. Cost · 3. Quality` exactly |
 
-### QUESTIONS-06 — A Claude Teammate has no built-in `AskUserQuestion`
+### QUESTIONS-06 — A Claude Agent has no built-in `AskUserQuestion`
 
-File: [`docs/engineering/manual-tests/questions.md`](questions.md#questions-06--a-claude-teammate-has-no-built-in-askuserquestion)
+File: [`docs/engineering/manual-tests/questions.md`](questions.md#questions-06--a-claude-agent-has-no-built-in-askuserquestion)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -4479,7 +4479,7 @@ File: [`docs/engineering/manual-tests/questions.md`](questions.md#questions-10--
 | --- | --- | --- | --- | --- |
 | 2026-10-01 | Pass *(earlier script)* | `198d8cc0` |  | | 2026-10-01, in the app, Haiku, `UserInputTimeoutSeconds=30`, idle bound 20 s. The card appeared at 06:45:32 and was gone at the next check, about 35 s later; Coach said the tool use *"didn't go through"* and offered to ask again, the Turn ended, and there was no hung-Adapter line or failure alert. With the default `Acp:AdvertiseElicitation=true` and no other flag, in addition: when asked naturally to plan a workout with both tools available, Haiku chose `ask_human` (a three-Question `QuestionCard`) over `AskUserQuestion`, one sample |
 
-## Prompt blocks: an image the Human names reaches the Teammate
+## Prompt blocks: an image the Human names reaches the Agent
 
 ### PROMPTBLOCKS-01 — A named image is seen, without a tool call
 
@@ -4495,7 +4495,7 @@ File: [`docs/engineering/manual-tests/prompt-blocks.md`](prompt-blocks.md#prompt
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-10-01 | Pass *(earlier script)* | `392b1c88` |  | 2026-10-01, in the app, Haiku, one sample. Six PNGs named in one Message: the Teammate said it could see 4 pictures and listed Red, Blue, Yellow, Purple (the first four); the log held one line ending `ImageCountCap=2`. |
+| 2026-10-01 | Pass *(earlier script)* | `392b1c88` |  | 2026-10-01, in the app, Haiku, one sample. Six PNGs named in one Message: the Agent said it could see 4 pictures and listed Red, Blue, Yellow, Purple (the first four); the log held one line ending `ImageCountCap=2`. |
 
 ### PROMPTBLOCKS-03 — An image over the size limit is a path line
 
@@ -4503,7 +4503,7 @@ File: [`docs/engineering/manual-tests/prompt-blocks.md`](prompt-blocks.md#prompt
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-10-01 | Pass *(earlier script)* | `392b1c88` |  | 2026-10-01, in the app, one sample. A 4.3 MB PNG named in a Message: the Teammate replied `PATHONLY`, the Turn completed, and the log held one Information line ending `TooLarge=1` with no path in it. |
+| 2026-10-01 | Pass *(earlier script)* | `392b1c88` |  | 2026-10-01, in the app, one sample. A 4.3 MB PNG named in a Message: the Agent replied `PATHONLY`, the Turn completed, and the log held one Information line ending `TooLarge=1` with no path in it. |
 
 ### PROMPTBLOCKS-04 — An image mentioned only in catch-up is not re-sent
 
@@ -4518,7 +4518,7 @@ File: [`docs/engineering/manual-tests/prompt-blocks.md`](prompt-blocks.md#prompt
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-10-01 | Pass *(earlier script)* | `392b1c88` |  | 2026-10-01, in the app, Haiku, one sample, relaunched with `Adapters:0` (`Id=claude`, `Command=node`, `PromptBlocks=false`; the locator found the stock adapter). A fresh PNG's banner text was asked for with no tools: the Teammate replied `CANNOT SEE`. |
+| 2026-10-01 | Pass *(earlier script)* | `392b1c88` |  | 2026-10-01, in the app, Haiku, one sample, relaunched with `Adapters:0` (`Id=claude`, `Command=node`, `PromptBlocks=false`; the locator found the stock adapter). A fresh PNG's banner text was asked for with no tools: the Agent replied `CANNOT SEE`. |
 
 ### PROMPTBLOCKS-06 — An Adapter that never advertised image gets a path line
 
@@ -4550,16 +4550,16 @@ File: [`docs/engineering/manual-tests/adapter-commands.md`](adapter-commands.md#
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### COMMANDS-04 — The card lists what the Teammate offers, and only while it is running
+### COMMANDS-04 — The card lists what the Agent offers, and only while it is running
 
-File: [`docs/engineering/manual-tests/adapter-commands.md`](adapter-commands.md#commands-04--the-card-lists-what-the-teammate-offers-and-only-while-it-is-running)
+File: [`docs/engineering/manual-tests/adapter-commands.md`](adapter-commands.md#commands-04--the-card-lists-what-the-agent-offers-and-only-while-it-is-running)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### COMMANDS-05 — Stop during a compaction leaves the Teammate usable
+### COMMANDS-05 — Stop during a compaction leaves the Agent usable
 
-File: [`docs/engineering/manual-tests/adapter-commands.md`](adapter-commands.md#commands-05--stop-during-a-compaction-leaves-the-teammate-usable)
+File: [`docs/engineering/manual-tests/adapter-commands.md`](adapter-commands.md#commands-05--stop-during-a-compaction-leaves-the-agent-usable)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -4813,9 +4813,9 @@ File: [`docs/engineering/manual-tests/file-changes.md`](file-changes.md#fm-4--wa
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### FM-5 — Renaming a watched Teammate does not spuriously list anything
+### FM-5 — Renaming a watched Agent does not spuriously list anything
 
-File: [`docs/engineering/manual-tests/file-changes.md`](file-changes.md#fm-5--renaming-a-watched-teammate-does-not-spuriously-list-anything)
+File: [`docs/engineering/manual-tests/file-changes.md`](file-changes.md#fm-5--renaming-a-watched-agent-does-not-spuriously-list-anything)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -4957,9 +4957,9 @@ File: [`docs/engineering/manual-tests/team-chats.md`](team-chats.md#teamchats-01
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### TEAMCHATS-02 — A Teammate who joins the Team is invited into the Team Room and the Transcript says so
+### TEAMCHATS-02 — An Agent who joins the Team is invited into the Team Room and the Transcript says so
 
-File: [`docs/engineering/manual-tests/team-chats.md`](team-chats.md#teamchats-02--a-teammate-who-joins-the-team-is-invited-into-the-team-room-and-the-transcript-says-so)
+File: [`docs/engineering/manual-tests/team-chats.md`](team-chats.md#teamchats-02--an-agent-who-joins-the-team-is-invited-into-the-team-room-and-the-transcript-says-so)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -5101,9 +5101,9 @@ File: [`docs/engineering/manual-tests/team-pages.md`](team-pages.md#tp-t1--membe
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### TP-T2 — Remove from team keeps the Teammate
+### TP-T2 — Remove from team keeps the Agent
 
-File: [`docs/engineering/manual-tests/team-pages.md`](team-pages.md#tp-t2--remove-from-team-keeps-the-teammate)
+File: [`docs/engineering/manual-tests/team-pages.md`](team-pages.md#tp-t2--remove-from-team-keeps-the-agent)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -5413,9 +5413,9 @@ File: [`docs/engineering/manual-tests/at-tagging.md`](at-tagging.md#attag-01--th
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### ATTAG-02 — Picking a Teammate writes its Name and wakes only that Teammate (AT-M2)
+### ATTAG-02 — Picking an Agent writes its Name and wakes only that Agent (AT-M2)
 
-File: [`docs/engineering/manual-tests/at-tagging.md`](at-tagging.md#attag-02--picking-a-teammate-writes-its-name-and-wakes-only-that-teammate-at-m2)
+File: [`docs/engineering/manual-tests/at-tagging.md`](at-tagging.md#attag-02--picking-an-agent-writes-its-name-and-wakes-only-that-agent-at-m2)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -5492,9 +5492,9 @@ File: [`docs/engineering/manual-tests/at-tagging.md`](at-tagging.md#attag-12--co
 
 ## Document history: the byline, the History and the Recent edits panel
 
-### DOCHISTORY-01 — Two Teammates create and edit a document; the byline and the panel show both
+### DOCHISTORY-01 — Two Agents create and edit a document; the byline and the panel show both
 
-File: [`docs/engineering/manual-tests/doc-history.md`](doc-history.md#dochistory-01--two-teammates-create-and-edit-a-document-the-byline-and-the-panel-show-both)
+File: [`docs/engineering/manual-tests/doc-history.md`](doc-history.md#dochistory-01--two-agents-create-and-edit-a-document-the-byline-and-the-panel-show-both)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -5534,16 +5534,16 @@ File: [`docs/engineering/manual-tests/doc-history.md`](doc-history.md#dochistory
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### DOCHISTORY-07 — A Teammate offered log_change gets the Stop hook, and existing settings stay
+### DOCHISTORY-07 — An Agent offered log_change gets the Stop hook, and existing settings stay
 
-File: [`docs/engineering/manual-tests/doc-history.md`](doc-history.md#dochistory-07--a-teammate-offered-log_change-gets-the-stop-hook-and-existing-settings-stay)
+File: [`docs/engineering/manual-tests/doc-history.md`](doc-history.md#dochistory-07--an-agent-offered-log_change-gets-the-stop-hook-and-existing-settings-stay)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### DOCHISTORY-08 — The hook sends a Teammate back to log, and leaves other Turns alone
+### DOCHISTORY-08 — The hook sends an Agent back to log, and leaves other Turns alone
 
-File: [`docs/engineering/manual-tests/doc-history.md`](doc-history.md#dochistory-08--the-hook-sends-a-teammate-back-to-log-and-leaves-other-turns-alone)
+File: [`docs/engineering/manual-tests/doc-history.md`](doc-history.md#dochistory-08--the-hook-sends-an-agent-back-to-log-and-leaves-other-turns-alone)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -5638,9 +5638,9 @@ File: [`docs/engineering/manual-tests/helpers.md`](helpers.md#helpers-02--save-a
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### HELPERS-03 — A Teammate's Task that leaves the team gets the gate (U-1, U-5)
+### HELPERS-03 — An Agent's Task that leaves the team gets the gate (U-1, U-5)
 
-File: [`docs/engineering/manual-tests/helpers.md`](helpers.md#helpers-03--a-teammates-task-that-leaves-the-team-gets-the-gate-u-1-u-5)
+File: [`docs/engineering/manual-tests/helpers.md`](helpers.md#helpers-03--an-agents-task-that-leaves-the-team-gets-the-gate-u-1-u-5)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -5738,9 +5738,9 @@ File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-08--a-card-expands-
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### FEED-09 — Clicking an avatar filters the Feed to that Teammate
+### FEED-09 — Clicking an avatar filters the Feed to that Agent
 
-File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-09--clicking-an-avatar-filters-the-feed-to-that-teammate)
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-09--clicking-an-avatar-filters-the-feed-to-that-agent)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |

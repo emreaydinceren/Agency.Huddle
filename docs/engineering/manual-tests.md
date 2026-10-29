@@ -72,7 +72,7 @@ window, and relaunch. The variable lives only in that terminal session — reope
 you must set it again.
 
 > [!NOTE]
-> Opening a Model or Effort picker — the New/Edit teammate form — spawns one short-lived probe
+> Opening a Model or Effort picker — the New/Edit agent form — spawns one short-lived probe
 > Adapter even with the guard on. That is by design: the probe never starts a Turn, so it spends
 > nothing, and gating it on `Acp:Enabled` would leave the picker empty in the default
 > configuration (`docs/engineering/rules.md` has the reasoning). Expect that row to appear and
@@ -93,7 +93,7 @@ Three more rules that cost money when broken:
 
 ### 0.3 The Model and Effort convention
 
-These are the app's own per-Persona settings on the Teammate card, not your own tooling. They
+These are the app's own per-Persona settings on the Agent card, not your own tooling. They
 decide what every paid test costs, so treat them as binding.
 
 | Situation | Model | Effort |
@@ -175,10 +175,10 @@ These are documented decisions in [Known limits](known-limits.md). Observing one
 | Changing the Theme repaints with no page load | `MudThemeProvider` lives in the render tree, so a Theme change is an ordinary re-render. The full reload the CSS-based system needed is gone. |
 | Every Theme is half of a light and dark pair | A Theme is one palette in one mode, so each design ships as two Themes — `Huddle Light` and `Huddle Dark`, `Lumen Light` and `Lumen Dark`, and so on. There is no High contrast group. |
 | The same Theme appears in a second browser and a private window | The choice lives in `appearance.json`, per installation, not in `localStorage`. |
-| Renaming a Teammate leaves its old Rooms and Transcripts behind | Removing or renaming a Persona does not cascade into the chat surface. Only its Model and Effort follow. |
+| Renaming an Agent leaves its old Rooms and Transcripts behind | Removing or renaming a Persona does not cascade into the chat surface. Only its Model and Effort follow. |
 | Stopping an Agent stops it in one Room only | Stop ends that Persona's session in that Room (one session per Persona per Room, ADR-0024); its sessions in other Rooms keep running. |
 | Tool activity never appears in scrollback | It belongs to the Draft and goes when the Draft does. |
-| An editing Prompt does not restart a running Teammate | A `Next session` Prompt is deliberately inert until that Teammate restarts. The badge says so. |
+| An editing Prompt does not restart a running Agent | A `Next session` Prompt is deliberately inert until that Agent restarts. The badge says so. |
 | The Model picker is stale after upgrading the Adapter | The catalog is probed once per app run and cached. Restart the app. |
 | A `node` row appears in `O-ADAPTERS` right after New/Edit, in a lane the guard says spends nothing | The Model/Effort probe runs even with `Acp:Enabled` false — it never starts a Turn, so it costs nothing. Only a row that persists is a real Adapter. |
 | `mcp__team__` appears in tool names | Deliberate. The `Team:` config root and the `mcp__team__` prefix are the two identifiers that keep the old code name. |
@@ -208,14 +208,14 @@ the [Tracker](manual-tests/tracker.md), never here.
 
 ### Areas
 
-- [Adapter commands](manual-tests/adapter-commands.md): `@Nova /compact` end to end, a bare slash staying Huddle's own, a disallowed command, the Teammate card's command line.
+- [Adapter commands](manual-tests/adapter-commands.md): `@Nova /compact` end to end, a bare slash staying Huddle's own, a disallowed command, the Agent card's command line.
 - [Adapters](manual-tests/adapters.md): choosing an Adapter per Persona and running two at once.
 - [App Tools](manual-tests/app-tools.md): the Tools a real model calls through progressive discovery.
 - [Appearance and Themes](manual-tests/appearance-theme.md): the Appearance tab, the Theme list and the accent colour.
 - [Avatar library](manual-tests/avatar-library.md): choosing a face from the library, its picker and filters.
 - [Document history](manual-tests/doc-history.md): the byline, the History and the History panel, and how often Agents log.
 - [Human gate](manual-tests/human-gate.md): the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page for gated Tasks.
-- [Helpers](manual-tests/helpers.md): the Helpers tab, Save and Reset, the Needs Human judgement on a Teammate's Task, the Human's override, the daily cap with Continue, and a failing Adapter.
+- [Helpers](manual-tests/helpers.md): the Helpers tab, Save and Reset, the Needs Human judgement on an Agent's Task, the Human's override, the daily cap with Continue, and a failing Adapter.
 - [File Changes, Watched Folders and Memory](manual-tests/file-changes.md): the paid File Changes checks.
 - [Creating Rooms and inviting Agents](manual-tests/invite-rooms.md): Room creation, invitations and Room naming.
 - [Library explorer and editor](manual-tests/library.md): the Library tree, document view and editor.
@@ -240,10 +240,10 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Chat uploads](manual-tests/uploads.md): the paperclip, paste and drop in the composer, the chips, the Message's path lines, the Library's Uploads root and Room delete.
 - [Team chats](manual-tests/team-chats.md): the Team Room, Team chats in the sidebar, the Members-tab Message, archiving and Task wakes and digests in a Team's Room.
 - [Teams](manual-tests/team-pages.md): the sidebar, Members, Files, Tasks and Shared Memory.
-- [Teammate card](manual-tests/teammate-card.md): view, edit, create and delete.
+- [Agent card](manual-tests/agent-profile-card.md): view, edit, create and delete.
 - [Global Search](manual-tests/global-search.md): the search box, the dropdown and the jump to a Message.
 - [References](manual-tests/at-tagging.md): the `@` picker, what a pick writes, the Room and Team links, Copy link and the Referenced items header.
-- [Teammates page](manual-tests/teammates-library.md): tiles, Teams grouping, the filter and rejected files.
+- [Agents page](manual-tests/agents-library.md): tiles, Teams grouping, the filter and rejected files.
 - [Turn detail and Spend](manual-tests/turn-detail.md): the live preview, Spend and phone width.
 - [Work Mode](manual-tests/work-mode.md): the picker, hidden modes and the permission behaviour.
 

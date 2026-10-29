@@ -6,7 +6,7 @@
 which reuses the Edit preview this spec builds.
 
 This is the design for showing more of what an Adapter already tells Huddle while a Turn runs:
-**what a tool call is changing** (an Edit preview), and **what a Teammate has spent** (Spend). It
+**what a tool call is changing** (an Edit preview), and **what an Agent has spent** (Spend). It
 also records, at sketch depth, three further surfaces — Adapter commands, Plan and Thinking — that
 were investigated and deliberately deferred.
 
@@ -37,7 +37,7 @@ Appendix C.
 ## 1. Goal
 
 While a Turn is in progress, let the Human see **what each tool call is about to change or has
-changed**, and let the Human see **what each Teammate has spent** — using data the Adapter already
+changed**, and let the Human see **what each Agent has spent** — using data the Adapter already
 sends and Huddle already receives.
 
 Concretely:
@@ -47,7 +47,7 @@ Concretely:
    calls, each with a status mark the Human can read without colour.
 2. **An edit shows its change.** A tool call that edits a file carries an **Edit preview** — the
    path, the line, and the old and new text — that the Human can expand in place.
-3. **A Teammate's Spend is visible.** The Teammate card says what the Adapter has reported spending
+3. **An Agent's Spend is visible.** The Agent card says what the Adapter has reported spending
    since the app started. It is display only and never refuses a Turn.
 4. **The wire does not move.** Every addition is an optional field on the existing `ToolActivity`
    Envelope. `ProtocolVersion.Current` stays 3.
@@ -75,7 +75,7 @@ a token Budget nobody can see and no figure in money.
 | T6 | The Turn ends, or the Human presses Stop | The whole list disappears with its Draft. The Transcript holds only the reply, exactly as today |
 | T7 | The Adapter repeats the same `diff` on two updates of one call | Only the first copy crosses the pipe |
 | T8 | A Persona runs on `agency-acp`, which sends no `diff` | Rows show a title and a status, with no expander and no error |
-| T9 | The Adapter reports a running total of 0.0908 USD after 0.0748 | The Teammate card reads *Spent since start: 0.091 USD*. Spend rose by 0.016 |
+| T9 | The Adapter reports a running total of 0.0908 USD after 0.0748 | The Agent card reads *Spent since start: 0.091 USD*. Spend rose by 0.016 |
 | T10 | The Adapter process restarts and its counter starts again at 0.02 | Spend adds 0.02. It never subtracts |
 | T11 | A Room Session is closed and later re-opened in the same Adapter process | The re-opened session's running total is not counted a second time |
 | T12 | A Persona on a local model reports no cost | The card shows no Spend line at all, not a zero |
@@ -163,7 +163,7 @@ process as the UI and reaches it the way `PersonaHealth` does.
                                                       PersonaRunner ──▶ PersonaSpend (singleton, in-process)
                                                                             │ SpendChanged(personaName)
                                                                             ▼
-                                                                       TeammateCard: "Spent since start: …"
+                                                                       AgentProfileCard: "Spent since start: …"
 ```
 
 | Component | Kind | New or changed |
@@ -181,7 +181,7 @@ process as the UI and reaches it the way `PersonaHealth` does.
 | `Huddle.App/wwwroot/app.css` | Rules for the list and the preview | Changed |
 | `Huddle.App/Acp/PersonaSpend.cs` | In-process Spend ledger and event | New |
 | `Huddle.App/Acp/PersonaRenameCascade.cs` | Moves a Spend entry on a rename; clears it on a removal | Changed |
-| `Huddle.App/Components/Shared/TeammateCard.razor` | Shows the Spend line | Changed |
+| `Huddle.App/Components/Shared/AgentProfileCard.razor` | Shows the Spend line | Changed |
 
 ---
 
@@ -502,7 +502,7 @@ takes its data as parameters and never calls a service.
 
  ▸ ✓  Read Directory.Packages.props
  ▾ ✓  Edit notes.md                     line 1
-      ┌ E:\Data\Teammates\Nova\work\notes.md
+      ┌ E:\Data\Agents\Nova\work\notes.md
       │ Removed   − one
       │ Added     + two
  ▸ ⟳  Write summary.txt
@@ -550,8 +550,8 @@ the Library Pane, which needs the containment check the Library already owns.
 
 ### 6.6 Spend
 
-**Purpose.** Keep a running figure of what each Teammate's Adapter has reported spending since the
-app started, correctly through session re-opens and Adapter restarts, and show it on the Teammate
+**Purpose.** Keep a running figure of what each Agent's Adapter has reported spending since the
+app started, correctly through session re-opens and Adapter restarts, and show it on the Agent
 card.
 
 **What the Adapter sends.** One `cost { amount, currency }` on the last `usage_update` of a Turn.
@@ -565,7 +565,7 @@ the next). It does not appear on the other seven updates of a Turn.
 - `RoomSession`'s `UsageUpdated` branch, after the token logic, calls
   `owner.AddSpend(usage.SessionId, cost.Amount, cost.Currency)` when `Cost` is non-null.
 - `PersonaSpend` turns running totals into increases and sums them per Persona and currency.
-- `TeammateCard` shows the sum and stays current.
+- `AgentProfileCard` shows the sum and stays current.
 
 **Inputs and outputs.** In: `UsageUpdated` events carrying an optional `UsageCost`. Out:
 `SpendChanged(personaName)` events and a read of the current totals. Nothing is sent to an Adapter
@@ -573,7 +573,7 @@ or across the pipe.
 
 **Internal flow.** The mapper sets `Cost`. `RoomSession` calls `owner.AddSpend`, `PersonaRunner`
 forwards it to `PersonaSpend.Add` with its own Persona Name, and `PersonaSpend` applies the rule
-below and raises the event. `TeammateCard` re-reads the totals.
+below and raises the event. `AgentProfileCard` re-reads the totals.
 
 **`PersonaSpend`.** An internal sealed Singleton in `Huddle.App/Acp`, registered beside
 `PersonaHealth` and reached the same way.
@@ -623,13 +623,13 @@ that reports no cost shows no line rather than a zero. Copy avoids *cost*, *bill
   and `MentionParser`.
 - `SpendChanged` is raised **outside** the lock, and a handler that throws is caught and logged, as
   `RoomEvents` does for its own events.
-- `TeammateCard` already subscribes to health itself because a `MudDialog` freezes its parameters
+- `AgentProfileCard` already subscribes to health itself because a `MudDialog` freezes its parameters
   at open (`code-map.md`); it subscribes to `SpendChanged` the same way and unsubscribes in
   `Dispose`, as every singleton-event subscriber must (`rules.md`).
 - **Rename and removal.** `PersonaRenameCascade` is the one place a new per-Persona store is added.
   `PersonaSpend.Rename` is called from `OnPersonaRenamed` **above** the early return for a Persona
   with no Agent row, for the reason the avatar row in `rules.md` gives: that guard fires for every
-  Teammate in a stock install, where `Acp:Enabled` is false. `Forget` is called from the
+  Agent in a stock install, where `Acp:Enabled` is false. `Forget` is called from the
   `PersonaRemoved` handler. A test pins the placement of the rename call.
 
 **Constraints.**
@@ -646,7 +646,7 @@ earliest, and each needs a decision the Human has not made.
 
 > [!NOTE]
 > **Superseded by [the Adapter commands spec](Huddle.Commands-Specifications.md), built 2026-09-30.**
-> It answers the three open questions below: a command addresses **one Teammate by Mention**
+> It answers the three open questions below: a command addresses **one Agent by Mention**
 > (`@Nova /compact`), the allowlist lives on the **Adapter Profile** (`Commands`), and the **Skill**
 > overlap does not arise because a Skill is Huddle's own know-how and an Adapter command is the
 > Adapter's. It defers the bare `/` picker below. What follows is kept as the record of the sketch.
@@ -662,9 +662,9 @@ default arm as an `UnknownUpdate` and is dropped.
 **The gate: isolation.** Those names match the skills installed in the Human's own Claude Code,
 not anything Huddle configured. `AdapterProfile.IsolateUserSettings` sends
 `settingSources: ["project","local"]` and `autoMemoryEnabled: false`, and was meant to keep the
-Human's personal setup out of a Teammate's session; RS Appendix B V-1 and V-2 never ran. A picker
+Human's personal setup out of an Agent's session; RS Appendix B V-1 and V-2 never ran. A picker
 built on this list before those checks would put the Human's personal skills in front of every
-Teammate. **V2 does not start until V-1 and V-2 pass, or until a filter (an allowlist per Adapter
+Agent. **V2 does not start until V-1 and V-2 pass, or until a filter (an allowlist per Adapter
 Profile) is decided.** An Adapter command is also not a **Skill** and not an **App Tool**
 (`language.md`), and must never be offered under either word.
 
@@ -675,10 +675,10 @@ Profile) is decided.** An Adapter command is also not a **Skill** and not an **A
 | Mapping | `AdapterCommandsUpdated(SessionId, IReadOnlyList<AdapterCommandInfo>)`, with `AdapterCommandInfo(Name, Description, InputHint)` |
 | State | `PersonaCommands`, an in-process Singleton shaped like `PersonaSpend`: the latest list per Persona, replaced whole on each update, with a change event |
 | Wire | None, for the same reason as Spend: the runner is in-process |
-| Composer | A picker opened by a leading `/` on a Room with exactly one Agent, or by `@Name /` in a larger Room, listing that Teammate's commands. `/invite` keeps its own parsing in `ChatService.SubmitFromComposerAsync`; an unknown `/word` still throws `Unknown command` unless it names an Adapter command of the addressed Teammate |
+| Composer | A picker opened by a leading `/` on a Room with exactly one Agent, or by `@Name /` in a larger Room, listing that Agent's commands. `/invite` keeps its own parsing in `ChatService.SubmitFromComposerAsync`; an unknown `/word` still throws `Unknown command` unless it names an Adapter command of the addressed Agent |
 | Sending | As prompt text: `/name args` as the first text block of the Turn's prompt. Buzz does the same, with a second block for context, because `claude-agent-acp` detects a command from the first block |
 
-**Open questions, for V2's own spec.** Which Teammate a `/command` addresses in a Room of three or
+**Open questions, for V2's own spec.** Which Agent a `/command` addresses in a Room of three or
 more; whether the allowlist lives in `Team:Acp:Adapters` or in a Persona; and whether a command the
 Persona's Skills already cover should be hidden.
 
@@ -695,7 +695,7 @@ In five Turns on the Chief of Staff neither arrived.
 - **Thinking.** No `agent_thought_chunk` appeared across roughly a hundred message chunks at the
   default Effort. Whether a higher Effort, or another setting in `_meta.claudeCode.options`, makes
   the Adapter send thoughts is unknown (V-5). Changing a Persona's Effort restarts its session and
-  loses its memory (`rules.md`), so this is not something to try on a Teammate that matters.
+  loses its memory (`rules.md`), so this is not something to try on an Agent that matters.
 
 **Sketch, if the gates open.** A Plan is a **replace**, never an append: ACP sends the whole list
 each time, and a Plan is an Agent's own checklist for one Turn, **not a Task**. It has Task's
@@ -734,7 +734,7 @@ That choice is V3's to make with the gate open, not this spec's.
 
 **Data flow between components.** Adapter to `Huddle.Acp` event, to `ToolActivity`, over the pipe
 to `Drafts`, to a `Draft` snapshot, to `MessageList`. Spend is a separate line: `Huddle.Acp` event,
-to `PersonaSpend`, to `TeammateCard`. The two paths share no state.
+to `PersonaSpend`, to `AgentProfileCard`. The two paths share no state.
 
 **Limits** (constants, not configuration):
 
@@ -854,7 +854,7 @@ already exist.
 | Server intake | `AgentConnection`'s read loop handles one `ToolActivity` at a time per connection, so a Draft's rows for one Agent are folded in arrival order |
 | `Drafts` | Every member takes `Drafts.gate`, a leaf lock. `DraftChanged` is raised after the lock is released, on the read loop's thread |
 | View | Subscribers marshal with `InvokeAsync`. `Chat.razor` coalesces bursts with `renderQueued`, so a flurry of updates is one render per circuit round trip, exactly as for text |
-| Spend | `PersonaSpend.Add` runs on the event reader's thread and takes its own leaf lock. `SpendChanged` is raised outside the lock. `TeammateCard` marshals with `InvokeAsync` |
+| Spend | `PersonaSpend.Add` runs on the event reader's thread and takes its own leaf lock. `SpendChanged` is raised outside the lock. `AgentProfileCard` marshals with `InvokeAsync` |
 
 **Lock ordering.** `Drafts.gate` and `PersonaSpend.gate` are both leaves: nothing is called while
 either is held, and neither is held when an event is raised. They are never nested, so there is no
@@ -915,9 +915,9 @@ and the hot path adds a few comparisons to work that already happens per notific
 | E-17 | A running total of zero after a larger one | Treated as a restart: adds zero, and the memory becomes zero |
 | E-18 | The currency changes within one session | The two are kept apart |
 | E-19 | A Room Session is evicted and re-opened in the same Adapter process | Same session id, same total, adds zero (T11) |
-| E-20 | The app restarts with Teammates that had Spend | The figure is zero again. The card line is absent until the next reported cost |
-| E-21 | A Teammate is renamed | `PersonaSpend.Rename` moves the entry, called above the no-Agent-row early return |
-| E-22 | A Teammate is removed | `PersonaSpend.Forget` clears the entry |
+| E-20 | The app restarts with Agents that had Spend | The figure is zero again. The card line is absent until the next reported cost |
+| E-21 | An Agent is renamed | `PersonaSpend.Rename` moves the entry, called above the no-Agent-row early return |
+| E-22 | An Agent is removed | `PersonaSpend.Forget` clears the entry |
 | E-23 | A very narrow screen | The `<pre>` wraps with `overflow-wrap: anywhere` and scrolls within a capped height; the expander stays at least 44 px tall |
 | E-24 | A Theme whose error and success colours have poor contrast | Text uses the normal text colour; only the left border uses them, and the `−`, `+` and labels carry the meaning |
 | E-25 | The Adapter adds an ACP status the mapper does not know | `MapToolCallStatus` has no discard arm, so the build fails on `CS8509`. That is the tripwire, and it is deliberate |
@@ -958,7 +958,7 @@ and the hot path adds a few comparisons to work that already happens per notific
    Budget as it always has, then calls `owner.AddSpend(sessionId, 0.0908, "USD")`.
 3. `PersonaSpend` finds the previous total for that session, `0.0748`, adds the difference of
    `0.016`, and raises `SpendChanged`.
-4. A `TeammateCard` that is open updates to *Spent since start: 0.091 USD*. A closed one reads the
+4. A `AgentProfileCard` that is open updates to *Spent since start: 0.091 USD*. A closed one reads the
    figure when it next opens.
 ---
 
@@ -975,7 +975,7 @@ rest follow from the code and from the rules that bind it.
 | D-2 | **Turn detail lives in `Drafts`**, in memory | A new store; persisting it beside the Transcript | A Draft already leaves on every path a Turn can end (ADR-0008). A new store would re-implement that clearing, and the Transcript is append-only with no rewrite path |
 | D-3 | **Additive optional fields on `ToolActivity`; no version bump** | A new `EditPreview` Envelope; the `ReadTranscript` "new type, no bump" precedent; the runner writing `Drafts` directly | A new type throws in the closed polymorphic and forces version 4, `echo-bot.ps1` and every pinned-JSON test (`traps.md`, ADR-0008). The `ReadTranscript` argument holds only for a reply the server sends on request; it fails for a pushed Envelope. Writing `Drafts` from the runner bypasses the pipe that every test's `FakePersonaServer` stands on. Recorded in [ADR-0034](adr/0034-turn-detail-rides-on-tool-activity-as-optional-fields.md) |
 | D-4 | **A bounded list of six recent calls, edits expandable (Human)** | One line; preview only on the approval card | One line loses every edit but the last in a Turn that edits five files. A card-only preview shows nothing when auto-approve is on, which is today's default |
-| D-5 | **Spend on the Teammate card only, this run, in-process (Human)** | The Room header too; log only; persisted | The header needs a per-Room attribution the Adapter's session-level total cannot give. Persistence needs a schema for a figure whose value is seeing it now. `PersonaHealth` already shows how per-Persona state reaches the UI |
+| D-5 | **Spend on the Agent card only, this run, in-process (Human)** | The Room header too; log only; persisted | The header needs a per-Room attribution the Adapter's session-level total cannot give. Persistence needs a schema for a figure whose value is seeing it now. `PersonaHealth` already shows how per-Persona state reaches the UI |
 | D-6 | **Spend sums increases and treats a drop as a restart, keyed by session id** | A baseline on the first update, as the token Budget does; taking the latest value; keying by `RoomSession` | A baseline hides real spend after an Adapter restart, which was observed to restart low. The latest value is not additive across sessions. A `RoomSession` key double-counts a re-opened session in the same process |
 | D-7 | **Sanitise at the pipe; never reject** | A `ProtocolError` for an oversize preview | A rejected activity loses a status change because a preview was large. Display data does not earn that trade |
 | D-8 | **Limits are constants** | Options in `AcpOptions` | The repository's guidance is no configuration surface a current feature does not ask for. A limit settable to *unbounded* defeats the purpose on a Singleton |
@@ -998,7 +998,7 @@ what was added; if the two ever differ, the glossary is right. They keep `Huddle
 | --- | --- | --- |
 | **Turn detail** | What a Draft shows beside its text while a Turn runs: its recent tool calls, each with a status and, for an edit, an Edit preview. In memory, bounded, and gone with the Draft | progress, trace, activity (avoided under **Change log**) |
 | **Edit preview** | The change a tool call makes to a file — the path, the line, and the text removed and added — shown in a Draft's Turn detail. Display only | diff (avoided under **File Changes**), patch, change list |
-| **Spend** | What the Adapter has reported spending for a Teammate since the app started, shown on its card. Never a limit, and never persisted | cost in interface copy, bill, and **Budget**, which limits |
+| **Spend** | What the Adapter has reported spending for an Agent since the app started, shown on its card. Never a limit, and never persisted | cost in interface copy, bill, and **Budget**, which limits |
 | **Adapter command** | A command an Adapter advertises for a session, sent as prompt text. Not a **Skill** and not an **App Tool**. V2 | slash command on its own (`/invite` is Huddle's), skill, tool |
 | **Plan**, **Plan entry** | An Agent's own checklist for one Turn, replaced whole each time it changes. Never a **Task**: it is unshared, unassigned and unpersisted. V3 | task, to-do, step list |
 | **Thinking** | The reasoning text an Adapter streams before its reply, shown collapsed. V3 | thought, reasoning, chain of thought (`thought level` is avoided under **Effort**) |
@@ -1099,8 +1099,8 @@ wonder why `EditChange` is not its own Envelope. It was written on 2026-09-30 as
 | TD-I10 | Impl | `IRoomSessionOwner.AddSpend`, `PersonaRunner`'s implementation over `PersonaSpend`, the `RoomSession` call | T10 green |
 | TD-T11 | Unit | `PersonaRenameCascadeTests`: `Rename_MovesSpend_EvenWhenNoAgentRowExists` (pins the call above the early return), `Removed_ForgetsSpend` | Fails |
 | TD-I11 | Impl | The cascade wiring and the DI registration beside `PersonaHealth` | T11 green |
-| TD-T12 | bUnit | `TeammateCardTests`: `SpendLine_ShowsThreeDecimalsAndTheCurrency`, `SpendLine_IsAbsent_WhenNothingWasReported`, `SpendLine_UpdatesOnSpendChanged`, `TwoCurrencies_ShowTwoLines`, `Dispose_Unsubscribes`, `SpendLine_IsNotShownInEditMode` | Fails |
-| TD-I12 | Impl | The Spend line in `TeammateCard.razor` | T12 green |
+| TD-T12 | bUnit | `AgentProfileCardTests`: `SpendLine_ShowsThreeDecimalsAndTheCurrency`, `SpendLine_IsAbsent_WhenNothingWasReported`, `SpendLine_UpdatesOnSpendChanged`, `TwoCurrencies_ShowTwoLines`, `Dispose_Unsubscribes`, `SpendLine_IsNotShownInEditMode` | Fails |
+| TD-I12 | Impl | The Spend line in `AgentProfileCard.razor` | T12 green |
 | **P7** | | **Documentation and live checks** | |
 | TD-D1 | Docs | The six terms and the **Draft** amendment into `language.md` | Done 2026-09-30 |
 | TD-D2 | Docs | `known-limits.md`: Turn detail and Spend are lost on restart; one change shown per call; a six-row window | Reviewed |
@@ -1120,7 +1120,7 @@ written and **not run**, because four of them spend money. What differs from the
 - **Test homes.** The `TD-T4` and `TD-T10` tests are in `RoomSessionTests` as planned; the
   runner-to-`PersonaSpend` forwarding test is in `PersonaRunnerTests`; the `TD-T6` intake tests
   are in `PipeEndToEndTests`; `TD-T7` is in `MessageListTests` and `TD-T12` in
-  `TeammateCardTests`.
+  `AgentProfileCardTests`.
 - **`EditPreview` takes `Edit` and `Path` only.** The row already shows the line, so the
   preview has no `Line` parameter to leave unused.
 - **Expanded rows are keyed by `(MessageId, ToolCallId)`** as planned, and pruned in
@@ -1139,7 +1139,7 @@ written and **not run**, because four of them spend money. What differs from the
 - **Gates.** `Check-Diff` is clean for this work. `Check-Visibility` still reports
   `BlockedFilter` in `Tasks/Views/TaskView.cs`, which predates this work and is not touched by it.
 - **One mutation is deliberately left alive:** removing the "ignore another Persona's report"
-  filter in `TeammateCard.OnSpendChanged` changes only how many times the card repaints, which no
+  filter in `AgentProfileCard.OnSpendChanged` changes only how many times the card repaints, which no
   test observes.
 - **Still open:** V-3 to V-6 (paid or optional), the manual tests, and the three gated surfaces
   (§6.7, §6.8).
@@ -1253,7 +1253,7 @@ unblocks.
 | V-2 | Does the Adapter **omit** a field on a `tool_call_update`, or send it as null? | Appendix B.2 shows omission for `diff`, `locations` and `line`. Confirm the dotacp type distinguishes the two, so a null in the event means *absent* | The merge rule in §8.3. Free. **Done 2026-09-30:** every field is a nullable reference or `uint?`, so the wire cannot tell omitted from null, and the rule treats both as *unchanged* |
 | V-3 | Does `cost` continue, or restart, when a closed Room Session is re-opened in the **same** Adapter process? | Two Rooms with the Chief of Staff, `MaxLiveSessions` of 1, a Turn in each, then back to the first. Watch `cost` across the third Turn | The session-id keying in §6.6 (T11). Two small paid Turns |
 | V-4 | How does the Adapter describe a multi-change call (`MultiEdit`)? How many `diff` blocks, and do they share a path? | One Turn asking for two edits to one file in one call | §6.1's first-diff rule and `OmittedChanges`. One paid Turn; optional |
-| V-5 | What makes `claude-agent-acp` send `agent_thought_chunk`? | Try a higher Effort on a **scratch** Persona, never a Teammate that matters: a change restarts the session and loses its memory | V3's Thinking (§6.8). Paid |
+| V-5 | What makes `claude-agent-acp` send `agent_thought_chunk`? | Try a higher Effort on a **scratch** Persona, never an Agent that matters: a change restarts the session and loses its memory | V3's Thinking (§6.8). Paid |
 | V-6 | Does `agency-acp` send `diff`, `locations` or `cost`? | Run one local Persona through an edit Turn | E-15, and whether rows for a local model are useful. Free of spend |
 
 ---
@@ -1276,7 +1276,7 @@ pictures.
 | The Human wants to know what an edit did | Wait for the Turn, then open the file in the Library, or read it in File Changes on the next Turn | Open the row and read *Removed* and *Added* in place, while the Turn runs |
 | A tool call fails | The title is replaced by the next call's | The row keeps its title and shows the *Failed* mark until the Draft goes |
 | The Turn ends or is stopped | The Draft becomes the reply, or vanishes | **Unchanged.** The list goes with the Draft, and the Transcript holds only the reply |
-| How much a Teammate has spent | Not visible anywhere | One line on its card: *Spent since start: 0.091 USD* |
+| How much an Agent has spent | Not visible anywhere | One line on its card: *Spent since start: 0.091 USD* |
 | The composer, Stop, the Reply Gate, the Budget notes and the strips | | **Unchanged** |
 
 **The cost to the Human is attention.** Every Room that shows a Draft now shows more under it, and a
@@ -1295,9 +1295,9 @@ with the reply posted and the list gone:
 
 ![The Edit preview: an edit with removed and added text, a new file with only added text, and a clipped preview with a count of further changes](images/turn-detail/turn-detail-edit-preview.svg)
 
-**The Spend line on the Teammate card.** One line per currency, none for a local model:
+**The Spend line on the Agent card.** One line per currency, none for a local model:
 
-![Three Teammate cards in view mode: one with a Spend line, one with none because no cost was reported, one with two currencies](images/turn-detail/turn-detail-card.svg)
+![Three Agent cards in view mode: one with a Spend line, one with none because no cost was reported, one with two currencies](images/turn-detail/turn-detail-card.svg)
 
 The wireframes below are the same screens in text, which a diff and a search can read.
 
@@ -1311,7 +1311,7 @@ down and the existing scroll-to-bottom follows:
      ▸ ✓  Read notes.md
      ▾ ⟳  Edit notes.md                                          line 12
           ┌────────────────────────────────────────────────────────────┐
-          │ …\Teammates\Chief of Staff\work\notes.md                   │
+          │ …\Agents\Chief of Staff\work\notes.md                   │
           │ ▌ Removed  − Teh meeting is on Friday.                     │
           │ ▌ Added    + The meeting is on Friday.                     │
           └────────────────────────────────────────────────────────────┘
@@ -1327,7 +1327,7 @@ The moments a row passes through, in the order the Adapter delivers them (Append
   4  Edit notes.md   line 12  ✓   completed                   →  mark changes; preview kept
 ```
 
-The Teammate card in view mode. The Spend line is one line per currency, under the status and its
+The Agent card in view mode. The Spend line is one line per currency, under the status and its
 reason, and is absent when nothing was reported:
 
 ```text
@@ -1419,7 +1419,7 @@ Exact strings, for the tests to assert with `Assert.Equal`. `language.md` is bin
 | A long preview dwarfs the reply | A `Write` of a large file. The block must stay inside its capped height | TD-M4 |
 | A dark Theme hides a border or a mark | Open the list under Huddle Dark, Nordic Dark and one more dark Theme | TD-M4 |
 | The Spend line reads as a limit | Read the card as the Human would. It must say what was spent, and imply no cap | TD-M2 |
-| A Teammate that reports no cost looks broken | A local Teammate's card must simply have no Spend line | TD-M3 |
+| An Agent that reports no cost looks broken | A local Agent's card must simply have no Spend line | TD-M3 |
 
 ### D.9 What is not drawn
 

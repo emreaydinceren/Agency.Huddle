@@ -10,7 +10,7 @@ internal static class FeedTestSupport
     /// <summary>A fixed instant the tests count from.</summary>
     public static readonly DateTimeOffset T0 = new(2026, 10, 20, 12, 0, 0, TimeSpan.Zero);
 
-    /// <summary>A Teammate Agent actor.</summary>
+    /// <summary>An Agent Agent actor.</summary>
     /// <param name="name">The Agent's Name.</param>
     /// <returns>The actor.</returns>
     public static FeedActor Agent(string name = "Nova") => new(FeedActorKind.Agent, name);

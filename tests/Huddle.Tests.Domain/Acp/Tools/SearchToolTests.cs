@@ -198,7 +198,7 @@ public sealed class SearchToolTests
 
         string result = await scene.Tool().InvokeAsync(Args("ab"), ct);
 
-        Assert.Equal("The query needs at least 3 characters. Only an empty query for teams or teammates browses.", result);
+        Assert.Equal("The query needs at least 3 characters. Only an empty query for teams or agents browses.", result);
     }
 
     /// <summary>A missing query and a query starting with '>' are each refused with their own sentence.</summary>
@@ -301,7 +301,7 @@ public sealed class SearchToolTests
         string scope = await tool.InvokeAsync(Args("secret plan", scope: "everything"), ct);
         string limit = await tool.InvokeAsync(Args("secret plan", limit: 51), ct);
 
-        Assert.Equal("'filter' must be one of: all, teams, teammates, library, tasks, rooms.", filter);
+        Assert.Equal("'filter' must be one of: all, teams, agents, library, tasks, rooms.", filter);
         Assert.Equal("'scope' must be 'mine' or 'all'.", scope);
         Assert.Equal("'limit' must be between 1 and 50.", limit);
     }

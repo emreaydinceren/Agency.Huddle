@@ -244,7 +244,7 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
         catch (Exception ex)
         {
             // A Helper must never take the dispatcher down (Policy 4): any failure from the stores or ApplyAsync is logged and
-            // shown on the card, and the Task stays as the Teammate saved it.
+            // shown on the card, and the Task stays as the Agent saved it.
             this.logger.LogWarning(ex, "Helper {HelperId} failed for {Key}.", entry.Invoker.Helper.Id.Value, entry.Key);
             this.TryRecordFailure(entry.Invoker.Helper.Id, ex.Message);
         }

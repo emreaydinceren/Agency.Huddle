@@ -26,14 +26,14 @@ At the bottom of the document, the History (§6.10):
 ```text
 History
   Today
-    (M) Mira    Teammate  Edited    Rewrote answer paragraph, downgraded F1 to moderate        11:02
-    (R) Ruth    Teammate  Reviewed  Verified 41 citations, fixed 2 page numbers                10:48
+    (M) Mira    Agent  Edited    Rewrote answer paragraph, downgraded F1 to moderate        11:02
+    (R) Ruth    Agent  Reviewed  Verified 41 citations, fixed 2 page numbers                10:48
     (E) Emre    you       Saved                                                                10:31
   Yesterday
-    (Q) Quinn   Teammate  Objected  F2's sensitivity range assumes the 2024 baseline, not      16:20
+    (Q) Quinn   Agent  Objected  F2's sensitivity range assumes the 2024 baseline, not      16:20
                                     the revised 2025 figures in [[sources]]
   11 October 2026
-    (M) Miriam  Teammate  Created   First draft of the four findings                           09:12
+    (M) Miriam  Agent  Created   First draft of the four findings                           09:12
                                                                                     Show older
 ```
 
@@ -51,7 +51,7 @@ shows the shape, §6 the components, and Appendix A the ordered, test-first task
 
 ## 1. Goal
 
-A Human opening a document that several Teammates worked on can see, without reading any chat:
+A Human opening a document that several Agents worked on can see, without reading any chat:
 
 - who wrote it, who changed it since, who checked it and who disagrees with it;
 - what each of them says they did, newest first.
@@ -78,7 +78,7 @@ These are decided, not forgotten ([ADR-0060](adr/0060-a-documents-history-is-wha
 - **Edits outside Huddle.** A change made in Obsidian, VS Code or by a script is not recorded.
 - **Snapshots, diffs and restore.** Huddle keeps no old versions.
 - **Agents reading the history.** There is no `read_history` tool in v1.
-- **"N Teammates told".** Counting the Agents that File Changes has notified of an edit is deferred.
+- **"N Agents told".** Counting the Agents that File Changes has notified of an edit is deferred.
 - **Rejoining history after a rename outside Huddle.** The history stays under the old path.
 - **Files other than Markdown.** Only `LibraryFileKind.Markdown` has a history.
 - **Comments.** The History lists what editors logged; it has no comment box. A question about a document goes to
@@ -137,8 +137,8 @@ public enum DocActorKind { Agent, Human }
 public sealed record DocHistoryEntry(DateTimeOffset At, string Actor, DocActorKind ActorKind, DocChangeKind Kind, string Summary);
 ```
 
-The Actor is stored as the Name, not an id. A Teammate rename
-([ADR-0011](adr/0011-a-rename-moves-the-teammate-not-its-history.md)) does not rewrite history files in v1, so
+The Actor is stored as the Name, not an id. An Agent rename
+([ADR-0011](adr/0011-a-rename-moves-the-agent-not-its-history.md)) does not rewrite history files in v1, so
 older entries keep the old Name; adding a step to `PersonaRenameCascade` is deferred.
 
 ### 6.2 `DocHistoryStore`
@@ -173,7 +173,7 @@ result texts written in code, never throwing for an expected failure.
 
 | Argument | Type | Rule |
 | --- | --- | --- |
-| `path` | string | The document's full path or `file://` URL, resolved with `LibraryPathResolver.TryResolveAbsolute`. A relative path is taken to be under the Agent's own Work Dir (`TeammatePaths.WorkDir`), which is where the name it was given in a Message points. |
+| `path` | string | The document's full path or `file://` URL, resolved with `LibraryPathResolver.TryResolveAbsolute`. A relative path is taken to be under the Agent's own Work Dir (`AgentPaths.WorkDir`), which is where the name it was given in a Message points. |
 | `kind` | string | `created`, `edited`, `reviewed` or `objected`, case-insensitive. |
 | `summary` | string | Required, trimmed, line breaks replaced by spaces, at most `MaxSummaryLength` characters. |
 
@@ -286,7 +286,7 @@ minute does not fill the panel. Nothing is collapsed in the file.
 
 One line under the note's first heading (a note that does not open with one gets it above its body), Markdown files only. It is drawn inside the rendered note, so it shows in Read and in the Split preview; above an editor with no preview (Edit mode) it sits under the toolbar. Above the heading, in the same rendered note, sit the note's tags (spec for Library tags Â§6.17). The groups ("Written by", "Edited by", "Reviewed by", "Objected by") are separated by a "Â·", and so is the time; every Name is bold.
 Each Name is shown with its avatar from `AvatarStore`: `ProfileAvatar` for an Agent, so a click opens the profile
-popover, and `TeammateAvatar` for the Human. The Name's tooltip shows that actor's latest summary. The time is relative ("today 11:02"), with the full date in a tooltip. With no
+popover, and `AgentAvatar` for the Human. The Name's tooltip shows that actor's latest summary. The time is relative ("today 11:02"), with the full date in a tooltip. With no
 history the line is absent, not "No history". It re-reads on `DocHistoryStore.Changed` for its own path.
 
 ### 6.8 `RecentEditsPanel`
@@ -323,7 +323,7 @@ It shows more than the panel does:
 | Entries | The newest 5 | All, `DocHistoryView.ByDay`, 50 at a time with **Show older** |
 | Summary | One line, cut with an ellipsis | In full, wrapping |
 | Kind | Not shown | A tinted `StatusChip` with a leading icon: Created, Edited, Reviewed, Objected, or Saved for an empty Human summary (colours in `DocHistoryKindStyle`) |
-| Actor | Avatar and Name | Avatar, Name, and a **you** or **Teammate** chip |
+| Actor | Avatar and Name | Avatar, Name, and a **you** or **Agent** chip |
 | Time | Relative | Clock time under a day heading, the full date and time in a tooltip |
 
 A summary is rendered by `MarkdownRenderer.ToHtml`, the pipeline the document body uses, so Task ids and
@@ -348,7 +348,7 @@ Nothing is written inside a Library Root.
 | A document renamed outside Huddle | The history stays under the old path; the renamed document starts empty. |
 | A document deleted outside Huddle | Its history file remains, unused. No cleanup in v1. |
 | A Library Root removed from configuration | Its `doc-history/{rootId}/` folder remains, unused. |
-| A Teammate renamed | Old entries keep the old Name; rewriting them in `PersonaRenameCascade` is deferred. |
+| An Agent renamed | Old entries keep the old Name; rewriting them in `PersonaRenameCascade` is deferred. |
 | A corrupt line | Skipped, logged once per file (§6.2). |
 | `Team:DocHistory:Enabled` turned off | Tool not offered, no recording, no byline, no panel. Existing files are kept. |
 
@@ -460,8 +460,8 @@ About 3 Turns. The UI is still covered only by the manual DOCHISTORY tests below
 
 A new page, `engineering/manual-tests/doc-history.md`:
 
-- **DOCHISTORY-1** Ask two Teammates to create and then edit a document; the byline and panel show both, in order.
-- **DOCHISTORY-2** Ask a Teammate to review a document without changing it; it appears under "reviewed by".
+- **DOCHISTORY-1** Ask two Agents to create and then edit a document; the byline and panel show both, in order.
+- **DOCHISTORY-2** Ask an Agent to review a document without changing it; it appears under "reviewed by".
 - **DOCHISTORY-3** Save in the Library; an entry under the Human's Name appears without a reload.
 - **DOCHISTORY-4** Rename and move the document in the Library; the history follows.
 - **DOCHISTORY-6** Scroll to the bottom of a document with a week of history: entries are grouped by day, every
@@ -474,7 +474,7 @@ A new page, `engineering/manual-tests/doc-history.md`:
 | # | Decision | Rejected | Why |
 | --- | --- | --- | --- |
 | D-1 | Agents report through `log_change`; Huddle never infers (ADR-0060) | ACP tool-call attribution; scan-window attribution | Misses `Bash` writes, guesses between concurrent Agents, cannot see reviews or objections |
-| D-2 | The actor is bound at construction | An `actor` argument | An Agent could log as another Teammate |
+| D-2 | The actor is bound at construction | An `actor` argument | An Agent could log as another Agent |
 | D-3 | `kind` is a closed enum of four | Free text; edits only | The byline needs fixed verbs; reviews and objections are why the history matters |
 | D-4 | JSON Lines under `DataDir`, mirroring the Library tree | A sidecar beside the document; one JSON array per file; hashed file names | A sidecar shows in Obsidian and to Agents; an array must be rewritten on every append; hashes make a folder rename a scan |
 | D-5 | Human saves log in `LibraryFileService` | In `LibraryDocument.razor` | Every Human write path is covered once |

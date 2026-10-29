@@ -101,7 +101,7 @@ public sealed class MessageDisplayTests
         Assert.Single(cut.FindAll(".day-separator"));
     }
 
-    /// <summary>A wake-up Huddle posted itself renders as the same slim system row, not as a Teammate's bubble with the agent-facing line.</summary>
+    /// <summary>A wake-up Huddle posted itself renders as the same slim system row, not as an Agent's bubble with the agent-facing line.</summary>
     [Fact]
     public async Task MessageList_WakeUpFromHuddle_RendersASlimSystemRow()
     {

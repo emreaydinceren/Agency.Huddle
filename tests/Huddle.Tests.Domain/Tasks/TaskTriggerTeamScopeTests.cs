@@ -38,7 +38,7 @@ public sealed class TaskTriggerTeamScopeTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct, Catalog());
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         Room root = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, agents.Nova.Id], ct);
         Room scoped = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, agents.Nova.Id], "Marketing", false, ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova", originRoomId: "gone", location: Marketing));
@@ -57,7 +57,7 @@ public sealed class TaskTriggerTeamScopeTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct, Catalog());
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         Room rootTrio = await harness.Directory.CreateRoomAsync("Trio", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova", location: Marketing));
 
@@ -77,7 +77,7 @@ public sealed class TaskTriggerTeamScopeTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct, Catalog());
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova", location: Marketing));
 
         await WakeAsync(harness, task, HumanActor);
@@ -94,7 +94,7 @@ public sealed class TaskTriggerTeamScopeTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct, Catalog());
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         Room teamRoom = await harness.Directory.CreateRoomAsync("Marketing", [KnownIds.Human, agents.Nova.Id], "Marketing", true, ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova", originRoomId: "gone", location: Marketing));
 
@@ -113,7 +113,7 @@ public sealed class TaskTriggerTeamScopeTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct, Catalog());
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         Room origin = await harness.Directory.CreateRoomAsync("Origin", [KnownIds.Human, agents.Nova.Id], ct);
         _ = await harness.Directory.CreateRoomAsync("Scoped", [KnownIds.Human, agents.Nova.Id], "Marketing", false, ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova", originRoomId: origin.Id, location: Marketing));
@@ -130,7 +130,7 @@ public sealed class TaskTriggerTeamScopeTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct, Catalog());
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova", location: new("Ghosts", null, false)));
 
         await WakeAsync(harness, task, HumanActor);

@@ -63,7 +63,7 @@
                     <SettingsIntro>
                         A prompt is one piece of wording this application sends to a model — part of a system prompt,
                         a turn, <code>get_help</code>'s output, or a tool's own description. Editing one changes what every
-                        teammate is told, not how the application itself behaves, and a prompt you have changed can
+                        agent is told, not how the application itself behaves, and a prompt you have changed can
                         always be restored to the wording it shipped with.
                     </SettingsIntro>
 
@@ -114,7 +114,7 @@
 </MudContainer>
 
 @code {
-    // The parent owns all state, the same split Teammates.razor uses with TeammateCard: PromptsPanel
+    // The parent owns all state, the same split Agents.razor uses with AgentProfileCard: PromptsPanel
     // itself holds nothing. pendingEdits is every uncommitted keystroke, keyed by prompt key; groups is
     // rebuilt from it (and from the store) whenever either changes, so a render never has to
     // reconcile two sources of truth for the same field.
@@ -124,7 +124,7 @@
     private IReadOnlyList<PromptFieldGroup> groups = [];
     private string? error;
 
-    // Guards ResetAllControl's destructive action, the same inline-confirm field Teammates.razor
+    // Guards ResetAllControl's destructive action, the same inline-confirm field Agents.razor
     // keeps for Remove (confirmingRemove) rather than a dialog or a JS confirm().
     private bool confirmingResetAll;
 

@@ -6,7 +6,7 @@
     right-click alone would not be reachable by keyboard, which is why the button is not optional.
 
     Delete's confirmation is an inline row swap, never a nested MudDialog and never a JS confirm() -
-    the same reasoning TeammateCard.razor's Remove button and ResetAllControl.razor both give: a
+    the same reasoning AgentProfileCard.razor's Remove button and ResetAllControl.razor both give: a
     confirmation dialog stacked on top of another dialog would need its own backdrop and focus trap for
     what is only ever a yes/no choice, and here there is no dialog to stack on at all - just a row.
 
@@ -37,11 +37,11 @@
     else
     {
         <NavTabLink Href="@($"/rooms/{this.Room.Id}")" TabTitle="@this.Room.Name" Class="@this.LinkClass"
-                    Icon="@(this.oneToOneTeammate is null ? Icons.Material.Filled.Chat : null)">
-            @if (this.oneToOneTeammate is not null)
+                    Icon="@(this.oneToOneAgent is null ? Icons.Material.Filled.Chat : null)">
+            @if (this.oneToOneAgent is not null)
             {
-                @* A 1:1 Room's leading visual is the Teammate's small avatar; a group Room takes the Chat icon (UX-016, OP-5). *@
-                <TeammateAvatar Name="@this.oneToOneTeammate.Name" Avatar="this.Avatars.Get(this.oneToOneTeammate.Name)" Size="Size.Small" Class="room-row-avatar" />
+                @* A 1:1 Room's leading visual is the Agent's small avatar; a group Room takes the Chat icon (UX-016, OP-5). *@
+                <AgentAvatar Name="@this.oneToOneAgent.Name" Avatar="this.Avatars.Get(this.oneToOneAgent.Name)" Size="Size.Small" Class="room-row-avatar" />
             }
             @* One line: the name truncates with an ellipsis and the full name is the tooltip. *@
             <span class="sidebar-row-label" title="@this.Room.Name">@this.Room.Name</span>
@@ -79,7 +79,7 @@
     private bool confirmingDelete;
     private bool busy;
     private int uploadCount;
-    private User? oneToOneTeammate;
+    private User? oneToOneAgent;
 
     /// <summary>The Room this row shows.</summary>
     [Parameter, EditorRequired]
@@ -97,12 +97,12 @@
     [Parameter]
     public EventCallback<string?> OnError { get; set; }
 
-    /// <summary>Finds the Room's one Teammate when it is a 1:1 Room (exactly one Agent member), or clears it for a group Room.</summary>
+    /// <summary>Finds the Room's one Agent when it is a 1:1 Room (exactly one Agent member), or clears it for a group Room.</summary>
     protected override async Task OnParametersSetAsync()
     {
         IReadOnlyList<User> members = await this.TeamDirectory.GetRoomMembersAsync(this.Room.Id);
         List<User> agents = [.. members.Where(static member => member.Kind == UserKind.Agent)];
-        this.oneToOneTeammate = agents.Count == 1 ? agents[0] : null;
+        this.oneToOneAgent = agents.Count == 1 ? agents[0] : null;
     }
 
     private string LinkClass => this.Class is null ? "hover-reveal-link" : $"hover-reveal-link {this.Class}";

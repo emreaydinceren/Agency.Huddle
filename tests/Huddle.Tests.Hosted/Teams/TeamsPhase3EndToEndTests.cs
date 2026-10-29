@@ -67,7 +67,7 @@ public sealed class TeamsPhase3EndToEndTests
         string teamFolder = Path.Combine(root.TasksDirPath, TeamName);
         Assert.True(File.Exists(Path.Combine(teamFolder, TeamPaths.TeamFileName)));
         Assert.True(File.Exists(Path.Combine(teamFolder, TeamPaths.ProcessFileName)));
-        string[] roleFiles = [.. Directory.GetFiles(root.TeammatesDirPath, "*.md", SearchOption.AllDirectories).Where(static path => File.ReadAllText(path).Contains("_role:", StringComparison.Ordinal))];
+        string[] roleFiles = [.. Directory.GetFiles(root.AgentsDirPath, "*.md", SearchOption.AllDirectories).Where(static path => File.ReadAllText(path).Contains("_role:", StringComparison.Ordinal))];
         Assert.Equal(cast.Cards.Count, roleFiles.Length);
         Assert.True(run.Services.GetRequiredService<ITeamFolders>().ReadTeamFile(TeamName)?.Onboarded);
         MessagePostedEvent[] onboarding = [.. run.Posts.Where(static post => string.Equals(post.Message.SenderId, KnownIds.Human, StringComparison.Ordinal))];
@@ -319,7 +319,7 @@ public sealed class TeamsPhase3EndToEndTests
     /// <param name="Manager">The manager's card.</param>
     private sealed record TeamCast(IReadOnlyList<CardState> Cards, CardState Manager)
     {
-        /// <summary>Builds the Task actor for the Teammate hired for <paramref name="roleId"/>.</summary>
+        /// <summary>Builds the Task actor for the Agent hired for <paramref name="roleId"/>.</summary>
         /// <param name="run">The running host.</param>
         /// <param name="roleId">The role id.</param>
         /// <param name="ct">Cancels the user lookup.</param>
@@ -394,7 +394,7 @@ public sealed class TeamsPhase3EndToEndTests
         }
 
         /// <summary>Counts the Task wake Messages posted that open with a Mention of <paramref name="name"/>.</summary>
-        /// <param name="name">The woken Teammate's name.</param>
+        /// <param name="name">The woken Agent's name.</param>
         /// <param name="changedBy">The actor the wake names as having changed the Task, or <see langword="null"/> for any wake.</param>
         /// <returns>The count.</returns>
         public int WakesOf(string name, string? changedBy) => this.Posts.Count(post =>
@@ -409,7 +409,7 @@ public sealed class TeamsPhase3EndToEndTests
         }
     }
 
-    /// <summary>Starts an in-memory mock agent for every launch, one per Teammate host.</summary>
+    /// <summary>Starts an in-memory mock agent for every launch, one per Agent host.</summary>
     private sealed class MockLauncher : IAgentProcessLauncher
     {
         private int launches;
@@ -425,7 +425,7 @@ public sealed class TeamsPhase3EndToEndTests
         }
     }
 
-    /// <summary>Wraps the real supervisor gate and records each wait with the Teammates that existed when it began.</summary>
+    /// <summary>Wraps the real supervisor gate and records each wait with the Agents that existed when it began.</summary>
     private sealed class RecordingStartGate : IPersonaStartGate
     {
         private PersonaSupervisor? inner;
@@ -435,10 +435,10 @@ public sealed class TeamsPhase3EndToEndTests
         /// <summary>Gets the names waited for, in order.</summary>
         public List<string> Waited { get; } = [];
 
-        /// <summary>Gets, per wait, the Teammate names that existed when it began.</summary>
+        /// <summary>Gets, per wait, the Agent names that existed when it began.</summary>
         public List<string[]> PersonasAtWait { get; } = [];
 
-        /// <summary>Gets, per wait, whether the Teammate reported running.</summary>
+        /// <summary>Gets, per wait, whether the Agent reported running.</summary>
         public List<bool> Results { get; } = [];
 
         /// <summary>Supplies the real gate and the store the recorder reads.</summary>

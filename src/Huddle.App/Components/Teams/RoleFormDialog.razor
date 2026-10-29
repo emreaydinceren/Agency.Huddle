@@ -23,10 +23,10 @@
                           HelperText="One line shown on the role card."
                           Value="this.description" ValueChanged="this.OnDescriptionChanged" MaxLength="200" Class="custom-role-description" />
             <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Instructions (optional)" Immediate="true" Lines="6"
-                          HelperText="What a Teammate in this role is told to do."
+                          HelperText="What an Agent in this role is told to do."
                           Value="this.instructions" ValueChanged="this.OnInstructionsChanged" Class="custom-role-instructions long-text-field markdown-field" />
             <MudSelect T="string" Label="Skills (optional)" MultiSelection="true" SelectedValues="@this.skills" SelectedValuesChanged="this.OnSkillsChanged"
-                       Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Skills this Huddle has or can copy; a Teammate in this role carries them." Class="custom-role-skills">
+                       Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Skills this Huddle has or can copy; an Agent in this role carries them." Class="custom-role-skills">
                 @foreach (Skill skill in this.InstalledSkills.All)
                 {
                     <MudSelectItem T="string" Value="@skill.Name">
@@ -43,7 +43,7 @@
                     <MudSelectItem T="string" Value="@entry.Name">
                         <MudText>@entry.Name</MudText>
                         <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@Agency.Huddle.App.Skills.Ui.SkillOriginText.Line(entry.Publisher, entry.Origin, entry.License)</MudText>
-                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary custom-role-copy-caption">Huddle copies it into Skills/ when a Teammate in this role is hired.</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary custom-role-copy-caption">Huddle copies it into Skills/ when an Agent in this role is hired.</MudText>
                     </MudSelectItem>
                 }
                 @* A Skill the role already names that is not usable here stays checked, so editing an old role does not drop it. *@
@@ -71,7 +71,7 @@
                     }
                 </MudCollapse>
             }
-            <MudSelect T="ModelTier" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Model strength" HelperText="How capable, and how costly, the Teammate's model is."
+            <MudSelect T="ModelTier" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Model strength" HelperText="How capable, and how costly, the Agent's model is."
                        Value="this.tier" ValueChanged="this.OnTierChanged" Class="custom-role-tier">
                 <MudSelectItem T="ModelTier" Value="ModelTier.Strongest">Strongest</MudSelectItem>
                 <MudSelectItem T="ModelTier" Value="ModelTier.Balanced">Balanced</MudSelectItem>

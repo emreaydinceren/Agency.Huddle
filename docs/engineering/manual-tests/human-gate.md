@@ -3,7 +3,7 @@
 Prove, in a real browser, that a Task which names an Action, or which the Human marked **Requires your acceptance**, cannot reach Done without the Human: that the Proof list and the decision card show what is still open, that Accept stays locked until the Proof is complete, that every other route to Done is refused, that an edit after acceptance takes the acceptance away, that Decline closes the Task with its reason, that an outside edit of the file is reverted, and that a restart loses nothing. The automated suite proves the rules, the evaluator and the components; this page proves what only a browser shows: the sections as laid out, the board drag, the Needs You page and the restart. The design is [the Human gate spec](../../Huddle.HumanGate-Specifications.md), its use cases U-1 to U-9 map to HUMANGATE-01 to HUMANGATE-09 in order, and the decisions are [ADR-0061](../../adr/0061-a-human-gated-task-waits-in-needs-you-for-the-humans-acceptance.md) and [ADR-0062](../../adr/0062-a-teams-definition-of-done-is-a-proof-checklist-in-process-md.md).
 
 **9 tests** · 9 free · about 1.3 hours. Written 2026-10-19; **not yet run by a person**. All nine
-were run on 2026-10-19 by agents driving the built-in browser as a paid run (real Haiku Teammates
+were run on 2026-10-19 by agents driving the built-in browser as a paid run (real Haiku Agents
 in a hired Research Team instead of the mock cast) and passed; HUMANGATE-03 used Sources checked
 instead of the checklist detail, and HUMANGATE-06 and -09 did not see the brief absent state or
 the empty page.
@@ -12,9 +12,9 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 ## Setup
 
-Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat). The mock Teammates stand in for the Agents, so no test here spends money. This area adds:
+Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat). The mock Agents stand in for the Agents, so no test here spends money. This area adds:
 
-1. Wait until **Ada** and **Bo** are both **Online** on `/teammates`. Treat Ada as the assignee ("Miriam" and "Leo" in the spec) and Bo as the Teammate who owns an open Proof item.
+1. Wait until **Ada** and **Bo** are both **Online** on `/agents`. Treat Ada as the assignee ("Miriam" and "Leo" in the spec) and Bo as the Agent who owns an open Proof item.
 2. Use a Team whose `Process.md` has a `## Definition of Done` section of four items, the last of them a checked document or a checklist that Bo owns, so that the Proof can be 3/4 and then 4/4. Where a test needs a Task with a Proof, create it under that Team.
 3. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'`. Task files are `$data\Teams\<Team>\_tasks\<ID>.md`.
 4. The exact interface strings below are those of the Task panel, the decision card, the board and the Needs You page. A pass means the text matches, not just the meaning.
@@ -42,7 +42,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 **Pass if — all of these**
 
 - At step 1 the line under the chip reads `You decide whether this is done`.
-- At step 2 the helper line reads `Ada can move it to Needs you once every line has Proof. Teammates can't mark it Done.` and `Can move to Done` carries the chip `<Human> only`.
+- At step 2 the helper line reads `Ada can move it to Needs you once every line has Proof. Agents can't mark it Done.` and `Can move to Done` carries the chip `<Human> only`.
 - At step 3 the heading reads `Proof`.
 - Before the Proof is complete, Ada's move to Needs you is refused; with 4/4 it succeeds and the card chip reads `Your decision` with `All Proof is in.`
 - After `Accept` the Task is Done, and its Change log names the Human who accepted.

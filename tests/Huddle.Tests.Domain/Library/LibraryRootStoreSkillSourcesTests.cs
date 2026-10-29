@@ -97,6 +97,6 @@ public sealed class LibraryRootStoreSkillSourcesTests : IDisposable
     private LibraryRootStore Store(SkillSourcesSettings settings)
     {
         IOptions<TeamOptions> options = this.dir.Options();
-        return new LibraryRootStore(options, new TeammatePaths(options), NullLogger<LibraryRootStore>.Instance, settings);
+        return new LibraryRootStore(options, new AgentPaths(options), NullLogger<LibraryRootStore>.Instance, settings);
     }
 }

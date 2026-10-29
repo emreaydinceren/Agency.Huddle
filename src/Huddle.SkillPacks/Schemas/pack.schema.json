@@ -12,7 +12,7 @@
     "title": { "type": "string", "minLength": 1 },
     "source": { "type": "string", "pattern": "^[a-z0-9.-]+(?:/[a-z0-9.-]+)+$", "description": "The Source id: host/owner/repo or local/name (O001)." },
     "appliesTo": { "type": "array", "items": { "type": "string" }, "description": "Role ids from `huddle-packs roles` (P005, P006)." },
-    "consultWhenAdds": { "type": "string", "maxLength": 200, "description": "When a Teammate should reach for this Pack (P007)." },
+    "consultWhenAdds": { "type": "string", "maxLength": 200, "description": "When an Agent should reach for this Pack (P007)." },
     "skills": {
       "type": "array",
       "minItems": 1,

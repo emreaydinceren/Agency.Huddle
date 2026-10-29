@@ -24,7 +24,7 @@ folder points at the files in `packs/`; another computer adds its own entry to t
 - The Packs hold no Skill files of their own. Each Skill names its catalog entry
   (`"catalog": "dotnet-skills"`), so the Skill's path, origin and commit come from that
   catalog and the Pack and the catalog share one copy.
-- Version stays `1.0.0`, matching the `_packs: ['msbuild-authoring@1.0.0']` lines Teammates
+- Version stays `1.0.0`, matching the `_packs: ['msbuild-authoring@1.0.0']` lines Agents
   already carry, so moving here shows no update.
 - The catalogs these Packs name (`dotnet-skills`, `addyosmani-agent-skills`) must be listed in
   SKILLS.md, or the Packs show as Not downloaded.

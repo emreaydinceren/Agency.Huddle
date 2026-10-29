@@ -117,7 +117,7 @@ public sealed class RecordsBundleBuilderTests
         Assert.Equal(1, bundle.Unreadable);
     }
 
-    /// <summary>Spend is gathered per Team member from the spend store.</summary>
+    /// <summary>Spend is gathered per Agent from the spend store.</summary>
     [Fact]
     public void Build_Spend_GroupedByMember()
     {

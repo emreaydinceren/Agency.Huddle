@@ -73,7 +73,7 @@ public sealed class TaskFeedRulesTests
         Assert.Empty(byHuman.Posts);
     }
 
-    /// <summary>A Helper's gate-on is a Notification that carries the reason and the Helper actor; a Teammate's stays Activity with no reason.</summary>
+    /// <summary>A Helper's gate-on is a Notification that carries the reason and the Helper actor; an Agent's stays Activity with no reason.</summary>
     [Fact]
     public void For_GateTurnedOnByHelper_NotifiesWithTheReason()
     {
@@ -89,9 +89,9 @@ public sealed class TaskFeedRulesTests
         Assert.Equal(new FeedActor(FeedActorKind.Helper, "Needs Human (Helper)"), post.Actor);
         TaskGatePayload payload = Assert.IsType<TaskGatePayload>(post.Payload);
         Assert.Equal("Sends a document outside the Team", payload.Reason);
-        FeedMessage teammate = Assert.Single(byAgent.Posts);
-        Assert.False(teammate.Notify);
-        Assert.Null(Assert.IsType<TaskGatePayload>(teammate.Payload).Reason);
+        FeedMessage agent = Assert.Single(byAgent.Posts);
+        Assert.False(agent.Notify);
+        Assert.Null(Assert.IsType<TaskGatePayload>(agent.Payload).Reason);
     }
 
     /// <summary>Every kind of Task actor maps to its own Feed actor kind; none falls into Outside Huddle by default.</summary>

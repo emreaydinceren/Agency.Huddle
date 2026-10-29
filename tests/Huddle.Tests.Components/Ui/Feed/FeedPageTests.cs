@@ -36,13 +36,13 @@ public sealed partial class FeedPageTests
     }
 
     private static IRenderedComponent<ContainerFragment> Render(
-        MudBunitContext ctx, string? category = null, string? teammate = null, string? team = null, TabPageContext? page = null)
+        MudBunitContext ctx, string? category = null, string? agent = null, string? team = null, TabPageContext? page = null)
     {
         RenderFragment content = builder =>
         {
             builder.OpenComponent<FeedPage>(0);
             builder.AddAttribute(1, nameof(FeedPage.Category), category);
-            builder.AddAttribute(2, nameof(FeedPage.Teammate), teammate);
+            builder.AddAttribute(2, nameof(FeedPage.Agent), agent);
             builder.AddAttribute(3, nameof(FeedPage.Team), team);
             builder.CloseComponent();
         };
@@ -97,7 +97,7 @@ public sealed partial class FeedPageTests
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
         Assert.Equal("Feed", Text(cut.Find("h1")));
-        Assert.Equal("What Teammates and Huddle did, newest first. Each line links to the Task, Room or document it's about.", Text(cut.Find(".page-header-subtitle")));
+        Assert.Equal("What Agents and Huddle did, newest first. Each line links to the Task, Room or document it's about.", Text(cut.Find(".page-header-subtitle")));
         Assert.Equal("Live", Text(cut.Find(".feed-live-chip")));
         Assert.Equal("Read-only — the Feed never changes the work and never shows message text.", Text(cut.Find(".feed-readonly-text")));
     }
@@ -117,19 +117,19 @@ public sealed partial class FeedPageTests
         Assert.Equal(["All 3", "Needs you 1", "Tasks 2", "Documents 0", "Rooms 0", "Gates 1", "Helpers 0"], Segments(cut));
     }
 
-    /// <summary>Choosing a Category navigates the Tab to it and keeps the Teammate and Team in the address.</summary>
+    /// <summary>Choosing a Category navigates the Tab to it and keeps the Agent and Team in the address.</summary>
     [Fact]
-    public async Task ChoosingACategory_NavigatesTheTab_KeepingTeammateAndTeam()
+    public async Task ChoosingACategory_NavigatesTheTab_KeepingAgentAndTeam()
     {
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         await using MudBunitContext ctx = NewContext(host);
-        TabPageContext page = OpenFeedTab(ctx, "/feed?teammate=Nova&team=Growth");
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, teammate: "Nova", team: "Growth", page: page);
+        TabPageContext page = OpenFeedTab(ctx, "/feed?agent=Nova&team=Growth");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, agent: "Nova", team: "Growth", page: page);
 
         await Choose(cut, "Tasks");
 
-        Assert.Equal("/feed?category=tasks&teammate=Nova&team=Growth", ctx.Services.GetRequiredService<TabService>().Active!.Url);
-        Assert.EndsWith("/feed?category=tasks&teammate=Nova&team=Growth", ctx.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().Uri, StringComparison.Ordinal);
+        Assert.Equal("/feed?category=tasks&agent=Nova&team=Growth", ctx.Services.GetRequiredService<TabService>().Active!.Url);
+        Assert.EndsWith("/feed?category=tasks&agent=Nova&team=Growth", ctx.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().Uri, StringComparison.Ordinal);
     }
 
     /// <summary>Choosing All removes the category parameter and leaves the others.</summary>
@@ -138,12 +138,12 @@ public sealed partial class FeedPageTests
     {
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         await using MudBunitContext ctx = NewContext(host);
-        TabPageContext page = OpenFeedTab(ctx, "/feed?category=tasks&teammate=Nova");
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "tasks", teammate: "Nova", page: page);
+        TabPageContext page = OpenFeedTab(ctx, "/feed?category=tasks&agent=Nova");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "tasks", agent: "Nova", page: page);
 
         await Choose(cut, "All");
 
-        Assert.Equal("/feed?teammate=Nova", ctx.Services.GetRequiredService<TabService>().Active!.Url);
+        Assert.Equal("/feed?agent=Nova", ctx.Services.GetRequiredService<TabService>().Active!.Url);
     }
 
     /// <summary>The Team select lists All teams and then each Team in catalog order, and choosing one navigates to <c>?team=</c>.</summary>
@@ -163,26 +163,26 @@ public sealed partial class FeedPageTests
         Assert.EndsWith("/feed?category=rooms&team=Platform", ctx.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().Uri, StringComparison.Ordinal);
     }
 
-    /// <summary>The Teammate chip is drawn only while a Teammate is set, and its x removes only that parameter.</summary>
+    /// <summary>The Agent chip is drawn only while an Agent is set, and its x removes only that parameter.</summary>
     [Fact]
-    public async Task TeammateChip_ShowsWhileSet_AndClearRemovesOnlyTheTeammate()
+    public async Task AgentChip_ShowsWhileSet_AndClearRemovesOnlyTheAgent()
     {
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         await using MudBunitContext plain = NewContext(host);
-        Assert.Empty(Render(plain).FindAll(".feed-teammate-chip"));
+        Assert.Empty(Render(plain).FindAll(".feed-agent-chip"));
         await using MudBunitContext ctx = NewContext(host);
-        TabPageContext page = OpenFeedTab(ctx, "/feed?category=tasks&teammate=Nova");
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "tasks", teammate: "Nova", page: page);
+        TabPageContext page = OpenFeedTab(ctx, "/feed?category=tasks&agent=Nova");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "tasks", agent: "Nova", page: page);
 
-        Assert.Equal("Teammate: Nova", Text(cut.Find(".feed-teammate-chip .task-filter-chip-button")));
-        await cut.Find(".feed-teammate-chip .task-filter-chip-clear").ClickAsync(new());
+        Assert.Equal("Agent: Nova", Text(cut.Find(".feed-agent-chip .task-filter-chip-button")));
+        await cut.Find(".feed-agent-chip .task-filter-chip-clear").ClickAsync(new());
 
         Assert.Equal("/feed?category=tasks", ctx.Services.GetRequiredService<TabService>().Active!.Url);
     }
 
-    /// <summary>Clicking a Teammate's avatar in a card sets the Teammate in the address.</summary>
+    /// <summary>Clicking an Agent's avatar in a card sets the Agent in the address.</summary>
     [Fact]
-    public async Task AvatarClick_NavigatesToTheTeammate()
+    public async Task AvatarClick_NavigatesToTheAgent()
     {
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         _ = Post(host, "Nova", "Growth", 1, "GRO-1");
@@ -191,10 +191,10 @@ public sealed partial class FeedPageTests
 
         await cut.Find("button.feed-card-avatar-button").ClickAsync(new());
 
-        Assert.EndsWith("/feed?teammate=Nova", ctx.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().Uri, StringComparison.Ordinal);
+        Assert.EndsWith("/feed?agent=Nova", ctx.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().Uri, StringComparison.Ordinal);
     }
 
-    /// <summary>The Teammate and Team parameters narrow the cards to that actor and Team, and an unknown category reads as All.</summary>
+    /// <summary>The Agent and Team parameters narrow the cards to that actor and Team, and an unknown category reads as All.</summary>
     [Fact]
     public async Task Filters_NarrowTheCards_AndAnUnknownCategoryReadsAsAll()
     {
@@ -203,16 +203,16 @@ public sealed partial class FeedPageTests
         FeedItem second = Post(host, "Kai", "Platform", 3, "PLA-1");
         FeedItem third = Post(host, "Nova", "Platform", 2, "PLA-2");
 
-        async Task<long[]> IdsAsync(string? category = null, string? teammate = null, string? team = null)
+        async Task<long[]> IdsAsync(string? category = null, string? agent = null, string? team = null)
         {
             await using MudBunitContext ctx = NewContext(host);
-            return CardIds(Render(ctx, category, teammate, team));
+            return CardIds(Render(ctx, category, agent, team));
         }
 
         Assert.Equal([third.Id, second.Id, first.Id], await IdsAsync(category: "nonsense"));
-        Assert.Equal([third.Id, first.Id], await IdsAsync(teammate: "Nova"));
+        Assert.Equal([third.Id, first.Id], await IdsAsync(agent: "Nova"));
         Assert.Equal([third.Id, second.Id], await IdsAsync(team: "Platform"));
-        Assert.Equal([third.Id], await IdsAsync(teammate: "Nova", team: "Platform"));
+        Assert.Equal([third.Id], await IdsAsync(agent: "Nova", team: "Platform"));
         await using MudBunitContext last = NewContext(host);
         Assert.Equal("All 3", Segments(Render(last, category: "nonsense"))[0]);
     }
@@ -254,7 +254,7 @@ public sealed partial class FeedPageTests
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         _ = Post(host, "Nova", "Growth", 5, "GRO-1");
         await using MudBunitContext ctx = NewContext(host);
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, teammate: "Nova");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, agent: "Nova");
         FeedItem mine = Post(host, "Nova", "Growth", 1, "GRO-2");
         FeedItem other = Post(host, "Kai", "Growth", 0, "GRO-3");
 
@@ -343,22 +343,22 @@ public sealed partial class FeedPageTests
 
     /// <summary>Each empty state names what is missing, and the header and filter bar stay drawn.</summary>
     /// <param name="category">The <c>category</c> parameter.</param>
-    /// <param name="teammate">The <c>teammate</c> parameter.</param>
+    /// <param name="agent">The <c>agent</c> parameter.</param>
     /// <param name="team">The <c>team</c> parameter.</param>
     /// <param name="title">The expected title.</param>
     /// <param name="text">The expected sentence.</param>
     [Theory]
-    [InlineData(null, null, null, "Nothing yet", "What your Teammates do appears here.")]
+    [InlineData(null, null, null, "Nothing yet", "What your Agents do appears here.")]
     [InlineData(null, "Nova", null, "Nothing from Nova yet.", "")]
     [InlineData("tasks", null, null, "Nothing here yet.", "Try All, or another Team.")]
     [InlineData(null, null, "Growth", "Nothing here yet.", "Try All, or another Team.")]
-    [InlineData("needs-you", null, null, "Nothing needs you", "Asks from your Teammates appear here.")]
-    public async Task EmptyStates_NameWhatIsMissing_AndKeepTheHeader(string? category, string? teammate, string? team, string title, string text)
+    [InlineData("needs-you", null, null, "Nothing needs you", "Asks from your Agents appear here.")]
+    public async Task EmptyStates_NameWhatIsMissing_AndKeepTheHeader(string? category, string? agent, string? team, string title, string text)
     {
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         await using MudBunitContext ctx = NewContext(host);
 
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, category, teammate, team);
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, category, agent, team);
 
         Assert.Equal(title, Text(cut.Find(".empty-state-title")));
         Assert.Equal(text, Text(cut.Find(".empty-state-text")));
@@ -411,9 +411,9 @@ public sealed partial class FeedPageTests
         await using MudBunitContext ctx = NewContext(host);
         TabPageContext page = OpenFeedTab(ctx, "/feed");
 
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "needs-you", teammate: "Nova", team: "Growth", page: page);
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "needs-you", agent: "Nova", team: "Growth", page: page);
 
         Assert.Equal("All 0", Text(cut.Find(".huddle-segmented-active-item")));
-        Assert.Empty(cut.FindAll(".feed-teammate-chip"));
+        Assert.Empty(cut.FindAll(".feed-agent-chip"));
     }
 }

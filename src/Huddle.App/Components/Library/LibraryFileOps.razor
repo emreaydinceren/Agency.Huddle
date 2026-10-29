@@ -382,16 +382,16 @@
             if (entry.IsFolder)
             {
                 string name = LastSegment(entry.Path.RelativePath);
-                string childName = entry.Path.Role == LibraryNodeRole.TeammateFolder ? this.TeammateDisplayName(name) : name;
+                string childName = entry.Path.Role == LibraryNodeRole.AgentFolder ? this.AgentDisplayName(name) : name;
                 await this.CollectFoldersAsync(entry.Path, childName, folders, ct);
             }
         }
     }
 
-    /// <summary>What the Move dialog calls a Teammate's folder: the Teammate's Name and Title ("Alan · Chief of Staff"),
-    /// not the folder's own name; the folder name stays in the row's tooltip. A folder no Teammate owns keeps its name.</summary>
+    /// <summary>What the Move dialog calls an Agent's folder: the Agent's Name and Title ("Alan · Chief of Staff"),
+    /// not the folder's own name; the folder name stays in the row's tooltip. A folder no Agent owns keeps its name.</summary>
     /// <param name="folderName">The folder's name on disk.</param>
-    internal string TeammateDisplayName(string folderName)
+    internal string AgentDisplayName(string folderName)
     {
         PersonaEntry? persona = (this.Services.GetService(typeof(PersonaStore)) as PersonaStore)?.ResolveByNameOrAlias(folderName);
         if (persona is null)

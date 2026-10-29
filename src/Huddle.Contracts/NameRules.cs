@@ -5,14 +5,14 @@ namespace Agency.Huddle.Contracts;
 public static partial class NameRules
 {
     /// <summary>
-    /// A Teammate Name is a display name — "Emily Lee" is as legitimate as "echo" — so single
+    /// An Agent Name is a display name — "Emily Lee" is as legitimate as "echo" — so single
     /// interior spaces are allowed. Everything else stays narrow, because a Name is not only shown:
     /// it is also the filename of a Persona ({name}.md), which makes this method the
     /// path-traversal guard, and it is matched against message text to find Mentions.
     /// <para>
     /// Leading, trailing and doubled spaces are rejected on purpose. Windows silently strips a
     /// trailing space from a filename, so "coo " and "coo" would resolve to one file while
-    /// presenting as two Teammates; and "Emily  Lee" beside "Emily Lee" is a distinction no reader
+    /// presenting as two Agents; and "Emily  Lee" beside "Emily Lee" is a distinction no reader
     /// can see. Rejecting them keeps a Name's rendered form and its stored form the same string.
     /// </para>
     /// </summary>

@@ -17,7 +17,7 @@ internal sealed class FileChangeTracker(
     ITeamDirectory directory,
     WatchedFolderResolver resolver,
     IOptions<TeamOptions> options,
-    TeammatePaths teammatePaths,
+    AgentPaths agentPaths,
     ILogger<FileChangeTracker> logger)
 {
     /// <summary>
@@ -283,9 +283,9 @@ internal sealed class FileChangeTracker(
     /// Checks Persona <c>watches</c> entries at startup for <see cref="Agency.Huddle.App.Acp.PersonaSupervisor"/>'s
     /// Degraded report, per FC §6.10. The message is the same fixed text for every unresolvable
     /// entry, regardless of the resolver's own specific reason, and also fires for a bare word that
-    /// resolves cleanly but is almost certainly a mistyped Teammate Name - see
-    /// <see cref="IsLikelyMistypedTeammateName"/>. Either way the entry is still watched (E-2: its
-    /// folder, or the Teammate meant, may exist later); this only ever adds a warning.
+    /// resolves cleanly but is almost certainly a mistyped Agent Name - see
+    /// <see cref="IsLikelyMistypedAgentName"/>. Either way the entry is still watched (E-2: its
+    /// folder, or the Agent meant, may exist later); this only ever adds a warning.
     /// </summary>
     /// <param name="declared">The Persona's <c>watches</c> frontmatter entries.</param>
     /// <returns>One warning per entry that does not resolve, or looks like a typo.</returns>
@@ -295,14 +295,14 @@ internal sealed class FileChangeTracker(
 
         List<string> warnings = [];
         string dataDirName = Path.GetFileName(options.Value.DataDir);
-        IReadOnlyCollection<string> teammateNames = personas.ListNames();
+        IReadOnlyCollection<string> agentNames = personas.ListNames();
 
         foreach (string entry in declared)
         {
-            if (!resolver.TryResolve(entry, teammateNames, out WatchedFolder? folder, out _)
-                || IsLikelyMistypedTeammateName(entry, folder, teammateNames))
+            if (!resolver.TryResolve(entry, agentNames, out WatchedFolder? folder, out _)
+                || IsLikelyMistypedAgentName(entry, folder, agentNames))
             {
-                warnings.Add($"Watched folder '{entry}' is not a Teammate or a folder inside {dataDirName}.");
+                warnings.Add($"Watched folder '{entry}' is not an Agent or a folder inside {dataDirName}.");
             }
         }
 
@@ -312,15 +312,15 @@ internal sealed class FileChangeTracker(
     /// <summary>
     /// Whether <paramref name="entry"/> resolved cleanly only because FC §6.3's own fallback rule
     /// treats a bare word with no other meaning as relative to <c>DataDir</c> - so a mistyped
-    /// Teammate Name such as <c>Nope</c> resolves to <c>{DataDir}/Nope</c> and would otherwise never
+    /// Agent Name such as <c>Nope</c> resolves to <c>{DataDir}/Nope</c> and would otherwise never
     /// warn, even though FC §6.10's own example is exactly this case. Multi-segment entries
     /// (<c>Shared/missing</c>) and explicitly relative ones (<c>./missing</c>) are left alone: those
     /// name a real path someone intends to create, which is not what this checks for (E-2).
     /// </summary>
     /// <param name="entry">The entry as written in frontmatter.</param>
     /// <param name="folder">What <paramref name="entry"/> resolved to.</param>
-    /// <param name="teammateNames">Every Teammate's Name, so a genuine match is never flagged.</param>
-    private static bool IsLikelyMistypedTeammateName(string entry, WatchedFolder folder, IReadOnlyCollection<string> teammateNames)
+    /// <param name="agentNames">Every Agent's Name, so a genuine match is never flagged.</param>
+    private static bool IsLikelyMistypedAgentName(string entry, WatchedFolder folder, IReadOnlyCollection<string> agentNames)
     {
         if (entry.Contains('/', StringComparison.Ordinal) || entry.Contains('\\', StringComparison.Ordinal))
         {
@@ -337,7 +337,7 @@ internal sealed class FileChangeTracker(
             return false;
         }
 
-        if (teammateNames.Any(name => string.Equals(name, entry, StringComparison.OrdinalIgnoreCase)))
+        if (agentNames.Any(name => string.Equals(name, entry, StringComparison.OrdinalIgnoreCase)))
         {
             return false;
         }
@@ -398,7 +398,7 @@ internal sealed class FileChangeTracker(
     /// <summary>Whether <paramref name="fullPath"/> is <paramref name="agentName"/>'s own Work Dir.</summary>
     private bool IsOwnWorkDir(string agentName, string fullPath)
     {
-        string ownFullPath = teammatePaths.WorkDir(agentName);
+        string ownFullPath = agentPaths.WorkDir(agentName);
         return string.Equals(ownFullPath, fullPath, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -439,7 +439,7 @@ internal sealed class FileChangeTracker(
         List<WatchedFolder> folders = [];
         HashSet<string> seenFullPaths = new(StringComparer.OrdinalIgnoreCase);
 
-        WatchedFolder own = new(agentName, teammatePaths.WorkDir(agentName));
+        WatchedFolder own = new(agentName, agentPaths.WorkDir(agentName));
         folders.Add(own);
         seenFullPaths.Add(own.FullPath);
 

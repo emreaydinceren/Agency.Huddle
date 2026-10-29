@@ -1,20 +1,20 @@
 @*
     The Settings page's "Reset all to defaults" control, in the header area. Guarded the way
-    Teammates.razor guards Remove: an inline confirm step that swaps the button for Confirm/Cancel in
+    Agents.razor guards Remove: an inline confirm step that swaps the button for Confirm/Cancel in
     place, never a dialog and never a JS confirm() - discarding every customisation in one click with
     no confirmation would be the single most destructive thing this page can do.
 
     The parent (Settings.razor) owns all state, the same split PromptsPanel uses: Confirming and
     AnyModified are both parameters rather than fields here, so the confirm step can be rendered
     directly from a test via ParameterView.FromDictionary (or bUnit's ComponentParameterCollectionBuilder),
-    exactly how TeammateCardTests renders TeammateCard's ConfirmingRemove state - HtmlRenderer cannot
+    exactly how AgentProfileCardTests renders AgentProfileCard's ConfirmingRemove state - HtmlRenderer cannot
     dispatch a click, so this was the only way to see this component's confirm step from a test before
     bUnit. Every parameter is deliberately non-string (two bools, three plain EventCallbacks with no
     payload) for the same reason PromptsPanel's are.
 
     Stage 3 (the MudBlazor migration) keeps this inline-confirm pattern exactly as designed - no
     IDialogService, no JS confirm() - and only restyles the three buttons per the migration brief's
-    Part A mapping: the danger button (formerly styled with the now-deleted .teammates-danger class)
+    Part A mapping: the danger button (formerly styled with the now-deleted .agents-danger class)
     becomes an outlined MudButton with Color.Error, and the plain Cancel button becomes a plain
     outlined MudButton.
 *@

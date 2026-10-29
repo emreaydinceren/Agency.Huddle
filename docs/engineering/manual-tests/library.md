@@ -10,7 +10,7 @@ Read [the manual test script](../manual-tests.md) first — the cost guard, the 
 
 ## Setup
 
-Unless a test says otherwise, run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat) from [Common procedures](common.md). The lane gives you **Ada** and **Bo** on the free mock adapter, each with an empty one-to-one Room, and `<data>` is `C:\seeds\huddle\uat\data`. Tests that need no Teammate (L2, L4, L6, L8, L11, L14, L15, L17, L19, L20, L21) also run there. L16 and L18 say which lane and data folder they use.
+Unless a test says otherwise, run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat) from [Common procedures](common.md). The lane gives you **Ada** and **Bo** on the free mock adapter, each with an empty one-to-one Room, and `<data>` is `C:\seeds\huddle\uat\data`. Tests that need no Agent (L2, L4, L6, L8, L11, L14, L15, L17, L19, L20, L21) also run there. L16 and L18 say which lane and data folder they use.
 
 This area adds one scratch folder and two pinned roots. Create the folder in `T-B` before you start, so nothing below edits a real repository file:
 
@@ -37,9 +37,9 @@ Also copy any `.png` to `$vault\report.png` and any `.pptx` to `$vault\deck.pptx
 - Name `Vault`, Path `C:\seeds\huddle\uat\vault`.
 - Name `Docs`, Path `<repo>\docs`. L0 only reads from it; no test edits it.
 
-Each pinned root appears in the table with a **Remove** button. The built-in **Teams** and **Teammates** roots have a **Hide** switch instead of **Remove**.
+Each pinned root appears in the table with a **Remove** button. The built-in **Teams** and **Agents** roots have a **Hide** switch instead of **Remove**.
 
-**Open the Library**, as the steps below say, means: click the **Library** button (the book icon) in the Activity bar, then the one **Library** row in the Sidebar. The Sidebar lists no roots. The `Library` tab opens on `/library` with the tree on the left, one top node per root: **Teams**, **Teammates**, **Uploads**, **Skill Sources**, **Vault** and **Docs**. A test picks its root by expanding that node in the tree.
+**Open the Library**, as the steps below say, means: click the **Library** button (the book icon) in the Activity bar, then the one **Library** row in the Sidebar. The Sidebar lists no roots. The `Library` tab opens on `/library` with the tree on the left, one top node per root: **Teams**, **Agents**, **Uploads**, **Skill Sources**, **Vault** and **Docs**. A test picks its root by expanding that node in the tree.
 
 ---
 
@@ -92,11 +92,11 @@ Each pinned root appears in the table with a **Remove** button. The built-in **T
 
 **Steps**
 
-1. In `T-B`, create the file: `New-Item -ItemType Directory -Force C:\seeds\huddle\uat\data\Teammates\Ada\work\memory | Out-Null; Set-Content C:\seeds\huddle\uat\data\Teammates\Ada\work\memory\launch-date.md "Launch: 1 Oct"`.
+1. In `T-B`, create the file: `New-Item -ItemType Directory -Force C:\seeds\huddle\uat\data\Agents\Ada\work\memory | Out-Null; Set-Content C:\seeds\huddle\uat\data\Agents\Ada\work\memory\launch-date.md "Launch: 1 Oct"`.
 2. Open Ada's Room and send `hello`. Wait for the reply. This is the baseline Turn; the reply may list the file as `added`.
-3. Open the Library and expand the **Teammates** root in the tree. Open `Ada`, then `work`, then `memory`, then `launch-date.md`.
+3. Open the Library and expand the **Agents** root in the tree. Open `Ada`, then `work`, then `memory`, then `launch-date.md`.
 4. Switch the mode toggle to **Edit**, change `1 Oct` to `15 Oct`, and press Ctrl+S. (The file is not Ada's definition, so no confirmation dialog appears.)
-5. In `T-B`, check the bytes: `Get-Content -Raw C:\seeds\huddle\uat\data\Teammates\Ada\work\memory\launch-date.md`. The text is exactly `Launch: 15 Oct` plus the original line ending, with no BOM and no other change.
+5. In `T-B`, check the bytes: `Get-Content -Raw C:\seeds\huddle\uat\data\Agents\Ada\work\memory\launch-date.md`. The text is exactly `Launch: 15 Oct` plus the original line ending, with no BOM and no other change.
 6. Back in Ada's Room send `anything new?`. Wait for the reply.
 7. Read the echoed reply for a line `changed ` followed by a path ending `launch-date.md`.
 
@@ -158,11 +158,11 @@ Each pinned root appears in the table with a **Remove** button. The built-in **T
 
 **Steps**
 
-1. Open the Library and expand the **Teammates** root in the tree, then open `Ada`, then `Ada.md`.
+1. Open the Library and expand the **Agents** root in the tree, then open `Ada`, then `Ada.md`.
 2. Switch the mode toggle to **Edit**.
 3. In the frontmatter (the block between the `---` lines at the top) add the line `teams: [Sales]`. If a `teams:` line exists, change it.
 4. Press Ctrl+S. A dialog titled **Save this definition?** says `Saving restarts Ada and clears its conversation memory.`. Click **Save**.
-5. Wait for Ada's card on Teammates to settle (Online again).
+5. Wait for Ada's card on Agents to settle (Online again).
 6. In `T-B`, run `Test-Path C:\seeds\huddle\uat\data\Teams\Sales`.
 7. In the Library, open **Teams** and confirm a `Sales` folder is listed.
 
@@ -215,7 +215,7 @@ Each pinned root appears in the table with a **Remove** button. The built-in **T
 
 **Free** · about 8 min
 
-*Spec §2 L5: The Human opens `Teammates/Ada/Ada.md`, Ada's definition, and saves it. Before saving: *Saving restarts Ada and clears its conversation memory.* On confirm, the save completes.*
+*Spec §2 L5: The Human opens `Agents/Ada/Ada.md`, Ada's definition, and saves it. Before saving: *Saving restarts Ada and clears its conversation memory.* On confirm, the save completes.*
 
 **Before you start**
 
@@ -223,13 +223,13 @@ Each pinned root appears in the table with a **Remove** button. The built-in **T
 
 **Steps**
 
-1. Open the Library and expand the **Teammates** root in the tree, then open `Ada` and `Ada.md`.
+1. Open the Library and expand the **Agents** root in the tree, then open `Ada` and `Ada.md`.
 2. Read the banner above the document. It says `This is Ada's definition.`
 3. Switch the mode toggle to **Edit**.
 4. Add a space at the end of the Persona body (below the second `---`).
 5. Press Ctrl+S.
 6. A dialog titled **Save this definition?** opens with `Saving restarts Ada and clears its conversation memory.`. First click **Cancel** and check that the file is unchanged on disk (`O-FILE`). Press Ctrl+S again and click **Save**.
-7. Open **Teammates** in the sidebar and watch Ada's card. It leaves Online and comes back.
+7. Open **Agents** in the sidebar and watch Ada's card. It leaves Online and comes back.
 
 **Pass if — all of these**
 
@@ -261,19 +261,19 @@ Each pinned root appears in the table with a **Remove** button. The built-in **T
 2. Right-click the `Marketing` node (a Team folder).
 3. Read the menu. Note which items are greyed out and what small text sits under them.
 4. Press Escape. Right-click `Launch Q4` (a Project folder) and read the menu again.
-5. In the tree, expand the **Teammates** root, right-click the `Ada` folder, and read the menu.
+5. In the tree, expand the **Agents** root, right-click the `Ada` folder, and read the menu.
 6. Hover the `Marketing` node for two seconds and check for a tooltip.
 
 **Pass if — all of these**
 
 - The Team and Project menus list **New Document**, **New Folder**, **Copy Path**, **Rename**, **Delete**, each with an icon and a divider ahead of **Copy Path** and **Rename**. **New Project** appears on the Team menu only.
 - **Rename** and **Delete** are shown disabled on the Team and the Project, with the reason `Team and Project folders can't be renamed, moved or deleted here.` as secondary text under each.
-- On the `Ada` folder the three are disabled with `Teammate folders can't be renamed, moved or deleted here.`
+- On the `Ada` folder the three are disabled with `Agent folders can't be renamed, moved or deleted here.`
 - Clicking a disabled item does nothing.
 
 **Fail if — any of these**
 
-- Rename, Move or Delete is enabled on a Team, Project or Teammate folder.
+- Rename, Move or Delete is enabled on a Team, Project or Agent folder.
 - The disabled items show no reason.
 
 **Note:** there is no hover tooltip on the node; the reason is the secondary text in the menu. Do not fail the test for a missing tooltip.
@@ -389,13 +389,13 @@ Each pinned root appears in the table with a **Remove** button. The built-in **T
 **Before you start**
 
 - `P-LAUNCH-UAT` is running. The mock adapter echoes the prompt, so the `changed` line is visible. If no `added` or `changed` line ever appears, conclude Inconclusive for step 11 (the File Changes block may be off for the mock profile).
-- Create `C:\seeds\huddle\uat\data\Teammates\Ada\work\plan.md` containing `Launch in Q4.` and send `hello` in Ada's Room first, so a baseline Turn exists.
+- Create `C:\seeds\huddle\uat\data\Agents\Ada\work\plan.md` containing `Launch in Q4.` and send `hello` in Ada's Room first, so a baseline Turn exists.
 
 **Steps**
 
-1. In the Library open **Teammates** → `Ada` → `work` → `plan.md` and switch to **Edit**.
+1. In the Library open **Agents** → `Ada` → `work` → `plan.md` and switch to **Edit**.
 2. Type ` (mine)` at the end of the first line. Do not save. The title shows `●`.
-3. In `T-B`, rewrite the file: `Set-Content C:\seeds\huddle\uat\data\Teammates\Ada\work\plan.md "Launch in Q1."`.
+3. In `T-B`, rewrite the file: `Set-Content C:\seeds\huddle\uat\data\Agents\Ada\work\plan.md "Launch in Q1."`.
 4. Click back into the document. A warning alert reads `This file changed on disk since you opened it.` with **Reload** and **Keep mine** buttons. Your text is not replaced.
 5. Click **Keep mine**. The alert disappears.
 6. Press Ctrl+S.
@@ -587,43 +587,43 @@ Each pinned root appears in the table with a **Remove** button. The built-in **T
 
 ---
 
-### L16 — Old Teams/*.md + work/ install is migrated to the Teammates/ folder layout on startup
+### L16 — Old Teams/*.md + work/ install is migrated to the Agents/ folder layout on startup
 
 **Free** · about 15 min
 
-*Migration: a data folder with Personas stored in `Teams/*.md` and Work Dirs at `work/<Name>` is upgraded to `Teammates/<Name>/<Name>.md` with `Teammates/<Name>/work/`. It runs only when `Teammates\.layout-migrated` is absent.*
+*Migration: a data folder with Personas stored in `Teams/*.md` and Work Dirs at `work/<Name>` is upgraded to `Agents/<Name>/<Name>.md` with `Agents/<Name>/work/`. It runs only when `Agents\.layout-migrated` is absent.*
 
 **Before you start**
 
-- `E-FRESH`: `P-STOP`, then `P-RESET-ALL` on the default data folder. This test runs on [`P-LAUNCH-FREE`](common.md#p-launch-free) and that default folder is `<data>` below, not the UAT folder. Migration runs only when `Teammates\.layout-migrated` is absent, and any earlier run has written it.
+- `E-FRESH`: `P-STOP`, then `P-RESET-ALL` on the default data folder. This test runs on [`P-LAUNCH-FREE`](common.md#p-launch-free) and that default folder is `<data>` below, not the UAT folder. Migration runs only when `Agents\.layout-migrated` is absent, and any earlier run has written it.
 
 **Steps**
 
-1. Run `P-LAUNCH-FREE`. With `P-NEW-PERSONA` create two Teammates, `Nova` and `Ada`, any body, Model Haiku, Effort low. Create a file in each Work Dir: `Set-Content <data>\Teammates\Nova\work\notes.md "n"` and `Set-Content <data>\Teammates\Ada\work\memory.md "m"`.
+1. Run `P-LAUNCH-FREE`. With `P-NEW-PERSONA` create two Agents, `Nova` and `Ada`, any body, Model Haiku, Effort low. Create a file in each Work Dir: `Set-Content <data>\Agents\Nova\work\notes.md "n"` and `Set-Content <data>\Agents\Ada\work\memory.md "m"`.
 2. `P-STOP`.
 3. Turn the install into the old layout in `T-B`:
 
    ```powershell
    New-Item -ItemType Directory -Force <data>\work | Out-Null
    foreach ($n in 'Nova','Ada') {
-     Move-Item <data>\Teammates\$n\$n.md <data>\Teams\$n.md
-     Move-Item <data>\Teammates\$n\work <data>\work\$n
+     Move-Item <data>\Agents\$n\$n.md <data>\Teams\$n.md
+     Move-Item <data>\Agents\$n\work <data>\work\$n
    }
-   Remove-Item -Recurse -Force <data>\Teammates
+   Remove-Item -Recurse -Force <data>\Agents
    ```
 
-   The marker `Teammates\.layout-migrated` goes with the folder. Check: `Test-Path <data>\Teams\Nova.md` is `True`, `Test-Path <data>\Teammates` is `False`.
+   The marker `Agents\.layout-migrated` goes with the folder. Check: `Test-Path <data>\Teams\Nova.md` is `True`, `Test-Path <data>\Agents` is `False`.
 4. Run `P-LAUNCH-FREE` again.
-5. In `T-A` look for a line starting `Teammate layout migration` (`O-LOG`).
-6. In `T-B`, list the layout: `Get-ChildItem -Recurse <data>\Teammates | Select-Object FullName`.
-7. Open **Teammates** in the sidebar, then open the Library and expand the **Teammates** root in the tree.
+5. In `T-A` look for a line starting `Agent layout migration` (`O-LOG`).
+6. In `T-B`, list the layout: `Get-ChildItem -Recurse <data>\Agents | Select-Object FullName`.
+7. Open **Agents** in the sidebar, then open the Library and expand the **Agents** root in the tree.
 
 **Pass if — all of these**
 
 - The log reports the migration at startup.
-- `Teammates\Nova\Nova.md`, `Teammates\Nova\work\notes.md`, `Teammates\Ada\Ada.md` and `Teammates\Ada\work\memory.md` exist, and `Teammates\.layout-migrated` exists.
+- `Agents\Nova\Nova.md`, `Agents\Nova\work\notes.md`, `Agents\Ada\Ada.md` and `Agents\Ada\work\memory.md` exist, and `Agents\.layout-migrated` exists.
 - `Teams\Nova.md` and `Teams\Ada.md` are gone. `Teams\` itself stays: it is the live Team-folder root. `work\` is empty or removed.
-- Both Teammates have cards on the Teammates page (they read **Offline** under the free lane; Offline is correct there) and the Library's Teammates root lists both with their work files.
+- Both Agents have cards on the Agents page (they read **Offline** under the free lane; Offline is correct there) and the Library's Agents root lists both with their work files.
 
 **Fail if — any of these**
 
@@ -667,16 +667,16 @@ Each pinned root appears in the table with a **Remove** button. The built-in **T
 
 ---
 
-### L18 — run.ps1 -CleanOnly deletes the database and Teammate definitions, and keeps everything else
+### L18 — run.ps1 -CleanOnly deletes the database and Agent definitions, and keeps everything else
 
 **Free** · about 8 min
 
-*UAT: `run.ps1 -CleanOnly` deletes the previous run's SQLite database and every Teammate definition file, then exits without building or starting anything. Work Dirs, `Teams/`, prompts and appearance are left alone.*
+*UAT: `run.ps1 -CleanOnly` deletes the previous run's SQLite database and every Agent definition file, then exits without building or starting anything. Work Dirs, `Teams/`, prompts and appearance are left alone.*
 
 **Before you start**
 
 - `E-STOPPED`. Use the UAT data folder: `P-LAUNCH-UAT` once, then `P-STOP`, with Ada and Bo present. Do not use `-Clean`: that also builds and starts the app.
-- Put a marker in each place: a file in `C:\seeds\huddle\uat\data\Teams\Marketing\` (or any Team folder), `C:\seeds\huddle\uat\data\Teammates\Ada\work\notes.md`, and make sure `prompts.json` and `appearance.json` exist in `<data>` (change a Prompt and the Theme in Settings once before stopping).
+- Put a marker in each place: a file in `C:\seeds\huddle\uat\data\Teams\Marketing\` (or any Team folder), `C:\seeds\huddle\uat\data\Agents\Ada\work\notes.md`, and make sure `prompts.json` and `appearance.json` exist in `<data>` (change a Prompt and the Theme in Settings once before stopping).
 
 **Steps**
 
@@ -689,8 +689,8 @@ Each pinned root appears in the table with a **Remove** button. The built-in **T
 
 - The script exits without building or starting the app (nothing answers on `http://localhost:5100`).
 - `team.db` (with `team.db-wal` and `team.db-shm` if present) is gone.
-- `Teammates\Ada\Ada.md` and `Teammates\Bo\Bo.md` are gone.
-- `Teammates\Ada\work\notes.md`, everything under `Teams\`, `prompts.json` and `appearance.json` are still there, as are `Teammates\.layout-migrated` and `Teammates\_unsorted`.
+- `Agents\Ada\Ada.md` and `Agents\Bo\Bo.md` are gone.
+- `Agents\Ada\work\notes.md`, everything under `Teams\`, `prompts.json` and `appearance.json` are still there, as are `Agents\.layout-migrated` and `Agents\_unsorted`.
 
 **Fail if — any of these**
 

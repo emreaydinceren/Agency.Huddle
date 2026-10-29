@@ -8,7 +8,7 @@ using Agency.Huddle.Tests.Factories;
 
 /// <summary>
 /// Covers the Invitation issued by an Agent. The Human's two routes into the same behaviour — the
-/// <c>/invite</c> command and the Add teammate control — are covered where they live.
+/// <c>/invite</c> command and the Add agent control — are covered where they live.
 /// </summary>
 public sealed class InviteAgentToolTests
 {

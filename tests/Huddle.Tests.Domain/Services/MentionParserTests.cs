@@ -132,7 +132,7 @@ public sealed class MentionParserTests
     public void Parse_DoesNotMatchAPrefixOfALongerWord()
     {
         // "ech" must not be found inside "@echo": a Mention ends at a word boundary, so that a
-        // Teammate cannot be Mentioned by accident every time a longer Name is written.
+        // Agent cannot be Mentioned by accident every time a longer Name is written.
         var ech = new User("1", "ech", UserKind.Agent, null);
 
         var result = MentionParser.Parse("@echo", [ech]);

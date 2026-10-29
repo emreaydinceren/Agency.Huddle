@@ -195,14 +195,14 @@ public sealed partial class NotificationsPanelTests
         IRenderedComponent<NotificationsPanel> cut = Render(ctx);
 
         Assert.Equal("Nothing needs you", cut.Find("[role='status']").TextContent.Trim());
-        Assert.Contains("Asks from your Teammates appear here.", cut.Find(".empty-state").TextContent, StringComparison.Ordinal);
+        Assert.Contains("Asks from your Agents appear here.", cut.Find(".empty-state").TextContent, StringComparison.Ordinal);
 
         await Choose(cut, "All");
 
         cut.WaitForAssertion(() =>
         {
             Assert.Equal("Nothing yet", cut.Find("[role='status']").TextContent.Trim());
-            Assert.Contains("What your Teammates do appears here.", cut.Find(".empty-state").TextContent, StringComparison.Ordinal);
+            Assert.Contains("What your Agents do appears here.", cut.Find(".empty-state").TextContent, StringComparison.Ordinal);
         });
     }
 

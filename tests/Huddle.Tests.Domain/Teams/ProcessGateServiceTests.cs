@@ -2,7 +2,7 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
-using Agency.Huddle.Tests.Teammates;
+using Agency.Huddle.Tests.Agents;
 using Agency.Huddle.Tests.Ui.Teams;
 
 namespace Agency.Huddle.Tests.Teams;

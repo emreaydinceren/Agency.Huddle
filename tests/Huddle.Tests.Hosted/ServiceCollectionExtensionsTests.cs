@@ -6,7 +6,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Circuits;
 using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.Tests;
@@ -21,11 +21,11 @@ namespace Agency.Huddle.Tests;
 public sealed class ServiceCollectionExtensionsTests
 {
     /// <summary>
-    /// Renaming <c>Acp.PersonaDir</c> to <c>Acp.TeammatesDir</c> (the Teammates rename) has no
+    /// Renaming <c>Acp.PersonaDir</c> to <c>Acp.AgentsDir</c> (the Agents rename) has no
     /// fallback: nothing in appsettings*.json sets the old key today, so keeping one would be dead
     /// weight. But a value left behind in a user secret or an environment variable would otherwise
     /// bind to nothing, leaving <see cref="Agency.Huddle.App.Acp.PersonaStore"/> to scan an empty
-    /// default "Teammates" folder - zero teammates, no exception, no log anywhere. That
+    /// default "Agents" folder - zero agents, no exception, no log anywhere. That
     /// silent-degradation shape is exactly what docs/engineering/traps.md exists to catch, so this
     /// must fail loudly at startup instead, naming the new key.
     /// </summary>
@@ -44,26 +44,26 @@ public sealed class ServiceCollectionExtensionsTests
         var ex = Assert.Throws<InvalidOperationException>(() => services.AddTeamServices(configuration));
 
         Assert.Equal(
-            "Configuration key 'Team:Acp:PersonaDir' was renamed to 'Team:Acp:TeammatesDir'. " +
+            "Configuration key 'Team:Acp:PersonaDir' was renamed to 'Team:Acp:AgentsDir'. " +
             "Update the configuration source that sets it (environment variable, user secret, etc.) - " +
             "there is no automatic fallback.",
             ex.Message);
     }
 
     /// <summary>
-    /// <see cref="Agency.Huddle.App.Library.LayoutGuard.ValidateTeamsAndTeammates"/> runs from the same
+    /// <see cref="Agency.Huddle.App.Library.LayoutGuard.ValidateTeamsAndAgents"/> runs from the same
     /// <c>PostConfigure</c> that normalises <c>DataDir</c>, so an overlapping <c>Team:Teams:Dir</c> and
-    /// <c>Team:Acp:TeammatesDir</c> must fail loudly the moment <see cref="TeamOptions"/> is resolved,
+    /// <c>Team:Acp:AgentsDir</c> must fail loudly the moment <see cref="TeamOptions"/> is resolved,
     /// rather than silently scanning one folder as both roots.
     /// </summary>
     [Fact]
-    public void AddTeamServices_WithOverlappingTeamsAndTeammatesDirs_ThrowsOnOptionsResolution()
+    public void AddTeamServices_WithOverlappingTeamsAndAgentsDirs_ThrowsOnOptionsResolution()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Team:Teams:Dir"] = "Teammates",
-                ["Team:Acp:TeammatesDir"] = "Teammates",
+                ["Team:Teams:Dir"] = "Agents",
+                ["Team:Acp:AgentsDir"] = "Agents",
             })
             .Build();
 
@@ -75,8 +75,8 @@ public sealed class ServiceCollectionExtensionsTests
             () => provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<TeamOptions>>().Value);
 
         string dataDir = Path.GetFullPath("App_Data");
-        string teammatesRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(dataDir, "Teammates")));
-        Assert.Equal($"'Team:Teams:Dir' ({teammatesRoot}) and 'Team:Acp:TeammatesDir' ({teammatesRoot}) must not overlap.", ex.Message);
+        string agentsRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(dataDir, "Agents")));
+        Assert.Equal($"'Team:Teams:Dir' ({agentsRoot}) and 'Team:Acp:AgentsDir' ({agentsRoot}) must not overlap.", ex.Message);
     }
 
     /// <summary>The team type catalog resolves from the container with the real embedded built-ins and no problems.</summary>
@@ -160,7 +160,7 @@ public sealed class ServiceCollectionExtensionsTests
         Assert.Equal(
             [
                 Agency.Huddle.App.Search.SearchFilter.Teams,
-                Agency.Huddle.App.Search.SearchFilter.Teammates,
+                Agency.Huddle.App.Search.SearchFilter.Agents,
                 Agency.Huddle.App.Search.SearchFilter.Library,
                 Agency.Huddle.App.Search.SearchFilter.Tasks,
                 Agency.Huddle.App.Search.SearchFilter.Rooms,
@@ -277,7 +277,7 @@ public sealed class ServiceCollectionExtensionsTests
     }
 
     /// <summary>
-    /// Spec §10's ordering constraint 1: <c>DataInitializer</c> -&gt; <c>BuiltinTeammateSeeder</c> -&gt;
+    /// Spec §10's ordering constraint 1: <c>DataInitializer</c> -&gt; <c>BuiltinAgentSeeder</c> -&gt;
     /// <see cref="PersonaSupervisor"/>, in that order. Hosted services start in registration order, so
     /// resolving <see cref="IHostedService"/> and checking the position each one lands at is the same
     /// thing as checking start order: the seeder must observe an empty Chief of Staff at startup and
@@ -304,17 +304,17 @@ public sealed class ServiceCollectionExtensionsTests
         List<IHostedService> hostedServices = [.. provider.GetServices<IHostedService>()];
 
         var dataInitializerIndex = hostedServices.FindIndex(service => service is DataInitializer);
-        var seederIndex = hostedServices.FindIndex(service => service is BuiltinTeammateSeeder);
+        var seederIndex = hostedServices.FindIndex(service => service is BuiltinAgentSeeder);
         var supervisorIndex = hostedServices.FindIndex(service => service is PersonaSupervisor);
 
         Assert.True(dataInitializerIndex >= 0, "DataInitializer was not registered as a hosted service.");
-        Assert.True(seederIndex >= 0, "BuiltinTeammateSeeder was not registered as a hosted service.");
+        Assert.True(seederIndex >= 0, "BuiltinAgentSeeder was not registered as a hosted service.");
         Assert.True(supervisorIndex >= 0, "PersonaSupervisor was not registered as a hosted service.");
         Assert.True(
             dataInitializerIndex < seederIndex,
-            $"Expected DataInitializer (index {dataInitializerIndex}) to start before BuiltinTeammateSeeder (index {seederIndex}).");
+            $"Expected DataInitializer (index {dataInitializerIndex}) to start before BuiltinAgentSeeder (index {seederIndex}).");
         Assert.True(
             seederIndex < supervisorIndex,
-            $"Expected BuiltinTeammateSeeder (index {seederIndex}) to start before PersonaSupervisor (index {supervisorIndex}).");
+            $"Expected BuiltinAgentSeeder (index {seederIndex}) to start before PersonaSupervisor (index {supervisorIndex}).");
     }
 }

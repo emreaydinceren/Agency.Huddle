@@ -3,12 +3,12 @@ using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Avatars;
 using static Agency.Huddle.Tests.Ui.AvatarLibraryPickSupport;
-using static Agency.Huddle.Tests.Ui.TeammateCardTestSupport;
+using static Agency.Huddle.Tests.Ui.AgentProfileCardTestSupport;
 
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Round 3 of the visual audit for the Teammate card and its avatar dialog (B8a to B8k, E5, B10): the title is the item's
+/// Round 3 of the visual audit for the Agent card and its avatar dialog (B8a to B8k, E5, B10): the title is the item's
 /// name, sections are Group labels rather than boxes, the handle is written <c>@alias</c>, the removal sits under a
 /// more-actions menu, the Create and Edit forms are grouped and use "e.g." examples, a list being read shows a progress bar
 /// instead of a disabled-looking box, the swatches are a named radio group, and the library replaces the avatar editor's
@@ -16,7 +16,7 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 public sealed class R3TeamsCardTests
 {
-    /// <summary>The View card's title is the Teammate's name, not "Teammate", and no second, larger name sits in the body (B8a, B10j).</summary>
+    /// <summary>The View card's title is the Agent's name, not "Agent", and no second, larger name sits in the body (B8a, B10j).</summary>
     [Fact]
     public async Task ViewCard_TitleIsTheName_AndTheBodyHoldsNoSecondName()
     {
@@ -28,7 +28,7 @@ public sealed class R3TeamsCardTests
 
         Assert.Equal("coo", cut.Find(".mud-dialog-title h6").TextContent.Trim());
         Assert.Empty(cut.FindAll(".mud-dialog-content h5"));
-        Assert.Empty(cut.FindAll(".teammate-card-name"));
+        Assert.Empty(cut.FindAll(".agent-profile-card-name"));
     }
 
     /// <summary>The View card's sections are Group labels over their content and no outlined box is drawn (B8b).</summary>
@@ -41,12 +41,12 @@ public sealed class R3TeamsCardTests
 
         IRenderedComponent<ContainerFragment> cut = await OpenViewCardAsync(ctx, factory, "coo");
 
-        string[] labels = [.. cut.FindAll(".mud-dialog-content .teammate-card-section > .group-label").Select(static label => label.TextContent.Trim())];
+        string[] labels = [.. cut.FindAll(".mud-dialog-content .agent-profile-card-section > .group-label").Select(static label => label.TextContent.Trim())];
         Assert.Equal(["Persona", "Model", "Effort", "Work mode", "Persona file"], labels);
         Assert.Empty(cut.FindAll(".mud-dialog-content .mud-paper-outlined"));
     }
 
-    /// <summary>The Teammate's handle is written <c>@alias</c>, not "Alias: alias" (B8f, design-system "Avatars and status").</summary>
+    /// <summary>The Agent's handle is written <c>@alias</c>, not "Alias: alias" (B8f, design-system "Avatars and status").</summary>
     [Fact]
     public async Task ViewCard_AliasIsWrittenWithAnAtSign()
     {
@@ -56,8 +56,8 @@ public sealed class R3TeamsCardTests
 
         IRenderedComponent<ContainerFragment> cut = await OpenViewCardAsync(ctx, factory, "coo");
 
-        Assert.Equal("@coo", cut.Find(".teammate-card-alias").TextContent.Trim());
-        Assert.DoesNotContain("Alias:", cut.Find(".teammate-card-alias").ParentElement?.TextContent, StringComparison.Ordinal);
+        Assert.Equal("@coo", cut.Find(".agent-profile-card-alias").TextContent.Trim());
+        Assert.DoesNotContain("Alias:", cut.Find(".agent-profile-card-alias").ParentElement?.TextContent, StringComparison.Ordinal);
     }
 
     /// <summary>The destructive action is not a red icon among text buttons: the card has a more-actions menu named for its target and no "Remove" icon button (B8d, B10f).</summary>
@@ -79,16 +79,16 @@ public sealed class R3TeamsCardTests
     [Fact]
     public void CardSource_PutsTheAdaptersCommandsBesideRestart_NotInTheHeader()
     {
-        string card = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "TeammateCard.razor"));
+        string card = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "AgentProfileCard.razor"));
         int restart = card.IndexOf("this.RestartAsync", StringComparison.Ordinal);
         int commands = card.IndexOf("this.offeredCommands", StringComparison.Ordinal);
-        int firstSection = card.IndexOf("teammate-card-section", StringComparison.Ordinal);
+        int firstSection = card.IndexOf("agent-profile-card-section", StringComparison.Ordinal);
 
         Assert.True(restart > 0 && commands > restart, "the commands must follow the Restart button");
         Assert.True(commands < firstSection, "the commands must come before the first section, with the action row");
     }
 
-    /// <summary>Edit groups its fields under Identity, Persona and Model (B10 New teammate).</summary>
+    /// <summary>Edit groups its fields under Identity, Persona and Model (B10 New agent).</summary>
     [Fact]
     public async Task EditCard_FieldsAreGroupedUnderGroupLabels()
     {
@@ -103,7 +103,7 @@ public sealed class R3TeamsCardTests
         Assert.Equal(["Identity", "Persona", "Model"], labels);
     }
 
-    /// <summary>The Create form's placeholders are "e.g." examples, never bare values, and the one text label reads "Persona text" (B10 New teammate).</summary>
+    /// <summary>The Create form's placeholders are "e.g." examples, never bare values, and the one text label reads "Persona text" (B10 New agent).</summary>
     [Fact]
     public async Task CreateCard_ExamplesAreMarkedAsExamples_AndThereIsOneTextLabel()
     {
@@ -111,7 +111,7 @@ public sealed class R3TeamsCardTests
         await using MudBunitContext ctx = NewContext(factory);
 
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, factory);
-        await ClickButtonAsync(cut, "New teammate");
+        await ClickButtonAsync(cut, "New agent");
 
         string[] placeholders = [.. cut.FindAll(".mud-dialog-content input[placeholder], .mud-dialog-content textarea[placeholder]").Select(static field => field.GetAttribute("placeholder") ?? string.Empty)];
         Assert.NotEmpty(placeholders);
@@ -120,7 +120,7 @@ public sealed class R3TeamsCardTests
         Assert.Equal(0, CountControlsLabelled(cut, "Persona body"));
     }
 
-    /// <summary>UX-E15: the New teammate form puts Title and Alias in one row, and Model and Effort in one row under a single Model label.</summary>
+    /// <summary>UX-E15: the New agent form puts Title and Alias in one row, and Model and Effort in one row under a single Model label.</summary>
     [Fact]
     public async Task CreateCard_TitleAndAliasShareARow_AndModelEffortShareARow()
     {
@@ -128,15 +128,15 @@ public sealed class R3TeamsCardTests
         await using MudBunitContext ctx = NewContext(factory);
 
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, factory);
-        await ClickButtonAsync(cut, "New teammate");
+        await ClickButtonAsync(cut, "New agent");
 
-        AngleSharp.Dom.IElement identity = cut.Find(".mud-dialog-content .teammate-card-identity-row");
+        AngleSharp.Dom.IElement identity = cut.Find(".mud-dialog-content .agent-profile-card-identity-row");
         Assert.Equal(2, identity.QuerySelectorAll("input").Length);
         Assert.Equal(1, identity.QuerySelectorAll("input[placeholder='e.g. coo']").Length);
-        AngleSharp.Dom.IElement models = cut.Find(".mud-dialog-content .teammate-card-model-row");
+        AngleSharp.Dom.IElement models = cut.Find(".mud-dialog-content .agent-profile-card-model-row");
         Assert.True(models.QuerySelectorAll(".mud-select").Length >= 2);
-        Assert.NotNull(FindInputControl(cut, "Model").Closest(".teammate-card-model-row"));
-        Assert.NotNull(FindInputControl(cut, "Effort").Closest(".teammate-card-model-row"));
+        Assert.NotNull(FindInputControl(cut, "Model").Closest(".agent-profile-card-model-row"));
+        Assert.NotNull(FindInputControl(cut, "Effort").Closest(".agent-profile-card-model-row"));
         Assert.Equal(1, cut.FindAll(".mud-dialog-content .group-label").Count(static label => label.TextContent.Trim() == "Model"));
     }
 
@@ -153,13 +153,13 @@ public sealed class R3TeamsCardTests
         await ClickButtonAsync(cut, "Edit");
 
         Assert.True(FindSelectInput(cut, "Model").HasAttribute("aria-busy"));
-        Assert.Contains("teammate-card-probing", FindInputControl(cut, "Model").ClassList);
-        Assert.NotEmpty(cut.FindAll(".teammate-card-probe[aria-label='Reading the models this agent offers']"));
+        Assert.Contains("agent-profile-card-probing", FindInputControl(cut, "Model").ClassList);
+        Assert.NotEmpty(cut.FindAll(".agent-profile-card-probe[aria-label='Reading the models this agent offers']"));
     }
 
     /// <summary>The avatar dialog is titled with the item's name, "coo's avatar" (B10j).</summary>
     [Fact]
-    public async Task AvatarDialog_TitleIsTheTeammatesName()
+    public async Task AvatarDialog_TitleIsTheAgentsName()
     {
         await using TeamWebApplicationFactory factory = new();
         await SeedPersonaAsync(factory, "coo", "x");

@@ -12,15 +12,15 @@ date: 2026-09-22
 
 ## The defect
 
-A Teammate's avatar was the initials of its Name on the Theme's `Primary` colour, and nothing about
+An Agent's avatar was the initials of its Name on the Theme's `Primary` colour, and nothing about
 it was choosable. It rendered in exactly two places, both spelled
-`<MudAvatar Color="Color.Primary">@TeammateCard.Monogram(name)</MudAvatar>`, both calling one
+`<MudAvatar Color="Color.Primary">@AgentProfileCard.Monogram(name)</MudAvatar>`, both calling one
 `internal static` helper that lived on a Razor component and was already being reached across from
-`Teammates.razor` — the same "one place should own a domain-value-to-rendering mapping" smell
+`Agents.razor` — the same "one place should own a domain-value-to-rendering mapping" smell
 `StatusDot` was extracted to fix for `PersonaState`.
 
-Two Teammates whose Names share a first and last initial were visually identical, and `app.css`
-admitted the gap in the comment above `.teammate-avatar`: *"The monogram stands in for Slack's
+Two Agents whose Names share a first and last initial were visually identical, and `app.css`
+admitted the gap in the comment above `.agent-avatar`: *"The monogram stands in for Slack's
 avatar photo."*
 
 ## The decision
@@ -46,7 +46,7 @@ background, and initials want one most of all.
 
 - It needs a discriminator that **can disagree with its payload** — `kind: image` with no file. The
   resolution rule that fixes that is precedence, written a second time.
-- It makes "no customisation" a written value, so every Teammate acquires a row and the
+- It makes "no customisation" a written value, so every Agent acquires a row and the
   absent-is-normal tolerance is gone.
 - A fourth kind later becomes a schema change rather than a fourth nullable field.
 
@@ -75,7 +75,7 @@ sends to the model. A forgotten line would put `Avatar Color: #4a154b` into mode
 forever.
 
 **3. [ADR-0013](0013-an-adapter-is-a-property-of-the-persona.md)'s own test excludes it.**
-Frontmatter holds what changes *how a Teammate runs*. The Model and the Effort do, and even they
+Frontmatter holds what changes *how an Agent runs*. The Model and the Effort do, and even they
 live in SQLite rather than in the file. An Avatar changes nothing about the Agent.
 
 **4. It would put an image file name inside a system prompt.**
@@ -88,7 +88,7 @@ The cost, accepted: **an Avatar does not travel with a copied `.md` file.** Neit
 Persona's Model or its Effort, and nobody has asked for those. It is recorded in
 [Known limits](../engineering/known-limits.md).
 
-## Why the key is a Teammate's Name
+## Why the key is an Agent's Name
 
 Keying the store by Name rather than by Persona buys three things that would each have been separate
 work:
@@ -108,7 +108,7 @@ event, never `Update`.
 **The move is the first statement in `OnPersonaRenamed`, above the "no Agent row" early return, and
 that placement is the single subtlest line in the feature.** An Avatar exists whether or not an Agent
 has ever connected. `Team:Acp:Enabled` is `false` by default, so in a stock installation *no*
-Teammate has an Agent row — put the move below the guard and renaming a Teammate silently loses its
+Agent has an Agent row — put the move below the guard and renaming an Agent silently loses its
 face, in the default configuration. A test pins it, and was confirmed to fail when the line is moved.
 
 A removal takes the Avatar and its image file with it, for the reason
@@ -131,7 +131,7 @@ in-app path and the watcher — because a `.md` deleted in an editor is noticed 
 - **No decoding, no dimension cap, no resizing.** Each needs an image decoder, which means a new
   package and a decompression-bomb surface. The browser scales the image down with CSS.
 
-**The file name is an opaque generated id, never the Teammate's Name.** Three concrete defects avoid
+**The file name is an opaque generated id, never the Agent's Name.** Three concrete defects avoid
 themselves: a Name may contain interior spaces, so a Name-derived URL would need percent-encoding at
 every call site; [Known limits](../engineering/known-limits.md) records that Windows reserved device
 names (`CON`, `NUL`, `COM1`) pass `NameRules`, and `CON.png` is a file Windows will not create; and an
@@ -142,11 +142,11 @@ replaced image gets a new id and therefore a new URL.
 
 A base64 `data:` URI needs no middleware, no provider, no cache story and no rename or removal
 cascade, and was seriously considered. It loses on payload: 512 KB of image is about 683 KB of
-base64, and Blazor Server sends that down the SignalR circuit. Ten Teammates on `/teammates` is
+base64, and Blazor Server sends that down the SignalR circuit. Ten Agents on `/agents` is
 roughly 6.8 MB on a page that currently paints in one small diff, and nothing is ever cached by the
 browser.
 
-So images are served by **`UseStaticFiles` with a `PhysicalFileProvider`** at `/teammate-avatars`.
+So images are served by **`UseStaticFiles` with a `PhysicalFileProvider`** at `/agent-avatars`.
 `MapStaticAssets` cannot serve them: it is manifest-driven and knows only build-time assets, so a
 file written at run time is a 404 through it. Roadmap item 7 reached the same conclusion for imported
 Themes and named this mechanism first.
@@ -159,7 +159,7 @@ wrong reason.
 
 ## Colour
 
-A background is real per-Teammate data, so it cannot live in a stylesheet — [Rules](../engineering/rules.md)
+A background is real per-Agent data, so it cannot live in a stylesheet — [Rules](../engineering/rules.md)
 confines colour literals to `MainLayout.razor.css` and `ThemeSourceTests` fails the build on any
 other. It is therefore emitted as an inline `style` built from a **C# string**, and a new test,
 `RazorComponents_NoInlineColourLiteralInStyleAttribute`, enumerates `Components/**/*.razor` and fails
@@ -191,11 +191,11 @@ suite is unchanged.
   running leaves its entry behind, because nothing observed the deletion. Tolerated deliberately,
   the same way `appearance.json` tolerates a `theme` id naming nothing.
 - **`RoomList` has no avatar.** A Room is named after *all* its Agent Members, and `Room` carries no
-  member list, so no single Teammate is recoverable from a sidebar row without new per-row queries. A
+  member list, so no single Agent is recoverable from a sidebar row without new per-row queries. A
   wrong face on a Room is worse than none.
 
 ## Existing files
 
 There is no migration and none is needed. `avatars.json` does not exist until the first avatar is
-saved, and an absent file means every Teammate renders exactly as it did before this change — which
+saved, and an absent file means every Agent renders exactly as it did before this change — which
 is also what makes the upgrade invisible to an installation that never opens the new controls.

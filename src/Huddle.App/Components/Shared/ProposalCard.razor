@@ -14,7 +14,7 @@
 @inherits AgentCardBase
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Components.Shared.AgentCards
-@using Agency.Huddle.App.Teammates
+@using Agency.Huddle.App.Agents
 
 @inject RoomEvents Events
 @inject ProposalStore Proposals
@@ -23,9 +23,9 @@
 
 @if (this.proposal is { } current && this.RoomIsOpen)
 {
-    <AgentCard Class="proposal-card" Title="@($"{current.ProposerName} is proposing Teammates")" AriaLabel="@($"Teammate proposal from {current.ProposerName}")">
+    <AgentCard Class="proposal-card" Title="@($"{current.ProposerName} is proposing Agents")" AriaLabel="@($"Agent proposal from {current.ProposerName}")">
         <ChildContent>
-            <p class="proposal-card-text">@current.ProposerName proposes new Teammates. Approve creates these Teammates.</p>
+            <p class="proposal-card-text">@current.ProposerName proposes new Agents. Approve creates these Agents.</p>
             <p class="proposal-card-headroom">@this.HeadroomText(current)</p>
 
             <MudTable Items="@current.Candidates" Hover="false" Dense="true" Elevation="0">
@@ -111,7 +111,7 @@
     }
 
     /// <summary>
-    /// The headroom line (Spec §6.11): "This adds 2 Teammates; 5 of 8 per Team." or "...; 14 of 16
+    /// The headroom line (Spec §6.11): "This adds 2 Agents; 5 of 8 per Team." or "...; 14 of 16
     /// live processes.", singular for one Candidate, naming whichever of the two hire limits has the
     /// least room (<see cref="HireLimitGuard.Tightest"/>) and dropping the clause entirely when both are
     /// off. Recomputed on every render from the live Team catalog and process count, never cached.
@@ -120,7 +120,7 @@
     private string HeadroomText(Proposal current)
     {
         var count = current.Candidates.Count;
-        var noun = count == 1 ? "Teammate" : "Teammates";
+        var noun = count == 1 ? "Agent" : "Agents";
         var tightest = this.HireLimits.Tightest(current.Candidates);
 
         if (tightest is null)

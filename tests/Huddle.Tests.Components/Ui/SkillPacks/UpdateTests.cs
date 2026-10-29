@@ -43,7 +43,7 @@ internal sealed class UpdateFixture : IDisposable
         await Eventually.UntilAsync(() => this.Host.Skills.Get("docx") is not null, Xunit.TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
         if (holder)
         {
-            this.Host.Teammate("Jane", ["docx"], [new VersionedRef("documents", "1.0.0")]);
+            this.Host.Agent("Jane", ["docx"], [new VersionedRef("documents", "1.0.0")]);
         }
 
         if (addSheets)
@@ -63,8 +63,8 @@ internal sealed class UpdateFixture : IDisposable
     /// <summary>The plan for documents.</summary>
     public PackUpdatePlan Plan()
     {
-        IReadOnlyList<Persona> teammates = [.. this.Host.Personas.Entries.Select(entry => this.Host.Personas.Get(entry.Name)).OfType<Persona>()];
-        return PackUpdatePlanner.Plan("documents", this.Host.Registry, this.Host.Skills, teammates, PhysicalFileReader.Instance);
+        IReadOnlyList<Persona> agents = [.. this.Host.Personas.Entries.Select(entry => this.Host.Personas.Get(entry.Name)).OfType<Persona>()];
+        return PackUpdatePlanner.Plan("documents", this.Host.Registry, this.Host.Skills, agents, PhysicalFileReader.Instance);
     }
 
     /// <summary>Disposes it.</summary>
@@ -85,8 +85,8 @@ public sealed class PackUpdatePlannerTests : IDisposable
         this.fixture.Dispose();
     }
 
-    /// <summary>A changed Skill file is in FileChanges with its affected Teammates, counting the changed and added files, and
-    /// is never a Teammate checkbox; an added Skill is in Added and on the holder's row.</summary>
+    /// <summary>A changed Skill file is in FileChanges with its affected Agents, counting the changed and added files, and
+    /// is never an Agent checkbox; an added Skill is in Added and on the holder's row.</summary>
     [Fact]
     public async Task Plan_FileChangeShared_AddedIsMembership()
     {
@@ -97,10 +97,10 @@ public sealed class PackUpdatePlannerTests : IDisposable
         SkillFileChange change = Assert.Single(plan.FileChanges);
         Assert.Equal("docx", change.Name);
         Assert.Equal(2, change.FilesChanged);
-        Assert.Equal(["Jane"], change.AffectedTeammates);
+        Assert.Equal(["Jane"], change.AffectedAgents);
         Assert.Equal("0123456", change.ToCommit);
         Assert.Equal(["sheets"], plan.Added.Select(static added => added.Name));
-        TeammateChange jane = Assert.Single(plan.Teammates);
+        AgentChange jane = Assert.Single(plan.Agents);
         Assert.Equal(["sheets"], jane.AddSkills);
         Assert.True(jane.VersionChanges);
         Assert.Equal("adds sheets; updates consult when; restarts", jane.Summary);
@@ -108,19 +108,19 @@ public sealed class PackUpdatePlannerTests : IDisposable
         Assert.Empty(plan.Removed);
     }
 
-    /// <summary>A Teammate that already has every Skill, the phrase and the version is not listed.</summary>
+    /// <summary>An Agent that already has every Skill, the phrase and the version is not listed.</summary>
     [Fact]
-    public async Task Plan_TeammateUpToDate_NotListed()
+    public async Task Plan_AgentUpToDate_NotListed()
     {
         await this.fixture.SeedAsync(addSheets: false, holder: false);
-        this.fixture.Host.Teammate("Omar", ["docx"], []);
+        this.fixture.Host.Agent("Omar", ["docx"], []);
         Persona omar = this.fixture.Host.Personas.Get("Omar") ?? throw new InvalidOperationException("Omar");
         this.fixture.Host.Personas.Update("Omar", PackMembership.Add(omar.Text, PackContents.From(this.fixture.Host.Registry.FindPack("documents") ?? throw new InvalidOperationException("documents"))), null, null, null);
         await this.fixture.Host.ReadAsync();
 
         PackUpdatePlan plan = this.fixture.Plan();
 
-        Assert.Empty(plan.Teammates);
+        Assert.Empty(plan.Agents);
         Assert.Single(plan.FileChanges);
     }
 
@@ -144,7 +144,7 @@ public sealed class PackUpdatePlannerTests : IDisposable
 }
 
 /// <summary>Pins <see cref="UpdateDialog"/> (Skill Packs spec §6.9.8): the two sections, the button's words, Not now, and that
-/// Update copies before it rewrites any Teammate.</summary>
+/// Update copies before it rewrites any Agent.</summary>
 public sealed class UpdateDialogTests : IDisposable
 {
     private readonly UpdateFixture fixture = new();
@@ -155,7 +155,7 @@ public sealed class UpdateDialogTests : IDisposable
         this.fixture.Dispose();
     }
 
-    /// <summary>The Skill files section has no checkbox; the membership section has one per Teammate, checked; the button
+    /// <summary>The Skill files section has no checkbox; the membership section has one per Agent, checked; the button
     /// reads Update 1, then Update files with nobody ticked.</summary>
     [Fact]
     public async Task Sections_AndButtonWords()
@@ -166,10 +166,10 @@ public sealed class UpdateDialogTests : IDisposable
 
         Assert.Empty(cut.FindAll(".update-dialog-file input[type=checkbox]"));
         Assert.Equal("Used by Jane. Their copy changes as soon as you update; they do not restart.", cut.Find(".update-dialog-affected").TextContent.Trim());
-        Assert.Single(cut.FindAll(".update-dialog-teammate input[type=checkbox]"));
+        Assert.Single(cut.FindAll(".update-dialog-agent input[type=checkbox]"));
         Assert.Equal("Update 1", cut.Find(".update-dialog-apply").TextContent.Trim());
 
-        await cut.InvokeAsync(() => cut.Find(".update-dialog-teammate input").ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = false }));
+        await cut.InvokeAsync(() => cut.Find(".update-dialog-agent input").ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = false }));
 
         Assert.Equal("Update files", cut.Find(".update-dialog-apply").TextContent.Trim());
     }
@@ -232,10 +232,10 @@ public sealed class UpdateDialogTests : IDisposable
         Assert.Equal(copy, File.ReadAllText(Path.Combine(this.fixture.Host.Settings.SkillsDir, "docx", "SKILL.md")));
     }
 
-    /// <summary>Update copies the files first, then changes the ticked Teammate: the copy has the new files and Jane holds
+    /// <summary>Update copies the files first, then changes the ticked Agent: the copy has the new files and Jane holds
     /// sheets at the new version.</summary>
     [Fact]
-    public async Task Update_CopiesThenChangesTeammates()
+    public async Task Update_CopiesThenChangesAgents()
     {
         await this.fixture.SeedAsync();
         await using MudBunitContext ctx = this.fixture.Ui.NewContext();
@@ -248,12 +248,12 @@ public sealed class UpdateDialogTests : IDisposable
         Assert.True(PersonaFrontmatter.TryReadIdentity(this.fixture.Host.Personas.Get("Jane")?.Text ?? string.Empty, out PersonaIdentity? identity, out _));
         Assert.Equal(["docx", "sheets"], identity.Skills);
         Assert.Equal([new VersionedRef("documents", "1.1.0")], identity.Packs);
-        Assert.Equal("documents title updated for 1 Teammate.", ctx.Services.GetRequiredService<ISnackbar>().ShownSnackbars.Last().Message);
+        Assert.Equal("documents title updated for 1 Agent.", ctx.Services.GetRequiredService<ISnackbar>().ShownSnackbars.Last().Message);
     }
 
-    /// <summary>A copy failure stops the update and leaves every Teammate file untouched.</summary>
+    /// <summary>A copy failure stops the update and leaves every Agent file untouched.</summary>
     [Fact]
-    public async Task Update_CopyFails_NoTeammateChanged()
+    public async Task Update_CopyFails_NoAgentChanged()
     {
         await this.fixture.SeedAsync();
         string jane = this.fixture.Host.Personas.Get("Jane")?.Text ?? string.Empty;
@@ -261,7 +261,7 @@ public sealed class UpdateDialogTests : IDisposable
 
         RemovalOutcome outcome = await updater.ApplyAsync(this.fixture.Plan(), ["Jane"], Xunit.TestContext.Current.CancellationToken);
 
-        Assert.Equal(new RemovalOutcome(false, "docx could not be copied: The disk is full. No Teammate was changed."), outcome);
+        Assert.Equal(new RemovalOutcome(false, "docx could not be copied: The disk is full. No Agent was changed."), outcome);
         Assert.Equal(jane, this.fixture.Host.Personas.Get("Jane")?.Text);
     }
 

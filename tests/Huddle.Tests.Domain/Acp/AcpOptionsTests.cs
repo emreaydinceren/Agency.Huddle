@@ -57,7 +57,7 @@ public sealed class AcpOptionsTests
     }
 
     /// <summary>
-    /// With no <c>Team:Acp</c> hire-limit keys configured, <see cref="AcpOptions.MaxTeammatesPerTeam"/>
+    /// With no <c>Team:Acp</c> hire-limit keys configured, <see cref="AcpOptions.MaxAgentsPerTeam"/>
     /// is 8 and <see cref="AcpOptions.MaxLiveProcesses"/> is 16 (HR-10, decision D1).
     /// </summary>
     [Fact]
@@ -65,12 +65,12 @@ public sealed class AcpOptionsTests
     {
         TeamOptions teamOptions = BindTeamOptions(new Dictionary<string, string?>());
 
-        Assert.Equal(8, teamOptions.Acp.MaxTeammatesPerTeam);
+        Assert.Equal(8, teamOptions.Acp.MaxAgentsPerTeam);
         Assert.Equal(16, teamOptions.Acp.MaxLiveProcesses);
     }
 
     /// <summary>
-    /// <c>Team:Acp:MaxTeammatesPerTeam</c> and <c>Team:Acp:MaxLiveProcesses</c> bind through
+    /// <c>Team:Acp:MaxAgentsPerTeam</c> and <c>Team:Acp:MaxLiveProcesses</c> bind through
     /// <c>ConfigurationBinder</c> onto <see cref="AcpOptions"/> as written (HR-10, decision D1).
     /// </summary>
     [Fact]
@@ -78,11 +78,11 @@ public sealed class AcpOptionsTests
     {
         TeamOptions teamOptions = BindTeamOptions(new Dictionary<string, string?>
         {
-            ["Team:Acp:MaxTeammatesPerTeam"] = "3",
+            ["Team:Acp:MaxAgentsPerTeam"] = "3",
             ["Team:Acp:MaxLiveProcesses"] = "5",
         });
 
-        Assert.Equal(3, teamOptions.Acp.MaxTeammatesPerTeam);
+        Assert.Equal(3, teamOptions.Acp.MaxAgentsPerTeam);
         Assert.Equal(5, teamOptions.Acp.MaxLiveProcesses);
     }
 

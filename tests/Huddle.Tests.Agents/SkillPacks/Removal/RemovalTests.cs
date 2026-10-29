@@ -8,7 +8,7 @@ using Agency.Huddle.Tests.SkillPacks.RegistryService;
 namespace Agency.Huddle.Tests.SkillPacks.Removal;
 
 /// <summary>Pins removing a Pack (Skill Packs spec §6.12.2): the confirm's two messages, the row and the file, Keep and Remove
-/// too, failures that stop safely, <c>hidden.json</c>, the log line, and Remove from Teammates.</summary>
+/// too, failures that stop safely, <c>hidden.json</c>, the log line, and Remove from Agents.</summary>
 public sealed class RemovePackTests : IDisposable
 {
     private readonly RemovalFixture fixture = new();
@@ -24,10 +24,10 @@ public sealed class RemovePackTests : IDisposable
     public void PackMessage_TwoVariants()
     {
         Assert.Equal(
-            "This removes its row from SKILLS.md and deletes packs\\document-skills.skillpack.json from the Skill Sources folder. No Teammate has this Pack. Your AI tool's clone is not touched.",
+            "This removes its row from SKILLS.md and deletes packs\\document-skills.skillpack.json from the Skill Sources folder. No Agent has this Pack. Your AI tool's clone is not touched.",
             RemovalText.PackMessage("packs\\document-skills.skillpack.json", null));
         Assert.Equal(
-            "This removes its row from SKILLS.md. The file E:\\Repos\\skills\\packs\\x.skillpack.json is outside the Skill Sources folder, so Huddle leaves it where it is. No Teammate has this Pack. Your AI tool's clone is not touched.",
+            "This removes its row from SKILLS.md. The file E:\\Repos\\skills\\packs\\x.skillpack.json is outside the Skill Sources folder, so Huddle leaves it where it is. No Agent has this Pack. Your AI tool's clone is not touched.",
             RemovalText.PackMessage(null, "E:\\Repos\\skills\\packs\\x.skillpack.json"));
         Assert.Equal("Remove \"Document skills\"?", RemovalText.PackTitle("Document skills"));
     }
@@ -70,7 +70,7 @@ public sealed class RemovePackTests : IDisposable
         Assert.Equal(RemovalFixture.Line(before, "consult_when"), RemovalFixture.Line(after, "consult_when"));
     }
 
-    /// <summary>Remove from Teammates too takes off the Skills nobody else gave and the phrase, and keeps the Teammate's own.</summary>
+    /// <summary>Remove from Agents too takes off the Skills nobody else gave and the phrase, and keeps the Agent's own.</summary>
     [Fact]
     public async Task RemoveToo_TakesOffPackSkillsAndPhrase()
     {
@@ -86,9 +86,9 @@ public sealed class RemovePackTests : IDisposable
         Assert.Null(RemovalFixture.Line(after, "_packs"));
     }
 
-    /// <summary>A Teammate write that fails stops before SKILLS.md is touched.</summary>
+    /// <summary>An Agent write that fails stops before SKILLS.md is touched.</summary>
     [Fact]
-    public async Task TeammateWriteFails_StopsBeforeSkillsMd()
+    public async Task AgentWriteFails_StopsBeforeSkillsMd()
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -98,7 +98,7 @@ public sealed class RemovePackTests : IDisposable
 
         await this.fixture.SeedAsync();
         await this.fixture.HolderAsync("Jane", "documents");
-        string file = Path.Combine(this.fixture.Host.DataDir, "Teammates", "Jane", "Jane.md");
+        string file = Path.Combine(this.fixture.Host.DataDir, "Agents", "Jane", "Jane.md");
         string md = File.ReadAllText(this.fixture.SkillsMd);
         File.SetAttributes(file, FileAttributes.ReadOnly);
         try
@@ -161,7 +161,7 @@ public sealed class RemovePackTests : IDisposable
         Assert.Equal("{ not json", File.ReadAllText(second.Host.Hidden.FilePath));
     }
 
-    /// <summary>The log line is event <c>removed</c>, subject <c>pack:&lt;id&gt;</c>, with row, fileDeleted, teammates and holders.</summary>
+    /// <summary>The log line is event <c>removed</c>, subject <c>pack:&lt;id&gt;</c>, with row, fileDeleted, agents and holders.</summary>
     [Fact]
     public async Task LogLine_HasTheData()
     {
@@ -176,7 +176,7 @@ public sealed class RemovePackTests : IDisposable
         JsonElement data = line.GetProperty("data");
         Assert.Equal("packs/documents.skillpack.json", data.GetProperty("row").GetString());
         Assert.True(data.GetProperty("fileDeleted").GetBoolean());
-        Assert.Equal("kept", data.GetProperty("teammates").GetString());
+        Assert.Equal("kept", data.GetProperty("agents").GetString());
         Assert.Equal(["Jane"], data.GetProperty("holders").EnumerateArray().Select(static item => item.GetString()));
     }
 
@@ -192,7 +192,7 @@ public sealed class RemovePackTests : IDisposable
         Assert.False(Directory.Exists(Path.Combine(this.fixture.Host.Dir, "sources")));
     }
 
-    /// <summary>Remove from Teammates (a withdrawn Pack) takes it off its holders and leaves the row and the file.</summary>
+    /// <summary>Remove from Agents (a withdrawn Pack) takes it off its holders and leaves the row and the file.</summary>
     [Fact]
     public async Task Unhold_LeavesRowAndFile()
     {
@@ -203,12 +203,12 @@ public sealed class RemovePackTests : IDisposable
 
         RemovalOutcome outcome = this.fixture.Remover.UnholdPack(this.fixture.Pack("documents"));
 
-        Assert.Equal(new RemovalOutcome(true, "documents title was taken off 1 Teammate."), outcome);
+        Assert.Equal(new RemovalOutcome(true, "documents title was taken off 1 Agent."), outcome);
         Assert.Null(RemovalFixture.Line(this.fixture.TextOf("Jane"), "_packs"));
         Assert.Equal(md, File.ReadAllText(this.fixture.SkillsMd));
         Assert.True(File.Exists(file));
         Assert.Equal("unheld", this.fixture.LastLog().GetProperty("event").GetString());
-        Assert.Equal("Remove from 2 Teammates?", RemovalText.UnholdTitle(2));
+        Assert.Equal("Remove from 2 Agents?", RemovalText.UnholdTitle(2));
         Assert.Equal("Jane and Omar will lose the Skills no one else gave them, and the Pack's \"consult when\" phrase. They restart. The Pack's row and file stay.", RemovalText.UnholdMessage(["Jane", "Omar"]));
     }
 
@@ -255,7 +255,7 @@ public sealed class RemoveCatalogTests : IDisposable
         Assert.DoesNotContain("extra.skillcatalog.json", File.ReadAllText(this.fixture.SkillsMd), StringComparison.Ordinal); // contains-ok: the row's text must be gone
         Assert.Equal(hiddenBefore, File.ReadAllText(this.fixture.Host.Hidden.FilePath));
         Assert.Equal(
-            "This removes its row from SKILLS.md and deletes catalogs\\dotnet-skills.skillcatalog.json from the Skill Sources folder. Its 106 Skills stop being listed. Teammates keep their copies in Skills/. These Packs name Skills in it and will show Broken until your AI tool fixes them: MSBuild Authoring.",
+            "This removes its row from SKILLS.md and deletes catalogs\\dotnet-skills.skillcatalog.json from the Skill Sources folder. Its 106 Skills stop being listed. Agents keep their copies in Skills/. These Packs name Skills in it and will show Broken until your AI tool fixes them: MSBuild Authoring.",
             RemovalText.CatalogMessage("catalogs\\dotnet-skills.skillcatalog.json", null, 106, ["MSBuild Authoring"]));
         Assert.Equal("Remove catalog \"dotnet-skills\"?", RemovalText.CatalogTitle("dotnet-skills"));
     }
@@ -282,7 +282,7 @@ public sealed class RemoveSourceTests : IDisposable
 
         RemovalOutcome outcome = this.fixture.Remover.RemoveSource("local/test");
 
-        Assert.Equal(new RemovalOutcome(true, "Source removed. 1 row and their files are gone; the clone and Teammates' copies are untouched."), outcome);
+        Assert.Equal(new RemovalOutcome(true, "Source removed. 1 row and their files are gone; the clone and Agents' copies are untouched."), outcome);
         Assert.False(File.Exists(file));
         Assert.False(Directory.Exists(Path.Combine(this.fixture.Host.Dir, "sources", "local")));
         Assert.True(File.Exists(clone));
@@ -375,10 +375,10 @@ public sealed class RemoveSourceTests : IDisposable
     public void SourceMessage_Composes()
     {
         Assert.Equal(
-            "This permanently deletes the notes kept for github.com/anthropics/skills: NOTES.md, source.json and log.jsonl. It also removes 2 rows from SKILLS.md (Document skills, anthropics-skills) and deletes their files from the Skill Sources folder. Teammates keep their copies in Skills/. Your AI tool's clone at E:\\Clones\\anthropics-skills is not touched. If you share this folder with another Huddle, it loses the notes too.",
+            "This permanently deletes the notes kept for github.com/anthropics/skills: NOTES.md, source.json and log.jsonl. It also removes 2 rows from SKILLS.md (Document skills, anthropics-skills) and deletes their files from the Skill Sources folder. Agents keep their copies in Skills/. Your AI tool's clone at E:\\Clones\\anthropics-skills is not touched. If you share this folder with another Huddle, it loses the notes too.",
             RemovalText.SourceMessage("github.com/anthropics/skills", ["Document skills", "anthropics-skills"], "E:\\Clones\\anthropics-skills"));
         Assert.Equal(
-            "This permanently deletes the notes kept for local/x: NOTES.md, source.json and log.jsonl. Teammates keep their copies in Skills/. If you share this folder with another Huddle, it loses the notes too.",
+            "This permanently deletes the notes kept for local/x: NOTES.md, source.json and log.jsonl. Agents keep their copies in Skills/. If you share this folder with another Huddle, it loses the notes too.",
             RemovalText.SourceMessage("local/x", [], null));
     }
 

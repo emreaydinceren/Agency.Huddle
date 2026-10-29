@@ -107,7 +107,7 @@ public sealed class TabPageRoutesTests
     [InlineData("/rooms/ab12", "Chat")]
     [InlineData("/settings", "Settings")]
     [InlineData("/settings/appearance", "Settings")]
-    [InlineData("/teammates", "Teammates")]
+    [InlineData("/agents", "Agents")]
     [InlineData("/library?root=r&path=p", "Library")]
     [InlineData("/tasks", "Tasks")]
     [InlineData("/tasks/new", "Tasks")]

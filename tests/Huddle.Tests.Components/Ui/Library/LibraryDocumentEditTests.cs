@@ -151,13 +151,13 @@ public sealed class LibraryDocumentEditTests : IDisposable
         cut.WaitForAssertion(() => Assert.Equal(LibraryPathDisplay.Shorten($"{path.Root.DisplayName}/{path.RelativePath}"), cut.Find(".library-document-path").TextContent.Trim()));
     }
 
-    /// <summary>Saving a Teammate definition asks a confirm first (Spec §6.12); Cancel writes nothing.</summary>
+    /// <summary>Saving an Agent definition asks a confirm first (Spec §6.12); Cancel writes nothing.</summary>
     [Fact]
     public async Task SaveDefinition_AsksConfirm_Cancel_DoesNotWrite()
     {
-        this.fixture.LibraryFixture.CreateTeammate("ada", "Ada", "ada");
-        LibraryPath path = this.fixture.LibraryFixture.ResolveTeammates("ada");
-        string filePath = this.fixture.LibraryFixture.ResolveTeammates("ada").FullPath;
+        this.fixture.LibraryFixture.CreateAgent("ada", "Ada", "ada");
+        LibraryPath path = this.fixture.LibraryFixture.ResolveAgents("ada");
+        string filePath = this.fixture.LibraryFixture.ResolveAgents("ada").FullPath;
         byte[] before = File.ReadAllBytes(filePath);
 
         await using MudBunitContext ctx = this.fixture.NewContext();
@@ -179,12 +179,12 @@ public sealed class LibraryDocumentEditTests : IDisposable
         Assert.Equal(before, File.ReadAllBytes(filePath));
     }
 
-    /// <summary>Saving a Teammate definition asks a confirm first (Spec §6.12); Save writes through.</summary>
+    /// <summary>Saving an Agent definition asks a confirm first (Spec §6.12); Save writes through.</summary>
     [Fact]
     public async Task SaveDefinition_AsksConfirm_Confirm_Writes()
     {
-        this.fixture.LibraryFixture.CreateTeammate("ada", "Ada", "ada");
-        LibraryPath path = this.fixture.LibraryFixture.ResolveTeammates("ada");
+        this.fixture.LibraryFixture.CreateAgent("ada", "Ada", "ada");
+        LibraryPath path = this.fixture.LibraryFixture.ResolveAgents("ada");
         string filePath = path.FullPath;
         string original = File.ReadAllText(filePath);
         string edited = original + "\nmore";
@@ -418,13 +418,13 @@ public sealed class LibraryDocumentEditTests : IDisposable
         Assert.True(dialog.Danger);
     }
 
-    /// <summary>[T17.1, UX-026, UX-R12] Saving a Teammate definition asks through the shared <see cref="ConfirmDialog"/> titled
+    /// <summary>[T17.1, UX-026, UX-R12] Saving an Agent definition asks through the shared <see cref="ConfirmDialog"/> titled
     /// "Save this definition?" with the verb "Save" on a primary (not danger) button.</summary>
     [Fact]
     public async Task SaveDefinition_OpensConfirmDialogWithSaveVerb()
     {
-        this.fixture.LibraryFixture.CreateTeammate("ada", "Ada", "ada");
-        LibraryPath path = this.fixture.LibraryFixture.ResolveTeammates("ada");
+        this.fixture.LibraryFixture.CreateAgent("ada", "Ada", "ada");
+        LibraryPath path = this.fixture.LibraryFixture.ResolveAgents("ada");
         string original = File.ReadAllText(path.FullPath);
 
         await using MudBunitContext ctx = this.fixture.NewContext();
@@ -538,12 +538,12 @@ public sealed class LibraryDocumentEditTests : IDisposable
         cut.WaitForAssertion(() => Assert.Equal("Updated", cut.Find(".library-rendered h1").TextContent.Trim()));
     }
 
-    /// <summary>(Spec §6.12) Saving a Teammate definition whose frontmatter Name changed is refused by <see cref="LibraryFileService.WriteTextAsync"/>'s settled reason; the disk is unchanged.</summary>
+    /// <summary>(Spec §6.12) Saving an Agent definition whose frontmatter Name changed is refused by <see cref="LibraryFileService.WriteTextAsync"/>'s settled reason; the disk is unchanged.</summary>
     [Fact]
     public async Task SaveDefinition_NameChanged_ShowsRefusal()
     {
-        this.fixture.LibraryFixture.CreateTeammate("ada", "Ada", "ada");
-        LibraryPath path = this.fixture.LibraryFixture.ResolveTeammates("ada");
+        this.fixture.LibraryFixture.CreateAgent("ada", "Ada", "ada");
+        LibraryPath path = this.fixture.LibraryFixture.ResolveAgents("ada");
         string filePath = path.FullPath;
         string original = File.ReadAllText(filePath);
         string renamed = original.Replace("Name: Ada", "Name: Ada2", StringComparison.Ordinal);
@@ -563,7 +563,7 @@ public sealed class LibraryDocumentEditTests : IDisposable
             .Single(b => string.Equals(b.TextContent.Trim(), "Save", StringComparison.Ordinal)).ClickAsync());
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-save-error")));
-        Assert.Equal("Rename teammates on the Teammates page.", cut.Find(".library-document-save-error").TextContent.Trim());
+        Assert.Equal("Rename agents on the Agents page.", cut.Find(".library-document-save-error").TextContent.Trim());
         Assert.Equal(original, File.ReadAllText(filePath));
     }
 
@@ -713,7 +713,7 @@ public sealed class LibraryDocumentEditTests : IDisposable
         /// <summary>The real Library stack (resolver, root store, file service) over this fixture's temp <c>DataDir</c>.</summary>
         public LibraryFileServiceFixture LibraryFixture { get; }
 
-        /// <summary>Builds a fixture with the standard Teams/Teammates layout.</summary>
+        /// <summary>Builds a fixture with the standard Teams/Agents layout.</summary>
         public static DocFixture Build() => new(LibraryFileServiceFixture.Build());
 
         /// <summary>A <see cref="MudBunitContext"/> with this fixture's real <see cref="LibraryFileService"/>, resolver, root store, and a permissive <see cref="FakeLibraryNoteResolver"/>/<see cref="FakeTaskReferenceResolver"/> pair.</summary>

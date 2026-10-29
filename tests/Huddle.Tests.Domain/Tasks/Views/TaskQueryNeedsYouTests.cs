@@ -46,7 +46,7 @@ public sealed class TaskQueryNeedsYouTests
         Assert.True(TaskQuery.NeedsYou(task, "Sam"));
     }
 
-    /// <summary>A Task assigned to a Teammate, or to nobody, does not need the Human.</summary>
+    /// <summary>A Task assigned to an Agent, or to nobody, does not need the Human.</summary>
     /// <param name="assignee">The assignee, or <see langword="null"/> for none.</param>
     [Theory]
     [InlineData("Nova")]

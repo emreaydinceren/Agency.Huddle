@@ -12,7 +12,7 @@ namespace Agency.Huddle.App.SkillSources;
 /// <summary>
 /// Puts a chosen Skill's files into <c>Skills/&lt;name&gt;/</c> safely and records where they came from (§6.6, §8.6): wait for
 /// quiet, hash, copy into <c>.staging</c>, hash both again, check the copy, write <c>.source.json</c>, then swap through
-/// <c>.trash</c>. It writes only inside <c>Skills/</c> plus one line in the Source's log, and never changes a Teammate file.
+/// <c>.trash</c>. It writes only inside <c>Skills/</c> plus one line in the Source's log, and never changes an Agent file.
 /// </summary>
 internal sealed partial class SkillCopier : ISkillCopier
 {

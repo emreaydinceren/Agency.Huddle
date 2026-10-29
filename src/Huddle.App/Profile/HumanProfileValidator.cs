@@ -6,7 +6,7 @@ namespace Agency.Huddle.App.Profile;
 
 /// <summary>
 /// Checks a proposed <see cref="HumanProfile"/> before <see cref="HumanProfileStore.Save"/>: the Name
-/// and Alias must be valid Names, must differ from each other, and must not belong to any Teammate,
+/// and Alias must be valid Names, must differ from each other, and must not belong to any Agent,
 /// as a Name or an Alias, ignoring case (<c>rules.md</c>: Name and Alias collisions are
 /// case-insensitive, and an Alias is accepted anywhere a Name is).
 /// </summary>
@@ -54,7 +54,7 @@ internal sealed class HumanProfileValidator(PersonaStore personas, ITeamDirector
         return problems;
     }
 
-    /// <summary>Adds a problem when <paramref name="value"/> is a Teammate's Name or Alias, or an Agent row's Name.</summary>
+    /// <summary>Adds a problem when <paramref name="value"/> is an Agent's Name or Alias, or an Agent row's Name.</summary>
     /// <param name="problems">The list to add to.</param>
     /// <param name="field">The field being checked, for the message.</param>
     /// <param name="value">The Name or Alias to check.</param>
@@ -65,7 +65,7 @@ internal sealed class HumanProfileValidator(PersonaStore personas, ITeamDirector
             if (string.Equals(entry.Name, value, StringComparison.OrdinalIgnoreCase)
                 || string.Equals(entry.Alias, value, StringComparison.OrdinalIgnoreCase))
             {
-                problems.Add($"{field} '{value}' already belongs to the Teammate {entry.Name}.");
+                problems.Add($"{field} '{value}' already belongs to the Agent {entry.Name}.");
                 return;
             }
         }

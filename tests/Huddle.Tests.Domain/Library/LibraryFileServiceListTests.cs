@@ -74,7 +74,7 @@ public sealed class LibraryFileServiceListTests
         Assert.Equal(["node_modules"], [.. customEntries.Select(e => Path.GetFileName(e.Path.FullPath))]);
     }
 
-    /// <summary>Under the Teams root, an underscore-prefixed folder is hidden; the same shape under a Teammate's work folder is not, since the rule is Teams-only.</summary>
+    /// <summary>Under the Teams root, an underscore-prefixed folder is hidden; the same shape under an Agent's work folder is not, since the rule is Teams-only.</summary>
     [Fact]
     public async Task ListAsync_UnderTeams_HidesUnderscoreFolders()
     {
@@ -82,30 +82,30 @@ public sealed class LibraryFileServiceListTests
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         Directory.CreateDirectory(Path.Combine(fixture.DataDir, "Teams", "Marketing", "_tasks"));
         File.WriteAllText(Path.Combine(fixture.DataDir, "Teams", "Marketing", "notes.md"), string.Empty);
-        Directory.CreateDirectory(Path.Combine(fixture.DataDir, "Teammates", "Nova", "work", "_x"));
-        Directory.CreateDirectory(Path.Combine(fixture.DataDir, "Teammates", "Nova", "work", "memory"));
+        Directory.CreateDirectory(Path.Combine(fixture.DataDir, "Agents", "Nova", "work", "_x"));
+        Directory.CreateDirectory(Path.Combine(fixture.DataDir, "Agents", "Nova", "work", "memory"));
         LibraryFileService service = fixture.CreateService();
         LibraryPath teamsFolder = fixture.ResolveTeams("Marketing");
-        LibraryPath teammateWork = fixture.ResolveTeammatesFolder("Nova/work");
+        LibraryPath agentWork = fixture.ResolveAgentsFolder("Nova/work");
 
         IReadOnlyList<LibraryEntry> teamsEntries = await service.ListAsync(teamsFolder, ct);
-        IReadOnlyList<LibraryEntry> teammateEntries = await service.ListAsync(teammateWork, ct);
+        IReadOnlyList<LibraryEntry> agentEntries = await service.ListAsync(agentWork, ct);
 
         Assert.Equal(["notes.md"], [.. teamsEntries.Select(e => Path.GetFileName(e.Path.FullPath))]);
-        Assert.Equal(["memory", "_x"], [.. teammateEntries.Select(e => Path.GetFileName(e.Path.FullPath))]);
+        Assert.Equal(["memory", "_x"], [.. agentEntries.Select(e => Path.GetFileName(e.Path.FullPath))]);
     }
 
-    /// <summary>The app's own <c>.layout-migrated</c> marker in the Teammates root is internal state and is not listed, so nobody can try to rename or delete it.</summary>
+    /// <summary>The app's own <c>.layout-migrated</c> marker in the Agents root is internal state and is not listed, so nobody can try to rename or delete it.</summary>
     [Fact]
-    public async Task ListAsync_TeammatesRoot_HidesTheLayoutMarker()
+    public async Task ListAsync_AgentsRoot_HidesTheLayoutMarker()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        Directory.CreateDirectory(Path.Combine(fixture.DataDir, "Teammates", "Nova"));
-        File.WriteAllText(Path.Combine(fixture.DataDir, "Teammates", ".layout-migrated"), string.Empty);
+        Directory.CreateDirectory(Path.Combine(fixture.DataDir, "Agents", "Nova"));
+        File.WriteAllText(Path.Combine(fixture.DataDir, "Agents", ".layout-migrated"), string.Empty);
         LibraryFileService service = fixture.CreateService();
 
-        IReadOnlyList<LibraryEntry> entries = await service.ListAsync(fixture.ResolveTeammatesFolder(string.Empty), ct);
+        IReadOnlyList<LibraryEntry> entries = await service.ListAsync(fixture.ResolveAgentsFolder(string.Empty), ct);
 
         Assert.Equal(["Nova"], [.. entries.Select(e => Path.GetFileName(e.Path.FullPath))]);
     }

@@ -306,23 +306,23 @@ public sealed class LibraryTreeTests : IDisposable
             cut.Find("div.library-tree-menu-note").TextContent.Trim());
     }
 
-    /// <summary>A Teammate folder's menu ends in the settled teammate-page redirect note (item 26).</summary>
+    /// <summary>An Agent folder's menu ends in the settled agent-page redirect note (item 26).</summary>
     [Fact]
-    public async Task Menu_OnTeammateFolder_NoteHasTeammateText()
+    public async Task Menu_OnAgentFolder_NoteHasAgentText()
     {
-        this.fixture.LibraryFixture.CreateTeammate("ada", "Ada", "ada");
-        LibraryPath teammatesScope = this.fixture.LibraryFixture.ResolveTeammatesFolder(string.Empty);
-        LibraryPath teammateFolder = this.fixture.LibraryFixture.ResolveTeammatesFolder("ada");
+        this.fixture.LibraryFixture.CreateAgent("ada", "Ada", "ada");
+        LibraryPath agentsScope = this.fixture.LibraryFixture.ResolveAgentsFolder(string.Empty);
+        LibraryPath agentFolder = this.fixture.LibraryFixture.ResolveAgentsFolder("ada");
 
         await using MudBunitContext ctx = this.fixture.NewContext();
-        IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [teammatesScope]);
+        IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [agentsScope]);
         await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
 
-        await cut.InvokeAsync(() => NodeRow(cut, teammateFolder.RelativePath).ContextMenuAsync());
+        await cut.InvokeAsync(() => NodeRow(cut, agentFolder.RelativePath).ContextMenuAsync());
 
         Assert.Equal(
-            "Teammate folders can't be renamed, moved or deleted here.",
+            "Agent folders can't be renamed, moved or deleted here.",
             cut.Find("div.library-tree-menu-note").TextContent.Trim());
     }
 
@@ -357,7 +357,7 @@ public sealed class LibraryTreeTests : IDisposable
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("span.library-tree-orphan")));
 
         Assert.Equal(
-            "No teammate has the Team label \"Legacy\".",
+            "No agent has the Team label \"Legacy\".",
             cut.Find("span.library-tree-orphan").GetAttribute("aria-label"));
         Assert.NotNull(cut.Find(".library-tree-orphan").ParentElement?.QuerySelector("svg"));
     }
@@ -435,22 +435,22 @@ public sealed class LibraryTreeTests : IDisposable
     }
 
     /// <summary>
-    /// Clicking a Teammate's own <c>&lt;Name&gt;.md</c> raises <c>OnOpenFile</c> too. The resolver
-    /// gives that file the <see cref="LibraryNodeRole.TeammateDefinition"/> role, not
+    /// Clicking an Agent's own <c>&lt;Name&gt;.md</c> raises <c>OnOpenFile</c> too. The resolver
+    /// gives that file the <see cref="LibraryNodeRole.AgentDefinition"/> role, not
     /// <see cref="LibraryNodeRole.File"/>, and a check on <c>File</c> alone left every definition
     /// unopenable, with no document panel and no Read/Edit/Split toggle.
     /// </summary>
     [Fact]
-    public async Task Click_TeammateDefinition_RaisesOnOpenFile()
+    public async Task Click_AgentDefinition_RaisesOnOpenFile()
     {
-        this.fixture.LibraryFixture.CreateTeammate("Jarvis", "Jarvis", "jar");
-        LibraryPath teammateFolder = this.fixture.LibraryFixture.ResolveTeammatesFolder("Jarvis");
+        this.fixture.LibraryFixture.CreateAgent("Jarvis", "Jarvis", "jar");
+        LibraryPath agentFolder = this.fixture.LibraryFixture.ResolveAgentsFolder("Jarvis");
         LibraryPath? opened = null;
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTree(
             ctx,
-            [teammateFolder],
+            [agentFolder],
             onOpenFile: EventCallback.Factory.Create<LibraryPath>(this, p => opened = p));
         await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
@@ -458,7 +458,7 @@ public sealed class LibraryTreeTests : IDisposable
         await cut.InvokeAsync(() => cut.FindAll("span.library-tree-node-name").Single(node => node.TextContent.Trim() == "Jarvis.md").ClickAsync());
 
         Assert.NotNull(opened);
-        Assert.Equal(LibraryNodeRole.TeammateDefinition, opened.Role);
+        Assert.Equal(LibraryNodeRole.AgentDefinition, opened.Role);
         Assert.Equal("Jarvis/Jarvis.md", opened.RelativePath);
     }
 
@@ -656,7 +656,7 @@ public sealed class LibraryTreeTests : IDisposable
         /// <summary>The board's Team folders, as <see cref="TeamFolderCatalog.List"/> reads them. Rebuilt by <see cref="RescanTasks"/>.</summary>
         public TaskStore Tasks { get; private set; }
 
-        /// <summary>Builds a fixture with the standard Teams/Teammates layout, plus an empty <see cref="TaskStore"/>.</summary>
+        /// <summary>Builds a fixture with the standard Teams/Agents layout, plus an empty <see cref="TaskStore"/>.</summary>
         public static TreeFixture Build()
         {
             TempDataDir dir = new();

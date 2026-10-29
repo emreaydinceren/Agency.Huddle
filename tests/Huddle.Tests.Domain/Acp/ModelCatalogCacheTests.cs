@@ -148,9 +148,9 @@ public sealed class ModelCatalogCacheTests
         Assert.Equal(2, runner.Calls.Count);
     }
 
-    /// <summary>The probe's cwd is the Teammates ROOT (<c>DataDir/Teammates</c>), never a Persona's own subfolder.</summary>
+    /// <summary>The probe's cwd is the Agents ROOT (<c>DataDir/Agents</c>), never a Persona's own subfolder.</summary>
     [Fact]
-    public async Task GetAsync_ProbeCwd_IsTeammatesRoot()
+    public async Task GetAsync_ProbeCwd_IsAgentsRoot()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
@@ -163,7 +163,7 @@ public sealed class ModelCatalogCacheTests
         await probe.GetAsync("claude", ct);
 
         Assert.Single(runner.Calls);
-        Assert.Equal(Path.Combine(dir.Path, "Teammates"), runner.Calls[0].ProbeCwd);
+        Assert.Equal(Path.Combine(dir.Path, "Agents"), runner.Calls[0].ProbeCwd);
     }
 
     /// <summary>The Work Modes share the effort probe: asking for both of one (Adapter, Model) spawns one process, not two.</summary>

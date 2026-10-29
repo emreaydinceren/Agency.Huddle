@@ -2026,7 +2026,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <see cref="ActiveTurn.Touched"/> set, per FC §6.8 item 2 and FC D-3b - but only for
     /// <see cref="ToolKind.Edit"/>, <see cref="ToolKind.Delete"/> or <see cref="ToolKind.Move"/>: an
     /// <see cref="ToolKind.Execute"/> call is not parsed, because a shell command is not a path and
-    /// guessing at one could claim another Teammate's change as this Agent's own. A no-op when there
+    /// guessing at one could claim another Agent's change as this Agent's own. A no-op when there
     /// is no active Turn.
     /// </summary>
     /// <param name="kind">The tool call's category, as ACP reported it.</param>

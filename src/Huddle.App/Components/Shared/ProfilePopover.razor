@@ -1,6 +1,6 @@
 @* <summary>
      The popover <see cref="ProfileAvatar"/> opens: the same <see cref="ProfileCard"/> Build a team's
-     roster shows, with only Edit (opens the Teammate card) and Message (opens the one-to-one, in the
+     roster shows, with only Edit (opens the Agent card) and Message (opens the one-to-one, in the
      Team's own when the avatar was seen in a Team). The Human's own avatar opens the same card with
      only Edit, which goes to the Settings Profile tab. Remove, Re-roll and Undo are the Human's decisions
      on the roster and are not offered here.
@@ -18,8 +18,8 @@
      the popover host, not next to the button).
    </summary> *@
 @implements IDisposable
-@inject TeammateProfiles Profiles
-@inject TeammateCardOpener CardOpener
+@inject AgentProfiles Profiles
+@inject AgentProfileCardOpener CardOpener
 @inject ChatService Chat
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -56,11 +56,11 @@
 @code {
     private readonly CancellationTokenSource cts = new();
     private ElementReference panel;
-    private TeammateProfileView? view;
+    private AgentProfileView? view;
     private bool loading = true;
     private bool focusPending;
 
-    /// <summary>The Teammate's Name, in any letter case.</summary>
+    /// <summary>The Agent's Name, in any letter case.</summary>
     [Parameter]
     [EditorRequired]
     public string Name { get; set; } = string.Empty;
@@ -127,14 +127,14 @@
         this.Navigation.NavigateTo("/settings/profile");
     }
 
-    /// <summary>Closes the popover, then opens the Teammate's card.</summary>
+    /// <summary>Closes the popover, then opens the Agent's card.</summary>
     private async Task EditAsync()
     {
         await this.CloseAsync();
         await this.CardOpener.OpenAsync(this.Name, CancellationToken.None);
     }
 
-    /// <summary>Closes the popover, then opens (creating it on first use) the one-to-one with the Teammate and goes there.</summary>
+    /// <summary>Closes the popover, then opens (creating it on first use) the one-to-one with the Agent and goes there.</summary>
     private async Task MessageAsync()
     {
         if (this.view is not { Agent: { } agent } shown)

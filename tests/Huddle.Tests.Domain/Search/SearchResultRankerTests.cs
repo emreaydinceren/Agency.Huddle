@@ -123,14 +123,14 @@ public sealed class SearchResultRankerTests
         Assert.False(result.Truncated);
     }
 
-    /// <summary>A Teammate ranks first when any one of its Teams is the open Team, not only its first Team.</summary>
+    /// <summary>An Agent ranks first when any one of its Teams is the open Team, not only its first Team.</summary>
     [Fact]
-    public void Rank_TeammateInAnyOpenTeam_RanksFirst()
+    public void Rank_AgentInAnyOpenTeam_RanksFirst()
     {
         SearchHit[] hits =
         [
             new TeamHit("Aardvark", null, 0, MatchTier.ExactName),
-            new TeammateHit("Nova", "Router", "nova", ["Marketing", "Platform"], MatchTier.ExactName),
+            new AgentHit("Nova", "Router", "nova", ["Marketing", "Platform"], MatchTier.ExactName),
         ];
 
         SearchResult result = SearchResultRanker.Rank(new SearchResult(hits, false), Query("Platform"));

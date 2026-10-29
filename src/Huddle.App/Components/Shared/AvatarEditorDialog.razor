@@ -1,7 +1,7 @@
 @namespace Agency.Huddle.App.Components.Shared
 
 @*
-    Avatar editing for the Teammate card, in its own dialog. The card's avatar is a button; pressing it, in View,
+    Avatar editing for the Agent card, in its own dialog. The card's avatar is a button; pressing it, in View,
     Edit and Create alike, opens this. The dialog is a thin wrapper: the editing itself is AvatarEditor in Buffered
     mode, which writes nothing and reports every change. The dialog keeps the latest avatar and pending image and
     hands back an AvatarEditorResult only when the Human presses the commit button. Cancelling, Escape and the close
@@ -12,7 +12,7 @@
     discard it), and in View, which has no Save of its own, the card writes it at once. Deferred tells this dialog
     which of the two it is serving, so the button and the hint say the truth.
 
-    An open dialog's parameters are frozen (see the header of TeammateCard.razor), so every parameter below is a
+    An open dialog's parameters are frozen (see the header of AgentProfileCard.razor), so every parameter below is a
     snapshot: it seeds the editor once and the editor's own reports are held in local fields.
 
     The title is the item's name ("Alan's avatar"). "Choose from library" does not open a third dialog: the editor swaps
@@ -30,7 +30,7 @@
     <DialogContent>
         @if (this.Deferred)
         {
-            <MudText Typo="Typo.caption" Class="d-block mb-2 mud-text-secondary">Written when you save the teammate.</MudText>
+            <MudText Typo="Typo.caption" Class="d-block mb-2 mud-text-secondary">Written when you save the agent.</MudText>
         }
         <AvatarEditor Name="@this.Name" Value="this.Current" ValueChanged="this.OnValueChanged" SaveMode="AvatarSaveMode.Buffered"
                       PendingImage="this.PendingImage" PendingImageExtension="@this.PendingImageExtension"
@@ -52,7 +52,7 @@
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }
 
-    /// <summary>The Teammate's Name, the source of the initials the preview falls back to. Empty on a Create card whose Name is not typed yet, which reads as a question mark.</summary>
+    /// <summary>The Agent's Name, the source of the initials the preview falls back to. Empty on a Create card whose Name is not typed yet, which reads as a question mark.</summary>
     [Parameter]
     public string Name { get; set; } = string.Empty;
 
@@ -81,7 +81,7 @@
     private bool pendingTouched;
     private bool libraryOpen;
 
-    /// <summary>The title: the Teammate's avatar by name, or "Choose an avatar" while the library replaces the editor's content. A Create card with no Name typed yet has just "Avatar".</summary>
+    /// <summary>The title: the Agent's avatar by name, or "Choose an avatar" while the library replaces the editor's content. A Create card with no Name typed yet has just "Avatar".</summary>
     private string DialogTitle
     {
         get

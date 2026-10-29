@@ -45,7 +45,7 @@ Human spoke, and stays in the Transcript for every other Member to read. Nothing
 pipe that did not before.
 
 **Only the Human is asked.** The tool takes no recipient. An Agent that wants an answer from
-another Teammate Mentions them in a Message, as it always has.
+another Agent Mentions them in a Message, as it always has.
 
 ## Why a Message and not a tool result
 
@@ -81,7 +81,7 @@ have two stores rather than one store with a mode.
 | Letting an Agent ask another Agent | Options save a person typing. An Agent reads prose as well as it reads options, and a Mention already works |
 | A new Envelope carrying the answer | A `ProtocolVersion` bump in lockstep across every pipe client, for a result a Message already delivers |
 | Escaping `@` in options instead of refusing it | An escaped Mention is still the Agent putting words in the Human's mouth |
-| Granting the tool through a Skill, like `propose_teammates` | `propose_teammates` is gated because each Teammate is a billed process. Asking costs nothing and creates nothing |
+| Granting the tool through a Skill, like `propose_agents` | `propose_agents` is gated because each Agent is a billed process. Asking costs nothing and creates nothing |
 | Drag-and-drop ranking | Up and down buttons work with a keyboard and a screen reader, and need no JavaScript |
 | Replacing `ask_human` with ACP elicitation (`elicitation/create`) | `ask_human` returns at once and its answer is an ordinary Message, while an elicitation request holds the Turn open. Elicitation was bridged **beside** it on 2026-10-01, not instead of it (see the note under Consequences) |
 

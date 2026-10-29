@@ -6,7 +6,7 @@ using Agency.Huddle.App;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Exercises the <c>/teammate-avatars</c> static-file middleware registered in <c>Program.cs</c>,
+/// Exercises the <c>/agent-avatars</c> static-file middleware registered in <c>Program.cs</c>,
 /// through a real <see cref="System.Net.Http.HttpClient"/> hosted by <see cref="TeamWebApplicationFactory"/> -
 /// the same shape <see cref="AppHostTests"/> uses for <c>/health</c>, so these prove the real pipeline
 /// rather than a hand-built <c>StaticFileOptions</c> in isolation.
@@ -39,7 +39,7 @@ public sealed class AvatarEndpointTests
         await File.WriteAllBytesAsync(Path.Combine(avatarsDirectory, "real.png"), MinimalPng, ct);
 
         using var client = factory.CreateClient();
-        using var response = await client.GetAsync("/teammate-avatars/real.png", ct);
+        using var response = await client.GetAsync("/agent-avatars/real.png", ct);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("image/png", response.Content.Headers.ContentType?.MediaType);
@@ -66,7 +66,7 @@ public sealed class AvatarEndpointTests
         await File.WriteAllTextAsync(svgPath, svgMarker, ct);
 
         using var client = factory.CreateClient();
-        using var response = await client.GetAsync("/teammate-avatars/evil.svg", ct);
+        using var response = await client.GetAsync("/agent-avatars/evil.svg", ct);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync(ct);
@@ -87,7 +87,7 @@ public sealed class AvatarEndpointTests
         await using var factory = new TeamWebApplicationFactory();
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync("/teammate-avatars/../appsettings.json", ct);
+        using var response = await client.GetAsync("/agent-avatars/../appsettings.json", ct);
 
         Assert.False(response.IsSuccessStatusCode);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -105,7 +105,7 @@ public sealed class AvatarEndpointTests
         await using var factory = new TeamWebApplicationFactory();
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync("/teammate-avatars/does-not-exist.png", ct);
+        using var response = await client.GetAsync("/agent-avatars/does-not-exist.png", ct);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -121,7 +121,7 @@ public sealed class AvatarEndpointTests
     /// <summary>
     /// The isolated <see cref="TeamOptions.DataDir"/> <paramref name="factory"/> composed its app
     /// with - resolved from the running host rather than duplicated, since <see cref="TeamWebApplicationFactory"/>
-    /// exposes its temp directory only indirectly (via <see cref="TeamWebApplicationFactory.TeammatesDirPath"/>
+    /// exposes its temp directory only indirectly (via <see cref="TeamWebApplicationFactory.AgentsDirPath"/>
     /// and friends), never as a raw path of its own.
     /// </summary>
     /// <param name="factory">The factory whose composed <see cref="TeamOptions"/> to read.</param>

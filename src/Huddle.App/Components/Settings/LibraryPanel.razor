@@ -1,6 +1,6 @@
 @*
     The Settings page's Library tab (Spec §6.10): the two built-in Library Roots (Teams,
-    Teammates) plus any pinned root, drawn straight off LibraryRootStore.Roots - never re-derived
+    Agents) plus any pinned root, drawn straight off LibraryRootStore.Roots - never re-derived
     here, the same "no local snapshot" shape SkillsPanel uses for SkillStore.All. A built-in root
     can be hidden but never removed (a MudSwitch, no Remove button); a pinned root can be removed
     but never hidden. Adding a folder requires it to exist on disk (LibraryRootStore.Save does not
@@ -17,7 +17,7 @@
 @inject IDialogService DialogService
 
 <SettingsIntro>
-    A Library Root is a folder the Library can read and change. Teams and Teammates are always
+    A Library Root is a folder the Library can read and change. Teams and Agents are always
     here; pin any other folder to add it.
 </SettingsIntro>
 

@@ -395,7 +395,7 @@ public sealed class PersonaSupervisorFileChangesTests
 
     /// <summary><paramref name="agentName"/>'s own Work Dir, always the first Watched Folder (FC §6.7 step 1).</summary>
     private static string OwnWorkDir(TeamOptions options, string agentName) =>
-        new TeammatePaths(Options.Create(options)).WorkDir(agentName);
+        new AgentPaths(Options.Create(options)).WorkDir(agentName);
 
     /// <summary>Builds a fresh <see cref="PersonaHealth"/> against the real clock.</summary>
     private static PersonaHealth NewHealth() => new(TimeProvider.System, NullLogger<PersonaHealth>.Instance);

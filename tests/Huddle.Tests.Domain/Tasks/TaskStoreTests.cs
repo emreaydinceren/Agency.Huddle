@@ -716,7 +716,7 @@ public sealed class TaskStoreTests
     /// <summary>
     /// A batch of three Writes through <see cref="TaskStore.WriteMany"/> updates every Task's index
     /// entry but raises <see cref="TaskStore.IndexChanged"/> exactly once, not three times (Settled
-    /// corrections-B2 D5 item 7 - the Teammate-rename cascade in Task 6.6 needs this to avoid firing
+    /// corrections-B2 D5 item 7 - the Agent-rename cascade in Task 6.6 needs this to avoid firing
     /// once per renamed file).
     /// </summary>
     [Fact]

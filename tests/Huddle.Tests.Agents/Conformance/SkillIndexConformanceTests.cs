@@ -15,7 +15,7 @@ public sealed class SkillIndexConformanceTests
     /// <summary>
     /// A Persona whose frontmatter assigns <c>team-building</c> is offered the prefixed
     /// <c>read_skill</c> tool and its appended system prompt lists that Skill in its Skill Index.
-    /// Also proves <c>validate_teammate</c> and <c>propose_teammates</c> gating end to end (Task
+    /// Also proves <c>validate_agent</c> and <c>propose_agents</c> gating end to end (Task
     /// 9.3, Task 10.2): <c>team-building</c>'s own <c>tools:</c> list grants both (Spec §6.8, §6.9),
     /// so the real <see cref="DotAcpAgentHostFactory"/> offers them here and their full
     /// <c>mcp__team__</c>-prefixed names reach the appended prompt's <c>{{toolNames}}</c> list, the
@@ -34,15 +34,15 @@ public sealed class SkillIndexConformanceTests
         string appendedPrompt = await fixture.AppendedSystemPromptAsync(ct);
 
         Assert.Contains("mcp__team__read_skill", appendedPrompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__validate_teammate", appendedPrompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__propose_teammates", appendedPrompt, StringComparison.Ordinal);
+        Assert.Contains("mcp__team__validate_agent", appendedPrompt, StringComparison.Ordinal);
+        Assert.Contains("mcp__team__propose_agents", appendedPrompt, StringComparison.Ordinal);
         Assert.Contains("- team-building: ", appendedPrompt, StringComparison.Ordinal);
     }
 
     /// <summary>
     /// A Persona with no <c>skills</c> field gets an appended system prompt with no Skill Index block
     /// at all and no mention of <c>read_skill</c> anywhere - Spec §14 D-11's whole point. Also proves
-    /// the other half of <c>validate_teammate</c> and <c>propose_teammates</c> gating (Task 9.3, Task
+    /// the other half of <c>validate_agent</c> and <c>propose_agents</c> gating (Task 9.3, Task
     /// 10.2): with no Skill granting either, the real <see cref="DotAcpAgentHostFactory"/> never
     /// offers them, so neither name ever reaches the appended prompt's <c>{{toolNames}}</c> list.
     /// </summary>
@@ -57,8 +57,8 @@ public sealed class SkillIndexConformanceTests
         string appendedPrompt = await fixture.AppendedSystemPromptAsync(ct);
 
         Assert.DoesNotContain("read_skill", appendedPrompt, StringComparison.Ordinal);
-        Assert.DoesNotContain("validate_teammate", appendedPrompt, StringComparison.Ordinal);
-        Assert.DoesNotContain("propose_teammates", appendedPrompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("validate_agent", appendedPrompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("propose_agents", appendedPrompt, StringComparison.Ordinal);
         Assert.DoesNotContain("You hold these Skills", appendedPrompt, StringComparison.Ordinal);
     }
 }

@@ -25,7 +25,7 @@
                 @foreach (User member in this.members)
                 {
                     <span class="feed-room-member" @key="member.Id">
-                        <TeammateAvatar Name="@member.Name" Size="Size.Small" />
+                        <AgentAvatar Name="@member.Name" Size="Size.Small" />
                         <span class="feed-room-member-name">@member.Name</span>
                     </span>
                 }

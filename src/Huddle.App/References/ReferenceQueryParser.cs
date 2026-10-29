@@ -11,7 +11,7 @@ internal static class ReferenceQueryParser
     /// <summary>Reads one picker token into the filter, phrase and searchable flag the Reference purpose searches with.</summary>
     /// <param name="token">The text after the trigger, without the trigger.</param>
     /// <param name="trigger">The trigger character: <c>'@'</c> or <c>'#'</c>.</param>
-    /// <param name="inviteCommand">True after <c>/invite </c> at the start of the box; the picker then lists Teammates only (D-23).</param>
+    /// <param name="inviteCommand">True after <c>/invite </c> at the start of the box; the picker then lists Agents only (D-23).</param>
     /// <returns>The filter, the trimmed phrase, and whether the picker searches.</returns>
     public static SearchParse Parse(string token, char trigger, bool inviteCommand)
     {
@@ -23,7 +23,7 @@ internal static class ReferenceQueryParser
         }
 
         SearchParse read = SearchQueryParser.Parse(token, SearchFilter.All);
-        SearchFilter filter = inviteCommand ? SearchFilter.Teammates : read.Filter;
+        SearchFilter filter = inviteCommand ? SearchFilter.Agents : read.Filter;
 
         // Every filter searches at any length except Library, which needs the search box's minimum (spec §5.1).
         bool searchable = filter != SearchFilter.Library || read.Phrase.Length >= SearchLimits.MinChars;

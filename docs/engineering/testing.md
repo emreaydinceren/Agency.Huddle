@@ -81,7 +81,7 @@ lived in **seams between** correctly-written components, which is exactly what u
 isolate away by construction.
 
 Components are tested **three** ways now, and the difference still matters. A
-page test fetches `/teammates` over HTTP and sees only the **prerender** —
+page test fetches `/agents` over HTTP and sees only the **prerender** —
 `Routes` is `InteractiveServer`, so anything behind a click is absent from that
 HTML. `HtmlRenderer` renders a component directly, adds no package, and is still
 right for any component that is plain HTML. And since 2026-09-14, **bUnit** —
@@ -102,7 +102,7 @@ which is why a plain render will not do. Three things to know before writing one
   click.** A prerender can never see a non-selected option's label. This is the same
   *"anything behind a click is absent"* limit as above, now applying to every
   converted `<select>`.
-- **`TeammateCard` cannot be tested in isolation at all.** `MudDialog` renders its
+- **`AgentProfileCard` cannot be tested in isolation at all.** `MudDialog` renders its
   content only once registered with a real dialog instance, and that registration
   goes through `IMudDialogInstanceInternal`, a type internal to MudBlazor's assembly.
   A hand-written fake satisfies the public cascading parameter and the dialog still
@@ -113,7 +113,7 @@ several asserted on shapes rather than behaviour — one checked
 `DoesNotContain("disabled")` across the whole document. Those are now real
 interactions. The hole this section used to describe — that neither way could see how
 a page passes parameters to a component — is closed differently than expected: the
-card now takes `DialogParameters`, and `TeammateDialogParametersTests` reflects over
+card now takes `DialogParameters`, and `AgentDialogParametersTests` reflects over
 its real `[Parameter]` properties and asserts every key names one. The `@`-binding bug
 that shipped once (see [Rules](rules.md)) is still caught, in its new shape.
 
@@ -142,7 +142,7 @@ actually resolves is a fact about the server, not about the text.
 
 **The re-probe on model change used to be the second behaviour this suite could
 not reach. It is not any more, and this paragraph is a dated record of why.** The
-old `HtmlRenderer` tests built `TeammateCard` from a parameter dictionary and
+old `HtmlRenderer` tests built `AgentProfileCard` from a parameter dictionary and
 could not dispatch a click, so a `<select>` change — the only thing that triggers
 the re-probe — was unreachable, and steps 14–19 of the checklist below were the
 whole coverage. Since the card became a real `MudDialog` driven through
@@ -169,23 +169,23 @@ Tools. With `Team:Acp:Enabled=true` — which spends money — check:
 > browser and filesystem only — and they are the whole of what the stylesheet
 > suites cannot see, because no test here renders a browser.
 
-1. `/teammates` loads, the sidebar link reads **Teammates**, and the page is
+1. `/agents` loads, the sidebar link reads **Agents**, and the page is
    styled (catches a missed CSS class rename). Clicking a tile opens the card;
-   **Edit** and **New teammate** open the same card in their own modes.
+   **Edit** and **New agent** open the same card in their own modes.
 2. `pwsh tools/echo-bot.ps1 -Name echo` connects, proving the wire round-trip.
 3. A Room of two Members replies without a Mention; adding a third makes it
    mention-gated.
-4. Adding a Persona on `/teammates` brings an Agent online with a Room named
+4. Adding a Persona on `/agents` brings an Agent online with a Room named
    after it.
 5. `App_Data/work/<Persona>/` is created.
 6. An Agent asked to list who exists calls `mcp__team__list_agents` and reports
    real names rather than inventing them.
-7. **New teammate** offers a Model list read from the installed adapter, not a
-   hardcoded one. Pick a non-default Model, save, and ask that teammate which
+7. **New agent** offers a Model list read from the installed adapter, not a
+   hardcoded one. Pick a non-default Model, save, and ask that agent which
    model it is. Change the Model on the card and ask again — the answer changes,
    and the log shows the runner restarted. No *"not in the agent's catalog"*
    warning should appear.
-8. Move `tools/acp/node_modules` aside and reload `/teammates`. The page still
+8. Move `tools/acp/node_modules` aside and reload `/agents`. The page still
    works and the picker says the agent will use its own default. Put it back.
 9. An `App_Data` created before this change still opens, with `persona_models`
    added in place and no wipe required.
@@ -204,14 +204,14 @@ Tools. With `Team:Acp:Enabled=true` — which spends money — check:
     `@Chief of Staff` in a Room of three or more actually reaches it. This is the
     one path no test can prove, because it depends on a real model writing the
     Mention out in full.
-11. Ask a teammate what tools it has. It calls `mcp__team__get_help` and reports
+11. Ask an agent what tools it has. It calls `mcp__team__get_help` and reports
     the real catalog rather than reciting the system prompt or inventing one.
     This is the only check that progressive discovery works end to end.
-12. In a Room of three or more, ask a teammate to bring another agent in. It
+12. In a Room of three or more, ask an agent to bring another agent in. It
     calls `mcp__team__invite_agent` with the id from its own `[Room: …]` label,
     the sidebar renames the Room with no refresh, and the invited Agent answers
     when Mentioned. Getting the id wrong here is the failure to watch for.
-13. **Add teammate** on the Room header lists only Agents that are not already
+13. **Add agent** on the Room header lists only Agents that are not already
     Members, and inviting one renames the Room the same way the command does.
 14. Open a Create/Edit card — the Effort list populates with **no second**
     `node` spawn.
@@ -219,14 +219,14 @@ Tools. With `Team:Acp:Enabled=true` — which spends money — check:
     and the chosen level resets.
 16. Pick a model with no effort support — the picker says so and nothing is
     stored.
-17. Pick a level and save — the teammate restarts, with **no** *"not in the
+17. Pick a level and save — the agent restarts, with **no** *"not in the
     agent's advertised effort catalog"* warning in the log.
-18. Save with Effort unchanged — the teammate does **not** restart.
-19. Remove a teammate and recreate it with the same name — the old Effort must
+18. Save with Effort unchanged — the agent does **not** restart.
+19. Remove an agent and recreate it with the same name — the old Effort must
     not resurrect.
 20. **The Teams no-op.** Put a Persona in `App_Data/Teams/Business/`, give it a
     Model, then move the file to `App_Data/Teams/`. Nothing changes — same Name,
-    same groups on `/teammates`, same Model. This is the check that most
+    same groups on `/agents`, same Model. This is the check that most
     distinguishes Team-as-a-field from Team-as-a-folder, and the one most likely
     to regress if someone reintroduces a path-derived key.
 21. **Folders are cosmetic.** A Persona filed under `Teams/Household/` whose
@@ -237,12 +237,12 @@ Tools. With `Team:Acp:Enabled=true` — which spends money — check:
     are named.
 23. **The watcher is live and recursive.** Edit a Persona nested in a Team
     sub-folder and confirm it reloads without a restart; rename the sub-folder
-    and confirm every teammate in it stays reachable. These are two of the four
+    and confirm every agent in it stays reachable. These are two of the four
     silent watcher failures in [Traps](traps.md) and neither produces an error
     when it breaks.
 24. **An Alias works everywhere a Name does.** With `alias: jar` on Jarvis:
-    `@jar` reaches it in a Room of three or more, `/invite @jar` adds it, and a
-    teammate calling `mcp__team__invite_agent` with `jar` succeeds — the Alias is
+    `@jar` reaches it in a Room of three or more, `/invite @jar` adds it, and an
+    agent calling `mcp__team__invite_agent` with `jar` succeeds — the Alias is
     advertised in `list_agents`' job description, so all three must accept it.
 25. **A two-Agent loop actually stops.** Set `Team:AgentMessageBudget` low (6 or
     so — this checklist spends money) and put two Personas in one Room with
@@ -262,7 +262,7 @@ Tools. With `Team:Acp:Enabled=true` — which spends money — check:
     than retry or post the same thing into another Room. Only a real model can
     prove the terminal wording works — same class as steps 11 and 12.
 28. **Dark mode is the test.** Set Settings → Appearance to **Dark**. Walk `/`, a
-    Room with a Draft streaming, `/teammates` with the card open and a rejected
+    Room with a Draft streaming, `/agents` with the card open and a rejected
     file present, and `/settings` on both tabs. Any element that stays light is a
     literal that survived tokenisation.
 29. **The device's theme is ignored, deliberately.** Pick a Theme from the **Dark**

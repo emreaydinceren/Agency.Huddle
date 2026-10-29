@@ -174,7 +174,7 @@ curl "$API/issues?state=open&type=issues" -H "Authorization: token ${GITEA_ACCES
 curl "$API/issues/12" -H "Authorization: token ${GITEA_ACCESS_TOKEN}"
 
 # Already reported? q= matches title AND body, so a test id also finds the issues it blocks.
-curl "$API/issues?state=all&type=issues&q=TEAMMATECARD-02" -H "Authorization: token ${GITEA_ACCESS_TOKEN}"
+curl "$API/issues?state=all&type=issues&q=AGENTPROFILECARD-02" -H "Authorization: token ${GITEA_ACCESS_TOKEN}"
 
 curl "$API/issues/12/comments" -H "Authorization: token ${GITEA_ACCESS_TOKEN}"
 ```
@@ -189,7 +189,7 @@ Useful query parameters: `state` (`open` | `closed` | `all`, default `open`), `t
 curl -X POST "$API/issues" \
   -H "Authorization: token ${GITEA_ACCESS_TOKEN}" \
   -H "Content-Type: application/json" \
-  -d '{"title":"TEAMMATECARD-02: New teammate opens no card", "body":"..."}'
+  -d '{"title":"AGENTPROFILECARD-02: New agent opens no card", "body":"..."}'
 
 # Comment on one.
 curl -X POST "$API/issues/12/comments" \

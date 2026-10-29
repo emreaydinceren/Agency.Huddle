@@ -63,10 +63,10 @@ public sealed class GetHelpToolTests
         using var dir = new Agency.Huddle.Tests.TempDataDir();
         var directory = await dir.CreateDirectoryAsync(ct);
         var store = new Agency.Huddle.App.FileChanges.FileStateStore(dir.Options(), NullLogger<Agency.Huddle.App.FileChanges.FileStateStore>.Instance);
-        var teammatePaths = new Agency.Huddle.App.Acp.TeammatePaths(dir.Options());
-        var resolver = new Agency.Huddle.App.FileChanges.WatchedFolderResolver(dir.Options(), teammatePaths);
+        var agentPaths = new Agency.Huddle.App.Acp.AgentPaths(dir.Options());
+        var resolver = new Agency.Huddle.App.FileChanges.WatchedFolderResolver(dir.Options(), agentPaths);
         using var personaStore = dir.CreatePersonaStore();
-        var tracker = new Agency.Huddle.App.FileChanges.FileChangeTracker(store, personaStore, directory, resolver, dir.Options(), teammatePaths, NullLogger<Agency.Huddle.App.FileChanges.FileChangeTracker>.Instance);
+        var tracker = new Agency.Huddle.App.FileChanges.FileChangeTracker(store, personaStore, directory, resolver, dir.Options(), agentPaths, NullLogger<Agency.Huddle.App.FileChanges.FileChangeTracker>.Instance);
 
         IAppTool[] watchTools =
         [

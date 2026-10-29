@@ -49,7 +49,7 @@ retro: { every: 14, unit: 'days' }
 ## Escalation
 
 - A price, a discount, a contract term or an opt-out request goes to the Human.
-- A disagreement between teammates goes to the Human with both views written on the Task.
+- A disagreement between agents goes to the Human with both views written on the Task.
 
 ## Onboarding
 

@@ -2,7 +2,7 @@
 
 This guide is for an AI agent that turns a written **scenario**, such as "a
 two-person business with a website project running late", into a complete,
-testable Huddle data folder. It covers Teammates and their personalities, Teams,
+testable Huddle data folder. It covers Agents and their personalities, Teams,
 Projects, Tasks, Views, Library notes, memory, Skills and chat Rooms. Follow the
 phases in order; each one depends on the one before.
 
@@ -25,24 +25,24 @@ entity means to a user, read [the user guide](../docs/Huddle.UserGuide.md).
 > roots, the repository and the user profile are always refused. Dates are offsets from the run
 > date (`--today yyyy-MM-dd` pins them). It also writes `manifest.md` and prints the launch command.
 > To browse the result, run `./run.ps1 -Seed` (add `-Port 1111` for another port): it builds, then
-> starts Huddle on the seed data and changes nothing else, so Teammates use whatever adapter your
+> starts Huddle on the seed data and changes nothing else, so Agents use whatever adapter your
 > normal configuration names (add `-NoAcp` to keep paid models from running). `-SeedRoot` points it
 > at a different seed root.
 > `tests/Huddle.Tests.Domain/Seeder/` loads the result through Huddle's own loaders, so it goes red when
 > this guide and the app drift apart. A second scenario, `--scenario uat`, builds only two mock-adapter
-> Teammates (Ada and Bo) with an empty Room each; the manual-test lane `P-LAUNCH-UAT` uses it, and it exists only
+> Agents (Ada and Bo) with an empty Room each; the manual-test lane `P-LAUNCH-UAT` uses it, and it exists only
 > when someone asks for it. Use the manual procedure below for a scenario the tool
 > does not have yet; adding one is a new `IScenario` in `src/Huddle.Seeder/Scenarios/`.
 
 ## What the `software-co` seed contains for the newer features
 
-Beyond Teammates, Teams, Tasks, Views and notes, the seed exercises Team Rooms, Message
+Beyond Agents, Teams, Tasks, Views and notes, the seed exercises Team Rooms, Message
 References, Uploads, Task attachments, document History, Sprints, Requests, the Right sidebar panels,
 avatar pictures and the Needs you card. `manifest.md` in the seed root lists every one with its ids and paths.
 
 | Feature | What is seeded | Where to look |
 | --- | --- | --- |
-| Team Rooms and Team chats | One Team Room each for Platform, Growth and Support (members are the Human plus the Team's Teammates, as the app's own reconciler creates them); two Team chats (`Pagination design`, `Pricing launch copy`) and a Team one-to-one with Dana. The six root Rooms are unchanged. | `SeedRoom.Team` and `IsTeamRoom`; the manifest's Rooms table has a Scope column |
+| Team Rooms and Team chats | One Team Room each for Platform, Growth and Support (members are the Human plus the Team's Agents, as the app's own reconciler creates them); two Team chats (`Pagination design`, `Pricing launch copy`) and a Team one-to-one with Dana. The six root Rooms are unchanged. | `SeedRoom.Team` and `IsTeamRoom`; the manifest's Rooms table has a Scope column |
 | Message References | Every Message that names a Task id, a Library file, a Room or a Team carries `References`, built the way the app's send path builds them. `PLAT-0004` was renamed, so its chip reads "changed" (`SeedTask.FormerTitle`). One cited document, `Customer-Update-Draft.md` in the incident Room, does not exist, so the Documents panel shows "not found". The archived `Q2 retro` Room stores no References, which keeps the reader's text-scan fallback covered. | `Writing/MessageReferences.cs` |
 | Documents in this chat | `Platform standup`, `Launch crew` and `Incident 0412 war room` each cite two to four documents; `Pagination.md` and `Incident-0412.md` are cited more than once. | the Right sidebar |
 | Uploads | A PNG and a text file in the root Room `Owen` (`Uploads/<roomId>/`) and in the Platform Team Room (`Teams/Platform/Uploads/<roomId>/`), each cited by a Message in the composer's format: a blank line, then the path in backticks. | `SoftwareCoLibrary.Uploads`; manifest Uploads table |
@@ -77,7 +77,7 @@ functions and with its snapshotter, so a change in the app turns those tests red
 
 1. **Write only Markdown (`.md`) and JSON (`.json`, `.jsonl`) files by hand.**
    Everything that lives in SQLite (`team.db`) is created through the web UI:
-   Teammates coming online, chat Rooms and their members, Room names, archiving,
+   Agents coming online, chat Rooms and their members, Room names, archiving,
    Model and Effort. Never open `team.db` for writing, and do not read it either.
    Get the IDs you need from the UI and from transcript files, as described
    below.
@@ -86,8 +86,8 @@ functions and with its snapshotter, so a change in the app turns those tests red
 3. **Write files while Huddle is stopped**, except where a step says otherwise.
    Huddle watches its folders. A file written while it runs is treated as an
    edit made outside Huddle: Tasks get a log line and a new Updated date, and
-   Teammates restart.
-4. **Do not spend money.** Teammates run on the free mock adapter
+   Agents restart.
+4. **Do not spend money.** Agents run on the free mock adapter
    (`mock-acp`), never on a paid model.
 5. **If the scenario needs another file type**, such as images, `.txt` or `.csv`
    files in the Library, or uploaded avatars, ask the user before adding it.
@@ -99,8 +99,8 @@ functions and with its snapshotter, so a change in the app turns those tests red
 | 1. Plan | — | Turn the scenario into a seed manifest |
 | 2. Prepare | Stopped | Build, choose folders, write the launch config |
 | 3. First start | Running, then stopped | Let Huddle create its database and folders |
-| 4. Write files | Stopped | Teammates, Skills, Tasks, notes, memory, Views, settings |
-| 5. Bring online | Running | Teammates connect; check the load |
+| 4. Write files | Stopped | Agents, Skills, Tasks, notes, memory, Views, settings |
+| 5. Bring online | Running | Agents connect; check the load |
 | 6. Web UI steps | Running | Rooms, empty Teams and Projects, Model and Effort, sender IDs |
 | 7. Write chat history | Stopped | Append messages to Room transcripts |
 | 8. Verify | Running | Walk the checklist; finish the manifest |
@@ -115,7 +115,7 @@ The manifest has one table per entity type:
 
 | Table | Columns |
 | --- | --- |
-| Teammates | Name, alias, title, Teams, Skills, one-line personality |
+| Agents | Name, alias, title, Teams, Skills, one-line personality |
 | Teams | Name, members, Projects, has memory? |
 | Tasks | ID, Team/Project, title, status, priority, assignee, closed?, due, blocked by, parent, notes |
 | Rooms | Name, members, message count, archived? |
@@ -132,13 +132,13 @@ Unless the scenario forbids it, include:
 
 | Area | Include |
 | --- | --- |
-| Teammates | One in **two or more Teams**; one in **no Team**; one holding a **Skill**; distinct personalities |
+| Agents | One in **two or more Teams**; one in **no Team**; one holding a **Skill**; distinct personalities |
 | Teams | One with Projects; one with **no members**; one with **no Projects**; a Project with **no Tasks** |
 | Tasks | Each of the eight statuses; at least one **closed**; one **overdue** (due date past, status not finished); one **blocked** by an open Task; one blocked by a **finished** Task (it is not shown as blocked); a **sub-task**; a **Duplicate**; one **unassigned**; one **assigned to the Human**; Tasks at the Team root and inside a Project; tags; a long Markdown description |
-| Change logs | Entries by the Human and by Teammates; a `status:` change; a `moved:` entry; a closed Task with a `closed` entry |
+| Change logs | Entries by the Human and by Agents; a `status:` change; a `moved:` entry; a closed Task with a `closed` entry |
 | Views | A List and a Board; a filter by Team, by assignee and by status; one grouped by Project |
-| Library | Notes linking with `[[wikilinks]]`; one note with several **backlinks**; one **unresolved** link; a note in a Teammate's `work/` folder |
-| Memory | Team Memory facts; a Project memory fact; a Teammate's personal memory |
+| Library | Notes linking with `[[wikilinks]]`; one note with several **backlinks**; one **unresolved** link; a note in an Agent's `work/` folder |
+| Memory | Team Memory facts; a Project memory fact; an Agent's personal memory |
 | Rooms | A one-to-one Room; a group Room with mentions; an **archived** Room; a Room with a custom name; messages that mention Task IDs |
 
 Negative cases, such as a Task file that fails to load, belong in a
@@ -183,7 +183,7 @@ Run Huddle with these settings. Every one of them matters:
 | `--Team:PipeName=huddle-seed` | Instances sharing a pipe name cross-connect their agents. |
 | `--Team:DemoAgent:Enabled=false` | Keeps the `echo` and `alpha` demo agents out of Rooms and pickers. Off by default now; keep passing it so the launch does not depend on the default. |
 | `--Team:Tasks:WakeEnabled=false` | Stops Task changes from posting wake-up messages. |
-| `--Team:Acp:Enabled=true` plus the four `Adapters:0` keys | Runs every Teammate on the free mock adapter. Set it explicitly: `appsettings.Development.json` changes the default. |
+| `--Team:Acp:Enabled=true` plus the four `Adapters:0` keys | Runs every Agent on the free mock adapter. Set it explicitly: `appsettings.Development.json` changes the default. |
 
 In Claude Code's desktop app, add an entry to `.claude/launch.json` and start it
 with `preview_start`. Remove the entry when you are done, because that file is
@@ -212,7 +212,7 @@ committed.
 
 `Args:0` must be present even though the mock ignores it. Without it Huddle
 reports that no adapter is installed. Because `mock` is the only adapter, every
-Teammate uses it, and the Teammate files need no `adapter:` line.
+Agent uses it, and the Agent files need no `adapter:` line.
 
 If the scenario names the Human, add `--Team:HumanName=<name>` and use the same
 name as `creator` in Task files and as `senderName` in transcripts. The default
@@ -220,22 +220,22 @@ is `You`.
 
 ## Phase 3: First start on an empty folder
 
-Start Huddle once with the empty data folder. Wait until the Teammates page
+Start Huddle once with the empty data folder. Wait until the Agents page
 loads, then stop it.
 
 > [!WARNING]
 > Do not write any files before this first start. On a folder without the
-> marker `Teammates/.layout-migrated`, Huddle runs a one-time layout migration
+> marker `Agents/.layout-migrated`, Huddle runs a one-time layout migration
 > that moves every `.md` file it finds under `Teams/`, other than Task files,
-> into `Teammates/_unsorted/`. Your notes and memory end up in the wrong place.
+> into `Agents/_unsorted/`. Your notes and memory end up in the wrong place.
 
 The first start creates:
 
 | Item | Notes |
 | --- | --- |
 | `team.db` | The database, with the Human's row |
-| `Teammates/.layout-migrated` | The marker that stops the migration running again |
-| `Teammates/Chief of Staff/Chief of Staff.md` | The built-in Teammate, always present |
+| `Agents/.layout-migrated` | The marker that stops the migration running again |
+| `Agents/Chief of Staff/Chief of Staff.md` | The built-in Agent, always present |
 | `Teams/`, `Skills/`, `avatars/`, `logs/` | Empty folders |
 | A Room for the Chief of Staff, and `rooms/<id>.jsonl` | Holds its first "greeting". On the mock adapter the greeting is the prompt echoed back; you replace it in Phase 7 |
 
@@ -244,9 +244,9 @@ The first start creates:
 Stop Huddle first. Write UTF-8 files without a byte-order mark. Either LF or
 CRLF line endings work.
 
-### Teammates and their personalities
+### Agents and their personalities
 
-Each Teammate is `Teammates/<Name>/<Name>.md`. The folder, the file name and
+Each Agent is `Agents/<Name>/<Name>.md`. The folder, the file name and
 `name:` must be identical.
 
 ```markdown
@@ -277,15 +277,15 @@ Boundaries: you do not give legal advice. You hand design questions to Kai.
 | --- | --- |
 | Required | `name`, `title`, `alias`, all non-blank |
 | Name and alias | 1–64 characters; start with a letter or digit; then letters, digits, `_`, `-` and single spaces; no dots |
-| Uniqueness | Names are unique, aliases are unique, and no alias may equal another Teammate's name. Case is ignored |
+| Uniqueness | Names are unique, aliases are unique, and no alias may equal another Agent's name. Case is ignored |
 | `teams`, `skills`, `watches` | `['A', 'B']`, a block list, or `A, B` all work |
-| Extra keys | Any other key, such as `specialty:`, is shown to other Teammates as part of this Teammate's job description |
+| Extra keys | Any other key, such as `specialty:`, is shown to other Agents as part of this Agent's job description |
 | `model:` / `effort:` keys | Have no effect. Model and Effort live in `team.db`; set them in Phase 6 |
 | Folder contents | Only the definition file at the top level. Anything else goes in `work/` |
 | Chief of Staff | Leave its file alone. Huddle writes a new one at every start if none is marked `_builtin: 'chief-of-staff'` |
 
-**Writing a good personality.** The body is the Teammate's private system
-prompt; other Teammates never see it. Make each Teammate recognisably different
+**Writing a good personality.** The body is the Agent's private system
+prompt; other Agents never see it. Make each Agent recognisably different
 so a tester can tell replies apart on a real adapter:
 
 - **Open with identity and role** in one sentence.
@@ -297,8 +297,8 @@ so a tester can tell replies apart on a real adapter:
   mentions in group Rooms.
 - Keep it under about 300 words. Put procedures in a Skill instead.
 
-A Teammate's `teams:` labels are enough to create its Teams. Huddle creates
-`Teams/<label>/` for each one when the Teammate loads.
+An Agent's `teams:` labels are enough to create its Teams. Huddle creates
+`Teams/<label>/` for each one when the Agent loads.
 
 ### Skills
 
@@ -337,7 +337,7 @@ data/Teams/Business/
 ```
 
 - **Memory files** hold one fact each. The first non-blank line is the fact,
-  and it is the only line Teammates see in their index.
+  and it is the only line Agents see in their index.
 - **Wikilinks**: `[[Brief]]`, `[[Research/Competitors]]`, `[[Brief#Goals]]`,
   `[[Brief|the brief]]`. Links resolve within one Library root, by file name,
   case-insensitively. Add one link to a note that does not exist to test the
@@ -347,9 +347,9 @@ data/Teams/Business/
 - A Team with no members, or a Project with no files, is created in the UI
   (Phase 6), not by making an empty folder.
 
-**Personal memory and working files** go in `Teammates/<Name>/work/`, for
-example `Teammates/Nova/work/memory/prefers-euros.md`, or
-`Teammates/Nova/work/Cash-flow.md`.
+**Personal memory and working files** go in `Agents/<Name>/work/`, for
+example `Agents/Nova/work/memory/prefers-euros.md`, or
+`Agents/Nova/work/Cash-flow.md`.
 
 ### Tasks
 
@@ -384,8 +384,8 @@ Collect the Q3 invoices and send them to the accountant.
 | `title` | Required, one line, 1–200 characters |
 | `status` | `Backlog`, `To Do`, `In Progress`, `Review`, `Done`, `Cancelled`, `Duplicate` or `Rejected` |
 | `priority` | `Low`, `Medium`, `High` or `Urgent` |
-| `creator` | Required. The Human's name or a Teammate's name |
-| `assignee` | Optional. A Teammate's exact `name`, or the Human's name |
+| `creator` | Required. The Human's name or an Agent's name |
+| `assignee` | Optional. An Agent's exact `name`, or the Human's name |
 | `origin` | Optional. A Room ID, which links the Task to that Room |
 | `parent` | Optional. One Task ID, which makes this a sub-task |
 | `blocked_by` | Optional list of Task IDs: `[BUSI-0001, BUSI-0005]` or a block list |
@@ -498,7 +498,7 @@ All of these sit at the data folder root and are optional.
 ```
 
 That is `avatars.json`: initials and a colour per name. Pictures need an upload
-through the Teammate card, so leave them out unless the user agrees.
+through the Agent card, so leave them out unless the user agrees.
 
 ```json
 { "theme": "huddle", "accentColor": "#e2762d" }
@@ -516,34 +516,34 @@ at startup.
 `prompts.json` overrides prompt texts. Leave it out unless the scenario is about
 prompts.
 
-## Phase 5: Bring the Teammates online
+## Phase 5: Bring the Agents online
 
-Start Huddle. Open `/teammates` and check:
+Start Huddle. Open `/agents` and check:
 
-- Every Teammate appears, under each of its Teams, marked **Online**.
+- Every Agent appears, under each of its Teams, marked **Online**.
 - There is **no "Files that didn't load"** box. If there is, fix the file it
   names while Huddle runs; it reloads within a second.
-- Each Teammate has a one-to-one Room in the **Chats** group. Huddle creates it
-  when the Teammate first connects.
+- Each Agent has a one-to-one Room in the **Chats** group. Huddle creates it
+  when the Agent first connects.
 
-A Teammate becomes selectable in chat pickers only after it has connected once.
+An Agent becomes selectable in chat pickers only after it has connected once.
 That is why the mock adapter is needed. With `Team:Acp:Enabled=false`, no
-seeded Teammate can join a Room.
+seeded Agent can join a Room.
 
 ## Phase 6: Web UI steps
 
 Do these in the browser at `http://localhost:5199`.
 
-### Collect each Teammate's sender ID
+### Collect each Agent's sender ID
 
-Transcript lines identify a Teammate by an internal sender ID, which lives in
+Transcript lines identify an Agent by an internal sender ID, which lives in
 `team.db`. Collect each one from the transcripts instead:
 
-1. Open the Teammate's one-to-one Room from **Chats**.
+1. Open the Agent's one-to-one Room from **Chats**.
 2. Type `ping` in the message box and press Enter. The mock replies in about a
    second.
 3. Read the Room ID from the address bar (`/rooms/<roomId>`), then open
-   `data/rooms/<roomId>.jsonl`. The reply line's `senderId` is the Teammate's
+   `data/rooms/<roomId>.jsonl`. The reply line's `senderId` is the Agent's
    ID. The Chief of Staff's ID is already on its greeting line.
 4. Record every ID in the manifest.
 
@@ -553,18 +553,18 @@ You remove these `ping` lines in Phase 7.
 
 | Goal | Steps |
 | --- | --- |
-| Group Room | Select **New chat**, tick two or more Teammates, select **Start chat**. It is named after its members, for example "Nova, Kai" |
-| One-to-one Room | Already exists. Selecting a single Teammate in **New chat** reopens it |
-| Add a member | In the Room, select **Add teammate** at the top right and choose one |
+| Group Room | Select **New chat**, tick two or more Agents, select **Start chat**. It is named after its members, for example "Nova, Kai" |
+| One-to-one Room | Already exists. Selecting a single Agent in **New chat** reopens it |
+| Add a member | In the Room, select **Add agent** at the top right and choose one |
 | Custom name | Select the pencil beside the Room name, type the name, press Enter |
 | Archive | Hover the Room in **Chats**, open its `⋯` **Room actions** menu, select **Archive** |
 
 Record each Room's ID from the address bar.
 
 > [!CAUTION]
-> Do not type messages that mention a Teammate (`@nova`) in the web UI. The
+> Do not type messages that mention an Agent (`@nova`) in the web UI. The
 > mock replies to every mention, and its reply is the full prompt echoed back.
-> In a Room with several Teammates, echoed mentions can set off a chain of
+> In a Room with several Agents, echoed mentions can set off a chain of
 > replies until the Room's budget pauses them. Write conversations in Phase 7
 > instead.
 
@@ -577,14 +577,14 @@ Record each Room's ID from the address bar.
 
 ### Set Model and Effort (only if the scenario needs them)
 
-Open **Teammates**, select **Edit** on the card, choose **Model** and
+Open **Agents**, select **Edit** on the card, choose **Model** and
 **Effort**, and select **Save**. The list shows the mock adapter's models, which
 may not exist on the adapter the tests later use. Skip this step unless the
 scenario is about models.
 
 ### Add memberships the files did not set
 
-Normally `teams:` in the Teammate files covers membership. To exercise the UI
+Normally `teams:` in the Agent files covers membership. To exercise the UI
 path instead, open the Team page, **Members** tab, **Add member**.
 
 ## Phase 7: Write the chat history
@@ -601,7 +601,7 @@ object per line, displayed in file order.
 | `id` | Unique 32-character hex string, for example a GUID without dashes |
 | `timestamp` | ISO 8601 with offset. Keep lines in ascending time order |
 | `senderId` | `human` for the Human; otherwise the ID collected in Phase 6 |
-| `senderName` | The Human's name (`You` by default), or the Teammate's current `name` |
+| `senderName` | The Human's name (`You` by default), or the Agent's current `name` |
 | `text` | Markdown. Task IDs such as `BUSI-0002` become links; `@alias` shows as a mention |
 
 Then:
@@ -617,7 +617,7 @@ Then:
 5. To link a Task to a conversation, set the Task's `origin:` to that Room's ID
    and reset the file's modified time as in Phase 4.
 
-Seeded messages are history only. Loading them never makes a Teammate reply.
+Seeded messages are history only. Loading them never makes an Agent reply.
 
 ## Phase 8: Verify
 
@@ -625,7 +625,7 @@ Start Huddle and walk this checklist. Record the results in the manifest.
 
 | Check | Where | Expect |
 | --- | --- | --- |
-| Teammates load | `/teammates` | Every Teammate, correct Teams; no "Files that didn't load" |
+| Agents load | `/agents` | Every Agent, correct Teams; no "Files that didn't load" |
 | Teams and Projects | Sidebar **Teams** | Every Team and Project; empty Teams show **No members** |
 | Tasks load | `/tasks/all-tasks` | Every open Task; no "Tasks that didn't load" |
 | No outside edits | Each Task's **Change log** | No `edited outside Huddle` line you did not write |
@@ -645,12 +645,12 @@ is the whole `<seed-root>` folder: copy it to reuse the scenario, and point
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| Notes appear in `Teammates/_unsorted/` | Files were written before the first start | Move them back to `Teams/`; the marker now exists |
+| Notes appear in `Agents/_unsorted/` | Files were written before the first start | Move them back to `Teams/`; the marker now exists |
 | A Task shows `edited outside Huddle` | The file's modified time is later than its last log entry | Reset the time in the file and remove the line |
 | A Task is missing | It is under **Tasks that didn't load** | Read the reason: duplicate ID, bad status, `duplicate_of` rules |
-| A Teammate is missing or Offline | Bad frontmatter, or `Acp:Enabled` is off | Check "Files that didn't load" and the launch settings |
+| An Agent is missing or Offline | Bad frontmatter, or `Acp:Enabled` is off | Check "Files that didn't load" and the launch settings |
 | "No ACP adapter is installed" | `Adapters:0:Args:0` is missing | Add `--Team:Acp:Adapters:0:Args:0=--mock` |
-| A Teammate is not in **New chat** | It has never connected | Start with the mock adapter and wait for Online |
+| An Agent is not in **New chat** | It has never connected | Start with the mock adapter and wait for Online |
 | `echo` and `alpha` appear | Demo agents are on | Add `--Team:DemoAgent:Enabled=false` |
 | Replies are long prompt text | That is the mock adapter | Replace them in Phase 7 |
 | A seeded message does not show | Invalid JSON on that line, or no final newline on the line before | Fix the line; bad lines are skipped with a warning in the log |

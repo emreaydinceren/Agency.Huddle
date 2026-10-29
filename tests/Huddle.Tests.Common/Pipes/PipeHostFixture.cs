@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using System.IO.Pipes;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Elicitation;
 
@@ -77,7 +77,7 @@ public sealed class PipeHostFixture : IAsyncDisposable
         builder.Configuration.AddInMemoryCollection(config);
         builder.Services.AddTeamServices(builder.Configuration);
         RemovePersonaSupervisorHostedService(builder.Services);
-        RemoveBuiltinTeammateSeederHostedService(builder.Services);
+        RemoveBuiltinAgentSeederHostedService(builder.Services);
 
         var loggerProvider = new RecordingLoggerProvider();
         builder.Logging.AddProvider(loggerProvider);
@@ -190,7 +190,7 @@ public sealed class PipeHostFixture : IAsyncDisposable
     }
 
     /// <summary>
-    /// Removes the <see cref="BuiltinTeammateSeeder"/> <see cref="IHostedService"/> that
+    /// Removes the <see cref="BuiltinAgentSeeder"/> <see cref="IHostedService"/> that
     /// <see cref="ServiceCollectionExtensions.AddTeamServices"/> just registered, so this fixture's
     /// <see cref="IHost"/> never writes a real Chief of Staff Persona onto disk.
     /// </summary>
@@ -216,12 +216,12 @@ public sealed class PipeHostFixture : IAsyncDisposable
     /// </para>
     /// </remarks>
     /// <param name="services">The fixture's service collection, already populated by <see cref="ServiceCollectionExtensions.AddTeamServices"/>.</param>
-    internal static void RemoveBuiltinTeammateSeederHostedService(IServiceCollection services)
+    internal static void RemoveBuiltinAgentSeederHostedService(IServiceCollection services)
     {
         var registration = services.FirstOrDefault(
-            d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(BuiltinTeammateSeeder))
+            d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(BuiltinAgentSeeder))
             ?? throw new InvalidOperationException(
-                $"Expected {nameof(ServiceCollectionExtensions.AddTeamServices)} to register {nameof(BuiltinTeammateSeeder)} " +
+                $"Expected {nameof(ServiceCollectionExtensions.AddTeamServices)} to register {nameof(BuiltinAgentSeeder)} " +
                 "as an IHostedService, but no such registration was found. Has it been renamed or moved?");
         services.Remove(registration);
     }

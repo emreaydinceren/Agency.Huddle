@@ -40,7 +40,7 @@ test-first task list. Every design decision is recorded in §11 with the alterna
 > sentence about when to ask where the model always sees it (the system prompt's tool roster is the
 > candidate), or stop the Adapter deferring. **The first is built** (§6.6, D-11): `systemPrompt.askHuman`, one
 > paragraph after the tools paragraph. QUESTIONS-01, re-run against it the same day, **passed** (one sample: a
-> fresh Haiku Teammate called ToolSearch and then `ask_human` unprompted).
+> fresh Haiku Agent called ToolSearch and then `ask_human` unprompted).
 > The run also added a muted, barred style for a quoted line in a Message (`app.css`), because an answer
 > and the question it quotes were otherwise indistinguishable.
 
@@ -93,7 +93,7 @@ Human taps, rather than with a list of questions the Human has to answer in pros
 Concretely:
 
 1. **`ask_human` asks only the Human.** It takes no recipient. An Agent that wants something
-   from another Teammate Mentions them in an ordinary Message, as today.
+   from another Agent Mentions them in an ordinary Message, as today.
 2. **The answer is an ordinary Message from the Human.** It quotes each Question and its
    answer, and Mentions the Agent that asked, so the Reply Gate wakes it in any Room. Nothing
    new crosses the pipe.
@@ -431,7 +431,7 @@ Prompts. It carries the whole of when to use the tool, because a model decides w
 a tool from its description alone:
 
 ```text
-Asks the Human one to three multiple-choice questions, shown in a Room as options they tap. Use it when you need their preferences, constraints or goals before you can help, such as which days, what budget, or which of these matters most, and you were about to write your questions out as a list. Do not use it when the answer is already in the conversation or can be inferred, for a fact you can look up, when they want your own recommendation or opinion, when they are venting, or when they have already given you detailed constraints. It asks only the Human: to ask another Teammate something, Mention them in an ordinary Message. Prefer one question, and write each so it makes sense on its own. Each has 2 to 4 short options that do not overlap, and a type: single_select (the default), multi_select, or rank_priorities. Always say in your reply why you are asking. After calling it, end your Turn: the answer arrives later, as a Message from the Human in that Room.
+Asks the Human one to three multiple-choice questions, shown in a Room as options they tap. Use it when you need their preferences, constraints or goals before you can help, such as which days, what budget, or which of these matters most, and you were about to write your questions out as a list. Do not use it when the answer is already in the conversation or can be inferred, for a fact you can look up, when they want your own recommendation or opinion, when they are venting, or when they have already given you detailed constraints. It asks only the Human: to ask another Agent something, Mention them in an ordinary Message. Prefer one question, and write each so it makes sense on its own. Each has 2 to 4 short options that do not overlap, and a type: single_select (the default), multi_select, or rank_priorities. Always say in your reply why you are asking. After calling it, end your Turn: the answer arrives later, as a Message from the Human in that Room.
 ```
 
 It names no tool, so it needs no placeholder and cannot break the `mcp__team__` rule in
@@ -694,8 +694,8 @@ propose after the answer.
 | E-7 | The asker calls `ask_human` and keeps writing, guessing the answer | Nothing in code prevents it; the success text forbids it. Manual test QM-2 |
 | E-8 | The asker asks in a Room other than the one its Turn is in | Allowed. There is no framing Message there, so the card must stand on its own. The tool description asks for self-contained questions |
 | E-9 | `PostAsync` fails after the take | Logged; the card is gone; the Human types |
-| E-10 | An Adapter whose MCP client mishandles a nested array schema | Shared with `propose_teammates`. Manual test QM-4 on `agency-acp` |
-| E-11 | An option reads `/compact`, or any text beginning with `/` | Nothing runs. The answer is posted as a quoted Question and its answer, ending with the asker's Mention, so it never *begins* with a Mention, and an Adapter command needs a **leading** Mention of that Teammate ([ADR-0035](adr/0035-an-adapter-command-is-a-message-the-human-addresses-by-mention.md); Commands spec C8). An ordinary prompt is also guarded against a leading `/` (Commands D-9) |
+| E-10 | An Adapter whose MCP client mishandles a nested array schema | Shared with `propose_agents`. Manual test QM-4 on `agency-acp` |
+| E-11 | An option reads `/compact`, or any text beginning with `/` | Nothing runs. The answer is posted as a quoted Question and its answer, ending with the asker's Mention, so it never *begins* with a Mention, and an Adapter command needs a **leading** Mention of that Agent ([ADR-0035](adr/0035-an-adapter-command-is-a-message-the-human-addresses-by-mention.md); Commands spec C8). An ordinary prompt is also guarded against a leading `/` (Commands D-9) |
 
 ---
 
@@ -708,7 +708,7 @@ manual tests.
 `systemPrompt*.txt` in `tests/Huddle.Tests/Acp/Golden/` (six today: plain, `unprefixed`, `memory`,
 `roomSessions`, `roomSessions.memory` and `skills`) and any `get_help` golden are regenerated in
 the task that registers the tool. Each diff is reviewed to be exactly one new tool; none lists
-`propose_teammates` today, because a Skill grants it, but all list `post_message`, and `ask_human`
+`propose_agents` today, because a Skill grants it, but all list `post_message`, and `ask_human`
 goes to every Persona (D-10).
 
 **Manual tests** live in [manual-tests/questions.md](engineering/manual-tests/questions.md) as QUESTIONS-01 to
@@ -734,7 +734,7 @@ QUESTIONS-10, in this table's order, and are registered in [manual-tests.md](eng
 | # | Decision | Rejected | Why |
 | --- | --- | --- | --- |
 | D-1 | **Only the Human is asked; no recipient argument** | Letting an Agent ask another Agent | Options save a person typing; an Agent reads prose as easily. Agent-to-Agent questions stay plain Mentions. Decided by the repo owner |
-| D-2 | **The answer is a Message from the Human** | A tool result the asker waits for; a new Envelope | A blocking tool would hold a Turn open for as long as the Human takes. That runs into the idle timeout, and it holds the Persona's Turn slot: `MaxConcurrentTurns` is per Persona and defaults to 1 ([ADR-0024](adr/0024-an-agent-holds-one-session-per-room.md)), so the Teammate would stall in every other Room too. Sessions are per Room now, so it is the slot, not a shared session, that spans Rooms. An Envelope means a `ProtocolVersion` bump. A Message reuses the Reply Gate, the Budget and the Transcript unchanged. Work Modes D-16 takes the same stance for plan approval |
+| D-2 | **The answer is a Message from the Human** | A tool result the asker waits for; a new Envelope | A blocking tool would hold a Turn open for as long as the Human takes. That runs into the idle timeout, and it holds the Persona's Turn slot: `MaxConcurrentTurns` is per Persona and defaults to 1 ([ADR-0024](adr/0024-an-agent-holds-one-session-per-room.md)), so the Agent would stall in every other Room too. Sessions are per Room now, so it is the slot, not a shared session, that spans Rooms. An Envelope means a `ProtocolVersion` bump. A Message reuses the Reply Gate, the Budget and the Transcript unchanged. Work Modes D-16 takes the same stance for plan approval |
 | D-3 | **No `@` in a question or an option** | Escaping `@` when composing; allowing it | The answer is posted as the Human. An escaped `@` is still the Agent putting words in the Human's mouth; refusing is simpler, and costs only an e-mail address in an option |
 | D-4 | **Any typed Human Message drops the card** | Keeping it until answered, as a Proposal is kept | The typed Message is the answer the asker acts on. A card left behind invites a second, contradicting one. A Proposal is kept because revising it through prose is its normal path; a Question has no such path |
 | D-5 | **Refused in a paused Room** | Allowed, since only a Human tap can answer | A tap resets the Budget. A Human deciding whether to let a runaway Room continue should see the Continue prompt, not a card that makes the decision for them as a side effect |
@@ -742,7 +742,7 @@ QUESTIONS-10, in this table's order, and are registered in [manual-tests.md](eng
 | D-7 | **Separate store from `ProposalStore`** | One "pending card" store for both | Different lifetimes (D-4). A shared store would need a mode flag at every call site |
 | D-8 | **Options disabled while the asker is still writing** | Enabled at once | Keeps the Transcript in the order it happened: the framing, then the answer |
 | D-9 | **Up and down buttons to rank** | Drag and drop | Keyboard and screen-reader access, and no JavaScript |
-| D-10 | **Every Agent gets the tool** | Granting it through a Skill | Asking costs nothing and creates nothing. `propose_teammates` is granted by a Skill because each Teammate is a billed process; `ask_human` is not |
+| D-10 | **Every Agent gets the tool** | Granting it through a Skill | Asking costs nothing and creates nothing. `propose_agents` is granted by a Skill because each Agent is a billed process; `ask_human` is not |
 | D-11 | **The full decision guidance lives in the tool description, and a short form of it in the system prompt** | A `get_help` section; a Skill; the description alone | A model decides to call a tool from its description; guidance in `get_help` or a Skill is read too late or not at all. *Amended 2026-10-01:* the description alone proved not enough, because the Claude Adapter defers MCP tools and the model sees only the name. The system prompt is the one text it always reads, so it carries a paragraph on when to ask (§6.6). The description stays as the full version |
 | D-12 | **`rank_priorities` ships in V1** | V2 | It is the one kind a typed answer is worst at, and up and down buttons keep it small |
 | D-13 | **Advertise ACP elicitation only once (a) the idle watchdog can pause for an open request, (b) a handler answers every `elicitation/create`, including the refusal-fallback and MCP form cases, and (c) the answer is written to the Transcript as a Message.** *Met 2026-10-01 (§6.8a, D-14 to D-19); `Acp:AdvertiseElicitation` is on by default and off restores the old behaviour exactly* | Bridging `AskUserQuestion` and `elicitation/create` to the `QuestionCard` before those held; rejecting elicitation for good | A bridge without the pause blocks the Turn and runs into the idle timeout; advertising `form` also enables the refusal-fallback dialog and MCP-initiated forms, each needing a handler, and gives a Claude Persona two ways to ask. The rejection was conditional, never permanent, and it ended when the three gates were met |
@@ -802,7 +802,7 @@ Built 2026-10-01 in this order, each part test-first and green on its own, with 
 - **The `team-building` Skill's step 1 interview** is the obvious first user: *"One-off or
   recurring"*, *"How involved"* and *"Practice or real work"* are each a `single_select`. The
   Greeting's menu of 31 teams is **not**: it is far past four options, and it stays prose. Edit
-  the Skill once this tool exists, not before, so the Skill never names a tool its Teammate
+  the Skill once this tool exists, not before, so the Skill never names a tool its Agent
   cannot call.
 - **ACP elicitation** is built (§6.8a). Still outside this spec, and not scheduled: URL mode (the
   Adapter's OAuth flow for MCP servers); a Huddle tool that lets an Agent *start* a typed form of its own,

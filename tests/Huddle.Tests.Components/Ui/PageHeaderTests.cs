@@ -83,7 +83,7 @@ public sealed class PageHeaderTests
         await using MudBunitContext ctx = new();
 
         var cut = ctx.Render<PageHeader>(parameters => parameters
-            .Add(p => p.Title, "Teammates")
+            .Add(p => p.Title, "Agents")
             .Add(p => p.Subtitle, "Your people, one place."));
 
         var intro = cut.Find(".page-header > .page-header-subtitle");
@@ -99,16 +99,16 @@ public sealed class PageHeaderTests
         int created = 0;
 
         var primary = ctx.Render<PageHeader>(parameters => parameters
-            .Add(p => p.Title, "Teammates")
-            .Add(p => p.CreateText, "New teammate")
+            .Add(p => p.Title, "Agents")
+            .Add(p => p.CreateText, "New agent")
             .Add(p => p.OnCreate, EventCallback.Factory.Create<MouseEventArgs>(ctx, () => created++)));
         var quiet = ctx.Render<PageHeader>(parameters => parameters
-            .Add(p => p.Title, "Teammates")
-            .Add(p => p.CreateText, "New teammate")
+            .Add(p => p.Title, "Agents")
+            .Add(p => p.CreateText, "New agent")
             .Add(p => p.CreatePrimary, false));
 
         var button = primary.Find(".page-header-actions button.page-header-create");
-        Assert.Equal("New teammate", button.TextContent.Trim());
+        Assert.Equal("New agent", button.TextContent.Trim());
         Assert.Contains("mud-button-filled-primary", button.ClassList);
         Assert.Contains("mud-button-filled-size-small", button.ClassList);
         await primary.InvokeAsync(() => button.ClickAsync());
@@ -173,7 +173,7 @@ public sealed class PageHeaderTests
     {
         await using MudBunitContext ctx = new();
 
-        var cut = ctx.Render<PageHeader>(parameters => parameters.Add(p => p.Title, "Teammates"));
+        var cut = ctx.Render<PageHeader>(parameters => parameters.Add(p => p.Title, "Agents"));
 
         // PageTitle writes into the document head, not into the component's own markup, so bUnit reads the
         // component itself; the rendered <title> text is pinned by the integration GET in TeamPageRouteTests.

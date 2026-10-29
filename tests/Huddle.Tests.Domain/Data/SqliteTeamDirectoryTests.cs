@@ -124,7 +124,7 @@ public sealed class SqliteTeamDirectoryTests
         Assert.Equal("Coo", stored.Name);
     }
 
-    /// <summary>Renaming a Teammate to the Name it already has is a no-op that reports success.</summary>
+    /// <summary>Renaming an Agent to the Name it already has is a no-op that reports success.</summary>
     [Fact]
     public async Task RenameUser_SameName_IsNoOpAndReturnsTrue()
     {
@@ -170,7 +170,7 @@ public sealed class SqliteTeamDirectoryTests
         Assert.Equal("You", human.Name);
     }
 
-    /// <summary>A new Name already held by a different Teammate is rejected rather than colliding.</summary>
+    /// <summary>A new Name already held by a different Agent is rejected rather than colliding.</summary>
     [Fact]
     public async Task RenameUser_NameTakenByDifferentUser_ReturnsFalse()
     {
@@ -208,7 +208,7 @@ public sealed class SqliteTeamDirectoryTests
         Assert.Equal("echo", stillEcho.Name);
     }
 
-    /// <summary>Renaming a Teammate leaves its Room memberships intact under the same id.</summary>
+    /// <summary>Renaming an Agent leaves its Room memberships intact under the same id.</summary>
     [Fact]
     public async Task RenameUser_Agent_PreservesRoomMembershipAndRoomsForUser()
     {

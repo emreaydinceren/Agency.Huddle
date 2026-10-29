@@ -500,19 +500,19 @@ public sealed class LibraryRenameLinksTests
         Assert.Equal(mixedOriginal, File.ReadAllBytes(Path.Combine(vault, "mixed.md")));
     }
 
-    /// <summary>A link inside a Teammate definition is never rewritten (restarting the teammate would
-    /// clear its memory); it is listed instead. The renamed file lives in the teammate's own work folder.</summary>
+    /// <summary>A link inside an Agent definition is never rewritten (restarting the agent would
+    /// clear its memory); it is listed instead. The renamed file lives in the agent's own work folder.</summary>
     [Fact]
-    public async Task Rename_TeammateDefinitionLink_NotRewritten_Listed()
+    public async Task Rename_AgentDefinitionLink_NotRewritten_Listed()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        string definitionText = fixture.CreateTeammate("ada", "Ada", "ada");
-        string workDir = Path.Combine(fixture.DataDir, "Teammates", "ada", "work");
+        string definitionText = fixture.CreateAgent("ada", "Ada", "ada");
+        string workDir = Path.Combine(fixture.DataDir, "Agents", "ada", "work");
         Directory.CreateDirectory(workDir);
         string notesPath = Path.Combine(workDir, "notes.md");
         File.WriteAllBytes(notesPath, Utf8BomCrLf("Working notes.\r\n"));
-        string definitionPath = Path.Combine(fixture.DataDir, "Teammates", "ada", "ada.md");
+        string definitionPath = Path.Combine(fixture.DataDir, "Agents", "ada", "ada.md");
         byte[] definitionOriginal = Utf8BomCrLf(definitionText.Replace("\nbody", "\nSee [[notes]] for details.\r\n", StringComparison.Ordinal));
         File.WriteAllBytes(definitionPath, definitionOriginal);
         fixture.Reload();
@@ -524,7 +524,7 @@ public sealed class LibraryRenameLinksTests
         Assert.NotNull(result.Value);
         Assert.DoesNotContain("ada/ada.md", result.Value.RewrittenNotes);
         Assert.Contains(result.Value.FailedNotes, failure => failure.RelativePath == "ada/ada.md");
-        Assert.Equal("ada.md is a teammate definition; update its links by hand.",
+        Assert.Equal("ada.md is an agent definition; update its links by hand.",
             result.Value.FailedNotes.Single(failure => failure.RelativePath == "ada/ada.md").Error);
         Assert.Equal(definitionOriginal, File.ReadAllBytes(definitionPath));
     }
@@ -638,7 +638,7 @@ public sealed class LibraryRenameLinksTests
         Assert.Equal(linkerOriginal, File.ReadAllBytes(Path.Combine(vault, "linker.md")));
     }
 
-    /// <summary>An unrelated Teammate definition, an unrelated too-large note and an unrelated
+    /// <summary>An unrelated Agent definition, an unrelated too-large note and an unrelated
     /// mixed-line-ending note - none linking to the moved item - are never listed: the listing rules for
     /// those three shapes only apply once a note is known to have an edit (8.5.i-b fix).</summary>
     [Fact]
@@ -649,8 +649,8 @@ public sealed class LibraryRenameLinksTests
         string vault = fixture.CreatePinnedRoot("Vault");
         File.WriteAllBytes(Path.Combine(vault, "plan.md"), Utf8BomCrLf("Plan body.\r\n"));
 
-        string definitionText = fixture.CreateTeammate("ada", "Ada", "ada");
-        string definitionPath = Path.Combine(fixture.DataDir, "Teammates", "ada", "ada.md");
+        string definitionText = fixture.CreateAgent("ada", "Ada", "ada");
+        string definitionPath = Path.Combine(fixture.DataDir, "Agents", "ada", "ada.md");
         byte[] definitionOriginal = Utf8BomCrLf(definitionText.Replace("\nbody", "\nUnrelated, no links here.\r\n", StringComparison.Ordinal));
         File.WriteAllBytes(definitionPath, definitionOriginal);
 

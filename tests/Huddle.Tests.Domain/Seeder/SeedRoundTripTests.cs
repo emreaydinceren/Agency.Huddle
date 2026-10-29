@@ -21,19 +21,19 @@ public sealed class SeedRoundTripTests
     private static readonly string[] SavedViewIds =
         ["platform-board", "growth-by-project", "my-open-work", "blocked-work", "awaiting-review", "support-urgent", "unassigned", "current-sprint", "closed-work"];
 
-    /// <summary>Every Teammate loads, none is rejected, and Team membership survives.</summary>
+    /// <summary>Every Agent loads, none is rejected, and Team membership survives.</summary>
     [Fact]
-    public async Task Teammates_AllLoadWithoutRejections()
+    public async Task Agents_AllLoadWithoutRejections()
     {
         using SeededFolder seed = await SeededFolder.CreateAsync(TestContext.Current.CancellationToken);
         SeedPlan plan = seed.Summary.Plan;
         var options = seed.Options();
 
-        using PersonaStore store = new(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
+        using PersonaStore store = new(new AgentPaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
 
         Assert.Empty(store.RejectedFiles);
-        Assert.Equal(plan.Teammates.Count, store.Entries.Count);
-        Assert.All(plan.Teammates, seeded =>
+        Assert.Equal(plan.Agents.Count, store.Entries.Count);
+        Assert.All(plan.Agents, seeded =>
         {
             PersonaEntry loaded = Assert.Single(store.Entries, e => e.Name == seeded.Name);
             Assert.Equal(seeded.Alias, loaded.Alias);
@@ -49,7 +49,7 @@ public sealed class SeedRoundTripTests
         using SeededFolder seed = await SeededFolder.CreateAsync(TestContext.Current.CancellationToken);
         SeedPlan plan = seed.Summary.Plan;
         var options = seed.Options();
-        using PersonaStore personas = new(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
+        using PersonaStore personas = new(new AgentPaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
 
         using TaskStore store = new(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
 
@@ -80,7 +80,7 @@ public sealed class SeedRoundTripTests
     {
         using SeededFolder seed = await SeededFolder.CreateAsync(TestContext.Current.CancellationToken);
         var options = seed.Options();
-        using PersonaStore personas = new(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
+        using PersonaStore personas = new(new AgentPaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
         using TaskStore store = new(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
 
         TaskItem task = Assert.Single(store.All, t => t.Id.ToString() == "SUPP-0005");
@@ -96,8 +96,8 @@ public sealed class SeedRoundTripTests
 
         using SkillStore store = new(seed.Options(), NullLogger<SkillStore>.Instance);
 
-        Assert.NotNull(store.Get(SoftwareCoTeammates.PostmortemSkill));
-        Assert.DoesNotContain(store.Issues, i => i.Skill == SoftwareCoTeammates.PostmortemSkill);
+        Assert.NotNull(store.Get(SoftwareCoAgents.PostmortemSkill));
+        Assert.DoesNotContain(store.Issues, i => i.Skill == SoftwareCoAgents.PostmortemSkill);
     }
 
     /// <summary>Every saved View in <c>views.json</c> is valid, and none is dropped.</summary>
@@ -113,7 +113,7 @@ public sealed class SeedRoundTripTests
         Assert.All(SavedViewIds, id => Assert.NotNull(store.Get(id)));
     }
 
-    /// <summary>The database holds the Human, every Teammate under its seeded id, and the Rooms with their members, names and archive flag.</summary>
+    /// <summary>The database holds the Human, every Agent under its seeded id, and the Rooms with their members, names and archive flag.</summary>
     [Fact]
     public async Task Database_HoldsUsersAndRooms()
     {
@@ -126,10 +126,10 @@ public sealed class SeedRoundTripTests
         IReadOnlyList<Room> rooms = await directory.GetRoomsAsync(ct);
 
         Assert.Equal("You", human.Name);
-        foreach (SeedTeammate teammate in plan.Teammates)
+        foreach (SeedAgent agent in plan.Agents)
         {
-            User? user = await directory.FindUserByNameAsync(teammate.Name, ct);
-            Assert.Equal(seed.Summary.Ids.UserIds[teammate.Name], user?.Id);
+            User? user = await directory.FindUserByNameAsync(agent.Name, ct);
+            Assert.Equal(seed.Summary.Ids.UserIds[agent.Name], user?.Id);
         }
 
         Assert.Equal(plan.Rooms.Count, rooms.Count);
@@ -173,7 +173,7 @@ public sealed class SeedRoundTripTests
     {
         using SeededFolder seed = await SeededFolder.CreateAsync(TestContext.Current.CancellationToken);
 
-        Assert.True(File.Exists(Path.Combine(seed.DataDir, "Teammates", ".layout-migrated")));
+        Assert.True(File.Exists(Path.Combine(seed.DataDir, "Agents", ".layout-migrated")));
         Assert.True(File.Exists(Path.Combine(seed.DataDir, "Teams", "Growth", "Personas.md")));
         Assert.True(File.Exists(Path.Combine(seed.Root, SeedRootGuard.MarkerFileName)));
         Assert.True(File.Exists(Path.Combine(seed.Root, "manifest.md")));

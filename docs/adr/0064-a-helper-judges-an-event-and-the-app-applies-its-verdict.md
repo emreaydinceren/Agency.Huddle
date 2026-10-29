@@ -15,25 +15,25 @@ design is [Huddle.Helpers-Specifications.md](../Huddle.Helpers-Specifications.md
 
 ## The problem
 
-The Human gate only works when someone turns it on. A Teammate that sets an Action before an
-outward step turns it on itself. A Teammate that writes "Reply to Acme about the renewal price"
+The Human gate only works when someone turns it on. An Agent that sets an Action before an
+outward step turns it on itself. An Agent that writes "Reply to Acme about the renewal price"
 and forgets does not, and the Task can reach Done without the Human seeing it.
 
-Making a Teammate do the checking is the wrong shape. A Teammate has a Room, a Persona, a Room
+Making an Agent do the checking is the wrong shape. An Agent has a Room, a Persona, a Room
 Budget and memory, and it talks. A yes-or-no judgement on every Task save needs none of that, and
-a Teammate posting "I checked RSH-208" in a Room on every save would be noise and spend.
+an Agent posting "I checked RSH-208" in a Room on every save would be noise and spend.
 
 ## The decision
 
-**A Helper is not a Teammate.** It has no Room, no Persona, no Room Budget, and it posts no
-Messages. If it talks, keeps memory or works in a Room, it is a Teammate (the Retro agent stays
+**A Helper is not an Agent.** It has no Room, no Persona, no Room Budget, and it posts no
+Messages. If it talks, keeps memory or works in a Room, it is an Agent (the Retro agent stays
 one, [ADR-0041](0041-retro-proposals-are-applied-only-by-the-humans-click.md)). If it judges an
 event, it is a Helper.
 
 **Helpers judge, the app acts.** A Helper gets no tools. Huddle builds everything it needs into
 the prompt, and the Helper returns JSON. Huddle parses it into the Helper's Verdict record,
 checks it, and the Helper's own code applies it through the same service the Human and the
-Teammates use. A Helper therefore meets every rule a Teammate meets, and adds none of its own.
+Agents use. A Helper therefore meets every rule an Agent meets, and adds none of its own.
 
 **One fresh adapter process per call.** The runner, generalised from the model catalog's
 throwaway probe session, starts the Adapter, opens a session with the Helper's Model and Effort
@@ -62,7 +62,7 @@ Changing the Adapter clears Model and Effort
 
 **The Needs Human Helper:**
 
-- Judges only a **Teammate's** save that creates a Task or changes its title, Action or
+- Judges only a **Agent's** save that creates a Task or changes its title, Action or
   description. It skips status changes, Evidence lines, Tasks already gated or closed, its own
   writes, and content it has already judged.
 - Can only turn the gate **on**. It writes through `TaskService.Update` as a new actor kind,
@@ -80,7 +80,7 @@ Changing the Adapter clears Model and Effort
 
 | Alternative | Why not |
 | --- | --- |
-| A hidden Teammate that checks Tasks | It needs a Room and a Budget, and its Messages are noise. It could also do more than judge |
+| A hidden Agent that checks Tasks | It needs a Room and a Budget, and its Messages are noise. It could also do more than judge |
 | Giving the Helper `update_task` | The model would act, not judge. Its refusals would come back as tool text, and its scope would be whatever the tool allows |
 | A rule or keyword list instead of a model | "Reply to Acme" and "Draft a reply for review" differ in meaning, not in words. The Human gate's own policy list is the prompt's guide |
 | A warm process shared by every call | State could leak between judgements, and a long-lived process needs supervising. Kept for later, behind the same seam |
@@ -93,7 +93,7 @@ Changing the Adapter clears Model and Effort
 
 ## Consequences
 
-- **The Human gate gets a second way on.** A Teammate's Action, the Human's switch, and now a
+- **The Human gate gets a second way on.** An Agent's Action, the Human's switch, and now a
   Helper's Verdict. The Change log says which, and the Task panel tells the Human that turning
   off a Helper's gate is final.
 - **A Helper's gate wakes the assignee.** It is a Task change, so ADR-0026 applies: the assignee
@@ -101,16 +101,16 @@ Changing the Adapter clears Model and Effort
   as an outside edit's is, and uses none of the Task's wake budget. That resets the Room Budget
   and the assignee's token Budget, at most once per Task; the specification leaves whether to
   accept that as an open decision.
-- **Shipping it on costs money.** With Adapters on, each qualifying Teammate save starts one
+- **Shipping it on costs money.** With Adapters on, each qualifying Agent save starts one
   Claude adapter process and makes one short Haiku-class call, up to the cap. Each gate it turns
-  on also costs one Teammate Turn for the wake, which is usually the larger cost.
-- **The Helper is a safety net, not the guard.** Task text is data written by a Teammate, and a
+  on also costs one Agent Turn for the wake, which is usually the larger cost.
+- **The Helper is a safety net, not the guard.** Task text is data written by an Agent, and a
   model can be talked out of a verdict. The worst a misled Helper can do is leave a gate off,
-  which is where the Task started. Teammates are still told to set the Action themselves.
+  which is where the Task started. Agents are still told to set the Action themselves.
 - **`TaskActorKind` gains a value**, and `TaskService` accepts a Change log reason when the gate
   turns on, not only with Cancelled or Rejected.
 - **Settings gains a Helpers tab**, and the Adapter, Model and Effort selects move out of the
-  Teammate card into a shared picker, so ADR-0015's reset lives in one place.
+  Agent card into a shared picker, so ADR-0015's reset lives in one place.
 - **Slice 3 adds the Feed.** Verdicts, a paused Helper and repeated failures will post there
   through its `IFeedPublisher`
   ([ADR-0063](0063-the-feed-is-a-stored-history-that-each-domain-component-posts-to.md)); this

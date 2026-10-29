@@ -8,7 +8,7 @@ namespace Agency.Huddle.Tests.Tasks;
 
 /// <summary>
 /// The wake <see cref="TaskTriggerService"/> posts when a Helper changes a Task (Helpers Spec §6.12, plan HL-14, and Helpers in
-/// the Feed spec §5.6): the assignee hears about it, Huddle is the sender (ADR-0065), the Helper is named, and a Teammate's
+/// the Feed spec §5.6): the assignee hears about it, Huddle is the sender (ADR-0065), the Helper is named, and an Agent's
 /// wake budget is not spent.
 /// </summary>
 public sealed class TaskTriggerHelperTests
@@ -74,7 +74,7 @@ public sealed class TaskTriggerHelperTests
         Assert.Equal(cast.Room.Id, Assert.Single(harness.Posts).Room.Id);
     }
 
-    /// <summary>A Teammate's change is still posted by that Teammate and the Human's by the Human: only a Helper's wake moved to Huddle.</summary>
+    /// <summary>An Agent's change is still posted by that Agent and the Human's by the Human: only a Helper's wake moved to Huddle.</summary>
     [Fact]
     public async Task OtherActors_StillPostAsThemselves()
     {
@@ -90,7 +90,7 @@ public sealed class TaskTriggerHelperTests
         Assert.Equal([KnownIds.Human, cast.Kai.Id], harness.Posts.Select(static post => post.Message.SenderId));
     }
 
-    /// <summary>A Helper's change does not spend the Task's Teammate wake budget, however many times it wakes.</summary>
+    /// <summary>A Helper's change does not spend the Task's Agent wake budget, however many times it wakes.</summary>
     [Fact]
     public async Task HelperChange_ConsumesNoWakeBudget()
     {
@@ -106,9 +106,9 @@ public sealed class TaskTriggerHelperTests
         Assert.Equal(0, harness.Activity.Budget(task.Id).Used);
     }
 
-    /// <summary>The Helper's batch is its own: a Helper change and a Teammate change in one window are two wakes, each naming its actor.</summary>
+    /// <summary>The Helper's batch is its own: a Helper change and an Agent change in one window are two wakes, each naming its actor.</summary>
     [Fact]
-    public async Task HelperAndTeammateChanges_AreSeparateBatches()
+    public async Task HelperAndAgentChanges_AreSeparateBatches()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();

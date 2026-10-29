@@ -141,7 +141,7 @@ async function main() {
   await shot(page, annotator, 'sidebar.png', { x: 0, y: drawer.y, width: drawer.width, height: VIEWPORT.height - drawer.y }, { left: 44, right: 44 }, [
     { n: 1, target: view('Chats'), at: 'left', bx: 'left' },
     { n: 2, target: view('Teams'), at: 'left', bx: 'left' },
-    { n: 3, target: view('Teammates'), at: 'left', bx: 'left' },
+    { n: 3, target: view('Agents'), at: 'left', bx: 'left' },
     { n: 4, target: view('Tasks'), at: 'left', bx: 'left' },
     { n: 5, target: view('Library'), at: 'left', bx: 'left' },
     { n: 6, target: aria(page, 'Archived chats'), at: 'left', bx: 'left' },

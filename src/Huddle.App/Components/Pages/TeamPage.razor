@@ -39,7 +39,7 @@
         <FocusedPageTitle Title="Huddle" />
         <MudAlert Severity="Severity.Warning" role="alert" Class="team-page-notice">
             <span class="team-page-notice-text">There is no Team named "@this.Team".</span>
-            <MudLink Href="/teammates" Class="team-page-notice-link">Teammates</MudLink>
+            <MudLink Href="/agents" Class="team-page-notice-link">Agents</MudLink>
         </MudAlert>
     }
     else if (isProject && project is null)
@@ -159,7 +159,7 @@
     /// <summary>A tab's icon: the entity icons of TabIcons for Members, Files and Tasks; Process has no entity of its own.</summary>
     private static string TabIcon(TeamPageTab tab) => tab switch
     {
-        TeamPageTab.Members => TabIcons.For("teammates"),
+        TeamPageTab.Members => TabIcons.For("agents"),
         TeamPageTab.Files => TabIcons.For("library"),
         TeamPageTab.Process => Icons.Material.Outlined.AccountTree,
         TeamPageTab.Details => Icons.Material.Outlined.Info,

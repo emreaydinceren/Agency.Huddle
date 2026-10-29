@@ -24,7 +24,7 @@ using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.App.Questions;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.TeamTypes;
 
@@ -60,7 +60,7 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// Registers the Helpers (Helpers Spec §5): the stores, the budget, the runner and dispatcher, and the Needs Human Helper
-    /// with its trigger. Unconditional like the probe: nothing here spends until a Teammate saves a Task and
+    /// with its trigger. Unconditional like the probe: nothing here spends until an Agent saves a Task and
     /// <c>Team:Acp:Enabled</c> is on; the dispatcher checks that at each fire.
     /// </summary>
     /// <param name="services">The collection to add to.</param>
@@ -123,11 +123,11 @@ public static class ServiceCollectionExtensions
     private static void ThrowOnRetiredConfigurationKeys(IConfiguration configuration)
     {
         // Acp.PersonaDir was renamed to Acp.TeamsDir (the "Teams" rename), and Acp.TeamsDir was in
-        // turn renamed to Acp.TeammatesDir (Spec §6.15, the Teammates-beside-Teams layout), with no
+        // turn renamed to Acp.AgentsDir (Spec §6.15, the Agents-beside-Teams layout), with no
         // back-compat fallback either time: nothing in appsettings*.json still sets either old key,
         // so a fallback would be dead weight. But a value left behind in a user secret or an
         // environment variable would otherwise bind to nothing, and PersonaStore would quietly scan
-        // an empty default "Teammates" folder - zero teammates, no exception, no log anywhere. That
+        // an empty default "Agents" folder - zero agents, no exception, no log anywhere. That
         // silent-degradation shape is exactly what docs/engineering/traps.md exists to catch, so fail
         // loudly at startup instead, naming the new key. This runs ahead of Configure<TeamOptions>
         // below, in the one place both this app's Program.cs and every test that composes it
@@ -136,7 +136,7 @@ public static class ServiceCollectionExtensions
         {
             throw new InvalidOperationException(
                 $"Configuration key '{TeamOptions.SectionName}:Acp:PersonaDir' was renamed to " +
-                $"'{TeamOptions.SectionName}:Acp:TeammatesDir'. Update the configuration source that sets it " +
+                $"'{TeamOptions.SectionName}:Acp:AgentsDir'. Update the configuration source that sets it " +
                 "(environment variable, user secret, etc.) - there is no automatic fallback.");
         }
 
@@ -144,7 +144,18 @@ public static class ServiceCollectionExtensions
         {
             throw new InvalidOperationException(
                 $"Configuration key '{TeamOptions.SectionName}:Acp:TeamsDir' was renamed to " +
-                $"'{TeamOptions.SectionName}:Acp:TeammatesDir'. Update the configuration source that sets it " +
+                $"'{TeamOptions.SectionName}:Acp:AgentsDir'. Update the configuration source that sets it " +
+                "(environment variable, user secret, etc.) - there is no automatic fallback.");
+        }
+
+        // Acp.TeammatesDir was renamed to Acp.AgentsDir with the Teammate-to-Agent rename; the
+        // start-up migration moves the folder, but a key left in a secret or environment variable
+        // would bind to nothing, so fail loudly here for the same reason as the guards above.
+        if (configuration[$"{TeamOptions.SectionName}:Acp:TeammatesDir"] is not null)
+        {
+            throw new InvalidOperationException(
+                $"Configuration key '{TeamOptions.SectionName}:Acp:TeammatesDir' was renamed to " +
+                $"'{TeamOptions.SectionName}:Acp:AgentsDir'. Update the configuration source that sets it " +
                 "(environment variable, user secret, etc.) - there is no automatic fallback.");
         }
 
@@ -171,7 +182,7 @@ public static class ServiceCollectionExtensions
         services.PostConfigure<TeamOptions>(options =>
         {
             options.DataDir = Path.GetFullPath(options.DataDir);
-            LayoutGuard.ValidateTeamsAndTeammates(options);
+            LayoutGuard.ValidateTeamsAndAgents(options);
         });
 
         services.AddSingleton<RoomEvents>();
@@ -201,7 +212,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PersonaHealth>();
 
         // Display-only Spend per Persona since the app started, reached the same way PersonaHealth
-        // is: a DI singleton a runner writes to and the Teammate card reads. It limits nothing.
+        // is: a DI singleton a runner writes to and the Agent card reads. It limits nothing.
         services.AddSingleton<PersonaSpend>();
         services.AddSingleton<PersonaCommands>();
 
@@ -236,7 +247,7 @@ public static class ServiceCollectionExtensions
         // looping Agent. A leaf singleton, same shape as TurnActivity just above.
         services.AddSingleton<TaskActivity>();
 
-        // FC §6.3: resolves a Watched Folder entry (a Teammate Name, a full path, or a path
+        // FC §6.3: resolves a Watched Folder entry (an Agent Name, a full path, or a path
         // relative to DataDir) into a full path, or refuses it with a reason.
         services.AddSingleton<WatchedFolderResolver>();
 
@@ -252,19 +263,19 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AgentGateway>();
         services.AddSingleton<IAgentGateway>(sp => sp.GetRequiredService<AgentGateway>());
 
-        services.AddSingleton<TeammatePaths>();
+        services.AddSingleton<AgentPaths>();
         services.AddSingleton<HiringPoolCatalog>();
         services.AddSingleton<CustomRoleStore>();
         services.AddSingleton<TeamTypeCatalog>();
         services.AddSingleton<UserCandidateWriter>();
         services.AddSingleton<IConnectorStatus, FileConnectorStatus>();
 
-        // Shared between PersonaRenameCascade (signals around a Teammate-folder move) and
+        // Shared between PersonaRenameCascade (signals around an Agent-folder move) and
         // DotAcpAgentHostFactory (waits on it before creating a Persona's Work Dir) - corrections-B2
         // item 20.
-        services.AddSingleton<TeammateFolderMoves>();
+        services.AddSingleton<AgentFolderMoves>();
 
-        // Unconditional: this is what lets the /teammates page be built and tested with no agent
+        // Unconditional: this is what lets the /agents page be built and tested with no agent
         // process and no tokens, regardless of whether Team:Acp:Enabled is set.
         services.AddSingleton<PersonaStore>();
 
@@ -440,7 +451,7 @@ public static class ServiceCollectionExtensions
     /// <returns>The same collection, for chaining.</returns>
     private static IServiceCollection AddHiringAndProcessServices(this IServiceCollection services)
     {
-        // The one hire-limit check ProposalService, ProposeTeammatesTool and ProposalCard share. The
+        // The one hire-limit check ProposalService, ProposeAgentsTool and ProposalCard share. The
         // live-process count reads PersonaSupervisor lazily, per call, so registering it here (before
         // the supervisor) creates no construction cycle.
         services.AddSingleton(sp => new HireLimitGuard(
@@ -647,14 +658,14 @@ public static class ServiceCollectionExtensions
             static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.RecentEditsPanel), static options => options.Library.Enabled && options.DocHistory.Enabled));
         services.AddTaskEditSidebarPanels();
         services.AddScoped<Sidebar.PageCommandBus>();
-        services.AddScoped<Components.Shared.TeammateCardOpener>();
+        services.AddScoped<Components.Shared.AgentProfileCardOpener>();
 
         // Stateless reader over singletons: builds the card the avatar profile popover shows.
-        services.AddSingleton<Components.Shared.TeammateProfiles>();
+        services.AddSingleton<Components.Shared.AgentProfiles>();
 
         // Global Search (spec §7.3): the five providers are stateless readers, one each per category.
         services.AddSingleton<Search.ISearchProvider, Search.TeamSearchProvider>();
-        services.AddSingleton<Search.ISearchProvider, Search.TeammateSearchProvider>();
+        services.AddSingleton<Search.ISearchProvider, Search.AgentSearchProvider>();
         services.AddSingleton<Search.ISearchProvider, Search.LibrarySearchProvider>();
         services.AddSingleton<Search.ISearchProvider, Search.TaskSearchProvider>();
         services.AddSingleton<Search.ISearchProvider, Search.RoomSearchProvider>();
@@ -694,14 +705,14 @@ public static class ServiceCollectionExtensions
             static subject => subject is Sidebar.TaskSubject, typeof(Components.Sidebar.TaskDocumentsPanel), static options => options.Tasks.Enabled && options.Library.Enabled));
     }
 
-    /// <summary>Registers the adapter probe, work-mode policy, model catalog, built-in Teammate reset and the Human rename cascade.</summary>
+    /// <summary>Registers the adapter probe, work-mode policy, model catalog, built-in Agent reset and the Human rename cascade.</summary>
     /// <param name="services">The service collection to add to.</param>
     /// <returns>The same collection, for chaining.</returns>
     private static IServiceCollection AddProbeAndRenameServices(this IServiceCollection services)
     {
         // Unconditional too, and for the same reason: the probe spends nothing on its own (it never
         // calls PromptAsync), so registering it costs nothing when Team:Acp:Enabled is off. What
-        // keeps it honest is WHEN it runs — the /teammates page only calls it on card-open, never on
+        // keeps it honest is WHEN it runs — the /agents page only calls it on card-open, never on
         // page-load.
         services.AddSingleton<IAdapterProbeRunner, AdapterProcessProbeRunner>();
         services.AddSingleton<WorkModePolicy>();
@@ -709,10 +720,10 @@ public static class ServiceCollectionExtensions
 
         // No interface, same reasoning as AppearanceStore/AvatarStore above: nothing needs to
         // substitute this, and it is built entirely from PersonaStore, already registered above.
-        // Deliberately a plain singleton rather than folded into the hosted BuiltinTeammateSeeder
-        // below - TeammateCard's "Reset to default" (Spec §6.12) needs to inject it directly, and a
+        // Deliberately a plain singleton rather than folded into the hosted BuiltinAgentSeeder
+        // below - AgentProfileCard's "Reset to default" (Spec §6.12) needs to inject it directly, and a
         // component must never depend on an IHostedService.
-        services.AddSingleton<BuiltinTeammateReset>();
+        services.AddSingleton<BuiltinAgentReset>();
 
         // A singleton before it is a hosted service: DataInitializer runs it directly at startup for a
         // rename made while the app was stopped, and the hosted half subscribes to HumanRenamed.
@@ -726,8 +737,8 @@ public static class ServiceCollectionExtensions
     /// <returns>The same collection, for chaining.</returns>
     private static IServiceCollection AddStartupHostedServices(this IServiceCollection services)
     {
-        // Before every other hosted service that reads Teammates (Skill Packs spec §6.5, "Start-up order"): the move, the
-        // repair of Skills/.trash and the first full read of the registry finish before BuiltinTeammateSeeder,
+        // Before every other hosted service that reads Agents (Skill Packs spec §6.5, "Start-up order"): the move, the
+        // repair of Skills/.trash and the first full read of the registry finish before BuiltinAgentSeeder,
         // DataInitializer and PersonaSupervisor start, because the host awaits each StartAsync in registration order.
         services.AddHostedService(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.RegistryWatcher>());
         services.AddHostedService(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.InstallFileWriter>());
@@ -741,7 +752,7 @@ public static class ServiceCollectionExtensions
         // guarantees the supervisor's first reconciliation already sees the Chief of Staff the
         // seeder just wrote, rather than racing a later PersonasChanged (Spec §6.12 Implementation
         // notes).
-        services.AddHostedService<BuiltinTeammateSeeder>();
+        services.AddHostedService<BuiltinAgentSeeder>();
 
         // Same instance as the hosted service, not a second registration - mirrors every other pair
         // in this file (AgentGateway/IAgentGateway, PersonaStore/IMentionAliasSource, PromptStore/IPromptSource).

@@ -32,9 +32,9 @@ public sealed class RoomReplyResolverTests
         Assert.Equal(RoomReply.Expected, result);
     }
 
-    /// <summary>A 3-member room with nobody Mentioned is Context Only for every reachable teammate.</summary>
+    /// <summary>A 3-member room with nobody Mentioned is Context Only for every reachable agent.</summary>
     [Fact]
-    public void Resolve_ThreeMembersAndNoTeammateMentioned_IsContextOnly()
+    public void Resolve_ThreeMembersAndNoAgentMentioned_IsContextOnly()
     {
         User human = NewHuman();
         User first = NewAgent("agent-1");
@@ -45,7 +45,7 @@ public sealed class RoomReplyResolverTests
         Assert.Equal(RoomReply.ContextOnly, result);
     }
 
-    /// <summary>A 3-member room where one teammate is Mentioned still expects a Reply, even though another is not.</summary>
+    /// <summary>A 3-member room where one agent is Mentioned still expects a Reply, even though another is not.</summary>
     [Fact]
     public void Resolve_ThreeMembersAndOneMentioned_ExpectsAReply()
     {
@@ -83,7 +83,7 @@ public sealed class RoomReplyResolverTests
         Assert.Equal(RoomReply.NoRecipients, result);
     }
 
-    /// <summary>A Mention of the Human, rather than a teammate, still reads as Context Only for every Agent.</summary>
+    /// <summary>A Mention of the Human, rather than an agent, still reads as Context Only for every Agent.</summary>
     [Fact]
     public void Resolve_AMentionOfTheHuman_IsStillContextOnly()
     {
@@ -96,7 +96,7 @@ public sealed class RoomReplyResolverTests
         Assert.Equal(RoomReply.ContextOnly, result);
     }
 
-    /// <summary>One teammate Mentioned and one not still expects a Reply overall, because only one reachable recipient needs to say Reply.</summary>
+    /// <summary>One agent Mentioned and one not still expects a Reply overall, because only one reachable recipient needs to say Reply.</summary>
     [Fact]
     public void Resolve_OneMentionedAndOneNot_ExpectsAReply()
     {
@@ -136,9 +136,9 @@ public sealed class RoomReplyResolverTests
         Assert.Equal(RoomReply.NoRecipients, result);
     }
 
-    /// <summary>Every teammate being unreachable resolves to NoRecipients, not ContextOnly - reachability is a recipient filter, not an outcome.</summary>
+    /// <summary>Every agent being unreachable resolves to NoRecipients, not ContextOnly - reachability is a recipient filter, not an outcome.</summary>
     [Fact]
-    public void Resolve_EveryTeammateUnreachable_HasNobodyToWake()
+    public void Resolve_EveryAgentUnreachable_HasNobodyToWake()
     {
         User human = NewHuman();
         User first = NewAgent("agent-1");
@@ -150,13 +150,13 @@ public sealed class RoomReplyResolverTests
     }
 
     /// <summary>
-    /// Mentioning an unreachable teammate resolves to MentionedUnreachable, not NoRecipients and not
-    /// ContextOnly: a teammate WAS named, so "nobody was addressed" (ContextOnly) is false, and "there
+    /// Mentioning an unreachable agent resolves to MentionedUnreachable, not NoRecipients and not
+    /// ContextOnly: an agent WAS named, so "nobody was addressed" (ContextOnly) is false, and "there
     /// was nobody to wake" (NoRecipients) is false in exactly the same way - this is its own outcome
     /// because both of the others would misdescribe a Message that plainly named someone.
     /// </summary>
     [Fact]
-    public void Resolve_AMentionOfAnUnreachableTeammate_IsMentionedUnreachable()
+    public void Resolve_AMentionOfAnUnreachableAgent_IsMentionedUnreachable()
     {
         User human = NewHuman();
         User offline = NewAgent("agent-1");
@@ -167,12 +167,12 @@ public sealed class RoomReplyResolverTests
     }
 
     /// <summary>
-    /// This is the case the MentionedUnreachable branch exists for: one Mentioned teammate is offline
-    /// while a different teammate is online and reachable. Without the branch this would fall through
-    /// to ContextOnly, and the Room would claim "no teammate was @-mentioned" when one plainly was.
+    /// This is the case the MentionedUnreachable branch exists for: one Mentioned agent is offline
+    /// while a different agent is online and reachable. Without the branch this would fall through
+    /// to ContextOnly, and the Room would claim "no agent was @-mentioned" when one plainly was.
     /// </summary>
     [Fact]
-    public void Resolve_AMentionedTeammateOfflineWhileAnotherIsOnline_IsMentionedUnreachable()
+    public void Resolve_AMentionedAgentOfflineWhileAnotherIsOnline_IsMentionedUnreachable()
     {
         User human = NewHuman();
         User echo = NewAgent("echo");
@@ -186,11 +186,11 @@ public sealed class RoomReplyResolverTests
     /// <summary>
     /// Pins the ordering inside <see cref="RoomReplyResolver.Resolve"/>: the Mention-reachability check
     /// runs before the fan-out that could otherwise answer Paused, so an unreachable Mention outranks a
-    /// spent Budget too - the Human should learn the addressed teammate cannot answer, not that the
+    /// spent Budget too - the Human should learn the addressed agent cannot answer, not that the
     /// Room merely ran out of Budget.
     /// </summary>
     [Fact]
-    public void Resolve_AMentionedTeammateUnreachable_OutranksASpentBudget()
+    public void Resolve_AMentionedAgentUnreachable_OutranksASpentBudget()
     {
         User human = NewHuman();
         User echo = NewAgent("echo");
@@ -205,10 +205,10 @@ public sealed class RoomReplyResolverTests
     /// <summary>
     /// <see cref="MessagePostedEvent.IsRecipient"/> excludes the sender from ever being a recipient, so
     /// an Agent that Mentions itself while itself unreachable must not trip the new branch - it resolves
-    /// normally off whichever other, reachable teammate the Message also names.
+    /// normally off whichever other, reachable agent the Message also names.
     /// </summary>
     [Fact]
-    public void Resolve_TheSenderBeingUnreachableIsNotAMentionedTeammate_StillResolvesNormally()
+    public void Resolve_TheSenderBeingUnreachableIsNotAMentionedAgent_StillResolvesNormally()
     {
         User human = NewHuman();
         User sender = NewAgent("echo");

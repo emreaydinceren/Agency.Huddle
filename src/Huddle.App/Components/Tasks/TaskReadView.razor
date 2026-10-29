@@ -526,7 +526,7 @@ else if (this.loaded is { } task)
         return null;
     }
 
-    /// <summary>The assignee's presence, or <see langword="null"/> when they are not a known Teammate (the Human has none).</summary>
+    /// <summary>The assignee's presence, or <see langword="null"/> when they are not a known Agent (the Human has none).</summary>
     /// <param name="name">The assignee's name.</param>
     private PresenceState? PresenceOf(string name) =>
         string.IsNullOrWhiteSpace(name) ? null : TaskPresence.For(name, this.Directory, this.Gateway, this.Health, this.Turns);

@@ -3,7 +3,7 @@ using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.References;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.Uploads;
 using Agency.Huddle.Contracts;
@@ -649,7 +649,7 @@ public sealed partial class ChatService
 
     /// <summary>
     /// Adds an Agent to a Room that already exists. All three doors into an Invitation - <c>/invite</c>
-    /// in the composer, the <b>Add teammate</b> control on the Room header, and an Agent's own
+    /// in the composer, the <b>Add agent</b> control on the Room header, and an Agent's own
     /// <c>mcp__team__invite_agent</c> call - end here, so all three inherit this method's behaviour,
     /// including the naming rule below.
     /// </summary>
@@ -740,7 +740,7 @@ public sealed partial class ChatService
     /// <summary>
     /// Gives a Room a Human-chosen name, which stays in place across later Invitations - see the
     /// remarks on <see cref="InviteAsync(string, string, CancellationToken)"/> for why that matters. A Room name is free display text: it
-    /// is never resolved against, so unlike a Teammate Name it is not run through <see cref="NameRules"/>.
+    /// is never resolved against, so unlike an Agent Name it is not run through <see cref="NameRules"/>.
     /// </summary>
     /// <param name="roomId">The Room to rename.</param>
     /// <param name="name">

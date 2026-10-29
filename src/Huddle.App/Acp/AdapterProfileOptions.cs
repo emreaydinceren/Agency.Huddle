@@ -10,7 +10,7 @@ public sealed class AdapterProfileOptions
     /// <summary>Stable identifier, compared <see cref="StringComparer.OrdinalIgnoreCase"/>.</summary>
     public string Id { get; set; } = string.Empty;
 
-    /// <summary>The name rendered on the Teammate card. Falls back to <see cref="Id"/> when unset.</summary>
+    /// <summary>The name rendered on the Agent card. Falls back to <see cref="Id"/> when unset.</summary>
     public string? DisplayName { get; set; }
 
     /// <summary>Optional human-facing text, for example "cloud, spends money per turn".</summary>
@@ -74,7 +74,7 @@ public sealed class AdapterProfileOptions
     public bool SessionPerRoom { get; set; } = true;
 
     /// <summary>
-    /// Names of the Adapter commands a Human may run on a Teammate on this Adapter, for example
+    /// Names of the Adapter commands a Human may run on an Agent on this Adapter, for example
     /// <c>compact</c>. No initialiser: <c>ConfigurationBinder</c> appends bound array elements to an
     /// already-populated collection (docs/engineering/rules.md, "Collection options need no
     /// initialiser"). <see langword="null"/> or empty means none. Compared case-insensitively.

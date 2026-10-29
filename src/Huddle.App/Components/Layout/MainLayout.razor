@@ -78,9 +78,9 @@
             <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Teams)">
                 <TeamsNav />
             </div>
-            <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Teammates)">
+            <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Agents)">
                 <MudNavMenu>
-                    <NavTabLink Href="/teammates" TabTitle="Teammates" Icon="@Icons.Material.Filled.Group" Class="nav-row-link">Teammates</NavTabLink>
+                    <NavTabLink Href="/agents" TabTitle="Agents" Icon="@Icons.Material.Filled.Group" Class="nav-row-link">Agents</NavTabLink>
                 </MudNavMenu>
             </div>
             <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Tasks)">

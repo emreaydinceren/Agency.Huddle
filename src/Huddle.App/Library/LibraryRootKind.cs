@@ -1,13 +1,13 @@
 namespace Agency.Huddle.App.Library;
 
-/// <summary>The kind of Library Root: a Team folder collection, Teammate folder collection, or pinned root.</summary>
+/// <summary>The kind of Library Root: a Team folder collection, Agent folder collection, or pinned root.</summary>
 public enum LibraryRootKind
 {
     /// <summary>Team folders.</summary>
     Teams,
 
-    /// <summary>Teammate folders.</summary>
-    Teammates,
+    /// <summary>Agent folders.</summary>
+    Agents,
 
     /// <summary>Pinned root.</summary>
     Pinned,

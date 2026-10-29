@@ -4,7 +4,7 @@ using Agency.Huddle.Seeder.Model;
 namespace Agency.Huddle.Seeder.Scenarios;
 
 /// <summary>
-/// The Feed of the <c>software-co</c> seed (Feed spec §2): what Teammates and Huddle did, the asks that are waiting and the asks
+/// The Feed of the <c>software-co</c> seed (Feed spec §2): what Agents and Huddle did, the asks that are waiting and the asks
 /// that came and went. Every unresolved Notification is true of the rest of the seed, because Huddle resolves the ones that are not
 /// when it starts: the Tasks assigned to the Human exist, the Launch crew Mention is unanswered, the gated Task carries the Helper's
 /// line, and the Helper's usage and status say it is at its cap and failing.

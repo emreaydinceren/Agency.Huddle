@@ -18,7 +18,7 @@ public sealed class SearchMatchTests
         Assert.Equal(expected, SearchMatch.Tier(candidate, phrase)?.ToString());
     }
 
-    /// <summary>A Teammate whose Name misses is found by its Alias, at the Alias's tier.</summary>
+    /// <summary>An Agent whose Name misses is found by its Alias, at the Alias's tier.</summary>
     [Fact]
     public void FirstTier_NameMissesAliasMatches_ReturnsAliasTier()
     {

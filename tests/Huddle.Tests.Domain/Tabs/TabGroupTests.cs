@@ -6,7 +6,7 @@ public sealed class TabGroupTests
     private static (TabService Service, Tab A, Tab B, Tab C) ThreePermanent()
     {
         TabService service = new();
-        Tab a = service.Open("/teammates");
+        Tab a = service.Open("/agents");
         service.Keep(a.Id);
         Tab b = service.Open("/settings");
         service.Keep(b.Id);
@@ -44,7 +44,7 @@ public sealed class TabGroupTests
 
         service.Pin(c.Id);
 
-        Assert.Equal(["library", "teammates", "settings"], Keys(service.Groups[0]));
+        Assert.Equal(["library", "agents", "settings"], Keys(service.Groups[0]));
         Tab pinned = service.Groups[0].Tabs[0];
         Assert.True(pinned.IsPinned);
         Assert.False(pinned.IsPreview);
@@ -55,13 +55,13 @@ public sealed class TabGroupTests
     public void Pin_APreview_MakesItPermanent()
     {
         TabService service = new();
-        Tab preview = service.Open("/teammates");
+        Tab preview = service.Open("/agents");
 
         service.Pin(preview.Id);
         service.Open("/settings");
 
         Assert.Equal(2, service.Tabs.Count);
-        Assert.Contains(service.Tabs, static tab => tab.IsPinned && tab.Key == "teammates");
+        Assert.Contains(service.Tabs, static tab => tab.IsPinned && tab.Key == "agents");
     }
 
     /// <summary>Pinned Tabs keep the order they were pinned in, ahead of every unpinned Tab.</summary>
@@ -73,7 +73,7 @@ public sealed class TabGroupTests
         service.Pin(c.Id);
         service.Pin(a.Id);
 
-        Assert.Equal(["library", "teammates", "settings"], Keys(service.Groups[0]));
+        Assert.Equal(["library", "agents", "settings"], Keys(service.Groups[0]));
     }
 
     /// <summary>Unpinning keeps the Tab permanent and puts it just after the pinned Tabs.</summary>
@@ -86,7 +86,7 @@ public sealed class TabGroupTests
 
         service.Unpin(a.Id);
 
-        Assert.Equal(["settings", "teammates", "library"], Keys(service.Groups[0]));
+        Assert.Equal(["settings", "agents", "library"], Keys(service.Groups[0]));
         Assert.False(service.Groups[0].Tabs[1].IsPinned);
         Assert.False(service.Groups[0].Tabs[1].IsPreview);
     }
@@ -96,7 +96,7 @@ public sealed class TabGroupTests
     public void Open_WithAnEarlyPinnedTabActive_InsertsAfterAllPinnedTabs()
     {
         TabService service = new();
-        Tab first = service.Open("/teammates");
+        Tab first = service.Open("/agents");
         service.Pin(first.Id);
         Tab second = service.Open("/settings");
         service.Pin(second.Id);
@@ -104,7 +104,7 @@ public sealed class TabGroupTests
 
         service.Open("/library");
 
-        Assert.Equal(["teammates", "settings", "library"], Keys(service.Groups[0]));
+        Assert.Equal(["agents", "settings", "library"], Keys(service.Groups[0]));
     }
 
     /// <summary>Pin, Unpin and every move leave an unknown id alone and raise nothing.</summary>
@@ -135,7 +135,7 @@ public sealed class TabGroupTests
 
         Assert.True(moved);
         Assert.Equal(2, service.Groups.Count);
-        Assert.Equal(["teammates", "library"], Keys(service.Groups[0]));
+        Assert.Equal(["agents", "library"], Keys(service.Groups[0]));
         Assert.Equal(["settings"], Keys(service.Groups[1]));
         Assert.Equal(service.Groups[1].Id, service.FocusedGroupId);
         Assert.Equal(b.Id, service.Active?.Id);
@@ -150,7 +150,7 @@ public sealed class TabGroupTests
         service.MoveLeft(b.Id);
 
         Assert.Equal(["settings"], Keys(service.Groups[0]));
-        Assert.Equal(["teammates", "library"], Keys(service.Groups[1]));
+        Assert.Equal(["agents", "library"], Keys(service.Groups[1]));
         Assert.Equal(service.Groups[0].Id, service.FocusedGroupId);
     }
 
@@ -159,7 +159,7 @@ public sealed class TabGroupTests
     public void Move_ALoneTab_IsRefused()
     {
         TabService service = new();
-        Tab only = service.Open("/teammates");
+        Tab only = service.Open("/agents");
 
         Assert.False(service.CanMoveLeft(only.Id));
         Assert.False(service.CanMoveRight(only.Id));
@@ -191,7 +191,7 @@ public sealed class TabGroupTests
 
         Assert.True(moved);
         Assert.Equal(["library"], Keys(service.Groups[0]));
-        Assert.Equal(["settings", "teammates"], Keys(service.Groups[1]));
+        Assert.Equal(["settings", "agents"], Keys(service.Groups[1]));
         Assert.Equal(a.Id, service.Groups[1].ActiveId);
         Assert.Equal(service.Groups[1].Id, service.FocusedGroupId);
     }
@@ -220,7 +220,7 @@ public sealed class TabGroupTests
 
         service.MoveRight(a.Id);
 
-        Assert.Equal(["teammates", "settings"], Keys(service.Groups[1]));
+        Assert.Equal(["agents", "settings"], Keys(service.Groups[1]));
         Assert.True(service.Groups[1].Tabs[0].IsPinned);
     }
 
@@ -257,7 +257,7 @@ public sealed class TabGroupTests
         service.MoveRight(b.Id);
         Assert.Equal(service.Groups[1].Id, service.FocusedGroupId);
 
-        Tab reopened = service.Open("/teammates");
+        Tab reopened = service.Open("/agents");
 
         Assert.Equal(a.Id, reopened.Id);
         Assert.Equal(3, service.Tabs.Count);
@@ -276,7 +276,7 @@ public sealed class TabGroupTests
         service.Open("/tasks/mine");
 
         Assert.Equal(["settings", "tasks:mine"], Keys(service.Groups[1]));
-        Assert.Equal(["teammates", "library"], Keys(service.Groups[0]));
+        Assert.Equal(["agents", "library"], Keys(service.Groups[0]));
     }
 
     /// <summary>Focusing a group changes the active Tab the URL should name, without changing either group's own active Tab.</summary>
@@ -297,7 +297,7 @@ public sealed class TabGroupTests
     public void FocusGroup_Noop_RaisesNothing()
     {
         TabService service = new();
-        service.Open("/teammates");
+        service.Open("/agents");
         int changes = 0;
         service.Changed += () => changes++;
 
@@ -340,7 +340,7 @@ public sealed class TabGroupTests
     public void Close_TheLastTabOverall_LeavesOneEmptyGroup()
     {
         TabService service = new();
-        Tab only = service.Open("/teammates");
+        Tab only = service.Open("/agents");
 
         service.Close(only.Id);
 
@@ -358,7 +358,7 @@ public sealed class TabGroupTests
 
         Assert.Null(next);
         service.FocusGroup(service.Groups[0].Id);
-        Assert.Equal("teammates", service.ActivateRelative(1)?.Key);
+        Assert.Equal("agents", service.ActivateRelative(1)?.Key);
     }
 
     /// <summary>The snapshot of one group is a group node with the pinned flag; of two, a split with the focused index.</summary>
@@ -406,7 +406,7 @@ public sealed class TabGroupTests
     {
         const string json = """
             {"version":1,"root":{"kind":"group","activeId":"t2","tabs":[
-              {"id":"t1","url":"/teammates","title":"Teammates","icon":"teammates","preview":false},
+              {"id":"t1","url":"/agents","title":"Agents","icon":"agents","preview":false},
               {"id":"t2","url":"/settings","title":"Settings","icon":"settings","preview":true}]}}
             """;
         TabService service = new();
@@ -429,7 +429,7 @@ public sealed class TabGroupTests
     public void Restore_ImpossibleLayouts_AreRefusedAndKeepTabs(string json)
     {
         TabService service = new();
-        service.Open("/teammates");
+        service.Open("/agents");
 
         bool accepted = service.Restore(TabSnapshot.TryParse(json));
 

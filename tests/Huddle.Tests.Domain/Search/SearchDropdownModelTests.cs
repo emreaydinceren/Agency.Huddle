@@ -26,12 +26,12 @@ public sealed class SearchDropdownModelTests
         return new TeamHit(name, null, 0, MatchTier.NamePrefix);
     }
 
-    /// <summary>A Teammate hit whose Title is the name.</summary>
-    /// <param name="name">The Teammate's name.</param>
+    /// <summary>An Agent hit whose Title is the name.</summary>
+    /// <param name="name">The Agent's name.</param>
     /// <returns>The hit.</returns>
-    private static TeammateHit TeammateNamed(string name)
+    private static AgentHit AgentNamed(string name)
     {
-        return new TeammateHit(name, "Engineer", "mia", Array.Empty<string>(), MatchTier.NamePrefix);
+        return new AgentHit(name, "Engineer", "mia", Array.Empty<string>(), MatchTier.NamePrefix);
     }
 
     /// <summary>A Library hit for a file, whose Title is its last path segment.</summary>
@@ -87,7 +87,7 @@ public sealed class SearchDropdownModelTests
     private static Dictionary<(SearchFilter Group, SearchScope Scope), SearchGroupState> AllArrived(params (SearchFilter Group, SearchScope Scope, SearchGroupState State)[] overrides)
     {
         Dictionary<(SearchFilter Group, SearchScope Scope), SearchGroupState> states = new();
-        foreach (SearchFilter group in new[] { SearchFilter.Teams, SearchFilter.Teammates, SearchFilter.Library, SearchFilter.Tasks, SearchFilter.Rooms })
+        foreach (SearchFilter group in new[] { SearchFilter.Teams, SearchFilter.Agents, SearchFilter.Library, SearchFilter.Tasks, SearchFilter.Rooms })
         {
             states[(group, SearchScope.Active)] = Done();
             states[(group, SearchScope.Archived)] = Done();
@@ -189,13 +189,13 @@ public sealed class SearchDropdownModelTests
     {
         Dictionary<(SearchFilter Group, SearchScope Scope), SearchGroupState> states = AllArrived(
             (SearchFilter.Teams, SearchScope.Active, Done(TeamNamed("login team"))),
-            (SearchFilter.Teammates, SearchScope.Active, Done(TeammateNamed("login mia"))),
+            (SearchFilter.Agents, SearchScope.Active, Done(AgentNamed("login mia"))),
             (SearchFilter.Library, SearchScope.Active, Done(FileNamed("login.md"))),
             (SearchFilter.Tasks, SearchScope.Active, Done(TaskNamed("login task"))),
             (SearchFilter.Tasks, SearchScope.Archived, Done(TaskNamed("login closed"))),
             (SearchFilter.Rooms, SearchScope.Active, Done(RoomNamed("login room"))),
             (SearchFilter.Rooms, SearchScope.Archived, Done(RoomNamed("login archived"))));
-        string[] expected = ["Teams", "Teammates", "Library", "Tasks", "Closed Tasks", "Rooms", "Archived Rooms"];
+        string[] expected = ["Teams", "Agents", "Library", "Tasks", "Closed Tasks", "Rooms", "Archived Rooms"];
 
         SearchDropdownView view = SearchDropdownModel.Build(Input(Parse(SearchFilter.All, "login"), states));
 

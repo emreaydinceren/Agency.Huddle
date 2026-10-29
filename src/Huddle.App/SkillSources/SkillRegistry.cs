@@ -189,21 +189,21 @@ internal sealed class SkillRegistry : ISkillAvailability, IDisposable
         };
     }
 
-    /// <summary>The Teammates whose <c>_packs</c> names the Pack.</summary>
+    /// <summary>The Agents whose <c>_packs</c> names the Pack.</summary>
     public IReadOnlyList<string> HolderNames(PackEntry pack)
     {
         ArgumentNullException.ThrowIfNull(pack);
         return this.Current.PackHolders.TryGetValue(pack.Id, out IReadOnlyList<string>? holders) ? holders : [];
     }
 
-    /// <summary>The Teammates whose <c>skills:</c> holds the Skill.</summary>
+    /// <summary>The Agents whose <c>skills:</c> holds the Skill.</summary>
     public IReadOnlyList<string> HolderNames(SkillEntry skill)
     {
         ArgumentNullException.ThrowIfNull(skill);
         return this.Current.SkillHolders.TryGetValue(skill.Name, out IReadOnlyList<string>? holders) ? holders : [];
     }
 
-    /// <summary>Whether a set of Packs and Skills can be handed to Teammates now: Pack Skills expanded, built-in and copied
+    /// <summary>Whether a set of Packs and Skills can be handed to Agents now: Pack Skills expanded, built-in and copied
     /// Skills present, the rest checked against the registry.</summary>
     public SkillReadiness CheckReady(IReadOnlyList<string> packIds, IReadOnlyList<string> skillNames)
     {
@@ -494,7 +494,7 @@ internal sealed class SkillRegistry : ISkillAvailability, IDisposable
             versions);
     }
 
-    /// <summary>Counts holders from the Teammate files.</summary>
+    /// <summary>Counts holders from the Agent files.</summary>
     private (Dictionary<string, IReadOnlyList<string>> Packs, Dictionary<string, IReadOnlyList<string>> Skills, Dictionary<string, IReadOnlySet<string>> Versions) Holders()
     {
         Dictionary<string, List<string>> packs = new(StringComparer.OrdinalIgnoreCase);
@@ -633,7 +633,7 @@ internal sealed class SkillRegistry : ISkillAvailability, IDisposable
         }
     }
 
-    /// <summary>A Teammate file changed: republish the same registry with fresh holders, no re-read.</summary>
+    /// <summary>An Agent file changed: republish the same registry with fresh holders, no re-read.</summary>
     private void OnPersonasChanged()
     {
         RegistrySnapshot snapshot = this.Current;

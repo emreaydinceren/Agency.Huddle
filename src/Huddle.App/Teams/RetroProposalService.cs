@@ -9,13 +9,13 @@ namespace Agency.Huddle.App.Teams;
 /// <summary>
 /// Shows a retro agent's proposed changes to the Human and applies the ones the Human accepts (RT-5, Spec §Retro). Huddle, not the
 /// agent, makes the edit: the replacement is applied only when <see cref="RetroChange.Find"/> occurs exactly once in the file as it is
-/// at Accept time, a Teammate file goes through <see cref="PersonaStore.Update"/> so Persona rules still apply, and the change is recorded
+/// at Accept time, an Agent file goes through <see cref="PersonaStore.Update"/> so Persona rules still apply, and the change is recorded
 /// as one <see cref="RetroStatus.Done"/> row with a single <see cref="RetroFileStore.AppendRows"/> call.
 /// </summary>
 /// <param name="proposals">Holds the pending sets.</param>
 /// <param name="teams">Gives each Team's members.</param>
 /// <param name="folders">Finds the Team folder.</param>
-/// <param name="personas">Reads and updates Teammate files.</param>
+/// <param name="personas">Reads and updates Agent files.</param>
 /// <param name="retro">Appends the register row.</param>
 /// <param name="directory">Reads the room's members and the Human.</param>
 /// <param name="chat">Posts the outcome in the room.</param>
@@ -195,7 +195,7 @@ internal sealed class RetroProposalService(
             && PersonaFrontmatter.TryReadIdentity(edited, out PersonaIdentity? identity, out _)
             && !string.Equals(identity.Name, member.Name, StringComparison.Ordinal))
         {
-            return Refused($"A retro change cannot rename a Teammate; {file} was not changed.");
+            return Refused($"A retro change cannot rename an Agent; {file} was not changed.");
         }
 
         if (!this.TryWrite(set.Team, file, path, edited, teamFile))
@@ -226,7 +226,7 @@ internal sealed class RetroProposalService(
         }
     }
 
-    /// <summary>Reads the target file's current text. <c>path</c> is the file for the two Team files and <see langword="null"/> for a Teammate file.</summary>
+    /// <summary>Reads the target file's current text. <c>path</c> is the file for the two Team files and <see langword="null"/> for an Agent file.</summary>
     private bool TryRead(string team, string file, out string text, out string? path)
     {
         text = string.Empty;

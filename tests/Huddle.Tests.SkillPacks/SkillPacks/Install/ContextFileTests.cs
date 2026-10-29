@@ -2,7 +2,7 @@ using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.SkillSources;
 using Agency.Huddle.SkillPacks;
 using Agency.Huddle.SkillPacks.Checking;
-using Agency.Huddle.Tests.Teammates;
+using Agency.Huddle.Tests.Agents;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Agency.Huddle.Tests.SkillPacks.Install;
@@ -22,7 +22,7 @@ public sealed class ContextFileTests
             InMemoryFileReader.At("Data", "Skills"),
             [new RoleInfo("developer", "Developer", "Writes code.", ["msbuild-authoring"]), new RoleInfo("bookkeeper", "Bookkeeper", "Keeps the books.", [])],
             [new InstalledSkill("read-skill", null, null, true), new InstalledSkill("docx", "https://github.com/o/r/tree/abc/docx", "9f2c", false)],
-            ["propose_sprint", "propose_teammates"],
+            ["propose_sprint", "propose_agents"],
             new DateTimeOffset(2026, 10, 17, 16, 25, 0, TimeSpan.FromHours(2)));
     }
 

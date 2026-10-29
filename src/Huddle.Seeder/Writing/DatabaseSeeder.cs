@@ -18,7 +18,7 @@ namespace Agency.Huddle.Seeder.Writing;
 /// </summary>
 internal static class DatabaseSeeder
 {
-    /// <summary>Creates the Human, the Teammate users, the Rooms, their membership and their transcripts.</summary>
+    /// <summary>Creates the Human, the Agent users, the Rooms, their membership and their transcripts.</summary>
     /// <param name="plan">What to create.</param>
     /// <param name="dataDir">The data folder, which must already exist.</param>
     /// <param name="ct">Cancels the writes.</param>
@@ -38,11 +38,11 @@ internal static class DatabaseSeeder
             await File.WriteAllTextAsync(Path.Combine(dataDir, "profile.json"), profile, ct).ConfigureAwait(false);
 
             Dictionary<string, string> userIds = new(StringComparer.OrdinalIgnoreCase);
-            foreach (SeedTeammate teammate in plan.Teammates)
+            foreach (SeedAgent agent in plan.Agents)
             {
-                User user = await directory.UpsertAgentUserAsync(teammate.Name, teammate.Title, ct).ConfigureAwait(false)
-                    ?? throw new InvalidOperationException($"Could not create the user '{teammate.Name}'.");
-                userIds[teammate.Name] = user.Id;
+                User user = await directory.UpsertAgentUserAsync(agent.Name, agent.Title, ct).ConfigureAwait(false)
+                    ?? throw new InvalidOperationException($"Could not create the user '{agent.Name}'.");
+                userIds[agent.Name] = user.Id;
             }
 
             // Rooms first, Messages second: a Message may link to a Room created after its own, and its link needs that Room's id.

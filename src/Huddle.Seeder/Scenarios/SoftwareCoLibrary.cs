@@ -5,7 +5,7 @@ using Agency.Huddle.Seeder.Writing;
 namespace Agency.Huddle.Seeder.Scenarios;
 
 /// <summary>
-/// Library notes, Team and Project memory, and Teammate working files for the <c>software-co</c> scenario.
+/// Library notes, Team and Project memory, and Agent working files for the <c>software-co</c> scenario.
 /// Wikilinks resolve by file name, so <c>Personas</c> gains three backlinks, <c>Architecture</c> gains three,
 /// and <c>Legal-Checklist</c> is deliberately left unresolved.
 /// </summary>
@@ -58,7 +58,7 @@ internal static class SoftwareCoLibrary
 
     /// <summary>
     /// Document History: a long History on the handbook (every kind, two Human saves inside the grouping window and more rows than
-    /// the History panel shows), an objection on the pricing brief, a review on the incident, a Teammate's private draft and a note the
+    /// the History panel shows), an objection on the pricing brief, a review on the incident, an Agent's private draft and a note the
     /// Human created. Every other note has no History, so "No edits logged." stays testable.
     /// </summary>
     internal static IReadOnlyList<SeedDocEdit> DocHistory { get; } =
@@ -76,7 +76,7 @@ internal static class SoftwareCoLibrary
         new(PricingBrief, 3, "13:45", "Sofia", DocActorKind.Agent, DocChangeKind.Objected, "Starter undercuts Team for groups of three or fewer"),
         new(Incident, 9, "11:00", "Alan", DocActorKind.Agent, DocChangeKind.Created, "Impact, cause and follow-ups from the war room"),
         new(Incident, 8, "09:30", "Dana", DocActorKind.Agent, DocChangeKind.Reviewed, "Customer impact matches the support tickets"),
-        new("Teammates/Alan/work/Postmortem-Draft-0412.md", 8, "17:10", "Alan", DocActorKind.Agent, DocChangeKind.Created, "Timeline drafted from the alert log"),
+        new("Agents/Alan/work/Postmortem-Draft-0412.md", 8, "17:10", "Alan", DocActorKind.Agent, DocChangeKind.Created, "Timeline drafted from the alert log"),
         new("Teams/Growth/Lifecycle Emails/Email-Ideas.md", 7, "08:45", "You", DocActorKind.Human, DocChangeKind.Created),
     ];
 
@@ -415,7 +415,7 @@ internal static class SoftwareCoLibrary
 
             #support/incident #platform/ops
             """),
-        new("Teammates/Alan/work/Postmortem-Draft-0412.md", """
+        new("Agents/Alan/work/Postmortem-Draft-0412.md", """
             # Postmortem draft: incident 0412
 
             Private draft, not yet reviewed. Facts and timeline are in [[Incident-0412]].
@@ -440,9 +440,9 @@ internal static class SoftwareCoLibrary
         new("Teams/Platform/API v2/memory/v1-sunset-window.md", "API v1 is retired 180 days after API v2 launches.\n"),
         new("Teams/Growth/Pricing Page/memory/launch-timing.md", "The pricing page launches together with the Q4 campaign, not before it.\n"),
 
-        // ---- Teammate personal memory ----
-        new("Teammates/Grace/work/memory/prefers-short-standups.md", "Stand-ups run 15 minutes at most; anything longer moves to its own Room.\n"),
-        new("Teammates/Maya/work/memory/brand-voice-rules.md", "Brand voice: plain words, short sentences, no exclamation marks in headlines.\n"),
-        new("Teammates/Ben/work/memory/supplier-payment-terms.md", "Suppliers are paid net 30 unless the invoice says otherwise.\n"),
+        // ---- Agent personal memory ----
+        new("Agents/Grace/work/memory/prefers-short-standups.md", "Stand-ups run 15 minutes at most; anything longer moves to its own Room.\n"),
+        new("Agents/Maya/work/memory/brand-voice-rules.md", "Brand voice: plain words, short sentences, no exclamation marks in headlines.\n"),
+        new("Agents/Ben/work/memory/supplier-payment-terms.md", "Suppliers are paid net 30 unless the invoice says otherwise.\n"),
     ];
 }

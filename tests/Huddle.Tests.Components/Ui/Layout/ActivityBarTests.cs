@@ -35,7 +35,7 @@ public sealed class ActivityBarTests
 
         IEnumerable<SidebarView> views = SidebarViews.Available(options).Select(static item => item.View);
 
-        Assert.Equal([SidebarView.Chats, SidebarView.Teams, SidebarView.Teammates], views);
+        Assert.Equal([SidebarView.Chats, SidebarView.Teams, SidebarView.Agents], views);
     }
 
     /// <summary>Only the selected view's button is pressed, and every button names the Sidebar it controls.</summary>

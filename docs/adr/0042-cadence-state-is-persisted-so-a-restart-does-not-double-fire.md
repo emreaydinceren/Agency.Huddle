@@ -7,7 +7,7 @@ date: 2026-10-08
 
 A Team's `Process.md` can ask for a **digest** (the manager summarises the Team) and a **retro**
 (the Retro agent, or the manager when none is hired, runs a retrospective), on a schedule or
-after a count of Done Tasks. `CadenceService` wakes the right Teammate when one is due. When it
+after a count of Done Tasks. `CadenceService` wakes the right Agent when one is due. When it
 last fired is kept in `team.db`, so a restart neither repeats a firing nor forgets one. The Human's
 view is in the [User Guide](../Huddle.UserGuide.md) (*Digests and retrospectives on a schedule*); the
 original Teams specification has been retired.

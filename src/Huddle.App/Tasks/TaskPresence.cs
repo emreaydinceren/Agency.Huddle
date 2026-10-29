@@ -32,7 +32,7 @@ internal static class TaskPresence
 
     /// <summary>
     /// One presence lookup by Name, shared by the Board, <c>TaskDetail</c> and <c>TaskTriggerService.Preview</c>
-    /// (corrections-B5): resolves the Teammate, its online state and whether it has a Turn running, then
+    /// (corrections-B5): resolves the Agent, its online state and whether it has a Turn running, then
     /// calls <see cref="Resolve(bool, bool)"/>.
     /// </summary>
     /// <param name="name">The assignee's Name.</param>

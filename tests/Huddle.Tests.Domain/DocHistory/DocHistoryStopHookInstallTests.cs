@@ -76,7 +76,7 @@ public sealed class DocHistoryStopHookInstallTests
     }
 
     /// <summary>
-    /// Teammates whose sessions start at once all write the one shared script; none of them may lose its hook to the
+    /// Agents whose sessions start at once all write the one shared script; none of them may lose its hook to the
     /// others' writes (a replace over a file another thread holds open is refused on Windows).
     /// </summary>
     [Fact]
@@ -84,7 +84,7 @@ public sealed class DocHistoryStopHookInstallTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        const int Teammates = 16;
+        const int Agents = 16;
         string script = Path.Combine(dir.Path, "hooks", DocHistoryStopHook.ScriptName);
 
         for (int round = 0; round < 10; round++)
@@ -94,8 +94,8 @@ public sealed class DocHistoryStopHookInstallTests
                 File.Delete(script);
             }
 
-            using Barrier barrier = new(Teammates);
-            string[] workDirs = [.. Enumerable.Range(0, Teammates).Select(index => Path.Combine(dir.Path, $"r{round}", $"w{index}"))];
+            using Barrier barrier = new(Agents);
+            string[] workDirs = [.. Enumerable.Range(0, Agents).Select(index => Path.Combine(dir.Path, $"r{round}", $"w{index}"))];
             await Task.WhenAll(workDirs.Select(workDir => Task.Run(
                 () =>
                 {

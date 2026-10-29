@@ -236,7 +236,7 @@ is loosened.
 - **Change structure outside the traits.** A new structure is a new trait value, written once in `app.css`.
 - **Colour syntax.** The app renders no syntax highlighting.
 
-Some colour is not the Theme's: a Teammate's avatar colour is the Human's choice, tooltips use MudBlazor's fixed
+Some colour is not the Theme's: an Agent's avatar colour is the Human's choice, tooltips use MudBlazor's fixed
 grey, and the Blazor error banner is a fixed light yellow on purpose.
 
 ## Checklist

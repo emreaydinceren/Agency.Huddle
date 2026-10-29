@@ -35,13 +35,13 @@ public interface ITeamDirectory
     /// <summary>
     /// Renames the <see cref="User"/> row with id <paramref name="userId"/> to
     /// <paramref name="newName"/>, keeping its id unchanged so every Room, <c>room_members</c> row
-    /// and Transcript that already reference that id continue to reference the same Teammate under
+    /// and Transcript that already reference that id continue to reference the same Agent under
     /// its new Name.
     /// </summary>
     /// <param name="userId">The id of the row to rename.</param>
     /// <param name="newName">
     /// The new Name. Must satisfy <see cref="NameRules.IsValidAgentName(string?)"/>, and must not
-    /// already belong to a different Teammate — Names are <c>COLLATE NOCASE UNIQUE</c>, so this is
+    /// already belong to a different Agent — Names are <c>COLLATE NOCASE UNIQUE</c>, so this is
     /// checked case-insensitively.
     /// </param>
     /// <returns><see langword="true"/> if the row was renamed; otherwise <see langword="false"/>.</returns>

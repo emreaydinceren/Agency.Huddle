@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 namespace Agency.Huddle.App.Acp;
 
 /// <summary>
-/// Decides which Work Modes (ADR-0033) may be offered in the Teammate card and sent to an Adapter. By
+/// Decides which Work Modes (ADR-0033) may be offered in the Agent card and sent to an Adapter. By
 /// default <c>bypassPermissions</c>, <c>auto</c> and <c>plan</c> are hidden. The first is advertised on
 /// Windows and removes every prompt, and the second hands permission decisions to the model and silently
 /// changes with the Model. <c>plan</c> is hidden because of what was measured live on 2026-09-30 (OQ-2):

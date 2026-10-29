@@ -4,7 +4,7 @@ using Agency.Huddle.App.Avatars;
 namespace Agency.Huddle.Tests.Avatars;
 
 /// <summary>
-/// <see cref="AvatarPalette"/>: the one palette the avatar editor offers as swatches and the one a new Teammate's
+/// <see cref="AvatarPalette"/>: the one palette the avatar editor offers as swatches and the one a new Agent's
 /// random background is drawn from, so a random colour is always a colour the editor can show as selected.
 /// </summary>
 public sealed class AvatarPaletteTests

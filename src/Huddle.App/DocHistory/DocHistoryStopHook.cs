@@ -22,9 +22,9 @@ internal static class DocHistoryStopHook
     private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
 
     /// <summary>
-    /// Serialises writes of the one script every Work Dir shares. Teammates start sessions at the same time, and on Windows
+    /// Serialises writes of the one script every Work Dir shares. Agents start sessions at the same time, and on Windows
     /// a move over a file another thread is reading is refused with <see cref="UnauthorizedAccessException"/>, which cost
-    /// those teammates their hook. The settings files are per Work Dir and need no gate.
+    /// those agents their hook. The settings files are per Work Dir and need no gate.
     /// </summary>
     private static readonly Lock ScriptGate = new();
 

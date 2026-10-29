@@ -1,6 +1,6 @@
 # Avatar library: choosing a face from the library
 
-Prove that the Avatar library picker (`Components/Shared/AvatarLibraryDialog.razor`, opened from the **Avatar** window of a Teammate card and of the Human's own profile card on **Settings → Profile**) narrows 324 pictures correctly, shows nothing but pictures, copies the chosen file through the normal upload path, and fails visibly when the library is missing or unreadable. Most of this is pixels, focus and what a screen reader announces, which the compiler and the bUnit suite cannot see. The picker is specified in [Huddle.AvatarLibrary-Specifications.md](../../Huddle.AvatarLibrary-Specifications.md) and decided in [ADR-0044](../../adr/0044-an-avatar-library-is-a-read-only-source-and-a-pick-copies.md).
+Prove that the Avatar library picker (`Components/Shared/AvatarLibraryDialog.razor`, opened from the **Avatar** window of an Agent card and of the Human's own profile card on **Settings → Profile**) narrows 324 pictures correctly, shows nothing but pictures, copies the chosen file through the normal upload path, and fails visibly when the library is missing or unreadable. Most of this is pixels, focus and what a screen reader announces, which the compiler and the bUnit suite cannot see. The picker is specified in [Huddle.AvatarLibrary-Specifications.md](../../Huddle.AvatarLibrary-Specifications.md) and decided in [ADR-0044](../../adr/0044-an-avatar-library-is-a-read-only-source-and-a-pick-copies.md).
 
 **28 tests** · all free · about 3.3 hours.
 
@@ -23,8 +23,8 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
    The equivalent command-line flag is `--Team:AvatarLibrary:Dir="E:\tmp\avatar-library"`; the [Engineering Guide](../../Huddle.EngineeringGuide.md#configuration) describes the key. The path is absolute because a library of your own is not under `<data>`. Those tests call the copy "the library folder". To go back to the bundled library, clear the variable (`Remove-Item Env:Team__AvatarLibrary__Dir`) and restart.
 4. Restart the app after any change to `Dir` or after the library folder appears or disappears. The thumbnail mount is added at start-up only, and only when the folder exists (`Program.cs:129`); AVATARLIB-02 depends on this.
-5. Open `http://localhost:5100/teammates`. Keep File Explorer open on `<lib>` and on `<repo>\src\Huddle.App\App_Data\avatars` so you can see copied files appear.
-6. Create one scratch Teammate for the card tests with **New teammate**, named `Library Test`. Delete it at the end of the area. The picker is reached from the card by clicking the avatar at the top of the card, which opens the **Avatar** window, and selecting **An image** there; the tests below call that "open the **Avatar** window".
+5. Open `http://localhost:5100/agents`. Keep File Explorer open on `<lib>` and on `<repo>\src\Huddle.App\App_Data\avatars` so you can see copied files appear.
+6. Create one scratch Agent for the card tests with **New agent**, named `Library Test`. Delete it at the end of the area. The picker is reached from the card by clicking the avatar at the top of the card, which opens the **Avatar** window, and selecting **An image** there; the tests below call that "open the **Avatar** window".
 
 ## Tests
 
@@ -40,7 +40,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Steps**
 
-1. Open `/teammates` and choose **New teammate**.
+1. Open `/agents` and choose **New agent**.
 2. Click the avatar at the top of the card to open the **Avatar** window, then select **An image**.
 3. Read the buttons beside the upload control.
 4. Close the **Avatar** window and the card. Open **Settings → Profile** and click the avatar on the profile card (**Change avatar**) to open the **Avatar** window.
@@ -68,7 +68,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Steps**
 
 1. Start the app with `Team:AvatarLibrary:Dir` set to your copy of the library (Setup step 3).
-2. Open **New teammate**, click the avatar to open the **Avatar** window, select **An image**, and read the buttons.
+2. Open **New agent**, click the avatar to open the **Avatar** window, select **An image**, and read the buttons.
 3. In a browser tab, open `http://localhost:5100/avatar-library/cook_tan_f_01.png`. In another tab open `http://localhost:5100/avatar-library/master.json.bak`.
 4. Stop the app. Rename `master.json.bak` back to `master.json`.
 5. Start the app again. Repeat step 2 and the first URL of step 3. Also open `http://localhost:5100/avatar-library/master.json`.
@@ -95,11 +95,11 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Before you start**
 
-- The app runs with the real library configured (Setup step 3). The scratch Teammate `Library Test` exists.
+- The app runs with the real library configured (Setup step 3). The scratch Agent `Library Test` exists.
 
 **Steps**
 
-1. Open `/teammates` and choose **Edit** on `Library Test`, then click the avatar to open the **Avatar** window.
+1. Open `/agents` and choose **Edit** on `Library Test`, then click the avatar to open the **Avatar** window.
 2. Select **Initials of the name**. Read the **Avatar** window.
 3. Select **A short label**. Read the **Avatar** window.
 4. Select **An image**. Read the **Avatar** window.
@@ -515,7 +515,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 - The **Avatar** window shows the picture in its preview and the text `New image selected (not yet saved)`, as after an upload. After **Apply** the card's own avatar shows the picture, still before any save.
 - After step 3, `<data>\avatars` has the same number of files as before: nothing is written yet.
 - After Cancel (step 4) and reopening (step 5), the image is unchanged and no file was added.
-- After Save (step 6) the new image appears, one new file appears in `<data>\avatars` with an opaque generated name (not the Teammate's Name), and the library folder is unchanged.
+- After Save (step 6) the new image appears, one new file appears in `<data>\avatars` with an opaque generated name (not the Agent's Name), and the library folder is unchanged.
 
 **Fail if — any of these**
 
@@ -564,7 +564,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Steps**
 
 1. Start the app with the library configured.
-2. Open **New teammate**, click the avatar, select **An image**, and press **Choose from library**.
+2. Open **New agent**, click the avatar, select **An image**, and press **Choose from library**.
 3. Read the dialog. Read the app console for the warning.
 4. Stop the app, restore `master.json` from `master.json.good`, and start again.
 
@@ -600,7 +600,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Steps**
 
-1. Open the picker from **New teammate**: click the avatar, select **An image**, and press **Choose from library**.
+1. Open the picker from **New agent**: click the avatar, select **An image**, and press **Choose from library**.
 2. Read the count line, then read the console once the dialog has opened.
 3. Note how many warnings were logged for the read.
 4. Stop the app, restore `master.json` from `master.json.good`, delete `fake.svg`, and restart.
@@ -673,7 +673,7 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 - The picker appears in front, the **Avatar** window and the card are dimmed behind it, and Tab cycles only within the picker.
 - The first Escape closes only the picker, and the **Avatar** window remains open with its state.
 - The X button and the backdrop click each close only the picker, leaving the **Avatar** window open and unchanged.
-- The second Escape closes only the **Avatar** window, and the third closes the card at once. Neither has an unsaved-changes prompt (`TeammateCard.Options` and `AvatarEditorDialog.Options` set only `CloseOnEscapeKey`).
+- The second Escape closes only the **Avatar** window, and the third closes the card at once. Neither has an unsaved-changes prompt (`AgentProfileCard.Options` and `AvatarEditorDialog.Options` set only `CloseOnEscapeKey`).
 
 **Record, not a pass criterion**
 
@@ -761,7 +761,7 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 
 **Free** · about 8 min
 
-*Proves that when the chosen file cannot be read at the pick, the **Avatar** window, opened from a Teammate card or from the Human's own profile card, shows a red error and sets nothing (specification §6.7.3 and §6.8, last row).*
+*Proves that when the chosen file cannot be read at the pick, the **Avatar** window, opened from an Agent card or from the Human's own profile card, shows a red error and sets nothing (specification §6.7.3 and §6.8, last row).*
 
 **Before you start**
 
@@ -807,7 +807,7 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 5. Press **Edit**, then click the avatar. Read the last button and the line under the preview. Select **A short label**, type `CD`, and press **Apply**. Read the card's avatar and `<data>\avatars.json`.
 6. Press **Cancel** on the card. Reopen `Library Test` and read its avatar.
 7. Press **Edit**, click the avatar, press **Cancel** in the window and read the card's avatar. Click the avatar again and press Esc. Click it again and click the dimmed area outside the window.
-8. Close the card. Choose **New teammate** and read the card's avatar before touching anything. Close the card and choose **New teammate** twice more, reading the avatar each time. Then click the avatar, select **An image**, press **Choose from library**, click a picture and press **Apply**. Read the card's avatar. Press **Cancel** on the card and look at `<data>\avatars`.
+8. Close the card. Choose **New agent** and read the card's avatar before touching anything. Close the card and choose **New agent** twice more, reading the avatar each time. Then click the avatar, select **An image**, press **Choose from library**, click a picture and press **Apply**. Read the card's avatar. Press **Cancel** on the card and look at `<data>\avatars`.
 9. Put `Library Test` back: open it, click the avatar, select **Initials of the name** and press **Save**.
 
 **Pass if — all of these**
@@ -815,7 +815,7 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 - The avatar shows a pencil when pointed at and a visible focus ring on Tab, and its accessible name is `Change avatar`.
 - The window is titled `Avatar` and offers `Initials of the name`, `A short label` and `An image`. The **Background** palette of swatches (no text field, no dropdown, and no **Use the theme colour** button) shows under Initials and under Label, and not under **An image**. The preview follows what you type and the swatch you press.
 - In View the last button reads **Save**, and `avatars.json` holds `AB` for `Library Test` as soon as you press it, with no Save on the card.
-- In Edit the last button reads **Apply**, with `Written when you save the teammate.` under the preview. After Apply the card's avatar shows `CD` while `avatars.json` still holds `AB`. After Cancel on the card and a reopen the avatar is `AB` again.
+- In Edit the last button reads **Apply**, with `Written when you save the agent.` under the preview. After Apply the card's avatar shows `CD` while `avatars.json` still holds `AB`. After Cancel on the card and a reopen the avatar is `AB` again.
 - **Cancel** and Esc leave the card's avatar unchanged. A click on the dimmed area outside the **Avatar** window does nothing.
 - In Create, the avatar opens already showing initials on a coloured background, and the three openings do not all show the same colour. Open the **Avatar** window on one of them and the matching swatch is highlighted. After Apply the card's avatar shows the picked picture, scaled to fill the circle, and after Cancel on the card `<data>\avatars` holds the same number of files as before.
 
@@ -838,7 +838,7 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 
 **Steps**
 
-1. Open **New teammate**, click the avatar to open the **Avatar** window, and select **An image**.
+1. Open **New agent**, click the avatar to open the **Avatar** window, and select **An image**.
 2. Read the buttons, then press **Choose from library** and read the count line.
 3. In a browser tab, open `http://localhost:5100/avatar-library/cook_tan_f_01.png`. In another tab open `http://localhost:5100/avatar-library/master.json`.
 4. Close the windows and the card without saving.
@@ -854,8 +854,8 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 - No library button appears with `Dir` unset -> the bundled library is not found beside the app (`AvatarLibraryLocator.BundledDir`), or the build did not copy it (`Huddle.App.csproj`, the `AvatarLibrary` content item).
 ## Cleanup
 
-1. Delete `Library Test` from `/teammates`.
-2. Delete any file this area added to `<data>\avatars` that no Teammate or the Human uses.
+1. Delete `Library Test` from `/agents`.
+2. Delete any file this area added to `<data>\avatars` that no Agent or the Human uses.
 3. In your copy of the library, restore `master.json` if any test changed it, confirm it matches its backup, and delete `fake.svg`, any `.bak` picture and `master.json.good`. Then delete the copy (`E:\tmp\avatar-library`). Confirm `git status` shows nothing changed under `src\Huddle.App\AvatarLibrary`.
 4. Clear `Team__AvatarLibrary__Dir` in the shell you used, so the next run uses the bundled library.
 5. Stop the app and restore the [§0.4](../manual-tests.md#04-rollback) backup if the area ran in a state you want to keep.

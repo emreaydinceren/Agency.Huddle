@@ -93,10 +93,10 @@
     [Parameter]
     public string RoomName { get; set; } = "";
 
-    /// <summary>The placeholder: the Room's name, a real ellipsis, and the <c>/invite</c> hint using the defined term Teammate.</summary>
+    /// <summary>The placeholder: the Room's name, a real ellipsis, and the <c>/invite</c> hint using the defined term Agent.</summary>
     private string Placeholder => string.IsNullOrWhiteSpace(this.RoomName)
-        ? "Message… (/invite @Teammate)"
-        : $"Message {this.RoomName}… (/invite @Teammate)";
+        ? "Message… (/invite @Agent)"
+        : $"Message {this.RoomName}… (/invite @Agent)";
 
     private ElementReference textarea;
     private ElementReference attachHost;
@@ -132,7 +132,7 @@
     /// <summary>The filter the token's prefix set (the Tasks filter for <c>#</c>).</summary>
     private SearchFilter filter = SearchFilter.All;
 
-    /// <summary>Whether the box starts with <c>/invite </c>, which pins the Teammates group.</summary>
+    /// <summary>Whether the box starts with <c>/invite </c>, which pins the Agents group.</summary>
     private bool inviteCommand;
 
     /// <summary>The index into the rows the keyboard or the default has highlighted.</summary>
@@ -183,7 +183,7 @@
         }
 
         // Switching Rooms must not carry the previous Room's status line across, the same reason
-        // InviteTeammate.razor clears its panel state on a Room change.
+        // InviteAgent.razor clears its panel state on a Room change.
         this.loadedRoomId = this.RoomId;
         this.errorText = null;
         this.infoText = null;
@@ -357,7 +357,7 @@
     /// </summary>
     /// <param name="token">The text after the trigger, or <see langword="null"/> to close the picker.</param>
     /// <param name="trigger">The trigger the script found: <c>@</c> or <c>#</c>.</param>
-    /// <param name="inviteCommand">Whether the box starts with <c>/invite </c>, which shows the Teammates group alone.</param>
+    /// <param name="inviteCommand">Whether the box starts with <c>/invite </c>, which shows the Agents group alone.</param>
     [JSInvokable]
     public Task ReferenceQueryAsync(string? token, string trigger, bool inviteCommand)
     {

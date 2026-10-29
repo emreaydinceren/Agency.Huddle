@@ -165,5 +165,5 @@ touch its stylesheet".**
 - **`MudSelect` renders its items into a popover that only populates on a real click**, so a
   plain HTTP GET can never see non-selected option labels. This is the same *"anything behind a
   click is absent from that HTML"* limitation [Testing](../engineering/testing.md) already records
-  for `TeammateCard`, and it now applies to every converted `<select>`. Coverage of the full
+  for `AgentProfileCard`, and it now applies to every converted `<select>`. Coverage of the full
   option list moves to bUnit.

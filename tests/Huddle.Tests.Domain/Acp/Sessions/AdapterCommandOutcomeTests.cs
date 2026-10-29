@@ -4,7 +4,7 @@ using Agency.Huddle.App.Acp.Sessions;
 namespace Agency.Huddle.Tests.Acp.Sessions;
 
 /// <summary>
-/// Pins <see cref="AdapterCommandOutcome"/>: the fixed line a Teammate posts to say what its Adapter
+/// Pins <see cref="AdapterCommandOutcome"/>: the fixed line an Agent posts to say what its Adapter
 /// command did. An Adapter's <c>/compact</c> sends no text of its own, so without this line a Room could
 /// not tell a finished compaction from a failed one (Commands spec, section 8.3).
 /// </summary>
@@ -102,7 +102,7 @@ public sealed class AdapterCommandOutcomeTests
         Assert.Null(text);
     }
 
-    /// <summary>The thousands separator does not follow the machine's culture: the line is read by every Teammate in the Room.</summary>
+    /// <summary>The thousands separator does not follow the machine's culture: the line is read by every Agent in the Room.</summary>
     [Fact]
     public void Describe_UsesInvariantCulture()
     {

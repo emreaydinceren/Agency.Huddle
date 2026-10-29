@@ -23,7 +23,7 @@
         @if (this.Item.Assignee is { Length: > 0 } assignee)
         {
             <dt>Assignee</dt>
-            <dd class="feed-preview-person"><TeammateAvatar Name="@assignee" Size="Size.Small" /><span class="feed-preview-assignee">@assignee</span></dd>
+            <dd class="feed-preview-person"><AgentAvatar Name="@assignee" Size="Size.Small" /><span class="feed-preview-assignee">@assignee</span></dd>
         }
         @if (this.AssignedBy is { } assignedBy)
         {

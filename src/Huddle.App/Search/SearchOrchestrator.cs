@@ -115,9 +115,9 @@ internal sealed class SearchOrchestrator(
             List<Task> pass = [];
             foreach (ISearchProvider provider in selected)
             {
-                // The picker puts the Room's Members first and cuts to five itself (spec §5.3), so its Teammates
+                // The picker puts the Room's Members first and cuts to five itself (spec §5.3), so its Agents
                 // group is fetched at the single-filter cap: a Member the ranker listed late is not cut away here.
-                int cap = purpose == SearchPurpose.Reference && provider.Group == SearchFilter.Teammates ? SearchLimits.SingleFilterCap : maxHits;
+                int cap = purpose == SearchPurpose.Reference && provider.Group == SearchFilter.Agents ? SearchLimits.SingleFilterCap : maxHits;
                 SearchQuery query = new(parse.Phrase, parse.Filter, openTeam, scope, cap, purpose);
                 pass.Add(this.RunProviderAsync(provider, query, id, scope == SearchScope.Active && provider.IsExpensive, ct));
             }
