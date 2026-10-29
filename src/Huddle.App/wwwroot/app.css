@@ -1781,7 +1781,9 @@ body.sidebar-resizing {
     padding: 4px 0;
 }
 
-.invite-agent {
+/* One Agent in the invite list. Not named .invite-agent: that is the header wrapper, and this width: 100% on it
+   took the whole members stack and squeezed "N members + you" to one word per line. */
+.invite-agent-option {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -1798,11 +1800,11 @@ body.sidebar-resizing {
 }
 
 /* MudButton centres its label; the list reads better flush left. */
-.invite-agent .mud-button-label {
+.invite-agent-option .mud-button-label {
     justify-content: flex-start;
 }
 
-.invite-agent:hover {
+.invite-agent-option:hover {
     background: var(--hu-hover);
 }
 
