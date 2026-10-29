@@ -85,12 +85,144 @@ internal static class SoftwareCoLibrary
     [
         // ---- Library notes ----
         new("Teams/Platform/Architecture.md", """
+            ---
+            title: Platform architecture
+            tags: [platform, architecture]
+            ---
+
             # Platform architecture
 
             The gateway fronts four services: accounts, billing, notifications and reports. Every request
             is traced end to end; see the [[Runbook]] for what to do when a trace looks wrong.
 
             The public contract is described in [[API-v2-Design]].
+            """),
+        new("Teams/Platform/Meeting-Notes-2026-10-14.md", """
+            ---
+            title: Platform weekly, 14 October
+            date: 2026-10-14
+            tags: platform, meeting/weekly
+            ---
+
+            # Platform weekly, 14 October
+
+            Attendees: Grace, Marcus, Lena and Alan.
+
+            ## Decisions
+
+            - The API v1 sunset is planned for #2026/q4. The plan is in [[Deprecation-Plan]].
+            - The pool-size alert from incident 0412 is tracked in #SUPP-0008 and still needs an owner.
+            - Paging stays limited to customer impact, see #platform/ops.
+
+            ## Actions
+
+            - Marcus drafts the migration guide #platform/api/v2
+            - Alan writes the alert rule (helpdesk ticket #4521)
+            """),
+        new("Teams/Platform/API v2/Deprecation-Plan.md", """
+            ---
+            title: API v1 deprecation plan
+            tags: ["platform/api", 'v1-sunset', Deprecation]
+            ---
+
+            # API v1 deprecation plan
+
+            v1 is retired 180 days after v2 launches. Customers get three notices: at launch, at 90 days and at 150 days.
+
+            ## Timeline
+
+            Launch is targeted for #2026/q4, so the sunset lands in #2027/q2.
+
+            ## Communication
+
+            Notices go out from the status page; the draft is tracked in #SUPP-0005. The discussion is in [[Meeting-Notes-2026-10-14]].
+            """),
+        new("Teams/Growth/Onboarding Revamp/Interview-Notes.md", """
+            ---
+            tags:
+              - growth/research
+              - user-interview
+              - müşteri/geri-bildirim
+            ---
+
+            # Onboarding interviews
+
+            Five interviews with people who signed up in the last month.
+
+            ## Solo founder
+
+            Wanted to import a project from a spreadsheet and could not find where. #persona/solo-founder #onboarding/import
+
+            ## Team lead
+
+            Got stuck inviting colleagues: the invite button looked disabled. #persona/team-lead #onboarding/invite
+
+            Everyone liked the sample project. #🚀
+            """),
+        new("Teams/Growth/Pricing Page/Competitor-Teardown.md", """
+            # Competitor teardown
+
+            Three competitors, compared on how they show price. The chart is `competitor-chart.png` in this folder.
+
+            Pages were captured from https://competitor.example/pricing#faq on 8 October. The accent colour in the captures is `#1a73e8`.
+
+            ## Per seat #pricing/per-seat
+
+            Competitors A and C charge per seat and hide the annual discount below the fold.
+
+            ## Usage based #pricing/usage
+
+            Competitor B charges by usage and shows a calculator.
+
+            ## Takeaways #growth/pricing
+
+            Show the annual discount next to the price, not below it.
+            """),
+        new("Teams/Growth/Lifecycle Emails/Welcome-Email-Draft.md", """
+            ---
+            title: Welcome email, draft 2
+            tags: #draft
+            ---
+
+            # Welcome email
+
+            Subject: Your workspace is ready
+
+            Hi there,
+
+            Your workspace is ready. The first thing to do is create a project.
+
+            #email/welcome #draft
+            """),
+        new("Teams/Support/Help Center/Release-Notes-Draft.md", """
+            ---
+            title: Help centre release notes
+            tags: [support/docs, release-notes]
+            ...
+
+            # Help centre release notes
+
+            ## October changes
+
+            - New article on resetting two-factor codes. #support/docs
+            - Rewrote the billing FAQ.
+
+            <!-- #internal: waiting on legal before we publish the refund wording -->
+
+            %% #todo check the screenshots %%
+
+            Published articles are listed at https://help.example.com/articles#recent.
+            """),
+        new("Teams/Support/Customer-Feedback-Log.md", """
+            # Customer feedback log
+
+            October entries, newest first. Ticket numbers are helpdesk tickets, not Tasks.
+
+            - Export to CSV times out on large workspaces (ticket #4521). #feedback/bug #Reports
+            - Please add dark mode to the mobile app. #feedback/feature-request
+            - Love the new onboarding checklist! #feedback/praise #onboarding
+            - Invoice PDF shows the wrong VAT number (ticket #4533). #feedback/bug #billing
+            - Reports page is slow again after the 0412 incident. #feedback/Bug #reports
             """),
         new("Teams/Platform/Engineering-Handbook.md", """
             # Platform engineering handbook
@@ -148,6 +280,8 @@ internal static class SoftwareCoLibrary
 
             - [[Architecture]] for the service layout
             - [[Pagination]] for cursors
+
+            #platform/process #Platform
             """),
         new("Teams/Platform/Observability/oncall-contacts.txt", """
             On-call contacts (plain text note, not Markdown)
@@ -163,6 +297,8 @@ internal static class SoftwareCoLibrary
             with a cursor. See [[Pagination]] for the cursor format.
 
             Rate limits are per API key. The wider system is drawn in [[Architecture]].
+
+            #platform/api #platform/api/v2
             """),
         new("Teams/Platform/API v2/Pagination.md", """
             # Pagination
@@ -172,6 +308,8 @@ internal static class SoftwareCoLibrary
             ## Page size
 
             The default is 50 and the maximum is 200. Asking for more returns 200 and a warning header.
+
+            #platform/api
             """),
         new("Teams/Platform/Observability/Runbook.md", """
             # Observability runbook
@@ -181,6 +319,8 @@ internal static class SoftwareCoLibrary
             3. Compare with the deploy log. Roll back first, investigate second.
 
             Service layout: [[Architecture]].
+
+            #platform/ops #support/incident
             """),
         new("Teams/Growth/Personas.md", """
             # Growth personas
@@ -196,6 +336,8 @@ internal static class SoftwareCoLibrary
             ## Operations manager
 
             Arrives from a sales call. Needs an invoice and a security questionnaire before anything else.
+
+            #growth/research
             """),
         new("Teams/Growth/Onboarding Revamp/Onboarding-Brief.md", """
             # Onboarding revamp brief
@@ -210,6 +352,12 @@ internal static class SoftwareCoLibrary
             afterwards is in [[Pricing-Research]].
             """),
         new("Teams/Growth/Pricing Page/Pricing-Research.md", """
+            ---
+            tags:
+              - growth/research
+              - growth/pricing
+            ---
+
             # Pricing research
 
             Twelve competitors compared. Nine charge per seat, three by usage. The team-lead
@@ -228,6 +376,8 @@ internal static class SoftwareCoLibrary
             [[Pricing-Research]].
 
             Before launch, run through the [[Legal-Checklist]] and get sign-off from the Human.
+
+            #growth/pricing #Launch
             """),
         new("Teams/Growth/Lifecycle Emails/Email-Ideas.md", """
             # Lifecycle email ideas
@@ -235,6 +385,8 @@ internal static class SoftwareCoLibrary
             - Day 0: welcome and the one thing to do first.
             - Day 3: a short story about a customer who did that thing.
             - Day 14: you have not been back; here is what changed.
+
+            #growth/email #launch
             """),
         new("Teams/Support/Escalation-Guide.md", """
             # Escalation guide
@@ -242,6 +394,8 @@ internal static class SoftwareCoLibrary
             1. Confirm the customer impact in one sentence.
             2. Page the on-call engineer if more than one customer is affected.
             3. Post in the incident Room and open a Task for the follow-ups.
+
+            #support/incident #support/escalation
             """),
         new("Teams/Support/Help Center/Style-Guide.md", """
             # Help centre style guide
@@ -258,6 +412,8 @@ internal static class SoftwareCoLibrary
             affected services is in [[Architecture]].
 
             **Follow-ups:** the status page, the pager rotation and a pool-size alert.
+
+            #support/incident #platform/ops
             """),
         new("Teammates/Alan/work/Postmortem-Draft-0412.md", """
             # Postmortem draft: incident 0412
@@ -269,6 +425,8 @@ internal static class SoftwareCoLibrary
             - 09:02 first alert fires on the reports service
             - 09:11 on-call acknowledges
             - 09:49 pool limit raised and errors stop
+
+            #support/incident #draft
             """),
 
         // ---- Team memory ----
