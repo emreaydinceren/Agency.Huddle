@@ -52,7 +52,9 @@
 @using System.Globalization
 @using Microsoft.AspNetCore.Components.Forms
 @using Agency.Huddle.App.Themes
+@implements IAsyncDisposable
 @inject AvatarStore Avatars
+@inject IJSRuntime JS
 @inject IDialogService DialogService
 @inject AvatarLibraryLocator LibraryLocator
 @inject IAvatarLibraryLoader LibraryLoader
@@ -68,7 +70,7 @@ else
 {
 <div class="avatar-editor">
     <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
-        <AgentAvatar Name="@this.Name" Avatar="this.Working" Size="Size.Large"
+        <AgentAvatar Name="@this.Name" Avatar="this.Working" Size="Size.Large" Shape="this.Shape"
                         PendingImage="this.pendingBytes" PendingImageExtension="@this.pendingExtension" />
     </MudStack>
 
@@ -77,7 +79,7 @@ else
             <label class="avatar-choice-pick">
                 <input type="radio" name="avatar-choice" class="visually-hidden"
                        checked="@(this.choice == AvatarChoice.Initials)" @onclick="@(() => this.ChooseAsync(AvatarChoice.Initials))" />
-                <AgentAvatar Name="@this.Name" Avatar="this.InitialsThumb" Size="Size.Medium" />
+                <AgentAvatar Name="@this.Name" Avatar="this.InitialsThumb" Size="Size.Medium" Shape="this.Shape" />
                 <span class="avatar-choice-title">Initials of the name</span>
             </label>
         </div>
@@ -86,27 +88,51 @@ else
             <label class="avatar-choice-pick">
                 <input type="radio" name="avatar-choice" class="visually-hidden"
                        checked="@(this.choice == AvatarChoice.Label)" @onclick="@(() => this.ChooseAsync(AvatarChoice.Label))" />
-                <AgentAvatar Name="@this.Name" Avatar="this.LabelThumb" Size="Size.Medium" />
+                <AgentAvatar Name="@this.Name" Avatar="this.LabelThumb" Size="Size.Medium" Shape="this.Shape" />
                 <span class="avatar-choice-title">A short label</span>
             </label>
             <div class="avatar-choice-body">
-                @* No MaxLength: it truncates by UTF-16 index, which can cut a surrogate pair in half. Counter gives the same
+                @* No MaxLength: it truncates by UTF-16 index, which can cut a surrogate pair in half. The counter below gives the same
                    affordance without that defect, sized from Avatar.MaxLabelTextElements so the two can never drift apart.
-                   Trimming happens once, in Working's Avatar.TrimLabel call, not here. *@
-                <MudTextField T="string" Label="Label" Variant="Variant.Outlined" Margin="Margin.Dense"
+                   MudTextField's own Counter is not used: it counts UTF-16 code units (a ZWJ emoji reads 5 / 6), and its text cannot be
+                   overridden. This is the markup MudInputControl renders for a counter (the helper container, the d-flex helper text, the
+                   right-aligned ms-auto line), so it looks the same, and it counts text elements as the limit does. Like the stock counter
+                   it does not change colour past the limit. Trimming happens once, in Working's Avatar.TrimLabel call, not here. *@
+                <MudTextField @ref="this.labelField" T="string" aria-label="Avatar label" Class="avatar-label-field" Variant="Variant.Outlined" Margin="Margin.Dense"
                               Value="@this.label" ValueChanged="this.OnLabelChangedAsync"
-                              Immediate="true" Counter="@Avatar.MaxLabelTextElements" />
+                              Immediate="true"
+                              Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.EmojiEmotions"
+                              AdornmentAriaLabel="Choose an emoji" OnAdornmentClick="this.OpenEmojiPicker" />
+                <div class="mud-input-control-helper-container px-2">
+                    <div class="d-flex mud-input-helper-text">
+                        <div class="ms-auto">@this.LabelCounterText</div>
+                    </div>
+                </div>
+                @* The emoji picker: a popover over the field that hosts the vendored <emoji-picker> element (lib/emoji-picker). Its
+                   events are wired by emoji-picker.js after it paints; a click outside (the overlay) or Escape closes it. The element is
+                   rendered only while open, so the picker's data is not loaded until the Human asks for it. data-source is the local
+                   file; the bundle has no CDN address at all. *@
+                <span @onclick:stopPropagation="true"><MudOverlay Visible="this.emojiOpen" OnClick="this.CloseEmojiPickerAsync" ZIndex="1" /></span>
+                @* FlipAlways: the popover opens on whichever side of the field has room, and app.css caps the picker's height to the
+                   viewport, so it fits either way. *@
+                <MudPopover Open="this.emojiOpen" Fixed="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                            OverflowBehavior="OverflowBehavior.FlipAlways" Paper="false" Class="avatar-emoji-popover">
+                    @if (this.emojiOpen)
+                    {
+                        <emoji-picker id="@EmojiPickerId" data-source="/lib/emoji-picker/data.json" aria-label="Emoji picker"></emoji-picker>
+                    }
+                </MudPopover>
             </div>
         </div>
 
-        @if (this.LibraryLocator.IsConfigured)
+        @if (this.AllowLibrary && this.LibraryLocator.IsConfigured)
         {
             <div class="@this.CardClass(AvatarChoice.Library)" @onclick="@(() => this.ChooseAsync(AvatarChoice.Library))">
                 <label class="avatar-choice-pick">
                     <input type="radio" name="avatar-choice" class="visually-hidden"
                            checked="@(this.choice == AvatarChoice.Library)" disabled="@(!this.LibraryHoldsImage)"
                            @onclick="@(() => this.ChooseAsync(AvatarChoice.Library))" />
-                    <AgentAvatar Name="@this.Name" Avatar="this.LibraryThumb" Size="Size.Medium"
+                    <AgentAvatar Name="@this.Name" Avatar="this.LibraryThumb" Size="Size.Medium" Shape="this.Shape"
                                  PendingImage="this.LibraryHoldsImage ? this.pendingBytes : null"
                                  PendingImageExtension="@(this.LibraryHoldsImage ? this.pendingExtension : null)" />
                     <span class="avatar-choice-title">Image from the library</span>
@@ -132,7 +158,7 @@ else
             <label class="avatar-choice-pick">
                 <input type="radio" name="avatar-choice" class="visually-hidden"
                        checked="@(this.choice == AvatarChoice.Upload)" @onclick="@(() => this.ChooseAsync(AvatarChoice.Upload))" />
-                <AgentAvatar Name="@this.Name" Avatar="this.UploadThumb" Size="Size.Medium"
+                <AgentAvatar Name="@this.Name" Avatar="this.UploadThumb" Size="Size.Medium" Shape="this.Shape"
                              PendingImage="this.UploadHoldsImage ? this.pendingBytes : null"
                              PendingImageExtension="@(this.UploadHoldsImage ? this.pendingExtension : null)" />
                 <span class="avatar-choice-title">Upload an image</span>
@@ -198,6 +224,17 @@ else
     private string? pendingExtension;
     private Avatar lastValue = Avatar.None;
     private bool libraryOpen;
+
+    /// <summary>The element id <c>emoji-picker.js</c> finds the picker by; one editor is open at a time, and the picker exists only while its popover is.</summary>
+    private const string EmojiPickerId = "avatar-emoji-picker";
+
+    private MudTextField<string>? labelField;
+    private bool emojiOpen;
+    private bool emojiWire;
+    private bool disposed;
+    private IJSObjectReference? emojiModule;
+    private IJSObjectReference? emojiHandle;
+    private DotNetObjectReference<AvatarEditor>? emojiSelf;
     private bool imageFromLibrary;
 
     [CascadingParameter]
@@ -230,6 +267,17 @@ else
     /// <summary>Raised in <see cref="AvatarSaveMode.Buffered"/> when an image is chosen (bytes and extension) or dropped (both null).</summary>
     [Parameter]
     public EventCallback<(byte[]? Bytes, string? Extension)> PendingImageChanged { get; set; }
+
+    /// <summary>
+    /// Whether the "Image from the library" card is offered. A Team passes <see langword="false"/>: its picture is a label or an upload.
+    /// The card also needs <see cref="AvatarLibraryLocator.IsConfigured"/>, so <see langword="true"/> shows it only when a library exists.
+    /// </summary>
+    [Parameter]
+    public bool AllowLibrary { get; set; } = true;
+
+    /// <summary>The outline the previews are drawn in, so the Human sees the shape they will get: a circle for an Agent or the Human, a rounded square for a Team.</summary>
+    [Parameter]
+    public AvatarShape Shape { get; set; } = AvatarShape.Circle;
 
     /// <summary>Raised with true when the library replaces the editor's content inside a dialog, and false when Back brings the editor back, so the hosting dialog can retitle itself and hide its own buttons.</summary>
     [Parameter]
@@ -384,6 +432,155 @@ else
         if (!this.OwnsImageSlot(value))
         {
             await this.DropPendingAsync();
+        }
+    }
+
+    /// <summary>Opens the emoji popover. The browser side is wired in <see cref="OnAfterRenderAsync(bool)"/>, once the picker element has painted.</summary>
+    private void OpenEmojiPicker()
+    {
+        this.emojiOpen = true;
+        this.emojiWire = true;
+    }
+
+    /// <summary>Closes the emoji popover (a click outside it, Escape, or a pick) and detaches the browser side.</summary>
+    private async Task CloseEmojiPickerAsync()
+    {
+        bool wasOpen = this.emojiOpen;
+        this.emojiOpen = false;
+        this.emojiWire = false;
+        await this.DetachEmojiAsync();
+        if (wasOpen && !this.disposed)
+        {
+            await this.FocusLabelAsync();
+        }
+    }
+
+    /// <summary>
+    /// Puts focus back on the Label field after the picker closes. The picker held focus, and once its popover is removed the page
+    /// would be left with none, so the next Escape would never reach the dialog. A circuit that has gone is not an error.
+    /// </summary>
+    private async Task FocusLabelAsync()
+    {
+        if (this.labelField is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await this.labelField.FocusAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The browser is gone, and with it the focus there was to restore.
+        }
+    }
+
+    /// <summary>The counter under the Label field: the label's length in Unicode text elements, the unit <see cref="Avatar.MaxLabelTextElements"/> is enforced in, over the limit.</summary>
+    private string LabelCounterText =>
+        string.Create(CultureInfo.InvariantCulture, $"{new StringInfo(this.label ?? string.Empty).LengthInTextElements} / {Avatar.MaxLabelTextElements}");
+
+    /// <summary>Wires the picker the render just painted: imports <c>emoji-picker.js</c> on first use and attaches it to the element.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!this.emojiWire || !this.emojiOpen)
+        {
+            return;
+        }
+
+        this.emojiWire = false;
+        try
+        {
+            this.emojiModule ??= await this.JS.InvokeAsync<IJSObjectReference>("import", "./emoji-picker.js");
+            this.emojiSelf ??= DotNetObjectReference.Create(this);
+            IJSObjectReference? attached = await this.emojiModule.InvokeAsync<IJSObjectReference?>("attach", EmojiPickerId, this.emojiSelf);
+            if (this.disposed || !this.emojiOpen)
+            {
+                await DisposeHandleAsync(attached);
+                return;
+            }
+
+            this.emojiHandle = attached;
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit went away while the picker was opening; there is nothing left to wire.
+        }
+    }
+
+    /// <summary>
+    /// Called from the browser when the Human picks an emoji. The emoji replaces the label (trimmed through
+    /// <see cref="Avatar.TrimLabel(string?)"/> like typed text), chooses the Label card and is committed as typing is; the popover then closes.
+    /// </summary>
+    /// <param name="emoji">The chosen emoji's Unicode text.</param>
+    [JSInvokable]
+    public async Task OnEmojiPickedAsync(string emoji)
+    {
+        await this.InvokeAsync(async () =>
+        {
+            this.label = Avatar.TrimLabel(emoji) ?? string.Empty;
+            await this.ApplyChoiceAsync(AvatarChoice.Label);
+            await this.CommitAsync();
+            await this.CloseEmojiPickerAsync();
+            this.StateHasChanged();
+        });
+    }
+
+    /// <summary>Called from the browser when Escape is pressed inside the picker.</summary>
+    [JSInvokable]
+    public async Task OnEmojiClosedAsync()
+    {
+        await this.InvokeAsync(async () =>
+        {
+            await this.CloseEmojiPickerAsync();
+            this.StateHasChanged();
+        });
+    }
+
+    /// <summary>Detaches and releases the browser-side handle, if any.</summary>
+    private async Task DetachEmojiAsync()
+    {
+        IJSObjectReference? handle = this.emojiHandle;
+        this.emojiHandle = null;
+        await DisposeHandleAsync(handle);
+    }
+
+    /// <summary>Asks a picker handle to remove its listeners, then releases it. A circuit that has gone is not an error.</summary>
+    /// <param name="handle">The handle, or <see langword="null"/>.</param>
+    private static async Task DisposeHandleAsync(IJSObjectReference? handle)
+    {
+        if (handle is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await handle.InvokeVoidAsync("dispose");
+            await handle.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The browser is gone, and its listeners with it.
+        }
+    }
+
+    /// <summary>Releases the picker's handle and module and the reference the browser calls back through.</summary>
+    public async ValueTask DisposeAsync()
+    {
+        this.disposed = true;
+        await this.DetachEmojiAsync();
+        this.emojiSelf?.Dispose();
+        if (this.emojiModule is not null)
+        {
+            try
+            {
+                await this.emojiModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // The browser is gone, and its module with it.
+            }
         }
     }
 

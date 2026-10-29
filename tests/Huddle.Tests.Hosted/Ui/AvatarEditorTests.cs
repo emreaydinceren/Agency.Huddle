@@ -1,6 +1,7 @@
 using AngleSharp.Dom;
 using Bunit;
 using Bunit.Rendering;
+
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +32,12 @@ public sealed class AvatarEditorTests
 
         /// <summary>The avatar the parent passes down.</summary>
         public Avatar Value { get; set; } = Avatar.None;
+
+        /// <summary>Whether the parent offers the library card.</summary>
+        public bool AllowLibrary { get; init; } = true;
+
+        /// <summary>The outline the parent asks the previews to be drawn in.</summary>
+        public AvatarShape Shape { get; init; } = AvatarShape.Circle;
 
         /// <summary>Every avatar the editor raised through <see cref="AvatarEditor.ValueChanged"/>, in order.</summary>
         public List<Avatar> Values { get; } = [];
@@ -68,6 +75,8 @@ public sealed class AvatarEditorTests
             builder.AddAttribute(3, nameof(AvatarEditor.SaveMode), probe.Mode);
             builder.AddAttribute(4, nameof(AvatarEditor.ValueChanged), EventCallback.Factory.Create<Avatar>(probe, probe.Values.Add));
             builder.AddAttribute(5, nameof(AvatarEditor.PendingImageChanged), EventCallback.Factory.Create<(byte[]? Bytes, string? Extension)>(probe, probe.Pending.Add));
+            builder.AddAttribute(6, nameof(AvatarEditor.AllowLibrary), probe.AllowLibrary);
+            builder.AddAttribute(7, nameof(AvatarEditor.Shape), probe.Shape);
             builder.CloseComponent();
         }
     }
@@ -84,6 +93,9 @@ public sealed class AvatarEditorTests
     /// <summary>Makes the parent render again with the probe's current value.</summary>
     private static Task RefreshParentAsync(IRenderedComponent<ContainerFragment> cut) =>
         cut.InvokeAsync(cut.FindComponent<Host>().Instance.Refresh);
+
+    /// <summary>The framework call <c>ElementReference.FocusAsync</c> makes, which <c>MudTextField.FocusAsync</c> ends in.</summary>
+    private const string FocusCall = "Blazor._internal.domWrapper.focus";
 
     /// <summary>The choice cards, in page order.</summary>
     private const string Cards = ".avatar-choice-card";
@@ -112,12 +124,7 @@ public sealed class AvatarEditorTests
 
     /// <summary>Types <paramref name="value"/> into the Label field by raising its <c>oninput</c>.</summary>
     private static Task TypeLabelAsync(IRenderedComponent<ContainerFragment> cut, string value) =>
-        cut.InvokeAsync(() =>
-        {
-            IElement control = cut.FindAll("div.mud-input-control")
-                .First(c => c.QuerySelectorAll("label").Any(l => l.TextContent.Contains("Label", StringComparison.Ordinal)));
-            return (control.QuerySelector("input") ?? throw new InvalidOperationException("No Label input.")).InputAsync(value);
-        });
+        AgentProfileCardTestSupport.SetAvatarLabelAsync(cut, value);
 
     /// <summary>Clicks the first button whose trimmed text equals <paramref name="text"/>.</summary>
     private static Task ClickButtonAsync(IRenderedComponent<ContainerFragment> cut, string text) =>
@@ -163,14 +170,14 @@ public sealed class AvatarEditorTests
         Assert.Equal("radiogroup", cut.Find(".avatar-choices").GetAttribute("role"));
         Assert.True(IsSelected(cut, UploadCard));
         Assert.True(HasButton(cut, "Upload…"));
-        Assert.True(HasInputLabelled(cut, "Label"));
+        AssertLabelFieldIsNamedByAriaOnly(cut);
 
         await SelectChoiceAsync(cut, "Initials of the name");
 
         Assert.True(IsSelected(cut, "Initials of the name"));
         Assert.False(IsSelected(cut, UploadCard));
         Assert.True(HasButton(cut, "Upload…"));
-        Assert.True(HasInputLabelled(cut, "Label"));
+        AssertLabelFieldIsNamedByAriaOnly(cut);
         Assert.Equal(AvatarPalette.Colours.Count, cut.FindAll(Swatch).Count);
     }
 
@@ -316,9 +323,12 @@ public sealed class AvatarEditorTests
         Assert.NotEmpty(cut.FindAll(Swatch));
     }
 
-    /// <summary>Whether a field labelled <paramref name="text"/> is on the page.</summary>
-    private static bool HasInputLabelled(IRenderedComponent<ContainerFragment> cut, string text) =>
-        cut.FindAll("div.mud-input-control").Any(c => c.QuerySelectorAll("label").Any(l => string.Equals(l.TextContent.Trim(), text, StringComparison.Ordinal)));
+    /// <summary>Asserts the label field is present with the accessible name "Avatar label" and that no visible <c>&lt;label&gt;</c> reads "Label".</summary>
+    private static void AssertLabelFieldIsNamedByAriaOnly(IRenderedComponent<ContainerFragment> cut)
+    {
+        Assert.Equal("Avatar label", cut.Find(AgentProfileCardTestSupport.AvatarLabelInput).GetAttribute("aria-label"));
+        Assert.DoesNotContain(cut.FindAll("label"), l => string.Equals(l.TextContent.Trim(), "Label", StringComparison.Ordinal));
+    }
 
     /// <summary>The Background palette offers every swatch of <see cref="AvatarPalette"/> and no swatch is chosen until one is pressed.</summary>
     [Fact]
@@ -690,5 +700,212 @@ public sealed class AvatarEditorTests
 
         Assert.True(HasText(cut, "New image selected (not yet saved)"));
         Assert.True(HasButton(cut, "Remove image"));
+    }
+
+    /// <summary>With <c>AllowLibrary</c> off the library card is not offered even though a library is configured, which is how a Team's editor hides it.</summary>
+    [Fact]
+    public async Task AllowLibraryFalse_HidesTheLibraryCard_EvenWhenALibraryIsConfigured()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        using TempDataDir library = CreateLibraryDir();
+        await using MudBunitContext ctx = NewContext(factory);
+        _ = Register(ctx.Services, library.Path, null);
+
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate) { AllowLibrary = false });
+
+        Assert.Equal(["Initials of the name", "A short label", UploadCard], cut.FindAll(".avatar-choice-title").Select(title => title.TextContent.Trim()));
+        Assert.DoesNotContain(cut.FindAll("button"), button => button.TextContent.Contains("Choose from library", StringComparison.Ordinal));
+    }
+
+    /// <summary>The default editor draws circles: none of its previews is a rounded square.</summary>
+    [Fact]
+    public async Task Shape_Default_DrawsCircles()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate));
+
+        Assert.True(cut.FindAll(".mud-avatar").Count >= 4);
+        Assert.Empty(cut.FindAll(".mud-avatar.avatar-square"));
+    }
+
+    /// <summary>A rounded-square editor draws every preview, the large one and each card's thumbnail, as a rounded square.</summary>
+    [Fact]
+    public async Task Shape_RoundedSquare_DrawsEveryPreviewAsASquare()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate) { Shape = AvatarShape.RoundedSquare });
+
+        int previews = cut.FindAll(".mud-avatar").Count;
+        Assert.True(previews >= 4);
+        Assert.Equal(previews, cut.FindAll(".mud-avatar.avatar-square").Count);
+    }
+
+    /// <summary>The Label card's field carries a smiley button that names itself for a screen reader.</summary>
+    [Fact]
+    public async Task EmojiButton_IsOnTheLabelField_WithAnAriaLabel()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate));
+
+        IElement button = cut.Find("button[aria-label='Choose an emoji']");
+        Assert.NotNull(button.Closest("div.mud-input-control"));
+        Assert.Empty(cut.FindAll("emoji-picker"));
+    }
+
+    /// <summary>
+    /// The browser's callback replaces the label with the emoji and chooses the Label card, as typing does, and the field shows it.
+    /// The text goes through <c>Avatar.TrimLabel</c>, so a control character is stripped and a seventh text element is cut.
+    /// </summary>
+    [Fact]
+    public async Task OnEmojiPicked_ReplacesTheLabel_ChoosesTheLabelCard_AndTrims()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+        Probe probe = new(AvatarSaveMode.Immediate) { Value = new Avatar(Label: "AB", Image: null, Background: null) };
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, probe);
+        await SelectChoiceAsync(cut, UploadCard);
+        AvatarEditor editor = cut.FindComponent<AvatarEditor>().Instance;
+
+        await cut.InvokeAsync(() => editor.OnEmojiPickedAsync("\u0007\U0001F600"));
+
+        Assert.True(IsSelected(cut, "A short label"));
+        Assert.True(HasInputValue(cut, "\U0001F600"));
+        Assert.Equal(new Avatar("\U0001F600", null, null), probe.Values[^1]);
+
+        await cut.InvokeAsync(() => editor.OnEmojiPickedAsync("1234567"));
+
+        Assert.Equal(new Avatar("123456", null, null), probe.Values[^1]);
+    }
+
+    /// <summary>A ZWJ sequence or a skin-toned emoji counts as one text element, so the whole emoji becomes the label.</summary>
+    [Fact]
+    public async Task OnEmojiPicked_ZwjSequence_IsOneLabelCharacter()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+        Probe probe = new(AvatarSaveMode.Immediate);
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, probe);
+        AvatarEditor editor = cut.FindComponent<AvatarEditor>().Instance;
+        string technologist = "\U0001F469‍\U0001F4BB";
+
+        await cut.InvokeAsync(() => editor.OnEmojiPickedAsync(technologist));
+
+        Assert.Equal(new Avatar(technologist, null, null), probe.Values[^1]);
+        Assert.True(HasText(cut, "1 / " + Avatar.MaxLabelTextElements));
+    }
+
+    /// <summary>The counter counts text elements, the unit the limit is in: a rocket is 1 / 6 (two UTF-16 units), and plain typing still counts one per letter.</summary>
+    [Fact]
+    public async Task Counter_CountsTextElementsNotUtf16Units()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate));
+        AvatarEditor editor = cut.FindComponent<AvatarEditor>().Instance;
+        Assert.True(HasText(cut, "0 / " + Avatar.MaxLabelTextElements));
+
+        await cut.InvokeAsync(() => editor.OnEmojiPickedAsync("\U0001F680"));
+
+        Assert.True(HasText(cut, "1 / " + Avatar.MaxLabelTextElements));
+        Assert.Single(cut.FindAll(".mud-input-control-helper-container .ms-auto"));
+
+        await cut.InvokeAsync(() => editor.OnEmojiPickedAsync("AB\U0001F469\u200D\U0001F4BB"));
+
+        Assert.True(HasText(cut, "3 / " + Avatar.MaxLabelTextElements));
+    }
+
+    /// <summary>Pressing the button opens the popover with the picker pointed at the local data file, attaches the browser side, and a pick closes the popover and detaches it.</summary>
+    [Fact]
+    public async Task EmojiButton_OpensThePicker_AndAPickClosesIt()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+        BunitJSModuleInterop module = ctx.JSInterop.SetupModule("./emoji-picker.js");
+        BunitJSModuleInterop handle = module.SetupModule("attach", _ => true);
+        handle.SetupVoid("dispose").SetVoidResult();
+        Probe probe = new(AvatarSaveMode.Immediate);
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, probe);
+
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='Choose an emoji']").ClickAsync());
+
+        IElement picker = cut.WaitForElement("emoji-picker");
+        Assert.Equal("/lib/emoji-picker/data.json", picker.GetAttribute("data-source"));
+        cut.WaitForAssertion(() => Assert.Equal("avatar-emoji-picker", Assert.Single(module.Invocations, call => call.Identifier == "attach").Arguments[0]));
+
+        await cut.InvokeAsync(() => cut.FindComponent<AvatarEditor>().Instance.OnEmojiPickedAsync("\U0001F680"));
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("emoji-picker")));
+        Assert.Equal(new Avatar("\U0001F680", null, null), probe.Values[^1]);
+        handle.VerifyInvoke("dispose");
+        ctx.JSInterop.VerifyInvoke(FocusCall);
+    }
+
+    /// <summary>Escape inside the picker closes the popover and leaves the label alone.</summary>
+    [Fact]
+    public async Task OnEmojiClosed_ClosesThePickerWithoutChangingTheLabel()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+        ctx.JSInterop.SetupModule("./emoji-picker.js").SetupModule("attach", _ => true).SetupVoid("dispose").SetVoidResult();
+        Probe probe = new(AvatarSaveMode.Immediate) { Value = new Avatar(Label: "AB", Image: null, Background: null) };
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, probe);
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='Choose an emoji']").ClickAsync());
+        cut.WaitForElement("emoji-picker");
+
+        await cut.InvokeAsync(() => cut.FindComponent<AvatarEditor>().Instance.OnEmojiClosedAsync());
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("emoji-picker")));
+        Assert.True(HasInputValue(cut, "AB"));
+        ctx.JSInterop.VerifyInvoke(FocusCall);
+    }
+
+    /// <summary>Disposing the editor while the picker is open releases the browser handle and the module.</summary>
+    [Fact]
+    public async Task Dispose_WhileThePickerIsOpen_ReleasesTheHandleAndTheModule()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+        BunitJSModuleInterop module = ctx.JSInterop.SetupModule("./emoji-picker.js");
+        BunitJSModuleInterop handle = module.SetupModule("attach", _ => true);
+        handle.SetupVoid("dispose").SetVoidResult();
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate));
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='Choose an emoji']").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Single(module.Invocations, call => call.Identifier == "attach"));
+
+        await cut.InvokeAsync(() => cut.FindComponent<AvatarEditor>().Instance.DisposeAsync().AsTask());
+
+        handle.VerifyInvoke("dispose");
+    }
+
+    /// <summary>Closing a picker that was never opened does not move focus: only a close that took focus from the field gives it back.</summary>
+    [Fact]
+    public async Task OnEmojiClosed_WhenThePickerIsNotOpen_DoesNotTouchFocus()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate));
+
+        await cut.InvokeAsync(() => cut.FindComponent<AvatarEditor>().Instance.OnEmojiClosedAsync());
+
+        Assert.DoesNotContain(ctx.JSInterop.Invocations, call => call.Identifier == FocusCall);
+    }
+
+    /// <summary>The popover is told to flip to the side with room, so it can sit above or below the field inside a short window.</summary>
+    [Fact]
+    public async Task EmojiPopover_FlipsToTheSideWithRoom()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate));
+
+        MudBlazor.MudPopover popover = cut.FindComponent<MudBlazor.MudPopover>().Instance;
+
+        Assert.Equal(MudBlazor.OverflowBehavior.FlipAlways, popover.OverflowBehavior);
     }
 }

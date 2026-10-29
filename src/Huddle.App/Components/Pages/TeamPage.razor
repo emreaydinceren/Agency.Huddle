@@ -3,6 +3,7 @@
 @page "/teams/{Team}/projects/{Project}"
 @page "/teams/{Team}/projects/{Project}/{Tab}"
 @implements IDisposable
+@using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Tabs
 @using Microsoft.Extensions.Options
@@ -11,6 +12,7 @@
 @inject NavigationManager Navigation
 @inject IDialogService DialogService
 @inject IServiceProvider Services
+@inject ISnackbar Snackbar
 
 @*
     Spec §6.6: the Team page and the Project page, one component. The route drives everything:
@@ -62,7 +64,29 @@
         {
             string sourceTeam = summary.Name;
             <PageHeader Title="@summary.Name">
+                <TitleLeading>
+                    @* The avatar is the way into the Team's avatar editor: a real button, as on the Agent card. avatar-transcript
+                       makes the Small avatar 32px, the height of the header row, and lets a picture show. A Team with no
+                       _team.md (TeamType is null) has nowhere to keep an avatar, so it gets the plain avatar and no button. *@
+                    @if (summary.TeamType is not null)
+                    {
+                        <button type="button" class="agent-profile-card-avatar team-page-avatar" aria-label="Change avatar" title="Change avatar"
+                                @onclick="@(() => this.EditAvatarAsync(sourceTeam))">
+                            <TeamAvatar Team="@summary.Name" Avatar="summary.Avatar" Size="Size.Small" Class="avatar-transcript" />
+                            <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="agent-profile-card-avatar-edit" />
+                        </button>
+                    }
+                    else
+                    {
+                        <TeamAvatar Team="@summary.Name" Avatar="summary.Avatar" Size="Size.Small" Class="avatar-transcript" />
+                    }
+                </TitleLeading>
                 <Actions>
+                    @* Says plainly what the avatar's pencil does; quieter than Duplicate (text, no border). Same condition as the avatar button. *@
+                    @if (summary.TeamType is not null)
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Class="team-page-actions" OnClick="@(() => this.EditAvatarAsync(sourceTeam))">Edit avatar…</MudButton>
+                    }
                     <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ContentCopy"
                                Class="team-page-actions" OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</MudButton>
                 </Actions>
@@ -171,6 +195,73 @@
     {
         DialogParameters<DuplicateTeamDialog> parameters = new() { { dialog => dialog.SourceTeam, team } };
         _ = await this.DialogService.ShowAsync<DuplicateTeamDialog>($"Duplicate {team}", parameters, DuplicateTeamDialog.Options);
+    }
+
+    /// <summary>
+    /// Opens <see cref="AvatarEditorDialog"/> for <paramref name="team"/>'s avatar and, when the Human saves, writes it to the Team's
+    /// <c>_team.md</c>. The dialog offers no library and previews a rounded square; "Save" (not "Apply") because nothing else on this
+    /// page holds the result until later.
+    /// </summary>
+    private async Task EditAvatarAsync(string team)
+    {
+        TeamSummary? summary = this.Catalog.Find(team);
+        if (summary is null)
+        {
+            return;
+        }
+
+        DialogParameters<AvatarEditorDialog> parameters = new()
+        {
+            { dialog => dialog.Name, summary.Name },
+            { dialog => dialog.Current, summary.Avatar },
+            { dialog => dialog.Deferred, false },
+            { dialog => dialog.AllowLibrary, false },
+            { dialog => dialog.Shape, AvatarShape.RoundedSquare },
+        };
+
+        IDialogReference reference = await this.DialogService.ShowAsync<AvatarEditorDialog>(null, parameters, AvatarEditorDialog.Options);
+        DialogResult? result = await reference.Result;
+        if (result is null || result.Canceled || result.Data is not AvatarEditorResult edited)
+        {
+            return;
+        }
+
+        this.SaveAvatar(summary.Name, edited);
+    }
+
+    /// <summary>
+    /// Writes a pending image, then the avatar into the Team's <c>_team.md</c>, then deletes the image it replaced. The order matters:
+    /// the old file goes only once the file that names the new one is saved. A Team with no readable <c>_team.md</c> cannot keep an
+    /// avatar, so the new image is removed again and the Human is told.
+    /// </summary>
+    /// <param name="team">The Team's name.</param>
+    /// <param name="edited">What the dialog handed back.</param>
+    private void SaveAvatar(string team, AvatarEditorResult edited)
+    {
+        AvatarStore store = this.Services.GetRequiredService<AvatarStore>();
+        Avatar toSave = store.CommitPendingImage(edited.Avatar, edited.PendingImage, edited.PendingImageExtension);
+        string? replaced = null;
+        bool saved = this.Services.GetService<ITeamFolders>()?.UpdateTeamFile(team, current =>
+        {
+            replaced = current.Avatar.Image;
+            return current with { Avatar = toSave };
+        }) ?? false;
+
+        if (!saved)
+        {
+            if (!string.Equals(toSave.Image, edited.Avatar.Image, StringComparison.Ordinal))
+            {
+                store.DeleteImage(toSave.Image);
+            }
+
+            _ = this.Snackbar.Add($"{team} has no team file, so its avatar could not be saved.", Severity.Warning, configure: null, key: "team-avatar-error");
+            return;
+        }
+
+        if (!string.Equals(replaced, toSave.Image, StringComparison.Ordinal))
+        {
+            store.DeleteImage(replaced);
+        }
     }
 
     private static string TeamHref(string team) => $"/teams/{Uri.EscapeDataString(team)}";

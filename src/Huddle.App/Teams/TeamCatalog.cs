@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.App.Teams;
@@ -308,6 +309,7 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
                 Manager = cards.GetValueOrDefault(data.DisplayName)?.Manager,
                 Workspace = cards.GetValueOrDefault(data.DisplayName)?.Workspace,
                 Owns = cards.GetValueOrDefault(data.DisplayName)?.Owns,
+                Avatar = cards.GetValueOrDefault(data.DisplayName)?.Avatar ?? Avatar.None,
             })
             .OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();

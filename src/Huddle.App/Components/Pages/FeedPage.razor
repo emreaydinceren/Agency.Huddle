@@ -8,6 +8,7 @@
     after it was shown. It is read-only: no dismiss, no accept, no reply. When the Feed is turned off it draws only an empty state.
 *@
 @implements IDisposable
+@using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Components.Feed
 @using Agency.Huddle.App.Feed
 @using Agency.Huddle.App.Tabs
@@ -62,7 +63,7 @@
                     @foreach (string teamName in this.TeamNames)
                     {
                         <MudSelectItem T="string" Value="@teamName">
-                            <MudIcon Icon="@Icons.Material.Outlined.Groups" Size="Size.Small" Class="feed-team-icon" /> @teamName
+                            <TeamAvatar Team="@teamName" Avatar="this.Catalog.Find(teamName)?.Avatar ?? Avatar.None" Size="Size.Small" Class="feed-team-icon" /> <span class="feed-team-option-name">@teamName</span>
                         </MudSelectItem>
                     }
                 </MudSelect>

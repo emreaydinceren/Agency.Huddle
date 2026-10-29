@@ -93,6 +93,9 @@ internal static class ServicePresets
         // ITeamDirectory are already registered above, for Chat.razor's own sake.
         typeof(ElicitationStore),
         typeof(ElicitationService),
+
+        // Chat.razor draws a Team Room's Team avatar in its header, read from the Team catalog.
+        typeof(ITeamCatalog),
     ];
 
     /// <summary>

@@ -248,11 +248,13 @@ public sealed class TeamDuplicatorTests
             HireLimitHarness harness = new(this.Dir.Options());
             this.Hire = new HireService(this.Personas, this.Types, this.Packs, this.avatars, harness.Guard, new FakeSkillCopier(), new FakeStartGate(), NullLogger<HireService>.Instance);
             this.Folders = new TeamFolderProvisioner(this.Personas, this.library.RootStore, this.library.Resolver, NullLogger<TeamFolderProvisioner>.Instance, this.Catalog);
-            this.Duplicator = new TeamDuplicator(this.Catalog, this.Types, this.Folders, this.Hire, this.Personas, this.Packs, this.hireContext);
+            this.Duplicator = new TeamDuplicator(this.Catalog, this.Types, this.Folders, this.Hire, this.Personas, this.Packs, this.hireContext, this.avatars);
             this.SourceWorkspace = Path.Combine(this.Dir.Path, "old-ws");
         }
 
         public TempDataDir Dir { get; }
+
+        public AvatarStore Avatars => this.avatars;
 
         public PersonaStore Personas { get; }
 
@@ -317,5 +319,58 @@ public sealed class TeamDuplicatorTests
             this.library.Dispose();
             this.Dir.Dispose();
         }
+    }
+
+    /// <summary>The copy gets its own image file with the same bytes under a new name, so replacing or deleting one Team's picture leaves the other's alone.</summary>
+    [Fact]
+    public void Duplicate_SourceAvatarImage_CopiedToADistinctFile()
+    {
+        using Fixture f = new();
+        f.SeedSource();
+        byte[] bytes = [1, 2, 3, 4];
+        string sourceImage = f.Avatars.WriteImage(bytes, ".png");
+        Assert.True(f.Folders.UpdateTeamFile(Source, current => current with { Avatar = new Avatar("GR", sourceImage, "#1E90FF") }));
+
+        DuplicateResult result = f.Duplicator.Duplicate(Source, Target, null);
+
+        Assert.True(result.Ok);
+        Avatar copy = f.Folders.ReadTeamFile(Target)?.Avatar ?? Avatar.None;
+        Assert.NotNull(copy.Image);
+        Assert.NotEqual(sourceImage, copy.Image);
+        Assert.Equal(".png", Path.GetExtension(copy.Image));
+        Assert.Equal(bytes, File.ReadAllBytes(Path.Combine(f.Avatars.ImageDirectory, copy.Image)));
+        Assert.Equal("GR", copy.Label);
+        Assert.Equal("#1E90FF", copy.Background);
+        f.Avatars.DeleteImage(sourceImage);
+        Assert.True(File.Exists(Path.Combine(f.Avatars.ImageDirectory, copy.Image)));
+        Assert.Equal(sourceImage, f.Folders.ReadTeamFile(Source)?.Avatar.Image);
+    }
+
+    /// <summary>A source avatar whose image file is gone gives the copy no image rather than a name that points at nothing; the label survives.</summary>
+    [Fact]
+    public void Duplicate_SourceAvatarImageMissingOnDisk_CopyHasNoImage()
+    {
+        using Fixture f = new();
+        f.SeedSource();
+        Assert.True(f.Folders.UpdateTeamFile(Source, current => current with { Avatar = new Avatar("GR", "0123456789abcdef0123456789abcdef.png", null) }));
+
+        DuplicateResult result = f.Duplicator.Duplicate(Source, Target, null);
+
+        Assert.True(result.Ok);
+        Assert.Equal(new Avatar("GR", null, null), f.Folders.ReadTeamFile(Target)?.Avatar);
+    }
+
+    /// <summary>A source with no avatar gives the copy none, and writes no image file.</summary>
+    [Fact]
+    public void Duplicate_SourceWithoutAvatar_CopyHasNone()
+    {
+        using Fixture f = new();
+        f.SeedSource();
+
+        DuplicateResult result = f.Duplicator.Duplicate(Source, Target, null);
+
+        Assert.True(result.Ok);
+        Assert.Equal(Avatar.None, f.Folders.ReadTeamFile(Target)?.Avatar);
+        Assert.False(Directory.Exists(f.Avatars.ImageDirectory) && Directory.GetFiles(f.Avatars.ImageDirectory).Length > 0);
     }
 }

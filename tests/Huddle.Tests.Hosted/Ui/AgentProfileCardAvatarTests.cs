@@ -48,7 +48,7 @@ public sealed class AgentProfileCardAvatarTests
     private static async Task TypeLabelAsync(IRenderedComponent<ContainerFragment> cut, string label)
     {
         await SelectAvatarChoiceAsync(cut, "A short label");
-        await SetImmediateTextValueAsync(cut, "Label", label);
+        await SetAvatarLabelAsync(cut, label);
     }
 
     /// <summary>Uploads <paramref name="bytes"/> through the open editor's file input.</summary>
@@ -237,7 +237,7 @@ public sealed class AgentProfileCardAvatarTests
         WaitForEditorClosed(cut);
         await OpenAvatarEditorAsync(cut);
 
-        IElement input = FindInputControl(cut, "Label").QuerySelector("input") ?? throw new InvalidOperationException("No input under 'Label'.");
+        IElement input = cut.Find(AvatarLabelInput);
         Assert.Equal("AB", input.GetAttribute("value"));
         Assert.Equal("AB", EditorPreviewText(cut));
     }
@@ -633,5 +633,52 @@ public sealed class AgentProfileCardAvatarTests
         UploadFile(cut, [1, 2, 3, 4], "fake.png");
 
         Assert.Equal("That file is not a PNG, JPEG or WebP image.", cut.Find(EditorDialog + " .mud-alert").TextContent.Trim());
+    }
+
+    /// <summary>In View the avatar has a spelled-out "Edit avatar…" button beside its pencil, and pressing it opens the same editor.</summary>
+    [Fact]
+    public async Task ViewMode_EditAvatarButton_OpensTheEditor()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await SeedPersonaAsync(factory, "coo", "x");
+        await using MudBunitContext ctx = NewContext(factory);
+        IRenderedComponent<ContainerFragment> cut = await OpenViewCardAsync(ctx, factory, "coo");
+
+        Assert.Equal("Edit avatar…", Assert.Single(cut.FindAll("button.mud-button-text"), static button => button.TextContent.Trim().StartsWith("Edit avatar", StringComparison.Ordinal)).TextContent.Trim());
+        await ClickButtonAsync(cut, "Edit avatar…");
+        cut.WaitForElement(EditorDialog);
+
+        Assert.True(HasEditorButton(cut, "Save"));
+    }
+
+    /// <summary>In Edit the button is there and opens the editor with the deferred "Apply" button.</summary>
+    [Fact]
+    public async Task EditMode_EditAvatarButton_OpensTheEditorWithApply()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await SeedPersonaAsync(factory, "coo", "x");
+        await using MudBunitContext ctx = NewContext(factory);
+        IRenderedComponent<ContainerFragment> cut = await OpenViewCardAsync(ctx, factory, "coo");
+        await ClickButtonAsync(cut, "Edit");
+
+        await ClickButtonAsync(cut, "Edit avatar…");
+        cut.WaitForElement(EditorDialog);
+
+        Assert.True(HasEditorButton(cut, "Apply"));
+    }
+
+    /// <summary>In Create the button is there too, and opens the editor.</summary>
+    [Fact]
+    public async Task CreateMode_EditAvatarButton_OpensTheEditor()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, factory);
+        await ClickButtonAsync(cut, "New agent");
+
+        await ClickButtonAsync(cut, "Edit avatar…");
+        cut.WaitForElement(EditorDialog);
+
+        Assert.True(HasEditorButton(cut, "Apply"));
     }
 }

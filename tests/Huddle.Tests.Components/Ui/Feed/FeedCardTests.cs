@@ -1,9 +1,11 @@
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Feed;
 using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Tasks;
 using AngleSharp.Dom;
 using Bunit;
@@ -115,7 +117,20 @@ public sealed class FeedCardTests
         IRenderedComponent<FeedCard> card = Render(ctx, NeedsYouItem());
 
         Assert.Equal("Tasks • GR Growth", Words(card.Find(".feed-card-meta").TextContent));
-        Assert.Equal("GR", card.Find(".feed-team-monogram").TextContent);
+        Assert.Equal("GR", card.Find(".feed-team-chip .mud-avatar.avatar-square").TextContent.Trim());
+    }
+
+    /// <summary>The Team chip draws the Team's own avatar from the catalog: its label, on a rounded square, in place of the monogram.</summary>
+    [Fact]
+    public async Task Card_TeamChip_ShowsTheTeamsOwnAvatar()
+    {
+        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        host.Teams.Teams = [new TeamSummary("Growth", [], [], HasFolder: true) { Avatar = new Avatar("UP", null, null) }];
+        await using MudBunitContext ctx = host.NewContext();
+
+        IRenderedComponent<FeedCard> card = Render(ctx, NeedsYouItem());
+
+        Assert.Equal("UP", card.Find(".feed-team-chip .mud-avatar.avatar-square").TextContent.Trim());
     }
 
     /// <summary>A Room item carries the Room chip in its meta line, and a document item reads "Library" with no Team chip.</summary>
@@ -538,7 +553,7 @@ public sealed class FeedCardTests
 
         IRenderedComponent<FeedCard> card = Render(ctx, item);
 
-        Assert.Empty(card.FindAll(".mud-avatar"));
+        Assert.Empty(card.FindAll(".mud-avatar:not(.avatar-square)")); // the Team chip's rounded square is the only avatar left
         Assert.Empty(card.FindAll(".feed-card-avatar-button"));
         Assert.NotNull(card.Find(".feed-card-mark .mud-icon-root"));
         Assert.Equal("Needs Human (Helper)", card.Find(".feed-card-actor").TextContent.Trim());

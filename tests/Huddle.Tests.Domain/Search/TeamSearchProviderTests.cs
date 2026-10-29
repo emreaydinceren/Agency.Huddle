@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Search;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Agents;
@@ -145,4 +146,22 @@ public sealed class TeamSearchProviderTests
     /// <returns>The query.</returns>
     private static SearchQuery Query(string text, SearchScope scope = SearchScope.Active) =>
         new(text, SearchFilter.Teams, null, scope, 50);
+
+    /// <summary>A hit carries its Team's avatar from the catalog, so the card can draw it.</summary>
+    [Fact]
+    public async Task Hit_CarriesTheTeamsAvatar()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        Avatar avatar = new("PL", null, "#1E90FF");
+        FakeTeamCatalog catalog = new()
+        {
+            Teams = [Team("Platform") with { Avatar = avatar }, Team("Marketing")],
+        };
+        TeamSearchProvider provider = new(catalog, RoleFixtures.Types(dir));
+
+        SearchResult result = await provider.SearchAsync(Query(""), ct);
+
+        Assert.Equal([avatar, Avatar.None], result.Hits.Cast<TeamHit>().Select(static hit => hit.Avatar));
+    }
 }

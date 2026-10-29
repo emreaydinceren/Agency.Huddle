@@ -1,3 +1,5 @@
+using Agency.Huddle.App.Avatars;
+
 namespace Agency.Huddle.App.Teams;
 
 /// <summary>One Team as the pages see it. Names compare ignoring case; Name is the display spelling.</summary>
@@ -21,4 +23,7 @@ public sealed record TeamSummary(
 
     /// <summary>The one-line statement of what the Team owns, from <c>_team.md</c>, or <see langword="null"/>.</summary>
     public string? Owns { get; init; }
+
+    /// <summary>The Team's avatar from <c>_team.md</c>, or <see cref="Avatar.None"/> when it has none.</summary>
+    public Avatar Avatar { get; init; } = Avatar.None;
 }

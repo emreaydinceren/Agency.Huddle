@@ -4,6 +4,8 @@ using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Tools;
 using Agency.Huddle.Tests.Helpers;
@@ -41,6 +43,9 @@ internal sealed class FeedCardHost : IDisposable
         this.HelperBudget = new HelperBudget(new HelperUsageStore(helperOptions), this.Clock);
         this.HelperSettings = new HelperSettingsResolver(new HelperSettingsStore(helperOptions), helperOptions, NullLogger<HelperSettingsResolver>.Instance);
     }
+
+    /// <summary>The Team catalog the card's Team chip reads its avatar from; empty until a test sets <see cref="FakeTeamCatalog.Teams"/>.</summary>
+    public FakeTeamCatalog Teams { get; } = new();
 
     /// <summary>The one registered Helper, a scripted stand-in with the id <c>NeedsHuman</c>.</summary>
     public ScriptedHelper Helper { get; } = new("NeedsHuman");
@@ -102,6 +107,7 @@ internal sealed class FeedCardHost : IDisposable
         ctx.Services.AddSingleton(this.HelperStatuses);
         ctx.Services.AddSingleton(this.HelperBudget);
         ctx.Services.AddSingleton(this.HelperSettings);
+        ctx.Services.AddSingleton<ITeamCatalog>(this.Teams);
         return ctx;
     }
 

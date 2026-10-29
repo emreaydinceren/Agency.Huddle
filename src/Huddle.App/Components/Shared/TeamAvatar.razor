@@ -1,0 +1,29 @@
+@*
+    A Team's face: the shared AgentAvatar drawn as a rounded square, so a Team never reads as a person (an Agent or the
+    Human is a circle). It is a thin wrapper and nothing else: the precedence (image, then label, then monogram of the
+    Team's name), the sizes and the colours all stay in AgentAvatar, so there is still one renderer. Call sites say
+    "team" and never pass a shape by hand. A Team's avatar is read from ITeamCatalog (Find(name)?.Avatar), not from
+    AvatarStore: its fields live in _team.md (ADR-0069).
+*@
+@using Agency.Huddle.App.Avatars
+
+<AgentAvatar Name="@this.Team" Avatar="this.Avatar" Size="this.Size" Class="@this.Class" Shape="AvatarShape.RoundedSquare" />
+
+@code {
+    /// <summary>The Team's name, the source of the monogram fallback.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Team { get; set; } = string.Empty;
+
+    /// <summary>The Team's avatar, or <see langword="null"/> for none, which draws the monogram of the name.</summary>
+    [Parameter]
+    public Avatar? Avatar { get; set; }
+
+    /// <summary>The avatar's size; <see cref="MudBlazor.Size.Medium"/> by default, as for <see cref="AgentAvatar"/>.</summary>
+    [Parameter]
+    public Size Size { get; set; } = Size.Medium;
+
+    /// <summary>Extra CSS classes for the root avatar.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+}

@@ -812,7 +812,7 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 
 **Pass if — all of these**
 
-- The avatar shows a pencil when pointed at and a visible focus ring on Tab, and its accessible name is `Change avatar`.
+- The avatar shows a pencil when pointed at and a visible focus ring on Tab, and its accessible name is `Change avatar`. A text button `Edit avatar…` under it opens the same window.
 - The window is titled `Avatar` and offers `Initials of the name`, `A short label` and `An image`. The **Background** palette of swatches (no text field, no dropdown, and no **Use the theme colour** button) shows under Initials and under Label, and not under **An image**. The preview follows what you type and the swatch you press.
 - In View the last button reads **Save**, and `avatars.json` holds `AB` for `Library Test` as soon as you press it, with no Save on the card.
 - In Edit the last button reads **Apply**, with `Written when you save the agent.` under the preview. After Apply the card's avatar shows `CD` while `avatars.json` still holds `AB`. After Cancel on the card and a reopen the avatar is `AB` again.

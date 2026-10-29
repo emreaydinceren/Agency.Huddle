@@ -269,4 +269,18 @@ public sealed class SearchCardTests : IDisposable
             _ => new RoomHit("room-1", "findings", 1, "msg-1", "Kai", "login", time, false, MatchTier.ContentMatch),
         };
     }
+
+    /// <summary>A Team card draws the Team's own avatar, from the hit, as a rounded square in the icon slot: its label here, the monogram when there is none.</summary>
+    [Fact]
+    public async Task TeamCard_ShowsTheTeamsAvatarAsARoundedSquare()
+    {
+        await using MudBunitContext ctx = new();
+        TeamHit labelled = new("Marketing", null, 1, MatchTier.ExactName) { Avatar = new Avatar("MK", null, null) };
+
+        IRenderedComponent<TeamSearchCard> cut = ctx.Render<TeamSearchCard>(p => p.Add(c => c.Hit, labelled));
+        IRenderedComponent<TeamSearchCard> bare = ctx.Render<TeamSearchCard>(p => p.Add(c => c.Hit, new TeamHit("Platform", null, 1, MatchTier.ExactName)));
+
+        Assert.Equal("MK", cut.Find(".mud-avatar.avatar-square").TextContent.Trim());
+        Assert.Equal("PL", bare.Find(".mud-avatar.avatar-square").TextContent.Trim());
+    }
 }

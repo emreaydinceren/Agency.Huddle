@@ -67,6 +67,13 @@
     public string? Class { get; set; }
 
     /// <summary>
+    /// The outline: <see cref="AvatarShape.Circle"/> (the default) for an Agent or the Human, <see cref="AvatarShape.RoundedSquare"/>
+    /// for a Team, which adds <c>avatar-square</c>. Callers draw a Team through <c>TeamAvatar</c> and never set this by hand.
+    /// </summary>
+    [Parameter]
+    public AvatarShape Shape { get; set; } = AvatarShape.Circle;
+
+    /// <summary>
     /// <see cref="Avatar"/>, or <see cref="Avatars.Avatar.None"/> when it is <see langword="null"/> -
     /// the one place that substitution happens, so every other member below can assume a real value.
     /// Fully qualified rather than a bare <c>Avatar.None</c>: this component's own <see cref="Avatar"/>
@@ -100,9 +107,10 @@
     }
 
     /// <summary>
-    /// <c>avatar-label-len-N</c> when a label of 4, 5 or 6 text elements is drawn, which <c>app.css</c> sizes down so it
-    /// fits the circle; <see langword="null"/> for a picture, for no label, for 1-3 elements (today's size) and for the
-    /// 24px avatar, which never draws more than three.
+    /// <c>avatar-label-len-N</c> when a label of 1, 4, 5 or 6 text elements is drawn: <c>app.css</c> sizes a long label
+    /// down so it fits the circle and a single element (an emoji, one letter) up so it fills it; <see langword="null"/>
+    /// for a picture, for no label and for 2-3 elements (today's size). The 24px avatar draws at most three elements, so
+    /// it only ever gets <c>len-1</c>.
     /// </summary>
     private string? LabelLengthClass
     {
@@ -114,7 +122,7 @@
             }
 
             int length = new StringInfo(label).LengthInTextElements;
-            return length is >= 4 and <= Agency.Huddle.App.Avatars.Avatar.MaxLabelTextElements
+            return length is 1 or (>= 4 and <= Agency.Huddle.App.Avatars.Avatar.MaxLabelTextElements)
                 ? string.Concat("avatar-label-len-", length.ToString(CultureInfo.InvariantCulture))
                 : null;
         }
@@ -192,6 +200,11 @@
         get
         {
             string kind = this.ImageSource is not null ? "avatar-image" : "avatar-monogram";
+            if (this.Shape == AvatarShape.RoundedSquare)
+            {
+                kind = string.Concat(kind, " avatar-square");
+            }
+
             if (this.LabelLengthClass is { } lengthClass)
             {
                 kind = string.Concat(kind, " ", lengthClass);

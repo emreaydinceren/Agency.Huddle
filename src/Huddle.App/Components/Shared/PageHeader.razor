@@ -6,6 +6,7 @@
 
       Title / Subtitle  the h1 and the intro under it (body1, Quiet ink, 75ch)
       TitleEditor       replaces the h1 while non-null: the Room's inline rename
+      TitleLeading      a small control before the title, such as the Team page's avatar
       TitleTrailing     small controls on the title's line, such as rename and copy link
       Aside             content at the right before the actions, such as the Room's members and Invite
       CreateText ...    the create action: a Small button at the right, filled when it is the page's one
@@ -17,6 +18,7 @@
 <div class="@this.RootClass">
     <div class="page-header-row">
         <div class="page-header-title">
+            @this.TitleLeading
             @if (this.TitleEditor is not null)
             {
                 @this.TitleEditor
@@ -61,6 +63,10 @@
     /// <summary>Content drawn instead of the h1 while it is set, for an inline rename. The caller keeps the title's size and weight (<c>title-inline-edit</c>); the document title is unchanged.</summary>
     [Parameter]
     public RenderFragment? TitleEditor { get; set; }
+
+    /// <summary>A small control on the title's own line, before the h1 or the <see cref="TitleEditor"/>, such as the Team page's avatar.</summary>
+    [Parameter]
+    public RenderFragment? TitleLeading { get; set; }
 
     /// <summary>Small controls on the title's own line, after the h1 or the <see cref="TitleEditor"/>.</summary>
     [Parameter]

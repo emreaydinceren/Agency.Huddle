@@ -252,17 +252,10 @@
     gap: 4px;
 }
 
-.feed-team-monogram {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 14px;
-    height: 14px;
-    border-radius: var(--mud-default-borderradius);
-    font-size: var(--mud-typography-caption-size);
-    font-weight: 600;
-    color: var(--mud-palette-primary-text);
-    background-color: var(--mud-palette-primary);
+/* The Team's rounded square, drawn at the old monogram's slot rather than at the 24px Small avatar, so the meta line keeps its height. */
+.feed-team-chip ::deep .mud-avatar.feed-team-avatar {
+    width: 18px;
+    height: 18px;
 }
 
 .feed-card-pills {

@@ -1,12 +1,17 @@
 using AngleSharp.Dom;
 using Bunit;
+using Bunit.Rendering;
+using Microsoft.AspNetCore.Components.Forms;
 using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Components.Teams;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Teams;
@@ -546,4 +551,169 @@ public sealed class TeamPageTests
     /// <summary>The parameters the Tasks stub last received.</summary>
     private static CapturedParameterView<TeamTasksTab> TasksParameters(IRenderedComponent<TeamPage> cut) =>
         cut.FindComponent<Stub<TeamTasksTab>>().Instance.Parameters;
+
+    /// <summary>
+    /// The header avatar opens the Team's editor: rounded-square previews, no library card even though a library is configured, and a
+    /// "Save" button. Saving a label writes it to the Team's <c>_team.md</c> through <c>UpdateTeamFile</c>, and cancelling writes nothing.
+    /// </summary>
+    [Fact]
+    public async Task Avatar_Click_OpensTheLibraryFreeSquareEditor_AndSaveWritesTheTeamFile()
+    {
+        using TempDataDir dir = new();
+        using TempDataDir library = new();
+        FakeTeamFolders folders = new() { UpdateResult = true, ReadResult = NewTeamFile(Avatar.None) };
+        await using MudBunitContext ctx = NewAvatarContext(dir, folders);
+        _ = AvatarLibraryPickSupport.Register(ctx.Services, library.Path, null);
+        IRenderedComponent<ContainerFragment> cut = RenderPageWithDialogs(ctx);
+
+        await AgentProfileCardTestSupport.OpenAvatarEditorAsync(cut);
+
+        Assert.Equal(["Initials of the name", "A short label", "Upload an image"], cut.FindAll(AgentProfileCardTestSupport.EditorDialog + " .avatar-choice-title").Select(title => title.TextContent.Trim()));
+        int previews = cut.FindAll(AgentProfileCardTestSupport.EditorDialog + " .mud-avatar").Count;
+        Assert.True(previews >= 4);
+        Assert.Equal(previews, cut.FindAll(AgentProfileCardTestSupport.EditorDialog + " .mud-avatar.avatar-square").Count);
+
+        await AgentProfileCardTestSupport.ClickEditorButtonAsync(cut, "Cancel");
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(AgentProfileCardTestSupport.EditorDialog)));
+        Assert.Equal(Avatar.None, folders.ReadResult?.Avatar);
+        Assert.DoesNotContain("UpdateTeamFile:Business", folders.Calls);
+
+        await AgentProfileCardTestSupport.OpenAvatarEditorAsync(cut);
+        await AgentProfileCardTestSupport.SelectAvatarChoiceAsync(cut, "A short label");
+        await AgentProfileCardTestSupport.SetAvatarLabelAsync(cut, "QA");
+        await AgentProfileCardTestSupport.ClickEditorButtonAsync(cut, "Save");
+
+        cut.WaitForAssertion(() => Assert.Equal(new Avatar("QA", null, null), folders.ReadResult?.Avatar));
+        Assert.Contains("UpdateTeamFile:Business", folders.Calls);
+    }
+
+    /// <summary>The header avatar shows the Team's own avatar from the catalog, as a rounded square.</summary>
+    [Fact]
+    public async Task Avatar_Header_ShowsTheCatalogAvatarAsARoundedSquare()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business") with { TeamType = TeamFileType, Avatar = new Avatar("BZ", null, null) }] };
+        await using MudBunitContext ctx = NewContext(catalog);
+
+        IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
+
+        IElement avatar = cut.Find("button.team-page-avatar .mud-avatar");
+        Assert.Equal("BZ", avatar.TextContent.Trim());
+        Assert.Contains("avatar-square", avatar.ClassList);
+    }
+
+    /// <summary>
+    /// A Team with no <c>_team.md</c> (no team type) has nowhere to keep an avatar, so the header draws its rounded square
+    /// without the button that would open an editor whose Save could only fail.
+    /// </summary>
+    [Fact]
+    public async Task Avatar_TeamWithoutTeamFile_ShowsTheAvatarWithoutTheEditButton()
+    {
+        await using MudBunitContext ctx = NewContext(Catalog());
+
+        IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
+
+        Assert.Empty(cut.FindAll("button.team-page-avatar"));
+        Assert.Contains("avatar-square", cut.Find(".page-header .mud-avatar").ClassList);
+    }
+
+    /// <summary>Saving an uploaded image writes it to the avatar folder, names it in <c>_team.md</c> and deletes the file it replaces.</summary>
+    [Fact]
+    public async Task Avatar_SaveUploadedImage_ReplacesAndDeletesThePreviousFile()
+    {
+        using TempDataDir dir = new();
+        AvatarStore store = new(dir.Options(), NullLogger<AvatarStore>.Instance);
+        string previous = store.WriteImage(AvatarLibraryPickSupport.MinimalPng, ".png");
+        FakeTeamFolders folders = new() { UpdateResult = true, ReadResult = NewTeamFile(new Avatar(null, previous, null)) };
+        await using MudBunitContext ctx = NewAvatarContext(dir, folders, store);
+        IRenderedComponent<ContainerFragment> cut = RenderPageWithDialogs(ctx);
+
+        await AgentProfileCardTestSupport.OpenAvatarEditorAsync(cut);
+        cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromBinary(AvatarLibraryPickSupport.MinimalPng, "team.png", contentType: "image/png"));
+        await AgentProfileCardTestSupport.ClickEditorButtonAsync(cut, "Save");
+
+        cut.WaitForAssertion(() => Assert.NotEqual(previous, folders.ReadResult?.Avatar.Image));
+        string? written = folders.ReadResult?.Avatar.Image;
+        Assert.NotNull(written);
+        Assert.True(File.Exists(Path.Combine(store.ImageDirectory, written)));
+        Assert.False(File.Exists(Path.Combine(store.ImageDirectory, previous)));
+    }
+
+    /// <summary>A Team with no readable team file cannot keep an avatar: the page tells the Human and removes the image it had just written.</summary>
+    [Fact]
+    public async Task Avatar_Save_WhenTheTeamFileCannotBeUpdated_RemovesTheNewImageAndWarns()
+    {
+        using TempDataDir dir = new();
+        AvatarStore store = new(dir.Options(), NullLogger<AvatarStore>.Instance);
+        FakeTeamFolders folders = new() { UpdateResult = false, ReadResult = null };
+        await using MudBunitContext ctx = NewAvatarContext(dir, folders, store);
+        IRenderedComponent<ContainerFragment> cut = RenderPageWithDialogs(ctx);
+
+        await AgentProfileCardTestSupport.OpenAvatarEditorAsync(cut);
+        cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromBinary(AvatarLibraryPickSupport.MinimalPng, "team.png", contentType: "image/png"));
+        await AgentProfileCardTestSupport.ClickEditorButtonAsync(cut, "Save");
+
+        cut.WaitForAssertion(() => Assert.Contains("UpdateTeamFile:Business", folders.Calls));
+        Assert.True(!Directory.Exists(store.ImageDirectory) || Directory.GetFiles(store.ImageDirectory).Length == 0);
+        ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
+        Assert.Equal("Business has no team file, so its avatar could not be saved.", Assert.Single(snackbar.ShownSnackbars).Message);
+    }
+
+    /// <summary>A bare team file for the avatar tests: no process, so the page adds no Process tab.</summary>
+    private static TeamFile NewTeamFile(Avatar avatar) =>
+        new(TeamFileType, null, null, null, string.Empty, string.Empty) { Avatar = avatar };
+
+    /// <summary>The team type of a Team that has a <c>_team.md</c>; the page offers the avatar editor only to such a Team.</summary>
+    private static readonly VersionedRef TeamFileType = new("development", "1");
+
+    /// <summary>A context with the Business Team (which has a team file), a real avatar store over <paramref name="dir"/>, and <paramref name="folders"/>.</summary>
+    private static MudBunitContext NewAvatarContext(TempDataDir dir, FakeTeamFolders folders, AvatarStore? store = null)
+    {
+        MudBunitContext ctx = NewContext(new FakeTeamCatalog { Teams = [Team("Business") with { TeamType = TeamFileType }] });
+        ctx.Services.AddSingleton(store ?? new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddSingleton<ITeamFolders>(folders);
+        AvatarLibraryPickSupport.RegisterUnconfigured(ctx.Services);
+        return ctx;
+    }
+
+    /// <summary>Renders the Business Team page beside the popover and dialog providers, so the avatar editor dialog paints.</summary>
+    private static IRenderedComponent<ContainerFragment> RenderPageWithDialogs(MudBunitContext ctx) =>
+        ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<TeamPage>(0);
+            builder.AddAttribute(1, nameof(TeamPage.Team), "Business");
+            builder.CloseComponent();
+        });
+
+    /// <summary>A Team with a team file has a spelled-out "Edit avatar…" button in the header before Duplicate, and pressing it opens the editor.</summary>
+    [Fact]
+    public async Task EditAvatarButton_SitsBeforeDuplicate_AndOpensTheEditor()
+    {
+        using TempDataDir dir = new();
+        FakeTeamFolders folders = new() { UpdateResult = true, ReadResult = NewTeamFile(Avatar.None) };
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business") with { TeamType = new VersionedRef("development", "1") }] };
+        await using MudBunitContext ctx = NewContext(catalog);
+        ctx.Services.AddSingleton(new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddSingleton<ITeamFolders>(folders);
+        AvatarLibraryPickSupport.RegisterUnconfigured(ctx.Services);
+        IRenderedComponent<ContainerFragment> cut = RenderPageWithDialogs(ctx);
+
+        string[] actions = [.. cut.FindAll(".page-header-actions button").Select(static button => button.TextContent.Trim())];
+        Assert.Equal(["Edit avatar…", "Duplicate"], actions);
+        await AgentProfileCardTestSupport.ClickAsync(cut, () => cut.Find(".page-header-actions .mud-button-text"));
+
+        cut.WaitForElement(AgentProfileCardTestSupport.EditorDialog);
+        Assert.True(AgentProfileCardTestSupport.HasEditorButton(cut, "Save"));
+    }
+
+    /// <summary>A Team with no team file (no team type) has nowhere to keep an avatar, so it gets neither the avatar button nor the "Edit avatar…" button.</summary>
+    [Fact]
+    public async Task EditAvatarButton_TeamWithoutATeamFile_IsAbsent()
+    {
+        await using MudBunitContext ctx = NewContext(Catalog());
+
+        IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
+
+        Assert.Equal(["Duplicate"], cut.FindAll(".page-header-actions button").Select(static button => button.TextContent.Trim()));
+        Assert.Empty(cut.FindAll("button.team-page-avatar"));
+    }
 }

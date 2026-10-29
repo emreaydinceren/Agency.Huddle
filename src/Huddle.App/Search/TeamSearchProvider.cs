@@ -36,7 +36,7 @@ internal sealed class TeamSearchProvider(ITeamCatalog catalog, TeamTypeCatalog t
                 : SearchMatch.FirstTier(query.Text, team.Name, typeLabel);
             if (tier is { } matched)
             {
-                hits.Add(new TeamHit(team.Name, typeLabel, team.Members.Count, matched));
+                hits.Add(new TeamHit(team.Name, typeLabel, team.Members.Count, matched) { Avatar = team.Avatar });
             }
         }
 

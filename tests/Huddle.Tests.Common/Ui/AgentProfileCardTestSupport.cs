@@ -107,6 +107,21 @@ internal static class AgentProfileCardTestSupport
             () => FindInputControl(cut, label).QuerySelector("input") ?? throw new InvalidOperationException($"No input under '{label}'."),
             input => input.Input(value));
 
+    /// <summary>The CSS selector of the avatar editor's label text input: the field has no visible label, so it is found by its <c>aria-label</c>.</summary>
+    internal const string AvatarLabelInput = ".avatar-label-field input[aria-label='Avatar label']";
+
+    /// <summary>
+    /// Types <paramref name="value"/> into the avatar editor's label field by raising its <c>oninput</c>, through
+    /// <see cref="DispatchWhenPresentAsync"/>. The field is found by <see cref="AvatarLabelInput"/>, not by a visible label.
+    /// </summary>
+    /// <param name="cut">The rendered page holding the editor.</param>
+    /// <param name="value">The text to type.</param>
+    internal static Task SetAvatarLabelAsync(IRenderedComponent<ContainerFragment> cut, string value) =>
+        DispatchWhenPresentAsync(
+            cut,
+            () => cut.Find(AvatarLabelInput),
+            input => input.Input(value));
+
     /// <summary>Registers this factory's real services (<see cref="PersonaStore"/> and friends) into a fresh <see cref="MudBunitContext"/>, the same pattern <c>AgentsPageTests</c> uses.</summary>
     internal static MudBunitContext NewContext(TeamWebApplicationFactory factory)
     {
