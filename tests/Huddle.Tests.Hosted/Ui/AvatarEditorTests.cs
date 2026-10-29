@@ -267,9 +267,9 @@ public sealed class AvatarEditorTests
         Assert.True(IsSelected(cut, UploadCard));
     }
 
-    /// <summary>The library card's radio is disabled until it holds a picture, and pressing the card opens the library instead of choosing it.</summary>
+    /// <summary>The library card's radio is disabled until it holds a picture, a press on the card itself does nothing, and only its "Choose from library" button opens the library.</summary>
     [Fact]
-    public async Task LibraryCard_WithNoPicture_IsNotSelectable_AndOpensTheLibrary()
+    public async Task LibraryCard_WithNoPicture_IgnoresACardPress_AndOnlyTheButtonOpensTheLibrary()
     {
         await using TeamWebApplicationFactory factory = new();
         using TempDataDir library = CreateLibraryDir();
@@ -281,8 +281,12 @@ public sealed class AvatarEditorTests
 
         await cut.InvokeAsync(() => { _ = Card(cut, LibraryCard).ClickAsync(); });
 
-        cut.WaitForAssertion(() => Assert.True(cut.FindAll(Thumb).Count > 3), TimeSpan.FromSeconds(5));
+        Assert.Empty(cut.FindAll(Thumb));
         Assert.True(IsSelected(cut, UploadCard));
+
+        await cut.InvokeAsync(() => { _ = cut.FindAll("button").First(button => string.Equals(button.TextContent.Trim(), ButtonText, StringComparison.Ordinal)).ClickAsync(); });
+
+        cut.WaitForAssertion(() => Assert.True(cut.FindAll(Thumb).Count > 3), TimeSpan.FromSeconds(5));
     }
 
     /// <summary>After a library pick the library card is chosen with its picture and "Remove image"; removing returns the choice to Initials, and the Background is hidden while it is chosen.</summary>

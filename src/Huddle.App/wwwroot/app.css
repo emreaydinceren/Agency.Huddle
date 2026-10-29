@@ -3401,11 +3401,13 @@ body.sidebar-resizing {
     cursor: pointer;
 }
 
+/* The card's controls sit at its right edge; the label field fills the row, so only the image cards' buttons move. */
 .avatar-choice-body {
     display: flex;
     flex: 1 1 12rem;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: flex-end;
     gap: 8px;
     min-width: 0;
 }
@@ -3426,6 +3428,7 @@ body.sidebar-resizing {
 .avatar-choice-body .mud-typography-body2 {
     flex-basis: 100%;
     order: 1;
+    text-align: end;
 }
 
 /* Under an image card the Background keeps its space but is not shown, so the dialog keeps its height (B8i). */

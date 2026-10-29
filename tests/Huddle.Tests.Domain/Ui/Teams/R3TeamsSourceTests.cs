@@ -45,6 +45,7 @@ public sealed class R3TeamsSourceTests
         Assert.Contains("box-shadow: inset 0 0 0 1px var(--mud-palette-primary);", selected, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.DoesNotContain("min-height", card, StringComparison.Ordinal);
         Assert.Contains("visibility: hidden;", CssText.RuleBodyLoose(css, ".avatar-editor-background-hidden"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("justify-content: flex-end;", CssText.RuleBodyLoose(css, ".avatar-choice-body"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 
     /// <summary>A swatch is a 32px circle drawn with the avatar recipe: the colour at 20% over Surface, 35% in a Dark Theme (B8h).</summary>

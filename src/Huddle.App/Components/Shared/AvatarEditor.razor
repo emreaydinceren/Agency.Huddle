@@ -4,8 +4,8 @@
       Initials of the name - nothing more.
       A short label        - the label field with its counter, always rendered; typing in it chooses this card.
       Image from the library (only when a library is configured) - a "Choose from library" button. It is not selectable
-                  until it holds a picture (its radio input is disabled, so the arrow keys skip it); pressing the card or
-                  the button opens the library, and cancelling leaves the earlier choice. Once it holds a picture it
+                  until it holds a picture (its radio input is disabled, so the arrow keys skip it, and a press on the card
+                  does nothing); only the button opens the library, and cancelling leaves the earlier choice. Once it holds a picture it
                   shows "Remove image", which returns the choice to Initials since this card cannot be chosen empty.
       Upload an image      - the "Upload…" button. This card can be chosen with no image (the avatar falls back to
                   initials), and "Remove image" keeps it chosen. An avatar with nothing stored opens here, and a stored
@@ -360,20 +360,14 @@ else
 
     /// <summary>
     /// Chooses a card. Idempotent: a label click, the input's click and the card's own click all arrive for one press, and
-    /// only the first changes anything. The library card holds no picture until one is picked, so choosing it then opens
-    /// the library instead and leaves the earlier choice.
+    /// only the first changes anything. The library card holds no picture until one is picked, so a press on it then does
+    /// nothing: only its "Choose from library" button opens the library.
     /// </summary>
     /// <param name="value">The card pressed.</param>
     private async Task ChooseAsync(AvatarChoice value)
     {
-        if (value == this.choice)
+        if (value == this.choice || (value == AvatarChoice.Library && !this.LibraryHoldsImage))
         {
-            return;
-        }
-
-        if (value == AvatarChoice.Library && !this.LibraryHoldsImage)
-        {
-            await this.ChooseFromLibraryAsync();
             return;
         }
 
