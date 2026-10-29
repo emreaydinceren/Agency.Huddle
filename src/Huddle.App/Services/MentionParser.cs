@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Data;
+using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Services;
 
@@ -14,6 +15,12 @@ namespace Agency.Huddle.App.Services;
 /// </remarks>
 public static class MentionParser
 {
+    /// <summary>
+    /// The handle that Mentions every Agent in the Room at once, so each takes a Turn. It never Mentions the
+    /// Human: it is a request for the Agents' Turns, and a Mention of the Human raises a Needs You card.
+    /// </summary>
+    internal const string AllHandle = "all";
+
     /// <summary>
     /// Parses <paramref name="text"/> for Mentions of <paramref name="members"/> by Name only. Delegates
     /// to <see cref="Parse(string, IReadOnlyList{User}, IReadOnlyList{MentionAlias})"/> with an empty
@@ -64,9 +71,12 @@ public static class MentionParser
                     continue;
                 }
 
-                if (seenIds.Add(candidate.Member.Id))
+                foreach (var member in candidate.Members)
                 {
-                    result.Add(candidate.Member);
+                    if (seenIds.Add(member.Id))
+                    {
+                        result.Add(member);
+                    }
                 }
 
                 // Resume past the handle just consumed (the loop's i++ steps onto `end`), so the
@@ -106,13 +116,29 @@ public static class MentionParser
         // un-sorted sequence wins that tie. Swap the two Concat operands below and an equal-length
         // Alias would start silently beating a Name, with no compiler or analyser signal -
         // Parse_NameBeatsAnEqualLengthAlias in MentionParserTests pins this ordering so a future edit
-        // cannot make that swap unnoticed.
+        // cannot make that swap unnoticed. "@all" comes last for the same reason: a Member actually
+        // called "All" is named, not swept up with everyone else.
         return members
             .Where(member => member.Name.Length > 0)
-            .Select(member => new Candidate(member.Name, member))
+            .Select(member => new Candidate(member.Name, [member]))
             .Concat(ResolveAliasCandidates(members, aliases))
+            .Concat(ResolveAllCandidate(members))
             .OrderByDescending(candidate => candidate.Handle.Length)
             .ToList();
+    }
+
+    /// <summary>
+    /// Yields the <see cref="AllHandle"/> candidate, resolving to every Agent in <paramref name="members"/>, or
+    /// nothing when the Room holds no Agent.
+    /// </summary>
+    /// <param name="members">The Room's Members.</param>
+    private static IEnumerable<Candidate> ResolveAllCandidate(IReadOnlyList<User> members)
+    {
+        List<User> agents = [.. members.Where(static member => member.Kind == UserKind.Agent)];
+        if (agents.Count > 0)
+        {
+            yield return new Candidate(AllHandle, agents);
+        }
     }
 
     /// <summary>
@@ -183,11 +209,11 @@ public static class MentionParser
             var owner = members.FirstOrDefault(member => string.Equals(member.Name, alias.Name, StringComparison.OrdinalIgnoreCase));
             if (owner is not null)
             {
-                yield return new Candidate(alias.Alias, owner);
+                yield return new Candidate(alias.Alias, [owner]);
             }
         }
     }
 
-    /// <summary>One handle - a Member's Name or a Persona's Alias - paired with the Member it resolves to, for the candidate scan.</summary>
-    private sealed record Candidate(string Handle, User Member);
+    /// <summary>One handle - a Member's Name, a Persona's Alias or <see cref="AllHandle"/> - paired with the Members it resolves to, for the candidate scan.</summary>
+    private sealed record Candidate(string Handle, IReadOnlyList<User> Members);
 }

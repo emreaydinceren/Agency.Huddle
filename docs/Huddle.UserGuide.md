@@ -1190,7 +1190,7 @@ Room gets a name derived from its members. Its transcript file is created in
 | Room | Behaviour |
 | --- | --- |
 | You and one Agent | The Agent answers every message. |
-| You and two or more Agents | An Agent answers only when you mention it, as in `@nova`. |
+| You and two or more Agents | An Agent answers only when you mention it, as in `@nova`. Write `@all` to have every Agent in the Room answer. |
 
 Type `/invite @alias` in the message box, or use the **Invite agent** button in the Room's header, to add an
 Agent to the current Room.
