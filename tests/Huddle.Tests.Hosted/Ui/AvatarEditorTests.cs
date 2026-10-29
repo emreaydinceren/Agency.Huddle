@@ -11,8 +11,8 @@ using static Agency.Huddle.Tests.Ui.AvatarLibraryPickSupport;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Renders <see cref="AvatarEditor"/> on its own, in both save modes. The component is the radio group (initials, a short
-/// label, an image), the label field with its counter, the upload and library pick, and the background swatches; its
+/// Renders <see cref="AvatarEditor"/> on its own, in both save modes. The component is a radiogroup of choice cards (initials, a short
+/// label, the library, an upload) with the label field and its counter, and the background swatches; its
 /// <see cref="AvatarEditor.SaveMode"/> decides whether each change is written to the <see cref="AvatarStore"/> under
 /// <see cref="AvatarEditor.Name"/> (Immediate, what Settings uses) or only reported through
 /// <see cref="AvatarEditor.ValueChanged"/> and <see cref="AvatarEditor.PendingImageChanged"/> (Buffered, what the
@@ -20,8 +20,8 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 public sealed class AvatarEditorTests
 {
-    /// <summary>The CSS selector of one swatch in the Background palette.</summary>
-    private const string Swatch = ".avatar-editor-background .avatar-swatch-input";
+    /// <summary>The CSS selector of one swatch in the Background palette while it is offered; under an image card the palette is rendered but hidden, and matches nothing here.</summary>
+    private const string Swatch = ".avatar-editor-background:not(.avatar-editor-background-hidden) .avatar-swatch-input";
 
     /// <summary>What the editor reported, and the parameters a parent would pass on its next render.</summary>
     private sealed class Probe(AvatarSaveMode mode)
@@ -85,13 +85,30 @@ public sealed class AvatarEditorTests
     private static Task RefreshParentAsync(IRenderedComponent<ContainerFragment> cut) =>
         cut.InvokeAsync(cut.FindComponent<Host>().Instance.Refresh);
 
-    /// <summary>Clicks the radio whose own text is <paramref name="choiceLabel"/>, on its inner input as the Agent card tests do.</summary>
+    /// <summary>The choice cards, in page order.</summary>
+    private const string Cards = ".avatar-choice-card";
+
+    /// <summary>The visible name of the upload card.</summary>
+    private const string UploadCard = "Upload an image";
+
+    /// <summary>The visible name of the library card.</summary>
+    private const string LibraryCard = "Image from the library";
+
+    /// <summary>The choice card whose text contains <paramref name="choiceLabel"/>.</summary>
+    private static IElement Card(IRenderedComponent<ContainerFragment> cut, string choiceLabel) =>
+        cut.FindAll(Cards).First(element => element.TextContent.Contains(choiceLabel, StringComparison.Ordinal));
+
+    /// <summary>The radio input inside the card named <paramref name="choiceLabel"/>.</summary>
+    private static IElement Radio(IRenderedComponent<ContainerFragment> cut, string choiceLabel) =>
+        Card(cut, choiceLabel).QuerySelector("input[type=radio]") ?? throw new InvalidOperationException($"No radio input under '{choiceLabel}'.");
+
+    /// <summary>Whether the card named <paramref name="choiceLabel"/> is the chosen one (carries the selected class).</summary>
+    private static bool IsSelected(IRenderedComponent<ContainerFragment> cut, string choiceLabel) =>
+        Card(cut, choiceLabel).ClassList.Contains("avatar-choice-card-selected");
+
+    /// <summary>Clicks the radio input of the card named <paramref name="choiceLabel"/>; the click bubbles to the card as in a browser.</summary>
     private static Task SelectChoiceAsync(IRenderedComponent<ContainerFragment> cut, string choiceLabel) =>
-        cut.InvokeAsync(() =>
-        {
-            IElement radio = cut.FindAll(".mud-radio").First(element => element.TextContent.Contains(choiceLabel, StringComparison.Ordinal));
-            return (radio.QuerySelector("input.mud-radio-input") ?? throw new InvalidOperationException($"No radio input under '{choiceLabel}'.")).ClickAsync();
-        });
+        cut.InvokeAsync(() => Radio(cut, choiceLabel).ClickAsync());
 
     /// <summary>Types <paramref name="value"/> into the Label field by raising its <c>oninput</c>.</summary>
     private static Task TypeLabelAsync(IRenderedComponent<ContainerFragment> cut, string value) =>
@@ -133,25 +150,45 @@ public sealed class AvatarEditorTests
         await cut.InvokeAsync(() => cut.FindAll(Thumb)[3].ClickAsync());
     }
 
-    /// <summary>With nothing stored the editor offers the three choices, starts on "An image" with its controls and no Label field, and shows no fields for the initials.</summary>
+    /// <summary>With nothing stored and no library the editor offers three cards in order, starts on the upload card (the avatar falls back to initials) and always renders the Label field.</summary>
     [Fact]
-    public async Task Renders_ThreeChoices_AndNoFieldsForInitials()
+    public async Task Renders_ThreeCards_StartsOnUpload_AndAlwaysHasTheLabelField()
     {
         await using TeamWebApplicationFactory factory = new();
         await using MudBunitContext ctx = NewContext(factory);
 
         IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate));
 
-        Assert.Equal(["Initials of the name", "A short label", "An image"], cut.FindAll(".mud-radio").Select(radio => radio.TextContent.Trim()));
-        Assert.False(HasText(cut, "Shown instead of initials."));
-        Assert.True(HasButton(cut, "Choose an image"));
+        Assert.Equal(["Initials of the name", "A short label", UploadCard], cut.FindAll(".avatar-choice-title").Select(title => title.TextContent.Trim()));
+        Assert.Equal("radiogroup", cut.Find(".avatar-choices").GetAttribute("role"));
+        Assert.True(IsSelected(cut, UploadCard));
+        Assert.True(HasButton(cut, "Upload…"));
+        Assert.True(HasInputLabelled(cut, "Label"));
 
         await SelectChoiceAsync(cut, "Initials of the name");
 
-        Assert.False(HasButton(cut, "Choose an image"));
+        Assert.True(IsSelected(cut, "Initials of the name"));
+        Assert.False(IsSelected(cut, UploadCard));
+        Assert.True(HasButton(cut, "Upload…"));
+        Assert.True(HasInputLabelled(cut, "Label"));
+        Assert.Equal(AvatarPalette.Colours.Count, cut.FindAll(Swatch).Count);
     }
 
-    /// <summary>A stored label starts the editor on "A short label" with the text in the field and a counter sized from the label limit.</summary>
+    /// <summary>A configured library adds the library card between the label and upload cards.</summary>
+    [Fact]
+    public async Task Renders_FourCards_WhenALibraryIsConfigured()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        using TempDataDir library = CreateLibraryDir();
+        await using MudBunitContext ctx = NewContext(factory);
+        _ = Register(ctx.Services, library.Path, null);
+
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate));
+
+        Assert.Equal(["Initials of the name", "A short label", LibraryCard, UploadCard], cut.FindAll(".avatar-choice-title").Select(title => title.TextContent.Trim()));
+    }
+
+    /// <summary>A stored label starts the editor on the label card with the text in the field and a counter sized from the label limit.</summary>
     [Fact]
     public async Task Value_WithLabel_SeedsTheLabelFieldAndCounter()
     {
@@ -161,14 +198,14 @@ public sealed class AvatarEditorTests
 
         IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, probe);
 
-        Assert.True(HasText(cut, "Shown instead of initials."));
+        Assert.True(IsSelected(cut, "A short label"));
         Assert.True(HasInputValue(cut, "AB"));
         Assert.True(HasText(cut, "2 / " + Avatar.MaxLabelTextElements));
     }
 
-    /// <summary>A stored image starts the editor on "An image", with the file name and a way to remove it, and no background swatches (the image covers the colour).</summary>
+    /// <summary>A stored image reopens on the upload card, with the file name and a way to remove it, and no background swatches (the image covers the colour).</summary>
     [Fact]
-    public async Task Value_WithImage_SeedsTheImageControlsAndHidesTheSwatches()
+    public async Task Value_WithImage_SeedsTheUploadCardAndHidesTheSwatches()
     {
         await using TeamWebApplicationFactory factory = new();
         await using MudBunitContext ctx = NewContext(factory);
@@ -176,11 +213,108 @@ public sealed class AvatarEditorTests
 
         IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, probe);
 
-        Assert.True(HasButton(cut, "Choose an image"));
+        Assert.True(IsSelected(cut, UploadCard));
+        Assert.True(HasButton(cut, "Upload…"));
         Assert.True(HasButton(cut, "Remove image"));
         Assert.True(HasText(cut, "face.png"));
         Assert.Empty(cut.FindAll(Swatch));
     }
+
+    /// <summary>Typing in the Label field chooses the label card without pressing it first.</summary>
+    [Fact]
+    public async Task TypingALabel_ChoosesTheLabelCard()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate));
+        Assert.False(IsSelected(cut, "A short label"));
+        await TypeLabelAsync(cut, "AB");
+
+        Assert.True(IsSelected(cut, "A short label"));
+        Assert.False(IsSelected(cut, UploadCard));
+        Assert.Equal("AB", cut.Find(".mud-avatar").TextContent.Trim());
+    }
+
+    /// <summary>The upload card can be chosen with no image, and "Remove image" keeps it chosen.</summary>
+    [Fact]
+    public async Task UploadCard_StaysChosenAfterRemoveImage()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+        Probe probe = new(AvatarSaveMode.Immediate) { Value = new Avatar(Label: null, Image: "face.png", Background: null) };
+
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, probe);
+        await ClickButtonAsync(cut, "Remove image");
+
+        Assert.True(IsSelected(cut, UploadCard));
+        Assert.False(HasButton(cut, "Remove image"));
+        Assert.Empty(cut.FindAll(Swatch));
+    }
+
+    /// <summary>A click on the empty part of the upload card's body, beside its button, chooses the card: only the buttons stop the click from reaching the card.</summary>
+    [Fact]
+    public async Task UploadCard_ClickBesideTheButton_ChoosesTheCard()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+        Probe probe = new(AvatarSaveMode.Immediate) { Value = new Avatar(Label: "AB", Image: null, Background: null) };
+
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, probe);
+        Assert.False(IsSelected(cut, UploadCard));
+        await cut.InvokeAsync(() => (Card(cut, UploadCard).QuerySelector(".avatar-choice-body") ?? throw new InvalidOperationException("No card body.")).ClickAsync());
+
+        Assert.True(IsSelected(cut, UploadCard));
+    }
+
+    /// <summary>The library card's radio is disabled until it holds a picture, and pressing the card opens the library instead of choosing it.</summary>
+    [Fact]
+    public async Task LibraryCard_WithNoPicture_IsNotSelectable_AndOpensTheLibrary()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        using TempDataDir library = CreateLibraryDir();
+        await using MudBunitContext ctx = NewContext(factory);
+        _ = Register(ctx.Services, library.Path, new AvatarLibraryImage(MinimalPng, ".png"));
+
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate));
+        Assert.True(Radio(cut, LibraryCard).HasAttribute("disabled"));
+
+        await cut.InvokeAsync(() => { _ = Card(cut, LibraryCard).ClickAsync(); });
+
+        cut.WaitForAssertion(() => Assert.True(cut.FindAll(Thumb).Count > 3), TimeSpan.FromSeconds(5));
+        Assert.True(IsSelected(cut, UploadCard));
+    }
+
+    /// <summary>After a library pick the library card is chosen with its picture and "Remove image"; removing returns the choice to Initials, and the Background is hidden while it is chosen.</summary>
+    [Fact]
+    public async Task LibraryPick_ChoosesTheLibraryCard_AndRemoveReturnsToInitials()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        using TempDataDir library = CreateLibraryDir();
+        await using MudBunitContext ctx = NewContext(factory);
+        _ = Register(ctx.Services, library.Path, new AvatarLibraryImage(MinimalPng, ".png"));
+        AvatarStore avatars = factory.Services.GetRequiredService<AvatarStore>();
+
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate));
+        await PickFromLibraryAsync(cut);
+
+        cut.WaitForAssertion(() => Assert.True(IsSelected(cut, LibraryCard)), TimeSpan.FromSeconds(5));
+        Assert.False(Radio(cut, LibraryCard).HasAttribute("disabled"));
+        Assert.True(HasButton(cut, "Remove image"));
+        Assert.Empty(cut.FindAll(Swatch));
+        Assert.NotNull(avatars.Get("You").Image);
+
+        await ClickButtonAsync(cut, "Remove image");
+
+        Assert.True(IsSelected(cut, "Initials of the name"));
+        Assert.True(Radio(cut, LibraryCard).HasAttribute("disabled"));
+        Assert.Null(avatars.Get("You").Image);
+        Assert.NotEmpty(cut.FindAll(Swatch));
+    }
+
+    /// <summary>Whether a field labelled <paramref name="text"/> is on the page.</summary>
+    private static bool HasInputLabelled(IRenderedComponent<ContainerFragment> cut, string text) =>
+        cut.FindAll("div.mud-input-control").Any(c => c.QuerySelectorAll("label").Any(l => string.Equals(l.TextContent.Trim(), text, StringComparison.Ordinal)));
 
     /// <summary>The Background palette offers every swatch of <see cref="AvatarPalette"/> and no swatch is chosen until one is pressed.</summary>
     [Fact]
@@ -250,7 +384,7 @@ public sealed class AvatarEditorTests
         probe.Value = Avatar.None;
         await RefreshParentAsync(cut);
 
-        Assert.True(HasText(cut, "Shown instead of initials."));
+        Assert.True(IsSelected(cut, "A short label"));
     }
 
     /// <summary>Immediate: a genuinely different <see cref="AvatarEditor.Value"/> from the parent (an outside edit) re-seeds the editor.</summary>
@@ -332,7 +466,7 @@ public sealed class AvatarEditorTests
         Probe probe = new(AvatarSaveMode.Immediate);
 
         IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, probe);
-        await SelectChoiceAsync(cut, "An image");
+        await SelectChoiceAsync(cut, UploadCard);
         Upload(cut, MinimalPng, "me.png");
 
         cut.WaitForAssertion(() => Assert.NotNull(avatars.Get("You").Image), TimeSpan.FromSeconds(5));
@@ -368,7 +502,7 @@ public sealed class AvatarEditorTests
         AvatarStore avatars = factory.Services.GetRequiredService<AvatarStore>();
 
         IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate));
-        await SelectChoiceAsync(cut, "An image");
+        await SelectChoiceAsync(cut, UploadCard);
         Upload(cut, new byte[AvatarImage.MaxBytes + 1], "big.png");
 
         cut.WaitForAssertion(() => Assert.Equal("alert", cut.Find(".mud-alert").GetAttribute("role")), TimeSpan.FromSeconds(5));
@@ -385,7 +519,7 @@ public sealed class AvatarEditorTests
         AvatarStore avatars = factory.Services.GetRequiredService<AvatarStore>();
 
         IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate));
-        await SelectChoiceAsync(cut, "An image");
+        await SelectChoiceAsync(cut, UploadCard);
         Upload(cut, [1, 2, 3, 4], "notes.png");
 
         cut.WaitForAssertion(() => Assert.Equal("That file is not a PNG, JPEG or WebP image.", cut.Find(".mud-alert").TextContent.Trim()), TimeSpan.FromSeconds(5));
@@ -403,7 +537,6 @@ public sealed class AvatarEditorTests
         AvatarStore avatars = factory.Services.GetRequiredService<AvatarStore>();
 
         IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate));
-        await SelectChoiceAsync(cut, "An image");
         await PickFromLibraryAsync(cut);
 
         cut.WaitForAssertion(() => Assert.NotNull(avatars.Get("You").Image), TimeSpan.FromSeconds(5));
@@ -421,7 +554,6 @@ public sealed class AvatarEditorTests
         AvatarStore avatars = factory.Services.GetRequiredService<AvatarStore>();
 
         IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate));
-        await SelectChoiceAsync(cut, "An image");
         await PickFromLibraryAsync(cut);
 
         cut.WaitForAssertion(() => Assert.Equal("That image could not be read.", cut.Find(".mud-alert").TextContent.Trim()), TimeSpan.FromSeconds(5));
@@ -487,7 +619,7 @@ public sealed class AvatarEditorTests
         Probe probe = new(AvatarSaveMode.Buffered);
 
         IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, probe);
-        await SelectChoiceAsync(cut, "An image");
+        await SelectChoiceAsync(cut, UploadCard);
         Upload(cut, MinimalPng, "me.png");
 
         cut.WaitForAssertion(() => Assert.NotEmpty(probe.Pending), TimeSpan.FromSeconds(5));
@@ -510,7 +642,6 @@ public sealed class AvatarEditorTests
         Probe probe = new(AvatarSaveMode.Buffered);
 
         IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, probe);
-        await SelectChoiceAsync(cut, "An image");
         await PickFromLibraryAsync(cut);
 
         cut.WaitForAssertion(() => Assert.NotEmpty(probe.Pending), TimeSpan.FromSeconds(5));
@@ -527,7 +658,7 @@ public sealed class AvatarEditorTests
         Probe probe = new(AvatarSaveMode.Buffered);
 
         IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, probe);
-        await SelectChoiceAsync(cut, "An image");
+        await SelectChoiceAsync(cut, UploadCard);
         Upload(cut, MinimalPng, "me.png");
         cut.WaitForAssertion(() => Assert.True(HasButton(cut, "Remove image")), TimeSpan.FromSeconds(5));
         await ClickButtonAsync(cut, "Remove image");
@@ -536,7 +667,7 @@ public sealed class AvatarEditorTests
         Assert.Null(probe.Pending[^1].Extension);
     }
 
-    /// <summary>Buffered: an earlier pending image passed in starts the editor on "An image" with the not-yet-saved note.</summary>
+    /// <summary>Buffered: an earlier pending image passed in starts the editor on the upload card with the not-yet-saved note.</summary>
     [Fact]
     public async Task Buffered_PendingImageParameters_SeedTheImageChoice()
     {

@@ -84,19 +84,6 @@ public sealed partial class R3OpenItemsTests
         Assert.Contains(".role-grid:hover, .role-grid:focus-within, .roster-grid:hover, .roster-grid:focus-within { scrollbar-color: var(--ink-edge) transparent; }", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
-    /// <summary>B8i: the avatar editor reserves 27rem so Initials, A short label and An image measure the same (the label mode's content measured about 421px).</summary>
-    [Fact]
-    public void AvatarEditor_ReservesTheTallestModesHeight()
-    {
-        Match rule = AvatarEditorRule().Match(CssText.AppCss(CssNewlines.AsIs));
-
-        Assert.True(rule.Success);
-        Assert.True(double.Parse(rule.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) >= 27);
-    }
-
-    [GeneratedRegex(@"\.avatar-editor \{[^}]*?min-height: ([0-9.]+)rem;", RegexOptions.CultureInvariant)]
-    private static partial Regex AvatarEditorRule();
-
     /// <summary>B8i: every swatch has its own colour name, none is a numbered repeat ("Red 2"), and all 30 are different.</summary>
     [Fact]
     public void Swatches_HaveDistinctColourNames()

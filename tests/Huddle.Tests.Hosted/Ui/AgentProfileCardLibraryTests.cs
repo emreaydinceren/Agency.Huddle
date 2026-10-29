@@ -31,7 +31,7 @@ public sealed class AgentProfileCardLibraryTests
         await OpenAvatarEditorAsync(cut);
         if (chooseImage)
         {
-            await SelectAvatarChoiceAsync(cut, "An image");
+            await SelectAvatarChoiceAsync(cut, "Upload an image");
         }
 
         return cut;
@@ -55,11 +55,11 @@ public sealed class AgentProfileCardLibraryTests
 
         IRenderedComponent<ContainerFragment> cut = await OpenEditorAsync(ctx, factory, edit: true, chooseImage: true);
 
-        Assert.True(HasEditorButton(cut, "Choose an image"));
+        Assert.True(HasEditorButton(cut, "Upload…"));
         Assert.False(HasEditorButton(cut, ButtonText));
     }
 
-    /// <summary>With a configured library the Image choice offers the library button next to "Choose an image".</summary>
+    /// <summary>With a configured library the editor offers the library button next to "Upload…".</summary>
     [Fact]
     public async Task LibraryButton_Shown_WhenConfigured()
     {
@@ -72,12 +72,12 @@ public sealed class AgentProfileCardLibraryTests
         IRenderedComponent<ContainerFragment> cut = await OpenEditorAsync(ctx, factory, edit: true, chooseImage: true);
 
         Assert.True(HasEditorButton(cut, ButtonText));
-        Assert.True(HasEditorButton(cut, "Choose an image"));
+        Assert.True(HasEditorButton(cut, "Upload…"));
     }
 
-    /// <summary>The button exists only under the Image choice, not under Initials or Label.</summary>
+    /// <summary>The library button lives on its own card, so it is offered whichever card is chosen.</summary>
     [Fact]
-    public async Task LibraryButton_OnlyUnderImageChoice()
+    public async Task LibraryButton_OfferedUnderEveryChoice()
     {
         await using TeamWebApplicationFactory factory = new();
         await SeedPersonaAsync(factory, "coo", "x");
@@ -89,9 +89,9 @@ public sealed class AgentProfileCardLibraryTests
         Assert.True(HasEditorButton(cut, ButtonText));
 
         await SelectAvatarChoiceAsync(cut, "A short label");
-        Assert.False(HasEditorButton(cut, ButtonText));
+        Assert.True(HasEditorButton(cut, ButtonText));
 
-        await SelectAvatarChoiceAsync(cut, "An image");
+        await SelectAvatarChoiceAsync(cut, "Upload an image");
         Assert.True(HasEditorButton(cut, ButtonText));
     }
 
