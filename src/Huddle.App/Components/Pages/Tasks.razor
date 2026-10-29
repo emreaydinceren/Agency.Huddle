@@ -47,7 +47,7 @@
 @inject TabService Tabs
 @inject RightSidebarService Sidebar
 
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4 tasks-page">
     <WakeToasts OnOpenTask="this.OnOpenTaskAsync" />
     <PageSubjectSource Value="@this.Subject" />
     @if (!this.Options.Value.Tasks.Enabled)
