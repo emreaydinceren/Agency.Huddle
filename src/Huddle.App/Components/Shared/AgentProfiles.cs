@@ -13,7 +13,8 @@ namespace Agency.Huddle.App.Components.Shared;
 /// Turns a saved Agent into what a <see cref="ProfileCard"/> draws, for the avatar profile popover.
 /// It reads the same sources Build a team does for a member (the Persona file, its role, the hiring
 /// pool's job) except that the role comes from the Persona's own frontmatter rather than from a team
-/// type the Human has selected.
+/// type the Human has selected. It also reads out what the Agent runs on: its Adapter from the
+/// Persona file, and its Model and Effort from their stores.
 /// </summary>
 /// <param name="personas">The Agent directory and definitions.</param>
 /// <param name="types">The team types, to find the Persona's role.</param>
@@ -23,6 +24,7 @@ namespace Agency.Huddle.App.Components.Shared;
 /// <param name="directory">The user directory, for the Agent's agent user.</param>
 /// <param name="gateway">The pipe gateway, for whether the agent is connected.</param>
 /// <param name="health">Reported health, the other input to the status dot.</param>
+/// <param name="adapters">The configured Adapters, for the display name of the one the Agent runs on.</param>
 /// <param name="human">The Human's live identity, so the Human's own avatar opens their profile too; <see langword="null"/> treats every name as an Agent's.</param>
 internal sealed class AgentProfiles(
     PersonaStore personas,
@@ -33,8 +35,15 @@ internal sealed class AgentProfiles(
     ITeamDirectory directory,
     IAgentGateway gateway,
     PersonaHealth health,
+    AdapterCatalog adapters,
     IHumanIdentity? human = null)
 {
+    /// <summary>What the Agent card says for a Model the Persona has not chosen.</summary>
+    private const string DefaultModelText = "Agent default";
+
+    /// <summary>What the Agent card says for an Effort the Persona has not chosen.</summary>
+    private const string DefaultEffortText = "Model default";
+
     /// <summary>Builds the profile of the Agent - or the Human - called <paramref name="name"/>.</summary>
     /// <param name="name">The Agent's Name or alias.</param>
     /// <param name="team">The Team the avatar was seen in, or <see langword="null"/> outside any Team.</param>
@@ -74,9 +83,22 @@ internal sealed class AgentProfiles(
         AgentProfile profile = new(entry.Name, entry.Title, job?.Description ?? string.Empty, avatars.Get(entry.Name))
         {
             State = state,
+            Runtime = this.ReadRuntime(persona),
             Tier = job?.Model.Tier ?? role?.Model?.Tier,
             SkillNames = identity?.Skills ?? [],
         };
         return new AgentProfileView(profile, manager, member ? ProfileMembership.Member : ProfileMembership.None, agent, team);
     }
+
+    /// <summary>
+    /// Reads out what the Persona runs on. The Adapter is the one it actually launches on: the default
+    /// when the Persona names none or names one that is not configured (the Agent card warns of the
+    /// same fallback). Model and Effort stay raw ids, because naming them would need a probe.
+    /// </summary>
+    /// <param name="persona">The Persona with its stored Model and Effort joined in.</param>
+    /// <returns>The three display strings.</returns>
+    private ProfileRuntime ReadRuntime(Persona persona) => new(
+        (adapters.Find(persona.Adapter) ?? adapters.Default).DisplayName,
+        persona.Model ?? DefaultModelText,
+        persona.Effort ?? DefaultEffortText);
 }

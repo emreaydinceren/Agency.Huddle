@@ -707,9 +707,13 @@ If **Save** shows a red error line (a malformed edit, or a Name/Alias collision 
 6. Read the **Model** and **Effort** sections again and write both down.
 7. In `T-C` run `Get-TeamDb "SELECT persona_name, model FROM persona_models"` and `Get-TeamDb "SELECT persona_name, effort FROM persona_efforts"`.
 8. Compare each of the four values you wrote down against the stored values.
+9. Open a Room with `Probe One` in it and click their avatar on a message row to open the profile popover. Read the **Adapter**, **Model** and **Effort** rows and write them down.
+10. Click the avatar of an Agent with no stored Model or Effort and read the same three rows.
 
 **Pass if — all of these**
 
+- The popover's **Model** and **Effort** rows show the exact stored ids (the popover never probes, so it never shows labels), and its **Adapter** row shows the same display name the Agent card's Adapter select shows.
+- An Agent with nothing stored shows `Agent default` for Model and `Model default` for Effort, the same words the Agent card uses, and the default Adapter's display name.
 - Right after **Save**, the **Model** section shows the friendly label (for example `Haiku 4.5`) and the **Effort** section shows the friendly label (for example `Low`).
 - When the same card is opened from the tile, the sections show the raw stored ids instead (for example `claude-haiku-4-5` and `low`).
 - Every one of the four values is either the exact stored id or that id's catalog label - never a third string, and never `Agent default` / `Model default` for an agent that has stored values.

@@ -1,6 +1,6 @@
 @* <summary>
      An Agent's profile card: avatar, name with status dot, title, description, and the membership,
-     tier and skills chips, with an optional row of caller-supplied actions. It is the card Build a
+     tier and skills chips, an optional Adapter, Model and Effort list, with an optional row of caller-supplied actions. It is the card Build a
      team's roster draws (B9c/B12) and the card the avatar profile popover shows, so both read as the
      same thing. The caller supplies the data as a <see cref="AgentProfile"/> and the buttons as
      <see cref="Actions"/>; the card owns the markup and its <c>roster-*</c> CSS classes.
@@ -56,6 +56,17 @@
             <span class="roster-skills" title="@string.Join(", ", profile.SkillNames)">@Plural.Of(profile.SkillNames.Count, "skill", "skills")</span>
         }
     </span>
+    @if (profile.Runtime is { } runtime)
+    {
+        <dl class="roster-runtime">
+            <dt>Adapter</dt>
+            <dd class="roster-runtime-adapter">@runtime.Adapter</dd>
+            <dt>Model</dt>
+            <dd class="roster-runtime-model">@runtime.Model</dd>
+            <dt>Effort</dt>
+            <dd class="roster-runtime-effort">@runtime.Effort</dd>
+        </dl>
+    }
     @if (profile.SetupReasons.Count > 0)
     {
         <span class="roster-setup">Needs setup: @string.Join("; ", profile.SetupReasons)</span>

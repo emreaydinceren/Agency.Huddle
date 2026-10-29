@@ -39,6 +39,34 @@ public sealed class ProfileCardTests
         Assert.NotNull(cut.Find(".roster-avatar-ring[aria-hidden=true] .roster-avatar"));
     }
 
+    /// <summary>Adapter, Model and Effort render as three label and value pairs, each value under its own label.</summary>
+    [Fact]
+    public async Task Runtime_Set_DrawsLabelledAdapterModelAndEffort()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = RenderIt(ctx, Plain with { Runtime = new ProfileRuntime("Claude Code", "opus", "high") });
+
+        string[] labels = [.. cut.FindAll(".roster-runtime dt").Select(label => label.TextContent)];
+        string[] values = [.. cut.FindAll(".roster-runtime dd").Select(value => value.TextContent)];
+        Assert.Equal(["Adapter", "Model", "Effort"], labels);
+        Assert.Equal(["Claude Code", "opus", "high"], values);
+        Assert.Equal("Claude Code", cut.Find(".roster-runtime-adapter").TextContent);
+        Assert.Equal("opus", cut.Find(".roster-runtime-model").TextContent);
+        Assert.Equal("high", cut.Find(".roster-runtime-effort").TextContent);
+    }
+
+    /// <summary>A profile with no runtime, such as the Human's or a roster draft, draws no runtime block.</summary>
+    [Fact]
+    public async Task Runtime_Unset_DrawsNothing()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = RenderIt(ctx, Plain);
+
+        Assert.Empty(cut.FindAll(".roster-runtime"));
+    }
+
     /// <summary>A null state draws no status dot.</summary>
     [Fact]
     public async Task State_Null_DrawsNoStatusDot()
