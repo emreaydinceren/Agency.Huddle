@@ -6942,6 +6942,23 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     color: var(--mud-palette-text-secondary);
 }
 
+.roster-runtime {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0 8px;
+    margin: 0;
+    font-size: var(--mud-typography-caption-size);
+}
+
+.roster-runtime dt {
+    color: var(--mud-palette-text-secondary);
+}
+
+.roster-runtime dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
 .roster-setup {
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-warning-darken);

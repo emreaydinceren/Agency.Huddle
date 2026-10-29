@@ -45,7 +45,7 @@ internal sealed class ProfileFixture : IDisposable
         this.Directory = this.dir.CreateDirectory();
         this.Gateway = new FakeAgentGateway();
         this.Health = new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance);
-        this.Profiles = new AgentProfiles(this.Personas, this.Types, this.Pool, this.Avatars, this.Catalog, this.Directory, this.Gateway, this.Health);
+        this.Profiles = new AgentProfiles(this.Personas, this.Types, this.Pool, this.Avatars, this.Catalog, this.Directory, this.Gateway, this.Health, AgentProfileCardTestSupport.BuildAdapterCatalog(("claude", "Claude Code"), ("codex", "Codex")));
         FileChatStore store = new(this.dir.Options(), NullLogger<FileChatStore>.Instance);
         RoomEvents events = new(NullLogger<RoomEvents>.Instance);
         this.Chat = new ChatService(this.Directory, store, events, new FakeMentionAliasSource(), TestOptions.Create(), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance)
@@ -96,10 +96,15 @@ internal sealed class ProfileFixture : IDisposable
     /// <param name="title">The Title.</param>
     /// <param name="team">The Team label, or null.</param>
     /// <param name="withRole">Whether the Agent carries the <c>t01/tutor</c> role.</param>
-    public void AddAgent(string name, string title, string? team = null, bool withRole = false) =>
+    /// <param name="adapter">The Adapter id written to the Persona file, or null for the default.</param>
+    /// <param name="model">The Model stored for the Agent, or null for the default.</param>
+    /// <param name="effort">The Effort stored for the Agent, or null for the default.</param>
+    public void AddAgent(string name, string title, string? team = null, bool withRole = false, string? adapter = null, string? model = null, string? effort = null) =>
         this.Personas.Add(
-            new PersonaIdentity(name, title, name.ToLowerInvariant(), Teams: team is null ? [] : [team], Skills: ["lint"], Role: withRole ? new RoleRef("t01", "tutor", "1.0.0") : null),
-            "You help.");
+            new PersonaIdentity(name, title, name.ToLowerInvariant(), Teams: team is null ? [] : [team], Adapter: adapter, Skills: ["lint"], Role: withRole ? new RoleRef("t01", "tutor", "1.0.0") : null),
+            "You help.",
+            model,
+            effort);
 
     /// <summary>Creates the Agent's agent user, as its first connection does.</summary>
     /// <param name="name">The Name.</param>

@@ -21,6 +21,9 @@ public sealed record AgentProfile(string Name, string Title, string Description,
     /// <summary>The model tier for the tier chip, or <see langword="null"/> to draw no chip.</summary>
     public ModelTier? Tier { get; init; }
 
+    /// <summary>What the Agent runs on, for the Adapter, Model and Effort rows, or <see langword="null"/> to draw no rows (the Human, a roster draft).</summary>
+    public ProfileRuntime? Runtime { get; init; }
+
     /// <summary>The names of the Agent's skills; drives the skills chip and its hover list.</summary>
     public IReadOnlyList<string> SkillNames { get; init; } = [];
 

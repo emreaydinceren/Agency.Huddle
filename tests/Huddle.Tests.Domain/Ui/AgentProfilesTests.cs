@@ -25,6 +25,51 @@ public sealed class AgentProfilesTests
         Assert.Null(view);
     }
 
+    /// <summary>An Agent with an Adapter, Model and Effort chosen shows the Adapter's display name and the stored ids.</summary>
+    [Fact]
+    public async Task BuildAsync_ChosenRuntime_ReadsAdapterModelAndEffort()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        await fixture.InitializeAsync(ct);
+        fixture.AddAgent("Ada", "Lead", adapter: "codex", model: "gpt-5", effort: "high");
+
+        AgentProfileView? view = await fixture.Profiles.BuildAsync("Ada", null, ct);
+
+        Assert.NotNull(view);
+        Assert.Equal(new ProfileRuntime("Codex", "gpt-5", "high"), view.Profile.Runtime);
+    }
+
+    /// <summary>An Agent that chose nothing reads as the default Adapter, with the Agent card's own default wording.</summary>
+    [Fact]
+    public async Task BuildAsync_NoChoices_ReadsDefaults()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        await fixture.InitializeAsync(ct);
+        fixture.AddAgent("Ada", "Lead");
+
+        AgentProfileView? view = await fixture.Profiles.BuildAsync("Ada", null, ct);
+
+        Assert.NotNull(view);
+        Assert.Equal(new ProfileRuntime("Claude Code", "Agent default", "Model default"), view.Profile.Runtime);
+    }
+
+    /// <summary>An Adapter that is no longer configured shows the default Adapter, the one the Agent will actually run on.</summary>
+    [Fact]
+    public async Task BuildAsync_UnconfiguredAdapter_ReadsDefaultAdapter()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        await fixture.InitializeAsync(ct);
+        fixture.AddAgent("Ada", "Lead", adapter: "retired");
+
+        AgentProfileView? view = await fixture.Profiles.BuildAsync("Ada", null, ct);
+
+        Assert.NotNull(view);
+        Assert.Equal("Claude Code", view.Profile.Runtime?.Adapter);
+    }
+
     /// <summary>The card carries the Agent's title, skills, the role's pool description and tier.</summary>
     [Fact]
     public async Task BuildAsync_Agent_FillsCardFromPersonaAndRole()
