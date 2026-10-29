@@ -11,7 +11,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.Questions;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.Tests.Acp.Fakes;
 using FakeAgentGateway = Agency.Huddle.Tests.Acp.Tools.FakeAgentGateway;
 using Agency.Huddle.Tests.Elicitation;
@@ -62,7 +62,7 @@ internal static class TaskTriggerTestSupport
     /// <param name="harness">The harness to arrange.</param>
     /// <param name="ct">Cancels the directory writes and <see cref="TaskTriggerService.StartAsync"/>.</param>
     /// <returns>The two Agents.</returns>
-    internal static async Task<Agents> RegisterAgentsAsync(Harness harness, CancellationToken ct)
+    internal static async Task<AgentPair> RegisterAgentsAsync(Harness harness, CancellationToken ct)
     {
         _ = harness.Personas.Add(new PersonaIdentity("Nova", "Nova", "nova", ["Platform"]), "You are Nova.");
         _ = harness.Personas.Add(new PersonaIdentity("Kai", "Kai", "kai", ["Platform"]), "You are Kai.");
@@ -71,7 +71,7 @@ internal static class TaskTriggerTestSupport
         Assert.NotNull(nova);
         Assert.NotNull(kai);
         await harness.Trigger.StartAsync(ct);
-        return new Agents(nova, kai);
+        return new AgentPair(nova, kai);
     }
 
     /// <summary>Sorts user ids ordinally, so two Member sets compare as sets.</summary>
@@ -102,14 +102,14 @@ internal static class TaskTriggerTestSupport
     }
 
     /// <summary>
-    /// Registers Nova (the usual assignee) and Kai (a third Teammate) as Personas and Agent users,
+    /// Registers Nova (the usual assignee) and Kai (a third Agent) as Personas and Agent users,
     /// creates the origin Room {Human, Nova, Kai} every waking test uses (Spec §10.4 step 1 - both the
     /// sender and the assignee are Members; choosing among Rooms is Task 9.5's), and starts the service.
     /// </summary>
     /// <param name="harness">The harness to arrange.</param>
     /// <param name="ct">Cancels the directory writes and <see cref="TaskTriggerService.StartAsync"/>.</param>
     /// <param name="start">Whether to call <see cref="TaskTriggerService.StartAsync"/>.</param>
-    /// <returns>The two Agents and the Room.</returns>
+    /// <returns>The two AgentPair and the Room.</returns>
     internal static async Task<Cast> StartWakingAsync(Harness harness, CancellationToken ct, bool start = true)
     {
         _ = harness.Personas.Add(new PersonaIdentity("Nova", "Nova", "nova", ["Platform"]), "You are Nova.");
@@ -163,7 +163,7 @@ internal static class TaskTriggerTestSupport
         };
 
         PersonaStore personas = new(
-            new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+            new AgentPaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         TaskStore store = new(dir.Options(), personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
         TaskEvents events = new();
         TaskActivity activity = new(teamOptions);
@@ -198,18 +198,18 @@ internal static class TaskTriggerTestSupport
         return harness;
     }
 
-    /// <summary>The two registered Agents a Room-choice test arranges (<see cref="RegisterAgentsAsync"/>), with no Room.</summary>
+    /// <summary>The two registered AgentPair a Room-choice test arranges (<see cref="RegisterAgentsAsync"/>), with no Room.</summary>
     /// <param name="Nova">The usual assignee.</param>
-    /// <param name="Kai">A second Teammate: creator, third-Agent actor, or neither.</param>
-    internal sealed record Agents(User Nova, User Kai)
+    /// <param name="Kai">A second Agent: creator, third-Agent actor, or neither.</param>
+    internal sealed record AgentPair(User Nova, User Kai)
     {
         /// <summary>Kai, acting through an App Tool.</summary>
         public TaskActor KaiActor => new(TaskActorKind.Agent, this.Kai.Name, this.Kai.Id);
     }
 
-    /// <summary>The two Agents and the origin Room a waking test arranges (<see cref="StartWakingAsync"/>).</summary>
+    /// <summary>The two AgentPair and the origin Room a waking test arranges (<see cref="StartWakingAsync"/>).</summary>
     /// <param name="Nova">The usual assignee.</param>
-    /// <param name="Kai">A third Teammate, the usual Agent actor.</param>
+    /// <param name="Kai">A third Agent, the usual Agent actor.</param>
     /// <param name="Room">The origin Room {Human, Nova, Kai}.</param>
     internal sealed record Cast(User Nova, User Kai, Room Room)
     {

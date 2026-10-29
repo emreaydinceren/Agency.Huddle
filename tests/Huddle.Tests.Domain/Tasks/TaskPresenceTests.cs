@@ -40,7 +40,7 @@ public sealed class TaskPresenceTests
         Assert.Equal(PresenceState.Asleep, state);
     }
 
-    /// <summary>A name no Teammate holds resolves to no presence at all.</summary>
+    /// <summary>A name no Agent holds resolves to no presence at all.</summary>
     [Fact]
     public async Task For_UnknownName_ReturnsNull()
     {

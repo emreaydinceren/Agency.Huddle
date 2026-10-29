@@ -9,8 +9,8 @@ using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Questions;
-using Agency.Huddle.App.Teammates;
-using Agency.Huddle.Tests.Teammates;
+using Agency.Huddle.App.Agents;
+using Agency.Huddle.Tests.Agents;
 using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -30,11 +30,11 @@ namespace Agency.Huddle.Tests.Ui;
 public sealed class ProposalCardTests
 {
     /// <summary>
-    /// Spec §6.11's Responsibilities: the proposer, the copy ("{Proposer} proposes new Teammates.
-    /// Approve creates these Teammates." - never "will be created"), every Candidate's Name, Alias,
+    /// Spec §6.11's Responsibilities: the proposer, the copy ("{Proposer} proposes new Agents.
+    /// Approve creates these Agents." - never "will be created"), every Candidate's Name, Alias,
     /// Title, Teams and Consult When, and the headroom line recomputed from
-    /// <see cref="PersonaStore.Entries"/> against the default <see cref="AcpOptions.MaxTeammatesPerTeam"/>
-    /// of 8 - a Business Team of five plus a two-Candidate Proposal reads "This adds 2 Teammates; 5
+    /// <see cref="PersonaStore.Entries"/> against the default <see cref="AcpOptions.MaxAgentsPerTeam"/>
+    /// of 8 - a Business Team of five plus a two-Candidate Proposal reads "This adds 2 Agents; 5
     /// of 8 per Team.".
     /// </summary>
     [Fact]
@@ -59,9 +59,9 @@ public sealed class ProposalCardTests
 
         var cut = RenderCard(ctx, room.Id);
 
-        Assert.Contains("Chief of Staff proposes new Teammates. Approve creates these Teammates.", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Chief of Staff proposes new Agents. Approve creates these Agents.", cut.Markup, StringComparison.Ordinal);
         Assert.DoesNotContain("will be created", cut.Markup, StringComparison.Ordinal);
-        Assert.Equal("This adds 2 Teammates; 5 of 8 per Team.", cut.Find(".proposal-card-headroom").TextContent.Trim());
+        Assert.Equal("This adds 2 Agents; 5 of 8 per Team.", cut.Find(".proposal-card-headroom").TextContent.Trim());
         Assert.Contains("Vera", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("vera", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Researcher", cut.Markup, StringComparison.Ordinal);
@@ -122,12 +122,12 @@ public sealed class ProposalCardTests
         await using MudBunitContext ctx = new();
         fixture.RegisterInto(ctx);
         var cut = RenderCard(ctx, room.Id);
-        Assert.Contains("proposes new Teammates", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("proposes new Agents", cut.Markup, StringComparison.Ordinal);
 
         var outcome = await fixture.Service.ApproveAsync(room.Id, proposal.Id, ct);
 
         Assert.Equal(ProposalOutcomeKind.Created, outcome.Kind);
-        cut.WaitForAssertion(() => Assert.DoesNotContain("proposes new Teammates", cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.DoesNotContain("proposes new Agents", cut.Markup, StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -162,7 +162,7 @@ public sealed class ProposalCardTests
     /// so a double click cannot call the service twice. <see cref="GatedTeamDirectory"/> suspends the
     /// proposer lookup <see cref="ProposalService.ApproveAsync"/> makes (through
     /// <c>ResolveMentionAsync</c>) so the busy window is observable, the same
-    /// hold-a-real-await-open technique <c>TeammateCardTests</c> uses via
+    /// hold-a-real-await-open technique <c>AgentProfileCardTests</c> uses via
     /// <c>FakeModelCatalog.ModelsGate</c>. Releasing the gate lets the call complete and the card
     /// disappear, proving the busy state was transient rather than stuck.
     /// </summary>
@@ -210,7 +210,7 @@ public sealed class ProposalCardTests
 
         var cut = RenderCard(ctx, room.Id);
 
-        IElement actions = AgentCardAssert.IsShell(cut, "Chief of Staff is proposing Teammates", "Teammate proposal from Chief of Staff");
+        IElement actions = AgentCardAssert.IsShell(cut, "Chief of Staff is proposing Agents", "Agent proposal from Chief of Staff");
         Assert.Equal(["Approve", "Decline"], AgentCardAssert.Verbs(actions));
     }
 
@@ -267,7 +267,7 @@ public sealed class ProposalCardTests
 
         var cut = RenderCard(ctx, roomId);
 
-        Assert.Equal("This adds 1 Teammate; 14 of 16 live processes.", cut.Find(".proposal-card-headroom").TextContent.Trim());
+        Assert.Equal("This adds 1 Agent; 14 of 16 live processes.", cut.Find(".proposal-card-headroom").TextContent.Trim());
     }
 
     /// <summary>A Candidate with no Team is counted only against the live limit, so the line names live processes.</summary>
@@ -284,7 +284,7 @@ public sealed class ProposalCardTests
 
         var cut = RenderCard(ctx, roomId);
 
-        Assert.Equal("This adds 1 Teammate; 2 of 16 live processes.", cut.Find(".proposal-card-headroom").TextContent.Trim());
+        Assert.Equal("This adds 1 Agent; 2 of 16 live processes.", cut.Find(".proposal-card-headroom").TextContent.Trim());
     }
 
     /// <summary>With both limits off the clause is dropped, as the single limit's off state was.</summary>
@@ -299,7 +299,7 @@ public sealed class ProposalCardTests
 
         var cut = RenderCard(ctx, roomId);
 
-        Assert.Equal("This adds 1 Teammate.", cut.Find(".proposal-card-headroom").TextContent.Trim());
+        Assert.Equal("This adds 1 Agent.", cut.Find(".proposal-card-headroom").TextContent.Trim());
     }
 
     /// <summary>Creates a Room with a proposer and stores a Proposal of <paramref name="candidates"/> in it.</summary>
@@ -376,7 +376,7 @@ public sealed class ProposalCardTests
         /// <summary>The temp directory backing this fixture's <see cref="TeamOptions.DataDir"/>.</summary>
         public TempDataDir DataDir { get; }
 
-        /// <summary>The real <see cref="PersonaStore"/> a test seeds existing Teammates into and reads created files back from.</summary>
+        /// <summary>The real <see cref="PersonaStore"/> a test seeds existing Agents into and reads created files back from.</summary>
         public PersonaStore Personas { get; }
 
         /// <summary>The gated <see cref="ITeamDirectory"/> a test arranges Rooms and Members through, and can suspend for the busy test.</summary>
@@ -393,12 +393,12 @@ public sealed class ProposalCardTests
 
         /// <summary>Builds a fresh <see cref="Fixture"/> with an initialised Team Directory (Human Name <c>"You"</c>) and no Personas yet loaded.</summary>
         /// <param name="ct">Cancels Team Directory initialisation.</param>
-        /// <param name="maxPerTeam"><see cref="AcpOptions.MaxTeammatesPerTeam"/> for this fixture.</param>
+        /// <param name="maxPerTeam"><see cref="AcpOptions.MaxAgentsPerTeam"/> for this fixture.</param>
         /// <param name="maxLive"><see cref="AcpOptions.MaxLiveProcesses"/> for this fixture.</param>
         public static async Task<Fixture> CreateAsync(CancellationToken ct, int maxPerTeam = 8, int maxLive = 16)
         {
             var dataDir = new TempDataDir();
-            IOptions<TeamOptions> options = dataDir.Options(opts => opts.Acp = new AcpOptions { MaxTeammatesPerTeam = maxPerTeam, MaxLiveProcesses = maxLive });
+            IOptions<TeamOptions> options = dataDir.Options(opts => opts.Acp = new AcpOptions { MaxAgentsPerTeam = maxPerTeam, MaxLiveProcesses = maxLive });
 
             var realDirectory = options.CreateDirectory();
             await realDirectory.InitializeAsync("You", ct);
@@ -442,7 +442,7 @@ public sealed class ProposalCardTests
     /// <see cref="GetUserAsync"/>, which awaits <see cref="Gate"/> first when one is set. Lets
     /// <see cref="Approve_Busy_ButtonsDisabled"/> hold <see cref="ProposalService.ApproveAsync"/>'s
     /// proposer lookup open long enough to observe the busy state before releasing it - the same
-    /// hold-a-real-await-open technique <c>TeammateCardTests</c> uses via
+    /// hold-a-real-await-open technique <c>AgentProfileCardTests</c> uses via
     /// <c>FakeModelCatalog.ModelsGate</c>, applied to the one dependency of
     /// <see cref="ProposalService"/> that is an interface rather than a sealed class.
     /// </summary>

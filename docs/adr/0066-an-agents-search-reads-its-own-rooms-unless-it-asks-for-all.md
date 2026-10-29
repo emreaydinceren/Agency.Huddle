@@ -6,7 +6,7 @@ date: 2026-10-28
 # An Agent's search reads its own Rooms unless it asks for all
 
 Global Search ([ADR-0051](0051-search-keeps-no-index-of-its-own.md)) is exposed to Agents as the `search`
-App Tool. It reuses the five providers, so an Agent can find Teams, Teammates, Library entries, Tasks and
+App Tool. It reuses the five providers, so an Agent can find Teams, Agents, Library entries, Tasks and
 Rooms by exact phrase. This record settles what an Agent may read when it searches Rooms. The design is
 [Huddle.GlobalSearch-Specifications.md](../Huddle.GlobalSearch-Specifications.md) §18.
 
@@ -28,7 +28,7 @@ of and every Room scoped to one of the caller's Teams. `all` covers every Room.*
 - `all` is allowed to every Persona, because an Agent can have a real reason to read another Room's history,
   such as a decision made elsewhere. Every such call is logged with the caller and the phrase.
 - The tool's description tells the Agent that Rooms default to its own, and when to widen.
-- The Library, Tasks, Teams and Teammates providers are not scoped: an Agent's own file tools already read
+- The Library, Tasks, Teams and Agents providers are not scoped: an Agent's own file tools already read
   the disk, and `list_tasks` and `get_task` already read every Task.
 
 ## Consequences

@@ -6,12 +6,12 @@ using Agency.Huddle.SkillPacks.Resolving;
 namespace Agency.Huddle.App.SkillSources;
 
 /// <summary>Applies an update plan (Skill Packs spec §6.9.8, "Update does"), in this order: copy every changed and added
-/// Skill into <c>Skills/</c> (one failure stops here and nothing else is written); then, for each ticked Teammate, write
+/// Skill into <c>Skills/</c> (one failure stops here and nothing else is written); then, for each ticked Agent, write
 /// <c>skills:</c>, <c>consult_when:</c> and <c>_packs:</c> with <see cref="PackMembership"/>, which restarts it; then one
 /// <c>update-applied</c> log line. Callers rebuild the registry afterwards.</summary>
 internal sealed class PackUpdater(SkillRegistry registry, ISkillCopier copier, PersonaStore personas, SourceLog log)
 {
-    /// <summary>Applies <paramref name="plan"/>; <paramref name="ticked"/> names the Teammates whose membership changes.</summary>
+    /// <summary>Applies <paramref name="plan"/>; <paramref name="ticked"/> names the Agents whose membership changes.</summary>
     public async Task<RemovalOutcome> ApplyAsync(PackUpdatePlan plan, IReadOnlyCollection<string> ticked, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -26,7 +26,7 @@ internal sealed class PackUpdater(SkillRegistry registry, ISkillCopier copier, P
         if (!copied.Ok)
         {
             CopyFailure first = copied.Failed[0];
-            return new RemovalOutcome(false, $"{first.Name} could not be copied: {first.Message} No Teammate was changed.");
+            return new RemovalOutcome(false, $"{first.Name} could not be copied: {first.Message} No Agent was changed.");
         }
 
         PackEntry? pack = registry.FindPack(plan.PackId);
@@ -34,7 +34,7 @@ internal sealed class PackUpdater(SkillRegistry registry, ISkillCopier copier, P
         if (pack is not null)
         {
             PackContents contents = PackContents.From(pack);
-            foreach (TeammateChange change in plan.Teammates.Where(change => ticked.Contains(change.Name, StringComparer.OrdinalIgnoreCase)))
+            foreach (AgentChange change in plan.Agents.Where(change => ticked.Contains(change.Name, StringComparer.OrdinalIgnoreCase)))
             {
                 if (personas.Get(change.Name) is not { } persona)
                 {
@@ -55,11 +55,11 @@ internal sealed class PackUpdater(SkillRegistry registry, ISkillCopier copier, P
         {
             log.Append(source, new LogLine("update-applied", pack is null ? $"skill:{plan.PackId}" : $"pack:{plan.PackId}", Data: new Dictionary<string, object?>(StringComparer.Ordinal)
             {
-                ["teammates"] = plan.Teammates.Where(change => ticked.Contains(change.Name, StringComparer.OrdinalIgnoreCase)).Select(static change => change.Name).ToList(),
+                ["agents"] = plan.Agents.Where(change => ticked.Contains(change.Name, StringComparer.OrdinalIgnoreCase)).Select(static change => change.Name).ToList(),
             }));
         }
 
-        string teammates = Agency.Huddle.App.Components.Shared.Plural.Of(changed, "Teammate", "Teammates");
-        return new RemovalOutcome(true, changed == 0 ? $"{plan.Title} updated." : $"{plan.Title} updated for {teammates}.");
+        string agents = Agency.Huddle.App.Components.Shared.Plural.Of(changed, "Agent", "Agents");
+        return new RemovalOutcome(true, changed == 0 ? $"{plan.Title} updated." : $"{plan.Title} updated for {agents}.");
     }
 }

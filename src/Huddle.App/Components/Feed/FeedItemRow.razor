@@ -17,7 +17,7 @@
     <div class="feed-row-members">
         @foreach (FeedItem member in this.Group.Items)
         {
-            <FeedItemRow @key="member.Id" Group="new FeedGroup([member])" OnDismiss="this.OnDismiss" OnDismissMany="this.OnDismissMany" OnTeammate="this.OnTeammate" />
+            <FeedItemRow @key="member.Id" Group="new FeedGroup([member])" OnDismiss="this.OnDismiss" OnDismissMany="this.OnDismissMany" OnAgent="this.OnAgent" />
         }
     </div>
 }
@@ -111,9 +111,9 @@ else
     [Parameter]
     public EventCallback<IReadOnlyList<FeedItem>> OnDismissMany { get; set; }
 
-    /// <summary>Called with a Teammate's Name when the avatar is clicked. Huddle and the Human have no such click.</summary>
+    /// <summary>Called with an Agent's Name when the avatar is clicked. Huddle and the Human have no such click.</summary>
     [Parameter]
-    public EventCallback<string> OnTeammate { get; set; }
+    public EventCallback<string> OnAgent { get; set; }
 
 
     private FeedSummaryLine Line => FeedSummary.Of(this.Group.Lead);
@@ -153,24 +153,24 @@ else
         FeedActor actor = this.Group.Lead.Actor;
         switch (actor.Kind)
         {
-            case FeedActorKind.Agent when this.OnTeammate.HasDelegate:
+            case FeedActorKind.Agent when this.OnAgent.HasDelegate:
                 builder.OpenElement(0, "button");
                 builder.AddAttribute(1, "type", "button");
                 builder.AddAttribute(2, "class", "feed-row-avatar-button");
                 builder.AddAttribute(3, "aria-label", actor.Name);
-                builder.AddAttribute(4, "onclick", EventCallback.Factory.Create<MouseEventArgs>(this, this.TeammateClickedAsync));
+                builder.AddAttribute(4, "onclick", EventCallback.Factory.Create<MouseEventArgs>(this, this.AgentClickedAsync));
                 builder.AddEventStopPropagationAttribute(5, "onclick", true);
-                builder.OpenComponent<TeammateAvatar>(6);
-                builder.AddComponentParameter(7, nameof(TeammateAvatar.Name), actor.Name);
-                builder.AddComponentParameter(8, nameof(TeammateAvatar.Size), Size.Small);
+                builder.OpenComponent<AgentAvatar>(6);
+                builder.AddComponentParameter(7, nameof(AgentAvatar.Name), actor.Name);
+                builder.AddComponentParameter(8, nameof(AgentAvatar.Size), Size.Small);
                 builder.CloseComponent();
                 builder.CloseElement();
                 break;
             case FeedActorKind.Agent:
             case FeedActorKind.Human:
-                builder.OpenComponent<TeammateAvatar>(0);
-                builder.AddComponentParameter(1, nameof(TeammateAvatar.Name), this.ActorName);
-                builder.AddComponentParameter(2, nameof(TeammateAvatar.Size), Size.Small);
+                builder.OpenComponent<AgentAvatar>(0);
+                builder.AddComponentParameter(1, nameof(AgentAvatar.Name), this.ActorName);
+                builder.AddComponentParameter(2, nameof(AgentAvatar.Size), Size.Small);
                 builder.CloseComponent();
                 break;
             default:
@@ -216,7 +216,7 @@ else
 
     private void Expand() => this.expanded = true;
 
-    private Task TeammateClickedAsync() => this.OnTeammate.InvokeAsync(this.Group.Lead.Actor.Name);
+    private Task AgentClickedAsync() => this.OnAgent.InvokeAsync(this.Group.Lead.Actor.Name);
 
     /// <summary>Enter on the focused row does what a click does; a link is activated by Enter alone.</summary>
     private void OnBodyKeyDown(KeyboardEventArgs args)

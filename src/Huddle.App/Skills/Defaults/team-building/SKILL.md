@@ -1,19 +1,19 @@
 ---
 name: team-building
-description: Use when the Human wants a team, wants to add or change a Teammate, asks who should work on something, or is new and has no team yet. Covers greeting a new Human, interviewing them, reusing Teammates, choosing how a team works, and proposing new Teammates.
-tools: [validate_teammate, propose_teammates]
+description: Use when the Human wants a team, wants to add or change an Agent, asks who should work on something, or is new and has no team yet. Covers greeting a new Human, interviewing them, reusing Agents, choosing how a team works, and proposing new Agents.
+tools: [validate_agent, propose_agents]
 ---
 
 # Team building
 
 This Skill helps the Human go from "I want help with X" to a small team of
-Teammates already at work on X. You interview the Human, propose a team, and
-start the work once they approve it. You never create a Teammate yourself: you
+Agents already at work on X. You interview the Human, propose a team, and
+start the work once they approve it. You never create an Agent yourself: you
 propose, and the Human's **Approve** creates.
 
-Every new Teammate is a running process that costs the Human money whether or
+Every new Agent is a running process that costs the Human money whether or
 not it is busy. A good team is the **smallest** one that does the job, and
-reusing an existing Teammate is usually better than creating one.
+reusing an existing Agent is usually better than creating one.
 
 This Skill has three supporting files: `onboarding.md`, `team-patterns.md` and
 `roles.md`. Read one with `read_skill`, passing its file name, only when a step
@@ -25,7 +25,7 @@ Read `onboarding.md` first in either of these cases:
 
 - **(a)** You are asked to greet a Human who has not written anything yet. That
   is a Greeting Turn, and nothing in the Room prompted it.
-- **(b)** A Human with no Teammates except you greets you or asks what this is.
+- **(b)** A Human with no Agents except you greets you or asks what this is.
 
 It shapes your first Message to them, suggests a few teams, and hands back to
 step 1.
@@ -38,11 +38,11 @@ can name a pattern from `team-patterns.md`. You need to know:
 | Ask about | Because it decides |
 | --- | --- |
 | **The goal**, and what a finished result looks like | The roles |
-| **One-off or recurring** | Whether new Teammates are worth creating at all, and whether they should keep notes or a library that grows with each piece of work |
+| **One-off or recurring** | Whether new Agents are worth creating at all, and whether they should keep notes or a library that grows with each piece of work |
 | **How involved** they want to be: every step, or only the result | Panel or pipeline |
 | **Practice or real work**: are they rehearsing something, or getting it done? | Whether this is a simulation |
 | **Which Team** this belongs to, if they already use Teams | The `teams` label |
-| **Spend**: how many Teammates they are willing to run | The size |
+| **Spend**: how many Agents they are willing to run | The size |
 
 If the Human has already answered some of these, do not ask again.
 
@@ -63,18 +63,18 @@ say so now rather than after the team exists. `team-patterns.md` lists these.
 ## 2. Take stock before proposing anything
 
 Call `list_agents`. For each role you have in mind, check whether an existing
-Teammate already covers it.
+Agent already covers it.
 
-- **Reuse a general role** (a Skeptic, an Editor, a Researcher). A Teammate can
+- **Reuse a general role** (a Skeptic, an Editor, a Researcher). An Agent can
   belong to several Teams, so reuse costs nothing extra.
-- **Create a dedicated Teammate for any character.** A Teammate's identity is
+- **Create a dedicated Agent for any character.** An Agent's identity is
   the same in every Room it is in, even though each Room now holds its own
-  separate conversation: a Teammate playing a hostile interviewer in one Room
+  separate conversation: an Agent playing a hostile interviewer in one Room
   brings that same persona into the next Room it is invited to. A character is
   anyone the Human talks *to* rather than works *with*: a counterparty, an
   interviewer, a customer, a stakeholder in a drill, a Study Buddy. If in
   doubt, create it dedicated.
-- **Do not reuse a Teammate the Human talks to privately** for a group
+- **Do not reuse an Agent the Human talks to privately** for a group
   simulation. Its private conversation will leak into the scene.
 - **Do not reuse a specialist outside its field.** A Specialist with a library
   is valuable because its context and its library hold one field. Put it in a
@@ -83,19 +83,19 @@ Teammate already covers it.
 ## 3. Choose how the team works
 
 Read `team-patterns.md`. First check its "Why a team rather than one agent"
-table: if no row applies, propose a single Teammate and say why one is enough.
+table: if no row applies, propose a single Agent and say why one is enough.
 Otherwise pick one pattern. Start from a **panel** unless the Human wants to
 hand work off and come back to a result. A pipeline costs more and fails more
 quietly.
 
-Prefer being asked to following. A Teammate that follows a Room takes a paid
-Turn on every Message there, including Messages between other Teammates. Only a
+Prefer being asked to following. An Agent that follows a Room takes a paid
+Turn on every Message there, including Messages between other Agents. Only a
 coordinator, a Game Master, or a character whose constant pressure is the point
 of the exercise should follow a Room.
 
 ## 4. Write each Candidate
 
-Each new Teammate you propose is a **Candidate**. Read `roles.md` for starting
+Each new Agent you propose is a **Candidate**. Read `roles.md` for starting
 points. Every Candidate has these fields:
 
 | Field | Rule |
@@ -104,8 +104,8 @@ points. Every Candidate has these fields:
 | `alias` | Required. Same rules as `name`. A short handle for Mentions, such as `jar` for Jarvis. |
 | `title` | Required. The job, in two or three words: `Researcher`, `Tech Lead`. |
 | `teams` | Optional list of Team labels, such as `['Business']`. A label must not contain `,` or `;`. A label is a view for the Human; it grants nothing. |
-| `consult_when` | Optional, one line. Other Teammates read it in `list_agents`, so say when to bring this Teammate in. For a character, write `Never. Only the Human addresses this Teammate.` |
-| `role` | Optional. `<type-id>/<role-id>` for a role of the team type the Human chose, such as `development/developer`. The role is hired from that type's template, so the Teammate gets the role's skills and model tier. A role needs a Team in `teams`, and a Team can have only one manager role. |
+| `consult_when` | Optional, one line. Other Agents read it in `list_agents`, so say when to bring this Agent in. For a character, write `Never. Only the Human addresses this Agent.` |
+| `role` | Optional. `<type-id>/<role-id>` for a role of the team type the Human chose, such as `development/developer`. The role is hired from that type's template, so the Agent gets the role's skills and model tier. A role needs a Team in `teams`, and a Team can have only one manager role. |
 | `body` | Required. The instructions. Must not start with `---`. See below. |
 
 **Write the body in the second person**, as a brief to a new colleague:
@@ -126,11 +126,11 @@ points. Every Candidate has these fields:
 - **For a character**, also give it a specific life rather than a label: a
   name, a situation, its own goals, anything it knows that the Human does not,
   and what makes it step out of character.
-- **Put every secret in the body, never in a field.** Other Teammates see a
-  Teammate's frontmatter fields in `list_agents`, including `title`, `alias`,
+- **Put every secret in the body, never in a field.** Other Agents see an
+  Agent's frontmatter fields in `list_agents`, including `title`, `alias`,
   `teams` and `consult_when`, but never its body. A walk-away point or a hidden alibi in `consult_when` is known to the
   whole cast.
-- **For a Teammate that keeps notes or a library**, use the Keeper or the
+- **For an Agent that keeps notes or a library**, use the Keeper or the
   Specialist with a library in `roles.md`. Its body must say that its files are
   its only memory, and how to read them selectively.
 - **Say it plainly when a role must hold back.** A model pulls every role toward
@@ -139,12 +139,12 @@ points. Every Candidate has these fields:
   Tutor unless its body forbids that in so many words.
 
 **Do not explain the chat application in the body.** Rooms, Mentions, tools and
-Budgets are explained to every Teammate automatically, and repeating them only
+Budgets are explained to every Agent automatically, and repeating them only
 risks contradicting that explanation.
 
 **A Candidate cannot set `model`, `effort`, `adapter` or `skills`.** Each of them
 spends money or grants tools, so they are the Human's choice, made on the
-Teammate card once the Teammate exists. A new Teammate starts on the
+Agent card once the Agent exists. A new Agent starts on the
 installation's defaults. When a role would suit a different Model, say so beside
 your Proposal. Two cases are worth mentioning:
 
@@ -155,23 +155,23 @@ your Proposal. Two cases are worth mentioning:
 - A judge, chair or grader should be on a Model none of the others use. On the
   same Model as one of them, it favours that one's answers.
 
-Call `validate_teammate` on each Candidate and fix every problem it reports
+Call `validate_agent` on each Candidate and fix every problem it reports
 before moving on. Validation is free, so call it as often as you need to.
 
 ## 5. Propose the team, then stop
 
-Call `propose_teammates` with the id of the Room you are talking to the Human in
+Call `propose_agents` with the id of the Room you are talking to the Human in
 and every Candidate. It checks them again and shows the Human a **Proposal**
 card in that Room, with **Approve** and **Decline**. The card is the question.
 Nothing is created until the Human clicks Approve.
 
-The card shows only the new Teammates, so post one short Message beside it that
+The card shows only the new Agents, so post one short Message beside it that
 says what the card cannot:
 
 - The pattern, and who coordinates.
-- Which existing Teammates are part of the team.
+- Which existing Agents are part of the team.
 - What following will cost, if anyone will follow a Room.
-- Any Teammate that would suit a different Model.
+- Any Agent that would suit a different Model.
 
 For example:
 
@@ -179,23 +179,23 @@ For example:
 I've proposed a pipeline for the launch research: Vera and Quill are new, and
 Jarvis does the research he already does. I'll coordinate and follow the work
 Room, so each Message there costs a Turn of mine too. Vera would do well on a
-cheaper Model; you can set that on her Teammate card once she exists. Approve
+cheaper Model; you can set that on her Agent card once she exists. Approve
 when you're ready, or tell me what to change.
 ```
 
 Then **stop and wait**. Do not create Rooms for the Candidates or Mention them;
 they do not exist yet.
 
-If `propose_teammates` refuses:
+If `propose_agents` refuses:
 
 | It says | You |
 | --- | --- |
 | A Candidate has problems | Fix them and call it again. |
-| How many Teammates exist, the limit, and how many you may propose | Tell the Human, and offer to reuse an existing Teammate or drop a role. Let them choose. Never shrink or merge roles to fit without asking. |
-| A Proposal from another Teammate is already waiting in this Room | Tell the Human. They answer that one first. |
+| How many Agents exist, the limit, and how many you may propose | Tell the Human, and offer to reuse an existing Agent or drop a role. Let them choose. Never shrink or merge roles to fit without asking. |
+| A Proposal from another Agent is already waiting in this Room | Tell the Human. They answer that one first. |
 
 If the Human asks for changes, revise the Candidates, validate them, and call
-`propose_teammates` again. Your new Proposal replaces your waiting one. If the
+`propose_agents` again. Your new Proposal replaces your waiting one. If the
 Human says the Proposal has gone, propose again: a restart of the application
 loses a waiting Proposal.
 
@@ -208,12 +208,12 @@ is what wakes you:
 | --- | --- | --- |
 | `Approved. Created …` | Every Candidate named there now exists | Carry on below. |
 | `Approved. Created … Could not create …` | Some were created; the rest failed, each with a reason | Carry on with those created. Tell the Human which failed and why, and offer to propose them again, fixed. |
-| `Approved, but nothing was created` | The limit was reached, or every Candidate failed | Say why in one sentence, and offer to reuse existing Teammates or propose a smaller team. |
-| `Declined the proposed Teammates` | The Human said no | Ask what to change. Do not propose the same team again unchanged. |
+| `Approved, but nothing was created` | The limit was reached, or every Candidate failed | Say why in one sentence, and offer to reuse existing Agents or propose a smaller team. |
+| `Declined the proposed Agents` | The Human said no | Ask what to change. Do not propose the same team again unchanged. |
 
-Once Teammates exist:
+Once Agents exist:
 
-1. Call `list_agents` to confirm each new Teammate is present. A new Teammate
+1. Call `list_agents` to confirm each new Agent is present. A new Agent
    takes a few moments to come online, and one that is not yet online will not
    answer a Mention. If one is missing, wait a moment and check again before
    giving it work.
@@ -222,8 +222,8 @@ Once Teammates exist:
    `create_room` if the pattern needs one. For a panel, tell them to Mention
    every panellist in the same Message, so each answers before seeing the
    others, and to compare the answers rather than ask the panel to debate. For
-   a Teammate that keeps a library or notes, tell them where its folder is, by
-   default `App_Data/Teammates/<Name>/work/`, so they can add material to it.
+   an Agent that keeps a library or notes, tell them where its folder is, by
+   default `App_Data/Agents/<Name>/work/`, so they can add material to it.
 3. For a pipeline, call `create_room` with every member of the team and a
    `seed`, then `follow_room` on it. The seed is the only context the team will
    have, so write it as below.
@@ -248,16 +248,16 @@ them before continuing. That pause is the Budget protecting their spend.
 - Call `unfollow_room` on every Room you followed for this work.
 - After a simulation, offer the Human a short debrief: what went well, and the
   one thing to try differently. Then suggest they delete the dedicated
-  characters on their Teammate cards, so the characters stop running and cannot
+  characters on their Agent cards, so the characters stop running and cannot
   bleed into other Rooms.
 - For recurring work, leave the team in place and say so.
 
 ## Never
 
 - Mention a Candidate, or give it work, before the Human has approved it.
-- Propose Teammates to get around a Budget or a paused Room.
-- Propose more Teammates than the job needs, to look thorough.
+- Propose Agents to get around a Budget or a paused Room.
+- Propose more Agents than the job needs, to look thorough.
 - Promise what a team cannot do: run on a schedule, share files between
-  Teammates, or work unattended for a long time.
-- Put another Teammate's instructions, or the Human's private details, in a
+  Agents, or work unattended for a long time.
+- Put another Agent's instructions, or the Human's private details, in a
   body.

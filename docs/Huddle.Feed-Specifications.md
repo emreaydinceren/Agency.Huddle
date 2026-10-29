@@ -8,7 +8,7 @@ changing them · **Vocabulary:** [language.md](engineering/language.md) (**Needs
 **Task**, **Human gate**, **Request**, **History**, **Tab**, **Top Bar**, **Right sidebar**); the new
 terms **Feed**, **Feed item**, **Notification**, **Activity** and **Feed publisher** are proposed in §9 D-17
 
-This is the design for the first slice of the **Feed**: one stored history of what Teammates and
+This is the design for the first slice of the **Feed**: one stored history of what Agents and
 Huddle did, shown two ways. The **Notifications** button in the Top Bar opens a panel in the Right
 sidebar holding the items that ask for the Human. The **Feed** Tab is the full timeline of Team
 activity. It builds on the [Needs You specification](Huddle.NeedsYou-Specifications.md), the
@@ -35,7 +35,7 @@ still open are in §10.
 
 Needs You answers "who is blocked on me right now". It forgets everything once a Room clears, and
 it has never said anything about work that needed nothing from the Human. The Human who comes back
-after an hour cannot tell what happened: which Tasks Teammates created, which Rooms started, which
+after an hour cannot tell what happened: which Tasks Agents created, which Rooms started, which
 documents changed, and which asks came and went.
 
 The Feed answers that with one stored list of **Feed items**, written by the component that knows
@@ -46,7 +46,7 @@ each fact:
 | Catching up | Open every Room, Task list and document | One timeline, newest first, each item opening its target |
 | Asks that came and went | A Room that cleared leaves no trace | The item stays, dimmed as resolved |
 | A Task handed to the Human | Visible only on My Tasks | A Notification with a count on the Top Bar |
-| A gate stopped a Teammate | Only the Teammate sees the refusal | A Notification saying the Human's call is due |
+| A gate stopped an Agent | Only the Agent sees the refusal | A Notification saying the Human's call is due |
 
 ### 1.1 Policies
 
@@ -74,7 +74,7 @@ each fact:
 | U-5 | Zoe Mentions the Human in Pricing; later the Human posts there | A Notification "Zoe mentioned you in Pricing"; the Human's post resolves it |
 | U-6 | Ruth's move of QA-9 to Done is refused by `qa-evidence-before-done` | A Notification "A gate stopped Ruth moving QA-9 to Done: <refusal>"; resolved when QA-9's status next changes or it closes |
 | U-7 | The Human dismisses a Notification | It leaves the panel and the count. It is still in the Feed Tab. 30 days later the row is deleted |
-| U-8 | The Human clicks Nova's avatar on an item | The Feed Tab narrows to Nova's items; its address becomes `/feed?teammate=Nova`, so the Tab remembers it |
+| U-8 | The Human clicks Nova's avatar on an item | The Feed Tab narrows to Nova's items; its address becomes `/feed?agent=Nova`, so the Tab remembers it |
 | U-9 | A new item arrives while the Feed Tab is open | It is inserted at the top. Older pages already loaded do not shift or repeat |
 | U-10 | The SQLite file is locked when the writer runs | A warning is logged and the batch is dropped. The Task update the Agent made succeeded and its tool result says so |
 | U-11 | Huddle restarts while a Question card was waiting | The card is gone after the restart (Questions live in memory), so its Notification is resolved at startup |
@@ -94,7 +94,7 @@ each fact:
 | Helpers | A separate specification and ADR-0064 |
 | Helpers posting to the Feed | Slice 3. The `IFeedPublisher` contract (§6.2) is what they will call |
 | Message text, Question text or Form fields in an item | Policy 2 |
-| "Teammate left a Room" | Nothing in Huddle removes a Member from a Room today: `ITeamDirectory` has `AddMemberAsync` and no removal, and `DeleteRoomAsync` drops a whole Room. See §10 OD-1 |
+| "Agent left a Room" | Nothing in Huddle removes a Member from a Room today: `ITeamDirectory` has `AddMemberAsync` and no removal, and `DeleteRoomAsync` drops a whole Room. See §10 OD-1 |
 | The Human's own Library saves | Every save appends a History entry and nothing is grouped, so one editing session would be dozens of items. §9 D-10 |
 | Unarchive and rename of a Room | Not in the owner's list. Cheap to add later as two more source types |
 
@@ -206,7 +206,7 @@ internal sealed record FeedMessage(
     bool Notify,
     FeedPayload Payload);
 
-/// <summary>Who did it: a Teammate by Name, Huddle itself, or an edit made outside Huddle.</summary>
+/// <summary>Who did it: an Agent by Name, Huddle itself, or an edit made outside Huddle.</summary>
 internal sealed record FeedActor(FeedActorKind Kind, string Name)
 {
     public static FeedActor Huddle { get; } = new(FeedActorKind.Huddle, "Huddle");
@@ -462,10 +462,10 @@ public IReadOnlyList<FeedItem> Related(FeedItem item, IReadOnlyList<string> extr
 /// <summary>The Feed Tab's seen mark (§6.1 <c>feed_state</c>), or 0 before the first view.</summary>
 public long TabSeenUpTo();
 
-/// <summary>The number on each Category segment (§6.9) under the Teammate and Team filters, in one query.</summary>
-public FeedCounts Counts(string? teammate, string? team);
+/// <summary>The number on each Category segment (§6.9) under the Agent and Team filters, in one query.</summary>
+public FeedCounts Counts(string? agent, string? team);
 
-internal sealed record FeedQuery(long? BeforeId, int Limit, string? Teammate, string? Team, FeedCategory Category = FeedCategory.All);
+internal sealed record FeedQuery(long? BeforeId, int Limit, string? Agent, string? Team, FeedCategory Category = FeedCategory.All);
 
 internal sealed record FeedCounts(int All, int NeedsYou, int Tasks, int Documents, int Rooms, int Gates);
 
@@ -474,10 +474,10 @@ internal sealed record FeedItem(
     DateTimeOffset? SeenAt, DateTimeOffset? DismissedAt, DateTimeOffset? ResolvedAt, FeedPayload? Payload);
 ```
 
-`Page` is `WHERE id < $before … ORDER BY id DESC LIMIT $limit`, with `actor = $teammate COLLATE NOCASE`
+`Page` is `WHERE id < $before … ORDER BY id DESC LIMIT $limit`, with `actor = $agent COLLATE NOCASE`
 and `json_extract(payload, '$.data.team') = $team COLLATE NOCASE` added when set, and the
 Category's condition from §6.9 (a `source_type IN (…)`, or `notify = 1 AND resolved_at IS NULL`
-for Needs you). `Counts` is one `SELECT` of six `SUM(CASE …)` columns over the same Teammate and
+for Needs you). `Counts` is one `SELECT` of six `SUM(CASE …)` columns over the same Agent and
 Team conditions, so the six numbers always agree with what each segment shows. `SourceType` is
 null for a wire name this build does not know; such an item counts only in All.
 
@@ -513,22 +513,22 @@ in `SidebarPanelCatalog`, because it applies to no Subject.
   with the six Categories of §6.9 and their counts, as a single-select `MudChipSet` that wraps (the
   panel is too narrow for the segmented control). It **opens on Needs you**, so the bell still
   shows what needs the Human first; All shows everything. The choice lives only while the panel
-  does. The panel has no Team select and no Teammate filter: those are the Feed Tab's.
+  does. The panel has no Team select and no Agent filter: those are the Feed Tab's.
 - Rows are `FeedItemRow` (§6.12), the same component as the Feed Tab's, with day groups, grouping
   and the "↑ N new items" pill, loaded by `Page` with `PanelLimit` and "Show more".
 - A ✕ revealed on hover or focus on a Notification row (`hover-reveal-row`, as `NeedsYouList`
   does) sends `Dismiss(id)` and removes the row from the panel's Needs you list at once; in All it
   stays, because dismissing hides a Notification from the bell, not from the Feed.
 - The panel reports the unseen count through `SidebarPanelContext.SetCount`.
-- Empty Needs you: `EmptyState` "Nothing needs you" with "Asks from your Teammates appear here."
-  Empty All: "Nothing yet" with "What your Teammates do appears here."
+- Empty Needs you: `EmptyState` "Nothing needs you" with "Asks from your Agents appear here."
+  Empty All: "Nothing yet" with "What your Agents do appears here."
 - Its last row is a `NavTabLink` "See all activity" to `/feed?category=<the panel's Category>`.
 
 ### 6.9 The Feed Tab
 
 **Route and Tab.** `FeedPage.razor` at `@page "/feed"`. `TabKeys.Describe` gains
 `["feed"] => new("feed", "Feed", "feed")`. Filters are query parameters,
-`/feed?category=<category>`, `/feed?teammate=<Name>` and `/feed?team=<Team>`, combinable, so a Tab
+`/feed?category=<category>`, `/feed?agent=<Name>` and `/feed?team=<Team>`, combinable, so a Tab
 remembers its filter (ADR-0045: a Tab is a remembered URL). An unknown `category` value reads as
 All.
 
@@ -546,7 +546,7 @@ Tab, like Settings, rather than switching the Sidebar view. Also the panel's "Se
 
 ![Figure 13a: the same header with its wireframe codes F2, F2a, F2b, F3, F3a, F3b and F3c](images/wireframes/13a-feed-header.svg)
 
-- **`PageHeader`** with Title "Feed" and the Subtitle "What Teammates and Huddle did, newest first.
+- **`PageHeader`** with Title "Feed" and the Subtitle "What Agents and Huddle did, newest first.
   Each line links to the Task, Room or document it's about." In `TitleTrailing`, the **Live chip**:
   a small Success-tinted chip with a filled dot and "Live". It says that new items arrive on their
   own (live insertion, below); it is always drawn while the page is subscribed to `FeedEvents`,
@@ -555,11 +555,11 @@ Tab, like Settings, rather than switching the Sidebar view. Also the panel's "Se
   `Icons.Material.Outlined.Visibility`: "Read-only — the Feed never changes the work and never
   shows message text."
 - **The filter bar**, one row: the **Category** control at the left and the **Team select** at the
-  right; the Teammate chip, when set, sits just left of the Team select.
+  right; the Agent chip, when set, sits just left of the Team select.
 
 **Category** is a `HuddleSegmentedControl<FeedCategory>` with seven segments (`ItemCount="7"`), each a
 label and its count from `FeedStore.Counts`. Selecting one navigates the Tab to
-`?category=<value>`, keeping `teammate` and `team`. Every Feed item is in All, in exactly one of
+`?category=<value>`, keeping `agent` and `team`. Every Feed item is in All, in exactly one of
 Tasks, Gates, Rooms, Documents or Helpers, and in Needs you only while it is an unresolved Notification, so
 Needs you overlaps the other five and the counts are not meant to add up:
 
@@ -575,7 +575,7 @@ Needs you overlaps the other five and the counts are not meant to add up:
 
 A new source type must be added to exactly one of the five type segments in the same change
 (a unit test walks `FeedSourceType` and fails on an unassigned value). The counts cover the
-items the store still holds (the retention window, §6.11) under the current Teammate and Team
+items the store still holds (the retention window, §6.11) under the current Agent and Team
 filters, and are re-read on `FeedEvents.ItemsAdded` and on a resolve.
 
 **Team select** is a `MudSelect<string?>` (Dense, Outlined, at its natural width, about 160px):
@@ -584,11 +584,11 @@ filters, and are re-read on `FeedEvents.ItemsAdded` and on a resolve.
 tile becomes the Teams icon). Choosing one navigates to `?team=<Team>`; "All teams" removes it.
 Documents carry no Team (§10 OD-4), so with a Team chosen the Documents count is 0.
 
-**Teammate chip.** Clicking an avatar sets `?teammate=<Name>`, shown as a `TaskFilterChip`
-"Teammate: Nova ×" in the filter bar; × removes only that parameter.
+**Agent chip.** Clicking an avatar sets `?agent=<Name>`, shown as a `TaskFilterChip`
+"Agent: Nova ×" in the filter bar; × removes only that parameter.
 
 Then the items, newest first, as `FeedCard`s (§6.13) under the day headings of §6.12. The panel
-keeps the compact `FeedItemRow`. In the Tab, clicking an avatar navigates to `?teammate=<actor>` (not for the Huddle actor or the Human).
+keeps the compact `FeedItemRow`. In the Tab, clicking an avatar navigates to `?agent=<actor>` (not for the Huddle actor or the Human).
 No Dismiss, no Accept, no Reply (§3).
 
 **Paging and live insertion.** The page loads `Page(new(null, PageSize, …))`, and loads the next
@@ -597,10 +597,10 @@ page with `BeforeId` = the lowest id shown when its "Show more" button is presse
 pill of §6.12 (D-22). Because pages are keyed by id, adding items at the top never changes what
 the next page returns, and nothing repeats or goes missing.
 
-**Empty:** `EmptyState` "Nothing yet" with "What your Teammates do appears here." Filtered and
-empty: "Nothing from Nova yet." for a Teammate, "Nothing here yet." with "Try All, or another
+**Empty:** `EmptyState` "Nothing yet" with "What your Agents do appears here." Filtered and
+empty: "Nothing from Nova yet." for an Agent, "Nothing here yet." with "Try All, or another
 Team." for a Category or Team. Needs you empty: "Nothing needs you" with "Asks from your
-Teammates appear here." The header and filter bar stay drawn in every empty state, so the
+Agents appear here." The header and filter bar stay drawn in every empty state, so the
 counts show where the items are.
 
 ### 6.10 Startup reconciliation
@@ -654,7 +654,7 @@ days, from the injected `TimeProvider`.
 
 **The row** is a three-column grid: avatar, body, time.
 
-- **Avatar**, 20px, top-aligned with the first line: a Teammate's `TeammateAvatar` monogram; the
+- **Avatar**, 20px, top-aligned with the first line: an Agent's `AgentAvatar` monogram; the
   Human's own avatar with the Name "You" for the Human's actions; Huddle's own icon (a toggle-like
   glyph in a circle) for the Huddle actor. A Team as actor (a 2-letter Team monogram) arrives with
   slice 1b.
@@ -711,7 +711,7 @@ between cards.
   Tab's `tab_seen_up_to` (D-26). The age is then Accent too. When the Tab has been shown for
   2 seconds, `FeedQueue.MarkTabSeen(highestShownId)` moves the mark; bars already drawn stay for
   that view and are gone on the next one, so the Human sees what is new before it clears.
-- **Avatar with a kind badge.** The actor's 40px `TeammateAvatar` (Huddle's own mark for Huddle,
+- **Avatar with a kind badge.** The actor's 40px `AgentAvatar` (Huddle's own mark for Huddle,
   the Human's for "You"), with a 16px round badge at its bottom right naming the kind: a check
   (stopped for you), a document (changed), a person (assigned to you), a gauge (Budget), a lock
   (gate), an @ (mention), a question mark (Question), a form (Form), a plus (created); a bolt
@@ -784,11 +784,11 @@ opens from the expanded card's Open button and from each chip.
 | `room-question` | `asked you a Question in {Room}` | `Asked <hh:mm> · waiting for you` |
 | `room-form` | `is waiting for you to fill in a Form in {Room}` | `Asked <hh:mm> · waiting for you` |
 | `room-budget` | `{Room} reached its Budget` (actor: Huddle) | `Paused <hh:mm> · waiting for you to continue or wrap up` |
-| `room-created` | `opened {Room}` · `<n> Teammates` | — |
+| `room-created` | `opened {Room}` · `<n> Agents` | — |
 | `room-joined` | `<member> joined {Room}` | — |
 | `room-archived` | `archived {Room}` | — |
 | `document-changed` | `created`, `edited`, `reviewed` or `objected to` `{Document}` · `<summary>` when there is one | — |
-| `helper-paused` | `paused {Helper}: its daily cap of <n> calls is reached` · `Teammates' Tasks are not judged until you continue or the day ends` (actor: Huddle) | `Paused <hh:mm> · Continue is on the Helper's card` |
+| `helper-paused` | `paused {Helper}: its daily cap of <n> calls is reached` · `Agents' Tasks are not judged until you continue or the day ends` (actor: Huddle) | `Paused <hh:mm> · Continue is on the Helper's card` |
 | `helper-failing` | `{Helper} failed <n> times in a row` · `<last error>` (actor: Huddle) | `Since <hh:mm> · Tasks are not being judged` |
 | Unreadable item | `Something happened` | — |
 
@@ -805,20 +805,20 @@ A summary starting in lower case follows the actor's Name. Other copy:
 | Panel title | `Notifications` |
 | Panel link | `See all activity` |
 | Panel Categories | The seven Category labels with counts; opens on `Needs you` |
-| Panel empty | Needs you: `Nothing needs you` · `Asks from your Teammates appear here.`; All: `Nothing yet` · `What your Teammates do appears here.` |
+| Panel empty | Needs you: `Nothing needs you` · `Asks from your Agents appear here.`; All: `Nothing yet` · `What your Agents do appears here.` |
 | Activity bar link | `Feed` |
 | Page title | `Feed` |
-| Page subtitle | `What Teammates and Huddle did, newest first. Each line links to the Task, Room or document it's about.` |
+| Page subtitle | `What Agents and Huddle did, newest first. Each line links to the Task, Room or document it's about.` |
 | Live chip | `Live` |
 | Read-only note | `Read-only — the Feed never changes the work and never shows message text.` |
 | Category segments | `All`, `Needs you`, `Tasks`, `Documents`, `Rooms`, `Gates`, `Helpers`, each followed by its count |
 | Team select | `All teams`, then each Team Name; `aria-label` `Team` |
-| Filter chip | `Teammate: <Name>` |
+| Filter chip | `Agent: <Name>` |
 | Day heading | `Today <Ddd, Mmm d>`, `Yesterday <Ddd, Mmm d>`, `<Weekday> <Mmm d>`, `<Mmm d>` |
 | Grouped row | `and <n> more Tasks` (or the source's noun); `In <Team>, <n> Rooms stopped to wait for you` |
 | New items pill | `↑ <n> new items` (`↑ 1 new item`) |
 | Age | `<n>m`, `<n>h`, `<n>d`; `now` under a minute |
-| Feed empty | `Nothing yet` · `What your Teammates do appears here.` |
+| Feed empty | `Nothing yet` · `What your Agents do appears here.` |
 | Paging | `Show more` |
 
 Use **Feed item** in prose and code for one row. Never "post" as a noun (that word is avoided for
@@ -836,7 +836,7 @@ Functional tests with the real `FeedStore` on a `TempDataDir` and a `ManualTimeP
 
 | Area | Must pin |
 | --- | --- |
-| `FeedStore` | Table created twice is harmless; a row round-trips every column; keyset paging returns no duplicates when rows are inserted between pages; Teammate and Team filters; unknown wire name and bad JSON read as a null payload, never a throw |
+| `FeedStore` | Table created twice is harmless; a row round-trips every column; keyset paging returns no duplicates when rows are inserted between pages; Agent and Team filters; unknown wire name and bad JSON read as a null payload, never a throw |
 | `FeedQueue` | `Post` and `Resolve` never throw: full queue, mismatched payload, disabled; the time is taken from the injected clock at the call |
 | `FeedWriter` | Commands apply in order (a Post then a Resolve in one batch leaves the row resolved); Resolve, MarkSeen and Dismiss touch only `notify = 1` rows; a locked database drops the batch and the next batch succeeds; events raised after commit; Room name and Team filled in |
 | Clean-up | Each retention boundary, one second each side; undismissed Notifications kept; zero keeps everything |
@@ -893,11 +893,11 @@ Settled with the owner: D-1 to D-9. Made in this specification and open to revie
 
 | # | Question | Recommendation |
 | --- | --- | --- |
-| OD-1 | "A Teammate leaves a Room" was asked for, but nothing in Huddle removes a Member today | Leave it out of slice 1. Add `RoomLeft` with the feature that removes a Member |
+| OD-1 | "An Agent leaves a Room" was asked for, but nothing in Huddle removes a Member today | Leave it out of slice 1. Add `RoomLeft` with the feature that removes a Member |
 | OD-2 | An Agent that retries a refused move posts a `GateDecisionDue` each time. Is that noise? | Keep one item per refusal (D-7) and watch real use. If it is noise, the sender (not the Feed) can skip a post while an unresolved one exists |
 | OD-3 | Undismissed Notifications, even resolved, are never deleted. The panel only shows the newest `PanelLimit`, but the table grows | Add `ResolvedRetentionDays` (say 30) for resolved, undismissed Notifications |
 | OD-4 | Documents carry no Team, so a Team filter never shows them | Derive the Team when the file is under a Team's folder (ADR-0030), in a later slice |
-| OD-5 | A rename leaves old items under the old Name, as Document History does (ADR-0060). The avatar of a renamed Teammate stops matching | Keep in v1. If it matters, `PersonaRenameCascade` can rewrite the `actor` column in one statement |
+| OD-5 | A rename leaves old items under the old Name, as Document History does (ADR-0060). The avatar of a renamed Agent stops matching | Keep in v1. If it matters, `PersonaRenameCascade` can rewrite the `actor` column in one statement |
 | OD-6 | Should Unarchive and Room rename be activity too? | Not in slice 1 (not asked for); two source types later |
 | OD-7 | The bell's panel now shows the whole Feed, opening on Needs you (D-21), but keeps the title "Notifications" | Keep "Notifications": the bell and its count are about the Human. Rename to "Feed" if the All view turns out to be what people use |
 
@@ -913,7 +913,7 @@ Slice 1 was built as designed, except for these facts.
 6. The card has no "Post by" deadline pill (a Task's due date has no time) and no Assignee job title.
 7. The Needs you chip count still includes dismissed Notifications.
 8. The disabled page text "The Feed is turned off." and "Set Team:Feed:Enabled to turn it on." is not in §7.
-9. The filter query values (`category`, `teammate`, `team`) are plain `[Parameter]`s filled by `TabPageRoutes`.
+9. The filter query values (`category`, `agent`, `team`) are plain `[Parameter]`s filled by `TabPageRoutes`.
 
 ---
 
@@ -953,7 +953,7 @@ exactly one Category.
 | "Priya moved #TASK-142 In progress → Review" (any status change) | `TaskService` | Tasks |
 | "Zoe drafted a Request to the Data Team", "Docs Team filed a Request for the Development Team" | Request tools (ADR-0040); a Team as actor | Tasks |
 | "Gate turned on · Needs you → Done now needs CI … · in Team process" | `ProcessGateService` / `Process.md` changes | Gates |
-| "Data Team hired a Teammate · Mira", "Margot hired Wren" | The hiring flow | None of the five fits: All only, or a new Category, decided in 1b |
+| "Data Team hired an Agent · Mira", "Margot hired Wren" | The hiring flow | None of the five fits: All only, or a new Category, decided in 1b |
 | "You installed the Skill Dependency upgrade audit" | Skills | All only, or a new Category, decided in 1b |
 | "Zoe changed tasks/…md +9 −0 · 3 evidence items", "Eli froze the v2.8.0 changelog" | `DocHistoryStore` with diff counts | Documents |
 | Budget lines with "80k / 80k tokens · Nadia and Vera paused", "you chose Continue 12:52" | `NeedsYouTracker` and the Budget code, with richer payloads and resolve reasons | Rooms |
@@ -986,5 +986,5 @@ Each task is one commit: a failing test, the code, a green `dotnet build Huddle.
 | FD-16 | `NotificationsButton` and `NotificationsPanel` | §8 Components row: count, seen, dismiss, resolved, See all activity |
 | FD-17 | `FeedSummary` copy and `FeedItemRow` (§6.12): day groups, reference chips, 3-line clamp, status line, age, grouping when drawn, the new items pill | One summary and status line per row of §7; the unreadable item; grouping joins only same actor, type and Team within 10 minutes and never mixes Notifications with Activity; the pill appears only when scrolled |
 | FD-17b | `FeedCard` (§6.13): unseen bar and `feed_state`, kind badge, meta line with Room and Team chips, status pills, expand with the Task, Room and document previews, "In the Feed" from `Related`, the navigation buttons | The bar follows `tab_seen_up_to` and clears on the next view; one card expanded at a time; a deleted target; Review in Needs you only for an unresolved gated Task; no button writes anything |
-| FD-18 | `FeedPage` at `/feed`, `TabKeys`, the `S5b` link; the header of §6.9 (Live chip, read-only note, Category control with counts, Team select, Teammate chip) | Paging, new items through the pill, `category`/`teammate`/`team` combine in the address and survive a Tab restore, counts re-read on a new item and on a resolve, target links |
+| FD-18 | `FeedPage` at `/feed`, `TabKeys`, the `S5b` link; the header of §6.9 (Live chip, read-only note, Category control with counts, Team select, Agent chip) | Paging, new items through the pill, `category`/`agent`/`team` combine in the address and survive a Tab restore, counts re-read on a new item and on a resolve, target links |
 | FD-19 | User Guide, wireframes, code-map, Engineering Guide keys, manual tests page `feed.md` | `Check-All.ps1` |

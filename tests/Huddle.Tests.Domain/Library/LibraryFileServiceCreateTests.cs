@@ -278,97 +278,97 @@ public sealed class LibraryFileServiceCreateTests
         Assert.True(File.Exists(Path.Combine(marketing, "memory", "fact.md")));
     }
 
-    /// <summary>Creating anything directly at the Teammates root is refused (corrections-B4 item 21, settled text).</summary>
+    /// <summary>Creating anything directly at the Agents root is refused (corrections-B4 item 21, settled text).</summary>
     [Fact]
-    public async Task CreateFolder_AtTeammatesRoot_Refused()
+    public async Task CreateFolder_AtAgentsRoot_Refused()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         LibraryFileService service = fixture.CreateService();
-        LibraryPath teammatesRoot = fixture.ResolveTeammatesFolder(string.Empty);
+        LibraryPath agentsRoot = fixture.ResolveAgentsFolder(string.Empty);
 
-        LibraryResult<LibraryPath> result = await service.CreateFolderAsync(teammatesRoot, "someone", ct);
+        LibraryResult<LibraryPath> result = await service.CreateFolderAsync(agentsRoot, "someone", ct);
 
         Assert.Null(result.Value);
-        Assert.Equal("Add teammates on the Teammates page.", result.Error);
-        Assert.False(Directory.Exists(Path.Combine(fixture.DataDir, "Teammates", "someone")));
+        Assert.Equal("Add agents on the Agents page.", result.Error);
+        Assert.False(Directory.Exists(Path.Combine(fixture.DataDir, "Agents", "someone")));
     }
 
-    /// <summary>Creating a file directly at the Teammates root is refused (corrections-B4 item 21, settled text).</summary>
+    /// <summary>Creating a file directly at the Agents root is refused (corrections-B4 item 21, settled text).</summary>
     [Fact]
-    public async Task CreateFile_AtTeammatesRoot_Refused()
+    public async Task CreateFile_AtAgentsRoot_Refused()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         LibraryFileService service = fixture.CreateService();
-        LibraryPath teammatesRoot = fixture.ResolveTeammatesFolder(string.Empty);
+        LibraryPath agentsRoot = fixture.ResolveAgentsFolder(string.Empty);
 
-        LibraryResult<LibraryPath> result = await service.CreateFileAsync(teammatesRoot, "notes", ct);
+        LibraryResult<LibraryPath> result = await service.CreateFileAsync(agentsRoot, "notes", ct);
 
         Assert.Null(result.Value);
-        Assert.Equal("Add teammates on the Teammates page.", result.Error);
-        Assert.False(File.Exists(Path.Combine(fixture.DataDir, "Teammates", "notes.md")));
+        Assert.Equal("Add agents on the Agents page.", result.Error);
+        Assert.False(File.Exists(Path.Combine(fixture.DataDir, "Agents", "notes.md")));
     }
 
-    /// <summary>Creating a <c>.md</c> file directly in a Teammate folder is refused (corrections-B4 item 21,
-    /// settled text): a Teammate folder holds only its definition.</summary>
+    /// <summary>Creating a <c>.md</c> file directly in an Agent folder is refused (corrections-B4 item 21,
+    /// settled text): an Agent folder holds only its definition.</summary>
     [Fact]
-    public async Task CreateFile_MdDirectlyInTeammateFolder_Refused()
+    public async Task CreateFile_MdDirectlyInAgentFolder_Refused()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        _ = fixture.CreateTeammate("ada", "Ada", "ada");
+        _ = fixture.CreateAgent("ada", "Ada", "ada");
         LibraryFileService service = fixture.CreateService();
-        LibraryPath teammateFolder = fixture.ResolveTeammatesFolder("ada");
+        LibraryPath agentFolder = fixture.ResolveAgentsFolder("ada");
 
-        LibraryResult<LibraryPath> result = await service.CreateFileAsync(teammateFolder, "notes", ct);
+        LibraryResult<LibraryPath> result = await service.CreateFileAsync(agentFolder, "notes", ct);
 
         Assert.Null(result.Value);
-        Assert.Equal("A teammate folder holds only its definition; use work/.", result.Error);
-        Assert.False(File.Exists(Path.Combine(fixture.DataDir, "Teammates", "ada", "notes.md")));
+        Assert.Equal("An agent folder holds only its definition; use work/.", result.Error);
+        Assert.False(File.Exists(Path.Combine(fixture.DataDir, "Agents", "ada", "notes.md")));
     }
 
-    /// <summary>A scope that names an existing Teammate definition file is refused like any non-folder scope (it used to resolve and then throw in the tree).</summary>
+    /// <summary>A scope that names an existing Agent definition file is refused like any non-folder scope (it used to resolve and then throw in the tree).</summary>
     [Fact]
-    public void TryResolveScope_TeammateDefinitionFile_Refused()
+    public void TryResolveScope_AgentDefinitionFile_Refused()
     {
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        _ = fixture.CreateTeammate("ben", "Ben", "ben");
+        _ = fixture.CreateAgent("ben", "Ben", "ben");
 
-        bool resolved = fixture.Resolver.TryResolveScope(new LibraryLocation("teammates", "ben/ben.md"), out LibraryPath? folder, out string? error);
+        bool resolved = fixture.Resolver.TryResolveScope(new LibraryLocation("agents", "ben/ben.md"), out LibraryPath? folder, out string? error);
 
         Assert.False(resolved);
         Assert.Null(folder);
         Assert.Equal("This folder isn't available in the Library.", error);
     }
 
-    /// <summary>A scope that names a Teammate folder still resolves.</summary>
+    /// <summary>A scope that names an Agent folder still resolves.</summary>
     [Fact]
-    public void TryResolveScope_TeammateFolder_Resolves()
+    public void TryResolveScope_AgentFolder_Resolves()
     {
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        _ = fixture.CreateTeammate("ben", "Ben", "ben");
+        _ = fixture.CreateAgent("ben", "Ben", "ben");
 
-        bool resolved = fixture.Resolver.TryResolveScope(new LibraryLocation("teammates", "ben"), out LibraryPath? folder, out string? error);
+        bool resolved = fixture.Resolver.TryResolveScope(new LibraryLocation("agents", "ben"), out LibraryPath? folder, out string? error);
 
         Assert.True(resolved);
         Assert.NotNull(folder);
         Assert.Null(error);
     }
 
-    /// <summary>Creating a file inside a Teammate's <c>work/</c> folder succeeds (corrections-B4 item 21: the
-    /// refusal is only for the Teammate folder itself, not its Work Dir).</summary>
+    /// <summary>Creating a file inside an Agent's <c>work/</c> folder succeeds (corrections-B4 item 21: the
+    /// refusal is only for the Agent folder itself, not its Work Dir).</summary>
     [Fact]
-    public async Task CreateFile_UnderTeammateWorkFolder_Succeeds()
+    public async Task CreateFile_UnderAgentWorkFolder_Succeeds()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        _ = fixture.CreateTeammate("ada", "Ada", "ada");
-        string workDir = Path.Combine(fixture.DataDir, "Teammates", "ada", "work");
+        _ = fixture.CreateAgent("ada", "Ada", "ada");
+        string workDir = Path.Combine(fixture.DataDir, "Agents", "ada", "work");
         Directory.CreateDirectory(workDir);
         fixture.Reload();
         LibraryFileService service = fixture.CreateService();
-        LibraryPath workFolder = fixture.ResolveTeammatesFolder("ada/work");
+        LibraryPath workFolder = fixture.ResolveAgentsFolder("ada/work");
 
         LibraryResult<LibraryPath> result = await service.CreateFileAsync(workFolder, "x", ct);
 

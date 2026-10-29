@@ -2,7 +2,7 @@ namespace Agency.Huddle.App.Components.Settings;
 
 /// <summary>
 /// Which section the Settings page's left menu is showing. Public for the same reason
-/// <c>TeammateCardMode</c> is: Razor generates <c>Settings.razor</c>'s component as a public type, and
+/// <c>AgentProfileCardMode</c> is: Razor generates <c>Settings.razor</c>'s component as a public type, and
 /// a route parameter or field of an <c>internal</c> enum type would not compile there.
 /// </summary>
 public enum SettingsTab

@@ -29,7 +29,7 @@ internal interface IModelCatalog
     /// this time started with that model selected. The list is for exactly ONE model on exactly ONE
     /// Adapter — effort is downstream of model choice, not a sibling catalog beside it — and the
     /// adapter's own <c>"default"</c> sentinel entry is already removed before this returns: the
-    /// Teammate card's blank "Agent default" option already IS that choice, and it stores
+    /// Agent card's blank "Agent default" option already IS that choice, and it stores
     /// <c>null</c>, so there is nothing left for the sentinel string to mean here.
     /// </summary>
     /// <remarks>

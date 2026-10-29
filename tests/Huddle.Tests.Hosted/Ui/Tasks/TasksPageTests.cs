@@ -22,7 +22,7 @@ namespace Agency.Huddle.Tests.Ui.Tasks;
 
 /// <summary>
 /// Pins Spec §13.2 (the Tasks page) and §13.12 (alerts and empty states). Split the same way
-/// <c>TeammatesPageTests</c> is: routing, HTTP status and raw markup facts stay on a plain HTTP GET
+/// <c>AgentsPageTests</c> is: routing, HTTP status and raw markup facts stay on a plain HTTP GET
 /// against <see cref="TeamWebApplicationFactory"/>, while the live-update pattern (§13.11) - a
 /// requery on <see cref="TaskEvents.TasksReloaded"/>, and unsubscribing on <see cref="IDisposable.Dispose"/> -
 /// renders <see cref="TasksPage"/> through <see cref="MudBunitContext"/> and <see cref="TaskToolHarness"/>

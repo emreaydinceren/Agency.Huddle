@@ -12,7 +12,7 @@ namespace Agency.Huddle.Tests.Tasks;
 /// <summary>
 /// OR-2 (Spec §Wake): a Task change wakes the Team's manager as well as the assignee, unless the
 /// manager made the change or already is the assignee, and the manager's wake counts toward the same
-/// per-Task limit of Teammate-made wake-ups. The shared harness lives in <see cref="TaskTriggerTestSupport"/>.
+/// per-Task limit of Agent-made wake-ups. The shared harness lives in <see cref="TaskTriggerTestSupport"/>.
 /// </summary>
 public sealed class TaskTriggerManagerWakeTests
 {
@@ -88,7 +88,7 @@ public sealed class TaskTriggerManagerWakeTests
         Assert.Equal("Mia", post.Message.Text);
     }
 
-    /// <summary>The manager's wake is the Task's tenth Teammate-made wake: it is delivered and the budget is then spent.</summary>
+    /// <summary>The manager's wake is the Task's tenth Agent-made wake: it is delivered and the budget is then spent.</summary>
     [Fact]
     public async Task ManagerWake_IsTheTenthWake_Delivered()
     {
@@ -112,7 +112,7 @@ public sealed class TaskTriggerManagerWakeTests
         Assert.True(harness.Activity.Budget(task.Id).Exhausted);
     }
 
-    /// <summary>The eleventh Teammate-made wake is refused for the manager like any other, and is not counted.</summary>
+    /// <summary>The eleventh Agent-made wake is refused for the manager like any other, and is not counted.</summary>
     [Fact]
     public async Task ManagerWake_IsTheEleventhWake_Refused()
     {

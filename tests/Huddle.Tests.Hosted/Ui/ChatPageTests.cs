@@ -358,7 +358,7 @@ public sealed class ChatPageTests
         var room = await chat.EnsureRoomForAsync(agent, ct);
         var messageId = Guid.CreateVersion7().ToString("N");
 
-        // Otherwise this Agent is offline by the same default TeammatesPageTests relies on (nothing
+        // Otherwise this Agent is offline by the same default AgentsPageTests relies on (nothing
         // ever registers a real pipe connection), and the member-health strip (a separate, correct
         // alert) would fire for the wrong reason and make this assertion meaningless.
         factory.FakeAgentGateway.SetOnline(agent.Id);
@@ -471,7 +471,7 @@ public sealed class ChatPageTests
     /// An Agent that is simply not running - no health report of any kind - produces no strip. This
     /// is the stock configuration, not an edge case: Team:Acp:Enabled is false by default, so no
     /// Persona has ever started and every Agent resolves to Offline. Listing those would put a
-    /// permanent alert in every Room saying nothing the Teammate tile does not already show, and an
+    /// permanent alert in every Room saying nothing the Agent tile does not already show, and an
     /// alert that is always on is one nobody reads.
     /// </summary>
     [Fact]
@@ -510,7 +510,7 @@ public sealed class ChatPageTests
         var room = await chat.EnsureRoomForAsync(agent, ct);
 
         // PersonaHealth is keyed by Persona Name, which - for an Agent backed by a real Persona -
-        // is the same string as the Agent's own Name, exactly the mapping Teammates.razor already
+        // is the same string as the Agent's own Name, exactly the mapping Agents.razor already
         // relies on for the tile and card.
         var health = factory.Services.GetRequiredService<PersonaHealth>();
         health.Report(agent.Name, PersonaState.Offline, "The Adapter needs authentication.");
@@ -584,12 +584,12 @@ public sealed class ChatPageTests
     }
 
     /// <summary>
-    /// A plain Message from the Human in a group Room, addressing no teammate by name, renders the
+    /// A plain Message from the Human in a group Room, addressing no agent by name, renders the
     /// context-only note - and announces it as role="status" rather than role="alert", proving the
     /// explicit attribute in Chat.razor survived: MudAlert itself emits no role at all.
     /// </summary>
     [Fact]
-    public async Task ChatPage_WhenNoTeammateIsMentionedInAGroupRoom_SaysTheMessageWasContextOnly()
+    public async Task ChatPage_WhenNoAgentIsMentionedInAGroupRoom_SaysTheMessageWasContextOnly()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
@@ -611,9 +611,9 @@ public sealed class ChatPageTests
         Assert.Contains("role=\"status\"", cut.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>A Message that @-mentions a teammate says nothing: a reply is expected, so there is nothing to explain.</summary>
+    /// <summary>A Message that @-mentions an agent says nothing: a reply is expected, so there is nothing to explain.</summary>
     [Fact]
-    public async Task ChatPage_WhenAMentionAddressesATeammate_SaysNothing()
+    public async Task ChatPage_WhenAMentionAddressesAAgent_SaysNothing()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
@@ -635,7 +635,7 @@ public sealed class ChatPageTests
 
     /// <summary>
     /// An Agent's own plain reply in a group Room never triggers the note, even though it too addresses
-    /// no teammate: a reply that ends a thread without an @-mention is the ordinary end of almost every
+    /// no agent: a reply that ends a thread without an @-mention is the ordinary end of almost every
     /// thread, and putting the note under nearly every final reply would make it the always-on strip
     /// ADR-0008 already rejected. The note answers "why did MY message get no reply", so it belongs only
     /// to the Human's own Message - Chat.razor's OnMessagePosted only resolves it for a Human sender.
@@ -688,7 +688,7 @@ public sealed class ChatPageTests
 
     /// <summary>
     /// A live Draft suppresses the note even when the Human's Message would otherwise resolve to
-    /// ContextOnly: a teammate is visibly typing from an earlier Mention, and stacking "name one to ask
+    /// ContextOnly: an agent is visibly typing from an earlier Mention, and stacking "name one to ask
     /// for a reply" beside a streaming row would be a worse lie than saying nothing.
     /// </summary>
     [Fact]
@@ -720,9 +720,9 @@ public sealed class ChatPageTests
         Assert.DoesNotContain("reply-note", cut.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>Every teammate Offline resolves to NoRecipients rather than ContextOnly, so the note - which only ever fires for ContextOnly - stays silent.</summary>
+    /// <summary>Every agent Offline resolves to NoRecipients rather than ContextOnly, so the note - which only ever fires for ContextOnly - stays silent.</summary>
     [Fact]
-    public async Task ChatPage_WhenEveryTeammateIsOffline_SaysNothing()
+    public async Task ChatPage_WhenEveryAgentIsOffline_SaysNothing()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
@@ -731,7 +731,7 @@ public sealed class ChatPageTests
         var (directory, chat, _) = ChatPageTests.Services(factory);
         var (room, _, _) = await ChatPageTests.CreateGroupRoomAsync(directory, chat, ct);
 
-        // Deliberately no SetOnline call: both teammates stay at FakeAgentGateway's default, offline.
+        // Deliberately no SetOnline call: both agents stay at FakeAgentGateway's default, offline.
         await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
         var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
 
@@ -742,13 +742,13 @@ public sealed class ChatPageTests
     }
 
     /// <summary>
-    /// Mentioning an offline teammate resolves to MentionedUnreachable, which - like every outcome
-    /// besides ContextOnly - renders nothing here: the Room must not claim no teammate was mentioned
+    /// Mentioning an offline agent resolves to MentionedUnreachable, which - like every outcome
+    /// besides ContextOnly - renders nothing here: the Room must not claim no agent was mentioned
     /// when one plainly was, so it says nothing rather than something false. Explaining this outcome to
     /// the Human is the deferred half of ADR-0012.
     /// </summary>
     [Fact]
-    public async Task ChatPage_WhenAMentionedTeammateIsOffline_SaysNothing()
+    public async Task ChatPage_WhenAMentionedAgentIsOffline_SaysNothing()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
@@ -757,7 +757,7 @@ public sealed class ChatPageTests
         var (directory, chat, _) = ChatPageTests.Services(factory);
         var (room, first, second) = await ChatPageTests.CreateGroupRoomAsync(directory, chat, ct);
 
-        // Only "first" comes online - "second" is the Mentioned teammate below, and stays offline.
+        // Only "first" comes online - "second" is the Mentioned agent below, and stays offline.
         factory.FakeAgentGateway.SetOnline(first.Id);
 
         await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
@@ -821,7 +821,7 @@ public sealed class ChatPageTests
         Assert.DoesNotContain("reply-note", cut.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>The note is never re-derived from scrollback: a Room loaded fresh shows nothing even when its history's last Message named no teammate.</summary>
+    /// <summary>The note is never re-derived from scrollback: a Room loaded fresh shows nothing even when its history's last Message named no agent.</summary>
     [Fact]
     public async Task ChatPage_ContextOnlyNote_IsAbsentFromAPlainLoad()
     {
@@ -970,8 +970,8 @@ public sealed class ChatPageTests
     /// Before the fix, <c>Composer.razor</c> only ever cleared <c>infoText</c>/<c>errorText</c> at the
     /// top of <c>SendAsync</c> - never on a Room change - so a confirmation from one Room stayed on
     /// screen in the next. Renders <see cref="Composer"/> directly through <see cref="MudBunitContext"/>
-    /// (the same split <see cref="TeammatesPageTests"/> uses) and drives the Room switch the same way
-    /// <c>InviteTeammateTests</c> drives its own state reset: a bUnit
+    /// (the same split <see cref="AgentsPageTests"/> uses) and drives the Room switch the same way
+    /// <c>InviteAgentTests</c> drives its own state reset: a bUnit
     /// <c>SetParametersAndRender</c> with a new <c>RoomId</c>, exactly what Chat.razor does when the
     /// user navigates from one Room's page to another's.
     /// </summary>
@@ -1125,7 +1125,7 @@ public sealed class ChatPageTests
         }
     }
 
-    /// <summary>The first rendered button whose trimmed text equals <paramref name="text"/> - the same pattern <c>TeammateCardTests</c> uses to find a MudButton by its visible label.</summary>
+    /// <summary>The first rendered button whose trimmed text equals <paramref name="text"/> - the same pattern <c>AgentProfileCardTests</c> uses to find a MudButton by its visible label.</summary>
     private static IElement FindButtonByText(IRenderedComponent<ContainerFragment> cut, string text) =>
         cut.FindAll("button").First(button => string.Equals(button.TextContent.Trim(), text, StringComparison.Ordinal));
 
@@ -1199,7 +1199,7 @@ public sealed class ChatPageTests
             factory.Services.GetRequiredService<Drafts>());
     }
 
-    /// <summary>Registers this factory's real Room services into a fresh <see cref="MudBunitContext"/>, the same pattern <c>TeammatesPageTests</c> uses for <c>Teammates</c>.</summary>
+    /// <summary>Registers this factory's real Room services into a fresh <see cref="MudBunitContext"/>, the same pattern <c>AgentsPageTests</c> uses for <c>Agents</c>.</summary>
     private static MudBunitContext NewContext(TeamWebApplicationFactory factory)
     {
         MudBunitContext ctx = UiTestHost.Create(services => services.CopyFrom(factory.Services, ServicePresets.Chat));

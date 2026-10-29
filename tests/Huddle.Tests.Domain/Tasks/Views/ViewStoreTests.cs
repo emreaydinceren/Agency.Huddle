@@ -12,7 +12,7 @@ namespace Agency.Huddle.Tests.Tasks.Views;
 /// refuses every write rather than falling back to empty, writes go through a temp file plus an
 /// atomic move, an invalid View entry is kept and flagged rather than skipped, and the two built-in
 /// Views are created in memory and only written once edited), and Spec §9.6's
-/// <see cref="ViewStore.RenameTeammate(string, string)"/>.
+/// <see cref="ViewStore.RenameAgent(string, string)"/>.
 /// </summary>
 public sealed class ViewStoreTests
 {
@@ -418,15 +418,15 @@ public sealed class ViewStoreTests
         Assert.Equal(["status"], renamed.Fields);
     }
 
-    /// <summary><see cref="ViewStore.RenameTeammate(string, string)"/> rewrites every View's assignee filter that named the old Teammate, leaving other assignee values untouched.</summary>
+    /// <summary><see cref="ViewStore.RenameAgent(string, string)"/> rewrites every View's assignee filter that named the old Agent, leaving other assignee values untouched.</summary>
     [Fact]
-    public void RenameTeammate_RewritesAssigneeFilters()
+    public void RenameAgent_RewritesAssigneeFilters()
     {
         using TempDataDir dataDir = new();
         using ViewStore store = new(dataDir.Options(), NullLogger<ViewStore>.Instance);
         store.Save(ListView("custom-1", "Custom View", assignees: ["Nova", "@unassigned"]));
 
-        store.RenameTeammate("Nova", "NovaPrime");
+        store.RenameAgent("Nova", "NovaPrime");
 
         TaskView? updated = store.Get("custom-1");
         Assert.NotNull(updated);

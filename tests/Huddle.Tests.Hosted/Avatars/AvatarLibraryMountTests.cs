@@ -9,7 +9,7 @@ namespace Agency.Huddle.Tests.Avatars;
 /// <summary>
 /// Exercises the <c>/avatar-library</c> static-file mount and the Avatar Library DI registrations in
 /// <c>Program.cs</c>, through a real <see cref="HttpClient"/> hosted by <see cref="TeamWebApplicationFactory"/>,
-/// the same shape <c>AvatarEndpointTests</c> uses for <c>/teammate-avatars</c>.
+/// the same shape <c>AvatarEndpointTests</c> uses for <c>/agent-avatars</c>.
 /// </summary>
 public sealed class AvatarLibraryMountTests : IDisposable
 {

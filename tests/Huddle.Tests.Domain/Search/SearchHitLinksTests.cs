@@ -15,11 +15,11 @@ public sealed class SearchHitLinksTests
         Assert.Equal("/teams/Marketing", url);
     }
 
-    /// <summary>A Teammate opens a dialog rather than a page, so it has no URL.</summary>
+    /// <summary>An Agent opens a dialog rather than a page, so it has no URL.</summary>
     [Fact]
-    public void UrlFor_TeammateHit_HasNoUrl()
+    public void UrlFor_AgentHit_HasNoUrl()
     {
-        string? url = SearchHitLinks.UrlFor(new TeammateHit("Nova", "Router", "nova", ["Marketing"], MatchTier.ExactName));
+        string? url = SearchHitLinks.UrlFor(new AgentHit("Nova", "Router", "nova", ["Marketing"], MatchTier.ExactName));
 
         Assert.Null(url);
     }

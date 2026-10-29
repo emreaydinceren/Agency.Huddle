@@ -1,11 +1,11 @@
 @*
     Lists archived Rooms, most recently archived first, with an Unarchive text button, a row menu holding Delete, and the same
     inline-confirm Delete swap RoomList.razor's own rows use - never a nested MudDialog and never a
-    JS confirm(), for the same reason TeammateCard.razor's Remove button gives: a confirmation dialog
+    JS confirm(), for the same reason AgentProfileCard.razor's Remove button gives: a confirmation dialog
     stacked on top of this one would need a second backdrop and a second focus trap for what is only
     ever a yes/no choice.
 
-    Follows TeammateCard.razor as this codebase's one real MudDialog template: an IMudDialogInstance
+    Follows AgentProfileCard.razor as this codebase's one real MudDialog template: an IMudDialogInstance
     cascading parameter, a shared static Options, and its own RoomEvents.RoomsChanged subscription
     (unsubscribed in Dispose, per rules.md) so unarchiving - from this dialog or from the sidebar's own
     row menu - repaints the list live rather than going stale the moment it opened.

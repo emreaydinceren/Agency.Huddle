@@ -128,7 +128,7 @@ public sealed class CreateTaskToolTests
 
     /// <summary>A successful create says who is assigned, and reports the notify clause <see cref="TaskTriggerService.Preview"/> resolves for it.</summary>
     [Fact]
-    public async Task CreateTask_Success_AssignedToTeammate_ReportsCreatedAndNotified()
+    public async Task CreateTask_Success_AssignedToAgent_ReportsCreatedAndNotified()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -183,7 +183,7 @@ public sealed class CreateTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Equal("Could not identify caller 'ghost-agent-id' as a Teammate.", result);
+        Assert.Equal("Could not identify caller 'ghost-agent-id' as an Agent.", result);
         Assert.Empty(harness.Store.All);
     }
 

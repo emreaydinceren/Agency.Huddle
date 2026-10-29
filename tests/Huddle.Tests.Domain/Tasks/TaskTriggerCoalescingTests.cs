@@ -289,9 +289,9 @@ public sealed class TaskTriggerCoalescingTests
         Assert.StartsWith("@Nova ", post.Message.Text);
     }
 
-    /// <summary>Corrections-B3 D9 item 16: an <c>@</c> in <c>{{title}}</c> is followed by U+2060, so Task text can't Mention a third Teammate who happens to be a Room Member.</summary>
+    /// <summary>Corrections-B3 D9 item 16: an <c>@</c> in <c>{{title}}</c> is followed by U+2060, so Task text can't Mention a third Agent who happens to be a Room Member.</summary>
     [Fact]
-    public async Task TitleWithAtSign_Neutralised_NoThirdTeammateMentioned()
+    public async Task TitleWithAtSign_Neutralised_NoThirdAgentMentioned()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
@@ -315,7 +315,7 @@ public sealed class TaskTriggerCoalescingTests
 
     /// <summary>Corrections-B3 D9 item 16: an <c>@</c> in a Change log summary rendered into <c>{{changes}}</c> is neutralised the same way.</summary>
     [Fact]
-    public async Task ChangesWithAtSign_Neutralised_NoThirdTeammateMentioned()
+    public async Task ChangesWithAtSign_Neutralised_NoThirdAgentMentioned()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();

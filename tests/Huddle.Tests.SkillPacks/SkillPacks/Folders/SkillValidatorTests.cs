@@ -17,7 +17,7 @@ public sealed class SkillValidatorTests
             ---
             name: team-building
             description: Use when the Human wants to build a team.
-            tools: [validate_teammate]
+            tools: [validate_agent]
             ---
             Body text.
             """;
@@ -31,7 +31,7 @@ public sealed class SkillValidatorTests
         Assert.False(validation.HasErrors);
         Assert.Equal("team-building", validation.Name);
         Assert.Equal("Use when the Human wants to build a team.", validation.Description);
-        List<string> expectedTools = ["validate_teammate"];
+        List<string> expectedTools = ["validate_agent"];
         Assert.Equal(expectedTools, validation.Tools);
     }
 

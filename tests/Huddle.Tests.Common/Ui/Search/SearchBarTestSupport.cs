@@ -13,7 +13,7 @@ using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Search;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tabs;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.Tests.Search;
 using Agency.Huddle.Tests.Ui.Layout;
 using Agency.Huddle.Tests.Waiting;
@@ -23,7 +23,7 @@ namespace Agency.Huddle.Tests.Ui.Search;
 /// <summary>
 /// The wiring every <c>SearchBarTests</c> test shares: a bUnit context holding a real <see cref="TabService"/>,
 /// a <see cref="SearchOrchestrator"/> over one <see cref="GatedSearchProvider"/> per filter (so a test decides
-/// when each group answers), and the Teammate card opener over a shared test app. It renders the search box
+/// when each group answers), and the Agent card opener over a shared test app. It renders the search box
 /// beside the popover and dialog providers.
 /// </summary>
 internal sealed class SearchBarHarness : IAsyncDisposable
@@ -32,7 +32,7 @@ internal sealed class SearchBarHarness : IAsyncDisposable
     public static readonly SearchFilter[] AllFilters =
     [
         SearchFilter.Teams,
-        SearchFilter.Teammates,
+        SearchFilter.Agents,
         SearchFilter.Library,
         SearchFilter.Tasks,
         SearchFilter.Rooms,
@@ -42,7 +42,7 @@ internal sealed class SearchBarHarness : IAsyncDisposable
     private static readonly TimeSpan Patience = TimeSpan.FromSeconds(10);
 
     /// <summary>Creates the context, the providers, the orchestrator and the Tab service.</summary>
-    /// <param name="factory">The test app whose Teammate services the card opener uses.</param>
+    /// <param name="factory">The test app whose Agent services the card opener uses.</param>
     public SearchBarHarness(TeamWebApplicationFactory factory)
     {
         ArgumentNullException.ThrowIfNull(factory);
@@ -67,8 +67,8 @@ internal sealed class SearchBarHarness : IAsyncDisposable
         this.Ctx.Services.AddSingleton(factory.Services.GetRequiredService<AdapterCatalog>());
         this.Ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Avatars.AvatarStore>());
         this.Ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Skills.SkillStore>());
-        this.Ctx.Services.AddSingleton(factory.Services.GetRequiredService<BuiltinTeammateReset>());
-        this.Ctx.Services.AddTransient(provider => new TeammateCardOpener(
+        this.Ctx.Services.AddSingleton(factory.Services.GetRequiredService<BuiltinAgentReset>());
+        this.Ctx.Services.AddTransient(provider => new AgentProfileCardOpener(
             provider.GetRequiredService<PersonaStore>(),
             provider.GetRequiredService<ITeamDirectory>(),
             provider.GetRequiredService<IAgentGateway>(),

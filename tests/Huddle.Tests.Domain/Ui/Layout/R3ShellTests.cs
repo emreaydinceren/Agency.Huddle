@@ -20,7 +20,7 @@ public sealed partial class R3ShellTests
     [Theory]
     [InlineData("/library", "library")]
     [InlineData("/library?root=notes", "library")]
-    [InlineData("/teammates", "teammates")]
+    [InlineData("/agents", "agents")]
     [InlineData("/teams/Business", "teams")]
     [InlineData("/teams/Business/projects/Q4", "teams")]
     [InlineData("/tasks/my-tasks", "tasks")]
@@ -40,7 +40,7 @@ public sealed partial class R3ShellTests
     /// <param name="expected">The view shown after, or <see langword="null"/> for a collapsed Sidebar.</param>
     [Theory]
     [InlineData("library", SidebarView.Chats, SidebarView.Library)]
-    [InlineData("teammates", SidebarView.Chats, SidebarView.Teammates)]
+    [InlineData("agents", SidebarView.Chats, SidebarView.Agents)]
     [InlineData("teams", SidebarView.Chats, SidebarView.Teams)]
     [InlineData("tasks", SidebarView.Library, SidebarView.Tasks)]
     [InlineData("settings", SidebarView.Chats, null)]

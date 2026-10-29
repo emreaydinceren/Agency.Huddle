@@ -5,18 +5,18 @@
 [ADR-0028](adr/0028-the-library-edits-markdown-as-source-and-never-rewrites-it.md) (editing),
 [ADR-0029](adr/0029-between-the-human-and-an-agent-the-last-write-wins.md) (concurrency),
 [ADR-0030](adr/0030-a-team-folder-is-its-library-and-holds-its-tasks.md) (Team folders),
-[ADR-0031](adr/0031-teammates-and-teams-are-sibling-folders.md) (`Teammates/` beside `Teams/`),
+[ADR-0031](adr/0031-agents-and-teams-are-sibling-folders.md) (`Agents/` beside `Teams/`),
 [ADR-0067](adr/0067-a-library-note-has-tags-read-from-its-text-like-obsidian.md) (tags, §6.17, built 2026-10-28) ·
 **Vocabulary:** [language.md](engineering/language.md) (**Library**, **Library Root**,
-**Team folder**, **Project**, **Teammate folder**, **Work Dir**, **Watched Folder**, **Library tag**) ·
+**Team folder**, **Project**, **Agent folder**, **Work Dir**, **Watched Folder**, **Library tag**) ·
 **Depends on:** [Tasks](Huddle.Tasks-Specifications.md) accepting ADR-0030
 
 > **Superseded 2026-10-10 (docked pane):** the docked Library Pane described in §6.9 and below was retired when Tabs arrived. The `/library` page is the only Library surface and is one Tab; a `?library=` link opens that Tab on the file through `LibraryLinkRouter`. See [Huddle.Tabs-Specifications.md](Huddle.Tabs-Specifications.md) §6.
 
 ```text
 {DataDir}/
-  Teammates/<Name>/<Name>.md      a Teammate's definition (a Persona in code)
-  Teammates/<Name>/work/          its Work Dir and cwd: memory/ and outputs
+  Agents/<Name>/<Name>.md      an Agent's definition (a Persona in code)
+  Agents/<Name>/work/          its Work Dir and cwd: memory/ and outputs
   Teams/<Team>/                   Team notes;  _tasks/ holds the Team's Tasks
   Teams/<Team>/<Project>/         Project notes and free sub-folders;  _tasks/
 ```
@@ -43,11 +43,11 @@ test-first task list. Every design decision is recorded in §11 with the alterna
 > [agents/CSharpPrinciples.md](../agents/CSharpPrinciples.md) for every C# file. Read
 > [mudblazor.md](engineering/mudblazor.md) before building any UI. Nothing here overrides them.
 
-**Sequencing.** Workstream L0 moves Persona files and Work Dirs into `Teammates/` (ADR-0031,
+**Sequencing.** Workstream L0 moves Persona files and Work Dirs into `Agents/` (ADR-0031,
 §6.15) and frees `Teams/`. It comes first. Workstream L2 changes the Tasks layout (§6.3) and
 cannot start until the Tasks effort has accepted ADR-0030. The request is in
 `Conversation/2026-09-24-library-workspaces-request.md`. Every other workstream can be built
-against the Teammates and pinned roots first, and pick up Team folders when L2 lands.
+against the Agents and pinned roots first, and pick up Team folders when L2 lands.
 
 ---
 
@@ -55,7 +55,7 @@ against the Teammates and pinned roots first, and pick up Team folders when L2 l
 
 1. **One place to read and fix the team's files.** Artifacts, Memory, Team notes, Project notes
    and pinned specs, browsed as a tree and opened beside the chat.
-2. **Scoped, not a file manager.** Only Library Roots are reachable: `Teams/`, `Teammates/`
+2. **Scoped, not a file manager.** Only Library Roots are reachable: `Teams/`, `Agents/`
    and folders the Human pins (ADR-0027).
 3. **Follows the Team > Project hierarchy.** Each Team has a Team folder. Its root holds Team notes,
    each Project is a folder and a Project's sub-folders are free (ADR-0030).
@@ -82,8 +82,8 @@ against the Teammates and pinned roots first, and pick up Team folders when L2 l
 | L2 | The Human creates Project *Launch Q4* in Marketing from the Library | `Teams/Marketing/Launch Q4/` is created. Tasks shows it as a Project with no Tasks yet |
 | L3 | A Persona's frontmatter gains `teams: [Marketing]` and no folder exists | `Teams/Marketing/` is created at the next Persona reload |
 | L4 | The Human pins `E:\Repos\Huddle\docs`, an Obsidian vault, and renames `specs/auth.md` to `specs/login.md` | The dialog says *Rename and update 5 links in 3 notes*. On confirm, the file moves and each `[[auth]]` becomes `[[login]]`; nothing else in those files changes |
-| L5 | The Human opens `Teammates/Ada/Ada.md`, Ada's definition, and saves it | Before saving: *Saving restarts Ada and clears its conversation memory.* |
-| L6 | The Human tries to rename or delete `Teams/Marketing/` or `…/Launch Q4/` | The action is not offered. The tooltip says Team and Project folders are managed from Tasks and Teammates |
+| L5 | The Human opens `Agents/Ada/Ada.md`, Ada's definition, and saves it | Before saving: *Saving restarts Ada and clears its conversation memory.* |
+| L6 | The Human tries to rename or delete `Teams/Marketing/` or `…/Launch Q4/` | The action is not offered. The tooltip says Team and Project folders are managed from Tasks and Agents |
 | L7 | A crafted path such as `..\..\Windows\win.ini`, or a junction inside a root pointing out of it | Refused by `LibraryPathResolver`; nothing is read or written |
 | L8 | The Human deletes `draft-old.md` | It goes to the Windows Recycle Bin, and the tree refreshes |
 | L9 | Nova rewrites `plan.md` while the Human has it open with no unsaved edits | When the pane regains focus, the new text is shown |
@@ -98,7 +98,7 @@ against the Teammates and pinned roots first, and pick up Team folders when L2 l
 
 **In v1:** the tree, the viewer, the Markdown editor, file operations (new file, new folder,
 rename, move, recycle), wikilinks, backlinks, link rewriting on rename, chat → file links, a Copy button that puts a document into
-any conversation (§6.14), Team folders, the `Teammates/` layout (§6.15), the pane (left or right, collapsible, pop-out) and the Settings panel for pinned
+any conversation (§6.14), Team folders, the `Agents/` layout (§6.15), the pane (left or right, collapsible, pop-out) and the Settings panel for pinned
 roots.
 
 **Built after v1:** tags (§6.17, [ADR-0067](adr/0067-a-library-note-has-tags-read-from-its-text-like-obsidian.md)).
@@ -114,11 +114,11 @@ drag and drop, and a graph view.
 | Term | Meaning |
 | --- | --- |
 | **Library** | The explorer, viewer and editor as a whole |
-| **Library Root** | One top-level folder the Library may reach, with an id: `teams`, `teammates`, or a pinned root's slug |
+| **Library Root** | One top-level folder the Library may reach, with an id: `teams`, `agents`, or a pinned root's slug |
 | **Library Pane** | The docked panel: the tree above, the open document below or beside it |
 | **Team folder** | `{DataDir}/Teams/<Team>/`, a Team's folder of notes, Projects and Tasks |
 | **Project** | A direct sub-folder of a Team folder; the same Project Tasks files into |
-| **Teammate folder** | `{DataDir}/Teammates/<Name>/`: the Teammate's definition and its `work/` Work Dir |
+| **Agent folder** | `{DataDir}/Agents/<Name>/`: the Agent's definition and its `work/` Work Dir |
 | **Pinned root** | A Library Root the Human added in configuration or Settings |
 | **Library tag** | A label on a note, written `#tag` in its body or in its frontmatter `tags` list; Obsidian's tag. Never a Mention or a Task reference (the glossary avoids *tag* for those), and not a Task's `tags` field |
 | **Library Path** | A resolved (root id, relative path, full path) value. The only way code reaches a file |
@@ -134,7 +134,7 @@ These go into [language.md](engineering/language.md) under a new *Library* secti
  ───────                      ──────────────────────────                             ────
  LibraryPane ──────────────►  LibraryFileService ──► LibraryPathResolver ──► Library Roots
   ├─ LibraryTree                 ▲    │                 (ADR-0027)             ├─ Teams/<Team>/…
-  ├─ LibraryDocument             │    └─► RecycleBin                           ├─ Teammates/<Name>/…
+  ├─ LibraryDocument             │    └─► RecycleBin                           ├─ Agents/<Name>/…
   │   ├─ Read: MarkdownRenderer ─┤                                             └─ pinned folders
   │   └─ Edit: library-editor.js │  WikiLinkIndex (per root; resolve, backlinks, rename rewrite)
   └─ BacklinksPanel ─────────────┘  LibraryRootStore (config + library-roots.json)
@@ -159,8 +159,8 @@ These go into [language.md](engineering/language.md) under a new *Library* secti
 | `Components/Sidebar/TagsPanel.razor` | The Right sidebar's Tags panel | §6.17 |
 | `TeamFolderProvisioner.cs` | Creates Team and Project folders | §6.2 |
 | `RecycleBin.cs` | `IRecycleBin` and its Windows implementation | §6.4 |
-| `Acp/TeammatePaths.cs` | Definition file, Teammate folder and Work Dir for a Name: the one place that joins them | §6.15 |
-| `Acp/TeammateLayoutMigration.cs` | The one-time move from `Teams/` + `work/` to `Teammates/` | §6.15 |
+| `Acp/AgentPaths.cs` | Definition file, Agent folder and Work Dir for a Name: the one place that joins them | §6.15 |
+| `Acp/AgentLayoutMigration.cs` | The one-time move from `Teams/` + `work/` to `Agents/` | §6.15 |
 | `LibraryLocation.cs` | The **public** record a host passes to say which folder the explorer starts from | §6.16 |
 | `Components/Library/LibraryExplorer.razor` | **The reusable control:** tree + document, scoped by its `Scopes` parameter. Every host embeds this | §6.16 |
 | `Components/Library/LibraryTree`, `LibraryDocument`, `LibraryEditor`, `BacklinksPanel` | The explorer's parts | §6.7, §6.16 |
@@ -176,9 +176,9 @@ These go into [language.md](engineering/language.md) under a new *Library* secti
 | `Services/MarkdownRenderer.cs` | A second resolver pass for wikilinks and absolute paths; `IsSafe` admits the exact `?library=` shape | §6.6 |
 | `Components/Shared/MessageList.razor` | Passes the Library resolver | §6.6 |
 | `Components/Layout/MainLayout.razor` | A `MudSplitPanel` around the body when the pane is open; reads `?library=` | §6.9 |
-| `FileChanges/WatchedFolderResolver.cs` | `ReservedFolders` becomes shared; a Teammate's Name resolves through `TeammatePaths` | §6.1, §6.13, §6.15 |
-| `FileChanges/FileChangeTracker.cs` | The Team folder as an implicit Watched Folder, `_` folders pruned; own Work Dir through `TeammatePaths` | §6.13, §6.15 |
-| `Acp/AcpOptions.cs`, `Acp/PersonaStore.cs`, `Acp/PersonaRenameCascade.cs`, `Acp/DotAcpAgentHostFactory.cs`, `Acp/ModelCatalogProbe.cs`, `Teammates/BuiltinTeammateSeeder.cs` | `Acp:TeammatesDir` replaces `Acp:TeamsDir`; the one-level scan; a rename moves the Teammate folder; every Work Dir join goes through `TeammatePaths` | §6.15 |
+| `FileChanges/WatchedFolderResolver.cs` | `ReservedFolders` becomes shared; an Agent's Name resolves through `AgentPaths` | §6.1, §6.13, §6.15 |
+| `FileChanges/FileChangeTracker.cs` | The Team folder as an implicit Watched Folder, `_` folders pruned; own Work Dir through `AgentPaths` | §6.13, §6.15 |
+| `Acp/AcpOptions.cs`, `Acp/PersonaStore.cs`, `Acp/PersonaRenameCascade.cs`, `Acp/DotAcpAgentHostFactory.cs`, `Acp/ModelCatalogProbe.cs`, `Agents/BuiltinAgentSeeder.cs` | `Acp:AgentsDir` replaces `Acp:TeamsDir`; the one-level scan; a rename moves the Agent folder; every Work Dir join goes through `AgentPaths` | §6.15 |
 | `Tasks/TaskLayout.cs`, `Tasks/TaskStore.cs`, `Tasks/TasksOptions.cs` | **Owned by the Tasks effort.** The `_tasks/` layout and the `Teams/` root | §6.3 |
 | `Components/Settings/Appearance*` | Library Pane side (left or right) | §6.9 |
 | `Acp/Sessions/RoomSession.cs` | A Library documents block after the File Changes block | §6.14 |
@@ -197,7 +197,7 @@ These go into [language.md](engineering/language.md) under a new *Library* secti
 /// <summary>A folder the Library may reach.</summary>
 public sealed record LibraryRoot(string Id, string DisplayName, string FullPath, LibraryRootKind Kind);
 
-public enum LibraryRootKind { Teams, Teammates, Pinned }
+public enum LibraryRootKind { Teams, Agents, Pinned }
 
 /// <summary>A path proven to be inside a Library Root. Only LibraryPathResolver creates one.</summary>
 public sealed record LibraryPath(LibraryRoot Root, string RelativePath, string FullPath);
@@ -217,7 +217,7 @@ public sealed record LibraryPath(LibraryRoot Root, string RelativePath, string F
 6. Under the **Teams** root, marks depth 1 as a Team folder and depth 2 as a Project folder,
    and refuses any path through a `_`-prefixed folder (§6.3). The Library never shows or touches
    Task files.
-7. Under the **Teammates** root, marks depth 1 as a Teammate folder, the `<Name>.md` inside it as
+7. Under the **Agents** root, marks depth 1 as an Agent folder, the `<Name>.md` inside it as
    its definition, and `work/` as its Work Dir (§6.15).
 
 The boundary is tested as data: a table of (root, input, expected result) rows, including
@@ -243,7 +243,7 @@ icon and still fully usable, as ADR-0025 decided for Tasks.
 on depth-1 and depth-2 folders under the Teams root, and `LibraryFileService` refuses them if
 called. Their names belong to Team labels and Tasks (ADR-0030).
 
-`Teams/` can hold Team folders only once Persona files have left it. `TeammateLayoutMigration`
+`Teams/` can hold Team folders only once Persona files have left it. `AgentLayoutMigration`
 (§6.15) runs first, so `TeamFolderProvisioner` never creates a folder among Persona files.
 
 ### 6.3 What Tasks must change (requested, not owned here)
@@ -256,10 +256,10 @@ Owned by the Tasks effort, and requested in the Conversation note:
   file. `PathFor` writes to `_tasks/`.
 - The Team and Project scan lists a Project for every non-`_` sub-folder of a Team, whether or not
   it holds a `_tasks/`.
-- Start-up refuses a `Teams/` root that overlaps `Acp:TeammatesDir`, as it refuses `Tasks/`
-  inside `Acp:TeammatesDir`.
+- Start-up refuses a `Teams/` root that overlaps `Acp:AgentsDir`, as it refuses `Tasks/`
+  inside `Acp:AgentsDir`.
 - A one-time migration moves `Tasks/<Team>/[<Project>/][_closed/]<ID>.md` to the new layout, if
-  any install holds Tasks. It is step 4 of `TeammateLayoutMigration` (§6.15), or a Tasks-owned
+  any install holds Tasks. It is step 4 of `AgentLayoutMigration` (§6.15), or a Tasks-owned
   step that runs after it.
 - Tasks spec §8.1, ADR-0025's first paragraph and `language.md`'s Tasks section are updated to
   match.
@@ -275,10 +275,10 @@ Owned by the Tasks effort, and requested in the Conversation note:
 | `ReadTextAsync(path)` | `TextFileCodec.Decode`: detects the BOM (UTF-8, UTF-16 LE/BE), otherwise UTF-8. Records the BOM, the encoding and the dominant line ending (CRLF or LF). Refuses files over `Library:MaxEditableBytes` for editing (view-only above it) |
 | `WriteTextAsync(path, text, TextFileFormat format)` | Normalises the editor's `\n` to the recorded line ending, re-encodes with the recorded encoding and BOM, and writes via a temp file in the same folder, then `File.Move(overwrite: true)`. No other transformation |
 | `CreateFileAsync`, `CreateFolderAsync` | Name validated against `Path.GetInvalidFileNameChars()`, a trailing `.` or space, and reserved names (`CON`, `NUL`…). New notes default to `.md`, UTF-8 without BOM, CRLF on Windows |
-| `RenameAsync`, `MoveAsync` | Within one root only. Refused for protected Team and Project folders (§6.2), and for a Teammate folder, its definition file and its `work/` folder (§6.15). For a `.md` file or a folder containing any, runs the link rewrite (§6.5) |
-| `RecycleAsync(path)` | `IRecycleBin.Send(path)`. The Windows implementation calls `Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile`/`DeleteDirectory` with `RecycleOption.SendToRecycleBin` and `UIOption.OnlyErrorDialogs`. Refused for a root itself, a protected Team or Project folder, a Teammate folder, its definition and its `work/` folder |
+| `RenameAsync`, `MoveAsync` | Within one root only. Refused for protected Team and Project folders (§6.2), and for an Agent folder, its definition file and its `work/` folder (§6.15). For a `.md` file or a folder containing any, runs the link rewrite (§6.5) |
+| `RecycleAsync(path)` | `IRecycleBin.Send(path)`. The Windows implementation calls `Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile`/`DeleteDirectory` with `RecycleOption.SendToRecycleBin` and `UIOption.OnlyErrorDialogs`. Refused for a root itself, a protected Team or Project folder, an Agent folder, its definition and its `work/` folder |
 
-A Teammate's Work Dir is never deleted from the app ([Huddle.EngineeringGuide.md](Huddle.EngineeringGuide.md), configuration
+An Agent's Work Dir is never deleted from the app ([Huddle.EngineeringGuide.md](Huddle.EngineeringGuide.md), configuration
 table). Its contents can be recycled one item at a time.
 
 ### 6.5 Wikilinks, backlinks and rename rewriting
@@ -462,7 +462,7 @@ As ADR-0029 decided:
 - **Pop out** opens `/library?root=…&path=…`: the same `LibraryExplorer` at full width with
   `Layout="SideBySide"`, the tree on the left. When the pane was showing a scoped explorer, the
   pop-out keeps that scope.
-- The sidebar gains a *Library* link beside Teammates and Tasks, which toggles the pane.
+- The sidebar gains a *Library* link beside Agents and Tasks, which toggles the pane.
   **Superseded (2026-10):** the sidebar's Library group is now one link to `/library` (shown while
   `Library:Enabled`). It lists no root rows and has no *+ Add folder*; Add folder is in Settings ›
   Library. The Library page's breadcrumb holds the open file's location; the document title is the
@@ -489,17 +489,17 @@ The built-in roots can be hidden but not removed.
 | Text and code | `.txt`, `.json`, `.yaml`, `.yml`, `.cs`, `.js`, `.ts`, `.css`, `.xml`, `.ps1`, `.csv`, `.log`, and any file whose first 8 KB decodes as UTF-8 with no NUL | Read-only, highlighted |
 | Image | `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, identified by magic bytes | Previewed through `/library-files/{rootId}/…`, served by `UseStaticFiles` + `PhysicalFileProvider` with those four content types only |
 | SVG | `.svg` | **Never served** ([rules.md](engineering/rules.md)); offered as text, read-only |
-| Anything else | | *Open in default app*, using the same server-side `Process.Start` as `TeammateCard.razor` |
+| Anything else | | *Open in default app*, using the same server-side `Process.Start` as `AgentProfileCard.razor` |
 
 All files are shown in the tree.
 
-### 6.12 Teammate definitions
+### 6.12 Agent definitions
 
-A Teammate's definition, `Teammates/<Name>/<Name>.md`, is one click from its memory in the
-Teammates root. It opens in Read mode with a banner (`MudAlert`, §8): *This is Ada's definition.* Saving it shows
+An Agent's definition, `Agents/<Name>/<Name>.md`, is one click from its memory in the
+Agents root. It opens in Read mode with a banner (`MudAlert`, §8): *This is Ada's definition.* Saving it shows
 *Saving restarts Ada and clears its conversation memory* first
-([rules.md](engineering/rules.md), *Editing a Persona … restarts its session*). The Teammates page
-stays the main place to edit a Teammate, and the only place to rename one.
+([rules.md](engineering/rules.md), *Editing a Persona … restarts its session*). The Agents page
+stays the main place to edit an Agent, and the only place to rename one.
 
 ### 6.13 Agents and the Team folder
 
@@ -554,14 +554,14 @@ Library documents mentioned in these messages:
 | `turn.libraryDocInline` | a fenced block holding `{{text}}` | `{{text}}` |
 | `turn.libraryDocTruncated` | `(cut at {{max}} bytes; the file is {{size}}.)` | `{{max}}`, `{{size}}` |
 
-### 6.15 Teammates beside Teams
+### 6.15 Agents beside Teams
 
-As [ADR-0031](adr/0031-teammates-and-teams-are-sibling-folders.md) decided:
+As [ADR-0031](adr/0031-agents-and-teams-are-sibling-folders.md) decided:
 
 ```text
 {DataDir}/
-  Teammates/                 Acp:TeammatesDir, default "Teammates"
-    Nova/                    Teammate folder, named after the Teammate
+  Agents/                 Acp:AgentsDir, default "Agents"
+    Nova/                    Agent folder, named after the Agent
       Nova.md                definition: frontmatter + system prompt (a Persona in code)
       work/                  Acp:WorkDir, now a sub-folder name: the Work Dir and cwd
         memory/…
@@ -569,36 +569,36 @@ As [ADR-0031](adr/0031-teammates-and-teams-are-sibling-folders.md) decided:
   Teams/                     Team:Teams:Dir, default "Teams" (§6.2)
 ```
 
-- **`TeammatePaths`** is a small injected class that answers `DefinitionFile(name)`,
-  `TeammateFolder(name)` and `WorkDir(name)`. Every existing
+- **`AgentPaths`** is a small injected class that answers `DefinitionFile(name)`,
+  `AgentFolder(name)` and `WorkDir(name)`. Every existing
   `Path.Combine(DataDir, Acp.WorkDir, name)` and every `PersonaStore` join of `teamsDir` with a
   name goes through it (`DotAcpAgentHostFactory.cs:102`, `FileChangeTracker.cs:391` and `:426`,
   `WatchedFolderResolver.cs:57`, `PersonaRenameCascade.cs:312`, and `PersonaStore.cs:324`, `:455`,
   `:558` and `:574`). Land it as a pure refactor, with the old layout, before anything moves.
-- **The scan reads one level.** `PersonaStore` loads `Teammates/*/*.md`, not
+- **The scan reads one level.** `PersonaStore` loads `Agents/*/*.md`, not
   `SearchOption.AllDirectories` (`PersonaStore.cs:644`), and its `FileSystemWatcher` ignores
-  anything under a `work/` folder. A second `.md` directly in a Teammate folder is a rejected file,
+  anything under a `work/` folder. A second `.md` directly in an Agent folder is a rejected file,
   as a duplicate is today.
-- **A rename** (`PersonaRenameCascade`) moves `Teammates/Old/` to `Teammates/New/` and renames the
+- **A rename** (`PersonaRenameCascade`) moves `Agents/Old/` to `Agents/New/` and renames the
   definition inside, as one directory move. If the old process still holds the folder, it gives up
   with the logged warning it already has for a held Work Dir.
 - **`Acp:TeamsDir` retires.** Setting it throws at start-up with a message naming
-  `Acp:TeammatesDir`, as `Acp:PersonaDir` does today.
-- **`TeammateLayoutMigration`** runs once at start-up, before `PersonaStore`, `TaskStore` and the
+  `Acp:AgentsDir`, as `Acp:PersonaDir` does today.
+- **`AgentLayoutMigration`** runs once at start-up, before `PersonaStore`, `TaskStore` and the
   Library. It follows ADR-0031's four steps: definitions, Work Dirs, empty old folders, then Tasks.
   It is idempotent, logs every move, and stops start-up with an error on a move it can't make,
   never leaving half a layout.
-- `ModelCatalogProbe`'s `cwd` becomes `Teammates/`. `BuiltinTeammateSeeder` writes the Chief of
-  Staff to `Teammates/<Name>/<Name>.md`. - **`run.ps1 -Clean` must change in the same commit as the layout.** Today it deletes every Persona
+- `ModelCatalogProbe`'s `cwd` becomes `Agents/`. `BuiltinAgentSeeder` writes the Chief of
+  Staff to `Agents/<Name>/<Name>.md`. - **`run.ps1 -Clean` must change in the same commit as the layout.** Today it deletes every Persona
   file by deleting `{DataDir}/{Acp:TeamsDir}`, which is `App_Data/Teams`, and keeps `work/`. Under
   the new layout that folder holds Team notes and Tasks, so an unchanged script would wipe them.
-  `-Clean` becomes: delete `team.db` and each `Teammates/*/<Name>.md` definition, and keep every
+  `-Clean` becomes: delete `team.db` and each `Agents/*/<Name>.md` definition, and keep every
   `work/` and all of `Teams/`. `run.ps1` is a shared root file, so announce the change.
 
 ### 6.16 One explorer, many places
 
 The tree and document viewer are one component, **`LibraryExplorer`**. A host page embeds it and
-says which folder it starts from. The Library Pane is one host; a Project, a Team or a Teammate
+says which folder it starts from. The Library Pane is one host; a Project, a Team or an Agent
 page can be others, each showing only its own folder.
 
 ```csharp
@@ -654,7 +654,7 @@ by whoever owns those pages):
 | `/library` pop-out page | the pane's scope | `SideBySide` |
 | A Project page (Tasks) | `teams` / `<Team>/<Project>` | `SideBySide` |
 | A Team page | `teams` / `<Team>` | `SideBySide` |
-| A Teammate page | `teammates` / `<Name>` | `Stacked` inside the Teammate card, or `SideBySide` |
+| An Agent page | `agents` / `<Name>` | `Stacked` inside the Agent card, or `SideBySide` |
 
 A Team page may want its members' folders beside the Team folder: pass one scope per member after
 the Team's. Which of these a Team page shows is its designer's call, not this component's.
@@ -891,8 +891,8 @@ All under `Team:`.
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `Teams:Dir` | `Teams` | Team folders, relative to `DataDir`. Shared with Tasks, and replaces `Tasks:Dir` (§6.3) |
-| `Acp:TeammatesDir` | `Teammates` | Teammate folders, relative to `DataDir`. Replaces `Acp:TeamsDir`, which now throws at start-up (§6.15) |
-| `Acp:WorkDir` | `work` | **Changes meaning:** the name of the Work Dir sub-folder inside each Teammate folder, no longer a root (§6.15) |
+| `Acp:AgentsDir` | `Agents` | Agent folders, relative to `DataDir`. Replaces `Acp:TeamsDir`, which now throws at start-up (§6.15) |
+| `Acp:WorkDir` | `work` | **Changes meaning:** the name of the Work Dir sub-folder inside each Agent folder, no longer a root (§6.15) |
 | `Library:Enabled` | `true` | `false` hides the pane, the page, the sidebar link and chat links |
 | `Library:Roots` | `[]` | Pinned roots: `[{ "Name": "Huddle docs", "Path": "E:\\Repos\\Huddle\\docs" }]` |
 | `Library:MaxEditableBytes` | `2097152` | Above this, a text file opens read-only |
@@ -973,7 +973,7 @@ are added to that page's *Facts already checked*.
 | E-6 | A wikilink target matches two files at equal distance | The first in ordinal path order, and the link's tooltip says it is ambiguous |
 | E-7 | A rename would rewrite links in a file over `MaxEditableBytes` | That file is skipped and listed in the result dialog |
 | E-8 | Recycle Bin unavailable (a network drive, or a non-Windows host) | Delete is refused with the reason. There is no silent permanent delete |
-| E-9 | A Team label contains a character invalid in a folder name | No Team folder is created; the Teammates page shows the existing Tasks warning |
+| E-9 | A Team label contains a character invalid in a folder name | No Team folder is created; the Agents page shows the existing Tasks warning |
 | E-10 | An Agent writes a file into a folder the tree has expanded | Appears on the next focus refresh |
 | E-11 | The `tags` entry is malformed (an unclosed `[` or quote, a tab in the block's indentation), or `tags` holds a map or a number | Its frontmatter tags are none. Its inline tags still count. Nothing is reported or rewritten. Other keys are not validated |
 | E-12 | `tags: #project` unquoted, `- #project`, `[#project]` | A YAML comment, a skipped null item and an invalid flow list: no frontmatter tag, as in Obsidian. `"#project"` quoted is the tag `project`. The Properties row shows the raw value as plain text |
@@ -1014,9 +1014,9 @@ are added to that page's *Facts already checked*.
 | D-19 | **The Agent gets the path plus a one-line annotation; text is inlined only for Adapters without file tools** | Path only; always inline the text | Agents that can read files decide what to read; the one Adapter that can't still gets the document, capped |
 | D-20 | **The annotation is a prompt block after File Changes, never a change to the Message** | Rewrite the pasted text; a new Envelope field | The transcript keeps what the Human typed; no `ProtocolVersion` bump |
 | D-21 | **`Teams/` means Team folders; there is no separate "Workspace"** (ADR-0030) | `Workspaces/` beside a Persona folder called `Teams/` | One word for one thing; the Human's call |
-| D-22 | **`Teammates/<Name>/` holds the definition and a `work/` Work Dir; no top-level `work/`** (ADR-0031) | Folder = `cwd` with the definition inside; flat `Nova.md` beside `Nova/`; keep `work/` | One folder per Teammate, and the Agent's `cwd` doesn't contain its own definition |
-| D-23 | **The code keeps `Persona`** | Rename the type to `Teammate` | A large rename with no behaviour change; the UX and folders already say Teammate |
-| D-24 | **One `LibraryExplorer` component, scoped by a `Scopes` input; the pane is just one host** | A pane-only Library; a separate tree per page | Project, Team and Teammate pages, and V2 pinned views, reuse it unchanged |
+| D-22 | **`Agents/<Name>/` holds the definition and a `work/` Work Dir; no top-level `work/`** (ADR-0031) | Folder = `cwd` with the definition inside; flat `Nova.md` beside `Nova/`; keep `work/` | One folder per Agent, and the Agent's `cwd` doesn't contain its own definition |
+| D-23 | **The code keeps `Persona`** | Rename the type to `Agent` | A large rename with no behaviour change; the UX and folders already say Agent |
+| D-24 | **One `LibraryExplorer` component, scoped by a `Scopes` input; the pane is just one host** | A pane-only Library; a separate tree per page | Project, Team and Agent pages, and V2 pinned views, reuse it unchanged |
 | D-25 | **A scope is a `LibraryLocation` (root id + folder), resolved by the one boundary** | An absolute folder path parameter | A host can't widen what the Library can reach (ADR-0027) |
 | D-26 | **Scope narrows the tree, not the links** | Resolve wikilinks and backlinks inside the scope only | A Project note linking a Team note must keep working |
 | D-27 | **Tags come from the body and the frontmatter `tags` list, merged into one set** (ADR-0067) | Frontmatter only; inline only | A vault is mostly inline tags; Obsidian's Properties editor and Agents write the frontmatter list |
@@ -1042,7 +1042,7 @@ are added to that page's *Facts already checked*.
 | A live file watcher | Focus refresh is enough for v1 |
 | Drag and drop in the tree | Move to… covers it |
 | Pinned views | A saved `Title` + `Scopes` in the sidebar; no change to `LibraryExplorer` (§6.16) |
-| Project, Team and Teammate pages hosting the explorer | The component is ready for them; the pages belong to Tasks and Teammates |
+| Project, Team and Agent pages hosting the explorer | The component is ready for them; the pages belong to Tasks and Agents |
 | Editing JSON, YAML and code | Read-only in v1 |
 | Linux and macOS Recycle Bin | `IRecycleBin` makes it one class |
 
@@ -1055,11 +1055,11 @@ solution after each (`dotnet build Huddle.slnx`, then `dotnet test Huddle.slnx -
 
 | Id | WS | Kind | Task | Section |
 | --- | --- | --- | --- | --- |
-| LB-T0 | L0 | Unit | `TeammatePathsTests`; every existing Work Dir and Persona-file test still green after the refactor, with the old layout | §6.15 |
-| LB-I0 | L0 | Impl | `TeammatePaths`, and every listed call site moved onto it: a pure refactor, no layout change | §6.15 |
-| LB-T0b | L0 | Functional | `TeammateLayoutMigrationTests` on a temp `DataDir`: flat and organisational Persona files, orphan Work Dir, rejected file to `_unsorted/`, idempotent second run, a held folder stops start-up; `PersonaStore` one-level scan ignores `work/**/*.md`; rename moves the whole folder; `Acp:TeamsDir` throws | §6.15 |
-| LB-I0b | L0 | Impl | `TeammateLayoutMigration`, `Acp:TeammatesDir`, the new `PersonaStore` scan, `PersonaRenameCascade`, `BuiltinTeammateSeeder`, `ModelCatalogProbe`, `run.ps1 -Clean` | §6.15 |
-| LB-T1 | L1 | Unit | `LibraryPathResolverTests`: the §6.1 table, including junction escape, sibling-prefix, reserved folders, `_` folders under Teams, and Teammate folder depths | §6.1 |
+| LB-T0 | L0 | Unit | `AgentPathsTests`; every existing Work Dir and Persona-file test still green after the refactor, with the old layout | §6.15 |
+| LB-I0 | L0 | Impl | `AgentPaths`, and every listed call site moved onto it: a pure refactor, no layout change | §6.15 |
+| LB-T0b | L0 | Functional | `AgentLayoutMigrationTests` on a temp `DataDir`: flat and organisational Persona files, orphan Work Dir, rejected file to `_unsorted/`, idempotent second run, a held folder stops start-up; `PersonaStore` one-level scan ignores `work/**/*.md`; rename moves the whole folder; `Acp:TeamsDir` throws | §6.15 |
+| LB-I0b | L0 | Impl | `AgentLayoutMigration`, `Acp:AgentsDir`, the new `PersonaStore` scan, `PersonaRenameCascade`, `BuiltinAgentSeeder`, `ModelCatalogProbe`, `run.ps1 -Clean` | §6.15 |
+| LB-T1 | L1 | Unit | `LibraryPathResolverTests`: the §6.1 table, including junction escape, sibling-prefix, reserved folders, `_` folders under Teams, and Agent folder depths | §6.1 |
 | LB-I1 | L1 | Impl | `LibraryRoot`, `LibraryPath`, `LibraryPathResolver`, `LibraryOptions`; share `ReservedFolders` | §6.1, §7 |
 | LB-T2 | L1 | Unit | `TextFileCodecTests`: BOM kinds, CRLF/LF/mixed, round-trip byte equality, legacy encoding refused | §6.4 |
 | LB-I2 | L1 | Impl | `TextFileCodec` | §6.4 |
@@ -1083,7 +1083,7 @@ solution after each (`dotnet build Huddle.slnx`, then `dotnet test Huddle.slnx -
 | LB-I10 | L4 | Impl | `MainLayout` split panel, side setting, divider position persisted, `/library` page, sidebar link | §6.9 |
 | LB-I11 | L4 | Impl | Settings → Library panel | §6.10 |
 | LB-I12 | L4 | Impl | Image mount on `/library-files/`, four content types, resolver per request | §6.11 |
-| LB-T10 | L4 | Source | `ThemeSourceTests` still pass with the new CSS; string parameters in `Components/Library/**` carry their leading `@` (the `rules.md` row), guarded the way `TeammateDialogParametersTests` guards the Teammate dialog | §8 |
+| LB-T10 | L4 | Source | `ThemeSourceTests` still pass with the new CSS; string parameters in `Components/Library/**` carry their leading `@` (the `rules.md` row), guarded the way `AgentDialogParametersTests` guards the Agent dialog | §8 |
 | LB-T11 | L3 | Unit | `RoomSession` prompt tests: the Library documents block's position (after File Changes, before Catch-up), dedupe and cap, paths outside roots ignored, inline text only when `ReadsFiles` is false, truncation line; prompt goldens and `PromptDefaultsTests` for the four keys | §6.14 |
 | LB-I13 | L3 | Impl | The block in `RoomSession`, the four `turn.library*` keys, the `LibraryPathResolver` lookup from an absolute path | §6.14 |
 | LB-I14 | L4 | Impl | The Copy button on the document header and the node menu, using `window.huddleClipboard` | §6.14 |

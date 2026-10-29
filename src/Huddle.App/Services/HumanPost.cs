@@ -4,7 +4,7 @@ namespace Agency.Huddle.App.Services;
 
 /// <summary>
 /// Posting a Message as the Human on the Human's behalf, the way an outcome card (a Sprint or retro
-/// proposal, a Teammate proposal, an answered question) reports back into its Room.
+/// proposal, an Agent proposal, an answered question) reports back into its Room.
 /// </summary>
 internal static class HumanPost
 {

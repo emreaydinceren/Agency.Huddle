@@ -12,7 +12,7 @@ using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teams;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Factories;
 
@@ -20,7 +20,7 @@ namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
 /// Pins <see cref="NewChat"/>'s optional <c>Team</c> parameter (Team chats spec §6.5): with a Team the
-/// panel is headed "New chat in {Team}", lists the Team's Teammates first and starts a Room scoped to the
+/// panel is headed "New chat in {Team}", lists the Team's Agents first and starts a Room scoped to the
 /// Team; without one it behaves as it always did and starts a root Room (T7). Real
 /// <see cref="SqliteTeamDirectory"/> and <see cref="ChatService"/> over a <see cref="TempDataDir"/>.
 /// </summary>
@@ -39,7 +39,7 @@ public sealed class NewChatTests
         Assert.Equal("New chat in Marketing", cut.Find(".new-chat-heading").TextContent.Trim());
     }
 
-    /// <summary>Teammates of the Team are listed before the others, whatever order the directory returns them in.</summary>
+    /// <summary>Agents of the Team are listed before the others, whatever order the directory returns them in.</summary>
     [Fact]
     public async Task WithTeam_ListsTheTeamsMembersFirst()
     {
@@ -54,7 +54,7 @@ public sealed class NewChatTests
         Assert.Equal(3, names.Length);
     }
 
-    /// <summary>T5: ticking a Team member and an outsider and choosing Start creates one Room scoped to the Team, leaves no root Room, and navigates to it.</summary>
+    /// <summary>T5: ticking an Agent and an outsider and choosing Start creates one Room scoped to the Team, leaves no root Room, and navigates to it.</summary>
     [Fact]
     public async Task WithTeam_Start_CreatesAScopedRoom_AndNavigates()
     {

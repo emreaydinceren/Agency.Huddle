@@ -31,7 +31,7 @@ internal static class HelperGateNote
             ChangeLogEntry entry = changeLog[i];
             if (entry.Summary.Contains(GateOff, StringComparison.Ordinal))
             {
-                // The Human (or a Teammate) turned it off after any earlier Helper entry; whatever holds it on now is not the Helper's word.
+                // The Human (or an Agent) turned it off after any earlier Helper entry; whatever holds it on now is not the Helper's word.
                 return null;
             }
 

@@ -121,7 +121,7 @@ internal static class SeedCli
     private static void Report(SeedSummary summary, TextWriter output)
     {
         output.WriteLine();
-        output.WriteLine($"Seeded {summary.Plan.Teammates.Count} Teammates, {summary.Plan.Teams.Count} Teams, {summary.Plan.Tasks.Count} Tasks,");
+        output.WriteLine($"Seeded {summary.Plan.Agents.Count} Agents, {summary.Plan.Teams.Count} Teams, {summary.Plan.Tasks.Count} Tasks,");
         output.WriteLine($"{summary.Plan.Rooms.Count} Rooms ({summary.Plan.Rooms.Sum(r => r.Messages.Count)} messages), {summary.Plan.Files.Count} note and memory files.");
         output.WriteLine($"Manifest: {Path.Combine(summary.Root, "manifest.md")}");
         output.WriteLine();

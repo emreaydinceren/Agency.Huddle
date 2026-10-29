@@ -6,8 +6,8 @@ date: 2026-09-30
 # An Adapter command is a Message the Human addresses by Mention, and an Adapter Profile allows it
 
 An Adapter advertises commands for a session. `claude-agent-acp` advertised 83 in one run, among them
-`/compact`, which frees a long-running Teammate's context without the Restart that forgets its
-conversation. The Human needs a way to run one on one Teammate. The full design is
+`/compact`, which frees a long-running Agent's context without the Restart that forgets its
+conversation. The Human needs a way to run one on one Agent. The full design is
 [Huddle.Commands-Specifications.md](../Huddle.Commands-Specifications.md).
 
 Three decisions are hard to reverse and surprising without this context, so they are recorded together.
@@ -15,11 +15,11 @@ Three decisions are hard to reverse and surprising without this context, so they
 ## The decisions
 
 **1. A command is a Message: `@Nova /compact`.** It is posted, stored and delivered like any Message.
-When the Human is the sender, the leading Mention is this Teammate, and the name is offered to it, the
+When the Human is the sender, the leading Mention is this Agent, and the name is offered to it, the
 runner sends the text after the Mention to the Adapter as the whole prompt. Nothing crosses the pipe that
 did not already, and the Reply Gate, Budget, work queue, Stop and idle timeout apply unchanged.
 
-**2. The allowlist is `Team:Acp:Adapters:*:Commands`, on the Adapter Profile.** A Teammate offers a
+**2. The allowlist is `Team:Acp:Adapters:*:Commands`, on the Adapter Profile.** An Agent offers a
 command only when its Adapter advertises it now *and* its profile names it. An Adapter with no entry
 offers nothing. The synthesised Claude profile allows `["compact"]`.
 
@@ -42,7 +42,7 @@ feature can be built before the wider isolation checks pass. It does not remove 
 ## Consequences
 
 - **A command Turn is an ordinary Turn** with a different prompt. It posts no reply text of its own
-  (`/compact` sends none), so the Teammate posts one fixed line reporting the outcome.
+  (`/compact` sends none), so the Agent posts one fixed line reporting the outcome.
 - **A command Turn must not drain anything it does not send.** Catch-up, own-post lines and File
   Changes stay queued for the next ordinary Turn.
 - **`Huddle.Acp` gains one event record and one mapper case**, which the ACP effort must be told of.
@@ -57,7 +57,7 @@ gets for free.
 
 **An allowlist in Persona frontmatter.** Every non-underscore frontmatter field is shown to other Agents
 through `list_agents`, a list-typed `Persona` member breaks `NeedsRestart`'s record equality, and editing
-it would restart the session and lose what the Teammate remembers. What a command name means is also a
+it would restart the session and lose what the Agent remembers. What a command name means is also a
 fact about the Adapter, like `ReadsFiles`.
 
 **One global allowlist.** `compact` means one thing on one Adapter and nothing on another; a single list

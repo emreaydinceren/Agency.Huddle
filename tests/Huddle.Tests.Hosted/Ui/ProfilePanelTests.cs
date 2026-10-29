@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Settings;
 using Agency.Huddle.App.Profile;
-using static Agency.Huddle.Tests.Ui.TeammateCardTestSupport;
+using static Agency.Huddle.Tests.Ui.AgentProfileCardTestSupport;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -61,9 +61,9 @@ public sealed class ProfilePanelTests
         Assert.Equal("Site Reliability Engineer", cut.Find(".roster-title").TextContent.Trim());
     }
 
-    /// <summary>A Name a Teammate already has is refused with a visible problem, and nothing is saved.</summary>
+    /// <summary>A Name an Agent already has is refused with a visible problem, and nothing is saved.</summary>
     [Fact]
-    public async Task Save_NameOfATeammate_ShowsTheProblemAndSavesNothing()
+    public async Task Save_NameOfAAgent_ShowsTheProblemAndSavesNothing()
     {
         await using TeamWebApplicationFactory factory = new();
         await SeedPersonaAsync(factory, "coo", "x");
@@ -74,7 +74,7 @@ public sealed class ProfilePanelTests
         await SetImmediateTextValueAsync(cut, "Name", "COO");
         await ClickAsync(cut, () => cut.Find("button.profile-save"));
 
-        Assert.Equal("Name 'COO' already belongs to the Teammate coo.", cut.Find(".profile-problem").TextContent.Trim());
+        Assert.Equal("Name 'COO' already belongs to the Agent coo.", cut.Find(".profile-problem").TextContent.Trim());
         Assert.Equal("You", store.Name);
     }
 

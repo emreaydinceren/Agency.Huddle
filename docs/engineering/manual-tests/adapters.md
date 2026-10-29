@@ -16,13 +16,13 @@ Background, if you need it: [ADR-0013](../../adr/0013-an-adapter-is-a-property-o
 ## Setup
 
 Run [`P-BUILD`](common.md#p-build) then the **RESTART LANE** described in
-[Model and Effort](model-effort.md) — teammate runners must actually start for anything here to
+[Model and Effort](model-effort.md) — agent runners must actually start for anything here to
 mean anything. You can skip that lane's Haiku step for the Chief of Staff: here the default
 Adapter is `mock`, so the Chief of Staff's Greeting Turn is answered by the free mock
 (`PersonaRunner.cs:481-495`). This area adds:
 
 1. **At least two Adapter Profiles must be configured**, or the Adapter select does not render at
-   all and three of these four tests are unrunnable (`TeammateCard.razor:310`). That is correct
+   all and three of these four tests are unrunnable (`AgentProfileCard.razor:310`). That is correct
    behaviour, not a defect: a stock installation configures no `Team:Acp:Adapters` and gets exactly
    one synthesised profile, and a dropdown offering one option is a control nobody can use. Add to
    `appsettings.Development.json`, writing `<repo>` as the absolute clone path with forward slashes:
@@ -116,18 +116,18 @@ Adapter is `mock`, so the Chief of Staff's Greeting Turn is answered by the free
 
 **Free** · about 25 min
 
-*Proves the load-bearing claim of the whole feature: the Adapter is resolved before the session exists, so the Room, the Reply Gate, the Budget and the Transcript never learn which Adapter answered. Two Teammates in one Room on two different Adapter Profiles must behave as two ordinary Teammates. Both are mock profiles on purpose: Mentioning a Persona on the `claude` profile takes a real cloud Turn, and the mock's echo carries `@<name>` text back, so a cloud Persona in this Room would be woken and billed. The cloud-versus-local boundary is not what this test proves.*
+*Proves the load-bearing claim of the whole feature: the Adapter is resolved before the session exists, so the Room, the Reply Gate, the Budget and the Transcript never learn which Adapter answered. Two Agents in one Room on two different Adapter Profiles must behave as two ordinary Agents. Both are mock profiles on purpose: Mentioning a Persona on the `claude` profile takes a real cloud Turn, and the mock's echo carries `@<name>` text back, so a cloud Persona in this Room would be woken and billed. The cloud-versus-local boundary is not what this test proves.*
 
 **Before you start**
 
 - Restart lane, three profiles configured (setup step 1).
 - Two Personas exist: **Wren** with **no** `adapter:` line (so it runs on the default, `mock`) and **Rook** with `adapter: mock2`. Neither is on `claude`.
-- Both read **Online** on `/teammates`.
+- Both read **Online** on `/agents`.
 
 **Steps**
 
 1. Open the Edit card for Rook. Confirm an **Adapter** select is present, above **Model**, and that its closed value reads `Mock 2`. Open Wren's Edit card and confirm its value reads `Use the default adapter`.
-2. Close each card without saving. Confirm with `O-FILE` that `<data>\Teammates\Rook\Rook.md` still carries `adapter: 'mock2'` in its frontmatter and that Wren's file has no `adapter:` line, and that no `persona_adapters` table exists (`O-DB`).
+2. Close each card without saving. Confirm with `O-FILE` that `<data>\Agents\Rook\Rook.md` still carries `adapter: 'mock2'` in its frontmatter and that Wren's file has no `adapter:` line, and that no `persona_adapters` table exists (`O-DB`).
 3. Run `O-MOCK-ADAPTERS`, then run `Get-CimInstance Win32_Process -Filter "Name='mock-acp.exe'" | Select-Object ProcessId, CommandLine`. Note that at least one command line ends `--mock` and at least one ends `--mock --second`.
 4. Create a Room containing the Human, Wren and Rook.
 5. Post one Message Mentioning **neither** of them. Wait 15 seconds.
@@ -139,15 +139,15 @@ Adapter is `mock`, so the Chief of Staff's Greeting Turn is answered by the free
 
 - In step 3 both a `--mock` and a `--mock --second` process exist, proving the two Personas really are on different Adapter Profiles and not silently both on the default.
 - In step 5 nothing replies and no Draft appears: a three-Member Room is Mention-gated (F11, `ReplyGate.cs`), and a Message Mentioning neither wakes neither. No budget note is shown after it (the note renders only once at least one agent reply has been counted, `Chat.razor:160-164`).
-- In step 8 both Teammates reply in the same Room, in the same Transcript, rendered identically — nothing in the Room view distinguishes which Adapter answered.
+- In step 8 both Agents reply in the same Room, in the same Transcript, rendered identically — nothing in the Room view distinguishes which Adapter answered.
 - The budget note then reads `N of M agent replies since you last spoke.` with `N` at least 2: both replies count against the one allowance. `N` may be higher, because the mock echoes your `@` text back and can wake the other; that is the budget doing its job, not a failure.
 
 **Fail if — any of these**
 
 - Step 3 shows only one kind of command line → the Adapter is not per-Persona; something is reading a global setting.
-- Either Teammate reads Degraded with a message naming an unconfigured Adapter (`The Adapter 'x' is not configured; running on 'mock'.`, `AdapterProfileResolver.cs:39`) → the `Id` in the file does not match the `Id` in configuration (they are compared case-insensitively, so this is a spelling difference, not a casing one). With `mock` as the default this costs nothing, but the test then proves nothing.
+- Either Agent reads Degraded with a message naming an unconfigured Adapter (`The Adapter 'x' is not configured; running on 'mock'.`, `AdapterProfileResolver.cs:39`) → the `Id` in the file does not match the `Id` in configuration (they are compared case-insensitively, so this is a spelling difference, not a casing one). With `mock` as the default this costs nothing, but the test then proves nothing.
 - Either reply renders differently from the other in the Transcript → something downstream of `PersonaRunner` has learned which Adapter answered, which the design forbids.
-- The Message in step 5 wakes either Teammate → the Reply Gate is not treating the Room as Mention-gated.
+- The Message in step 5 wakes either Agent → the Reply Gate is not treating the Room as Mention-gated.
 
 **Inconclusive if**
 
@@ -155,11 +155,11 @@ Wren or Rook stays Offline with `No ACP adapter is installed for Persona '<Name>
 
 ---
 
-### ADAPTERS-02 — A mock Adapter's reply lands whole in the Room and the Transcript, and the other Teammate is unaffected
+### ADAPTERS-02 — A mock Adapter's reply lands whole in the Room and the Transcript, and the other Agent is unaffected
 
 **Free** · about 10 min
 
-*Proves that a reply from a scripted Adapter is persisted as one complete Message that matches what the Room rendered, and that one Teammate's Turn does not disturb the other's. What this test cannot prove is incremental streaming or Stop: the mock sends its three chunks back to back with no delay (`MockBehaviour.cs:45-75`; latency injection is deferred to V2, Spec §6.10), so a human cannot see a Draft grow or click Stop mid-Turn. Both are unobservable here, not passed. They are exercised by the automated tests, and by any paid test that watches a real Draft.*
+*Proves that a reply from a scripted Adapter is persisted as one complete Message that matches what the Room rendered, and that one Agent's Turn does not disturb the other's. What this test cannot prove is incremental streaming or Stop: the mock sends its three chunks back to back with no delay (`MockBehaviour.cs:45-75`; latency injection is deferred to V2, Spec §6.10), so a human cannot see a Draft grow or click Stop mid-Turn. Both are unobservable here, not passed. They are exercised by the automated tests, and by any paid test that watches a real Draft.*
 
 **Before you start**
 
@@ -171,13 +171,13 @@ Wren or Rook stays Offline with `No ACP adapter is installed for Persona '<Name>
 1. Post a Message Mentioning **only** Rook, with a distinctive sentence of a dozen words (for example "violet harbour lantern seven quiet rivers ahead of the morning tide").
 2. Once Rook's reply has settled, compare what the Room shows with the Transcript (`O-TRANSCRIPT`).
 3. Post another Message Mentioning **both** Personas.
-4. Check the Teammate tiles on `/teammates` and the Room's health strip.
+4. Check the Agent tiles on `/agents` and the Room's health strip.
 
 **Pass if — all of these**
 
 - Rook's reply contains your sentence (the mock echoes the whole prompt, `P-LAUNCH-UAT`: judge "arrived and contains", never an exact body), and it is **one** Message in the Transcript whose text matches what the Room rendered.
 - Wren did not reply to step 1's Message: it Mentioned only Rook.
-- In step 3 both Teammates answer.
+- In step 3 both Agents answer.
 - After step 3 no health state is raised anywhere, no `role="alert"` appears, and both tiles stay Online.
 
 **Fail if — any of these**
@@ -192,16 +192,16 @@ You see a Draft row appear or not appear for a split second. Do not judge stream
 
 ---
 
-### ADAPTERS-03 — Changing a Teammate's Adapter resets Model and Effort, says so, and restarts the session
+### ADAPTERS-03 — Changing an Agent's Adapter resets Model and Effort, says so, and restarts the session
 
 **Free** · about 10 min · *no Message is ever sent to the `claude` Persona, so no cloud Turn is taken*
 
-*Proves the cascade and the consequence together: an Adapter change clears Model and Effort with an inline note, and saving restarts the session on the new Adapter. See [ADR-0015](../../adr/0015-model-and-effort-reset-when-the-adapter-changes.md). Not asserted here: that the restart "loses the memory". A new session's first Turn carries the last 20 Messages of the Room (F8, ADR-0024), and the mock echoes its whole prompt, so a Teammate that "remembers" a word after the switch proves nothing either way.*
+*Proves the cascade and the consequence together: an Adapter change clears Model and Effort with an inline note, and saving restarts the session on the new Adapter. See [ADR-0015](../../adr/0015-model-and-effort-reset-when-the-adapter-changes.md). Not asserted here: that the restart "loses the memory". A new session's first Turn carries the last 20 Messages of the Room (F8, ADR-0024), and the mock echoes its whole prompt, so an Agent that "remembers" a word after the switch proves nothing either way.*
 
 **Before you start**
 
 - Restart lane, three profiles configured (setup step 1), and the Node adapter installed (`tools/acp/install.ps1`), so a `claude` Persona can start. Starting a session is not a prompt Turn and spends nothing.
-- A Persona **Lark** on the `claude` Adapter (`adapter: claude` in `<data>\Teammates\Lark\Lark.md`) with a **Model and an Effort explicitly chosen** (Haiku and `low`, per the convention) and Online.
+- A Persona **Lark** on the `claude` Adapter (`adapter: claude` in `<data>\Agents\Lark\Lark.md`) with a **Model and an Effort explicitly chosen** (Haiku and `low`, per the convention) and Online.
 - Do **not** post any Message to Lark's Rooms before or during this test.
 - `O-ADAPTERS` prints `1` and note the `O-MOCK-ADAPTERS` count.
 
@@ -210,14 +210,14 @@ You see a Draft row appear or not appear for a split second. Do not judge stream
 1. Open Lark's Edit card. Note the current Model and Effort.
 2. Change **Adapter** to `Mock`.
 3. Read the card without saving.
-4. Save. Watch `/teammates`, then run `O-ADAPTERS` and `O-MOCK-ADAPTERS` again.
-5. Open `O-FILE` on `<data>\Teammates\Lark\Lark.md`, and with `O-DB` select the rows for `Lark` from `persona_models` and `persona_efforts` (`PersonaModelStore.cs:26`, `PersonaEffortStore.cs:28`).
+4. Save. Watch `/agents`, then run `O-ADAPTERS` and `O-MOCK-ADAPTERS` again.
+5. Open `O-FILE` on `<data>\Agents\Lark\Lark.md`, and with `O-DB` select the rows for `Lark` from `persona_models` and `persona_efforts` (`PersonaModelStore.cs:26`, `PersonaEffortStore.cs:28`).
 
 **Pass if — all of these**
 
-- In step 3 both **Model** and **Effort** have cleared to their blank defaults, and an inline note reads `Changing the adapter reset Model and Effort to their defaults.` followed by `Each adapter advertises its own models…` (`TeammateCard.razor:326-331`).
+- In step 3 both **Model** and **Effort** have cleared to their blank defaults, and an inline note reads `Changing the adapter reset Model and Effort to their defaults.` followed by `Each adapter advertises its own models…` (`AgentProfileCard.razor:326-331`).
 - That note is a **status**, not an alert — it does not interrupt, and a screen reader announces it politely. (Inspect for `role="status"`; `role="alert"` is a failure.)
-- If Lark also had a non-default Work mode, a second `role="status"` note says `Changing the adapter reset Work mode to its default.` (`TeammateCard.razor:453-461`, ADR-0033).
+- If Lark also had a non-default Work mode, a second `role="status"` note says `Changing the adapter reset Work mode to its default.` (`AgentProfileCard.razor:453-461`, ADR-0033).
 - In step 4 the tile passes through Starting and returns to Online, `O-ADAPTERS` falls to `0` (the `claude` process exits) and `O-MOCK-ADAPTERS` rises by one (the new process is `mock-acp`, which `O-ADAPTERS` cannot see).
 - In step 5 the file says `adapter: 'mock'`, and neither table has a row for `Lark`.
 
@@ -257,8 +257,8 @@ Lark cannot start on `claude` (Offline, or Degraded with an install message), so
 
 **Steps**
 
-1. In a two-Member Room with that Persona, ask it something that requires a Room it does not have: "start a room with the other teammates and introduce yourself".
-2. Watch `O-TOOLCALLS` for the Persona (`<data>\logs\tool-calls\<Name>\`) for any tool call at all. `O-WIRE` cannot be used: it sees only the echo bot, never an in-process Teammate (F14).
+1. In a two-Member Room with that Persona, ask it something that requires a Room it does not have: "start a room with the other agents and introduce yourself".
+2. Watch `O-TOOLCALLS` for the Persona (`<data>\logs\tool-calls\<Name>\`) for any tool call at all. `O-WIRE` cannot be used: it sees only the echo bot, never an in-process Agent (F14).
 3. If it calls `get_help`, read whether the next line is `create_room`.
 4. Repeat twice more with differently-worded requests.
 5. Record, in the Tracker, **the model name, the endpoint, and what it did** — for each of the three attempts.

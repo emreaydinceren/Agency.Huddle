@@ -5,11 +5,11 @@ using Agency.Huddle.Acp.Abstractions;
 namespace Agency.Huddle.App.Acp.Sessions;
 
 /// <summary>
-/// The fixed line a Teammate posts to say what its Adapter command did (Commands spec, section 8.3).
+/// The fixed line an Agent posts to say what its Adapter command did (Commands spec, section 8.3).
 /// An Adapter's <c>/compact</c> sends no message text, only a tool call whose output carries
 /// <c>{preTokens, postTokens, durationMs}</c>, so without this line a Room could not tell a finished
 /// compaction from a failed one. It is interface copy in code, not a Prompt: it is read by the Human and
-/// by every Teammate in the Room and is never sent to a model as an instruction.
+/// by every Agent in the Room and is never sent to a model as an instruction.
 /// </summary>
 internal static class AdapterCommandOutcome
 {

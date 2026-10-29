@@ -57,8 +57,8 @@ not yet:
 
 | Step | In Agency.Huddle | Status |
 | --- | --- | --- |
-| Generate | A Teammate with its own role, context and model | Built |
-| Challenge | `@`-mention a second Teammate, ideally on another model | Built; you have to ask for it |
+| Generate | An Agent with its own role, context and model | Built |
+| Challenge | `@`-mention a second Agent, ideally on another model | Built; you have to ask for it |
 | Verify | You, a member of every room; Tasks with a named owner and a Review status | Partly: no built-in test step |
 
 The rest of this page explains each row.
@@ -70,15 +70,15 @@ make members reach different conclusions, listed roughly by how hard each is to
 fake with a prompt:
 
 1. **Different models.** Members on one model share its priors however their roles
-   read. A Teammate's Model and Adapter are set per Teammate, so one team can span
+   read. An Agent's Model and Adapter are set per Agent, so one team can span
    vendors and the strongest lever is a setting.
 2. **Different information.** A member that reads other files, or a different slice
-   of the conversation, argues from different evidence. Each Teammate has its own
+   of the conversation, argues from different evidence. Each Agent has its own
    Work Dir and memory, so what it knows is its own.
 3. **Opposed incentives.** "Find what breaks" produces a different answer than
    "Review this". Give roles that pull against each other, such as builder and
    breaker or cost and quality, rather than roles that merely differ. Write the
-   stance into the Teammate's own instructions so it holds whatever you ask.
+   stance into the Agent's own instructions so it holds whatever you ask.
 4. **Independent first answers.** Mention several members in one Message and each
    answers before seeing the others, so the discussion starts from real
    differences. After that they read each other, as colleagues do. That is the
@@ -86,9 +86,9 @@ fake with a prompt:
    disagreement survives the conversation.
 
 A **Skill** supplies a method, not a viewpoint, such as a threat-modeling
-procedure for the one Teammate who reviews security. Because Skills are assigned per
-Teammate, a method does not spread to the whole team and flatten it. The first lever
-depends on you setting each Teammate's Model; see
+procedure for the one Agent who reviews security. Because Skills are assigned per
+Agent, a method does not spread to the whole team and flatten it. The first lever
+depends on you setting each Agent's Model; see
 [What we have not solved](#what-we-have-not-solved).
 
 ## The diagram with a hole in it
@@ -122,7 +122,7 @@ Agency.Huddle is a chat app. It looks like Slack because Slack already solved th
 problem for people: work happens in rooms, and you are in the rooms that concern
 you.
 
-The other members of your rooms are AI agents. Each Teammate runs as its own agent
+The other members of your rooms are AI agents. Each Agent runs as its own agent
 process, driven over the [Agent Client Protocol](https://agentclientprotocol.com)
 (ACP). They read the room, answer when spoken to, start rooms of their own, and
 pull each other in when a question is not theirs.
@@ -163,8 +163,8 @@ Agency.Huddle puts you in the room; it does not make you check.
 
 ## Five pillars, five answers
 
-**Specialized agents.** A **Teammate** is a Markdown file,
-`Teammates/<Name>/<Name>.md`. Its frontmatter says who it is and what it knows; its
+**Specialized agents.** A **Agent** is a Markdown file,
+`Agents/<Name>/<Name>.md`. Its frontmatter says who it is and what it knows; its
 body becomes its private instructions. Drop a new file in and `@CFO` comes online
 without a restart.
 
@@ -177,26 +177,26 @@ skills: ['team-building']
 consult_when: 'A recommendation rests on figures nobody has sourced'
 ```
 
-The fields other Teammates may see compose into a job description, which is what
+The fields other Agents may see compose into a job description, which is what
 lets one agent bring in the right colleague instead of guessing at a name. The body
-never reaches anyone else, so a Teammate can hold goals the others do not see.
+never reaches anyone else, so an Agent can hold goals the others do not see.
 
-Each Teammate also names its **Adapter**, the ACP agent process behind it, and its
-model. One Teammate can run on Anthropic's `claude-agent-acp` in the cloud while
+Each Agent also names its **Adapter**, the ACP agent process behind it, and its
+model. One Agent can run on Anthropic's `claude-agent-acp` in the cloud while
 the one reviewing its work runs a local model through `agency-acp`, which is the
 first lever in [Making members disagree on purpose](#making-members-disagree-on-purpose).
-The [User Guide](Huddle.UserGuide.md) covers the rest of a Teammate's settings, the
+The [User Guide](Huddle.UserGuide.md) covers the rest of an Agent's settings, the
 Skills it can read, and the Teams and Projects it works in.
 
 You do not have to write the files yourself. The built-in Chief of Staff proposes a
 team, and nothing is created until you select **Approve**. By default it proposes
-no more than eight Teammates, because every Teammate is a process.
+no more than eight Agents, because every Agent is a process.
 
 **Communication channels.** Inside the app, a named pipe carries one JSON object
 per line. An agent exists in Agency.Huddle for exactly one reason: some process
 connected to the pipe and said `hello`. That is the entire contract. A
 forty-line PowerShell script that echoes text back is a full member of any room,
-and so is a Teammate whose runner speaks ACP to a real agent on the other side —
+and so is an Agent whose runner speaks ACP to a real agent on the other side —
 the chat surface cannot tell them apart, and that is the point. Any language, any
 process, one line of JSON.
 
@@ -222,25 +222,25 @@ never need is paid for when it asks, not on every turn of every session.
 
 **Memory.** Shared: one append-only JSON Lines **Transcript** per room that
 everyone reads, plus a **Team Memory** folder every member of a Team sees. Individual:
-each Teammate has its own memory folder and its own **Room Session** per room, so the
+each Agent has its own memory folder and its own **Room Session** per room, so the
 context of one conversation does not leak into another. Work that must outlast a
 chat lives in **Tasks**, a Markdown file with an owner, a status and a change log,
-and in the **Library**, where you and your Teammates keep notes side by side. Notes
+and in the **Library**, where you and your Agents keep notes side by side. Notes
 link to each other with `[[wiki links]]`, show their backlinks, and keep their links
-when you rename or move them. A Teammate is told which watched files changed since
-its last turn. A Teammate does not keep its conversation across a restart, so
+when you rename or move them. An Agent is told which watched files changed since
+its last turn. An Agent does not keep its conversation across a restart, so
 anything worth keeping goes into a memory file. There is no vector store; the memory
 is files you can open.
 
 ## Work that wakes people up
 
 **Tasks** are Markdown files you can see as a List or as a Board, with one swimlane
-per Project and cards you drag between columns. When a Task assigned to a Teammate
-changes, whether you drag a card, edit the file by hand or another Teammate updates
+per Project and cards you drag between columns. When a Task assigned to an Agent
+changes, whether you drag a card, edit the file by hand or another Agent updates
 it, Huddle posts a message in a Room that wakes the assignee. Work moves without
 anyone polling a chat. Every change is appended to the Task's change log, and the
-statuses include **Review**, which is where a Challenge step belongs. Teammates
-changing each other's Tasks could loop, so each Task allows ten Teammate-made
+statuses include **Review**, which is where a Challenge step belongs. Agents
+changing each other's Tasks could loop, so each Task allows ten Agent-made
 wake-ups until you select **Allow 10 more**.
 
 ## Stages are verbs, not people
@@ -261,10 +261,10 @@ So in Agency.Huddle the verb goes in the request:
 @CFO critique the margin assumptions above
 ```
 
-Two Teammates, two verbs, no mechanism. Mention-gating routes it. The CFO
+Two Agents, two verbs, no mechanism. Mention-gating routes it. The CFO
 critiques the numbers *because* it is the CFO.
 
-The verb is in the request; the stance is lasting. A Teammate's Markdown body is its
+The verb is in the request; the stance is lasting. An Agent's Markdown body is its
 private instructions, so a CFO told to doubt every margin assumption keeps doing so
 whichever verb you use.
 
@@ -290,7 +290,7 @@ members read each other, you are in the room, and a Budget stops runaway chatter
 is still why we treat checking at each hand-off as the open problem.
 
 Nothing switches modes. There is no room kind. Topology is whatever falls out of
-which Teammates exist, which tools each holds, and who is in the room. The design
+which Agents exist, which tools each holds, and who is in the room. The design
 record — including why we rejected a blocking `delegate()` tool, and why relying
 on specialists to tag the coordinator back turned out to be a silent failure
 path — is in
@@ -324,46 +324,46 @@ This repository applies it to review, and each piece below can be opened and rea
   rather than on working out the layout.
 
 None of this removes a person. A person sets what done means, and the checks say
-whether it was met. It also checks the repository, not your Teammates: a team in
+whether it was met. It also checks the repository, not your Agents: a team in
 the app still has no built-in test step, as the table below says.
 
 ## What we have not solved
 
 A team fixes none of its own failure modes by default. Five are worth saying plainly:
 
-- **Convergence.** A team the Chief of Staff proposes starts every Teammate on the
+- **Convergence.** A team the Chief of Staff proposes starts every Agent on the
   installation's default Model and Adapter, because a Candidate cannot carry either.
-  Until you change them on each Teammate card, the team is one model in several
+  Until you change them on each Agent card, the team is one model in several
   roles, and a discussion between them can settle too easily
   ([why this matters](#making-members-disagree-on-purpose)).
-- **Collaboration is not automatic value.** Teammates talking to each other is not
+- **Collaboration is not automatic value.** Agents talking to each other is not
   a review. Mention a challenger to attack a specific piece of work.
-- **Cascading errors.** If one Teammate makes a wrong assumption early and the next
+- **Cascading errors.** If one Agent makes a wrong assumption early and the next
   trusts it, every later step builds on it and the work looks more finished, not
   less. The fix is to verify at each hand-off, not only at the end.
 - **Cost.** Every hand-off is more model calls. A team costs more than one agent
-  doing the same job. A Teammate's card shows what it spent since it started, and a
-  long-running Teammate can be summarized with `@name /compact` to shrink the
+  doing the same job. An Agent's card shows what it spent since it started, and a
+  long-running Agent can be summarized with `@name /compact` to shrink the
   conversation it carries. The compaction itself is a model call that the card does
   not count.
 - **Mental load moves, it does not vanish.** Setting up roles and reviewing a team's
   output is work. The payoff comes on repeated or long-running jobs. Start with one
-  Teammate, and add a team when coordination, not capability, is what slows you down.
+  Agent, and add a team when coordination, not capability, is what slows you down.
 
 And here is where Agency.Huddle stands on the guardrails an autonomous network needs:
 
 | Guardrail | Status |
 | --- | --- |
 | Human-in-the-loop | **Structural.** Every room, by schema. |
-| A verify step | **Partly.** The human is always in the room and Tasks name an owner, but there is no built-in test step. A team that has only a Generate and a Challenge Teammate has no Verify. |
-| Runaway-loop guard | **Yes.** A per-room Budget of agent replies (40 by default) that any human message resets; when it is spent the agents pause and you choose **Continue** or **Leave paused**. A per-Teammate token Budget, ten Teammate-made wake-ups per Task, and an idle timeout on a silent Turn. **Stop** cancels a Turn. |
-| Seeing what an agent did | **Mostly.** A reply shows its recent tool calls, an edit opens to a preview, a Teammate card shows its reported spend, Task changes are logged, and file changes are reported to the next Turn. None of the tool-call detail is kept after the reply. |
-| Least-privilege tool access | **Partly.** A Work Mode limits what the agent does before it asks, but Huddle approves the agent's permission requests itself, so nothing asks you before a tool runs. The one write refused in every mode is into the agent's own `~/.claude` folder, and a shell command that redirects there is not caught. A write outside the Work Dir is not refused. Per-Teammate tool grants are not built ([roadmap item 9](engineering/roadmap.md)), and asking the human before a tool runs is proposed, not built (item 20). |
-| Sandboxing | No. A Teammate's work directory is real disk. |
+| A verify step | **Partly.** The human is always in the room and Tasks name an owner, but there is no built-in test step. A team that has only a Generate and a Challenge Agent has no Verify. |
+| Runaway-loop guard | **Yes.** A per-room Budget of agent replies (40 by default) that any human message resets; when it is spent the agents pause and you choose **Continue** or **Leave paused**. A per-Agent token Budget, ten Agent-made wake-ups per Task, and an idle timeout on a silent Turn. **Stop** cancels a Turn. |
+| Seeing what an agent did | **Mostly.** A reply shows its recent tool calls, an edit opens to a preview, an Agent card shows its reported spend, Task changes are logged, and file changes are reported to the next Turn. None of the tool-call detail is kept after the reply. |
+| Least-privilege tool access | **Partly.** A Work Mode limits what the agent does before it asks, but Huddle approves the agent's permission requests itself, so nothing asks you before a tool runs. The one write refused in every mode is into the agent's own `~/.claude` folder, and a shell command that redirects there is not caught. A write outside the Work Dir is not refused. Per-Agent tool grants are not built ([roadmap item 9](engineering/roadmap.md)), and asking the human before a tool runs is proposed, not built (item 20). |
+| Sandboxing | No. An Agent's work directory is real disk. |
 | Authentication | None, by design. Run it on your own machine. |
 
 The wall we expected to hit first, one session per agent spanning every room, is
-gone: a Teammate now holds one Room Session per room
+gone: an Agent now holds one Room Session per room
 ([ADR-0024](adr/0024-an-agent-holds-one-session-per-room.md)). What remains is the
 Adapter. One that cannot resume a session has to be run in the older shared shape,
 and that is a setting, not a guarantee.
@@ -391,7 +391,7 @@ agents **spend money**.
 
 To work on the code instead, you need the .NET 10 SDK. For a first run that spends
 nothing, turn the agent process off, because the development configuration starts a
-real one per Teammate:
+real one per Agent:
 
 ```powershell
 $env:Team__Acp__Enabled = 'false'
@@ -402,7 +402,7 @@ Open `http://localhost:5100`. A fresh install has no rooms. To try the two built
 demo agents, `echo` and `alpha`, set `Team__DemoAgent__Enabled` to `true` before
 `dotnet run`, click **echo**, type `hi`, and it answers. Bringing real Claude agents online from
 source takes Node.js and a logged-in `claude` CLI; `Team:Acp:Enabled` is the switch.
-[`docs/Huddle.UserGuide.md`](Huddle.UserGuide.md) walks through Teammates, Teams,
+[`docs/Huddle.UserGuide.md`](Huddle.UserGuide.md) walks through Agents, Teams,
 Tasks and the Library, and
 [`docs/Huddle.EngineeringGuide.md`](Huddle.EngineeringGuide.md) holds the whole design.
 
@@ -419,7 +419,7 @@ problem, and the one we are working on now.
 
 A person cannot read everything, but a person can read less. What people should own
 is the small surface: the goals, the specs and the acceptance criteria. A Task body
-is that spec, written where the Teammate who takes it and the person who accepts it
+is that spec, written where the Agent who takes it and the person who accepts it
 both read it.
 
 The next problem also has a shape. Verifying means checking results against goals:

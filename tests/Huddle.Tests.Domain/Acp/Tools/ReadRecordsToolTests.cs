@@ -429,7 +429,7 @@ public sealed class ReadRecordsToolTests
         Assert.Equal($"Room {roomId} has no messages from Team Platform.", result);
     }
 
-    /// <summary>A root Room that exists in the directory keeps the sender rule: a Team member posting is enough to read it.</summary>
+    /// <summary>A root Room that exists in the directory keeps the sender rule: an Agent posting is enough to read it.</summary>
     [Fact]
     public async Task Invoke_RootRoomWithTeamMember_IsRead()
     {
@@ -443,7 +443,7 @@ public sealed class ReadRecordsToolTests
         Assert.Equal("2026-10-08 10:00 Rae: hello", result);
     }
 
-    /// <summary>A root Room that exists in the directory keeps the sender rule: with no Team member posting it is refused.</summary>
+    /// <summary>A root Room that exists in the directory keeps the sender rule: with no Agent posting it is refused.</summary>
     [Fact]
     public async Task Invoke_RootRoomWithoutTeamMember_IsRefused()
     {

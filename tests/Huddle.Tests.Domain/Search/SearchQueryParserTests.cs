@@ -8,7 +8,7 @@ public sealed class SearchQueryParserTests
     /// <summary>Each of the five prefixes sets its filter, ignores case, and is removed from the phrase.</summary>
     [Theory]
     [InlineData("team:nova", SearchFilter.Teams, "nova")]
-    [InlineData("TEAMMATE:nova", SearchFilter.Teammates, "nova")]
+    [InlineData("AGENT:nova", SearchFilter.Agents, "nova")]
     [InlineData("Lib:readme", SearchFilter.Library, "readme")]
     [InlineData("task:fix", SearchFilter.Tasks, "fix")]
     [InlineData("Room:kickoff", SearchFilter.Rooms, "kickoff")]
@@ -19,14 +19,14 @@ public sealed class SearchQueryParserTests
         Assert.Equal(new SearchParse(expectedFilter, expectedPhrase, true), parse);
     }
 
-    /// <summary>The colon decides: <c>teammate:</c> sets Teammates and <c>team:</c> sets Teams.</summary>
+    /// <summary>The colon decides: <c>agent:</c> sets Agents and <c>team:</c> sets Teams.</summary>
     [Fact]
-    public void Parse_TeamAndTeammate_AreKeptApart()
+    public void Parse_TeamAndAgent_AreKeptApart()
     {
-        SearchParse teammate = SearchQueryParser.Parse("teammate:nova", SearchFilter.All);
+        SearchParse agent = SearchQueryParser.Parse("agent:nova", SearchFilter.All);
         SearchParse team = SearchQueryParser.Parse("team:nova", SearchFilter.All);
 
-        Assert.Equal(new SearchParse(SearchFilter.Teammates, "nova", true), teammate);
+        Assert.Equal(new SearchParse(SearchFilter.Agents, "nova", true), agent);
         Assert.Equal(new SearchParse(SearchFilter.Teams, "nova", true), team);
     }
 
@@ -75,13 +75,13 @@ public sealed class SearchQueryParserTests
         Assert.Equal(new SearchParse(SearchFilter.Tasks, "fix", true), parse);
     }
 
-    /// <summary>An empty phrase under Teams or Teammates is a browse, whichever way the filter was set.</summary>
+    /// <summary>An empty phrase under Teams or Agents is a browse, whichever way the filter was set.</summary>
     [Theory]
     [InlineData("", SearchFilter.Teams, SearchFilter.Teams)]
-    [InlineData("", SearchFilter.Teammates, SearchFilter.Teammates)]
+    [InlineData("", SearchFilter.Agents, SearchFilter.Agents)]
     [InlineData("team:", SearchFilter.All, SearchFilter.Teams)]
-    [InlineData("teammate:   ", SearchFilter.Rooms, SearchFilter.Teammates)]
-    public void Parse_EmptyTeamsAndTeammates_Browse(string boxText, SearchFilter chip, SearchFilter expectedFilter)
+    [InlineData("agent:   ", SearchFilter.Rooms, SearchFilter.Agents)]
+    public void Parse_EmptyTeamsAndAgents_Browse(string boxText, SearchFilter chip, SearchFilter expectedFilter)
     {
         SearchParse parse = SearchQueryParser.Parse(boxText, chip);
 
@@ -97,7 +97,7 @@ public sealed class SearchQueryParserTests
         Assert.Equal(new SearchParse(SearchFilter.Tasks, string.Empty, false), parse);
     }
 
-    /// <summary>An empty box under All, Library or Rooms is not searchable, only browsable under Teams and Teammates.</summary>
+    /// <summary>An empty box under All, Library or Rooms is not searchable, only browsable under Teams and Agents.</summary>
     [Theory]
     [InlineData(SearchFilter.All)]
     [InlineData(SearchFilter.Library)]
@@ -169,7 +169,7 @@ public sealed class SearchQueryParserTests
     [Theory]
     [InlineData(SearchFilter.All, "")]
     [InlineData(SearchFilter.Teams, "team:")]
-    [InlineData(SearchFilter.Teammates, "teammate:")]
+    [InlineData(SearchFilter.Agents, "agent:")]
     [InlineData(SearchFilter.Library, "lib:")]
     [InlineData(SearchFilter.Tasks, "task:")]
     [InlineData(SearchFilter.Rooms, "room:")]

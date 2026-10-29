@@ -1,6 +1,6 @@
 namespace Agency.Huddle.Contracts;
 
-/// <summary>The kinds a Message can reference (spec §8.1). A Teammate is Mentioned, never referenced.</summary>
+/// <summary>The kinds a Message can reference (spec §8.1). An Agent is Mentioned, never referenced.</summary>
 public enum ReferenceKind
 {
     /// <summary>A Task, keyed by its id.</summary>

@@ -2,7 +2,7 @@ using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.App.Helpers.NeedsHuman;
 
-/// <summary>Everything the Needs Human Helper reads about a Task, captured when the Teammate saved it.</summary>
+/// <summary>Everything the Needs Human Helper reads about a Task, captured when the Agent saved it.</summary>
 /// <param name="Id">The Task.</param>
 /// <param name="Fingerprint">The Task's content fingerprint at that moment; a Verdict applies only while the Task still has it.</param>
 /// <param name="Title">The title.</param>

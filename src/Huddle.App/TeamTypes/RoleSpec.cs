@@ -6,7 +6,7 @@ namespace Agency.Huddle.App.TeamTypes;
 /// <param name="Candidate">The path to the candidate Markdown file.</param>
 /// <param name="Manager">Whether this is the team's manager role.</param>
 /// <param name="Required">Whether Start Team needs this role.</param>
-/// <param name="MaxPerTeam">The most Teammates of this role a team may hold; 0 means unlimited; 1 when omitted.</param>
+/// <param name="MaxPerTeam">The most Agents of this role a team may hold; 0 means unlimited; 1 when omitted.</param>
 /// <param name="Covers">The coverage steps this role provides, or null when omitted.</param>
 /// <param name="Model">The model the role asks for, or null when omitted (Balanced).</param>
 /// <param name="Skills">The skills the role carries, or null when omitted.</param>

@@ -272,7 +272,7 @@ Check these before reading the code.
 | `pwsh: command not found` at the Health endpoint smoke test step | The SDK image stopped shipping PowerShell. `10.0.401` installs it as a global tool and symlinks `/usr/bin/pwsh` (`PowerShell.Linux.arm64` on this runner), but that is the image's choice, not a guarantee across bumps | Add a step before it — `dotnet tool install --global PowerShell` and put `$HOME/.dotnet/tools` on `PATH` — in **both** workflows. Confirm with `command -v pwsh && pwsh --version` |
 | The smoke test FAILs while the whole test suite is green | Read the stderr and stdout tails the script prints; that is what they are for. `AddressInUseException`, a missing `libe_sqlite3.so`, or a timeout waiting for `Now listening on:` are environmental — the app never bound. A `404 - the endpoint is not mapped` is **not** environmental | For 404, `app.MapHealthChecks("/health")` was removed from `Program.cs` and this step caught a real regression the suite cannot see. For the rest, re-run; if it persists, reproduce with the Docker command above |
 | The build step fails with `error MSB3883: Unexpected exception` and `ReleaseMutex failed. WaitOne Id: N Release Id: N`, on a project the change does not touch, with no `CS` diagnostic | The Roslyn compiler server (`VBCSCompiler`) lost a race on its own mutex. It is the runner, not the code. Seen once, on 2026-10-18 (run 1014, job 1702), on `Huddle.Contracts` | Re-run the job. If it recurs, add `-p:UseSharedCompilation=false` to `dotnet build` in **both** workflows, which trades the server's speed for no shared state |
-| Several tests that host the app (`TeamWebApplicationFactory`: `TeammatesPageTests`, `TasksPageTests`, `AvatarEndpointTests`) fail with `TaskCanceledException`, `The client aborted the request`, each after 12-38 s, and the `Huddle.Tests` step takes about twice its usual ~1 m 55 s | The runner was starved for CPU, so app start-up plus one request outran the tests' 10-second `CancellationTokenSource`. The runner shares the desktop with everything else running there. A plain avatar 404 failing the same way is the tell, because it renders no component. Seen on 2026-10-18 (run 1014, job 1704): 9 failures in a 4 m 00 s step, then green in 1 m 58 s on re-run (job 1706) with no change. These tests run in `Huddle.Tests.Hosted` at `maxParallelThreads: 2` | Check the step's duration first. If it is about double the usual, re-run once the desktop is quiet. If these fail at a normal duration, it is real: the request never completed, so read the first failure's stack rather than raising the budget |
+| Several tests that host the app (`TeamWebApplicationFactory`: `AgentsPageTests`, `TasksPageTests`, `AvatarEndpointTests`) fail with `TaskCanceledException`, `The client aborted the request`, each after 12-38 s, and the `Huddle.Tests` step takes about twice its usual ~1 m 55 s | The runner was starved for CPU, so app start-up plus one request outran the tests' 10-second `CancellationTokenSource`. The runner shares the desktop with everything else running there. A plain avatar 404 failing the same way is the tell, because it renders no component. Seen on 2026-10-18 (run 1014, job 1704): 9 failures in a 4 m 00 s step, then green in 1 m 58 s on re-run (job 1706) with no change. These tests run in `Huddle.Tests.Hosted` at `maxParallelThreads: 2` | Check the step's duration first. If it is about double the usual, re-run once the desktop is quiet. If these fail at a normal duration, it is real: the request never completed, so read the first failure's stack rather than raising the budget |
 
 ### Line endings
 
@@ -281,8 +281,8 @@ Linux runner compiles bytes you never compile locally. **Something does depend o
 2026-09-15, and it was live for longer than anyone noticed: C# raw string literals *preserve*
 their source file's line endings rather than normalising them, so `PromptCatalog`'s defaults —
 and therefore every prompt sent to a model — carried `\r\n` on a Windows build and `\n` in this
-container. Two tests read source files as text (`TeammatesRazorSourceTests` over
-`Teammates.razor`, and `AcpReferenceTests`) and are the shape that would notice, but neither
+container. Two tests read source files as text (`AgentsRazorSourceTests` over
+`Agents.razor`, and `AcpReferenceTests`) and are the shape that would notice, but neither
 covers prompts; `PromptGoldenTests` and `PromptDefaultsFileTests` both normalise line endings on
 *both* sides before comparing, so neither could see it either.
 
@@ -299,7 +299,7 @@ git ls-files --eol -- 'src/**/*.razor'
 ```
 
 ```text
-i/lf    w/crlf  attr/                  src/Huddle.App/Components/Pages/Teammates.razor
+i/lf    w/crlf  attr/                  src/Huddle.App/Components/Pages/Agents.razor
 ```
 
 The sibling Agency repo added a root `.gitattributes` forcing `*.cs text eol=crlf` after

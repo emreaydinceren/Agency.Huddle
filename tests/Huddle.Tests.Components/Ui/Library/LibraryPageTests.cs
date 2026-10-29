@@ -223,7 +223,7 @@ public sealed class LibraryPageTests : IDisposable
         /// fixture's temp <c>DataDir</c>.</summary>
         public LibraryFileServiceFixture LibraryFixture { get; }
 
-        /// <summary>Builds a fixture with the standard Teams/Teammates layout.</summary>
+        /// <summary>Builds a fixture with the standard Teams/Agents layout.</summary>
         public static ExplorerFixture Build()
         {
             TempDataDir dir = new();

@@ -256,7 +256,7 @@ public sealed class TaskDetailSprintTests
         Assert.Equal(TaskPriority.Urgent, harness.Store.Get(task.Id)?.Priority);
     }
 
-    /// <summary>The Save label still comes from <c>Preview</c>: a pending Sprint on a Task assigned to an Awake or Asleep Teammate reads "Save &amp; Notify" (spec §12.1, D-S8).</summary>
+    /// <summary>The Save label still comes from <c>Preview</c>: a pending Sprint on a Task assigned to an Awake or Asleep Agent reads "Save &amp; Notify" (spec §12.1, D-S8).</summary>
     [Fact]
     public async Task WakeLabel_FollowsPreview_WhenASprintIsPending()
     {

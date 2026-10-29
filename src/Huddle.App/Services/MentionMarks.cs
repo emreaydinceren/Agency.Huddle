@@ -6,6 +6,6 @@ namespace Agency.Huddle.App.Services;
 /// <see cref="StringComparison.OrdinalIgnoreCase"/>, ending at a word boundary), is wrapped in a
 /// <c>mention</c> span.
 /// </summary>
-/// <param name="Handles">The Names and Aliases of the Room's Teammates that are Members.</param>
+/// <param name="Handles">The Names and Aliases of the Room's Agents that are Members.</param>
 /// <param name="OwnHandles">The Human's own Name and Alias; a Mention of one also carries <c>mention--me</c>.</param>
 public sealed record MentionMarks(IReadOnlyList<string> Handles, IReadOnlyList<string> OwnHandles);

@@ -1,7 +1,7 @@
 # Huddle user guide
 
 Huddle is a chat workspace where you work with a small team of AI
-**Teammates**. You talk to them in chat Rooms, organise them into Teams and
+**Agents**. You talk to them in chat Rooms, organise them into Teams and
 Projects, hand them Tasks, and share notes with them through the Library. This
 guide is for the person running Huddle on their own machine. It explains what
 each part of the app does, how the parts relate, and **what Huddle writes to
@@ -19,24 +19,24 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | Get started with your own copy | [Install](#install) |
 | Find your way around the screen | [A quick tour of the screen](#a-quick-tour-of-the-screen), [Tabs](#tabs) and [Global search](#global-search) |
 | See which Rooms and Tasks are waiting on you | [Needs you](#needs-you) |
-| See what your Teammates did while you were away | [Feed](#feed) |
+| See what your Agents did while you were away | [Feed](#feed) |
 | Decide whether a Task is done, or what leaves the Team | [The Human gate](#the-human-gate) |
-| Read a Teammate's status badge or a chip | [Status at a glance](#status-at-a-glance) and [Chips](#chips) |
-| Understand how Teammates, Teams, Tasks and memory relate | [The data model](#the-data-model) |
-| Free a long-running Teammate's memory without restarting it | [Freeing a Teammate's memory with `/compact`](#freeing-a-teammates-memory-with-compact) |
+| Read an Agent's status badge or a chip | [Status at a glance](#status-at-a-glance) and [Chips](#chips) |
+| Understand how Agents, Teams, Tasks and memory relate | [The data model](#the-data-model) |
+| Free a long-running Agent's memory without restarting it | [Freeing an Agent's memory with `/compact`](#freeing-an-agents-memory-with-compact) |
 | Know which file a change lands in | [Where your data lives](#where-your-data-lives) and [What happens when…](#what-happens-when-reference) |
-| Add or change a Teammate | [Working with Teammates](#working-with-teammates) |
+| Add or change an Agent | [Working with Agents](#working-with-agents) |
 | Set up Teams and Projects | [Organising Teams and Projects](#organising-teams-and-projects) |
 | Hire a Team from a type | [Hiring a Team from a type](#hiring-a-team-from-a-type) |
 | Set a Team's process and gates, schedules and Household | [Running a Team](#running-a-team) |
 | Handle asks between Teams, or Team retrospectives | [Requests between Teams](#requests-between-teams) and [Retrospectives](#retrospectives) |
-| Chat with one or several Teammates | [Chatting in Rooms](#chatting-in-rooms) |
+| Chat with one or several Agents | [Chatting in Rooms](#chatting-in-rooms) |
 | Chat inside a Team, or find its Team Room | [Team chats](#team-chats) |
 | Track work | [Tracking work with Tasks](#tracking-work-with-tasks) |
 | Share notes and documents | [Keeping notes in the Library](#keeping-notes-in-the-library) |
 | See a Room's members, Tasks and files, or a note's outline and links | [The Right sidebar](#the-right-sidebar) |
-| Teach Teammates a procedure | [Giving Teammates Skills](#giving-teammates-skills) |
-| See what Teammates remember and which files they changed | [Memory and file changes](#memory-and-file-changes) |
+| Teach Agents a procedure | [Giving Agents Skills](#giving-agents-skills) |
+| See what Agents remember and which files they changed | [Memory and file changes](#memory-and-file-changes) |
 | Change prompts, Themes, Personas, Skills or Library roots | [Settings](#settings) |
 | Turn a Helper on or off, or change what it may spend | [Helpers](#helpers) |
 | Fix something that went wrong | [Troubleshooting](#troubleshooting) |
@@ -107,9 +107,9 @@ give the page more room. The sidebar opens on **Chats**.
 | --- | --- |
 | **Chats** | **Needs you**, a card drawn only while a Room is waiting on you (see [Needs you](#needs-you)), then **Group by: All | Team**. **All** lists your root Rooms in two folders: **Needs you** on top, holding the chats waiting on you, and **All** with the rest, plus **New chat**. It never folds the list behind "Show all". A Team's chats are not listed under **All**; see [Team chats](#team-chats). Pick **Team** to list every chat in a folder per Team ("No team" first); click a folder to close or open it. The choice and the closed folders are remembered. A chat that is waiting on you also wears a **Needs you** pill in the list. |
 | **Teams** | One row per Team. Expand it to see its Team Room, its chats and its Projects. **Build a team** sits at the bottom. The More (⋮) menu on a Team row has **New chat** and **New project**. |
-| **Teammates** | A link to the page listing every Teammate, grouped by Team. |
+| **Agents** | A link to the page listing every Agent, grouped by Team. |
 | **Tasks** | Your saved Views of Tasks: **All Tasks**, **My Tasks**, any you saved, and **New view**. Not shown when Tasks are turned off. |
-| **Library** | One **Library** link. The Library's roots (**Teams**, **Teammates**, and any folders you pinned) and **Add folder** are on the Library page. Not shown when the Library is turned off. |
+| **Library** | One **Library** link. The Library's roots (**Teams**, **Agents**, and any folders you pinned) and **Add folder** are on the Library page. Not shown when the Library is turned off. |
 
 The two buttons at the bottom of the Activity bar are **Archived chats** and **Settings**.
 
@@ -117,7 +117,7 @@ The two buttons at the bottom of the Activity bar are **Archived chats** and **S
 
 1. **Chats**, highlighted because the sidebar is showing it.
 2. **Teams**.
-3. **Teammates**.
+3. **Agents**.
 4. **Tasks**.
 5. **Library**.
 6. **Archived chats**.
@@ -134,7 +134,7 @@ Every page has its own address, so you can bookmark it:
 | Address | Page |
 | --- | --- |
 | `/rooms/{roomId}` | A chat Room |
-| `/teammates` | Teammates |
+| `/agents` | Agents |
 | `/teams/{Team}`, `/teams/{Team}/files`, `/teams/{Team}/tasks` | A Team page and its tabs |
 | `/teams/{Team}/projects/{Project}` | A Project page |
 | `/tasks/{viewId}` | A saved Task View |
@@ -147,8 +147,8 @@ Every page has its own address, so you can bookmark it:
 
 When several Rooms are running, **Needs you** at the top of the sidebar's **Chats** view lists the ones waiting on you, longest wait first. A Room is listed when:
 
-- a Teammate **mentions you** in a Message you have not answered (the row shows who and when);
-- a Teammate has asked you a **Question** or opened a **Form** that is still waiting;
+- an Agent **mentions you** in a Message you have not answered (the row shows who and when);
+- an Agent has asked you a **Question** or opened a **Form** that is still waiting;
 - the Room has used up its **Budget** and is paused until you speak.
 
 Each row shows an icon for every reason, the Room's name, and who asked and when. Select it to open the Room.
@@ -163,17 +163,17 @@ The **Needs you** page lists the Tasks first, each as a decision card where you 
 
 ### Feed
 
-The **Feed** is one list of what your Teammates and Huddle did, and what is waiting for you. It is the way to catch up after an hour away: the Tasks Teammates created, the Rooms that started, the documents that changed, and the asks that came and went. It is read-only. It never changes the work, and it never shows the text of a Message.
+The **Feed** is one list of what your Agents and Huddle did, and what is waiting for you. It is the way to catch up after an hour away: the Tasks Agents created, the Rooms that started, the documents that changed, and the asks that came and went. It is read-only. It never changes the work, and it never shows the text of a Message.
 
 **The Notifications bell.** The **Notifications** button at the right of the Top Bar shows how many new items ask for you: a Task assigned to you, a gated Task waiting for your approval, a Mention, a Question or a Form, a Room that reached its Budget, a Request only you can confirm, and a Task move that a gate stopped. Opening it shows the **Notifications** panel in the Right sidebar and marks what it shows as seen, so the number goes away; the items stay. The panel opens on **Needs you**. Choose **All**, **Tasks**, **Documents**, **Rooms**, **Gates** or **Helpers** to see the rest of the Feed, each with its count. Hover a row and press its ✕ to hide that Notification from the bell. It stays in the Feed. **See all activity** at the bottom opens the Feed Tab on the same Category.
 
 An item you caused yourself never rings the bell. A Notification fades and leaves **Needs you** once the reason is gone: you posted in the Room, you accepted the Task, the Task was reassigned.
 
-**The Feed Tab.** The **Feed** icon at the top of the Activity bar opens the Feed in a Tab. The header shows a **Live** chip, because new items arrive on their own, and the note "Read-only — the Feed never changes the work and never shows message text." Below it, **All**, **Needs you**, **Tasks**, **Documents**, **Rooms**, **Gates** and **Helpers** each show a count, and the **All teams** select narrows the list to one Team. Click a Teammate's avatar to see only that Teammate's items; the Tab remembers the filter in its address.
+**The Feed Tab.** The **Feed** icon at the top of the Activity bar opens the Feed in a Tab. The header shows a **Live** chip, because new items arrive on their own, and the note "Read-only — the Feed never changes the work and never shows message text." Below it, **All**, **Needs you**, **Tasks**, **Documents**, **Rooms**, **Gates** and **Helpers** each show a count, and the **All teams** select narrows the list to one Team. Click an Agent's avatar to see only that Agent's items; the Tab remembers the filter in its address.
 
 Items are cards, newest first, under day headings. A card shows who did what, a chip for the Task, Room or document it is about, the Team, and for a Notification a pill such as "Waiting for you". Press the chevron, or the empty space on the card, to expand a card into a preview of the Task, Room or document, with the other items about it under "In the Feed", and **Open Task**, **Open Room** or **Open document**. **Review in Needs you** appears for a gated Task that is waiting. Those buttons only open things; deciding, replying and accepting stay in the Needs you page and the Room. A thin bar at a card's left edge marks items you have not seen in the Feed Tab yet; it clears the next time you open the Tab. If new items arrive while you are scrolled down, a "↑ n new items" pill appears at the top. Press it to add them.
 
-**Helpers in the Feed.** When the Needs Human Helper turns **Requires your acceptance** on for a Task, the Feed shows it as a Notification, with the Helper's reason and a Helper mark where a Teammate's avatar would be, until you turn the gate off, decide the Task, it waits in Needs You, or it closes. If a Helper pauses at its daily cap, or fails three times in a row, **Huddle** says so in the **Helpers** Category and links to the Helper's card on **Settings › Helpers**, where **Continue** is; the item is done when you continue, the day ends or the Helper works again. The Helper's wake-up Message to the Task's assignee is written by **Huddle**, not by you, so it no longer answers a Mention of you or clears a Room from Needs you.
+**Helpers in the Feed.** When the Needs Human Helper turns **Requires your acceptance** on for a Task, the Feed shows it as a Notification, with the Helper's reason and a Helper mark where an Agent's avatar would be, until you turn the gate off, decide the Task, it waits in Needs You, or it closes. If a Helper pauses at its daily cap, or fails three times in a row, **Huddle** says so in the **Helpers** Category and links to the Helper's card on **Settings › Helpers**, where **Continue** is; the item is done when you continue, the day ends or the Helper works again. The Helper's wake-up Message to the Task's assignee is written by **Huddle**, not by you, so it no longer answers a Mention of you or clears a Room from Needs you.
 
 Feed items are kept for 30 days (a Notification you dismissed, 30 days after you dismissed it). To turn the Feed off, set `Team:Feed:Enabled` to `false`; the bell and the **Feed** icon then disappear. See the [Engineering Guide](Huddle.EngineeringGuide.md) for the keys.
 
@@ -240,18 +240,18 @@ The search box sits in the top bar, above the sidebar and every page.
 
 - **Open the box** with `Ctrl+K` from anywhere, with `/` when no text field has focus, or by
   clicking it. `Esc` closes it and returns you to where you were.
-- **Narrow the search** with the chips under the box: **All**, **Teams**, **Teammates**,
+- **Narrow the search** with the chips under the box: **All**, **Teams**, **Agents**,
   **Library**, **Tasks** and **Rooms**. Picking a chip is the same as typing its prefix at the
-  start of the box: `team:`, `teammate:`, `lib:`, `task:` or `room:`. `Alt+1` to `Alt+6` pick
+  start of the box: `team:`, `agent:`, `lib:`, `task:` or `room:`. `Alt+1` to `Alt+6` pick
   them from the keyboard, and `Ctrl+Left` and `Ctrl+Right` move between them.
 - **A search starts at 3 characters**, after any prefix. `task:fi` waits; `task:fix` searches.
   Matching ignores case and looks for the exact phrase you typed.
-- **Results come in groups:** Teams, Teammates, Library, Tasks and Rooms. With All, each group
+- **Results come in groups:** Teams, Agents, Library, Tasks and Rooms. With All, each group
   shows up to five results. With one chip picked, that group shows up to 50. Library matches
   its contents as well as its names, for entries up to 1 MB. Closed Tasks and archived chats come
   last, shown in grey.
 - **Open a result** with `Enter` in the current Tab, or `Ctrl+Enter` to open it in a new Tab that
-  stays. A Teammate opens its card. A Room opens at the matching Message, which is highlighted for
+  stays. An Agent opens its card. A Room opens at the matching Message, which is highlighted for
   a moment.
 - **Every search reads again.** Global Search keeps no index of its own, so a new Message or file
   shows up on your next search, and nothing is kept after it. `Results may be incomplete.` means a
@@ -275,7 +275,7 @@ It holds one or more panels, depending on the page:
 
 | Panel | What it shows | What selecting it does |
 | --- | --- | --- |
-| **Members** | Everyone in the Room, Teammates first, each with their avatar and, for a Teammate, the [presence badge](#status-at-a-glance) on it. | The avatar opens the member's profile. |
+| **Members** | Everyone in the Room, Agents first, each with their avatar and, for an Agent, the [presence badge](#status-at-a-glance) on it. | The avatar opens the member's profile. |
 | **Tasks in this chat** | Each Task the Room's Messages mention, most recent first, with its current title and state. A deleted Task shows `(unavailable)`. | The row opens the Task. The arrow beside it scrolls the Room to the Message that last mentioned it. |
 | **Documents in this chat** | Each Library file the Room's Messages mention, most recent first. A file that is no longer in the Library is shown in grey. | The row opens the file in the Library. The arrow scrolls the Room to the Message. |
 | **Outline** | The note's headings, indented by level. In **Split** mode it follows your typing; in **Read** and **Edit** it shows the note as last loaded or saved. | Scrolls the note to that heading. In **Edit** mode it moves the cursor to the heading's line. |
@@ -302,49 +302,49 @@ connect. Later sections explain how to work with them.
 | Entity | What it is | Stored as |
 | --- | --- | --- |
 | **You (the Human)** | The person using the app. You set your Name, Alias, Title and avatar on **Settings > Profile**; `Team:HumanName` (default `You`) is only the Name a blank system starts with. Your Alias @mentions you like your Name. You are in every Room. | `profile.json`, `avatars.json` and a row in `team.db` |
-| **Teammate** (also called a **Persona**) | One AI Teammate: its name, job title, @alias, Teams, Skills, and its instructions. | `Teammates/<Name>/<Name>.md` |
-| **Agent** | A Teammate that is running and online in chat. There is one Agent per Teammate file. | A row in `team.db`, plus a running adapter process |
-| **Team** | A named group of Teammates. Its membership is a label in each member's `teams:` list; a Team set up from a type also has a manager, a workspace and a process. | A label in each member's `teams:` list, plus a folder `Teams/<Team>/` holding `_team.md` (and `Process.md`, once set) |
+| **Agent** (also called a **Persona**) | One AI Agent: its name, job title, @alias, Teams, Skills, and its instructions. | `Agents/<Name>/<Name>.md` |
+| **Agent** | An Agent that is running and online in chat. There is one Agent per Agent file. | A row in `team.db`, plus a running adapter process |
+| **Team** | A named group of Agents. Its membership is a label in each member's `teams:` list; a Team set up from a type also has a manager, a workspace and a process. | A label in each member's `teams:` list, plus a folder `Teams/<Team>/` holding `_team.md` (and `Process.md`, once set) |
 | **Project** | A piece of work inside one Team. | A sub-folder `Teams/<Team>/<Project>/` |
 | **Room** | A chat conversation between you and one or more Agents. | Rows in `team.db` |
 | **Message** | One chat message, in one Room. | One line in `rooms/<roomId>.jsonl` |
-| **Room Session** | A Teammate's private working conversation for one Room. | Only a resume pointer, in `room-sessions/<Name>.json` |
+| **Room Session** | An Agent's private working conversation for one Room. | Only a resume pointer, in `room-sessions/<Name>.json` |
 | **Task** | A unit of work filed under a Team or Project, optionally assigned to someone. | `Teams/<Team>/[<Project>/]_tasks/<ID>.md` |
 | **View** | A saved list or board of Tasks with filters. | `views.json` |
 | **Library item** | Any note, folder or file you browse in the Library. | The file itself, wherever it lives |
-| **Personal memory** | What one Teammate remembers across chats. | `Teammates/<Name>/work/memory/*.md` |
+| **Personal memory** | What one Agent remembers across chats. | `Agents/<Name>/work/memory/*.md` |
 | **Team Memory** | Facts shared by every member of a Team, or by a Project. | `Teams/<Team>/memory/*.md` and `Teams/<Team>/<Project>/memory/*.md` |
-| **Skill** | A named, reusable set of instructions a Teammate can read on demand. | `Skills/<skill-name>/SKILL.md` plus extra `.md` files |
+| **Skill** | A named, reusable set of instructions an Agent can read on demand. | `Skills/<skill-name>/SKILL.md` plus extra `.md` files |
 
 ### How they relate
 
 ```mermaid
 erDiagram
-    TEAMMATE }o--o{ TEAM : "is a member of (teams: list)"
+    AGENT }o--o{ TEAM : "is a member of (teams: list)"
     TEAM ||--o{ PROJECT : "has sub-folders"
     TEAM ||--o{ TASK : "files tasks in _tasks/"
     PROJECT ||--o{ TASK : "files tasks in _tasks/"
-    TASK }o--o| TEAMMATE : "assigned to"
+    TASK }o--o| AGENT : "assigned to"
     TASK }o--o| TASK : "parent / blocked by / duplicate of"
-    TEAMMATE }o--o{ SKILL : "holds (skills: list)"
-    ROOM }o--|{ TEAMMATE : "has members"
+    AGENT }o--o{ SKILL : "holds (skills: list)"
+    ROOM }o--|{ AGENT : "has members"
     ROOM ||--o{ MESSAGE : "transcript"
-    TEAMMATE ||--o{ ROOM_SESSION : "one per Room it works in"
+    AGENT ||--o{ ROOM_SESSION : "one per Room it works in"
     ROOM ||--o{ ROOM_SESSION : ""
-    TEAMMATE ||--|| PERSONAL_MEMORY : "work/memory/"
+    AGENT ||--|| PERSONAL_MEMORY : "work/memory/"
     TEAM ||--|| TEAM_MEMORY : "memory/"
     PROJECT ||--o| TEAM_MEMORY : "memory/"
 ```
 
 The relationships that matter most:
 
-- **A Teammate can belong to many Teams.** Membership is written on the
-  Teammate, not on the Team. A Teammate file with
+- **An Agent can belong to many Teams.** Membership is written on the
+  Agent, not on the Team. An Agent file with
   `teams: ['Business', 'Household']` is a member of both, and appears under both
-  on the Teammates page. A Teammate with no `teams:` line appears under **No
+  on the Agents page. An Agent with no `teams:` line appears under **No
   team**.
 - **A Team is a label plus a folder.** The list of Teams is every label used by
-  any Teammate, plus every folder directly under `Teams/`. A folder with no
+  any Agent, plus every folder directly under `Teams/`. A folder with no
   members still shows, as **No members**. A label with no folder gets one
   created automatically. A Team's folder may also hold `_team.md`, which names its
   team type, manager and workspace, and `Process.md`, which says how it works.
@@ -353,22 +353,22 @@ The relationships that matter most:
   Project, except `memory` and names starting with `_` or `.`.
 - **A Task belongs to one Team, and optionally one Project.** Which one is
   decided by the folder the file sits in, not by a field. A Task has at most
-  **one assignee**: a Teammate or you. A Task can have one parent Task
+  **one assignee**: an Agent or you. A Task can have one parent Task
   (sub-tasks), a list of Tasks that block it, and can be marked a duplicate of
   another.
 - **A Room always includes you**, plus one or more Agents. A Message belongs to
   exactly one Room.
-- **A Teammate keeps a separate conversation per Room**: a Room Session. What it
+- **An Agent keeps a separate conversation per Room**: a Room Session. What it
   said in one Room is not visible in another. Only memory, Team Memory, Tasks and
   file changes cross between Rooms.
-- **A Skill is attached to Teammates only**, by name, through the Teammate's
-  `skills:` list. One Skill can be held by any number of Teammates. Skills are
+- **A Skill is attached to Agents only**, by name, through the Agent's
+  `skills:` list. One Skill can be held by any number of Agents. Skills are
   not attached to Teams, Projects or Rooms.
 
-### Example: one Teammate file
+### Example: one Agent file
 
-A Teammate is a Markdown file with frontmatter. Everything below the frontmatter
-is the Teammate's private instructions.
+An Agent is a Markdown file with frontmatter. Everything below the frontmatter
+is the Agent's private instructions.
 
 ```markdown
 ---
@@ -383,11 +383,11 @@ You are Nova. You keep the team's Tasks moving and summarise progress.
 
 | Field | Required | Meaning |
 | --- | --- | --- |
-| `name` | Yes | The Teammate's identity. Must match the folder and file name. |
-| `title` | Yes | Job title, shown on cards and to other Teammates. |
+| `name` | Yes | The Agent's identity. Must match the folder and file name. |
+| `title` | Yes | Job title, shown on cards and to other Agents. |
 | `alias` | Yes | Short handle for mentions, as in `@nova`. |
-| `teams` | No | The Teams this Teammate belongs to. |
-| `skills` | No | Skills this Teammate may read. |
+| `teams` | No | The Teams this Agent belongs to. |
+| `skills` | No | Skills this Agent may read. |
 | `adapter` | No | Which AI adapter runs it. |
 | `watches` | No | Extra folders it is told about when files change. |
 
@@ -403,9 +403,9 @@ development checkout that is `src/Huddle.App/App_Data`.
 
 ```text
 App_Data/
-├── Teammates/                     Team:Acp:TeammatesDir
+├── Agents/                     Team:Acp:AgentsDir
 │   └── Nova/
-│       ├── Nova.md                the Teammate definition
+│       ├── Nova.md                the Agent definition
 │       └── work/                  Nova's working folder (Team:Acp:WorkDir)
 │           └── memory/            Nova's personal memory
 ├── Teams/                         Team:Teams:Dir
@@ -419,8 +419,8 @@ App_Data/
 │           └── _tasks/
 ├── Skills/                        Team:Acp:SkillsDir; your own and overridden Skills
 ├── rooms/<roomId>.jsonl           one chat transcript per Room
-├── room-sessions/<Name>.json      where each Teammate can resume each Room
-├── file-state/<Name>.json         what each Teammate last saw of its folders
+├── room-sessions/<Name>.json      where each Agent can resume each Room
+├── file-state/<Name>.json         what each Agent last saw of its folders
 ├── team.db                        SQLite: users, agents, rooms, members, models, task ID counters
 ├── views.json                     saved Task Views
 ├── library-roots.json             pinned Library folders (created on first change)
@@ -436,15 +436,15 @@ App_Data/
 > `rooms/`, `room-sessions/`, `file-state/`, `avatars/`, `logs/` or `team.db`.
 > The Library refuses to open them, and hand edits can lose chat history.
 
-## Working with Teammates
+## Working with Agents
 
-Select **Teammates** in the Activity bar, then the **Teammates** link in the sidebar. The page lists every Teammate, grouped by
-Team, with a **Team** filter at the top. A Teammate in two Teams is listed under
-both. Each card shows the Teammate's status as a badge on its avatar.
+Select **Agents** in the Activity bar, then the **Agents** link in the sidebar. The page lists every Agent, grouped by
+Team, with a **Team** filter at the top. An Agent in two Teams is listed under
+both. Each card shows the Agent's status as a badge on its avatar.
 
 ### Status at a glance
 
-The same badge sits on a Teammate's avatar everywhere: the Teammates page, a Room, the
+The same badge sits on an Agent's avatar everywhere: the Agents page, a Room, the
 Board and the Right sidebar. Hover it to see the reason.
 
 | Badge | Means |
@@ -452,56 +452,56 @@ Board and the Right sidebar. Hover it to see the reason.
 | Green circle with a check | Online: ready to work |
 | Amber circle that pulses | Starting up |
 | Blue circle that pulses | Working on something now, such as a Turn in a Room or a Task |
-| Red circle with a dash | Something is wrong; open the Teammate to see why |
+| Red circle with a dash | Something is wrong; open the Agent to see why |
 | Hollow grey ring | Offline, or asleep with nothing to do |
 
-Amber always means something wants your attention: a Teammate starting, a **High**
+Amber always means something wants your attention: an Agent starting, a **High**
 priority, an overdue date or a Room that needs you. Working is blue.
 
 ![The status badges, the four chip looks, the text sizes and a Board card](images/visual-reference.svg)
 
-Each Teammate has its own card with **Message**, **Edit**, **Open**,
-**Restart** and **Remove**. With no Teammates the page says "No Teammates yet.
-Choose New teammate."
+Each Agent has its own card with **Message**, **Edit**, **Open**,
+**Restart** and **Remove**. With no Agents the page says "No Agents yet.
+Choose New agent."
 
-### Adding a Teammate
+### Adding an Agent
 
-1. Select **New teammate**.
-2. **Name** starts with a random first name that no Teammate has yet. Keep it,
+1. Select **New agent**.
+2. **Name** starts with a random first name that no Agent has yet. Keep it,
    edit it, or select the reset button (the circular arrow at the right of the
    box) for another one. Then fill in **Title** and **Alias**. Optionally add
    **Teams** as a comma-separated list, select **Skills**, **Model**,
    **Effort**, **Work mode** and an avatar.
-3. Write the Teammate's instructions in the text area.
-4. Select **Add teammate**.
+3. Write the Agent's instructions in the text area.
+4. Select **Add agent**.
 
 **In the background:**
 
 - Huddle composes the frontmatter and writes
-  `Teammates/<Name>/<Name>.md`.
+  `Agents/<Name>/<Name>.md`.
 - Model, Effort and Work mode are written to `team.db`.
-- The Teammate starts as an Agent and appears in chat. Its `work/` and
+- The Agent starts as an Agent and appears in chat. Its `work/` and
   `work/memory/` folders are created.
 - Each Team label you entered that has no folder yet gets
   `Teams/<Team>/` created.
 
 Names and aliases are at most 64 characters, start with a letter or digit, and
 may contain letters, digits, `_`, `-` and single spaces. No dots. Names and
-aliases must be unique across all Teammates. How many Teammates a Team may hold,
+aliases must be unique across all Agents. How many Agents a Team may hold,
 and how many run at once, is limited; see [Hire limits](#hire-limits).
 
-The built-in **Chief of Staff** is the first Teammate you meet. It helps you put
-a team together: it proposes Teammates, and nothing is created until you select
+The built-in **Chief of Staff** is the first Agent you meet. It helps you put
+a team together: it proposes Agents, and nothing is created until you select
 **Approve**. It has **Reset to default** instead of **Remove**; the card asks
 **Reset to default?** in place, and **Reset** confirms it.
 
-### Editing a Teammate
+### Editing an Agent
 
 Select **Edit** on the card, change the fields or the instructions, and select
 **Save**.
 
 **In the background:** Huddle rewrites `<Name>.md` in place. **Saving restarts
-the Teammate and clears what it remembers of every conversation.** Its Rooms and
+the Agent and clears what it remembers of every conversation.** Its Rooms and
 their transcripts stay. On its next turn in each Room it catches up by reading
 up to the last 20 messages of that Room. Its personal memory files in
 `work/memory/` are kept.
@@ -510,13 +510,13 @@ A restart also happens when you change Model, Effort, Work mode, Adapter, Skills
 or Teams. Changing the avatar does not restart anything.
 
 > [!NOTE]
-> The Edit card has no **Teams** field. To take a Teammate off a Team, use
+> The Edit card has no **Teams** field. To take an Agent off a Team, use
 > **Remove from Team** on the Team page's **Members** tab; to add it to a Team,
 > edit the `teams:` line in the text.
 
 ### Changing an avatar
 
-Select the avatar at the top of a Teammate's card. It does this in every mode:
+Select the avatar at the top of an Agent's card. It does this in every mode:
 viewing, editing and creating. An **Edit** (✎) mark appears on it when you point at it
 or tab to it. A window titled **Avatar** opens with three choices, and **An image**
 is selected when the avatar has no label or image yet:
@@ -530,24 +530,24 @@ is selected when the avatar has no label or image yet:
 The round picture at the top of the window previews your choice as you make it.
 Initials and a label sit on a **Background** colour. Set it by pressing a swatch
 in the palette in the window; the swatch for the current colour is highlighted. A
-colour can be changed to another swatch but not cleared, so once a Teammate has a
+colour can be changed to another swatch but not cleared, so once an Agent has a
 colour it keeps one. An image covers the background, so the palette is hidden while
 **An image** is selected. A colour you chose earlier is kept, and is there again if
 you go back to initials or a label.
 
-A new Teammate starts with a colour of its own: when you open **New teammate**,
+A new Agent starts with a colour of its own: when you open **New agent**,
 Huddle picks a random swatch from the same palette, so a new card is not a row of
-identical circles. It is written with the Teammate when you select **Add
-teammate**, and you can change it in the window like any other. Teammates that
+identical circles. It is written with the Agent when you select **Add
+agent**, and you can change it in the window like any other. Agents that
 already exist, and any created some other way, keep the theme's colour until you
 press a swatch.
 
 What the window's last button does depends on where you opened it:
 
-- **Creating or editing a Teammate:** it reads **Apply**. The new avatar shows on
-  the card at once, but nothing is written until you select **Add teammate** or
+- **Creating or editing an Agent:** it reads **Apply**. The new avatar shows on
+  the card at once, but nothing is written until you select **Add agent** or
   **Save** on the card. **Cancel** on the card throws it away.
-- **Viewing a Teammate:** the card has no Save of its own, so the button reads
+- **Viewing an Agent:** the card has no Save of its own, so the button reads
   **Save** and the avatar is written as soon as you select it.
 
 **Cancel**, the close button and the **Esc** key leave the avatar as it was.
@@ -566,7 +566,7 @@ pictures to pick from.
   turn it off, and it returns to its place. **Clear all** turns everything off.
 - **Pick a picture.** Select it, and the library window closes. The **Avatar**
   window shows the picture and says **New image selected (not yet saved)**.
-  Select **Apply** (or **Save**, when you opened it from a viewed Teammate) to
+  Select **Apply** (or **Save**, when you opened it from a viewed Agent) to
   keep it, or **Cancel** to keep your old avatar. On your own avatar in
   **Settings › Appearance** the picture is saved at once.
 
@@ -576,14 +576,14 @@ To use a library of your own instead, set `Team:AvatarLibrary:Dir` to its folder
 (it needs a `master.json` and the pictures, like the bundled one). If you set it
 to a folder that does not exist there is no library at all and no button, which
 is how to switch the library off; uploading an image works either way. A
-picked picture is copied, so the Teammate keeps it even if the library is later
+picked picture is copied, so the Agent keeps it even if the library is later
 moved or deleted.
 
 ### Choosing a Work mode
 
-A **Work mode** is how much the Teammate's agent may do before it must ask first.
+A **Work mode** is how much the Agent's agent may do before it must ask first.
 Select **Edit** on the card and pick one in **Work mode**, directly under
-**Effort**. The choices come from the Teammate's Adapter, so they are the
+**Effort**. The choices come from the Agent's Adapter, so they are the
 Adapter's own names and the text under the select describes the one you picked.
 
 For the Claude adapter the choices are:
@@ -595,18 +595,18 @@ For the Claude adapter the choices are:
 | **Accept edits** | The agent edits files without asking. |
 
 **Plan**, **Auto** and **Bypass permissions** are not offered. **Plan** is hidden
-because a Teammate in it ends its turn without posting a reply. **Auto** hands
+because an Agent in it ends its turn without posting a reply. **Auto** hands
 permission decisions to the model and changes with the Model. **Bypass
 permissions** removes every prompt. An operator who wants them back changes
 `Team:Acp:HiddenModes`. A mode on the hidden list is never sent, even if one is
-already stored for a Teammate.
+already stored for an Agent.
 
 **In the background:**
 
 - The mode is stored in `team.db`, not in `<Name>.md`.
-- It is applied every time the Teammate starts or resumes, after its Model and
+- It is applied every time the Agent starts or resumes, after its Model and
   Effort.
-- **Saving a different Work mode restarts the Teammate and clears what it
+- **Saving a different Work mode restarts the Agent and clears what it
   remembers**, as a Model change does.
 - Changing the **Adapter** resets Work mode to the agent's default and the card
   says so. Each Adapter advertises its own modes, so pick one again if you want
@@ -620,7 +620,7 @@ already stored for a Teammate.
 > inside the agent's own `~/.claude` folder. A shell command that redirects into
 > it is not caught.
 
-### Renaming a Teammate
+### Renaming an Agent
 
 Change **Name** on the Edit card and save. Huddle warns you first:
 messages already posted keep the old name, because the transcript records what
@@ -628,68 +628,68 @@ was said at the time.
 
 **In the background:**
 
-- The folder `Teammates/<Old>/` moves to `Teammates/<New>/` and the definition
+- The folder `Agents/<Old>/` moves to `Agents/<New>/` and the definition
   file is renamed with it.
 - The avatar, `file-state/`, `room-sessions/` entries and the `team.db` row are
   renamed.
 - Every Task whose `creator:` or `assignee:` was the old name is rewritten, open
   and closed, and saved Task Views that filtered on it are updated. No Change
   log line is added to those Tasks.
-- Rooms that were auto-named after the Teammate are renamed. Rooms you named
+- Rooms that were auto-named after the Agent are renamed. Rooms you named
   yourself are left alone.
 
-### Removing a Teammate
+### Removing an Agent
 
 Select **Remove**. The card asks **Remove {name}?** in place; select **Remove**
-again to confirm, or **Cancel** to keep the Teammate.
+again to confirm, or **Cancel** to keep the Agent.
 
 **In the background:** only `<Name>.md` is deleted, along with its Model, Effort,
-Work mode, avatar and resume entries. The Teammate goes offline. Its Rooms, their
+Work mode, avatar and resume entries. The Agent goes offline. Its Rooms, their
 transcripts and its `work/` folder stay on disk. Tasks still assigned to it keep
 the name and no longer wake anyone.
 
-### Restarting a Teammate
+### Restarting an Agent
 
-**Restart** deletes `room-sessions/<Name>.json` and restarts the Teammate. Every
+**Restart** deletes `room-sessions/<Name>.json` and restarts the Agent. Every
 Room then starts a fresh conversation, with catch-up from the transcript. Use it
-when a Teammate seems confused.
+when an Agent seems confused.
 
 ### Editing the file by hand
 
-You can open a Teammate's file with **Open** or through the Library and edit it
-in any editor. Huddle watches the `Teammates/` folder and picks up a saved change
+You can open an Agent's file with **Open** or through the Library and edit it
+in any editor. Huddle watches the `Agents/` folder and picks up a saved change
 within half a second. It behaves exactly like an in-app edit, including the
 restart. A file that fails validation is listed under **Files that didn't load**
-on the Teammates page, with the reason.
+on the Agents page, with the reason.
 
 ### Packs, setup warnings and the Process step
 
-A Teammate who was hired from a team type's role has a **Complete setup** panel on
+An Agent who was hired from a team type's role has a **Complete setup** panel on
 its card. It shows:
 
-- **Role:** the role and version the Teammate was hired as.
-- **Total spent:** the lasting cost of the Teammate, one line per currency, kept
+- **Role:** the role and version the Agent was hired as.
+- **Total spent:** the lasting cost of the Agent, one line per currency, kept
   across restarts. This is different from **Spent since start**, which counts
   only the current run.
 - **Packs:** named groups of Skills, such as **MSBuild Authoring**. Select a
-  pack's chip to add its Skills to that Teammate, or select it again to take
+  pack's chip to add its Skills to that Agent, or select it again to take
   them off. A Skill the role itself carries stays when you remove a pack. Adding
-  a pack also adds a short phrase to the Teammate's `consult_when` line, so the
+  a pack also adds a short phrase to the Agent's `consult_when` line, so the
   manager knows to route that kind of work to it.
 - Each Skill's provenance line (see [Adding Skills with your AI tool](#adding-skills-with-your-ai-tool)).
 
 The panel shows a warning, as a full sentence, in two places:
 
-- beside the **Model** choice, when the Teammate runs on the same vendor as a
+- beside the **Model** choice, when the Agent runs on the same vendor as a
   member whose role it must differ from (the Reviewer and QA, for example, against
   the Developer), such as "Reviewer Jane runs on the same vendor as Developer
   Joe.";
-- beneath the packs, when the Teammate has more Skills than is advised, or when
+- beneath the packs, when the Agent has more Skills than is advised, or when
   two or more of its Skills come from the same catalog sub-category, such as
   "msbuild-a and msbuild-b are both in Build tooling.".
 
 A warning does not stop anything. It tells you where the Team's setup may be
-weaker than you meant. A Teammate you added by hand, with no role, shows none of
+weaker than you meant. An Agent you added by hand, with no role, shows none of
 this.
 
 A manager's card also has a **Process** step, with **Use this process** for the
@@ -708,10 +708,10 @@ process its team type offers, or **Start blank**. Either one writes the Team's
 
 Select **Teams** in the Activity bar, then **Build a team** at the bottom of the Teams group, and follow its four steps;
 see [Building a team with the Chief of Staff](#building-a-team-with-the-chief-of-staff).
-Approving the last step creates the Team folder and hires the Teammates you drafted.
+Approving the last step creates the Team folder and hires the Agents you drafted.
 
 **In the background:** Huddle creates the folder `Teams/<Team>/`. Nothing else
-is written and no Teammate restarts. The new Team shows **No members** until you
+is written and no Agent restarts. The new Team shows **No members** until you
 add someone.
 
 Team names cannot contain `,` `;` `[` `]`, cannot start with `_` or `.`, and
@@ -725,29 +725,29 @@ Open the Team, then the **Members** tab. It is the **Hire** step of **Build a te
 this Team: the role cards, then the **Roster** with the members first (each with the
 presence badge on its avatar and the word **Member**) and any new drafts after them.
 
-- **Add** on a role card puts a new draft Teammate on the roster, as in Build a team.
-- **Edit** on a member opens their Teammate card, which saves at once.
+- **Add** on a role card puts a new draft Agent on the roster, as in Build a team.
+- **Edit** on a member opens their Agent card, which saves at once.
 - **Message** opens this Team's own one-to-one chat with that member. It shows once the
   member has connected at least once.
 - **Remove** opens a menu: **Remove from team** takes the member off this Team and keeps
-  the Teammate; **Delete teammate** deletes them. Either marks the card until you save,
+  the Agent; **Delete agent** deletes them. Either marks the card until you save,
   and **Undo** clears the mark.
 - **Manager** picks who manages the Team, from the members and drafts in a manager role.
 
 Nothing changes until **Save changes**, which is off until something did and while the
 manager is marked to go with nobody chosen instead. It asks first when anyone will be
 deleted, then hires the new drafts, makes the chosen member the manager, takes the
-leaving members off the Team, deletes the marked Teammates, and redraws the tab. To put
-a Teammate who already exists into a Team, add the Team to the `teams:` line in the text
-of their Teammate card.
+leaving members off the Team, deletes the marked Agents, and redraws the tab. To put
+an Agent who already exists into a Team, add the Team to the `teams:` line in the text
+of their Agent card.
 
 **In the background:** removing from a Team rewrites only the `teams:` line in that
-Teammate's `<Name>.md`, then saves. The Teammate restarts and loses its
+Agent's `<Name>.md`, then saves. The Agent restarts and loses its
 conversation memory. Removing the last member does **not** delete the Team folder. The
 Team stays, marked **No members**.
 
 > [!CAUTION]
-> Close any open Teammate Edit card before adding or removing members. A card
+> Close any open Agent Edit card before adding or removing members. A card
 > saves its whole text, so saving a card that was open during the membership
 > change puts the old `teams:` line back.
 
@@ -853,25 +853,25 @@ roles") it shows a grid of cards in this order: a blank card with an **Add** (+)
 the roles the chosen team type already defines (each with a **Suggested** chip), your own
 roles, then the rest of the hiring pool. To fill the roster:
 
-1. **Press Add on a role card.** A new Teammate for that role joins the **Draft roster**
+1. **Press Add on a role card.** A new Agent for that role joins the **Draft roster**
    below, with a name and an avatar drawn for it (a picture from the avatar library, one
    of those the role suggests when it has any). The role card shows a check to say the
-   role is covered. Press **Add** again for a second Teammate in the same role.
+   role is covered. Press **Add** again for a second Agent in the same role.
 2. **Adjust each draft card.** **Re-roll** draws another name and avatar. **Edit** opens
-   the Teammate card, saved with **Save draft**; it changes only the draft. **Remove**
+   the Agent card, saved with **Save draft**; it changes only the draft. **Remove**
    takes the draft off the roster.
 3. **Check the manager.** The team type's manager role carries a **Manager** badge.
 
-A dashed ring around a draft's avatar means the Teammate is not hired yet; nothing is
-hired until you approve. A Teammate who already exists has a solid ring.
+A dashed ring around a draft's avatar means the Agent is not hired yet; nothing is
+hired until you approve. An Agent who already exists has a solid ring.
 
 The **Add** (+) card opens a form (title, what it does, instructions, model strength); the
 role is saved in `custom-roles.json` in your data folder and stays on the page for next
 time. A role you wrote has **Edit** and **Delete** buttons; Delete asks first.
 
 **Approve & hire**, the last step, is off until the team details are complete and the
-roster has at least one Teammate; a hint beside it says which is missing. Pressing it
-creates the Team (its type, Library folder and purpose), hires every draft Teammate into
+roster has at least one Agent; a hint beside it says which is missing. Pressing it
+creates the Team (its type, Library folder and purpose), hires every draft Agent into
 it with the avatar drawn for it, makes the draft in the type's manager role the Team's
 manager, and opens the Team. If a draft's name is already taken, you are told before
 anything is created.
@@ -882,14 +882,14 @@ connected". That warning does not stop the approval. Before anything is created,
 hire** copies the Skills the roster needs into `Skills/`. A Skill that cannot be copied (not downloaded,
 broken, or withdrawn by its Source) stops the approval with "Skills not ready: …" and nothing is created.
 A card that names such a Skill already shows **Needs setup** with a **Copy prompt**; paste it into your AI
-tool, and the card turns ready by itself when the tool finishes. A hired Teammate runs on the adapter and
+tool, and the card turns ready by itself when the tool finishes. A hired Agent runs on the adapter and
 model its role's strength resolved to and carries the role's Skills and packs. **Edit** on a draft can
 change them: its **Skills** list shows the Skills Huddle has or can copy, and Skills that are not on this
 computer yet are listed below it, each with **Copy prompt**. The role form for your own roles has the
 same **Skills** field.
 ### Hiring a Team from a type
 
-A team type is a template for a kind of Team: its roles, the Teammates that fill
+A team type is a template for a kind of Team: its roles, the Agents that fill
 them, its process and its workspace. The built-in types are **Development Team**
 and **Household**. Your own types live in the `TeamTypes` folder under your data
 folder, and a folder there with the same id replaces the built-in one.
@@ -907,18 +907,18 @@ hire** in step 4. See
 
 ### Hire limits
 
-Two limits apply whenever Teammates are hired, whether from **Build a team** or by
+Two limits apply whenever Agents are hired, whether from **Build a team** or by
 approving a Chief of Staff proposal:
 
 | Setting | Default | What it limits |
 | --- | --- | --- |
-| `Team:Acp:MaxTeammatesPerTeam` | `8` | Teammates in one Team. |
+| `Team:Acp:MaxAgentsPerTeam` | `8` | Agents in one Team. |
 | `Team:Acp:MaxLiveProcesses` | `16` | Agent processes running at once, across every Team. |
 
 A hire that would pass either is refused with a plain sentence, such as "Team
-'Web Team' is full: 8 of 8 Teammates." or "16 of 16 agent processes are running, so
-no more Teammates can be hired." A value of zero turns a limit off. The old
-`Team:Acp:MaxTeammates` is retired: it is still read, so an old configuration
+'Web Team' is full: 8 of 8 Agents." or "16 of 16 agent processes are running, so
+no more Agents can be hired." A value of zero turns a limit off. The old
+`Team:Acp:MaxAgents` is retired: it is still read, so an old configuration
 loads, but nothing enforces it.
 
 ### Models for a role
@@ -976,7 +976,7 @@ no `Process.md` says "This Team has no process yet."
 | Gate | Refuses |
 | --- | --- |
 | `qa-evidence-before-done` | A Task moving to **Done** until a member whose role verifies (for example QA) has added an Evidence line with a command. |
-| `checks-before-merge` | A `git merge` or `git push` by a Teammate in the Team until an Evidence line shows the Team's `checkCommand` ending with exit code 0. |
+| `checks-before-merge` | A `git merge` or `git push` by an Agent in the Team until an Evidence line shows the Team's `checkCommand` ending with exit code 0. |
 | `spec-approved-before-build` | A Task moving to **In Progress** until its parent spec Task is approved. |
 | `failing-test-before-fix` | A bug Task moving to **Review** until its Evidence shows a failing run followed by a passing one. A Task is a bug when it has the `bug` label or is a bug Request. |
 
@@ -996,30 +996,30 @@ in its panel.
 - **Creating** a Task directly in **In Progress**, **Review** or **Done** is
   refused in the same way when a gate would refuse it. In the Task panel you get the
   same warning with a **Move anyway** button, and confirming it creates the Task and
-  logs the override. A Teammate's `file_request` or create call cannot override.
-- When a **Teammate** is refused, the refusal comes back to it as the result of its
+  logs the override. An Agent's `file_request` or create call cannot override.
+- When a **Agent** is refused, the refusal comes back to it as the result of its
   `update_task` or `close_task` call, and it cannot override.
-- When a Teammate or you **edit a Task file by hand** to jump to a gated status,
+- When an Agent or you **edit a Task file by hand** to jump to a gated status,
   Huddle puts the status back, keeps the rest of your edit, and adds `outside edit
   refused by gate: <reason>` to the Change log. Evidence-only edits are kept.
 
 **Evidence.** A Task file can have an `## Evidence` section above its Change log.
 Each line is the time, the author, the command, and optionally the exit code and a
 pointer to the tool-call log, separated by ` | `; a plain line of text is a note.
-Teammates add lines with the `add_evidence` tool, and lines are only ever appended.
+Agents add lines with the `add_evidence` tool, and lines are only ever appended.
 The Task panel does not have a separate Evidence view; you read it in the Task file
 in the Library.
 
-**Tool-call log.** Huddle keeps a lasting record of every tool call a Teammate
-makes, one JSON line each, in `logs/tool-calls/<Teammate>/<date>.jsonl` in your data
+**Tool-call log.** Huddle keeps a lasting record of every tool call an Agent
+makes, one JSON line each, in `logs/tool-calls/<Agent>/<date>.jsonl` in your data
 folder. An Evidence line can point to a line of it, such as
 `logs/tool-calls/Joe/2026-10-08.jsonl#L12`, so you can check that the command was run.
 
-**How the merge gate works, and its limits.** When a Teammate asks to run a shell
+**How the merge gate works, and its limits.** When an Agent asks to run a shell
 command, Huddle reads it. If it is a `git merge` or `git push` and the Team has
 `checks-before-merge` and a `checkCommand`, Huddle refuses it until Evidence on one
 of the Team's open Tasks shows the latest run of that exact command passing. The
-Teammate is told only that the request was denied; the reason is written to the log,
+Agent is told only that the request was denied; the reason is written to the log,
 not shown to it. This is a guard against honest mistakes, not a sandbox. It only
 works in work modes where the Adapter asks before running a command, and it does not
 catch a git alias, `FOO=1 git push`, `sudo`, a command wrapped in `bash -c`, a script
@@ -1089,7 +1089,7 @@ Tasks, which names the Team that filed it. The receiving Team's Tasks have a
   confirms it was delivered as asked. An agent that tries to close a Request nobody
   confirmed, with `close_task` or `update_task`, is refused. You can still close one
   yourself.
-- Four tools do this, each granted by a Skill the Teammate holds. The built-in
+- Four tools do this, each granted by a Skill the Agent holds. The built-in
   `team-management` Skill grants all of them, and the manager of a Development Team
   or a Household carries it, as does the Development QA Engineer, so the QA can
   confirm a Request without any setup. Holding the Skill does not make the QA a
@@ -1125,7 +1125,7 @@ built-in `retrospective` Skill, which the role carries.
 reads only its own Team: a compact bundle of the Team's records, one Task's Change
 log and Evidence, or the last 200 messages of a Room. A Room is readable only if
 the Team's members posted in it and everyone who posted there is a member of that
-Team or you. A Room with an outsider in it is refused. A Teammate who is not a
+Team or you. A Room with an outsider in it is refused. An Agent who is not a
 member of the Team, or who lacks the Skill, is refused.
 
 **What it proposes.** The proposals arrive as a card in the Retro agent's Room.
@@ -1137,7 +1137,7 @@ changes nothing, when:
 
 - the text to replace is not in the file exactly once;
 - the edit would leave `_team.md` unreadable (it is checked before it is written);
-- the edit would change a member's name (a retro change cannot rename a Teammate).
+- the edit would change a member's name (a retro change cannot rename an Agent).
 
 A refusal appears as a notice and the change stays on the card. An applied or
 rejected change shows as a message in the Room, which also wakes the proposer.
@@ -1176,7 +1176,7 @@ and its default process runs a retro every 14 days.
 
 ### Starting a chat
 
-Select **New chat** and pick one or more Teammates. Choosing a single Teammate
+Select **New chat** and pick one or more Agents. Choosing a single Agent
 reopens your existing one-to-one Room with it, if there is one. In the Rooms
 group this makes a root Room. From a Team's menu it makes a chat inside that
 Team; see [Team chats](#team-chats).
@@ -1189,13 +1189,13 @@ Room gets a name derived from its members. Its transcript file is created in
 
 | Room | Behaviour |
 | --- | --- |
-| You and one Teammate | The Teammate answers every message. |
-| You and two or more Teammates | A Teammate answers only when you mention it, as in `@nova`. |
+| You and one Agent | The Agent answers every message. |
+| You and two or more Agents | An Agent answers only when you mention it, as in `@nova`. |
 
-Type `/invite @alias` in the message box, or use the **Invite teammate** button in the Room's header, to add a
-Teammate to the current Room.
+Type `/invite @alias` in the message box, or use the **Invite agent** button in the Room's header, to add an
+Agent to the current Room.
 
-Teammates can reply to each other. To stop runaway conversations, a Room has a
+Agents can reply to each other. To stop runaway conversations, a Room has a
 **Budget**: after a number of Agent replies without you speaking, Agents pause
 and Huddle asks whether to **Continue** or **Leave paused**. Your next message
 resets it.
@@ -1204,22 +1204,22 @@ resets it.
 
 1. Huddle appends one line of JSON to `rooms/<roomId>.jsonl`. Transcripts are
    append-only and are never rewritten.
-2. The Teammates who should answer each take a turn in **their own Room Session
-   for this Room**. A Teammate runs one turn at a time across all its Rooms.
-3. At the start of the turn, the Teammate is told about any files that changed
+2. The Agents who should answer each take a turn in **their own Room Session
+   for this Room**. An Agent runs one turn at a time across all its Rooms.
+3. At the start of the turn, the Agent is told about any files that changed
    in its folders since its last turn in this Room (see
    [Memory and file changes](#memory-and-file-changes)).
 4. When the turn ends, Huddle saves the session's resume pointer to
    `room-sessions/<Name>.json`.
 
 Room Sessions are opened on demand and closed after 30 minutes idle. At most 3
-are open per Teammate at once. A closed session resumes where it left off if the
+are open per Agent at once. A closed session resumes where it left off if the
 adapter supports it. Otherwise it starts fresh and catches up from the last 20
 messages of the transcript.
 
 ### Referencing things in a Message
 
-Type `@` in the message box to find a Teammate, a Room, a Team or a Library file. The
+Type `@` in the message box to find an Agent, a Room, a Team or a Library file. The
 list opens at the start of a line, after a space or after an opening bracket, so an
 email address such as `me@example.com` does not open it. Type `@room:` or `@lib:` to
 narrow the list to Rooms or Library files. A bare `@` lists the Room's Members first.
@@ -1231,7 +1231,7 @@ What a pick writes:
 
 | You pick | The Message gets |
 | --- | --- |
-| A Teammate | `@` and the Teammate's name. It is addressed exactly as if you had typed `@Name`. |
+| An Agent | `@` and the Agent's name. It is addressed exactly as if you had typed `@Name`. |
 | A Task | The Task's id, shown as a link. |
 | A Room | A link to the Room. A Room in a Team says which Team in its label. |
 | A Team | A link to the Team's page. |
@@ -1250,8 +1250,8 @@ Typing keeps narrowing the list. Ctrl+Z after a pick undoes it in one step and b
 the text you typed. The **Send** button always sends the text exactly as you typed it, even
 while the list is open.
 
-A Teammate who is not a Member of the Room is shown in grey and marked **Not in this Room**.
-Type **/invite @** in the message box, or pick the Teammate after inviting it, to add
+An Agent who is not a Member of the Room is shown in grey and marked **Not in this Room**.
+Type **/invite @** in the message box, or pick the Agent after inviting it, to add
 it to the Room first.
 
 When a referenced item changes, the link shows the change. A **changed** chip means
@@ -1274,14 +1274,14 @@ reference the picker writes. The Room opens when a reader selects it.
 A plain address from the address bar opens the Room, but it is not a reference: it
 shows as a link and nothing more.
 
-### Watching a Teammate work
+### Watching an Agent work
 
-While a Teammate is answering, its reply shows its last six tool calls as rows.
+While an Agent is answering, its reply shows its last six tool calls as rows.
 Each row has a status (**Waiting**, **Running**, **Failed** or done), and shows
 the file name and line when the call touches a file. When the call is an edit,
 select the arrow on its row to see an **Edit preview** of the change in place.
 
-A Teammate's card also shows **Spent since start**, one line per currency, when
+An Agent's card also shows **Spent since start**, one line per currency, when
 its adapter reports a cost. It is a figure for this run, not a ledger.
 
 > [!NOTE]
@@ -1290,10 +1290,10 @@ its adapter reports a cost. It is a figure for this run, not a ledger.
 
 ### How the conversation reads
 
-- Your messages sit on the right in a bubble tinted with the accent colour. A Teammate's message is plain text beside its avatar, with no card.
-- Files and notes a message refers to sit under it: under your bubble on the right, under a Teammate's text on the left.
+- Your messages sit on the right in a bubble tinted with the accent colour. An Agent's message is plain text beside its avatar, with no card.
+- Files and notes a message refers to sit under it: under your bubble on the right, under an Agent's text on the left.
 - A notice, such as "Grace is Offline", sits between the conversation and the message box, in the same column.
-- A separator marks each day ("Today", "Yesterday", "Fri 2 Oct"), and consecutive messages from one Teammate share a single name and avatar.
+- A separator marks each day ("Today", "Yesterday", "Fri 2 Oct"), and consecutive messages from one Agent share a single name and avatar.
 - When a Task changes and wakes its assignee, the Room shows one slim line (such as "PLAT-0004 changed by You") instead of a message from you. Select the line to see the changes.
 - A Task link carries a status dot in its status colour, the same colour as the status on the List and Board.
 
@@ -1303,10 +1303,10 @@ its adapter reports a cost. It is a figure for this run, not a ledger.
 2. **Rename** (pencil icon).
 3. **Copy link**.
 4. The Room's members.
-5. **Invite teammate**.
+5. **Invite agent**.
 6. The button that opens the **Right sidebar**.
 7. A day separator.
-8. A Teammate's message: plain text beside its avatar.
+8. An Agent's message: plain text beside its avatar.
 9. A Task link, with its status dot.
 10. The message box.
 11. The paperclip, for attaching files.
@@ -1318,7 +1318,7 @@ Press the paperclip beside Send, paste a screenshot, or drop files on the
 composer. Each file is saved at once into the Library, and its chip shows above
 the text box. Remove a chip with its close button before you send if you change
 your mind; the saved file is then deleted and nothing is posted. When you send,
-each file's path is added to your Message, so the Teammates who answer can open
+each file's path is added to your Message, so the Agents who answer can open
 it with their own tools.
 
 - The limits are 25 MiB per file and 10 files per Message. A file over the size
@@ -1334,7 +1334,7 @@ it with their own tools.
 - Deleting a Room sends its uploaded files to the Recycle Bin. Archiving keeps
   them.
 - The Message that carries a file's path is the only notice of it. File Changes
-  does not report uploads, so a Teammate is not told of one by a file change.
+  does not report uploads, so an Agent is not told of one by a file change.
 - Pending chips do not survive a page reload. Files already saved stay in the
   Room's folder; remove them from the Library if you do not want them.
 
@@ -1343,24 +1343,24 @@ it with their own tools.
 - Type `#` at the start of a word to pick a Task. A Task ID such as `BUSI-0001`
   in a message becomes a link to the Task.
 - An absolute path to a Library file becomes a link that opens the file in the
-  Library, in its own tab. The Teammates who answer are also given the list of those files,
+  Library, in its own tab. The Agents who answer are also given the list of those files,
   or, for adapters that cannot read files, the text of small ones.
 
-### Freeing a Teammate's memory with `/compact`
+### Freeing an Agent's memory with `/compact`
 
-A Teammate that has worked in a Room for a long time carries a long conversation.
+An Agent that has worked in a Room for a long time carries a long conversation.
 **Compacting** summarises it, which frees space and usually speeds and cheapens
 later turns, without the **Restart** that forgets the conversation entirely. To
-compact one Teammate, **mention it and then write the command**:
+compact one Agent, **mention it and then write the command**:
 
 ```text
 @nova /compact
 ```
 
-You can add guidance after the name, which is passed to the Teammate as written:
+You can add guidance after the name, which is passed to the Agent as written:
 `@nova /compact keep the decisions and the open questions`.
 
-When it finishes, the Teammate posts one line in the Room, for example
+When it finishes, the Agent posts one line in the Room, for example
 `Compacted my conversation: 50,624 → 2,964 tokens in 9 s.` It still knows the
 conversation, but as a summary: a detail you care about may not survive, so put
 lasting facts in memory files.
@@ -1368,28 +1368,28 @@ lasting facts in memory files.
 - **The mention comes first, and is required.** This works in a Room of two as
   well. A bare `/compact` is refused with *Unknown command*, because a message
   that starts with a slash is one of Huddle's own commands (such as `/invite`).
-- **Only you can run one.** The same text from another Teammate is an ordinary
+- **Only you can run one.** The same text from another Agent is an ordinary
   message.
-- **Only listed commands work.** `/compact` is the one offered to Teammates on the
+- **Only listed commands work.** `/compact` is the one offered to Agents on the
   standard Claude adapter. Anything else you write after a mention, such as
-  `@nova /config`, is sent as ordinary text and runs nothing. A Teammate's
-  card lists what it offers: open **Teammates**, select the Teammate, and look for
+  `@nova /config`, is sent as ordinary text and runs nothing. An Agent's
+  card lists what it offers: open **Agents**, select the Agent, and look for
   lines like `/compact — Free up context by summarizing the conversation so far`.
-  The line is absent while the Teammate is offline.
+  The line is absent while the Agent is offline.
 - **It costs a little.** A compaction is a model call, and Huddle does not show it
-  in the **Spent since start** line. The Teammate's token budget may also count
+  in the **Spent since start** line. The Agent's token budget may also count
   slightly fewer tokens afterwards than were really used.
 - **Stop works.** Use **Stop** to cancel one in progress; a stopped command posts
   nothing.
 
-If a Teammate has just started and you write the command straight away, it may be
+If an Agent has just started and you write the command straight away, it may be
 treated as an ordinary message, because it has not yet told Huddle what it
 offers. Try again a moment later.
 
 **In the background:** your message is stored like any other, in
-`rooms/<roomId>.jsonl`. Huddle sends only the command to the Teammate's adapter for
-that turn, without the Room context, and keeps any messages the Teammate missed
-for its next ordinary turn. The Teammate's own summary lives in its adapter
+`rooms/<roomId>.jsonl`. Huddle sends only the command to the Agent's adapter for
+that turn, without the Room context, and keeps any messages the Agent missed
+for its next ordinary turn. The Agent's own summary lives in its adapter
 session; nothing new is written to disk for the compaction itself.
 
 ### Renaming, archiving and deleting Rooms
@@ -1410,26 +1410,26 @@ A Room is either a root Room or belongs to one Team. The two look the same in
 the chat; they differ in where they are listed.
 
 - **Rooms** lists the root Rooms: the chats you start from the Rooms group, and
-  your one-to-one Rooms with Teammates.
+  your one-to-one Rooms with Agents.
 - **A Team's chats** are listed under the Team in the sidebar's **Teams** view, below its Team
   Room and above its Projects. Open the Team's More (⋮) menu and select **New chat**.
   The panel is headed *New chat in Marketing* and lists that Team's members
-  first, but you can still select a Teammate from another Team.
+  first, but you can still select an Agent from another Team.
 - **The Team Room** is a chat named after the Team, holding you and every member
   of the Team. Every Team has one. It is created when the Team first has a
-  member, and a Teammate who joins the Team later is invited into it; the
+  member, and an Agent who joins the Team later is invited into it; the
   Transcript records the join like any invitation. Leaving a Team does not take
-  the Teammate out of the Team Room. The Team Room cannot be renamed, so it has
+  the Agent out of the Team Room. The Team Room cannot be renamed, so it has
   no pencil icon.
 - **Message** on a member's roster card in the Team's **Members** tab opens that
-  Team's own one-to-one with the Teammate, created if it does not exist. It is
+  Team's own one-to-one with the Agent, created if it does not exist. It is
   separate from the one-to-one under Rooms, so the two conversations do not mix.
 - **Digests and retrospectives** for a Team post in its Team Room, with a
-  mention of the Teammate they are for, so it replies. If the Team Room is
-  archived, they post in that Teammate's one-to-one under Rooms instead. A Task
+  mention of the Agent they are for, so it replies. If the Team Room is
+  archived, they post in that Agent's one-to-one under Rooms instead. A Task
   whose original chat is gone wakes its assignee in a chat of that Team.
-- **A Team that goes away** (no folder and no Teammate's label names it any more,
-  which is what renaming its folder in Explorer does while no Teammate still
+- **A Team that goes away** (no folder and no Agent's label names it any more,
+  which is what renaming its folder in Explorer does while no Agent still
   carries the old name) has its chats archived, with their history kept. Find them under **Archived chats**. If you unarchive one of them
   while its Team is still gone, it is listed under Rooms with "(Marketing)" after
   its name.
@@ -1437,19 +1437,19 @@ the chat; they differ in where they are listed.
 **In the background:** when a chat is created inside a Team, Huddle writes a
 row to the `room_teams` table in `team.db`, saying which Team the Room belongs
 to. A Team Room has its flag set there too. Huddle creates and fills Team Rooms
-when the list of Teams changes, so a Team made by hand, or from a Teammate's
+when the list of Teams changes, so a Team made by hand, or from an Agent's
 `teams:` line, gets one as well. A Team Room that you archive stays archived;
 Huddle does not recreate it.
 
 ## Memory and file changes
 
-Teammates do not keep conversations between restarts, so anything worth
+Agents do not keep conversations between restarts, so anything worth
 remembering goes into files. There are two kinds of memory, both plain Markdown
 folders.
 
 | Memory | Folder | Who sees it |
 | --- | --- | --- |
-| **Personal memory** | `Teammates/<Name>/work/memory/` | That Teammate only. Created when the Teammate starts. |
+| **Personal memory** | `Agents/<Name>/work/memory/` | That Agent only. Created when the Agent starts. |
 | **Team Memory** | `Teams/<Team>/memory/` | Every member of the Team. |
 | **Project memory** | `Teams/<Team>/<Project>/memory/` | Every member of the Team. |
 
@@ -1462,32 +1462,32 @@ Invoices go out on the last working day of each month.
 Use the template in Business/templates/invoice.md.
 ```
 
-Teammates write memory with their own file tools. You can write it too: open the
+Agents write memory with their own file tools. You can write it too: open the
 Team's **Files** tab, select the `memory` folder, and select **New note**.
 Huddle creates the `memory/` folder the first time something is written there.
 
-**How Teammates learn about it:**
+**How Agents learn about it:**
 
-- **When a session opens**, each Teammate's system prompt includes an index of
+- **When a session opens**, each Agent's system prompt includes an index of
   its personal memory and of the Team Memory of every Team it belongs to. Each
   entry is the file's first line, cut at 200 characters. The Team index lists at
   most 50 entries in total (`Team:Teams:MaxMemoryEntries`).
-- **At the start of each turn**, a Teammate is told which files were added,
+- **At the start of each turn**, an Agent is told which files were added,
   changed or deleted in its **watched folders** since its last turn in that
   Room. Watched folders are its own `work/` folder, the folder of each of its
   Teams (excluding `_tasks`), and any folders it chose to watch. Huddle keeps
   what it last saw in `file-state/<Name>.json`.
 
 Memory and file changes require `Team:FileChanges:Enabled` (on by default) and an
-adapter that can read files. Without them, Teammates get no memory index.
+adapter that can read files. Without them, Agents get no memory index.
 
 > [!NOTE]
 > The `memory/` folder is not protected in the Library the way Team and Project
-> folders are. You can rename or delete it, and Teammates will lose the index.
+> folders are. You can rename or delete it, and Agents will lose the index.
 
 ## Tracking work with Tasks
 
-A **Task** is a Markdown file under a Team or Project. You and your Teammates
+A **Task** is a Markdown file under a Team or Project. You and your Agents
 see the same Tasks, and a change to an assigned Task wakes the assignee.
 
 ### Opening and editing a Task
@@ -1508,7 +1508,7 @@ The description has the same formatting buttons as a note in the Library (bold, 
 and task list), with the same shortcuts (Ctrl+B, Ctrl+I, Ctrl+E). **New task** and **Make a copy** open the same editor in their own Tab, so there is one place to edit a Task.
 
 While an edit Tab is open, the [Right sidebar](#the-right-sidebar) shows what Huddle works out about the Task:
-**Activity** (the Room it last woke a Teammate in, how many of its wakes are used, and who is working on it now),
+**Activity** (the Room it last woke an Agent in, how many of its wakes are used, and who is working on it now),
 **Blocked by**, **Blocks** (the open Tasks waiting on it) and **Linked documents** (the Library files its description
 links to). They show the Task as saved, not your unsaved edits.
 
@@ -1541,13 +1541,13 @@ Draft the October invoice run and check it against last month.
 | `title` | One line, 1–200 characters. |
 | `status` | One of the eight statuses below. |
 | `priority` | Low, Medium, High or Urgent. |
-| `creator`, `assignee` | A Teammate's name, or your name. One assignee at most. |
+| `creator`, `assignee` | An Agent's name, or your name. One assignee at most. |
 | `origin` | The Room the Task was created from, if any. |
 | `parent`, `blocked_by`, `duplicate_of` | Links to other Tasks. |
 | `tags`, `start_date`, `due_date` | Dates are `yyyy-MM-dd`. |
 | `request`, `from_team`, `requester`, `triage`, `decline_reason`, `confirmed_by` | Present on a Request from another Team; see [Requests between Teams](#requests-between-teams). |
 | Body | The description, in Markdown. |
-| `## Evidence` | Optional, only where a Team's gates look for it. Lines of evidence a Teammate added; append-only. See [The four gates](#the-four-gates). |
+| `## Evidence` | Optional, only where a Team's gates look for it. Lines of evidence an Agent added; append-only. See [The four gates](#the-four-gates). |
 | `## Change log` | An append-only history. Huddle adds lines and never edits old ones. |
 
 The Team and Project are not fields. They come from the folder the file is in.
@@ -1577,7 +1577,7 @@ Select **New task** on the Tasks page or a Team page's Tasks tab. A new Tab,
 "New task", opens with the same editor you get from **Edit**: Title, Status,
 Priority, Assignee, Team / Project, Parent, blockers, Tags, Start and Due date,
 and a description with **Edit** and **Preview**. Select **Save** at the top
-right. If the Task is assigned to a Teammate, the button reads **Save & notify
+right. If the Task is assigned to an Agent, the button reads **Save & notify
 {Name}**. After the first save the same Tab becomes that Task's edit page.
 
 | Action | In the background |
@@ -1590,14 +1590,14 @@ right. If the Task is assigned to a Teammate, the button reads **Save & notify
 | **Make a copy** | In the **⋮** menu of the read-only panel or the edit page. Opens a "New task" Tab holding an unsaved copy titled `Copy of …`. Nothing is written until you save. The copy is of the Task as saved, not of edits still pending. |
 
 Every write goes to a temporary file first and is then moved into place, so a
-Task file is never half-written. If someone else (a Teammate, or you in another
+Task file is never half-written. If someone else (an Agent, or you in another
 window) changed the same Task while you were editing, Huddle merges changes to
 different fields silently and asks **Keep mine** or **Take theirs** for a field
 you both changed.
 
-### How Task changes reach Teammates
+### How Task changes reach Agents
 
-When a Task assigned to a Teammate changes, Huddle **wakes** the assignee by
+When a Task assigned to an Agent changes, Huddle **wakes** the assignee by
 posting a message in a Room, as the person who made the change:
 
 ```text
@@ -1610,16 +1610,16 @@ Call get_task with taskId BUSI-0002 for the full task.
   exactly you, the creator and the assignee; otherwise a new Room.
 - Changes by the same person within 5 seconds are combined into one message.
 - No one is woken for their own changes, for Tasks assigned to you, or for
-  assignees that are not known Teammates.
-- Teammates changing each other's Tasks could loop, so each Task allows 10
-  Teammate-made wake-ups. After that, changes are still saved but nobody is
+  assignees that are not known Agents.
+- Agents changing each other's Tasks could loop, so each Task allows 10
+  Agent-made wake-ups. After that, changes are still saved but nobody is
   woken until you select **Allow 10 more** in the Task panel. Any change you make
   resets the count.
 
 The panel tells you what will happen before you save, for example "Nova is
 offline, so this change won't reach them."
 
-Teammates use the tools `create_task`, `get_task`, `list_tasks`, `update_task`,
+Agents use the tools `create_task`, `get_task`, `list_tasks`, `update_task`,
 `close_task`, `reopen_task` and `add_evidence`. Their changes follow the same rules
 and write the same files, and they are also subject to a Team's
 [gates](#the-four-gates) and to the [Request](#requests-between-teams) rules, which
@@ -1632,7 +1632,7 @@ Huddle draws a small label in one of four looks, and each look has one job:
 | Look | Means | Example |
 | --- | --- | --- |
 | Status or priority: a tinted label with an icon | A state or a priority; its colour follows [Status at a glance](#status-at-a-glance) (amber needs attention) | **High**, **In Progress** |
-| Tag: a plain grey label | A word you or a Teammate attached | `api`, `pricing` |
+| Tag: a plain grey label | A word you or an Agent attached | `api`, `pricing` |
 | Filter: dashed until set, outlined in the accent once set | A filter on a View; press it to change it, **Close (×)** to clear it | **Assignee: Me** |
 | Meta: plain small text, no label at all | A count or a detail | "@jane", "3 need you" |
 
@@ -1679,8 +1679,8 @@ small dialog (1 to 60 characters, not the name of another View). **Delete view**
 
 A Task's More (⋮) menu is titled **Actions for {id}**. It has **Copy id** and **Copy link**
 (the message at the bottom of the window reads "Copied link to {id}"). A Task's panel shows **Created**, **Updated**
-and **Closed** dates. A Task a Teammate is working on shows a **Teammate working**
-chip, and a Task that woke a Teammate links to **Woken in Room {name}**.
+and **Closed** dates. A Task an Agent is working on shows a **Agent working**
+chip, and a Task that woke an Agent links to **Woken in Room {name}**.
 
 **In the background:** Views are saved to `views.json` in the data root. If that
 file has a syntax error, Huddle shows the line and column and makes Views
@@ -1688,14 +1688,14 @@ read-only until you fix it.
 
 ### The Human gate
 
-**Your Teammates do the work. You make the calls.** The **Human gate** keeps a Task
+**Your Agents do the work. You make the calls.** The **Human gate** keeps a Task
 from becoming Done without you. Anything that leaves the Team or cannot easily be
 undone, such as sending, paying, signing, publishing or merging, stops and waits for
-you. Teammates draft as much as they like; the Task shows you the work and the Proof,
+you. Agents draft as much as they like; the Task shows you the work and the Proof,
 and you judge the evidence rather than the tone.
 
 A Task goes through five steps: **Draft, Check, Track, Gate, Decide.** The assignee
-drafts. Other Teammates supply the Proof the Team asks for. The Task's Change log
+drafts. Other Agents supply the Proof the Team asks for. The Task's Change log
 records who did what. When the Proof is complete the assignee moves the Task to
 **Needs you**, and you **Accept**, **Request changes** or **Decline**. Two rules hold
 however the Team's process is set up: only you can mark a gated Task Done, and a
@@ -1703,7 +1703,7 @@ Team's process can add Proof but never remove your decision.
 
 What needs no gate: internal notes, drafts, research and ordinary Task updates.
 What is always gated: customer messages, money, contracts, public posts, merges to
-main and deleting data. A Teammate about to do one of these names it in the Task's
+main and deleting data. An Agent about to do one of these names it in the Task's
 **Action** first.
 
 #### Turning it on, and the Action
@@ -1741,7 +1741,7 @@ and a rule:
 
 | Rule | It is met when |
 | --- | --- |
-| `evidence from <step>` | a Teammate whose role covers that step added an Evidence line with a command to the Task |
+| `evidence from <step>` | an Agent whose role covers that step added an Evidence line with a command to the Task |
 | ``command `<cmd>` exits 0`` | the latest Evidence line for that command passed |
 | `task tagged <tag>` | a sub-Task with that tag is Done |
 | `document reviewed by <step>` | a document attached to the Task was reviewed by that step after its last edit, and nobody has objected since |
@@ -1809,10 +1809,10 @@ There is no **Move anyway** for a gated Task.
   the document is edited in Huddle afterwards. An edit made in another editor leaves
   no history entry, so the review stays valid. Check the document yourself before
   you accept.
-- **The gate guards the Task's status, not the outward action itself.** A Teammate
+- **The gate guards the Task's status, not the outward action itself.** An Agent
   that can send email can still send it. The gate makes sure the Task is not Done
   without you, and that the Action was named; it does not block the tool. Give
-  Teammates only the tools you are happy for them to use.
+  Agents only the tools you are happy for them to use.
 
 ### Editing Task files by hand
 
@@ -1835,14 +1835,14 @@ Type a new Sprint name in the Sprint field on the Task panel to create one; pick
 Sprint from the list, or leave it blank. A Sprint disappears when the last Task leaves it.
 
 In a View, you can filter by Sprint (including **@current** for the newest, or **@none** for
-Tasks with no Sprint), group by it, or sort by it. Teammates can set a Task's Sprint by name
+Tasks with no Sprint), group by it, or sort by it. Agents can set a Task's Sprint by name
 or id, or use **current** to mean the newest. Only you can create a new Sprint by typing a
-name; Teammates cannot — they must pick from the existing ones.
+name; Agents cannot — they must pick from the existing ones.
 
 ## Keeping notes in the Library
 
 The **Library** is a file browser and Markdown editor over your data folders. It
-is how you and your Teammates share documents.
+is how you and your Agents share documents.
 
 ### Library roots
 
@@ -1851,7 +1851,7 @@ A **root** is a top-level folder shown in the Library:
 | Root | Folder |
 | --- | --- |
 | **Teams** | `Teams/`: Team and Project folders and their notes. Task folders (`_tasks`) are hidden. |
-| **Teammates** | `Teammates/`: each Teammate's definition and `work/` folder. |
+| **Agents** | `Agents/`: each Agent's definition and `work/` folder. |
 | Pinned folders | Any folder on your machine you add with **Add folder** or in **Settings › Library**. |
 
 Pinned folders are saved in `library-roots.json` in the data root. The file is
@@ -1868,9 +1868,9 @@ previewed. Files larger than 2 MiB are read-only.
 **In the background:** a save writes a temporary file beside the note and moves
 it into place, keeping the file's original encoding and line endings. If the
 file changed on disk since you opened it, Huddle warns you and offers **Reload**
-or **Keep mine**. Saving a Teammate's definition file restarts that Teammate.
+or **Keep mine**. Saving an Agent's definition file restarts that Agent.
 
-Teammates are told about your saves at their next turn if the file is in one of
+Agents are told about your saves at their next turn if the file is in one of
 their watched folders.
 
 ### Links between notes
@@ -1894,25 +1894,25 @@ Open the More (⋮) menu on any item, or right-click it.
 | **Copy path** | Copies the full path, which you can paste into chat. |
 | **Delete** | Asks `Delete 'name'?`, then sends the item to the **Windows Recycle Bin**. Refused on network or removable drives, where the Recycle Bin is not available. |
 
-Roots, Team folders, Project folders, Teammate folders, definitions and `work/`
+Roots, Team folders, Project folders, Agent folders, definitions and `work/`
 folders cannot be renamed, moved or deleted here. Folders that hold Tasks cannot
 be moved. File names follow Windows rules: no `/ \ : < > " | ? *`, no trailing
 dot or space, no device names such as `CON` or `NUL`.
 
 The search box matches file names, not content, and shows at most 200 results.
 
-## Giving Teammates Skills
+## Giving Agents Skills
 
-A **Skill** is a folder of Markdown instructions that a Teammate reads only when
+A **Skill** is a folder of Markdown instructions that an Agent reads only when
 it needs them, such as how to build a team or how to write a release note. It
-keeps the Teammate's main instructions short.
+keeps the Agent's main instructions short.
 
 ### Assigning a Skill
 
-On a Teammate's Edit card, pick Skills in the **Skills** list and save.
+On an Agent's Edit card, pick Skills in the **Skills** list and save.
 
-**In the background:** Huddle writes `skills: ['a', 'b']` into the Teammate's
-`<Name>.md` and restarts it. The Teammate's system prompt then lists each Skill's
+**In the background:** Huddle writes `skills: ['a', 'b']` into the Agent's
+`<Name>.md` and restarts it. The Agent's system prompt then lists each Skill's
 name and description, and it gets the `read_skill` tool to read them.
 
 ### Writing your own Skill
@@ -1941,7 +1941,7 @@ Start with what the user can now do. One bullet per change. ...
 | Files | Only `.md` files directly in the folder count, up to 64 KB each. Sub-folders are ignored. |
 
 Huddle watches `Skills/` and picks up a new or changed Skill within a second.
-Editing a Skill does not restart anyone. Teammates read the current text the
+Editing a Skill does not restart anyone. Agents read the current text the
 next time they call `read_skill`. Check **Settings › Skills** for problems: an
 invalid Skill is listed under **Problems** with the reason.
 
@@ -1963,12 +1963,12 @@ Huddle does not download Skills; your AI tool does, for example Claude Code or C
 
 To add Skills, open **Settings › Skills**, select **Add with your AI tool** on the **Packs** tab, say where the Skills are, and select **Copy prompt**. Paste the prompt into your AI tool. When it finishes, a message says what is ready, and **Show** takes you to it. **Import skill** on the **Skills** tab does the same for a single Skill from a link or folder.
 
-When you give a Teammate a Skill, Huddle copies it into `Skills/` and the Teammate uses that copy. Later changes to the AI tool's files reach the Teammate only when you apply an update.
+When you give an Agent a Skill, Huddle copies it into `Skills/` and the Agent uses that copy. Later changes to the AI tool's files reach the Agent only when you apply an update.
 
 | You see | It means | What to do |
 | --- | --- | --- |
 | **Not downloaded** | A catalog or Pack lists the Skill, but it has no folder on this computer. | Select **Copy prompt** and paste it into your AI tool. |
-| **Update available** | The files your AI tool has now differ from the copies Teammates use. | Select **Review update** to see what changed and apply it. |
+| **Update available** | The files your AI tool has now differ from the copies Agents use. | Select **Review update** to see what changed and apply it. |
 | **Needs setup** | A hire card or draft names a Pack or Skill that is not ready. | Select **Copy prompt** on the card. The card turns ready by itself when the AI tool finishes. |
 | **Broken** | A check failed or a pointer leads nowhere. | Select **Copy fix prompt** and paste it into your AI tool. |
 
@@ -1981,50 +1981,50 @@ An installed Skill keeps a `.source.json` file in its folder, which records wher
 
 ### The Skills tab
 
-A Skill is a folder of instructions that a Teammate reads when its work calls for it. This list shows every Skill Huddle knows about: built in, fetched by your AI tool, or listed in a catalog but not on this computer yet. A Skill marked Not downloaded has no folder here; Copy prompt gives your AI tool what it needs to fetch it. Huddle never downloads Skills itself. Giving a Teammate a Skill copies it to that Teammate, so later changes reach it only when you apply an update.
+A Skill is a folder of instructions that an Agent reads when its work calls for it. This list shows every Skill Huddle knows about: built in, fetched by your AI tool, or listed in a catalog but not on this computer yet. A Skill marked Not downloaded has no folder here; Copy prompt gives your AI tool what it needs to fetch it. Huddle never downloads Skills itself. Giving an Agent a Skill copies it to that Agent, so later changes reach it only when you apply an update.
 
-Each row shows the Skill's name and description, where it came from, its state and the Teammates that use it. Search by name, narrow the list with the **State** filter, or turn on **Show hidden** to see what you hid. The **⋯** menu on a row offers **Copy prompt**, **Hide** or **Unhide**, **Show catalog in Library** and, for a built-in Skill you changed, **Restore default**.
+Each row shows the Skill's name and description, where it came from, its state and the Agents that use it. Search by name, narrow the list with the **State** filter, or turn on **Show hidden** to see what you hid. The **⋯** menu on a row offers **Copy prompt**, **Hide** or **Unhide**, **Show catalog in Library** and, for a built-in Skill you changed, **Restore default**.
 
 **Reload** reads SKILLS.md and every file it points to again, right now. **Problems** at the bottom lists what failed a check, with the file and the fix.
 
 ### The Packs tab
 
-A Pack is a named set of Skills for some roles, such as MSBuild Authoring. Choosing a Pack on a Teammate gives it all the Pack's Skills at once and tells its manager when to use them. Packs come from SKILLS.md, a list your AI tool keeps; Huddle never fetches one itself. To add one, select Add with your AI tool, say where it is, and paste the prompt into Claude Code, Codex or a similar tool. Whatever passes Huddle's checks is ready to use at once; there is no approval step.
+A Pack is a named set of Skills for some roles, such as MSBuild Authoring. Choosing a Pack on an Agent gives it all the Pack's Skills at once and tells its manager when to use them. Packs come from SKILLS.md, a list your AI tool keeps; Huddle never fetches one itself. To add one, select Add with your AI tool, say where it is, and paste the prompt into Claude Code, Codex or a similar tool. Whatever passes Huddle's checks is ready to use at once; there is no approval step.
 
 Each card shows the Pack's title, version and state, its Source, how many Skills it holds, when it was last updated and the roles it is for. A line under the title says what is wrong when something is. **Details** shows where the Pack came from, each Skill with its licence and warnings, and the notes your AI tool kept.
 
-A card marked **New** appeared since you last left this tab. **Check for updates** opens a prompt that asks your AI tool to look for newer versions. **Hide** leaves a Pack out of lists; Teammates who have it keep it.
+A card marked **New** appeared since you last left this tab. **Check for updates** opens a prompt that asks your AI tool to look for newer versions. **Hide** leaves a Pack out of lists; Agents who have it keep it.
 
 ### The Sources tab
 
 A Source is one place Skills come from: a GitHub repository, another Git server or a folder on this computer. Your AI tool keeps notes for each Source on how it found and fetched it, so the next update starts from what it learned. Everything here lives in the Skill Sources folder, which you can share with another Huddle. Removing a Source removes its notes and rows, but never the clone itself. Your AI tool reads the install file first; Copy path copies its location.
 
-The tab shows the install file and this computer's name, the Skill Sources folder with **Change…** to choose another, one row per Source and one row per catalog. A Source its owner deprecated, withdrew or moved says so on its row, in words. Withdrawn Skills cannot be given to new hires; Teammates who already have them keep working and are flagged.
+The tab shows the install file and this computer's name, the Skill Sources folder with **Change…** to choose another, one row per Source and one row per catalog. A Source its owner deprecated, withdrew or moved says so on its row, in words. Withdrawn Skills cannot be given to new hires; Agents who already have them keep working and are flagged.
 ## Settings
 
 | Tab | What it changes | Saved to |
 | --- | --- | --- |
-| **Profile** | You: Name, Alias (a second name that @mentions you), Title and a short description, shown as the same card a Teammate gets. Click the avatar to change it. A Name or Alias a Teammate already uses is refused. Renaming yourself moves your avatar and your Tasks with you, and every message you ever sent shows the new Name; the transcript files are not rewritten. | `profile.json` (avatar in `avatars.json`) |
-| **Prompts** | The text Huddle sends to Teammates, such as the wake-up message. **Reset all to defaults** (beside the sticky **Save**) asks "Reset every prompt to its default?" and **Reset all** confirms. | `prompts.json` |
-| **Helpers** | The small background agents that make one judgement for you, such as whether a Task a Teammate wrote needs your acceptance. Each has a card: on or off, the Adapter, Model and Effort it runs on, a daily cap, what it spent today, its last run and its last error. See [Helpers](#helpers). | `team.db` |
+| **Profile** | You: Name, Alias (a second name that @mentions you), Title and a short description, shown as the same card an Agent gets. Click the avatar to change it. A Name or Alias an Agent already uses is refused. Renaming yourself moves your avatar and your Tasks with you, and every message you ever sent shows the new Name; the transcript files are not rewritten. | `profile.json` (avatar in `avatars.json`) |
+| **Prompts** | The text Huddle sends to Agents, such as the wake-up message. **Reset all to defaults** (beside the sticky **Save**) asks "Reset every prompt to its default?" and **Reset all** confirms. | `prompts.json` |
+| **Helpers** | The small background agents that make one judgement for you, such as whether a Task an Agent wrote needs your acceptance. Each has a card: on or off, the Adapter, Model and Effort it runs on, a daily cap, what it spent today, its last run and its last error. See [Helpers](#helpers). | `team.db` |
 | **Appearance** | You pick one light Theme and one dark Theme; the picker lists the Light Themes and the Dark Themes separately. The button in the top bar switches between your two. An accent colour is set here too; your own avatar moved to **Profile**. | `appearance.json` |
-| **Personas** | The Teammate definitions. | `Teammates/…` |
+| **Personas** | The Agent definitions. | `Agents/…` |
 | **Skills** | Three tabs: **Skills** (every Skill, its state and who uses it), **Packs** (Packs from SKILLS.md, **Add with your AI tool**) and **Sources** (where Skills come from, the Skill Sources folder). See [Adding Skills with your AI tool](#adding-skills-with-your-ai-tool). | `Skills/…`, `SkillSources/` |
 | **Team types** | Read-only list of team types, built-in or yours, with **Reload** and a **Problems** list. | `TeamTypes/…` |
 | **Library** | Pinned folders; hide the built-in roots. | `library-roots.json` |
 
 ### Helpers
 
-A **Helper** is a small background agent that makes one judgement about something that just happened, and lets Huddle act on its answer. It is not a Teammate: it has no Room, keeps no memory, uses no tools and posts no Messages. Huddle shows it what it needs to see, it answers in a few words, and Huddle makes the change itself.
+A **Helper** is a small background agent that makes one judgement about something that just happened, and lets Huddle act on its answer. It is not an Agent: it has no Room, keeps no memory, uses no tools and posts no Messages. Huddle shows it what it needs to see, it answers in a few words, and Huddle makes the change itself.
 
-The first Helper is **Needs Human**. When a Teammate creates a Task, or rewrites its title or description, Needs Human reads it. If doing the work would leave the team or could not easily be undone (a message to a customer, money, signing, publishing, merging to main, deleting data), it turns on **Requires your acceptance** for that Task. The Change log reads `human gate on (reason: …)` by `Needs Human (Helper)`, and the Task's assignee is woken, as for any other change. The Task panel says "Turned on by the Needs Human Helper: …".
+The first Helper is **Needs Human**. When an Agent creates a Task, or rewrites its title or description, Needs Human reads it. If doing the work would leave the team or could not easily be undone (a message to a customer, money, signing, publishing, merging to main, deleting data), it turns on **Requires your acceptance** for that Task. The Change log reads `human gate on (reason: …)` by `Needs Human (Helper)`, and the Task's assignee is woken, as for any other change. The Task panel says "Turned on by the Needs Human Helper: …".
 
 What a Helper will and will not do:
 
 - **It only adds caution.** Needs Human can turn the gate on. Only you can turn it off.
 - **Your word is final.** Once you turn the gate off on a Task, Needs Human never looks at that Task again, whatever is written in it later.
 - **It never judges you.** A Task you create or edit is not judged, nor is one that already has an Action, one that is Done or Cancelled, or one where only the status or an Evidence line changed.
-- **It never blocks work.** If it fails, times out or answers nonsense, the Task stays as the Teammate saved it, and the Helper's card says what went wrong (**Last error**).
+- **It never blocks work.** If it fails, times out or answers nonsense, the Task stays as the Agent saved it, and the Helper's card says what went wrong (**Last error**).
 - **It never spends without asking.** Each Helper has a **Daily cap** of calls (50 for Needs Human). At the cap it pauses and its card says **Paused — daily cap reached**. **Continue (+10 today)** allows ten more calls for today only; saves made while it is paused are skipped and counted on the card.
 
 On **Settings › Helpers** each Helper has a card:
@@ -2032,38 +2032,38 @@ On **Settings › Helpers** each Helper has a card:
 | Control | What it does |
 | --- | --- |
 | **On** | Turns the Helper on or off. |
-| **Adapter, Model, Effort** | What it runs on. Needs Human starts on Claude, Haiku, low effort. Changing the Adapter clears Model and Effort, as on a Teammate's card. |
+| **Adapter, Model, Effort** | What it runs on. Needs Human starts on Claude, Haiku, low effort. Changing the Adapter clears Model and Effort, as on an Agent's card. |
 | **Daily cap** | Calls a day before it pauses and asks you. At least 1. |
 | **Edit the prompt** | Opens the Helper's prompt on **Settings › Prompts**, under **Helpers**. An edit applies from the Helper's next call. |
 | **Save**, **Reset to defaults** | **Save** keeps your choices. **Reset to defaults** goes back to `Team:Helpers:<Id>` in the configuration, then to the built-in defaults. |
 
-Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false; the tab says so and the cards are read only. A call costs a fraction of a cent on Haiku: at the cap of 50 a day, about 12 cents. Needs Human's wake-up of the assignee, when it turns the gate on, is a full Turn on that Teammate's own model and is usually the larger cost; it happens at most once per Task. The wake-up is posted by **Huddle**, shown in the Room as a muted line, and the **Feed** tells you when a Helper pauses or keeps failing.
+Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false; the tab says so and the cards are read only. A call costs a fraction of a cent on Haiku: at the cap of 50 a day, about 12 cents. Needs Human's wake-up of the assignee, when it turns the gate on, is a full Turn on that Agent's own model and is usually the larger cost; it happens at most once per Task. The wake-up is posted by **Huddle**, shown in the Room as a muted line, and the **Feed** tells you when a Helper pauses or keeps failing.
 
 ## What happens when… (reference)
 
-| You… | Huddle writes | Teammate effect |
+| You… | Huddle writes | Agent effect |
 | --- | --- | --- |
-| Add a Teammate | `Teammates/<Name>/<Name>.md`, `team.db`, `Teams/<label>/` if missing | Comes online |
-| Edit a Teammate, or change Model, Effort, Work mode, Skills or Teams | Rewrites `<Name>.md` (Model, Effort and Work mode in `team.db`) | Restarts; conversation memory cleared |
-| Rename a Teammate | Moves `Teammates/<Old>/`; renames entries in `room-sessions/`, `file-state/`, `avatars.json`, `team.db`; rewrites Task creators and assignees and View filters | Restarts |
-| Rename yourself on **Settings > Profile** | `profile.json`; renames your entry in `avatars.json` and your row in `team.db`; rewrites Task creators and assignees and View filters | None; Teammates see your new Name on new and old messages from their next turn |
-| Remove a Teammate | Deletes `<Name>.md` only | Goes offline; Rooms, transcripts and `work/` stay |
-| Restart a Teammate | Deletes `room-sessions/<Name>.json` | Every Room starts fresh, with catch-up |
-| Build a team (**Approve & hire**) | `Teams/<Team>/_team.md`, then a Teammate file for each draft | The Teammates are hired; start them from their cards |
+| Add an Agent | `Agents/<Name>/<Name>.md`, `team.db`, `Teams/<label>/` if missing | Comes online |
+| Edit an Agent, or change Model, Effort, Work mode, Skills or Teams | Rewrites `<Name>.md` (Model, Effort and Work mode in `team.db`) | Restarts; conversation memory cleared |
+| Rename an Agent | Moves `Agents/<Old>/`; renames entries in `room-sessions/`, `file-state/`, `avatars.json`, `team.db`; rewrites Task creators and assignees and View filters | Restarts |
+| Rename yourself on **Settings > Profile** | `profile.json`; renames your entry in `avatars.json` and your row in `team.db`; rewrites Task creators and assignees and View filters | None; Agents see your new Name on new and old messages from their next turn |
+| Remove an Agent | Deletes `<Name>.md` only | Goes offline; Rooms, transcripts and `work/` stay |
+| Restart an Agent | Deletes `room-sessions/<Name>.json` | Every Room starts fresh, with catch-up |
+| Build a team (**Approve & hire**) | `Teams/<Team>/_team.md`, then an Agent file for each draft | The Agents are hired; start them from their cards |
 | Details tab (**Save changes**) | `Teams/<Team>/_team.md` (purpose, Library folder) | Nothing else |
-| Members tab (**Save changes**) | A Teammate file for each new draft, `_team.md`'s manager, the `teams:` line of each member taken off the Team, and removes the deleted Teammates' files | The new Teammates are hired; the ones taken off restart; the deleted ones are gone |
-| Duplicate a Team | A new `Teams/<Team>/` and new Teammate files; no memory, notes or Tasks | New Teammates start |
+| Members tab (**Save changes**) | An Agent file for each new draft, `_team.md`'s manager, the `teams:` line of each member taken off the Team, and removes the deleted Agents' files | The new Agents are hired; the ones taken off restart; the deleted ones are gone |
+| Duplicate a Team | A new `Teams/<Team>/` and new Agent files; no memory, notes or Tasks | New Agents start |
 | Use a process | `Teams/<Team>/Process.md`, never over an existing one | Members read it |
 | Import a Skill | `Skills/<name>/` with `.source.json` | Read on next `read_skill` |
 | Turn a gate off | The `gates:` line of `Process.md` | None |
 | Approve or decline a Sprint proposal | Approve creates the Sprint and adds the Tasks | The manager reads the outcome |
-| Accept or reject a retro change | Accept edits the target file and adds a row to `Retro register.md` | The proposer reads the outcome; an edited Teammate file restarts that Teammate |
+| Accept or reject a retro change | Accept edits the target file and adds a row to `Retro register.md` | The proposer reads the outcome; an edited Agent file restarts that Agent |
 | Override a gate | The Task, with `gate overridden by Human` in its Change log | Assignee woken |
-| Add or remove a Team member | The `teams:` line in `<Name>.md` | That Teammate restarts |
+| Add or remove an Agent | The `teams:` line in `<Name>.md` | That Agent restarts |
 | Create a Project | `Teams/<Team>/<Project>/` | Members see it as a file change |
 | Start a chat | `team.db` | None until you post |
-| Post a message | One line appended to `rooms/<roomId>.jsonl` | Addressed Teammates take a turn |
-| Write `@name /compact` | One line in `rooms/<roomId>.jsonl`, then the Teammate's outcome line | That Teammate compacts its conversation; other Teammates only read the outcome |
+| Post a message | One line appended to `rooms/<roomId>.jsonl` | Addressed Agents take a turn |
+| Write `@name /compact` | One line in `rooms/<roomId>.jsonl`, then the Agent's outcome line | That Agent compacts its conversation; other Agents only read the outcome |
 | Archive a Room | `team.db` | None; Room still works |
 | Delete a Room | `team.db`; deletes `rooms/<roomId>.jsonl` permanently | Resume entry pruned at next start |
 | Create or edit a Task | `Teams/<Team>/[<Project>/]_tasks/<ID>.md` with a Change log line | Assignee woken |
@@ -2080,22 +2080,22 @@ Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false;
 
 | Symptom | Cause and fix |
 | --- | --- |
-| `@nova /compact` got an ordinary reply instead of compacting | The Teammate does not offer that command (check its card), it was not yet online, or another Teammate wrote it. Only you can run a command, and only those listed on the card. |
+| `@nova /compact` got an ordinary reply instead of compacting | The Agent does not offer that command (check its card), it was not yet online, or another Agent wrote it. Only you can run a command, and only those listed on the card. |
 | `/compact` on its own says *Unknown command* | Write the mention first: `@nova /compact`. |
-| A Teammate forgot our conversation | It was restarted: an edit, a membership change, or **Restart**. Put lasting facts in memory files. |
-| A Teammate file does not appear | See **Files that didn't load** on the Teammates page. Common causes: missing `name`, `title` or `alias`, a duplicate alias, or `name` not matching the file. |
-| All Teammates show **Offline** | The agent host is off, for example when Huddle is started with `--Team:Acp:Enabled=false`. |
+| An Agent forgot our conversation | It was restarted: an edit, a membership change, or **Restart**. Put lasting facts in memory files. |
+| An Agent file does not appear | See **Files that didn't load** on the Agents page. Common causes: missing `name`, `title` or `alias`, a duplicate alias, or `name` not matching the file. |
+| All Agents show **Offline** | The agent host is off, for example when Huddle is started with `--Team:Acp:Enabled=false`. |
 | A Task did not wake its assignee | The assignee is you, the change was made by the assignee, the assignee is offline or no longer exists, or the Task's wake budget is spent (**Allow 10 more**). |
 | A Task file is missing from every View | It is under **Tasks that didn't load**, or it is in `_closed/` and the View's scope is Active. |
 | A Team still appears after I removed everyone | Removing members never deletes the folder. The Team shows **No members**. |
-| A membership change was undone | A Teammate Edit card that was open during the change saved its old text. Re-add the member. |
+| A membership change was undone | An Agent Edit card that was open during the change saved its old text. Re-add the member. |
 | Delete in the Library says the Recycle Bin isn't available | The file is on a network or removable drive. Delete it in your file manager. |
 | A new Skill doesn't show | Check **Settings › Skills › Problems**. The `name` must match the folder name. |
 | A Team type I wrote is missing from the Team type list | Check **Settings › Team Types › Problems** for the file and reason, fix it, then select **Reload**. |
-| **Approve & hire** is disabled | The team details are not complete, or the roster has no Teammate; the hint beside the button says which. |
+| **Approve & hire** is disabled | The team details are not complete, or the roster has no Agent; the hint beside the button says which. |
 | A hire says a Team is full, or that agent processes are running | A hire limit was reached; see [Hire limits](#hire-limits). |
 | A Task would not move, with a message naming a gate | The Team's process has that gate on. Add the Evidence it asks for, or use **Move anyway** in the Task panel. |
-| A Teammate's `git push` was denied | The Team's `checks-before-merge` gate wants an Evidence line showing the `checkCommand` passing. The reason is in the log, not shown to the Teammate. |
+| An Agent's `git push` was denied | The Team's `checks-before-merge` gate wants an Evidence line showing the `checkCommand` passing. The reason is in the log, not shown to the Agent. |
 | A Task I edited by hand went back to its old status | A gate refused the new status; the Change log says `outside edit refused by gate`. |
 | An imported Skill says it already exists | The name belongs to a built-in Skill or to one from another source. Nothing was changed. |
 | A card says **Needs setup** for a connector | List it in `connectors.json` in the data folder, then select **I connected it**. |

@@ -257,7 +257,7 @@ actually advertised, because a protocol reader that silently drops an
 advertised option is exactly the failure class
 [traps.md](../engineering/traps.md) exists for.
 `ModelCatalogProbe.WithoutAdapterDefault` does the filtering instead, one layer
-up. The Teammate card's blank "Agent default" option *is* that
+up. The Agent card's blank "Agent default" option *is* that
 filtered-out choice, and it stores `null`, which means no
 `session/set_config_option` is sent for effort at all.
 
@@ -270,7 +270,7 @@ them both resolved to **no new mechanism**:
   restart-on-change; Effort joins them rather than getting its own path. Buzz
   has none either.
 - **`currentValue` staleness does not arise.** Team never caches a
-  `currentValue` at all — the Teammate card shows the **stored** choice, not
+  `currentValue` at all — the Agent card shows the **stored** choice, not
   the session's live value. The visible consequence: if the adapter clamps a
   requested level back to `"default"`, the card will not say so. That is
   recorded in [known-limits.md](../engineering/known-limits.md) rather than

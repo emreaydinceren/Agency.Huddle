@@ -1,0 +1,517 @@
+using Agency.Huddle.App;
+using Agency.Huddle.App.Acp;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Agency.Huddle.Tests.Elicitation;
+using Agency.Huddle.Tests.Factories;
+
+namespace Agency.Huddle.Tests.Acp;
+
+/// <summary>
+/// Pins <see cref="AgentLayoutMigration"/>: the one-time, idempotent start-up step that moves an
+/// old <c>{DataDir}/Teams/</c> + <c>{DataDir}/work/</c> layout into ADR-0031's
+/// <c>{DataDir}/Agents/&lt;Name&gt;/</c> sibling-folder layout, per Spec §6.15.
+/// </summary>
+public sealed class AgentLayoutMigrationTests
+{
+    /// <summary>A flat definition directly under the old <c>Teams/</c> moves into its own Agent folder, named from frontmatter.</summary>
+    [Fact]
+    public void Run_FlatDefinitions_MoveIntoAgentFolders()
+    {
+        using TempDataDir dataDir = new();
+        WriteTeamsFile(dataDir.Path, "wrong-filename.md", TestPersonas.FrontmatterText("Nova"));
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        string target = Path.Combine(dataDir.Path, "Agents", "Nova", "Nova.md");
+        Assert.True(File.Exists(target));
+        Assert.Equal(TestPersonas.FrontmatterText("Nova"), File.ReadAllText(target));
+        Assert.False(File.Exists(Path.Combine(dataDir.Path, "Teams", "wrong-filename.md")));
+    }
+
+    /// <summary>A <c>Teammates/</c> folder from before the Agent rename is renamed to <c>Agents/</c> with its Persona folders and Work Dirs intact, and a second run changes nothing.</summary>
+    [Fact]
+    public void Run_LegacyTeammatesFolder_IsRenamedToAgentsAndStaysIdempotent()
+    {
+        using TempDataDir dataDir = new();
+        string legacyFile = Path.Combine(dataDir.Path, "Teammates", "Nova", "Nova.md");
+        Directory.CreateDirectory(Path.GetDirectoryName(legacyFile)!);
+        File.WriteAllText(legacyFile, TestPersonas.FrontmatterText("Nova"));
+        Directory.CreateDirectory(Path.Combine(dataDir.Path, "Teammates", "Nova", "work"));
+        File.WriteAllText(Path.Combine(dataDir.Path, "Teammates", "Nova", "work", "x.md"), "keep");
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "Teammates")));
+        Assert.Equal(TestPersonas.FrontmatterText("Nova"), File.ReadAllText(Path.Combine(dataDir.Path, "Agents", "Nova", "Nova.md")));
+        Assert.Equal("keep", File.ReadAllText(Path.Combine(dataDir.Path, "Agents", "Nova", "work", "x.md")));
+    }
+
+    /// <summary>When both <c>Teammates/</c> and <c>Agents/</c> exist the old folder is left alone rather than merged over a Persona.</summary>
+    [Fact]
+    public void Run_BothLegacyAndAgentsFolders_LeavesLegacyUntouched()
+    {
+        using TempDataDir dataDir = new();
+        Directory.CreateDirectory(Path.Combine(dataDir.Path, "Teammates", "Old"));
+        File.WriteAllText(Path.Combine(dataDir.Path, "Teammates", "Old", "Old.md"), TestPersonas.FrontmatterText("Old"));
+        Directory.CreateDirectory(Path.Combine(dataDir.Path, "Agents"));
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Teammates", "Old", "Old.md")));
+    }
+
+    /// <summary>A definition nested under an organisational sub-folder moves too, and the now-empty sub-folder is removed while <c>Teams/</c> itself survives.</summary>
+    [Fact]
+    public void Run_OrganisationalSubfolder_MovesAndRemovesEmptyFolder()
+    {
+        using TempDataDir dataDir = new();
+        WriteTeamsFile(dataDir.Path, Path.Combine("Marketing", "Ada.md"), TestPersonas.FrontmatterText("Ada"));
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Agents", "Ada", "Ada.md")));
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "Teams", "Marketing")));
+        Assert.True(Directory.Exists(Path.Combine(dataDir.Path, "Teams")));
+    }
+
+    /// <summary>A Work Dir under the old <c>work/</c> moves under its Agent's folder, and <c>work/</c> is removed once empty.</summary>
+    [Fact]
+    public void Run_WorkDirs_MoveUnderAgent()
+    {
+        using TempDataDir dataDir = new();
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
+        WriteWorkFile(dataDir.Path, Path.Combine("Nova", "memory", "x.md"), "hello");
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        string target = Path.Combine(dataDir.Path, "Agents", "Nova", "work", "memory", "x.md");
+        Assert.True(File.Exists(target));
+        Assert.Equal("hello", File.ReadAllText(target));
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "work")));
+    }
+
+    /// <summary>A Work Dir with no definition still moves: the app never deletes a Work Dir.</summary>
+    [Fact]
+    public void Run_WorkDirWithoutDefinition_StillMoves()
+    {
+        using TempDataDir dataDir = new();
+        WriteWorkFile(dataDir.Path, Path.Combine("Ghost", "a.md"), "ghost content");
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        string target = Path.Combine(dataDir.Path, "Agents", "Ghost", "work", "a.md");
+        Assert.True(File.Exists(target));
+        Assert.Equal("ghost content", File.ReadAllText(target));
+    }
+
+    /// <summary>A <c>.md</c> file that is not a valid Persona moves to <c>Agents/_unsorted/</c>, keeping its relative path.</summary>
+    [Fact]
+    public void Run_InvalidPersonaFile_GoesToUnsorted()
+    {
+        using TempDataDir dataDir = new();
+        WriteTeamsFile(dataDir.Path, Path.Combine("sub", "readme.md"), "Just notes, no frontmatter here.");
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        string target = Path.Combine(dataDir.Path, "Agents", "_unsorted", "sub", "readme.md");
+        Assert.True(File.Exists(target));
+        Assert.Equal("Just notes, no frontmatter here.", File.ReadAllText(target));
+    }
+
+    /// <summary>An organisational folder that still holds a non-Persona file is not removed, and the file stays put.</summary>
+    [Fact]
+    public void Run_FolderStillHoldingFiles_IsKept()
+    {
+        using TempDataDir dataDir = new();
+        string keepPath = Path.Combine(dataDir.Path, "Teams", "Marketing", "keep.txt");
+        Directory.CreateDirectory(Path.GetDirectoryName(keepPath)!);
+        File.WriteAllText(keepPath, "do not touch");
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.True(File.Exists(keepPath));
+        Assert.True(Directory.Exists(Path.Combine(dataDir.Path, "Teams", "Marketing")));
+    }
+
+    /// <summary>Running the migration a second time changes nothing and logs that there was nothing to migrate.</summary>
+    [Fact]
+    public void Run_SecondRun_IsNoOp()
+    {
+        using TempDataDir dataDir = new();
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
+        RecordingLogger<AgentLayoutMigrationTests> firstLogger = new();
+        AgentLayoutMigration.Run(dataDir.Options(), firstLogger);
+        string target = Path.Combine(dataDir.Path, "Agents", "Nova", "Nova.md");
+        string beforeSecondRun = File.ReadAllText(target);
+        RecordingLogger<AgentLayoutMigrationTests> secondLogger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), secondLogger);
+
+        Assert.Equal(beforeSecondRun, File.ReadAllText(target));
+        Assert.Empty(secondLogger.Entries);
+    }
+
+    /// <summary>A fully successful run writes the completion marker under <c>Agents/</c>.</summary>
+    [Fact]
+    public void Run_Success_WritesMarker()
+    {
+        using TempDataDir dataDir = new();
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Agents", ".layout-migrated")));
+    }
+
+    /// <summary>A run that finds nothing to migrate still writes the marker: a new install counts as already migrated.</summary>
+    [Fact]
+    public void Run_NothingToMigrate_WritesMarker()
+    {
+        using TempDataDir dataDir = new();
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Agents", ".layout-migrated")));
+        // contains-ok: collection-membership predicate over log entries; the entry's full message is not the assertion's concern here.
+        Assert.Contains(logger.Entries, entry => entry.Message.Contains("nothing to migrate", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// A move that fails part-way leaves no marker, and the old layout is still readable. Once the
+    /// block on the source is released, the next run finishes the migration and writes the marker.
+    /// </summary>
+    [Fact]
+    public void Run_FailureMidway_NoMarker_ResumesOnNextRun()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Windows-only: File.Move of an already-open file fails on Windows, not on POSIX.");
+        }
+
+        using TempDataDir dataDir = new();
+        string source = Path.Combine(dataDir.Path, "Teams", "Nova.md");
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
+        string markerPath = Path.Combine(dataDir.Path, "Agents", ".layout-migrated");
+        RecordingLogger<AgentLayoutMigrationTests> firstLogger = new();
+
+        using (FileStream blocker = new(source, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            _ = Assert.Throws<InvalidOperationException>(() => AgentLayoutMigration.Run(dataDir.Options(), firstLogger));
+            Assert.False(File.Exists(markerPath));
+        }
+
+        RecordingLogger<AgentLayoutMigrationTests> secondLogger = new();
+        AgentLayoutMigration.Run(dataDir.Options(), secondLogger);
+
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Agents", "Nova", "Nova.md")));
+        Assert.True(File.Exists(markerPath));
+    }
+
+    /// <summary>
+    /// A planned move whose target already exists with byte-identical content counts as already
+    /// done: it is skipped without error, and the leftover source is cleaned up.
+    /// </summary>
+    [Fact]
+    public void Run_TargetIdenticalExists_Skipped()
+    {
+        using TempDataDir dataDir = new();
+        string content = TestPersonas.FrontmatterText("Nova");
+        WriteTeamsFile(dataDir.Path, "Nova.md", content);
+        string target = Path.Combine(dataDir.Path, "Agents", "Nova", "Nova.md");
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+        File.WriteAllText(target, content);
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.Equal(content, File.ReadAllText(target));
+        Assert.False(File.Exists(Path.Combine(dataDir.Path, "Teams", "Nova.md")));
+    }
+
+    /// <summary>When only <c>Agents/</c> already exists (no <c>Teams/</c>, no <c>work/</c>), the migration makes no change.</summary>
+    [Fact]
+    public void Run_NewLayoutAlreadyPresent_IsNoOp()
+    {
+        using TempDataDir dataDir = new();
+        string existing = Path.Combine(dataDir.Path, "Agents", "Nova", "Nova.md");
+        Directory.CreateDirectory(Path.GetDirectoryName(existing)!);
+        File.WriteAllText(existing, TestPersonas.FrontmatterText("Nova"));
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.Equal(TestPersonas.FrontmatterText("Nova"), File.ReadAllText(existing));
+    }
+
+    /// <summary>When a move cannot complete (the target is blocked), the migration throws naming the path and leaves the old layout readable.</summary>
+    [Fact]
+    public void Run_MoveFails_ThrowsAndLeavesOldLayoutReadable()
+    {
+        using TempDataDir dataDir = new();
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
+        string blocker = Path.Combine(dataDir.Path, "Agents", "Nova");
+        Directory.CreateDirectory(Path.Combine(dataDir.Path, "Agents"));
+        File.WriteAllText(blocker, "this is a file, not a folder");
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => AgentLayoutMigration.Run(dataDir.Options(), logger));
+
+        string source = Path.Combine(dataDir.Path, "Teams", "Nova.md");
+        string target = Path.Combine(dataDir.Path, "Agents", "Nova", "Nova.md");
+        // contains-ok: the message's tail is the framework IOException.Message from Directory.CreateDirectory, which is OS/culture-dependent; only the prefix naming source and target is ours to pin.
+        Assert.StartsWith($"Could not migrate '{source}' to '{target}': ", exception.Message, StringComparison.Ordinal);
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Teams", "Nova.md")));
+    }
+
+    /// <summary>The migration logs one entry per item it moves.</summary>
+    [Fact]
+    public void Run_LogsEveryMove()
+    {
+        using TempDataDir dataDir = new();
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
+        WriteTeamsFile(dataDir.Path, "Ada.md", TestPersonas.FrontmatterText("Ada"));
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        string novaSource = Path.Combine(dataDir.Path, "Teams", "Nova.md");
+        string novaTarget = Path.Combine(dataDir.Path, "Agents", "Nova", "Nova.md");
+        string adaSource = Path.Combine(dataDir.Path, "Teams", "Ada.md");
+        string adaTarget = Path.Combine(dataDir.Path, "Agents", "Ada", "Ada.md");
+        Assert.Equal(2, logger.Entries.Count);
+        // contains-ok: collection-membership predicate over log entries containing paths; each entry's exact wording is not the assertion's concern.
+        Assert.Contains(logger.Entries, entry => entry.Message.Contains(novaSource, StringComparison.Ordinal) && entry.Message.Contains(novaTarget, StringComparison.Ordinal));
+        Assert.Contains(logger.Entries, entry => entry.Message.Contains(adaSource, StringComparison.Ordinal) && entry.Message.Contains(adaTarget, StringComparison.Ordinal));
+    }
+
+    /// <summary>Two files sharing a Name are both rejected by <see cref="PersonaIndex.Build(IReadOnlyList{ValueTuple{string, string}})"/> and both go to <c>_unsorted/</c>.</summary>
+    [Fact]
+    public void Run_DuplicateNames_BothGoToUnsorted()
+    {
+        using TempDataDir dataDir = new();
+        WriteTeamsFile(dataDir.Path, "a.md", TestPersonas.FrontmatterText("Nova"));
+        WriteTeamsFile(dataDir.Path, "b.md", TestPersonas.FrontmatterText("Nova"));
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Agents", "_unsorted", "a.md")));
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Agents", "_unsorted", "b.md")));
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "Agents", "Nova")));
+    }
+
+    /// <summary>Once the completion marker exists, the migration does nothing at all: a Persona-like note later added to <c>Teams/</c> is left untouched.</summary>
+    [Fact]
+    public void Run_MarkerPresent_LeavesTeamsUntouched()
+    {
+        using TempDataDir dataDir = new();
+        string markerPath = Path.Combine(dataDir.Path, "Agents", ".layout-migrated");
+        Directory.CreateDirectory(Path.GetDirectoryName(markerPath)!);
+        File.WriteAllText(markerPath, string.Empty);
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Teams", "Nova.md")));
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "Agents", "Nova")));
+    }
+
+    /// <summary>Marker present, and every Agent folder since deleted: the migration still does not rescan <c>Teams/</c>, so a note left there stays put.</summary>
+    [Fact]
+    public void Run_AllAgentsDeleted_DoesNotRescanTeams()
+    {
+        using TempDataDir dataDir = new();
+        string markerPath = Path.Combine(dataDir.Path, "Agents", ".layout-migrated");
+        Directory.CreateDirectory(Path.GetDirectoryName(markerPath)!);
+        File.WriteAllText(markerPath, string.Empty);
+        WriteTeamsFile(dataDir.Path, Path.Combine("Marketing", "Ada.md"), TestPersonas.FrontmatterText("Ada"));
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Teams", "Marketing", "Ada.md")));
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "Agents", "Ada")));
+    }
+
+    /// <summary>A missing <c>DataDir</c> is a no-op: the migration does not create it.</summary>
+    [Fact]
+    public void Run_MissingDataDir_IsNoOp()
+    {
+        string missingDataDir = Path.Combine(Path.GetTempPath(), "team-tests", Guid.NewGuid().ToString("N"));
+        IOptions<TeamOptions> options = Options.Create(new TeamOptions { DataDir = missingDataDir });
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(options, logger);
+
+        Assert.False(Directory.Exists(missingDataDir));
+    }
+
+    /// <summary>The migration's source is always the literal <c>Teams/</c> folder, never the configured <c>Team:Teams:Dir</c>.</summary>
+    [Fact]
+    public void Run_TeamsDirOverride_DoesNotChangeSource()
+    {
+        using TempDataDir dataDir = new();
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
+        IOptions<TeamOptions> options = dataDir.Options(opts => opts.Teams = new TeamsOptions { Dir = "CustomTeams" });
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(options, logger);
+
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Agents", "Nova", "Nova.md")));
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "CustomTeams")));
+    }
+
+    /// <summary>Step 4 moves every location the old Tasks layout allowed: Team/file, Team/_closed/file, Team/Project/file and Team/Project/_closed/file.</summary>
+    [Fact]
+    public void Run_Tasks_MoveIntoTasksFolders()
+    {
+        using TempDataDir dataDir = new();
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "PLAT-1.md"), "flat");
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "_closed", "PLAT-2.md"), "closed");
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "Auth", "PLAT-3.md"), "project");
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "Auth", "_closed", "PLAT-4.md"), "project-closed");
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.Equal("flat", File.ReadAllText(Path.Combine(dataDir.Path, "Teams", "Platform", "_tasks", "PLAT-1.md")));
+        Assert.Equal("closed", File.ReadAllText(Path.Combine(dataDir.Path, "Teams", "Platform", "_tasks", "_closed", "PLAT-2.md")));
+        Assert.Equal("project", File.ReadAllText(Path.Combine(dataDir.Path, "Teams", "Platform", "Auth", "_tasks", "PLAT-3.md")));
+        Assert.Equal("project-closed", File.ReadAllText(Path.Combine(dataDir.Path, "Teams", "Platform", "Auth", "_tasks", "_closed", "PLAT-4.md")));
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "Tasks")));
+    }
+
+    /// <summary>Step 4 runs after step 3's cleanup: an organisational Teams/ sub-folder left by step 3 is still removed once empty, and step 4 still creates a fresh Team folder for a Task that names a different Team.</summary>
+    [Fact]
+    public void Run_TasksAfterPersonas_OrgFolderRemovedThenTeamFolderCreated()
+    {
+        using TempDataDir dataDir = new();
+        WriteTeamsFile(dataDir.Path, Path.Combine("Marketing", "Ada.md"), TestPersonas.FrontmatterText("Ada"));
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "PLAT-1.md"), "flat");
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "Teams", "Marketing")));
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Teams", "Platform", "_tasks", "PLAT-1.md")));
+    }
+
+    /// <summary>Files the old rules ignore - a root file, a reserved sub-folder, and one nested too deep - are left in place under Tasks/, which survives rather than being removed, and each is logged.</summary>
+    [Fact]
+    public void Run_TasksNonTaskFiles_LeftAndLogged()
+    {
+        using TempDataDir dataDir = new();
+        WriteTasksFile(dataDir.Path, "x.md", "stray");
+        WriteTasksFile(dataDir.Path, Path.Combine("_drafts", "y.md"), "draft");
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "Auth", "Sub", "PLAT-9.md"), "too-deep");
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Tasks", "x.md")));
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Tasks", "_drafts", "y.md")));
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Tasks", "Platform", "Auth", "Sub", "PLAT-9.md")));
+        Assert.True(Directory.Exists(Path.Combine(dataDir.Path, "Tasks")));
+        Assert.Contains(logger.Entries, entry => entry.Level == LogLevel.Warning);
+    }
+
+    /// <summary>Once every Task file under Tasks/ has moved, the now-empty Tasks/ root itself is removed.</summary>
+    [Fact]
+    public void Run_TasksEmpty_RootRemoved()
+    {
+        using TempDataDir dataDir = new();
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "PLAT-1.md"), "flat");
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "Tasks")));
+    }
+
+    /// <summary>No Tasks/ root at all is a no-op for step 4: no exception, nothing created.</summary>
+    [Fact]
+    public void Run_TasksAbsent_NoOp()
+    {
+        using TempDataDir dataDir = new();
+        WriteTeamsFile(dataDir.Path, "Nova.md", TestPersonas.FrontmatterText("Nova"));
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "Tasks")));
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Agents", "Nova", "Nova.md")));
+    }
+
+    /// <summary>A Task move whose target already exists, and is not byte-identical, throws naming the path - the same throw-on-first-failure rule as steps 1-3.</summary>
+    [Fact]
+    public void Run_TasksTargetExists_Throws()
+    {
+        using TempDataDir dataDir = new();
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "PLAT-1.md"), "new content");
+        string target = Path.Combine(dataDir.Path, "Teams", "Platform", "_tasks", "PLAT-1.md");
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+        File.WriteAllText(target, "different content");
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => AgentLayoutMigration.Run(dataDir.Options(), logger));
+
+        string source = Path.Combine(dataDir.Path, "Tasks", "Platform", "PLAT-1.md");
+        Assert.Equal($"Could not migrate '{source}' to '{target}': the target already exists.", exception.Message);
+    }
+
+    /// <summary>Settled: step 4 is gated by its own source (Tasks/), not by the completion marker - an install that ran a D3-era build already carries the marker but still holds an old Tasks/ root, and that root is still migrated.</summary>
+    [Fact]
+    public void Run_MarkerPresent_OldTasksRootStillMigrated()
+    {
+        using TempDataDir dataDir = new();
+        string markerPath = Path.Combine(dataDir.Path, "Agents", ".layout-migrated");
+        Directory.CreateDirectory(Path.GetDirectoryName(markerPath)!);
+        File.Create(markerPath).Dispose();
+
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "PLAT-1.md"), "flat");
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Teams", "Platform", "_tasks", "PLAT-1.md")));
+    }
+
+    /// <summary>Writes a file under the old <c>{DataDir}/Tasks/</c> layout, creating parent folders as needed.</summary>
+    private static void WriteTasksFile(string dataDir, string relativePath, string text)
+    {
+        string path = Path.Combine(dataDir, "Tasks", relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, text);
+    }
+
+    /// <summary>Writes a file under the old <c>{DataDir}/Teams/</c> layout, creating parent folders as needed.</summary>
+    private static void WriteTeamsFile(string dataDir, string relativePath, string text)
+    {
+        string path = Path.Combine(dataDir, "Teams", relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, text);
+    }
+
+    /// <summary>Writes a file under the old <c>{DataDir}/work/</c> layout, creating parent folders as needed.</summary>
+    private static void WriteWorkFile(string dataDir, string relativePath, string text)
+    {
+        string path = Path.Combine(dataDir, "work", relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, text);
+    }
+}

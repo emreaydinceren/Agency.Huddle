@@ -1,7 +1,7 @@
 namespace Agency.Huddle.App.Acp;
 
 /// <summary>
-/// What <see cref="SystemPromptComposer"/> needs to prime a hired Team member (Task 29, MS-7): who it is,
+/// What <see cref="SystemPromptComposer"/> needs to prime a hired Agent (Task 29, MS-7): who it is,
 /// its role and Team, which colleagues to consult and which skills it holds with their triggers.
 /// </summary>
 /// <param name="Name">The member's Name.</param>

@@ -49,7 +49,7 @@ public sealed class AddWithAiDialogTests : IDisposable
             [
                 "Your AI tool fetches what you point to, writes the Pack or catalog files, checks them and adds the rows.",
                 "Your AI tool looks through the catalogs you already have, suggests up to three Packs for the role and asks you before it fetches anything.",
-                "Your AI tool pulls newer commits for the Sources you pick and updates their files. Huddle then shows Update available where Teammates' copies differ.",
+                "Your AI tool pulls newer commits for the Sources you pick and updates their files. Huddle then shows Update available where Agents' copies differ.",
                 "Your AI tool reads what Huddle reported about a row and repairs the row or the files it points to.",
             ],
             cut.FindAll(".add-with-ai-task-line").Select(static line => line.TextContent.Trim()));

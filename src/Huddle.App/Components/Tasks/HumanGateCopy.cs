@@ -32,12 +32,12 @@ internal static class HumanGateCopy
 
     /// <summary>The explanation of a gated Task that names no Action.</summary>
     public const string ExplanationNoAction =
-        "Teammates draft, check and track: you decide. Accepting marks it Done; nothing is sent or published. Done also needs the team's Proof to be complete.";
+        "Agents draft, check and track: you decide. Accepting marks it Done; nothing is sent or published. Done also needs the team's Proof to be complete.";
 
     /// <summary>The helper line under the switch.</summary>
     /// <param name="assignee">The assignee's name, or <see cref="UnassignedAssignee"/>.</param>
     public static string Helper(string assignee) =>
-        $"{assignee} can move it to Needs you once every line has Proof. Teammates can't mark it Done.";
+        $"{assignee} can move it to Needs you once every line has Proof. Agents can't mark it Done.";
 
     /// <summary>The decision card chip (row 14).</summary>
     public const string DecisionChip = "Your decision";
@@ -162,7 +162,7 @@ internal static class HumanGateCopy
     /// <param name="assignee">The assignee's name, or <see cref="UnassignedAssignee"/>.</param>
     /// <param name="action">The Action text.</param>
     public static string Explanation(string assignee, string action) =>
-        $"Teammates draft, check and track: you decide. Accepting lets {assignee} {action}. Done also needs the team's Proof to be complete.";
+        $"Agents draft, check and track: you decide. Accepting lets {assignee} {action}. Done also needs the team's Proof to be complete.";
 
     // --- Needs You on screen (P12, UI copy rows 35-38) ---
 

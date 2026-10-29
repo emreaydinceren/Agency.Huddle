@@ -66,9 +66,9 @@ public sealed class ProcessStepTests
         Register(ctx, dir, out _);
         IRenderedComponent<ContainerFragment> cut = RenderStep(ctx);
 
-        IReadOnlyList<IElement> options = await TeammateCardTestSupport.OpenSelectAndListOptionsAsync(cut, "Process");
+        IReadOnlyList<IElement> options = await AgentProfileCardTestSupport.OpenSelectAndListOptionsAsync(cut, "Process");
         Assert.Equal(["flow", "other"], options.Select(static item => item.TextContent.Trim()).Order(StringComparer.Ordinal).ToList());
-        await TeammateCardTestSupport.ClickSelectItemAsync(cut, "other");
+        await AgentProfileCardTestSupport.ClickSelectItemAsync(cut, "other");
         cut.WaitForAssertion(() => Assert.Equal(OtherText, cut.Find(".process-step-preview").TextContent));
         await cut.InvokeAsync(() => cut.Find("button.process-step-use").ClickAsync());
 

@@ -47,13 +47,13 @@ internal static class PersonaFrontmatter
     /// under that bullet is noise. <c>Title</c>, <c>Alias</c> and <c>Teams</c> stay: they are useful
     /// to a reading agent, and <c>Alias</c> in particular tells one that <c>@jar</c> is a working
     /// handle. <c>Adapter</c> is excluded too (Spec §7.2, §12 E-6): <c>mcp__team__list_agents</c>
-    /// describes a Teammate to other Agents, and which Adapter runs it is not something any Agent
-    /// can act on — without this exclusion, every Teammate's job description would gain a line
+    /// describes an Agent to other Agents, and which Adapter runs it is not something any Agent
+    /// can act on — without this exclusion, every Agent's job description would gain a line
     /// reading "Adapter: agency", model-facing text about Huddle's own plumbing. <c>Skills</c> is
-    /// excluded for the same reason (Spec §6.3, §7.2): which Skill files a Teammate loads is
+    /// excluded for the same reason (Spec §6.3, §7.2): which Skill files an Agent loads is
     /// plumbing about how it reads its own know-how, not something another Agent reading
     /// <c>list_agents</c> can act on. <c>Watches</c> is excluded for the same reason again
-    /// (FC §6.2): which folders a Teammate subscribes to is plumbing about its own File Changes
+    /// (FC §6.2): which folders an Agent subscribes to is plumbing about its own File Changes
     /// list, not something another Agent reading <c>list_agents</c> can act on. <c>_builtin</c>
     /// needs no entry here at all — it is already caught by the generic <c>_</c>-prefix rule
     /// above, since every reserved programmatic field starts with an underscore.
@@ -216,7 +216,7 @@ internal static class PersonaFrontmatter
         if (identity.Watches is { Count: > 0 })
         {
             // Unlike Teams and Skills, FC §6.2's sample shows watches: [Nova, Shared/pricing]
-            // unquoted: an entry is a folder path or Teammate Name, never free text that could
+            // unquoted: an entry is a folder path or Agent Name, never free text that could
             // need YAML escaping, so this is written raw rather than through QuoteScalar.
             lines.Add($"watches: [{string.Join(", ", identity.Watches)}]");
         }
@@ -270,7 +270,7 @@ internal static class PersonaFrontmatter
     /// Not built on <see cref="Compose"/> or <see cref="Parse"/>. <see cref="Compose"/> emits only
     /// the four identity keys, so recomposing a real Persona file through it would drop every
     /// other frontmatter field - exactly the fields <see cref="ComposeJobDescription"/> reads for
-    /// a Teammate's job description. <see cref="Parse"/> is not round-trip safe either, since it
+    /// an Agent's job description. <see cref="Parse"/> is not round-trip safe either, since it
     /// collapses a block scalar's line breaks to spaces and joins a list's items with <c>"; "</c>.
     /// A multi-line value cannot be replaced by a one-line edit, so this method leaves a block
     /// scalar or block list untouched and returns the input unchanged instead of flattening it -

@@ -589,7 +589,7 @@ public sealed class ThemeCatalogTests
     /// rule's own comment, which warns against "improving" it back to an accent colour - so the
     /// <c>TextPrimary</c> pairs above already cover its legibility, at 4.5:1, stricter than the
     /// 3.0:1 WCAG 1.4.11 would require for a non-text indicator. <c>LinesDefault</c> has exactly one
-    /// consumer in this codebase, <c>.teammate-tile:hover</c>'s border, a decorative hover cue that
+    /// consumer in this codebase, <c>.agent-tile:hover</c>'s border, a decorative hover cue that
     /// is co-indicated by a background change in the same rule - not a WCAG non-text-contrast
     /// requirement - so it is not held to a floor here.
     /// </summary>

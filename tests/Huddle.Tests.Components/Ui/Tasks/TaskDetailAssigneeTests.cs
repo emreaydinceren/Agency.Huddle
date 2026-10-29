@@ -32,7 +32,7 @@ public sealed class TaskDetailAssigneeTests
 
     /// <summary>
     /// Settled (R7 addendum, J46, assigned to 14.2 explicitly): an Assignee option's <c>ItemTemplate</c>
-    /// renders a <c>TeammateAvatar</c> nested inside a presence <c>MudBadge</c> whose <c>BadgeAriaLabel</c>
+    /// renders a <c>AgentAvatar</c> nested inside a presence <c>MudBadge</c> whose <c>BadgeAriaLabel</c>
     /// states the presence in words - the exact <c>TaskCard.razor</c> wording, "{Name} is {Presence}" - and
     /// the option's own Name text exactly. Renders the template directly from a real
     /// <see cref="AssigneeOption"/> returned by the autocomplete's own <c>SearchFunc</c> (never
@@ -40,7 +40,7 @@ public sealed class TaskDetailAssigneeTests
     /// popover open from a plain text change.
     /// </summary>
     [Fact]
-    public async Task Assignee_OptionTemplate_ShowsTeammateAvatarInPresenceBadge_AndExactName()
+    public async Task Assignee_OptionTemplate_ShowsAgentAvatarInPresenceBadge_AndExactName()
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         harness.Gateway.SetOnline(harness.NovaId ?? throw new InvalidOperationException("NovaId missing"));
@@ -63,7 +63,7 @@ public sealed class TaskDetailAssigneeTests
         var itemCut = ctx.Render(itemTemplate!(nova));
 
         IRenderedComponent<MudBadge> badge = itemCut.FindComponent<MudBadge>();
-        IRenderedComponent<TeammateAvatar> avatar = badge.FindComponent<TeammateAvatar>();
+        IRenderedComponent<AgentAvatar> avatar = badge.FindComponent<AgentAvatar>();
         Assert.Equal("Nova", avatar.Instance.Name);
         Assert.Equal("Nova is Asleep", badge.Instance.BadgeAriaLabel);
         Assert.Equal("Nova", TextOf(itemCut, ".task-assignee-name"));
@@ -158,7 +158,7 @@ public sealed class TaskDetailAssigneeTests
         var itemCut = ctx.Render(itemTemplate!(human));
 
         Assert.Empty(itemCut.FindComponents<MudBadge>());
-        Assert.Equal(humanName, itemCut.FindComponent<TeammateAvatar>().Instance.Name);
+        Assert.Equal(humanName, itemCut.FindComponent<AgentAvatar>().Instance.Name);
         Assert.Equal(humanName, TextOf(itemCut, ".task-assignee-name"));
     }
 

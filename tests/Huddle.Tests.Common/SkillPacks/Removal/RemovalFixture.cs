@@ -8,7 +8,7 @@ using Agency.Huddle.Tests.SkillPacks.RegistryService;
 namespace Agency.Huddle.Tests.SkillPacks.Removal;
 
 /// <summary>A registry for the remove and hide flows (Skill Packs spec §6.12): a Source, Packs inside and outside the folder,
-/// a catalog, Teammates that hold a Pack, and helpers to read the files back.</summary>
+/// a catalog, Agents that hold a Pack, and helpers to read the files back.</summary>
 internal sealed class RemovalFixture : IDisposable
 {
     /// <summary>The registry and its files.</summary>
@@ -39,10 +39,10 @@ internal sealed class RemovalFixture : IDisposable
     /// <summary>The Pack with this id.</summary>
     public PackEntry Pack(string id) => this.Host.Registry.FindPack(id) ?? throw new InvalidOperationException($"No Pack {id}.");
 
-    /// <summary>Adds a Teammate that carries <paramref name="own"/> and has the Pack added by the card's own rule, then re-reads.</summary>
+    /// <summary>Adds an Agent that carries <paramref name="own"/> and has the Pack added by the card's own rule, then re-reads.</summary>
     public async Task<string> HolderAsync(string name, string packId, params string[] own)
     {
-        this.Host.Teammate(name, own, []);
+        this.Host.Agent(name, own, []);
         Persona persona = this.Host.Personas.Get(name) ?? throw new InvalidOperationException(name);
         string text = PackMembership.Add(persona.Text, PackContents.From(this.Pack(packId)));
         this.Host.Personas.Update(name, text, persona.Model, persona.Effort, persona.WorkMode);
@@ -50,7 +50,7 @@ internal sealed class RemovalFixture : IDisposable
         return text;
     }
 
-    /// <summary>A Teammate's file text now.</summary>
+    /// <summary>An Agent's file text now.</summary>
     public string TextOf(string name) => this.Host.Personas.Get(name)?.Text ?? throw new InvalidOperationException(name);
 
     /// <summary>The frontmatter line that starts with <paramref name="key"/>, or null.</summary>

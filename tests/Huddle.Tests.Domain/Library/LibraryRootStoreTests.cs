@@ -8,7 +8,7 @@ using Agency.Huddle.Tests.Elicitation;
 namespace Agency.Huddle.Tests.Library;
 
 /// <summary>
-/// Tests for <see cref="LibraryRootStore"/>: the Teams/Teammates built-ins plus configured or
+/// Tests for <see cref="LibraryRootStore"/>: the Teams/Agents built-ins plus configured or
 /// saved pinned roots (Spec §6.10), slug generation, hide/show of a built-in, and the
 /// <c>ViewStore</c>-style malformed-file behaviour (corrections-B3 4.1.t item 1): a broken
 /// <c>library-roots.json</c> keeps the configured roots, sets a load error, and refuses writes.
@@ -17,10 +17,10 @@ public sealed class LibraryRootStoreTests
 {
     /// <summary>With no configuration and no saved file, the two built-in roots come first, in order.</summary>
     [Fact]
-    public void Roots_Default_AreTeamsThenTeammates()
+    public void Roots_Default_AreTeamsThenAgents()
     {
         using var dataDir = new TempDataDir();
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var store = new LibraryRootStore(dataDir.Options(), paths, NullLogger<LibraryRootStore>.Instance);
 
         Assert.Equal("teams", store.Roots[0].Id);
@@ -28,10 +28,10 @@ public sealed class LibraryRootStoreTests
         Assert.Equal(Path.Combine(dataDir.Path, "Teams"), store.Roots[0].FullPath);
         Assert.Equal("Teams", store.Roots[0].DisplayName);
 
-        Assert.Equal("teammates", store.Roots[1].Id);
-        Assert.Equal(LibraryRootKind.Teammates, store.Roots[1].Kind);
-        Assert.Equal(Path.Combine(dataDir.Path, "Teammates"), store.Roots[1].FullPath);
-        Assert.Equal("Teammates", store.Roots[1].DisplayName);
+        Assert.Equal("agents", store.Roots[1].Id);
+        Assert.Equal(LibraryRootKind.Agents, store.Roots[1].Kind);
+        Assert.Equal(Path.Combine(dataDir.Path, "Agents"), store.Roots[1].FullPath);
+        Assert.Equal("Agents", store.Roots[1].DisplayName);
     }
 
     /// <summary>The trust warning every pinning surface shows is one constant with the Spec's settled text (UX-R15).</summary>
@@ -46,7 +46,7 @@ public sealed class LibraryRootStoreTests
     public void TryPin_MissingFolder_ReturnsTheErrorAndSavesNothing()
     {
         using var dataDir = new TempDataDir();
-        var store = new LibraryRootStore(dataDir.Options(), new TeammatePaths(dataDir.Options()), NullLogger<LibraryRootStore>.Instance);
+        var store = new LibraryRootStore(dataDir.Options(), new AgentPaths(dataDir.Options()), NullLogger<LibraryRootStore>.Instance);
 
         string? error = store.TryPin("Docs", Path.Combine(dataDir.Path, "Nope"));
 
@@ -60,7 +60,7 @@ public sealed class LibraryRootStoreTests
     public void TryPin_ExistingFolder_PinsItAfterTheOthers()
     {
         using var dataDir = new TempDataDir();
-        var store = new LibraryRootStore(dataDir.Options(), new TeammatePaths(dataDir.Options()), NullLogger<LibraryRootStore>.Instance);
+        var store = new LibraryRootStore(dataDir.Options(), new AgentPaths(dataDir.Options()), NullLogger<LibraryRootStore>.Instance);
         string first = Path.Combine(dataDir.Path, "First");
         string second = Path.Combine(dataDir.Path, "Second");
         Directory.CreateDirectory(first);
@@ -82,7 +82,7 @@ public sealed class LibraryRootStoreTests
         using var dataDir = new TempDataDir();
         var docsPath = Path.Combine(dataDir.Path, "Docs");
         Directory.CreateDirectory(docsPath);
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Huddle docs", Path = docsPath }] });
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
@@ -99,7 +99,7 @@ public sealed class LibraryRootStoreTests
     {
         using var dataDir = new TempDataDir();
         Directory.CreateDirectory(Path.Combine(dataDir.Path, "Docs"));
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Docs", Path = "Docs" }] });
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
@@ -114,7 +114,7 @@ public sealed class LibraryRootStoreTests
         using var dataDir = new TempDataDir();
         var docsPath = Path.Combine(dataDir.Path, "Docs");
         Directory.CreateDirectory(docsPath);
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Docs", Path = docsPath + Path.DirectorySeparatorChar }] });
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
@@ -127,7 +127,7 @@ public sealed class LibraryRootStoreTests
     public void Roots_BlankPinnedPath_SkippedAndLogged()
     {
         using var dataDir = new TempDataDir();
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Blank", Path = "   " }] });
         var logger = new RecordingLogger<LibraryRootStore>();
 
@@ -143,7 +143,7 @@ public sealed class LibraryRootStoreTests
     {
         using var dataDir = new TempDataDir();
         var missingPath = Path.Combine(dataDir.Path, "Gone");
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Gone", Path = missingPath }] });
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
@@ -164,7 +164,7 @@ public sealed class LibraryRootStoreTests
         Assert.Equal(expected, LibraryRootStore.Slug(name, []));
     }
 
-    /// <summary>"teams" and "teammates" are always taken inside Slug, so a name that slugs to either gets a numeric suffix, and a repeat of the same name keeps incrementing (corrections-B3 item 6).</summary>
+    /// <summary>"teams" and "agents" are always taken inside Slug, so a name that slugs to either gets a numeric suffix, and a repeat of the same name keeps incrementing (corrections-B3 item 6).</summary>
     [Fact]
     public void Slug_ReservedName_CollisionsIncrementSuffix()
     {
@@ -195,7 +195,7 @@ public sealed class LibraryRootStoreTests
     public void Save_CreatesFileAndReplacesConfigured()
     {
         using var dataDir = new TempDataDir();
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Old", Path = dataDir.Path }] });
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
 
@@ -212,7 +212,7 @@ public sealed class LibraryRootStoreTests
     public void NoFile_NoWrite()
     {
         using var dataDir = new TempDataDir();
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var store = new LibraryRootStore(dataDir.Options(), paths, NullLogger<LibraryRootStore>.Instance);
 
         _ = store.Roots;
@@ -225,7 +225,7 @@ public sealed class LibraryRootStoreTests
     public void Reset_DeletesFile_RestoresConfigured()
     {
         using var dataDir = new TempDataDir();
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Configured", Path = dataDir.Path }] });
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
         store.Save([new PinnedRootEntry("Saved", dataDir.Path)]);
@@ -236,12 +236,12 @@ public sealed class LibraryRootStoreTests
         Assert.Contains(store.Roots, r => r.DisplayName == "Configured");
     }
 
-    /// <summary>The Uploads root is a built-in after Teams and Teammates, kind Uploads, at the configured folder under DataDir, and the folder is not created.</summary>
+    /// <summary>The Uploads root is a built-in after Teams and Agents, kind Uploads, at the configured folder under DataDir, and the folder is not created.</summary>
     [Fact]
-    public void Roots_Default_IncludeUploadsAfterTeammates()
+    public void Roots_Default_IncludeUploadsAfterAgents()
     {
         using var dataDir = new TempDataDir();
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var store = new LibraryRootStore(dataDir.Options(), paths, NullLogger<LibraryRootStore>.Instance);
 
         LibraryRoot uploads = store.Roots[2];
@@ -258,7 +258,7 @@ public sealed class LibraryRootStoreTests
     public void Roots_ConfiguredUploadsDir_MovesTheRoot()
     {
         using var dataDir = new TempDataDir();
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Uploads = new LibraryUploadsOptions { Dir = "Attachments" } });
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
@@ -278,7 +278,7 @@ public sealed class LibraryRootStoreTests
     public void SetHidden_Uploads_HidesTheRoot()
     {
         using var dataDir = new TempDataDir();
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var store = new LibraryRootStore(dataDir.Options(), paths, NullLogger<LibraryRootStore>.Instance);
 
         store.SetHidden("uploads", true);
@@ -292,7 +292,7 @@ public sealed class LibraryRootStoreTests
     public void Reset_ClearsHiddenToo()
     {
         using var dataDir = new TempDataDir();
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var store = new LibraryRootStore(dataDir.Options(), paths, NullLogger<LibraryRootStore>.Instance);
         store.SetHidden("teams", true);
 
@@ -306,7 +306,7 @@ public sealed class LibraryRootStoreTests
     public void HiddenBuiltIn_IsOmittedFromVisibleRoots_ButStillResolvable()
     {
         using var dataDir = new TempDataDir();
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var store = new LibraryRootStore(dataDir.Options(), paths, NullLogger<LibraryRootStore>.Instance);
 
         store.SetHidden("teams", true);
@@ -320,7 +320,7 @@ public sealed class LibraryRootStoreTests
     public void SetHidden_NoFile_WritesOnlyHidden_PinnedStillFromConfiguration()
     {
         using var dataDir = new TempDataDir();
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Docs", Path = dataDir.Path }] });
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
 
@@ -339,12 +339,12 @@ public sealed class LibraryRootStoreTests
         Assert.DoesNotContain(reloaded.VisibleRoots, r => r.Id == "teams");
     }
 
-    /// <summary>Hiding a pinned (non-built-in) root's id is rejected: only "teams" and "teammates" can be hidden (corrections-B3 item 8).</summary>
+    /// <summary>Hiding a pinned (non-built-in) root's id is rejected: only "teams" and "agents" can be hidden (corrections-B3 item 8).</summary>
     [Fact]
     public void SetHidden_PinnedId_ThrowsArgumentException()
     {
         using var dataDir = new TempDataDir();
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Docs", Path = dataDir.Path }] });
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
         var pinnedId = Assert.Single(store.Roots, r => r.Kind == LibraryRootKind.Pinned).Id;
@@ -357,7 +357,7 @@ public sealed class LibraryRootStoreTests
     public void Save_RaisesRootsChangedOnce()
     {
         using var dataDir = new TempDataDir();
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var store = new LibraryRootStore(dataDir.Options(), paths, NullLogger<LibraryRootStore>.Instance);
         var raised = 0;
         store.RootsChanged += () => raised++;
@@ -373,7 +373,7 @@ public sealed class LibraryRootStoreTests
     {
         using var dataDir = new TempDataDir();
         File.WriteAllText(Path.Combine(dataDir.Path, "library-roots.json"), "{ this is not valid json");
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var options = dataDir.Options(opts => opts.Library = new LibraryOptions { Roots = [new PinnedRootOption { Name = "Docs", Path = dataDir.Path }] });
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
@@ -388,7 +388,7 @@ public sealed class LibraryRootStoreTests
     {
         using var dataDir = new TempDataDir();
         File.WriteAllText(Path.Combine(dataDir.Path, "library-roots.json"), "{ this is not valid json");
-        var paths = new TeammatePaths(dataDir.Options());
+        var paths = new AgentPaths(dataDir.Options());
         var store = new LibraryRootStore(dataDir.Options(), paths, NullLogger<LibraryRootStore>.Instance);
 
         Assert.Throws<InvalidOperationException>(() => store.Save([new PinnedRootEntry("New", dataDir.Path)]));

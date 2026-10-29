@@ -16,7 +16,7 @@ namespace Agency.Huddle.Tests.Ui;
 /// <see cref="AvatarEditor.SaveMode"/> decides whether each change is written to the <see cref="AvatarStore"/> under
 /// <see cref="AvatarEditor.Name"/> (Immediate, what Settings uses) or only reported through
 /// <see cref="AvatarEditor.ValueChanged"/> and <see cref="AvatarEditor.PendingImageChanged"/> (Buffered, what the
-/// Teammate card will use).
+/// Agent card will use).
 /// </summary>
 public sealed class AvatarEditorTests
 {
@@ -85,7 +85,7 @@ public sealed class AvatarEditorTests
     private static Task RefreshParentAsync(IRenderedComponent<ContainerFragment> cut) =>
         cut.InvokeAsync(cut.FindComponent<Host>().Instance.Refresh);
 
-    /// <summary>Clicks the radio whose own text is <paramref name="choiceLabel"/>, on its inner input as the Teammate card tests do.</summary>
+    /// <summary>Clicks the radio whose own text is <paramref name="choiceLabel"/>, on its inner input as the Agent card tests do.</summary>
     private static Task SelectChoiceAsync(IRenderedComponent<ContainerFragment> cut, string choiceLabel) =>
         cut.InvokeAsync(() =>
         {

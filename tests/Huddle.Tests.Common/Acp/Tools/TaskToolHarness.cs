@@ -205,7 +205,7 @@ internal sealed class TaskToolHarness : IDisposable
     /// <summary>The shell's Tabs, which hold the breadcrumb trail the Tasks page sets.</summary>
     public Agency.Huddle.App.Tabs.TabService Tabs { get; } = new();
 
-    /// <summary>The chosen avatar per Teammate, over <see cref="TempDataDir"/>'s <c>avatars.json</c>.</summary>
+    /// <summary>The chosen avatar per Agent, over <see cref="TempDataDir"/>'s <c>avatars.json</c>.</summary>
     public AvatarStore Avatars { get; }
 
     /// <summary>The Ui fake in place of a real, pipe-connected <see cref="IAgentGateway"/>.</summary>

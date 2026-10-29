@@ -12,7 +12,7 @@ saves. Huddle does not check any entry against the file. The full design is in
 
 ## The problem
 
-Several Teammates work on one document: Miriam writes it, Mira edits it, Ruth checks its citations and Quinn
+Several Agents work on one document: Miriam writes it, Mira edits it, Ruth checks its citations and Quinn
 objects to a finding. The Human opening it wants to know who did what, and when, without reading a chat transcript.
 
 Huddle cannot see this reliably by itself. Agents are not sandboxed and write files through `Write`, `Edit` or
@@ -59,5 +59,5 @@ minute. And "Ruth fact-checked this" or "Quinn objects" changes no byte at all, 
 - **The bet is measured before it is built.** A paid probe drives a real Adapter through seven scenarios, five runs
   each, and must reach its pass rates before `log_change` is implemented (the spec's §10, *Live tests*).
 - **The byline and the History panel read only the history.** Neither looks at the file.
-- **Deferred:** telling the Human how many Teammates have been notified of an edit, letting Agents read the history,
+- **Deferred:** telling the Human how many Agents have been notified of an edit, letting Agents read the history,
   and rejoining history after a rename outside Huddle.

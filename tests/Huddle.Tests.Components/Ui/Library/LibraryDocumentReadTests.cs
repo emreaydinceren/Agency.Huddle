@@ -298,12 +298,12 @@ public sealed class LibraryDocumentReadTests : IDisposable
             cut.Find(".library-document-banner").TextContent.Trim()));
     }
 
-    /// <summary>[12.2a] A Teammate's definition file opens with the settled banner naming it (Spec §6.12).</summary>
+    /// <summary>[12.2a] An Agent's definition file opens with the settled banner naming it (Spec §6.12).</summary>
     [Fact]
     public async Task Definition_ShowsBanner()
     {
-        this.fixture.LibraryFixture.CreateTeammate("ada", "Ada", "ada");
-        LibraryPath path = this.fixture.LibraryFixture.ResolveTeammates("ada");
+        this.fixture.LibraryFixture.CreateAgent("ada", "Ada", "ada");
+        LibraryPath path = this.fixture.LibraryFixture.ResolveAgents("ada");
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
@@ -317,8 +317,8 @@ public sealed class LibraryDocumentReadTests : IDisposable
     [Fact]
     public async Task Banners_AreDenseStatusAlerts()
     {
-        this.fixture.LibraryFixture.CreateTeammate("ada", "Ada", "ada");
-        LibraryPath path = this.fixture.LibraryFixture.ResolveTeammates("ada");
+        this.fixture.LibraryFixture.CreateAgent("ada", "Ada", "ada");
+        LibraryPath path = this.fixture.LibraryFixture.ResolveAgents("ada");
         using DocFixture smallLimitFixture = DocFixture.Build(options => options.Library.MaxEditableBytes = 16);
         string root = smallLimitFixture.LibraryFixture.CreatePinnedRoot("Notes");
         File.WriteAllText(Path.Combine(root, "big.md"), new string('x', 1024));
@@ -587,7 +587,7 @@ public sealed class LibraryDocumentReadTests : IDisposable
         /// <summary>The real Library stack (resolver, root store, file service) over this fixture's temp <c>DataDir</c>.</summary>
         public LibraryFileServiceFixture LibraryFixture { get; }
 
-        /// <summary>Builds a fixture with the standard Teams/Teammates layout, optionally customising <see cref="Agency.Huddle.App.TeamOptions"/> first.</summary>
+        /// <summary>Builds a fixture with the standard Teams/Agents layout, optionally customising <see cref="Agency.Huddle.App.TeamOptions"/> first.</summary>
         /// <param name="configure">An optional callback to customise the bound <see cref="Agency.Huddle.App.TeamOptions"/> before use.</param>
         public static DocFixture Build(Action<Agency.Huddle.App.TeamOptions>? configure = null) => new(LibraryFileServiceFixture.Build(configure));
 

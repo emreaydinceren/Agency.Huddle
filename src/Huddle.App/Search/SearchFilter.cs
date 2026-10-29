@@ -9,8 +9,8 @@ public enum SearchFilter
     /// <summary>Teams only.</summary>
     Teams,
 
-    /// <summary>Teammates only.</summary>
-    Teammates,
+    /// <summary>Agents only.</summary>
+    Agents,
 
     /// <summary>Library files and folders only.</summary>
     Library,

@@ -9,7 +9,7 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 ## Setup
 
 1. Run [`P-BUILD`](common.md#p-build), then [`P-LAUNCH-FREE`](common.md#p-launch-free) in `T-A` and wait for `Now listening on: http://localhost:5100`. No Adapter is needed.
-2. Make the data the tests search for, once, before GLOBALSEARCH-01: one Team named `Marketing`; one Teammate named `Nova` in that Team; one Library file under the Teams root whose text contains the word `login` (for example `Teams/Marketing/plan.md`); one Task whose title contains `login`; one Room `findings` with a Message that contains `login`; one archived Room and one closed Task that also contain `login`. Record the Message's Room URL for GLOBALSEARCH-05.
+2. Make the data the tests search for, once, before GLOBALSEARCH-01: one Team named `Marketing`; one Agent named `Nova` in that Team; one Library file under the Teams root whose text contains the word `login` (for example `Teams/Marketing/plan.md`); one Task whose title contains `login`; one Room `findings` with a Message that contains `login`; one archived Room and one closed Task that also contain `login`. Record the Message's Room URL for GLOBALSEARCH-05.
 3. Use the browser you will test in, at its normal zoom unless a test says otherwise. Never test through a private window.
 4. A Library root that is pinned in the tree is needed for GLOBALSEARCH-03 and GLOBALSEARCH-07. Pin a folder with many files for GLOBALSEARCH-03 only.
 
@@ -198,7 +198,7 @@ If the Room has no Message above the fold, scroll so it is, and record the scrol
 
 **Pass if — all of these**
 
-- The headings appear in this order: Teams, Teammates, Library, Tasks, Closed Tasks, Rooms, Archived Rooms, with empty groups not drawn in All.
+- The headings appear in this order: Teams, Agents, Library, Tasks, Closed Tasks, Rooms, Archived Rooms, with empty groups not drawn in All.
 - The Closed Tasks and Archived Rooms cards are dimmed, and their group headings say so in words (the state does not rest on colour alone).
 - In the Tasks filter, the closed Task appears under Closed Tasks. In the Rooms filter, the archived Room appears under Archived Rooms.
 
@@ -259,7 +259,7 @@ If the locked folder cannot be made, record that the test is not performed; do n
 
 **Pass if — all of these**
 
-- Every chip is reachable and `Alt+1` to `Alt+6` pick All, Teams, Teammates, Library, Tasks and Rooms.
+- Every chip is reachable and `Alt+1` to `Alt+6` pick All, Teams, Agents, Library, Tasks and Rooms.
 - `Up` and `Down` skip the headings and reach every card.
 - The screen reader announces the highlighted card's name and kind, and then the result count (`<n> results` or `1 result`).
 

@@ -3,7 +3,7 @@ using Agency.Huddle.Seeder.Model;
 namespace Agency.Huddle.Seeder.Scenarios;
 
 /// <summary>
-/// A small software company: three working Teams (Platform, Growth, Support) with shared Teammates, plus two
+/// A small software company: three working Teams (Platform, Growth, Support) with shared Agents, plus two
 /// edge-case Teams (Sandbox with nobody in it, Archive with people but no Projects).
 /// </summary>
 internal sealed class SoftwareCoScenario : IScenario
@@ -141,15 +141,15 @@ internal sealed class SoftwareCoScenario : IScenario
     public string Name => "software-co";
 
     /// <inheritdoc/>
-    public string Description => "A software company: Platform, Growth and Support (7 Projects, shared Teammates, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Archive.";
+    public string Description => "A software company: Platform, Growth and Support (7 Projects, shared Agents, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Archive.";
 
     /// <inheritdoc/>
     public SeedPlan Build(DateOnly today) => new()
     {
         Scenario = this.Name,
         HumanName = "You",
-        Teammates = SoftwareCoTeammates.All,
-        Skills = SoftwareCoTeammates.Skills,
+        Agents = SoftwareCoAgents.All,
+        Skills = SoftwareCoAgents.Skills,
         Teams = SoftwareCoLibrary.Teams,
         Tasks = SoftwareCoTasks.All,
         Files = SoftwareCoLibrary.Files,

@@ -14,7 +14,7 @@ namespace Agency.Huddle.Tests.Tasks;
 /// <c>Team:Teams:Dir</c> (Library Task G1.2): <see cref="TaskStore.RootDirectory"/> now resolves
 /// under <see cref="TeamsOptions.Dir"/>, the old key is rejected at startup like the
 /// <c>Acp:PersonaDir</c> and <c>Acp:TeamsDir</c> guards, and the constructor's overlap check
-/// reports <see cref="Agency.Huddle.App.Library.LayoutGuard.ValidateTeamsAndTeammates"/>'s message.
+/// reports <see cref="Agency.Huddle.App.Library.LayoutGuard.ValidateTeamsAndAgents"/>'s message.
 /// </summary>
 public sealed class TasksRootTests
 {
@@ -71,25 +71,25 @@ public sealed class TasksRootTests
     }
 
     /// <summary>
-    /// The constructor's overlap guard reports <see cref="Agency.Huddle.App.Library.LayoutGuard.ValidateTeamsAndTeammates"/>'s
-    /// message, not the retired <c>Team:Tasks:Dir</c> wording, when <c>Team:Teams:Dir</c> nests inside <c>Team:Acp:TeammatesDir</c>.
+    /// The constructor's overlap guard reports <see cref="Agency.Huddle.App.Library.LayoutGuard.ValidateTeamsAndAgents"/>'s
+    /// message, not the retired <c>Team:Tasks:Dir</c> wording, when <c>Team:Teams:Dir</c> nests inside <c>Team:Acp:AgentsDir</c>.
     /// </summary>
     [Fact]
-    public void Constructor_TeamsInsideTeammates_ThrowsLayoutGuardMessage()
+    public void Constructor_TeamsInsideAgents_ThrowsLayoutGuardMessage()
     {
         using TempDataDir dir = new();
         IOptions<TeamOptions> options = dir.Options();
-        options.Value.Acp.TeammatesDir = Path.Combine(options.Value.Teams.Dir, "Sub");
+        options.Value.Acp.AgentsDir = Path.Combine(options.Value.Teams.Dir, "Sub");
         using PersonaStore personas = dir.CreatePersonaStore();
 
         string expectedTeamsRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Teams.Dir));
-        string expectedTeammatesRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Acp.TeammatesDir));
+        string expectedAgentsRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Acp.AgentsDir));
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
             () => new TaskStore(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance));
 
         Assert.Equal(
-            $"'Team:Teams:Dir' ({expectedTeamsRoot}) and 'Team:Acp:TeammatesDir' ({expectedTeammatesRoot}) must not overlap.",
+            $"'Team:Teams:Dir' ({expectedTeamsRoot}) and 'Team:Acp:AgentsDir' ({expectedAgentsRoot}) must not overlap.",
             exception.Message);
     }
 }

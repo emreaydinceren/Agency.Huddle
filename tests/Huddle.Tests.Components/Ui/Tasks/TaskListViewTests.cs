@@ -210,17 +210,17 @@ public sealed class TaskListViewTests : IDisposable
         Assert.NotNull(assignee.QuerySelector(".mud-avatar"));
     }
 
-    /// <summary>A Teammate assignee's avatar opens their profile; the Human's (any name with no Persona behind it) stays a plain avatar.</summary>
+    /// <summary>An Agent assignee's avatar opens their profile; the Human's (any name with no Persona behind it) stays a plain avatar.</summary>
     [Fact]
-    public async Task Assignee_ProfileButtonOnlyForATeammate()
+    public async Task Assignee_ProfileButtonOnlyForAAgent()
     {
         _ = this.personas.Add(new Agency.Huddle.App.Acp.PersonaIdentity("Nova", "Nova", "nova", []), "You are Nova.");
-        TaskItem teammate = TestTasks.Make(id: "PLAT-0001", title: "T", assignee: "Nova");
+        TaskItem agent = TestTasks.Make(id: "PLAT-0001", title: "T", assignee: "Nova");
         TaskItem human = TestTasks.Make(id: "PLAT-0002", title: "U", assignee: "You");
         TaskView view = MakeView(fields: ["assignee"]);
 
         await using MudBunitContext ctx = new();
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, view, [teammate, human]);
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, view, [agent, human]);
 
         IElement button = Assert.Single(cut.FindAll(".task-assignee button.profile-avatar-button"));
         Assert.Equal("Show Nova's profile", button.GetAttribute("aria-label"));

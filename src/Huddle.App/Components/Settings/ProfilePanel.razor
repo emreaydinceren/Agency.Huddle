@@ -1,13 +1,13 @@
 @*
     The Settings page's Profile tab: who the Human is. A live ProfileCard shows the Human the way
-    Teammates and the avatar popover see them, and the fields under it edit the Name, Alias, Title
+    Agents and the avatar popover see them, and the fields under it edit the Name, Alias, Title
     and Description stored in profile.json (HumanProfileStore).
 
     The avatar on the card is a "Change avatar" button that opens AvatarEditorDialog, the same editor
-    a Teammate card opens. The dialog is not deferred: its Save writes avatars.json at once under the
+    an Agent card opens. The dialog is not deferred: its Save writes avatars.json at once under the
     Human's current Name, because an avatar has nothing to validate. The fields, by contrast, wait for
-    this tab's Save, which validates them first (HumanProfileValidator) - a Name or Alias that a
-    Teammate already uses is refused, because a Mention must never resolve to two Members.
+    this tab's Save, which validates them first (HumanProfileValidator) - a Name or Alias that an
+    Agent already uses is refused, because a Mention must never resolve to two Members.
 
     Saving a new Name raises HumanRenamed, and HumanRenameCascade moves the Avatar entry, Task
     assignees, View filters and the directory row before ProfileChanged repaints anything. Messages
@@ -29,7 +29,7 @@
 @if (!this.Profiles.IsSaved)
 {
     <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="mb-3 profile-welcome">
-        Welcome. Start by telling your Teammates who you are: your Name, an optional Alias they can
+        Welcome. Start by telling your Agents who you are: your Name, an optional Alias they can
         @@mention you by, and your title. Click the avatar to give yourself a face.
     </MudAlert>
 }
@@ -84,12 +84,12 @@
     private IReadOnlyList<string> problems = [];
 
     /// <summary>The card as it will look once saved: the fields as typed, with the stored avatar.</summary>
-    private TeammateProfile Preview
+    private AgentProfile Preview
     {
         get
         {
             var shownName = string.IsNullOrWhiteSpace(this.name) ? this.Profiles.Name : this.name.Trim();
-            return new TeammateProfile(shownName, this.title?.Trim() ?? string.Empty, this.description?.Trim() ?? string.Empty, this.Avatars.Get(this.Profiles.Name));
+            return new AgentProfile(shownName, this.title?.Trim() ?? string.Empty, this.description?.Trim() ?? string.Empty, this.Avatars.Get(this.Profiles.Name));
         }
     }
 
@@ -199,7 +199,7 @@
 
     /// <summary>
     /// Opens <see cref="AvatarEditorDialog"/> for the Human's stored Name and writes what it returns at once,
-    /// the way a Teammate card in View mode does: an image first, then the avatar itself.
+    /// the way an Agent card in View mode does: an image first, then the avatar itself.
     /// </summary>
     private async Task EditAvatarAsync()
     {

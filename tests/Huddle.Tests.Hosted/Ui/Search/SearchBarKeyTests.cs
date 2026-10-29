@@ -33,9 +33,9 @@ public sealed class SearchBarKeyTests(TeamWebApplicationFactory factory) : IClas
     /// <returns>The component instance, whose <c>[JSInvokable]</c> methods the script calls.</returns>
     private static SearchBar Bar(IRenderedComponent<ContainerFragment> cut) => cut.FindComponent<SearchBar>().Instance;
 
-    /// <summary>Alt+3 lights Teammates, the third chip, while the dropdown is open.</summary>
+    /// <summary>Alt+3 lights Agents, the third chip, while the dropdown is open.</summary>
     [Fact]
-    public async Task SelectChip_3_LightsTeammates()
+    public async Task SelectChip_3_LightsAgents()
     {
         await using SearchBarHarness h = new(factory);
         IRenderedComponent<ContainerFragment> cut = h.Render();
@@ -43,7 +43,7 @@ public sealed class SearchBarKeyTests(TeamWebApplicationFactory factory) : IClas
 
         await cut.InvokeAsync(() => SearchBarKeyTests.Bar(cut).SelectChipAsync(3));
 
-        Assert.Equal("Teammates", SearchBarKeyTests.Checked(cut));
+        Assert.Equal("Agents", SearchBarKeyTests.Checked(cut));
     }
 
     /// <summary>Ctrl+Right moves from All to the next chip, Teams.</summary>

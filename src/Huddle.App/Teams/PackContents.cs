@@ -2,7 +2,7 @@ using Agency.Huddle.SkillPacks.Resolving;
 
 namespace Agency.Huddle.App.Teams;
 
-/// <summary>What a Pack puts into a Teammate file: its <c>_packs</c> entry, its Skills and its <c>consult_when</c> clause.</summary>
+/// <summary>What a Pack puts into an Agent file: its <c>_packs</c> entry, its Skills and its <c>consult_when</c> clause.</summary>
 /// <param name="Id">The Pack id.</param>
 /// <param name="Version">The Pack file's version, written to <c>_packs</c>.</param>
 /// <param name="ConsultWhenAdds">The clause added to <c>consult_when</c>, or null.</param>

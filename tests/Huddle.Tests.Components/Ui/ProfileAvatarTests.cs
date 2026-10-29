@@ -10,7 +10,7 @@ using TestContext = Xunit.TestContext;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Renders <see cref="ProfileAvatar"/>: an avatar that is a button, and the popover with the Teammate's
+/// Renders <see cref="ProfileAvatar"/>: an avatar that is a button, and the popover with the Agent's
 /// profile card that its click opens.
 /// </summary>
 public sealed class ProfileAvatarTests
@@ -42,7 +42,7 @@ public sealed class ProfileAvatarTests
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".roster-card")));
     }
 
-    /// <summary>The button names the Teammate, announces a dialog, and nothing is open until it is clicked.</summary>
+    /// <summary>The button names the Agent, announces a dialog, and nothing is open until it is clicked.</summary>
     [Fact]
     public async Task Closed_ButtonHasAccessibleNameAndNoPopover()
     {
@@ -59,14 +59,14 @@ public sealed class ProfileAvatarTests
         Assert.NotEmpty(cut.FindAll(Button + " .mud-avatar"));
     }
 
-    /// <summary>Clicking the avatar opens the popover with the Teammate's name and title, and an Edit button.</summary>
+    /// <summary>Clicking the avatar opens the popover with the Agent's name and title, and an Edit button.</summary>
     [Fact]
     public async Task Click_OpensCardWithNameTitleAndEdit()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using ProfileFixture fixture = new();
         await fixture.InitializeAsync(ct);
-        fixture.AddTeammate("Ada", "Lead");
+        fixture.AddAgent("Ada", "Lead");
         await using MudBunitContext ctx = fixture.NewContext();
         var cut = RenderIt(ctx, "Ada");
 
@@ -89,7 +89,7 @@ public sealed class ProfileAvatarTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using ProfileFixture fixture = new();
         await fixture.InitializeAsync(ct);
-        fixture.AddTeammate("Ada", "Lead");
+        fixture.AddAgent("Ada", "Lead");
         await using MudBunitContext ctx = fixture.NewContext();
         var cut = RenderIt(ctx, "Ada");
 
@@ -98,14 +98,14 @@ public sealed class ProfileAvatarTests
         Assert.Single(cut.Find(".avatar-parent").Children);
     }
 
-    /// <summary>A Teammate with no agent user has no Message button.</summary>
+    /// <summary>An Agent with no agent user has no Message button.</summary>
     [Fact]
-    public async Task Message_AbsentWhenTeammateHasNoAgentUser()
+    public async Task Message_AbsentWhenAgentHasNoAgentUser()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using ProfileFixture fixture = new();
         await fixture.InitializeAsync(ct);
-        fixture.AddTeammate("Ada", "Lead");
+        fixture.AddAgent("Ada", "Lead");
         await using MudBunitContext ctx = fixture.NewContext();
         var cut = RenderIt(ctx, "Ada");
 
@@ -114,14 +114,14 @@ public sealed class ProfileAvatarTests
         Assert.Empty(cut.FindAll(Panel + " button[aria-label='Message Ada']"));
     }
 
-    /// <summary>A Teammate with an agent user has a Message button.</summary>
+    /// <summary>An Agent with an agent user has a Message button.</summary>
     [Fact]
-    public async Task Message_PresentWhenTeammateHasAgentUser()
+    public async Task Message_PresentWhenAgentHasAgentUser()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using ProfileFixture fixture = new();
         await fixture.InitializeAsync(ct);
-        fixture.AddTeammate("Ada", "Lead");
+        fixture.AddAgent("Ada", "Lead");
         await fixture.AddAgentAsync("Ada", ct);
         await using MudBunitContext ctx = fixture.NewContext();
         var cut = RenderIt(ctx, "Ada");
@@ -138,7 +138,7 @@ public sealed class ProfileAvatarTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using ProfileFixture fixture = new();
         await fixture.InitializeAsync(ct);
-        fixture.AddTeammate("Ada", "Lead");
+        fixture.AddAgent("Ada", "Lead");
         await fixture.AddAgentAsync("Ada", ct);
         await using MudBunitContext ctx = fixture.NewContext();
         var cut = RenderIt(ctx, "Ada");
@@ -172,7 +172,7 @@ public sealed class ProfileAvatarTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using ProfileFixture fixture = new();
         await fixture.InitializeAsync(ct);
-        fixture.AddTeammate("Ada", "Lead", "Garden");
+        fixture.AddAgent("Ada", "Lead", "Garden");
         await fixture.AddAgentAsync("Ada", ct);
         fixture.AddTeam("Garden", null, "Ada");
         await using MudBunitContext ctx = fixture.NewContext();
@@ -199,7 +199,7 @@ public sealed class ProfileAvatarTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using ProfileFixture fixture = new();
         await fixture.InitializeAsync(ct);
-        fixture.AddTeammate("Ada", "Lead", "Garden");
+        fixture.AddAgent("Ada", "Lead", "Garden");
         await fixture.AddAgentAsync("Ada", ct);
         fixture.AddTeam("Garden", null, "Ada");
         await using MudBunitContext ctx = fixture.NewContext();
@@ -226,7 +226,7 @@ public sealed class ProfileAvatarTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using ProfileFixture fixture = new();
         await fixture.InitializeAsync(ct);
-        fixture.AddTeammate("Ada", "Lead");
+        fixture.AddAgent("Ada", "Lead");
         await using MudBunitContext ctx = fixture.NewContext();
         var cut = RenderIt(ctx, "Ada");
         await OpenAsync(cut);

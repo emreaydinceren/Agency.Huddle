@@ -42,8 +42,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     private readonly AdapterProfileResolver resolver;
     private readonly IAgentProcessLauncher launcher;
     private readonly SkillStore skills;
-    private readonly TeammatePaths teammatePaths;
-    private readonly TeammateFolderMoves folderMoves;
+    private readonly AgentPaths agentPaths;
+    private readonly AgentFolderMoves folderMoves;
     private readonly ITeamCatalog teamCatalog;
     private readonly WorkModePolicy workModePolicy;
 
@@ -69,8 +69,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// narrow (Spec §6.4 Implementation notes) — <c>PersonaSupervisor</c> resolves the same names a
     /// second time, only for the Degraded warnings it reports before ever calling this factory.
     /// </param>
-    /// <param name="teammatePaths">Locates each Persona's Work Dir.</param>
-    /// <param name="folderMoves">Awaited before creating a Persona's Work Dir, so a rename's Teammate-folder move never races this factory creating a stale copy of it - corrections-B2 item 20.</param>
+    /// <param name="agentPaths">Locates each Persona's Work Dir.</param>
+    /// <param name="folderMoves">Awaited before creating a Persona's Work Dir, so a rename's Agent-folder move never races this factory creating a stale copy of it - corrections-B2 item 20.</param>
     /// <param name="teamCatalog">The Teams and their Projects, handed to each Persona's host so its session start can list the Team Memory of the Teams the Persona belongs to (Spec §6.4).</param>
     /// <param name="workModePolicy">Decides whether a Persona's Work Mode may be sent to its Adapter (ADR-0033).</param>
     public DotAcpAgentHostFactory(
@@ -80,8 +80,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         AdapterProfileResolver resolver,
         IAgentProcessLauncher launcher,
         SkillStore skills,
-        TeammatePaths teammatePaths,
-        TeammateFolderMoves folderMoves,
+        AgentPaths agentPaths,
+        AgentFolderMoves folderMoves,
         ITeamCatalog teamCatalog,
         WorkModePolicy workModePolicy)
     {
@@ -91,7 +91,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         ArgumentNullException.ThrowIfNull(resolver);
         ArgumentNullException.ThrowIfNull(launcher);
         ArgumentNullException.ThrowIfNull(skills);
-        ArgumentNullException.ThrowIfNull(teammatePaths);
+        ArgumentNullException.ThrowIfNull(agentPaths);
         ArgumentNullException.ThrowIfNull(folderMoves);
         ArgumentNullException.ThrowIfNull(teamCatalog);
         ArgumentNullException.ThrowIfNull(workModePolicy);
@@ -105,7 +105,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         this.resolver = resolver;
         this.launcher = launcher;
         this.skills = skills;
-        this.teammatePaths = teammatePaths;
+        this.agentPaths = agentPaths;
         this.folderMoves = folderMoves;
     }
 
@@ -263,7 +263,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// <returns>The Work Dir and the memory folder paths.</returns>
     private (string WorkDir, string MemoryDir) CreateWorkDirs(string personaName)
     {
-        var workDir = this.teammatePaths.WorkDir(personaName);
+        var workDir = this.agentPaths.WorkDir(personaName);
         Directory.CreateDirectory(workDir);
 
         // FC §6.15: the folder is always created next to the Work Dir, even when the memory block
@@ -287,7 +287,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     }
 
     /// <summary>
-    /// Waits for a rename's Teammate-folder move to settle (corrections-B2 item 20). The move can
+    /// Waits for a rename's Agent-folder move to settle (corrections-B2 item 20). The move can
     /// still be in flight (retrying against a not-yet-exited old process) when the runner it raced
     /// against restarts under the new Name and this factory starts it - wait for that move to settle
     /// first, or this would create a fresh, empty folder at the new Name while the move still holds
@@ -367,8 +367,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             ActivatorUtilities.CreateInstance<UnfollowRoomTool>(this.serviceProvider, agentId),
             askHumanTool,
             readSkillTool,
-            ActivatorUtilities.CreateInstance<ValidateTeammateTool>(this.serviceProvider),
-            ActivatorUtilities.CreateInstance<ProposeTeammatesTool>(this.serviceProvider, agentId),
+            ActivatorUtilities.CreateInstance<ValidateAgentTool>(this.serviceProvider),
+            ActivatorUtilities.CreateInstance<ProposeAgentsTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<ProposeSprintTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<ListTeamsTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<FileRequestTool>(this.serviceProvider, agentId),

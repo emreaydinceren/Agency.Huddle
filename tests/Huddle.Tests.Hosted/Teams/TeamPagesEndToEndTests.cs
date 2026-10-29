@@ -78,7 +78,7 @@ public sealed class TeamPagesEndToEndTests
         Assert.Equal(MembershipOutcome.Added, result.Outcome);
         Assert.Null(result.Problem);
         Assert.Equal(["Kim"], catalog.Find("Business")?.Members);
-        string definition = await File.ReadAllTextAsync(Path.Combine(factory.TeammatesDirPath, "kim", "kim.md"), ct);
+        string definition = await File.ReadAllTextAsync(Path.Combine(factory.AgentsDirPath, "kim", "kim.md"), ct);
         Assert.True(PersonaFrontmatter.TryReadIdentity(definition, out PersonaIdentity? identity, out string error), error);
         Assert.Equal(["Business"], identity.Teams);
     }

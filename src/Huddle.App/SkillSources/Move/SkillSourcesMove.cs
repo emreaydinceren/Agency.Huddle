@@ -16,7 +16,7 @@ namespace Agency.Huddle.App.SkillSources.Move;
 /// <summary>
 /// Moves today's Packs, catalog and imported Skills into the Skill Sources folder, once, on the first start of this version
 /// (§6.13). It writes exactly the files an AI tool following <c>InstallSkillPack.md</c> would have written: everything is staged
-/// in <c>SkillSources/.move-&lt;random&gt;/</c>, placed, and SKILLS.md last. It changes no Teammate, writes nothing in
+/// in <c>SkillSources/.move-&lt;random&gt;/</c>, placed, and SKILLS.md last. It changes no Agent, writes nothing in
 /// <c>Skills/</c>, and opens no network connection.
 /// </summary>
 internal sealed partial class SkillSourcesMove : ISkillSourcesMove

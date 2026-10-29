@@ -28,20 +28,20 @@ still open are in §10.
 
 ## 1. Goal
 
-**Your Teammates do the work. You make the calls.**
+**Your Agents do the work. You make the calls.**
 
 Anything that leaves the Team or cannot easily be undone, such as sending, paying, signing,
 publishing or merging, stops and waits for the Human. Huddle puts it in Needs You with the work,
 the Proof and who checked it, so the Human can decide in one look.
 
-AI Teammates are fast and tireless, but they are not accountable. The gate answers four problems:
+AI Agents are fast and tireless, but they are not accountable. The gate answers four problems:
 
 | Problem | Without a gate | With the gate |
 | --- | --- | --- |
 | Accountability | "The AI sent it" is not an answer a customer, auditor or lawyer accepts | A named person accepted every outward Action, with a record of when |
-| Actions that cannot be undone | A wrong email, payment, signature or merge is out before anyone looks | Teammates draft as much as they like; nothing gets out without the Human |
+| Actions that cannot be undone | A wrong email, payment, signature or merge is out before anyone looks | Agents draft as much as they like; nothing gets out without the Human |
 | Confident mistakes | A polished draft can hide a wrong number or a missing source | Proof is checked before it reaches the Human, who judges evidence, not tone |
-| Runaway work | Teammates loop, argue or burn tokens unnoticed | The Room Budget pauses them and asks (already built, ADR-0006) |
+| Runaway work | Agents loop, argue or burn tokens unnoticed | The Room Budget pauses them and asks (already built, ADR-0006) |
 
 Each decision is logged, so over time the Human learns which kinds of work they can accept
 quickly and which need a closer look.
@@ -55,7 +55,7 @@ Concretely:
 2. **Two rules hold however the Team's process is set up.** Accepting is always on: a process can
    add Proof, never remove the Human's decision. Incomplete Proof locks the gate: the Human sees
    "Done locked · Proof 2/3" and an "Ask Zoe for QA evidence" button, never a way to override.
-3. **The roles, as RACI.** Responsible: the assignee. Consulted: reviewer Teammates (QA, Skeptic,
+3. **The roles, as RACI.** Responsible: the assignee. Consulted: reviewer Agents (QA, Skeptic,
    Compliance Checker) who supply Proof. Accountable: the Human, and only the Human, through the
    gate. Informed: the Task's Room and its Change log.
 
@@ -64,10 +64,10 @@ Concretely:
 These are stated to the Human in the User Guide and to Agents in their tool text.
 
 1. **What is outward, and always gated:** customer messages, money, contracts, public posts,
-   merges to main, deleting data. A Teammate about to do one of these sets the Task's Action first.
+   merges to main, deleting data. An Agent about to do one of these sets the Task's Action first.
 2. **What needs no gate:** internal notes, drafts, research and Task updates.
 3. **Proof before people:** a gated Task reaches the Human only once the Definition of Done is met.
-4. **Declines teach:** a decline or a change request carries a reason, which reaches the Teammate
+4. **Declines teach:** a decline or a change request carries a reason, which reaches the Agent
    and the Retro.
 5. **Audit trail:** every decision is a line in a plain file: who, what, when, on which Proof.
 
@@ -93,11 +93,11 @@ These are stated to the Human in the User Guide and to Agents in their tool text
 
 | Not in v1 | Why |
 | --- | --- |
-| Huddle carrying out the Action (sending the mail, merging the PR) | The Teammate has the tools. ADR-0061, Rejected |
+| Huddle carrying out the Action (sending the mail, merging the PR) | The Agent has the tools. ADR-0061, Rejected |
 | Refusing an Agent's outward tool call before acceptance | The gate guards the Task status. See §10 OD-1 for merge and push |
-| More than one approver, or approval by a Teammate | The Human is the one accountable party |
+| More than one approver, or approval by an Agent | The Human is the one accountable party |
 | Watchers on a Task | Not a Tasks concept today. The Room and Change log inform |
-| Writing the decline into the Teammate's Memory | Memory belongs to the Agent (language.md). It gets the reason and decides |
+| Writing the decline into the Agent's Memory | Memory belongs to the Agent (language.md). It gets the reason and decides |
 | A per-Task checklist | ADR-0062, Rejected. A Task needing more gets a tagged sub-Task |
 | Turning ordinary Tasks' Proof into a hard gate | ADR-0062 keeps plan decision D3 for ordinary work |
 
@@ -292,9 +292,9 @@ entries first, each as a `TaskDecisionCard`, then the Room entries in the existi
 - **Requires your acceptance** switch. Locked on, with a lock icon, when an Action is set: "This
   Task names an Action that leaves the team."
 - **What will happen** field: the Action, one line, placeholder "Nothing leaves the team".
-- Helper line: "<assignee> can move it to Needs you once every line has Proof. Teammates can't mark it Done."
+- Helper line: "<assignee> can move it to Needs you once every line has Proof. Agents can't mark it Done."
 - **Can move to Done** with a chip "<Human> only" and a lock.
-- Explanation: for no Action, "Teammates draft, check and track: you decide. Accepting marks it
+- Explanation: for no Action, "Agents draft, check and track: you decide. Accepting marks it
   Done; nothing is sent or published. Done also needs the team's Proof to be complete." For an
   Action, the second sentence is "Accepting lets <assignee> <action>."
 
@@ -345,7 +345,7 @@ Done is an acceptance, or the assignee's move after one.
   and the acceptance (`none`, `accepted by <Human> at <time>`, or `stale`).
 - `list_tasks` accepts the status `Needs You`.
 - `TaskToolText` gains a paragraph, reached through `get_help` (progressive discovery): what
-  counts as outward (§1.1), that a Teammate sets the Action before doing it, that only the Human
+  counts as outward (§1.1), that an Agent sets the Action before doing it, that only the Human
   accepts, and that after acceptance the assignee carries out the Action and then moves the Task
   to Done. The tool names keep the `mcp__team__` prefix.
 
@@ -415,7 +415,7 @@ Manual tests go in a new page, `engineering/manual-tests/human-gate.md`, written
 | D-9 | Needs You Task entries are read from Task files, no ✕ | A fifth in-memory reason (lost on restart, dismissable) |
 | D-10 | A Human's drop into Done opens the decision card as a dialog; from Review it is refused | The drop is the acceptance (decided without the Proof in view); the board always refuses (a dead end the Human cannot act on) |
 | D-11 | Decline sits in an overflow menu and closes as Rejected | A third main button (mockup 2 has two) |
-| D-12 | Decline reasons reach the Teammate and the Retro, not its Memory | Huddle writes the Agent's Memory |
+| D-12 | Decline reasons reach the Agent and the Retro, not its Memory | Huddle writes the Agent's Memory |
 
 ---
 

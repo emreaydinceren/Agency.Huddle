@@ -98,7 +98,7 @@ internal sealed class PersonaCommands(ILogger<PersonaCommands> logger)
         }
     }
 
-    /// <summary>Forgets a removed or stopped Persona's list, so its card shows none and a stopped Teammate offers nothing.</summary>
+    /// <summary>Forgets a removed or stopped Persona's list, so its card shows none and a stopped Agent offers nothing.</summary>
     /// <param name="personaName">The Persona, compared without regard to case.</param>
     internal void Forget(string personaName)
     {

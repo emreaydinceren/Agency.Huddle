@@ -5,7 +5,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Questions;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Factories;
 
@@ -32,8 +32,8 @@ public sealed class ToolNamesTests
             new PostMessageTool(chat, "caller-id", new FakePromptSource(), new OwnPosts(TestOptions.Create())),
             new FollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
-            new ValidateTeammateTool(checker, new FakePromptSource()),
-            new ProposeTeammatesTool(proposals, checker, directory, new HireLimitGuard(new Agency.Huddle.Tests.Teams.FakeTeamCatalog(), TestOptions.Create(), static () => 0), TimeProvider.System, "caller-id", new FakePromptSource()),
+            new ValidateAgentTool(checker, new FakePromptSource()),
+            new ProposeAgentsTool(proposals, checker, directory, new HireLimitGuard(new Agency.Huddle.Tests.Teams.FakeTeamCatalog(), TestOptions.Create(), static () => 0), TimeProvider.System, "caller-id", new FakePromptSource()),
             new GetHelpTool([], new FakePromptSource(), "mcp__team__"),
             new CreateTaskTool(taskHarness.Service, taskHarness.Triggers, taskHarness.Directory, taskHarness.Sprints, new FakePromptSource(), "caller-id"),
             new GetTaskTool(taskHarness.Store, taskHarness.Sprints, new FakePromptSource()),
@@ -50,8 +50,8 @@ public sealed class ToolNamesTests
         Assert.Equal("post_message", tools[3].Name);
         Assert.Equal("follow_room", tools[4].Name);
         Assert.Equal("unfollow_room", tools[5].Name);
-        Assert.Equal("validate_teammate", tools[6].Name);
-        Assert.Equal("propose_teammates", tools[7].Name);
+        Assert.Equal("validate_agent", tools[6].Name);
+        Assert.Equal("propose_agents", tools[7].Name);
         Assert.Equal("get_help", tools[8].Name);
         Assert.Equal("create_task", tools[9].Name);
         Assert.Equal("get_task", tools[10].Name);

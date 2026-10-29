@@ -179,7 +179,7 @@ public sealed class ReferenceResolverTests
         Assert.Equal(12, result.EligibleCount);
     }
 
-    /// <summary>A Team comes back with its type's display name and its Teammates.</summary>
+    /// <summary>A Team comes back with its type's display name and its Agents.</summary>
     [Fact]
     public async Task Resolve_Team_TypeAndMembers()
     {

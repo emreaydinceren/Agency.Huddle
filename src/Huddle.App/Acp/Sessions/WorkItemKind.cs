@@ -10,7 +10,7 @@ internal enum WorkItemKind
     Greeting,
 
     /// <summary>
-    /// An Adapter command a Human addressed to this Teammate by Mention, for example <c>@Nova /compact</c>
+    /// An Adapter command a Human addressed to this Agent by Mention, for example <c>@Nova /compact</c>
     /// (Commands spec, section 6.5). The prompt is the bare command and nothing else, and the Turn
     /// neither collects File Changes nor drains Catch-up.
     /// </summary>

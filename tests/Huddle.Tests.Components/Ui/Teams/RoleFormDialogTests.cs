@@ -37,7 +37,7 @@ public sealed class RoleFormDialogTests : IDisposable
         await cut.InvokeAsync(() => cut.Find(".custom-role-skills .mud-select-input").MouseDownAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
 
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".custom-role-copy-caption")));
-        Assert.Equal("Huddle copies it into Skills/ when a Teammate in this role is hired.", cut.Find(".custom-role-copy-caption").TextContent.Trim());
+        Assert.Equal("Huddle copies it into Skills/ when an Agent in this role is hired.", cut.Find(".custom-role-copy-caption").TextContent.Trim());
         Assert.Equal("Not downloaded", cut.Find(".custom-role-not-downloaded").TextContent.Trim());
         Assert.Equal("Not on this computer yet (2)", cut.Find(".custom-role-not-here-toggle").TextContent.Trim());
         Assert.Equal("Skills not downloaded are listed below; ask your AI tool to fetch them.", cut.Find(".custom-role-skills-helper").TextContent.Trim());

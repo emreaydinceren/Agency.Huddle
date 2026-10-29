@@ -1,0 +1,11 @@
+@page "/teammates"
+@inject NavigationManager Navigation
+
+@code {
+    /// <summary>Sends a bookmark or link made before the Teammate-to-Agent rename to the Agents page, keeping the query string.</summary>
+    protected override void OnInitialized()
+    {
+        string query = new Uri(this.Navigation.Uri).Query;
+        this.Navigation.NavigateTo("/agents" + query, replace: true);
+    }
+}

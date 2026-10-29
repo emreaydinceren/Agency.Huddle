@@ -49,6 +49,6 @@ toolbar buttons) so those later features fill slots rather than reshape it.
 - A page in the unfocused pane that navigates itself (a Room redirecting when it is archived) moves
   the focused pane, because the router has one location.
 - Two Rooms side by side have not been watched live: the per-Room draft and the per-element composer
-  script were written to allow it, but only the Settings and Teammates pages were seen in two panes.
+  script were written to allow it, but only the Settings and Agents pages were seen in two panes.
 - Both panes re-render on every Tab change. Cheap today; revisit if a third group is allowed.
 - Dragging, stacked groups and overflow remain later work.

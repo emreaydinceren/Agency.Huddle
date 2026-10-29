@@ -70,12 +70,12 @@ builder.Services.AddHealthChecks();
 var app = builder.Build();
 
 // Right after Build() and before anything resolves PersonaStore: a hosted service is too late,
-// because PersonaStore scans Teammates/ in its own constructor and all hosted services are
-// resolved before the first StartAsync (Spec §6.15, corrections-B2 #29). ILogger<TeammateLayoutMigration>
+// because PersonaStore scans Agents/ in its own constructor and all hosted services are
+// resolved before the first StartAsync (Spec §6.15, corrections-B2 #29). ILogger<AgentLayoutMigration>
 // does not compile for a static class (CS0718), hence the named-category logger (#28).
-TeammateLayoutMigration.Run(
+AgentLayoutMigration.Run(
     app.Services.GetRequiredService<IOptions<TeamOptions>>(),
-    app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Agency.Huddle.App.Acp.TeammateLayoutMigration"));
+    app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Agency.Huddle.App.Acp.AgentLayoutMigration"));
 
 app.UseAntiforgery();
 
@@ -106,7 +106,7 @@ var avatarContentTypes = new FileExtensionContentTypeProvider(
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(avatarsPath),
-    RequestPath = "/teammate-avatars",
+    RequestPath = "/agent-avatars",
     ContentTypeProvider = avatarContentTypes,
     ServeUnknownFileTypes = false,
     OnPrepareResponse = static context =>
@@ -119,7 +119,7 @@ app.UseStaticFiles(new StaticFileOptions
 });
 
 // The Avatar Library is the Human's own folder, so it is mounted read-only where it lives rather than
-// copied under {DataDir}; a chosen image is copied into the Teammate's avatar by AvatarStore, never
+// copied under {DataDir}; a chosen image is copied into the Agent's avatar by AvatarStore, never
 // referenced, so deleting the library later breaks nothing. The folder may be unset or absent, and a
 // PhysicalFileProvider throws on a missing root, so the mount is added only when the folder exists and
 // is never created here. It reuses the enumerated three-type provider above, so master.json and any

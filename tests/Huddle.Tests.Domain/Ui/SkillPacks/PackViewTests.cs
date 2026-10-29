@@ -34,20 +34,20 @@ public sealed class PackViewTests : IDisposable
         Assert.Equal("2 of 2 Skills have no folder here: alpha and beta.", view.Cause);
     }
 
-    /// <summary>A Teammate holding an older version of the Pack, with no Skill file changed, gets the version line.</summary>
+    /// <summary>An Agent holding an older version of the Pack, with no Skill file changed, gets the version line.</summary>
     [Fact]
     public async Task UpdateAvailable_VersionOnly_SaysTheVersionDiffers()
     {
         this.host.Source();
         this.host.Pack("documents", "docx", this.host.CloneSkill("docx"));
         this.host.SkillsMd(["packs/documents.skillpack.json"]);
-        this.host.Teammate("Jane", ["docx"], [new VersionedRef("documents", "0.9.0")]);
+        this.host.Agent("Jane", ["docx"], [new VersionedRef("documents", "0.9.0")]);
         await this.host.ReadAsync();
 
         PackView view = this.View();
 
         Assert.Equal(ItemState.UpdateAvailable, view.State);
-        Assert.Equal("The version Teammates hold differs from this Pack file's.", view.Cause);
+        Assert.Equal("The version Agents hold differs from this Pack file's.", view.Cause);
     }
 
     /// <summary>Copied Skills whose files changed at the pointer are named: one "has", two "have".</summary>

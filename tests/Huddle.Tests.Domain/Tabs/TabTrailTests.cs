@@ -20,7 +20,7 @@ public sealed class TabTrailTests
     [InlineData("/tasks/my-tasks", "[Tasks](/tasks)")]
     [InlineData("/tasks/new", "[Tasks](/tasks)")]
     [InlineData("/tasks/item/7", "[Tasks](/tasks)")]
-    [InlineData("/teammates", "")]
+    [InlineData("/agents", "")]
     [InlineData("/settings", "")]
     [InlineData("/settings/appearance", "")]
     [InlineData("/library?root=a&path=b.md", "")]
@@ -50,9 +50,9 @@ public sealed class TabTrailTests
         Assert.Equal("Teams > [Sales & Ops](/teams/Sales%20%26%20Ops)", Draw(trail));
     }
 
-    /// <summary>A page with no ancestor (Teammates, Settings, a Task View's own page) has an empty trail, so the bar draws no one-crumb trail that repeats the h1.</summary>
+    /// <summary>A page with no ancestor (Agents, Settings, a Task View's own page) has an empty trail, so the bar draws no one-crumb trail that repeats the h1.</summary>
     [Theory]
-    [InlineData("/teammates")]
+    [InlineData("/agents")]
     [InlineData("/settings/profile")]
     [InlineData("/tasks")]
     public void Build_PageWithNoAncestor_IsEmpty(string url)

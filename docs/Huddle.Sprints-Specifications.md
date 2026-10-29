@@ -104,7 +104,7 @@ them together.
    (Tasks §7.3).
 2. **Reference by id, display by name.** A Task holds `S2`. The name is looked up when drawn, so
    a rename is free. This is the opposite of `assignee:`, which holds a Name and needs a rename
-   cascade (Tasks §9.6), and the reason is that a Sprint has a stable id and a Teammate does not.
+   cascade (Tasks §9.6), and the reason is that a Sprint has a stable id and an Agent does not.
 3. **A missing reference is not a file error.** A Task whose Sprint is not in the file loads, and
    the interface shows `(missing)`. This is Tasks §7.2's rule for `parent` and `blocked_by`.
 4. **Code guards, text doesn't.** An Agent cannot create a Sprint because its tools are not
@@ -706,7 +706,7 @@ nothing reads `sprints.md` then.
 | E-S15 | A patch sets a Sprint that doesn't exist | `Refused`, nothing written (§9.4). Setting nothing about the Sprint on a Task with a missing one is not refused |
 | E-S16 | An Agent passes `sprint: "current"` and there are no Sprints | Refused: *There is no current sprint; no sprints exist yet.* |
 | E-S17 | A View filters on `@current` and `sprints.md` has changed | The page re-queries on `SprintsChanged`, so the answer follows the file |
-| E-S18 | Teammate rename | Nothing to do. A Task holds a Sprint id, not a Name (§4, principle 2) |
+| E-S18 | Agent rename | Nothing to do. A Task holds a Sprint id, not a Name (§4, principle 2) |
 | E-S19 | The Human closes a Done Task in the current Sprint | It keeps its Sprint, leaves Active Views, and appears in a Closed View with the Sprint filter. Nothing counts Tasks, so no count drops |
 | E-S20 | A change moves the last Task out of `S2` | After the save and the Change log entry, `S2`'s line is removed (§8.2). Only that line changes. The log entry already carries `S2 (Auth hardening)` |
 | E-S21 | `S2` is held only by Closed Tasks | It stays. Closed Tasks count. Reopening one needs it |

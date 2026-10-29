@@ -7,7 +7,7 @@ using Agency.Huddle.Tests.Avatars;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Shared setup for the tests that pick an Avatar from the library through <see cref="Agency.Huddle.App.Components.Shared.TeammateCard"/>
+/// Shared setup for the tests that pick an Avatar from the library through <see cref="Agency.Huddle.App.Components.Shared.AgentProfileCard"/>
 /// and <see cref="Agency.Huddle.App.Components.Settings.Appearance"/>: a fake loader whose picked image is a chosen value, and the
 /// registration of a locator that is configured (over a temp folder holding <c>master.json</c>) or not.
 /// </summary>

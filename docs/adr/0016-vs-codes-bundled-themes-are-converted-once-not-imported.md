@@ -161,7 +161,7 @@ rotting into a permanent excuse. Same discipline as the retired
 non-text floor**, on the stated grounds that it is the focus ring. It is not. `app.css`
 paints the focus ring `outline: 2px solid var(--mud-palette-text-primary)` — deliberately,
 under a comment ending *"Do not 'improve' this back to an accent colour"* — and
-`--mud-palette-lines-default` has exactly one consumer, `.teammate-tile:hover`'s
+`--mud-palette-lines-default` has exactly one consumer, `.agent-tile:hover`'s
 `border-color`, a hover cue whose state the same rule also signals by changing the
 background. Holding a co-indicated decorative border to a non-text-contrast minimum asserts
 something untrue about this codebase, and it failed `huddle` itself at 2.00:1. The focus

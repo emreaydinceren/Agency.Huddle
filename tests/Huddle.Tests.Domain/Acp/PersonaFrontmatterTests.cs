@@ -203,12 +203,12 @@ public sealed class PersonaFrontmatterTests
     [Fact]
     public void Parse_YamlBlockListWithEscapedQuotedItems_StripsAndUnescapesEachItem()
     {
-        var text = "---\nconsult_when:\n  - 'You don''t know which teammate owns something'\n  - 'Plain reason'\n---\nbody";
+        var text = "---\nconsult_when:\n  - 'You don''t know which agent owns something'\n  - 'Plain reason'\n---\nbody";
 
         var (fields, _) = PersonaFrontmatter.Parse(text);
 
         Assert.Equal(
-            "You don't know which teammate owns something; Plain reason",
+            "You don't know which agent owns something; Plain reason",
             Assert.Single(fields).Value);
     }
 
@@ -253,7 +253,7 @@ public sealed class PersonaFrontmatterTests
             + "summary: >-\n"
             + "  Owns the seams between workstations: triages anything unrouted, decides who handles what, holds the through-line across weeks, and produces the daily and weekly brief.\n"
             + "consult_when:\n"
-            + "  - 'You don''t know which teammate owns something'\n"
+            + "  - 'You don''t know which agent owns something'\n"
             + "  - 'Your task spans two or more workstations and needs someone to hold the whole picture'\n"
             + "do_not_consult_for:\n"
             + "  - 'Deep domain analysis of any kind — they will route it straight back to you'\n"
@@ -272,7 +272,7 @@ public sealed class PersonaFrontmatterTests
             "Mention: @Chief of Staff",
             "Role: Router, triage, and cross-workstation continuity",
             "Summary: Owns the seams between workstations: triages anything unrouted, decides who handles what, holds the through-line across weeks, and produces the daily and weekly brief.",
-            "Consult When: You don't know which teammate owns something; Your task spans two or more workstations and needs someone to hold the whole picture",
+            "Consult When: You don't know which agent owns something; Your task spans two or more workstations and needs someone to hold the whole picture",
             "Do Not Consult For: Deep domain analysis of any kind — they will route it straight back to you; Anything already clearly inside one workstation",
             "Delivers: A routing decision",
             "Owns: Brain\\CLAUDE.md (Routing Map)",
@@ -306,7 +306,7 @@ public sealed class PersonaFrontmatterTests
     }
 
     /// <summary>
-    /// <c>adapter</c> is plumbing about which ACP agent runs a Teammate, not something any Agent
+    /// <c>adapter</c> is plumbing about which ACP agent runs an Agent, not something any Agent
     /// can act on (Spec §12, E-6), so it never appears in the job description — while an
     /// unrelated custom key survives, proving only <c>adapter</c> was excluded.
     /// </summary>
@@ -323,7 +323,7 @@ public sealed class PersonaFrontmatterTests
     }
 
     /// <summary>
-    /// <c>skills</c> names which Skill files a Teammate loads — plumbing, like <c>adapter</c> — so it
+    /// <c>skills</c> names which Skill files an Agent loads — plumbing, like <c>adapter</c> — so it
     /// must never appear in the job description <c>list_agents</c> shows (Spec §6.3, §7.2). <c>_builtin</c>
     /// is already excluded by the generic <c>_</c>-prefix rule, with no <see cref="PersonaFrontmatter"/>
     /// change needed. <c>consult_when</c> is ordinary frontmatter and survives untouched.

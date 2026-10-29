@@ -21,8 +21,8 @@ internal sealed class FeedPager(FeedStore store, int pageSize, bool hideDismisse
     /// <summary>The Category shown.</summary>
     public FeedCategory Category { get; set; } = FeedCategory.All;
 
-    /// <summary>Only this Teammate's items, or <see langword="null"/> for everyone's.</summary>
-    public string? Teammate { get; set; }
+    /// <summary>Only this Agent's items, or <see langword="null"/> for everyone's.</summary>
+    public string? Agent { get; set; }
 
     /// <summary>Only this Team's items, or <see langword="null"/> for every Team.</summary>
     public string? Team { get; set; }
@@ -154,7 +154,7 @@ internal sealed class FeedPager(FeedStore store, int pageSize, bool hideDismisse
     {
         ArgumentNullException.ThrowIfNull(item);
 
-        if (this.Teammate is { } name && !string.Equals(item.Actor.Name, name, StringComparison.OrdinalIgnoreCase))
+        if (this.Agent is { } name && !string.Equals(item.Actor.Name, name, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
@@ -192,7 +192,7 @@ internal sealed class FeedPager(FeedStore store, int pageSize, bool hideDismisse
     }
 
     private FeedQuery QueryFor(long? beforeId, int limit) =>
-        new(beforeId, limit, this.Teammate, this.Team, this.Category, hideDismissed && this.Category == FeedCategory.NeedsYou);
+        new(beforeId, limit, this.Agent, this.Team, this.Category, hideDismissed && this.Category == FeedCategory.NeedsYou);
 
     private bool IsHidden(FeedItem item) => hideDismissed && (item.DismissedAt is not null || this.hidden.Contains(item.Id));
 

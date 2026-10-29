@@ -59,20 +59,20 @@ public sealed class LibraryFileServiceMoveTests
         Assert.Equal(LibraryNodeRole.Folder, result.Value.NewPath.Role);
     }
 
-    /// <summary>Renaming a protected item (Team/Project folder, Teammate folder, its definition, its Work
+    /// <summary>Renaming a protected item (Team/Project folder, Agent folder, its definition, its Work
     /// Dir, or a root) is refused with the matching Protected refusals text; nothing moves.</summary>
     [Theory]
     [InlineData("TeamFolder")]
-    [InlineData("TeammateFolder")]
-    [InlineData("TeammateDefinition")]
+    [InlineData("AgentFolder")]
+    [InlineData("AgentDefinition")]
     [InlineData("WorkDir")]
     [InlineData("Root")]
     public async Task Rename_Protected_Refused(string kind)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        _ = fixture.CreateTeammate("ada", "Ada", "ada");
-        string workDir = Path.Combine(fixture.DataDir, "Teammates", "ada", "work");
+        _ = fixture.CreateAgent("ada", "Ada", "ada");
+        string workDir = Path.Combine(fixture.DataDir, "Agents", "ada", "work");
         Directory.CreateDirectory(workDir);
         string teamsRoot = Path.Combine(fixture.DataDir, "Teams");
         string marketing = Path.Combine(teamsRoot, "Marketing");
@@ -83,9 +83,9 @@ public sealed class LibraryFileServiceMoveTests
         (LibraryPath item, string expectedError, string sourcePath) = kind switch
         {
             "TeamFolder" => (fixture.ResolveTeams("Marketing"), "Team and Project folders can't be renamed, moved or deleted here.", marketing),
-            "TeammateFolder" => (fixture.ResolveTeammatesFolder("ada"), "Teammate folders can't be renamed, moved or deleted here.", Path.Combine(fixture.DataDir, "Teammates", "ada")),
-            "TeammateDefinition" => (fixture.ResolveTeammates("ada"), "Teammate folders can't be renamed, moved or deleted here.", Path.Combine(fixture.DataDir, "Teammates", "ada", "ada.md")),
-            "WorkDir" => (fixture.ResolveTeammatesFolder("ada/work"), "Teammate folders can't be renamed, moved or deleted here.", workDir),
+            "AgentFolder" => (fixture.ResolveAgentsFolder("ada"), "Agent folders can't be renamed, moved or deleted here.", Path.Combine(fixture.DataDir, "Agents", "ada")),
+            "AgentDefinition" => (fixture.ResolveAgents("ada"), "Agent folders can't be renamed, moved or deleted here.", Path.Combine(fixture.DataDir, "Agents", "ada", "ada.md")),
+            "WorkDir" => (fixture.ResolveAgentsFolder("ada/work"), "Agent folders can't be renamed, moved or deleted here.", workDir),
             "Root" => (fixture.ResolveTeams(string.Empty), "A Library root can't be renamed, moved or deleted.", teamsRoot),
             _ => throw new InvalidOperationException($"Unknown kind: {kind}"),
         };
@@ -316,98 +316,98 @@ public sealed class LibraryFileServiceMoveTests
         Assert.DoesNotContain(onDisk, entry => Path.GetFileName(entry).Contains(".renaming-", StringComparison.Ordinal));
     }
 
-    /// <summary>Renaming a file that sits directly in the Teammates root is refused with wording that fits a rename, not the create wording ("Add teammates on the Teammates page.").</summary>
+    /// <summary>Renaming a file that sits directly in the Agents root is refused with wording that fits a rename, not the create wording ("Add agents on the Agents page.").</summary>
     [Fact]
-    public async Task Rename_File_InTeammatesRoot_Refused_WithRenameWording()
+    public async Task Rename_File_InAgentsRoot_Refused_WithRenameWording()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        string strayPath = Path.Combine(fixture.DataDir, "Teammates", "stray.txt");
+        string strayPath = Path.Combine(fixture.DataDir, "Agents", "stray.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(strayPath)!);
         File.WriteAllText(strayPath, "x");
         fixture.Reload();
         LibraryFileService service = fixture.CreateService();
 
-        LibraryResult<LibraryMoveResult> result = await service.RenameAsync(fixture.ResolveTeammatesFolder("stray.txt"), "other.txt", ct);
+        LibraryResult<LibraryMoveResult> result = await service.RenameAsync(fixture.ResolveAgentsFolder("stray.txt"), "other.txt", ct);
 
         Assert.Null(result.Value);
-        Assert.Equal("Files can't be renamed or moved directly in the Teammates folder. Teammates are managed on the Teammates page.", result.Error);
+        Assert.Equal("Files can't be renamed or moved directly in the Agents folder. Agents are managed on the Agents page.", result.Error);
         Assert.True(File.Exists(strayPath));
     }
 
-    /// <summary>Moving a file directly into the Teammates root is refused (item 21, applied to move destinations by
+    /// <summary>Moving a file directly into the Agents root is refused (item 21, applied to move destinations by
     /// corrections-B4 item 26) with wording that fits a move, not the create wording.</summary>
     [Fact]
-    public async Task Move_File_IntoTeammatesRoot_Refused()
+    public async Task Move_File_IntoAgentsRoot_Refused()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        string teammatesRoot = Path.Combine(fixture.DataDir, "Teammates");
-        _ = fixture.CreateTeammate("ada", "Ada", "ada");
-        string workDir = Path.Combine(teammatesRoot, "ada", "work");
+        string agentsRoot = Path.Combine(fixture.DataDir, "Agents");
+        _ = fixture.CreateAgent("ada", "Ada", "ada");
+        string workDir = Path.Combine(agentsRoot, "ada", "work");
         Directory.CreateDirectory(workDir);
         string sourcePath = Path.Combine(workDir, "note.md");
         File.WriteAllText(sourcePath, "a");
         fixture.Reload();
         LibraryFileService service = fixture.CreateService();
-        LibraryPath file = fixture.ResolveTeammatesFolder("ada/work/note.md");
-        LibraryPath teammatesRootPath = fixture.ResolveTeammatesFolder(string.Empty);
+        LibraryPath file = fixture.ResolveAgentsFolder("ada/work/note.md");
+        LibraryPath agentsRootPath = fixture.ResolveAgentsFolder(string.Empty);
 
-        LibraryResult<LibraryMoveResult> result = await service.MoveAsync(file, teammatesRootPath, ct);
+        LibraryResult<LibraryMoveResult> result = await service.MoveAsync(file, agentsRootPath, ct);
 
         Assert.Null(result.Value);
-        Assert.Equal("Files can't be renamed or moved directly in the Teammates folder. Teammates are managed on the Teammates page.", result.Error);
+        Assert.Equal("Files can't be renamed or moved directly in the Agents folder. Agents are managed on the Agents page.", result.Error);
         Assert.True(File.Exists(sourcePath));
-        Assert.False(File.Exists(Path.Combine(teammatesRoot, "note.md")));
+        Assert.False(File.Exists(Path.Combine(agentsRoot, "note.md")));
     }
 
-    /// <summary>Moving a <c>.md</c> file into an existing Teammate folder is refused with item 21's settled
+    /// <summary>Moving a <c>.md</c> file into an existing Agent folder is refused with item 21's settled
     /// text (corrections-B4 item 26).</summary>
     [Fact]
-    public async Task Move_MdFile_IntoTeammateFolder_Refused()
+    public async Task Move_MdFile_IntoAgentFolder_Refused()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        _ = fixture.CreateTeammate("ada", "Ada", "ada");
-        string teammatesRoot = Path.Combine(fixture.DataDir, "Teammates");
-        string workDir = Path.Combine(teammatesRoot, "ada", "work");
+        _ = fixture.CreateAgent("ada", "Ada", "ada");
+        string agentsRoot = Path.Combine(fixture.DataDir, "Agents");
+        string workDir = Path.Combine(agentsRoot, "ada", "work");
         Directory.CreateDirectory(workDir);
         string sourcePath = Path.Combine(workDir, "note.md");
         File.WriteAllText(sourcePath, "a");
         fixture.Reload();
         LibraryFileService service = fixture.CreateService();
-        LibraryPath file = fixture.ResolveTeammatesFolder("ada/work/note.md");
-        LibraryPath teammateFolder = fixture.ResolveTeammatesFolder("ada");
+        LibraryPath file = fixture.ResolveAgentsFolder("ada/work/note.md");
+        LibraryPath agentFolder = fixture.ResolveAgentsFolder("ada");
 
-        LibraryResult<LibraryMoveResult> result = await service.MoveAsync(file, teammateFolder, ct);
+        LibraryResult<LibraryMoveResult> result = await service.MoveAsync(file, agentFolder, ct);
 
         Assert.Null(result.Value);
-        Assert.Equal("A teammate folder holds only its definition; use work/.", result.Error);
+        Assert.Equal("An agent folder holds only its definition; use work/.", result.Error);
         Assert.True(File.Exists(sourcePath));
-        Assert.False(File.Exists(Path.Combine(teammatesRoot, "ada", "note.md")));
+        Assert.False(File.Exists(Path.Combine(agentsRoot, "ada", "note.md")));
     }
 
-    /// <summary>Renaming a non-<c>.md</c> file sitting directly in a Teammate folder to a <c>.md</c> name is
+    /// <summary>Renaming a non-<c>.md</c> file sitting directly in an Agent folder to a <c>.md</c> name is
     /// refused with item 21's text, applied to rename destinations too (corrections-B4 item 26).</summary>
     [Fact]
-    public async Task Rename_NonMdFileInTeammateFolder_ToMd_Refused()
+    public async Task Rename_NonMdFileInAgentFolder_ToMd_Refused()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        _ = fixture.CreateTeammate("ada", "Ada", "ada");
-        string teammatesRoot = Path.Combine(fixture.DataDir, "Teammates");
-        string sourcePath = Path.Combine(teammatesRoot, "ada", "pic.png");
+        _ = fixture.CreateAgent("ada", "Ada", "ada");
+        string agentsRoot = Path.Combine(fixture.DataDir, "Agents");
+        string sourcePath = Path.Combine(agentsRoot, "ada", "pic.png");
         File.WriteAllBytes(sourcePath, [1, 2, 3]);
         fixture.Reload();
         LibraryFileService service = fixture.CreateService();
-        LibraryPath file = fixture.ResolveTeammatesFolder("ada/pic.png");
+        LibraryPath file = fixture.ResolveAgentsFolder("ada/pic.png");
 
         LibraryResult<LibraryMoveResult> result = await service.RenameAsync(file, "pic.md", ct);
 
         Assert.Null(result.Value);
-        Assert.Equal("A teammate folder holds only its definition; use work/.", result.Error);
+        Assert.Equal("An agent folder holds only its definition; use work/.", result.Error);
         Assert.True(File.Exists(sourcePath));
-        Assert.False(File.Exists(Path.Combine(teammatesRoot, "ada", "pic.md")));
+        Assert.False(File.Exists(Path.Combine(agentsRoot, "ada", "pic.md")));
     }
 
     /// <summary>Renaming a folder while a file inside it is held open without <see cref="FileShare.Delete"/>

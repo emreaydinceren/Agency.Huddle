@@ -9,8 +9,8 @@ internal sealed record SeedPlan
     /// <summary>The Human's name.</summary>
     public required string HumanName { get; init; }
 
-    /// <summary>The Teammates.</summary>
-    public required IReadOnlyList<SeedTeammate> Teammates { get; init; }
+    /// <summary>The Agents.</summary>
+    public required IReadOnlyList<SeedAgent> Agents { get; init; }
 
     /// <summary>The Skills.</summary>
     public required IReadOnlyList<SeedSkill> Skills { get; init; }

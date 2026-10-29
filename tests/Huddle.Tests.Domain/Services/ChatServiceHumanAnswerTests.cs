@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Factories;
 using Agency.Huddle.Tests.Fakes;

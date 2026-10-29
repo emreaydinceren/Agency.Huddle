@@ -80,12 +80,12 @@ public sealed class SearchOrchestratorTests : IDisposable
         await EndAsync(search, ct);
     }
 
-    /// <summary>The picker's Teammates group is asked for the single-filter cap even under All, so the Composer can put the Room's Members first before cutting to five (spec §5.3).</summary>
+    /// <summary>The picker's Agents group is asked for the single-filter cap even under All, so the Composer can put the Room's Members first before cutting to five (spec §5.3).</summary>
     [Fact]
-    public async Task ReferencePurpose_TeammatesUnderAll_AskForTheSingleFilterCap()
+    public async Task ReferencePurpose_AgentsUnderAll_AskForTheSingleFilterCap()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        GatedSearchProvider mates = new(SearchFilter.Teammates, isExpensive: false);
+        GatedSearchProvider mates = new(SearchFilter.Agents, isExpensive: false);
         GatedSearchProvider teams = new(SearchFilter.Teams, isExpensive: false);
         SearchOrchestrator orchestrator = this.Create(mates, teams);
 
@@ -251,9 +251,9 @@ public sealed class SearchOrchestratorTests : IDisposable
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         GatedSearchProvider teams = new(SearchFilter.Teams, isExpensive: false);
-        GatedSearchProvider teammates = new(SearchFilter.Teammates, isExpensive: false);
+        GatedSearchProvider agents = new(SearchFilter.Agents, isExpensive: false);
         GatedSearchProvider rooms = new(SearchFilter.Rooms, isExpensive: true);
-        GatedSearchProvider[] providers = [teams, teammates, rooms];
+        GatedSearchProvider[] providers = [teams, agents, rooms];
         SearchOrchestrator orchestrator = this.Create(providers);
 
         Task search = orchestrator.SearchAsync(Parse(SearchFilter.All), null);
@@ -276,10 +276,10 @@ public sealed class SearchOrchestratorTests : IDisposable
         Assert.Equal(
             [
                 (SearchFilter.Teams, SearchScope.Active),
-                (SearchFilter.Teammates, SearchScope.Active),
+                (SearchFilter.Agents, SearchScope.Active),
                 (SearchFilter.Rooms, SearchScope.Active),
                 (SearchFilter.Teams, SearchScope.Archived),
-                (SearchFilter.Teammates, SearchScope.Archived),
+                (SearchFilter.Agents, SearchScope.Archived),
                 (SearchFilter.Rooms, SearchScope.Archived),
             ],
             seen.OrderBy(pair => pair.Scope).ThenBy(pair => pair.Group).ToList());
@@ -309,15 +309,15 @@ public sealed class SearchOrchestratorTests : IDisposable
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         GatedSearchProvider teams = new(SearchFilter.Teams, isExpensive: false);
-        GatedSearchProvider teammates = new(SearchFilter.Teammates, isExpensive: false);
-        SearchOrchestrator orchestrator = this.Create(teams, teammates);
+        GatedSearchProvider agents = new(SearchFilter.Agents, isExpensive: false);
+        SearchOrchestrator orchestrator = this.Create(teams, agents);
 
         Task search = orchestrator.SearchAsync(Parse(SearchFilter.Teams), null);
         IReadOnlyList<GatedCall> calls = await teams.WaitForCallsAsync(1, ct);
 
         Assert.Equal(SearchLimits.SingleFilterCap, calls[0].Query.MaxHits);
         Assert.Equal(SearchFilter.Teams, calls[0].Query.Filter);
-        Assert.Empty(teammates.Calls);
+        Assert.Empty(agents.Calls);
 
         orchestrator.Cancel();
         await EndAsync(search, ct);

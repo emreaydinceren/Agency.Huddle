@@ -15,7 +15,7 @@ internal static class ReferenceLimits
     /// <summary>The longest referenced value quoted in an Agent's header (spec §9.2 step 3).</summary>
     public const int MaxValueChars = 120;
 
-    /// <summary>The most Teammate names listed for a Team in an Agent's header (spec §9.1).</summary>
+    /// <summary>The most Agent names listed for a Team in an Agent's header (spec §9.1).</summary>
     public const int MaxTeamMemberNames = 8;
 
     /// <summary>The longest token a reference may carry (spec §5.1).</summary>

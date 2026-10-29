@@ -11,7 +11,7 @@ using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Tasks;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.Tests.Library;
 
 namespace Agency.Huddle.Tests.Ui;

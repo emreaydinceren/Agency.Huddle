@@ -16,7 +16,7 @@ namespace Agency.Huddle.App.Tasks;
 /// through <see cref="TaskStore"/>, and raises <see cref="TaskEvents.TaskChanged"/> after the write,
 /// outside every lock. <see cref="Create"/>, <see cref="Update"/>, <see cref="Close"/>,
 /// <see cref="Reopen"/> and outside-edit logging (<see cref="OnOutsideEdit"/>) are implemented so
-/// far (Tasks 6.1-6.5); Teammate renaming follows in Task 6.6. Subscribes to
+/// far (Tasks 6.1-6.5); Agent renaming follows in Task 6.6. Subscribes to
 /// <see cref="TaskStore.OutsideEditDetected"/> and <see cref="TaskStore.IndexChanged"/> in its
 /// constructor, so it also implements <see cref="IDisposable"/> to unsubscribe from both
 /// (Spec §9.4, traps.md L98).
@@ -675,26 +675,26 @@ internal sealed class TaskService : IDisposable
     /// <summary>
     /// Rewrites <c>creator:</c>/<c>assignee:</c> in every Task, including Closed ones, whose value
     /// equals <paramref name="oldName"/> (Spec §9.6, ordinal case-insensitive). A change of identity,
-    /// not of the Task - ADR-0011 says a rename moves the Teammate, not its history - so this writes
+    /// not of the Task - ADR-0011 says a rename moves the Agent, not its history - so this writes
     /// with no Change log entry and raises no <see cref="TaskEvents.TaskChanged"/>. Called from
     /// <see cref="Acp.PersonaRenameCascade.OnPersonaRenamed"/> before <c>RenameUser</c>, and must
     /// never throw (Settled corrections-B2 D6 item 11) so a bad Task file never blocks the
     /// race-critical Team Directory rename above it.
     /// </summary>
-    /// <param name="oldName">The Teammate's current Name.</param>
-    /// <param name="newName">The Teammate's new Name.</param>
-    internal void RenameTeammate(string oldName, string newName)
+    /// <param name="oldName">The Agent's current Name.</param>
+    /// <param name="newName">The Agent's new Name.</param>
+    internal void RenameAgent(string oldName, string newName)
     {
         lock (this.mutateGate)
         {
-            this.RenameTeammateCore(oldName, newName);
+            this.RenameAgentCore(oldName, newName);
         }
     }
 
-    /// <summary>The body of <see cref="RenameTeammate"/>, run under <see cref="mutateGate"/>.</summary>
-    /// <param name="oldName">The Teammate's current Name.</param>
-    /// <param name="newName">The Teammate's new Name.</param>
-    private void RenameTeammateCore(string oldName, string newName)
+    /// <summary>The body of <see cref="RenameAgent"/>, run under <see cref="mutateGate"/>.</summary>
+    /// <param name="oldName">The Agent's current Name.</param>
+    /// <param name="newName">The Agent's new Name.</param>
+    private void RenameAgentCore(string oldName, string newName)
     {
         List<(TaskItem Task, string ExpectedVersion, string Text)> writes = this.CollectRenameWrites(oldName, newName);
         if (writes.Count == 0)
@@ -713,10 +713,10 @@ internal sealed class TaskService : IDisposable
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
             // A whole-batch failure - the composed text failed to parse (an invariant break) or a
-            // file could not be written at all. Logged and swallowed: renaming a Teammate must never
+            // file could not be written at all. Logged and swallowed: renaming an Agent must never
             // throw, because it runs synchronously before the race-critical Team Directory rename in
             // PersonaRenameCascade.OnPersonaRenamed.
-            this.logger.LogWarning(ex, "Could not rename Teammate '{OldName}' to '{NewName}' in one or more Task files.", oldName, newName);
+            this.logger.LogWarning(ex, "Could not rename Agent '{OldName}' to '{NewName}' in one or more Task files.", oldName, newName);
             return;
         }
 
@@ -729,7 +729,7 @@ internal sealed class TaskService : IDisposable
                 // outside-edit rebuild will see the file as it now is. Logged and continues with the
                 // rest of the batch, matching the per-file "never throws" contract.
                 this.logger.LogWarning(
-                    "Could not rename Teammate '{OldName}' to '{NewName}' in Task '{TaskId}': the file changed on disk since it was read.",
+                    "Could not rename Agent '{OldName}' to '{NewName}' in Task '{TaskId}': the file changed on disk since it was read.",
                     oldName,
                     newName,
 #pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
@@ -740,8 +740,8 @@ internal sealed class TaskService : IDisposable
     }
 
     /// <summary>The write for each Task whose creator or assignee is <paramref name="oldName"/>, with the head recomposed under <paramref name="newName"/>.</summary>
-    /// <param name="oldName">The Teammate's current Name.</param>
-    /// <param name="newName">The Teammate's new Name.</param>
+    /// <param name="oldName">The Agent's current Name.</param>
+    /// <param name="newName">The Agent's new Name.</param>
     private List<(TaskItem Task, string ExpectedVersion, string Text)> CollectRenameWrites(string oldName, string newName)
     {
         List<(TaskItem Task, string ExpectedVersion, string Text)> writes = [];
@@ -1527,7 +1527,7 @@ internal sealed class TaskService : IDisposable
             return;
         }
 
-        problems.Add(string.Create(CultureInfo.InvariantCulture, $"Unknown teammate '{assignee}'."));
+        problems.Add(string.Create(CultureInfo.InvariantCulture, $"Unknown agent '{assignee}'."));
     }
 
     /// <summary>Spec §9.2: DuplicateOf is set exactly when the status is Duplicate.</summary>

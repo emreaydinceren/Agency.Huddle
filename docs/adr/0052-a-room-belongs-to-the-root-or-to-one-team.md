@@ -18,7 +18,7 @@ Rooms unscoped.
 
 Rooms know nothing about Teams. Messaging a member from a Team's Members tab opens the same
 one-to-one Room as the sidebar does, and that Room can be reached from every Team the
-Teammate is in. So nothing can answer "which Team is this conversation for?", and three
+Agent is in. So nothing can answer "which Team is this conversation for?", and three
 things need that answer:
 
 - **Uploads.** A file attached in a Team's conversation belongs in that Team's folder; one
@@ -34,7 +34,7 @@ never changes. The Team is keyed by its name, compared ignoring case, as `cadenc
 already does, because a Team has no other identity.
 
 **A scoped Room is a Room.** Membership, Budget, the reply rule, Archive and Delete behave
-as they do now. Any Teammate can be invited, member of the Team or not. Scope changes only
+as they do now. Any Agent can be invited, member of the Team or not. Scope changes only
 where the Room is listed, where its uploads go, and one line of the Agent's Turn label.
 
 **Root and Team one-to-ones are separate Rooms.** Every lookup of "the Room with exactly
@@ -43,7 +43,7 @@ from the Marketing Members tab opens, or creates, Marketing's one-to-one with No
 sidebar's Nova Room stays the persistent root one.
 
 **Each Team has one Team Room**, named after the Team, holding the Human and every member.
-It is created when the Team first has a member, and a Teammate who joins the Team later is
+It is created when the Team first has a member, and an Agent who joins the Team later is
 added to it. One reconciler, run on every change to the Team catalog, does both, so a Team
 created from a type and a Team born from a Persona's `teams:` label behave the same. It is
 marked in `room_teams` (`team_room = 1`, unique per Team), not found by name, and **it cannot
@@ -78,10 +78,10 @@ direction.
 
 | Alternative | Why not |
 | --- | --- |
-| Infer the Team from the Room's members | Ambiguous for a Teammate in two Teams, and the answer moves as people post |
+| Infer the Team from the Room's members | Ambiguous for an Agent in two Teams, and the answer moves as people post |
 | A `team` column on `rooms` | The repo adds state as sibling tables so every DDL stays `CREATE TABLE IF NOT EXISTS` |
 | Scope remembered from which page opened the Room | The same one-to-one would belong to whichever Team the Human clicked last |
-| Only Team members may join a scoped Room | Chosen against by the Human: Scope decides where files go and where it is listed, not who may talk |
+| Only Agents may join a scoped Room | Chosen against by the Human: Scope decides where files go and where it is listed, not who may talk |
 | A Room can be moved between scopes | Files already uploaded would sit in the wrong folder. Start a new chat instead |
 | Deleting a Team deletes its Rooms | Transcripts are not recoverable; archiving loses nothing |
 | A stable Team id in `_team.md` | Label-only Teams have no file, and nothing renames a Team today |
@@ -95,7 +95,7 @@ direction.
   `FindRoomWithExactMembersAsync` and `FindRoomWithExactMemberSetAsync` take a Scope;
   `DeleteRoomAsync` deletes the `room_teams` row first.
 - Every Scope parameter defaults to root, so persona hello, onboarding, `create_room` and
-  the Teammates page behave exactly as before. Task wakes and cadence opt in on purpose.
+  the Agents page behave exactly as before. Task wakes and cadence opt in on purpose.
 - Cadence posts in a Room of three or more, so they carry a Mention; without it the reply
   rule would leave the recipient asleep.
 - A Project folder already named `Uploads` stops being listed as a Project. This goes into
@@ -105,7 +105,7 @@ direction.
   *Nova*.
 - `read_records` reads a Room scoped to the Team directly, and keeps the ADR-0040 sender rule
   for root Rooms, so no Room readable today stops being readable.
-- Leaving a Team does not remove the Teammate from the Team Room: no code removes a Room
+- Leaving a Team does not remove the Agent from the Team Room: no code removes a Room
   Member today. This goes into `known-limits.md`.
 - A Team's one-to-one never matches the Team Room, even in a Team with one member, because the
   Team Room is flagged `team_room = 1` and every scoped find excludes it. Nothing renames a Team

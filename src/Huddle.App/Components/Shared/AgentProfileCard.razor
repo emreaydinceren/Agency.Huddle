@@ -1,0 +1,2286 @@
+
+@*
+    An Agent's details, shown the way Slack shows a profile: one card, opened over the page.
+    Viewing, editing and creating are three modes of this same card rather than three layouts, so an
+    Agent presents identically whichever verb brought you here.
+
+    Stage 4 of the MudBlazor migration replaces the hand-rolled overlay <div> with a real MudDialog,
+    shown through IDialogService - the accessibility debt this migration exists to pay off: a real
+    dialog gets focus trapping, Escape-to-close and correct ARIA wiring from MudBlazor itself, none of
+    which the old role="dialog" div ever had.
+
+    That change has one consequence worth recording: MudBlazor deliberately freezes a dialog's
+    parameters at the moment IDialogService.ShowAsync opens it - MudBlazor's own DialogHelperComponent
+    ignores every SetParametersAsync call after the first, by design, "to keep dialog content stable
+    while the parent fragment re-renders" (see its source comment). So nothing the page does AFTER
+    opening this card - Agents.razor's own StateHasChanged calls included - can push a new value
+    into an already-open instance. Every interaction that must visibly change something INSIDE this
+    same open dialog (switching to Edit, the Model-change effort re-probe, the inline Remove
+    confirmation, a Restart's busy flag, a failed Save's error) is therefore handled ENTIRELY inside
+    this component, against its own local fields and its own injected services, rather than by
+    bouncing an EventCallback up to Agents.razor and waiting for a parameter to come back down -
+    that round trip would silently never arrive. Agents.razor still supplies the identity and the
+    point-in-time facts that only need to be right at the moment the card opens (RoomId, FilePath):
+    those stay ordinary [Parameter]s.
+
+    Status is the one exception, and it is not a snapshot: rules.md's "Health outranks pipe
+    liveness" applies to every surface that renders this badge, this card included, and the
+    Restart button's own busy state is derived from it - the one screen a user needs Restart on is
+    exactly the one a stale snapshot would misreport. So this component injects PersonaHealth and
+    IAgentGateway itself and subscribes to their Changed/PresenceChanged
+    events directly, the same pattern Agents.razor uses for its own tiles, rather than trusting
+    the Status parameter past the moment the card opened. Disposed the same way rules.md requires
+    for any singleton event subscription: unsubscribed in Dispose, so a card the Human has already
+    closed can never leak a handler into a hub that outlives it.
+*@
+
+@using Agency.Huddle.Acp.Abstractions
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.Pipes
+@using Agency.Huddle.App.Skills
+@using Agency.Huddle.App.TeamTypes
+@using Agency.Huddle.App.Agents
+@using System.Diagnostics
+@using System.Diagnostics.CodeAnalysis
+@using System.Globalization
+@implements IDisposable
+
+@inject PersonaStore Personas
+@inject PersonaSupervisor Supervisor
+@inject IModelCatalog ModelCatalog
+@inject AdapterCatalog Adapters
+@inject PersonaHealth Health
+@inject PersonaSpend Spend
+@inject PersonaCommands Commands
+@inject IAgentGateway Gateway
+@inject ITeamDirectory TeamDirectory
+@inject AvatarStore Avatars
+@inject SkillStore Skills
+@inject BuiltinAgentReset Reset
+@* The avatar editor (AvatarEditorDialog) opens over this card as a second dialog when the avatar is pressed;
+   the Avatar Library picker opens over that, from the editor itself. *@
+@inject IDialogService DialogService
+@* Resolved by hand, not injected: the team-type catalog and the Skill registry only matter to an Agent hired
+   from a role, and a card opened in a host that registers neither (an Agents page without Teams) must
+   keep rendering exactly as before. *@
+@inject IServiceProvider Services
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@this.CardTitle</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (this.error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4" role="alert">@this.error</MudAlert>
+        }
+
+        @if (this.mode != AgentProfileCardMode.View)
+        {
+            <div class="group-label">Identity</div>
+        }
+
+        <MudStack Row="true" Spacing="3" Class="mb-4">
+            @* The avatar is the way into the avatar editor in every mode, so it is a real button: focusable,
+               announced, and carrying the one hover/focus cue (the pencil, app.css .agent-profile-card-avatar). The
+               avatar itself keeps its own single root element; the button wraps it rather than replacing it. *@
+            <button type="button" class="agent-profile-card-avatar" aria-label="Change avatar" title="Change avatar" @onclick="this.EditAvatarAsync">
+                <AgentAvatar Name="@this.name" Avatar="this.avatar" Size="Size.Large"
+                                PendingImage="this.avatarPendingBytes" PendingImageExtension="@this.avatarPendingExtension" />
+                <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="agent-profile-card-avatar-edit" />
+            </button>
+
+            @if (this.mode == AgentProfileCardMode.Create)
+            {
+                <MudStack Spacing="2" Class="flex-grow-1">
+                    <MudTextField T="string" Label="Name" Placeholder="e.g. Chief of Staff" @bind-Value="this.name"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.RestartAlt"
+                                  AdornmentAriaLabel="New random name" OnAdornmentClick="this.PickAnotherName"
+                                  HelperText="Letters, digits, spaces, - and _. Spaces are fine." />
+                    @* UX-E15: Title and Alias share one row so the New agent dialog fits a 900px-high window. *@
+                    <div class="agent-profile-card-row agent-profile-card-identity-row">
+                        <MudTextField T="string" Label="Title" Placeholder="e.g. Chief of Staff" @bind-Value="this.title"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Shown beside the name." />
+                        <MudTextField T="string" Label="Alias" Placeholder="e.g. coo" @bind-Value="this.alias"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="For @@mentions." />
+                    </div>
+                    <MudTextField T="string" Label="Teams" Placeholder="e.g. Business, Household" @bind-Value="this.teams"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Comma-separated. Leave blank for no team." />
+                </MudStack>
+            }
+            else
+            {
+                <div>
+                    @if (this.mode == AgentProfileCardMode.View)
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">@this.title</MudText>
+                    }
+                    <MudText Typo="Typo.body2" Class="d-flex align-center gap-2">
+                        <StatusDot State="this.status.State" />
+                        @StatusDot.Label(this.status.State)
+                    </MudText>
+                    @* The reason (when one is known) is a full line here - there is room for it on the
+                       card, unlike the tile's tooltip in Agents.razor. Follows the same pattern as
+                       the "Files that didn't load" section: a diagnostic surfaced as domain state. *@
+                    @if (this.status.Reason is not null)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Error">@this.status.Reason</MudText>
+                    }
+                    @if (this.mode == AgentProfileCardMode.View)
+                    {
+                        @* What this Agent's Adapter has reported spending since the app started: display only, one
+                           line per currency, and absent (never a zero) when nothing was reported. View mode only -
+                           in Edit the card is a form for changing the Agent, not for reading a running total. *@
+                        @foreach (var amount in this.spendAmounts)
+                        {
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary agent-profile-card-spend">Spent since start: @amount.Amount.ToString("N3", CultureInfo.CurrentCulture) @amount.Currency</MudText>
+                        }
+                        @* NF-6: the lasting total, kept across restarts, for an Agent hired from a role. *@
+                        @if (this.roleRef is not null)
+                        {
+                            @foreach (var persisted in this.Spend.GetPersisted(this.name))
+                            {
+                                <MudText Typo="Typo.body2" Class="mud-text-secondary agent-profile-card-spend-total">Total spent: @persisted.Amount.ToString("N3", CultureInfo.CurrentCulture) @persisted.Currency</MudText>
+                            }
+                        }
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary agent-profile-card-alias">@($"@{this.alias}")</MudText>
+                        @if (this.teams.Length > 0)
+                        {
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">Teams: @this.teams</MudText>
+                        }
+                    }
+                </div>
+            }
+        </MudStack>
+
+        @* NF-1: the role and version this Agent was hired from. Absent for an Agent with no _role. *@
+        @if (this.roleRef is not null)
+        {
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2 agent-profile-card-role">Role: @this.roleRef</MudText>
+        }
+
+        @if (this.mode == AgentProfileCardMode.View)
+        {
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap" Class="mb-2">
+                @if (this.onMessage.HasDelegate)
+                {
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.MessageAsync">Message</MudButton>
+                }
+                else if (this.roomId is not null)
+                {
+                    <MudButton Href="@($"/rooms/{this.roomId}")" Variant="Variant.Outlined" Size="Size.Small">Message</MudButton>
+                }
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.BeginEditAsync">Edit</MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.OpenInEditor">Open</MudButton>
+                @* Offered in every state, including Online. It was once offered only while there was
+                   "something to fix", on the grounds that a healthy agent needs no button that
+                   would restart a session for nothing - but a session is exactly what a NextSession
+                   Prompt waits for. Those fields are badged on the settings page precisely because an
+                   edit to one cannot reach a running Agent (rules.md: "Editing a Prompt must never
+                   restart a session"), so with Restart hidden on a healthy card the only way to apply
+                   one was to edit the Persona text - an unrelated change the user does not want, made
+                   solely for the restart it triggers. APPTOOLS-22 and PROMPTSSETTINGS-39 both already
+                   direct a tester to click Restart on an Online agent, so the scripts assumed this
+                   too. The trade is unchanged and is stated below the row in the Edit form's own
+                   words: a manual Restart clears what the agent remembers.
+
+                   Starting is the one state still excluded, and for a different reason than "nothing
+                   to fix": the session is mid-creation, so a Restart there races the start it would
+                   be cancelling. Offline, Degraded and Online are all settled states. *@
+                @if (this.status.State is not PersonaState.Starting)
+                {
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="this.restarting" OnClick="this.RestartAsync">@(this.restarting ? "Restarting…" : "Restart")</MudButton>
+                }
+                @* Deliberately an inline swap, not a nested MudDialog: MudBlazor dialogs are not
+                   designed to stack, and a confirmation dialog on top of this one would need a second
+                   backdrop and a second focus trap for what is only ever a yes/no choice. Swapping the
+                   one Remove (or, for the Chief of Staff, Reset to default) button for an InlineConfirm
+                   (its verb button and Cancel; Escape cancels it and focus returns to the button it replaced)
+                   in place reads as a confirmation without either, and keeps the whole exchange inside
+                   the one dialog whose parameters are already frozen (see the file-level comment) - a
+                   nested dialog would need its own independent parameter set anyway.
+
+                   The Chief of Staff cannot be Removed (Spec §6.12) - it is recognised by its
+                   PersonaEntry.Builtin marker, resolved fresh here rather than carried as a
+                   [Parameter], since the entry can change (a rename) while this same dialog stays
+                   open, and rules.md forbids adding a member to the Persona record for this. *@
+                @if (this.IsBuiltinAgent)
+                {
+                    @if (this.confirmingReset)
+                    {
+                        <InlineConfirm Prompt="Reset to default?" ConfirmText="Reset" OnConfirm="this.ConfirmReset" OnCancel="this.CancelReset" />
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error" @ref="this.resetButton" OnClick="this.BeginReset">Reset to default</MudButton>
+                    }
+                }
+                else
+                {
+                    @if (this.confirmingRemove)
+                    {
+                        <InlineConfirm Prompt="@ConfirmCopy.DeleteTitle(this.name)" OnConfirm="this.ConfirmRemove" OnCancel="this.CancelRemove" />
+                    }
+                    else
+                    {
+                        @* A destructive action is never a red icon among text buttons (design-system "Menus"): it
+                           sits under the more-actions button. The activator names its target and has no tooltip, which
+                           would stay up over the first item. The item asks inline, so it opens no dialog. *@
+                        <MudMenu Class="agent-profile-card-more" Dense="true">
+                            <ActivatorContent Context="menuContext">
+                                <MudIconButton Icon="@ActionIcons.MoreActions" Size="Size.Small" @ref="this.removeButton"
+                                               aria-label="@MenuDialogs.ActivatorLabel(this.name)" OnClick="menuContext.ToggleAsync" />
+                            </ActivatorContent>
+                            <ChildContent>
+                                <MudMenuItem Icon="@ActionIcons.Delete" Class="menu-item-destructive" OnClick="this.BeginRemove">Delete agent</MudMenuItem>
+                            </ChildContent>
+                        </MudMenu>
+                    }
+                }
+            </MudStack>
+
+            @* Spec §6.12's confirm copy, verbatim - shown only during the Reset confirm step, the
+               same way the caption line just below explains what saving does for every other card. *@
+            @if (this.IsBuiltinAgent && this.confirmingReset)
+            {
+                <MudText Typo="Typo.body2" Class="d-block mb-3 mud-text-secondary">Restore the Chief of Staff's instructions, Title, Teams, Skills, Model and Effort to their defaults? Its Name, Alias, Rooms and history are kept.</MudText>
+            }
+
+            @if (this.status.State is not PersonaState.Starting)
+            {
+                <MudText Typo="Typo.caption" Class="d-block mb-3 mud-text-secondary">Like saving an edit, this restarts the agent, which clears what it remembers.</MudText>
+            }
+
+            @* What this Agent's Adapter lets a Human run, one line each, in the Adapter's own words, as helper text beside
+               Restart (a command such as /compact frees context without one). Razor encodes the description, so it is shown as
+               text, never as Markdown or markup. Absent when it offers nothing, which is every Agent on a stock install. *@
+            @foreach (var command in this.offeredCommands)
+            {
+                <MudText Typo="Typo.caption" Class="d-block mb-1 mud-text-secondary agent-profile-card-command" title="@($"Write @{this.name} /{command.Name} in a Room to run it")">/@command.Name — @command.Description</MudText>
+            }
+
+            @* Sections are Group labels and spacing, not boxes (design-system "Dialog anatomy"). *@
+            <section class="agent-profile-card-section">
+                <div class="group-label">Persona</div>
+                <pre class="agent-profile-card-persona">@this.text</pre>
+            </section>
+
+            <section class="agent-profile-card-section">
+                <div class="group-label">Model</div>
+                <MudText Typo="Typo.body1">@this.ModelDisplayText</MudText>
+            </section>
+
+            <section class="agent-profile-card-section">
+                <div class="group-label">Effort</div>
+                <MudText Typo="Typo.body1">@this.EffortDisplayText</MudText>
+            </section>
+
+            <section class="agent-profile-card-section">
+                <div class="group-label">Work mode</div>
+                <MudText Typo="Typo.body1">@this.WorkModeDisplayText</MudText>
+            </section>
+
+            @if (this.filePath is not null)
+            {
+                <section class="agent-profile-card-section">
+                    <div class="group-label">Persona file</div>
+                    <MudText Typo="Typo.body2" Class="agent-profile-card-path">@this.filePath</MudText>
+                </section>
+            }
+        }
+        else
+        {
+            @if (this.mode == AgentProfileCardMode.Edit)
+            {
+                <MudStack Spacing="2" Class="mb-3">
+                    <MudTextField T="string" Label="Name" Placeholder="e.g. Chief of Staff" Value="@this.name" ValueChanged="this.OnNameChanged"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Disabled="@this.nameLocked" HelperText="@this.NameHelperText" />
+                    <MudTextField T="string" Label="Title" Placeholder="e.g. Chief of Staff" Value="@this.title" ValueChanged="this.OnTitleChanged"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Disabled="@this.titleLocked" HelperText="@this.TitleHelperText" />
+                    <MudTextField T="string" Label="Alias" Placeholder="e.g. coo" Value="@this.alias" ValueChanged="this.OnAliasChanged"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Disabled="@this.aliasLocked" HelperText="@this.AliasHelperText" />
+                </MudStack>
+
+                @* This said the opposite until ADR-0011: a rename used to leave the Agent, its Rooms and
+                   their Transcripts behind under the old Name. It now carries all of them, so the note
+                   is Info rather than Warning, and what it reports is the one thing a rename still does
+                   NOT do - rewrite what was already said. See docs/adr/0011-a-rename-moves-the-agent-
+                   not-its-history.md for why history is deliberately left alone. *@
+                @if (!string.Equals(this.name, this.Name, StringComparison.Ordinal))
+                {
+                    @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
+                       so role="status" is added explicitly to keep the note announced, per rules.md/traps.md.
+                       "status" rather than "alert": this is no longer an interruption, it is a consequence. *@
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">
+                        Renaming brings this agent's chats, its history and its work folder with it. Messages already posted keep the old name — the transcript records what was said at the time.
+                    </MudAlert>
+                }
+            }
+
+            <div class="group-label">Persona</div>
+            <MudTextField T="string" Value="@this.text" ValueChanged="this.OnTextChanged"
+                          Label="Persona text"
+                          Placeholder="e.g. You are the Chief of Staff. You keep the team honest."
+                          Lines="4" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          HelperText="@this.TextHelperText"
+                          Class="mb-3 long-text-field markdown-field" />
+
+            @* Spec §6.7, §2 U7: next to the Adapter select, and the same WriteListField data flow -
+               this.text is the source of truth, re-derived by ReadSkills whenever this.text changes
+               out from under it (BeginEditAsync, a successful Save), and written back through
+               PersonaFrontmatter.WriteListField on every selection change, mirroring how the Adapter
+               select above reads/writes "adapter" through WriteScalarField. No count-gate unlike the
+               Adapter select's "@if (AdapterChoices.Count > 1)": a MultiSelection picker with zero or
+               one option is still a legitimate zero/one-Skill catalog, not a control nobody could use. *@
+            <MudSelect T="string" Label="Skills" MultiSelection="true" SelectedValues="@this.skills"
+                       SelectedValuesChanged="this.OnSkillsChanged" Variant="Variant.Outlined" Margin="Margin.Dense"
+                       HelperText="Changing Skills restarts this Agent." Class="mb-3">
+                @foreach (var skill in this.OrderedSkills)
+                {
+                    <MudSelectItem T="string" Value="@skill.Name">
+                        <MudText>@skill.Name</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@skill.Description</MudText>
+                        <SkillProvenanceLine Skill="@skill" />
+                        @if (SkillOrigin.Of(skill) is { } origin)
+                        {
+                            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@origin</MudText>
+                        }
+                    </MudSelectItem>
+                }
+                @* Skill Packs spec §6.10.4: registry Skills Huddle can copy (a folder on this computer, not in Skills/ yet). They are
+                   copied on Save, or for a draft when the Team is approved; a not-downloaded one is never an option. *@
+                @foreach (Agency.Huddle.SkillPacks.Resolving.SkillEntry entry in this.CopyableSkills)
+                {
+                    <MudSelectItem T="string" Value="@entry.Name">
+                        <MudText>@entry.Name</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@entry.Description</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@Agency.Huddle.App.Skills.Ui.SkillOriginText.Line(entry.Publisher, entry.Origin, entry.License)</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-profile-card-copy-caption">@(this.OnDraftSaved.HasDelegate ? "Huddle copies it into Skills/ when you approve." : "Huddle copies it into Skills/ when you save.")</MudText>
+                    </MudSelectItem>
+                }
+            </MudSelect>
+
+            @* Skills a catalog or Pack lists but that have no folder on this computer: not choosable, but visible with their
+               remedy, so a Skill the Human cannot pick yet is still in sight (Skill Packs spec §6.10.4). *@
+            @if (this.NotDownloadedSkills.Count > 0)
+            {
+                <MudButton Variant="Variant.Text" Size="Size.Small" Class="agent-profile-card-not-here-toggle mb-1" OnClick="@(() => this.notHereOpen = !this.notHereOpen)"
+                           EndIcon="@(this.notHereOpen ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">Not on this computer yet (@this.NotDownloadedSkills.Count)</MudButton>
+                <MudCollapse Expanded="@this.notHereOpen" Class="agent-profile-card-not-here mb-3">
+                    @foreach (Agency.Huddle.SkillPacks.Resolving.SkillEntry entry in this.NotDownloadedSkills)
+                    {
+                        Agency.Huddle.SkillPacks.Resolving.SkillEntry shown = entry;
+                        <div class="agent-profile-card-not-here-row d-flex flex-wrap align-center gap-2 mb-1" data-skill="@shown.Name">
+                            <MudCheckBox T="bool" Value="@this.skills.Contains(shown.Name, StringComparer.Ordinal)" Disabled="true" Dense="true" aria-label="@($"{shown.Name} is not on this computer yet")" />
+                            <div>
+                                <MudText Typo="Typo.body2">@shown.Name</MudText>
+                                <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@shown.Description</MudText>
+                                <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@Agency.Huddle.App.Skills.Ui.SkillOriginText.Line(shown.Publisher, shown.Origin, shown.License)</MudText>
+                            </div>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="agent-profile-card-copy-prompt ml-auto" OnClick="@(() => this.CopyFetchPromptAsync(shown))">Copy prompt</MudButton>
+                        </div>
+                    }
+                </MudCollapse>
+            }
+
+            @* An assigned Skill name the store no longer resolves - a Skill folder removed or renamed
+               since this Persona last saved (Spec §6.7). Shown as a removable chip rather than silently
+               dropped, so the Human can see it and take it off; OnClose runs the same WriteListField
+               write as a fresh selection, just with the missing name filtered out. *@
+            @if (this.MissingSkillNames.Count > 0 && !this.OnDraftSaved.HasDelegate)
+            {
+                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="mb-3">
+                    @foreach (var missing in this.MissingSkillNames)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="status-chip status-chip-warning" Icon="@Icons.Material.Filled.Warning" OnClose="@(() => this.RemoveSkill(missing))">@missing</MudChip>
+                    }
+                </MudStack>
+            }
+
+            @* MS-4: the packs this role offers. Clicking one adds or removes its skills and its consultWhenAdds
+               clause, so the manager who reads the public job description knows to route that work here. *@
+            @* Skill Packs spec §6.10.4: the role's Packs from SKILLS.md, each drawn by its state. A not-downloaded Pack is a line
+               of text with Copy prompt, never a chip; a withdrawn one is not offered, and only a holder sees it, in red, with the
+               warning and Remove from this Agent. *@
+            @if (this.rolePacks.Count > 0)
+            {
+                <MudText Typo="Typo.overline">Packs</MudText>
+                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Class="mb-1">
+                    @foreach (var pack in this.rolePacks)
+                    {
+                        Agency.Huddle.SkillPacks.Resolving.PackEntry entry = pack;
+                        Agency.Huddle.SkillPacks.Resolving.ItemState state = this.PackState(entry);
+                        bool active = this.IsPackActive(entry.Id);
+                        @if (state == Agency.Huddle.SkillPacks.Resolving.ItemState.Withdrawn)
+                        {
+                            @if (active)
+                            {
+                                <StatusChip Color="Color.Error" Icon="@Icons.Material.Filled.Block" Class="agent-profile-card-pack-withdrawn">@entry.Title</StatusChip>
+                            }
+                        }
+                        else if (state != Agency.Huddle.SkillPacks.Resolving.ItemState.NotDownloaded || active)
+                        {
+                            <MudTooltip Text="@(state == Agency.Huddle.SkillPacks.Resolving.ItemState.Deprecated ? $"Deprecated: {this.ReasonOf(entry)}" : null)" ShowOnFocus="true">
+                                <MudChip T="string" Size="Size.Small" Class="@(active ? "agent-profile-card-pack filter-chip filter-chip-set" : "agent-profile-card-pack filter-chip")"
+                                         Variant="Variant.Outlined" aria-pressed="@(active ? "true" : "false")"
+                                         Icon="@PackIcon(state)" OnClick="@(() => this.TogglePack(entry))">@entry.Title</MudChip>
+                            </MudTooltip>
+                            @if (state == Agency.Huddle.SkillPacks.Resolving.ItemState.UpdateAvailable)
+                            {
+                                <MudLink Typo="Typo.caption" Class="agent-profile-card-pack-update" OnClick="@(() => this.OpenPackUpdateAsync(entry))">Update available</MudLink>
+                            }
+                        }
+                    }
+                </MudStack>
+                @foreach (var pack in this.rolePacks.Where(pack => this.PackState(pack) == Agency.Huddle.SkillPacks.Resolving.ItemState.NotDownloaded && !this.IsPackActive(pack.Id)))
+                {
+                    Agency.Huddle.SkillPacks.Resolving.PackEntry entry = pack;
+                    <div class="agent-profile-card-pack-missing d-flex flex-wrap align-center gap-2 mb-1">
+                        <MudText Typo="Typo.body2">Pack "@entry.Title" is not downloaded.</MudText>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="agent-profile-card-pack-copy-prompt" OnClick="@(() => this.CopyPackPromptAsync(entry))">Copy prompt</MudButton>
+                    </div>
+                }
+                @foreach (var pack in this.rolePacks.Where(pack => this.PackState(pack) == Agency.Huddle.SkillPacks.Resolving.ItemState.Withdrawn && this.IsPackActive(pack.Id)))
+                {
+                    Agency.Huddle.SkillPacks.Resolving.PackEntry entry = pack;
+                    <MudAlert Severity="Severity.Warning" Dense="true" role="status" Class="mb-2 agent-profile-card-warning agent-profile-card-pack-withdrawn-warning">
+                        <span class="agent-profile-card-pack-withdrawn-text">Pack "@entry.Title" was withdrawn by its Source: @this.ReasonOf(entry). @this.name keeps working.</span>
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Class="agent-profile-card-pack-remove ml-2" OnClick="@(() => this.TogglePack(entry))">Remove from this Agent</MudButton>
+                    </MudAlert>
+                }
+            }
+            @if (this.roleSpec is { } findRole && this.Services.GetService<Agency.Huddle.App.SkillSources.SkillRegistry>() is not null)
+            {
+                <MudLink Typo="Typo.body2" Class="agent-profile-card-find-packs d-block mb-3" OnClick="@(() => this.FindPacksAsync(findRole))">Find more Packs for @findRole.Title</MudLink>
+            }
+
+            @* PR-2: a manager's Complete Setup panel adds the Process step. *@
+            @if (this.managedTeam is { } processTeam)
+            {
+                <ProcessStep Team="@processTeam" />
+            }
+
+            @* MS-5: too many skills, or two sharing a catalog Sub Category. *@
+            @foreach (var warning in this.SetupWarnings.Skills)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3 agent-profile-card-warning" role="status">@warning</MudAlert>
+            }
+
+            <div class="group-label">Model</div>
+
+            @* Configuration, not a probe (Spec §6.6): AdapterCatalog is frozen at startup and read
+               synchronously, so unlike the Model and Effort selects below there is no loading state
+               to guard here. Wrapped in @if rather than shown Disabled when there is only one
+               profile: Spec §4 (P6) requires a stock installation - which configures no Adapters and
+               therefore always has exactly one synthesised profile - to look byte-for-byte like it
+               did before this feature existed, and a dropdown offering a single option is a control
+               nobody could ever use anyway (Spec §12, E-2). *@
+            @if (this.AdapterChoices.Count > 1)
+            {
+                <MudSelect T="string" Label="Adapter" Value="@(this.adapter ?? string.Empty)" ValueChanged="this.OnAdapterChangedAsync"
+                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                           HelperText="@this.AdapterHelperText" Class="mb-3">
+                    <MudSelectItem T="string" Value="@string.Empty">Use the default adapter</MudSelectItem>
+                    @foreach (var choice in this.AdapterChoices)
+                    {
+                        <MudSelectItem T="string" Value="@choice.Id">@choice.DisplayName</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+
+            @* Spec §6.6/§8.3: the Adapter counterpart of the effortResetByModelChange note below -
+               same reasoning, one control to the left. role="status" rather than role="alert" because
+               MudAlert renders no role by default (rules.md) and this is a consequence of what the
+               human just did, not an interruption. *@
+            @if (this.adapterResetModelAndEffort)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">
+                    Changing the adapter reset Model and Effort to their defaults. Each adapter advertises its own models, so choices made for the previous adapter do not carry across — pick them again if you want specific ones.
+                </MudAlert>
+            }
+
+            @* @bind-Value, not @oninput: MudSelect raises its ValueChanged on selection, the same
+               "change" semantics the old <select>'s @onchange comment called out - see
+               OnModelChangedAsync below for why the Effort catalog must be re-read from here.
+
+               Disabled while the probe is in flight (issue #39), but styled as busy rather than off (.agent-profile-card-probing) with a progress bar under it (audit E5; ReadOnly is banned by convention CV5). An unread catalog is an EMPTY one, so
+               ModelChoices renders exactly two options - the blank default and the synthesised entry for
+               the stored id - and an interactive select offers that two-item list as though it were the
+               whole truth.
+
+               Disabled, NOT ReadOnly, the same as the locked identity boxes above.
+               Both refuse to open the popover, but MudBlazor 9.10.0 styles only the disabled one:
+               .mud-input.mud-disabled dims the text and dots the underline, while the read-only case has
+               no input rule at all. A read-only select would therefore look live and silently swallow
+               the click - worse than the incomplete list it replaced. Verified against the shipped
+               MudBlazor.min.css, not assumed. The cost is the tab order; ModelRowHelperText carries the
+               reason on screen either way, and the window is one adapter spawn long. *@
+            @* UX-E15: Model, Effort and Work mode are one row of equal selects under the one Model label. *@
+            <div class="agent-profile-card-row agent-profile-card-model-row mb-1">
+            <div class="agent-profile-card-cell">
+            <MudSelect T="string" Label="Model" Value="@(this.model ?? string.Empty)" ValueChanged="this.OnModelChangedAsync"
+                       Disabled="@this.modelsLoading" aria-busy="@(this.modelsLoading ? "true" : null)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                       title="Which model this agent thinks with." Class="@(this.modelsLoading ? "agent-profile-card-probing" : null)">
+                <MudSelectItem T="string" Value="@string.Empty">@DefaultOptionText</MudSelectItem>
+                @foreach (var choice in this.ModelChoices)
+                {
+                    <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
+                }
+            </MudSelect>
+            @if (this.modelsLoading)
+            {
+                <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="agent-profile-card-probe" aria-label="Reading the models this agent offers" />
+            }
+            </div>
+
+            <div class="agent-profile-card-cell">
+            @* Disabled while its own probe is in flight, for the reason spelled out on the Model select
+               above. Note the flag is effortsLoading, not modelsLoading: the two catalogs are probed by
+               two separate adapter spawns and land at different moments, so each select waits only on
+               the list it is actually offering. *@
+            <MudSelect T="string" Label="Effort" Value="@(this.effort ?? string.Empty)" ValueChanged="this.OnEffortChanged"
+                       Disabled="@this.effortsLoading" aria-busy="@(this.effortsLoading ? "true" : null)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                       title="How hard this agent thinks." Class="@(this.effortsLoading ? "agent-profile-card-probing" : null)">
+                <MudSelectItem T="string" Value="@string.Empty">@DefaultOptionText</MudSelectItem>
+                @foreach (var choice in this.EffortChoices)
+                {
+                    <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
+                }
+            </MudSelect>
+            @if (this.effortsLoading)
+            {
+                <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="agent-profile-card-probe" aria-label="Reading the effort levels this model offers" />
+            }
+            </div>
+
+            @* Work mode: how much the Agent may do before it must ask (ADR-0033). Offered from the
+               Adapter's own advertised list, so there is no list of modes in this file. Hidden when the
+               Adapter advertises none and nothing is stored (ShowWorkModePicker): a picker with only a
+               blank option is a control nobody can use, but a STORED value keeps it so the Human can
+               still see and clear it. Disabled, not ReadOnly, while the probe is out, for the reason
+               spelled out on the Model select above. The same probe answers this and Effort, so it
+               waits on effortsLoading. ToStringFunc shows the mode's name rather than its id (an id such
+               as "acceptEdits" is for the wire); the selected mode's own description is the helper text. *@
+            @if (this.ShowWorkModePicker)
+            {
+                <div class="agent-profile-card-cell">
+                <MudSelect T="string" Label="Work mode" Value="@(this.workMode ?? string.Empty)" ValueChanged="this.OnWorkModeChanged"
+                           Disabled="@this.effortsLoading" aria-busy="@(this.effortsLoading ? "true" : null)" ToStringFunc="@this.WorkModeLabel"
+                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                           title="@this.WorkModeTitle" Class="@(this.effortsLoading ? "agent-profile-card-probing" : null)">
+                    <MudSelectItem T="string" Value="@string.Empty">@DefaultOptionText</MudSelectItem>
+                    @foreach (var choice in this.WorkModeChoices)
+                    {
+                        <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
+                    }
+                </MudSelect>
+                @if (this.effortsLoading)
+                {
+                    <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="agent-profile-card-probe" aria-label="Reading the work modes this agent offers" />
+                }
+                </div>
+            }
+            </div>
+            @* One shared line for the three selects (UX-E15): per-select helper text wrapped to 4-5 lines in
+               the narrow columns. Each select's own explanation is its title. *@
+            <MudText Typo="Typo.caption" Class="d-block mb-3 mud-text-secondary agent-profile-card-row-helper">@this.ModelRowHelperText</MudText>
+
+            @* The reset below is deliberate and asserted by PERSONALIFECYCLE-29 - this note exists
+               only because it used to happen invisibly (issue #45). role="status" is written out
+               because MudAlert renders no role by default (rules.md), and "status" rather than
+               "alert" for the same reason the rename note above uses it: this is a consequence of
+               what the user just did, not an interruption. *@
+            @if (this.effortResetByModelChange)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">
+                    Changing the model reset Effort to the default. Each model advertises its own effort levels, so a level chosen for the previous model does not carry across — pick one again if you want a specific level.
+                </MudAlert>
+            }
+
+            @* MS-3: a vendor shared with a role this one must differ from. *@
+            @foreach (var warning in this.SetupWarnings.Model)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-3 agent-profile-card-warning" role="status">@warning</MudAlert>
+            }
+
+            @* ADR-0033. Same role="status" reasoning as the notes above: a consequence of what the Human
+               just did, never role="alert". Its own note, rather than a third clause in the Model/Effort
+               one, so the text those tests pin does not move. *@
+            @if (this.adapterResetWorkMode)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mt-3" role="status">
+                    Changing the adapter reset Work mode to its default. Each adapter advertises its own modes, so a mode chosen for the previous adapter does not carry across — pick one again if you want a specific mode.
+                </MudAlert>
+            }
+
+        }
+    </DialogContent>
+    <DialogActions>
+        @if (this.mode != AgentProfileCardMode.View)
+        {
+            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Close">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@this.copying" OnClick="this.SaveAsync">
+                @if (this.copying)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                @this.SaveLabel
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>
+    /// The <see cref="DialogOptions"/> every <see cref="AgentProfileCard"/> opens with: the shared
+    /// <see cref="HuddleDialogOptions.SmallForm"/> (close button, no backdrop dismissal, because Edit and
+    /// Create hold typed text), so <c>Agents.razor</c>'s <c>ShowAsync</c> call and this file agree.
+    /// </summary>
+    internal static DialogOptions Options => HuddleDialogOptions.SmallForm;
+
+    [CascadingParameter]
+    public required IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public AgentProfileCardMode Mode { get; set; }
+
+    [Parameter]
+    public string Name { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Alias { get; set; } = string.Empty;
+
+    /// <summary>A single comma-separated string of Team names, exactly as the Create card's Teams input and the View card's Teams line both show it.</summary>
+    [Parameter]
+    public string Teams { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Text { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Model { get; set; }
+
+    [Parameter]
+    public string? Effort { get; set; }
+
+    /// <summary>
+    /// The id of the Work Mode this Persona's sessions start in (ADR-0033), or <see langword="null"/>
+    /// for the Adapter's own mode. Named <c>WorkMode</c>, never <c>Mode</c>: the card already has a
+    /// <c>Mode</c> parameter, which is its Create/Edit/View state.
+    /// </summary>
+    [Parameter]
+    public string? WorkMode { get; set; }
+
+    /// <summary>Which ACP agent runs this Persona's session (Spec §7.2), or <see langword="null"/> for the installation's default profile.</summary>
+    [Parameter]
+    public string? Adapter { get; set; }
+
+    /// <summary>
+    /// The one status every surface renders, resolved by the caller through
+    /// <see cref="PersonaStatusResolver.Resolve"/> - never re-derived here from a plain online/offline
+    /// bool, which is exactly what <see cref="PersonaStatusResolver"/> exists to prevent. A snapshot
+    /// taken when the card opened: see the file-level comment for why this card does not chase a
+    /// background health change while it is already showing.
+    /// </summary>
+    [Parameter]
+    public PersonaStatus Status { get; set; } = new(PersonaState.Offline, null, DateTimeOffset.MinValue);
+
+    /// <summary>The Room this Agent shares with the Human, when one existed at the moment this card opened.</summary>
+    [Parameter]
+    public string? RoomId { get; set; }
+
+    /// <summary>
+    /// When supplied, the Message action is a button that raises this (and closes the card) instead of a
+    /// link to <see cref="RoomId"/>: the Team page's Members tab opens a Team-scoped Room, which no
+    /// fixed <c>/rooms/{id}</c> known at open time could name.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnMessage { get; set; }
+
+    [Parameter]
+    public string? FilePath { get; set; }
+
+    /// <summary>
+    /// When supplied, a Create card edits a draft instead of making an Agent: Save raises this with the
+    /// fields as typed and closes, and nothing is written to the Persona store. Build a team's draft roster
+    /// opens the card this way.
+    /// </summary>
+    [Parameter]
+    public EventCallback<(string Name, string Title, string Text, string? Model, string? Effort, Avatar Avatar, byte[]? Image, string? ImageExtension, string? Adapter, IReadOnlyList<string> Skills)> OnDraftSaved { get; set; }
+
+
+    /// <summary>The names of the Skills the draft carries, which a draft card starts with. Only read with <see cref="OnDraftSaved"/>.</summary>
+    [Parameter]
+    public IReadOnlyList<string>? DraftSkills { get; set; }
+
+    /// <summary>The draft's avatar, which a draft card starts with instead of drawing a new one. Only read with <see cref="OnDraftSaved"/>.</summary>
+    [Parameter]
+    public Avatar? DraftAvatar { get; set; }
+
+    /// <summary>The bytes of the draft's library image, shown on the avatar until it is saved. Only read with <see cref="OnDraftSaved"/>.</summary>
+    [Parameter]
+    public byte[]? DraftImage { get; set; }
+
+    /// <summary>The extension, with its dot, of <see cref="DraftImage"/>.</summary>
+    [Parameter]
+    public string? DraftImageExtension { get; set; }
+
+    /// <summary>The Names a draft may not take, besides those of existing Agents: the other drafts. Only read with <see cref="OnDraftSaved"/>.</summary>
+    [Parameter]
+    public IReadOnlyList<string> TakenNames { get; set; } = [];
+
+    // Local, mutable working copies of the parameters above, seeded once in OnInitialized and never
+    // re-seeded from the (frozen, per the file-level comment) parameters again. Every action this
+    // card performs - Save, Remove, Restart, the Model/Effort probes - reads and writes these, never
+    // the parameters, so the card stays internally consistent for the whole time it is open.
+    private AgentProfileCardMode mode;
+    private string name = string.Empty;
+    private string title = string.Empty;
+    private string alias = string.Empty;
+    private string teams = string.Empty;
+    private string text = string.Empty;
+    private string? model;
+    private string? effort;
+    private string? workMode;
+    private string? adapter;
+
+    // Unlike model/effort/adapter above, this has no [Parameter] counterpart to seed from: a Skill
+    // assignment lives only in this.text's frontmatter (Spec §6.7), never on the Persona record, so
+    // ReadSkills(this.text) is the only source - see its own remarks.
+    private IReadOnlyList<string> skills = [];
+
+
+    /// <summary>The installed Skills; a draft card lists the ones its role brings first, so the checked options are the first thing the Human sees.</summary>
+    private IEnumerable<Skill> OrderedSkills => this.DraftSkills is null
+        ? this.Skills.All
+        : this.Skills.All.OrderBy(skill => this.DraftSkills?.Contains(skill.Name, StringComparer.Ordinal) == true ? 0 : 1);
+
+    // The avatar this card shows: what the store holds, until the avatar editor applies something, and
+    // then what it applied. In Create and Edit that is only in memory until SaveAsync; in View it is
+    // written at once (EditAvatarAsync). Seeded in OnInitializedAsync and re-seeded in BeginEditAsync,
+    // exactly like every other local field on this card - see the file-level comment on why nothing
+    // here may come from a re-pushed parameter once the dialog is open.
+    private Avatar avatar = Avatar.None;
+
+    // An image the editor applied that has not been written yet. Nothing reaches {DataDir}/avatars
+    // until SaveAvatar, because only then is there a Name to file it under (a Create has none until
+    // it is saved) and a Cancel must be able to throw it away.
+    private byte[]? avatarPendingBytes;
+    private string? avatarPendingExtension;
+
+    private string? roomId;
+    private EventCallback onMessage;
+
+    /// <summary>Raises the Message callback, then closes the card so the page it navigates to is not left behind a dialog.</summary>
+    private async Task MessageAsync()
+    {
+        await this.onMessage.InvokeAsync();
+        this.MudDialog.Close();
+    }
+    private string? filePath;
+    private PersonaStatus status = new(PersonaState.Offline, null, DateTimeOffset.MinValue);
+
+    // The title the dialog's title bar was last told to show. MudBlazor's dialog instance renders
+    // TitleContent itself and does not repaint it when this component re-renders, so OnAfterRender
+    // compares CardTitle with this and asks the instance to repaint when they differ.
+    private string? paintedTitle;
+
+    // What this Persona's Adapter has reported spending since the app started, one entry per
+    // currency, re-read on PersonaSpend.SpendChanged. Empty when nothing was reported.
+    private IReadOnlyList<SpendAmount> spendAmounts = [];
+
+    // The Adapter commands this Agent currently offers, re-read on PersonaCommands.CommandsChanged.
+    // Empty when it offers none or is not running.
+    private IReadOnlyList<AdapterCommand> offeredCommands = [];
+    private string? error;
+    private MudButton? resetButton;
+    private MudIconButton? removeButton;
+    private bool restoreActionFocus;
+    private bool confirmingRemove;
+    private bool confirmingReset;
+    private bool restarting;
+
+    // Set when PersonaFrontmatter.WriteScalarField silently refused the matching identity box's last
+    // edit - the field is a block scalar (">"/"|") or a block list, which cannot be replaced by a
+    // one-line rewrite. See TryRejectIdentityFieldEdit for the detection and the file-level comment
+    // for why nothing here writes to disk regardless.
+    private bool nameLocked;
+    private bool titleLocked;
+    private bool aliasLocked;
+
+    // The Name PersonaStore currently has this Persona filed under - distinct from "name" above, which
+    // the Name box freely rewrites as the human types a new one. PersonaStore.Update's own "name"
+    // parameter is a LOOKUP key ("whichever Name this Persona is presently indexed under"), so passing
+    // the just-edited "name" there would ask the index for a Name it has never seen written to disk and
+    // throw. Seeded from the frozen Name parameter and refreshed to the saved Persona's own Name after
+    // every successful Save, so a second Edit/Save cycle in the same open dialog keeps looking the
+    // Persona up correctly even after an earlier rename in this same session.
+    private string persistedName = string.Empty;
+
+    // Resolved once, in OnInitializedAsync, for whichever Persona this card names - null for
+    // Create (no Agent exists yet) and for a Persona that has never connected. Re-read on every
+    // RefreshStatus call rather than cached status alone, because IAgentGateway.IsOnline needs it.
+    private string? agentId;
+
+    // Only populated while this card is showing its Create/Edit form - see LoadModelsAsync for why
+    // the probe never runs before then.
+    private IReadOnlyList<AgentModelOption> availableModels = [];
+    private bool modelsLoading;
+
+    // Only populated while this card is showing its Create/Edit form - see LoadEffortsAsync for why
+    // the probe never runs before then.
+    private IReadOnlyList<AgentEffortOption> availableEfforts = [];
+    private bool effortsLoading;
+
+    // Guards a superseded probe. Unlike the model catalog, the effort catalog is re-read whenever the
+    // Model select changes, so a user can start a second probe while the first is still in flight;
+    // without this, a slow answer for the abandoned model lands on the new choice.
+    private int effortProbeGeneration;
+
+    // The model-catalog counterpart of effortProbeGeneration above, added by Task 8.3 (Spec §12,
+    // E-4): changing the Adapter twice quickly starts two model probes, and this stops the slower
+    // one (for the Adapter no longer selected) from overwriting the faster one.
+    private int modelProbeGeneration;
+
+    /// <summary>
+    /// Set when a Model change has just discarded a stored Effort, and cleared the moment the user
+    /// makes a fresh Effort choice, re-enters Edit, or saves. The discard itself is deliberate - the
+    /// effort ladder belongs to the model (see <see cref="OnModelChangedAsync"/>) - so what this flag
+    /// drives is the notice, not the behaviour: issue #45 was that the selection vanished silently.
+    /// </summary>
+    private bool effortResetByModelChange;
+
+    /// <summary>
+    /// Set when an Adapter change has just discarded a stored Model and/or Effort, and cleared the
+    /// moment the user re-enters Edit, chooses a fresh Effort, or saves — the same lifecycle as
+    /// <see cref="effortResetByModelChange"/>, one control to the left (Spec §6.6, §8.3).
+    /// </summary>
+    private bool adapterResetModelAndEffort;
+
+    /// <summary>
+    /// Set when an Adapter change has just discarded a stored Work Mode (ADR-0033, extending
+    /// ADR-0015), and cleared on the same occasions as <see cref="adapterResetModelAndEffort"/>.
+    /// </summary>
+    private bool adapterResetWorkMode;
+
+    /// <summary>
+    /// The Work Modes the Adapter advertises, after the hidden-modes policy. Read by the same probe
+    /// as <see cref="availableEfforts"/>, so it loads and is superseded with it; see
+    /// <see cref="LoadEffortsAsync"/>.
+    /// </summary>
+    private IReadOnlyList<AgentModeOption> availableWorkModes = [];
+
+    /// <summary>Draws an Agent name from the pool that no existing Agent has.</summary>
+    /// <param name="current">The name now showing, which is not drawn again, or <see langword="null"/>.</param>
+    /// <returns>The drawn name.</returns>
+    private string PickName(string? current) =>
+        AgentNamePool.Pick(Random.Shared, this.Personas.Entries.Select(static entry => entry.Name), current);
+
+    /// <summary>Replaces the Name box with another random name from the pool.</summary>
+    private void PickAnotherName() => this.name = this.PickName(this.name);
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.mode = this.Mode;
+        this.name = this.Name;
+        this.persistedName = this.Name;
+        this.title = this.Title;
+        this.alias = this.Alias;
+        this.teams = this.Teams;
+        this.text = this.Text;
+        this.model = this.Model;
+        this.effort = this.Effort;
+        this.workMode = this.WorkMode;
+        this.adapter = this.Adapter;
+        this.skills = ReadSkills(this.text);
+        this.ResolveRole();
+        this.SeedAvatarState();
+
+        // Only a card that is creating draws a colour: an existing Agent with no avatar keeps showing the
+        // Theme's own colour, and opening it must not change that. The colour is held like any applied avatar
+        // and written by SaveAsync, so a card that is cancelled leaves nothing behind.
+        if (this.mode == AgentProfileCardMode.Create)
+        {
+            this.avatar = Avatar.None with { Background = AvatarPalette.Pick(Random.Shared) };
+            if (this.OnDraftSaved.HasDelegate && this.DraftAvatar is not null)
+            {
+                this.avatar = this.DraftAvatar;
+                this.avatarPendingBytes = this.DraftImage;
+                this.avatarPendingExtension = this.DraftImageExtension;
+            }
+
+            if (this.OnDraftSaved.HasDelegate && this.DraftSkills is not null)
+            {
+                this.skills = this.DraftSkills;
+            }
+
+            this.name = this.Name.Length > 0 ? this.Name : this.PickName(null);
+        }
+
+        this.roomId = this.RoomId;
+        this.onMessage = this.OnMessage;
+        this.filePath = this.FilePath;
+        this.status = this.Status;
+
+        // Health.Changed and Gateway.PresenceChanged are singletons that outlive this card, so the
+        // subscription is unsubscribed in Dispose - see the file-level comment on why Status, alone
+        // among this card's parameters, must keep tracking live truth rather than the snapshot it
+        // opened with.
+        this.Health.Changed += this.OnHealthOrPresenceChanged;
+        this.Gateway.PresenceChanged += this.OnHealthOrPresenceChanged;
+
+        // PersonaSpend is one more singleton that outlives this card, subscribed to for the same reason
+        // and unsubscribed in Dispose: a MudDialog freezes its parameters at open, so the Spend line
+        // would otherwise show what was true when the card opened.
+        this.Spend.SpendChanged += this.OnSpendChanged;
+        this.spendAmounts = this.Spend.Get(this.name);
+
+        // PersonaCommands is the same kind of singleton, subscribed to and released the same way.
+        this.Commands.CommandsChanged += this.OnCommandsChanged;
+        this.offeredCommands = this.Commands.Get(this.name);
+
+        // SkillStore is a singleton too - a Skill written or removed on disk while this card is open
+        // must repaint both the option list and MissingSkillNames, the same reasoning as the
+        // Health/Gateway subscriptions above (Spec §6.7's "Internal flow": subscribe, unsubscribe in
+        // Dispose, re-render through InvokeAsync(StateHasChanged)).
+        this.Skills.SkillsChanged += this.OnSkillsStoreChanged;
+
+        if (this.mode != AgentProfileCardMode.Create)
+        {
+            var agent = await this.TeamDirectory.FindUserByNameAsync(this.name);
+            this.agentId = agent?.Id;
+            this.RefreshStatus();
+        }
+
+        if (this.mode is AgentProfileCardMode.Create or AgentProfileCardMode.Edit)
+        {
+            // Sequential, not parallel: the probe's single SemaphoreSlim serialises them anyway, and
+            // on Create the second call is a pure cache hit (no model chosen yet means the
+            // default-model effort ladder, which the model probe's own session already populated).
+            await this.LoadModelsAsync();
+
+            // Issue #39: without the StateHasChanged below, the Model select does not repaint when ITS
+            // catalog lands - it repaints when this whole method does, which is after the second adapter
+            // spawn has also answered. ComponentBase renders a handler at two points only, its first
+            // yield and its completion, and both awaits here sit between them. StateHasChanged flushes a
+            // batch synchronously, so no yield is needed to make the render happen.
+            //
+            // Started before the repaint and awaited after it, deliberately: LoadEffortsAsync sets
+            // effortsLoading on its way in, so kicking it off first is what makes the intermediate
+            // render say "Reading the effort levels…" instead of briefly asserting "This model offers no
+            // effort choice" about a ladder nobody has read yet - the same false claim this issue is
+            // about, moved one control to the right.
+            Task efforts = this.LoadEffortsAsync();
+            this.StateHasChanged();
+            await efforts;
+        }
+    }
+
+    /// <summary>
+    /// Repaints the dialog's title bar when <see cref="CardTitle"/> changed since it was last painted
+    /// (Create to View after Add agent, View to Edit, a rename saved in Edit). The dialog instance
+    /// owns the title bar and ignores this component's own re-renders, so without this the header
+    /// keeps the wording the card opened with.
+    /// </summary>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        var cardTitle = this.CardTitle;
+        if (!string.Equals(cardTitle, this.paintedTitle, StringComparison.Ordinal))
+        {
+            this.paintedTitle = cardTitle;
+            if (!firstRender)
+            {
+                this.MudDialog.StateHasChanged();
+            }
+        }
+    }
+
+    /// <summary>Unsubscribes from <see cref="PersonaHealth.Changed"/>,<see cref="IAgentGateway.PresenceChanged"/> and <see cref="SkillStore.SkillsChanged"/> - see the file-level comment for why this card, alone among components showing a snapshot-at-open parameter, keeps live subscriptions.</summary>
+    public void Dispose()
+    {
+        this.Health.Changed -= this.OnHealthOrPresenceChanged;
+        this.Gateway.PresenceChanged -= this.OnHealthOrPresenceChanged;
+        this.Spend.SpendChanged -= this.OnSpendChanged;
+        this.Commands.CommandsChanged -= this.OnCommandsChanged;
+        this.Skills.SkillsChanged -= this.OnSkillsStoreChanged;
+    }
+
+    /// <summary>
+    /// Repaints the Spend line when <see cref="PersonaSpend.SpendChanged"/> names this card's
+    /// Persona. Another Persona's report is ignored: it cannot change a figure shown here.
+    /// </summary>
+    /// <param name="personaName">The Persona whose Spend changed.</param>
+    private void OnSpendChanged(string personaName)
+    {
+        if (!string.Equals(personaName, this.name, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.spendAmounts = this.Spend.Get(this.name);
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    /// <summary>
+    /// Repaints the command lines when <see cref="PersonaCommands.CommandsChanged"/> names this card's
+    /// Persona. Another Persona's list is ignored: it cannot change what is shown here.
+    /// </summary>
+    /// <param name="personaName">The Persona whose offered commands changed.</param>
+    private void OnCommandsChanged(string personaName)
+    {
+        if (!string.Equals(personaName, this.name, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.offeredCommands = this.Commands.Get(this.name);
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    /// <summary>
+    /// Recomputes <see cref="status"/> from live pipe liveness and health, the same join
+    /// <see cref="PersonaStatusResolver.Resolve"/> performs for every other surface - never a plain
+    /// online/offline bool re-derived here, which is exactly what that resolver exists to prevent.
+    /// </summary>
+    private void RefreshStatus()
+    {
+        var connected = this.agentId is not null && this.Gateway.IsOnline(this.agentId);
+        this.status = PersonaStatusResolver.Resolve(connected, this.Health.Get(this.name));
+    }
+
+    /// <summary>
+    /// Repaints this card when either half of <see cref="PersonaStatusResolver.Resolve"/>'s input
+    /// changes - a health report or a pipe connect/disconnect - so the Restart button and the status
+    /// line never lag behind either fact while this card is open.
+    /// </summary>
+    private void OnHealthOrPresenceChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
+        {
+            await this.ResolveAgentIdAsync();
+            this.RefreshStatus();
+            this.StateHasChanged();
+        });
+    }
+
+    /// <summary>
+    /// Looks the Agent's Agent user up when <see cref="agentId"/> is still unknown. A card opened in
+    /// Create mode has none, and the user row for an Agent that was just added may only appear after
+    /// the card saved, so the lookup is retried on each health or presence report until it succeeds;
+    /// without it the card would resolve "not connected" for the whole life of the dialog.
+    /// </summary>
+    private async Task ResolveAgentIdAsync()
+    {
+        if (this.agentId is null && this.mode != AgentProfileCardMode.Create)
+        {
+            var agent = await this.TeamDirectory.FindUserByNameAsync(this.name);
+            this.agentId = agent?.Id;
+        }
+    }
+
+    /// <summary>
+    /// Repaints this card when <see cref="SkillStore.SkillsChanged"/> fires - a Skill written,
+    /// edited or removed on disk while this card is open - so the Skills select's own option list
+    /// and <see cref="MissingSkillNames"/> never lag behind what <see cref="Skills"/> currently
+    /// resolves (Spec §6.7's "Internal flow"), the same dispatch <see cref="OnHealthOrPresenceChanged"/>
+    /// uses for its own singleton subscriptions.
+    /// </summary>
+    private void OnSkillsStoreChanged()
+    {
+        _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+    }
+
+    /// <summary>
+    /// (Re-)seeds the avatar this card shows from <see cref="AvatarStore.Get(string)"/> and drops any image
+    /// that was applied but not written. Called once from <see cref="OnInitializedAsync"/> and again from
+    /// <see cref="BeginEditAsync"/> - see the field group's own remarks for why nothing here may instead
+    /// come from a re-pushed parameter.
+    /// </summary>
+    private void SeedAvatarState()
+    {
+        this.avatar = this.Avatars.Get(this.name);
+        this.avatarPendingBytes = null;
+        this.avatarPendingExtension = null;
+    }
+
+    /// <summary>
+    /// Opens <see cref="AvatarEditorDialog"/> over this card, from the avatar in every mode, and takes back what the
+    /// Human committed. A cancelled editor changes nothing. In Create and Edit the result is only held (the editor
+    /// says "Apply") and <see cref="SaveAsync"/> writes it, so the card's own Cancel can still throw it away; View has
+    /// no Save of its own, so there the result is written at once (the editor says "Save").
+    /// </summary>
+    private async Task EditAvatarAsync()
+    {
+        bool deferred = this.mode != AgentProfileCardMode.View;
+        DialogParameters<AvatarEditorDialog> parameters = new()
+        {
+            { dialog => dialog.Name, this.name },
+            { dialog => dialog.Current, this.avatar },
+            { dialog => dialog.PendingImage, this.avatarPendingBytes },
+            { dialog => dialog.PendingImageExtension, this.avatarPendingExtension },
+            { dialog => dialog.Deferred, deferred },
+        };
+
+        IDialogReference reference = await this.DialogService.ShowAsync<AvatarEditorDialog>(null, parameters, AvatarEditorDialog.Options);
+        DialogResult? result = await reference.Result;
+        if (result is null || result.Canceled || result.Data is not AvatarEditorResult edited)
+        {
+            return;
+        }
+
+        this.avatar = edited.Avatar;
+        this.avatarPendingBytes = edited.PendingImage;
+        this.avatarPendingExtension = edited.PendingImageExtension;
+
+        if (!deferred)
+        {
+            this.SaveAvatar();
+        }
+    }
+
+    /// <summary>
+    /// Writes the avatar this card shows under the current <see cref="name"/>: first an image applied but not yet
+    /// written, through <see cref="AvatarStore.WriteImage(ReadOnlySpan{byte}, string)"/>, then the avatar itself. Only
+    /// here, with a Name known (a Create mints one when it is saved), can an image be filed under the right key.
+    /// </summary>
+    private void SaveAvatar()
+    {
+        Avatar toSave = this.avatar;
+        if (this.avatarPendingBytes is not null && this.avatarPendingExtension is not null)
+        {
+            toSave = toSave with { Image = this.Avatars.WriteImage(this.avatarPendingBytes, this.avatarPendingExtension) };
+        }
+
+        this.Avatars.Save(this.name, toSave);
+        this.avatar = toSave;
+        this.avatarPendingBytes = null;
+        this.avatarPendingExtension = null;
+    }
+    private string SaveLabel
+    {
+        get
+        {
+            if (this.mode != AgentProfileCardMode.Create)
+            {
+                return "Save";
+            }
+
+            return this.OnDraftSaved.HasDelegate ? "Save draft" : "Add agent";
+        }
+    }
+
+    private string CardTitle => this.mode switch
+    {
+        AgentProfileCardMode.Create => this.OnDraftSaved.HasDelegate ? "Edit draft" : "New agent",
+        AgentProfileCardMode.Edit => $"Edit {this.name}",
+        _ => this.name,
+    };
+
+    /// <summary>
+    /// Whether the Persona currently filed under <see cref="name"/> carries the
+    /// <see cref="BuiltinAgent.ChiefOfStaffMarker"/> - resolved fresh from <see cref="Personas"/>
+    /// on every render rather than cached, so a rename in this same open dialog is reflected
+    /// immediately (Spec §6.12). Deliberately not a <c>[Parameter]</c>: rules.md forbids adding a
+    /// member to the <see cref="Persona"/> record, and <see cref="PersonaEntry.Builtin"/> already
+    /// lives on the entry this lookup reads.
+    /// </summary>
+    private bool IsBuiltinAgent =>
+        this.Personas.Entries.Any(entry =>
+            string.Equals(entry.Name, this.name, StringComparison.Ordinal)
+            && string.Equals(entry.Builtin, BuiltinAgent.ChiefOfStaffMarker, StringComparison.Ordinal));
+
+    // AdapterCatalog is configuration read once at startup, never a probe (Spec §6.6 - "LoadAdapters()
+    // - synchronous; configuration, not a probe"), so unlike ModelChoices/EffortChoices below there is
+    // no loading state to guard here. Still synthesises an entry for a stored-but-unconfigured id,
+    // exactly as ModelChoices does, so the card shows what the file says rather than silently
+    // resetting it - see AdapterHelperText for the note that names the mismatch.
+    private IReadOnlyList<AdapterProfile> AdapterChoices
+    {
+        get
+        {
+            var profiles = this.Adapters.Profiles;
+            if (this.adapter is null || profiles.Any(p => string.Equals(p.Id, this.adapter, StringComparison.OrdinalIgnoreCase)))
+            {
+                return profiles;
+            }
+
+            return [new AdapterProfile(this.adapter, this.adapter, null, string.Empty, null, null, UsesToolNamePrefix: false), .. profiles];
+        }
+    }
+
+    private string AdapterHelperText
+    {
+        get
+        {
+            if (this.adapter is not null && this.Adapters.Find(this.adapter) is null)
+            {
+                return $"The adapter '{this.adapter}' is not configured. This agent will run on '{this.Adapters.Default.Id}'.";
+            }
+
+            return "Which agent runs this agent. Changing it restarts the agent, which clears what it remembers.";
+        }
+    }
+
+    // Opening Edit must not silently reset a stored choice to default when saved: if the Persona's
+    // stored Model is no longer (or never was) in AvailableModels — the probe failed, or the
+    // adapter's own catalog changed — synthesise an entry for it so the select still shows and keeps
+    // the stored value instead of falling back to the first option.
+    private IReadOnlyList<AgentModelOption> ModelChoices
+    {
+        get
+        {
+            if (this.model is null || this.availableModels.Any(m => string.Equals(m.Id, this.model, StringComparison.Ordinal)))
+            {
+                return this.availableModels;
+            }
+
+            return [new AgentModelOption(this.model, this.model, null), .. this.availableModels];
+        }
+    }
+
+    private string ModelDisplayText
+    {
+        get
+        {
+            if (this.model is null)
+            {
+                return "Agent default";
+            }
+
+            var match = this.availableModels.FirstOrDefault(m => string.Equals(m.Id, this.model, StringComparison.Ordinal));
+            return match?.Name ?? this.model;
+        }
+    }
+
+    /// <summary>The blank option of the Model, Effort and Work mode selects; short enough to read in full in a one-third column.</summary>
+    private const string DefaultOptionText = "Agent default";
+
+    /// <summary>The one line under the Model, Effort and Work mode row: what is being read while a probe is out, otherwise the restart note that applies to all three.</summary>
+    private string ModelRowHelperText
+    {
+        get
+        {
+            if (this.modelsLoading)
+            {
+                return "Reading the models this agent offers...";
+            }
+
+            if (this.effortsLoading)
+            {
+                return "Reading the effort levels this model offers...";
+            }
+
+            return "Changing any of these restarts the agent, which clears what it remembers.";
+        }
+    }
+
+    // Opening Edit must not silently reset a stored choice to default when saved: if the Persona's
+    // stored Effort is no longer (or never was) in AvailableEfforts — the probe failed, or the
+    // adapter's own catalog changed — synthesise an entry for it so the select still shows and keeps
+    // the stored value instead of falling back to the first option.
+    private IReadOnlyList<AgentEffortOption> EffortChoices
+    {
+        get
+        {
+            if (this.effort is null || this.availableEfforts.Any(e => string.Equals(e.Id, this.effort, StringComparison.Ordinal)))
+            {
+                return this.availableEfforts;
+            }
+
+            return [new AgentEffortOption(this.effort, this.effort, null), .. this.availableEfforts];
+        }
+    }
+
+    // "Model default", not "Agent default": effort is resolved by the model, not the agent, so the
+    // null sentinel hands resolution back to the model's own default.
+    private string EffortDisplayText
+    {
+        get
+        {
+            if (this.effort is null)
+            {
+                return "Model default";
+            }
+
+            var match = this.availableEfforts.FirstOrDefault(e => string.Equals(e.Id, this.effort, StringComparison.Ordinal));
+            return match?.Name ?? this.effort;
+        }
+    }
+
+    /// <summary>
+    /// Whether the Work mode select is rendered: while the probe is out (the catalog is unread, so
+    /// "empty" would be a false claim), when the Adapter advertises at least one mode, or when one is
+    /// stored. Hidden only when the Adapter advertises none and nothing is stored.
+    /// </summary>
+    private bool ShowWorkModePicker => this.effortsLoading || this.availableWorkModes.Count > 0 || this.workMode is not null;
+
+    // Opening Edit must not silently reset a stored choice when saved: a stored mode the Adapter no
+    // longer advertises (an upgrade, a failed probe) is synthesised, so the select still shows and keeps
+    // it - the same rule as EffortChoices.
+    private IReadOnlyList<AgentModeOption> WorkModeChoices
+    {
+        get
+        {
+            if (this.workMode is null || this.availableWorkModes.Any(mode => string.Equals(mode.Id, this.workMode, StringComparison.Ordinal)))
+            {
+                return this.availableWorkModes;
+            }
+
+            return [new AgentModeOption(this.workMode, this.workMode, null), .. this.availableWorkModes];
+        }
+    }
+
+    /// <summary>The name to show for a mode id: the Adapter's own name for it when it is advertised, otherwise the id itself.</summary>
+    /// <param name="id">The mode id, or blank for the Adapter's own mode.</param>
+    private string WorkModeLabel(string? id)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return string.Empty;
+        }
+
+        return this.availableWorkModes.FirstOrDefault(mode => string.Equals(mode.Id, id, StringComparison.Ordinal))?.Name ?? id;
+    }
+
+    // "Agent default", like Model: the mode is the Adapter's own when none is chosen.
+    private string WorkModeDisplayText => this.workMode is null ? "Agent default" : this.WorkModeLabel(this.workMode);
+
+    // The selected mode's own description - what the Adapter says it does - because the names alone
+    // ("Auto", "Plan") do not say what they permit. A title, not helper text: it must not wrap the row.
+    private string WorkModeTitle
+    {
+        get
+        {
+            var description = this.availableWorkModes
+                .FirstOrDefault(mode => string.Equals(mode.Id, this.workMode, StringComparison.Ordinal))?.Description;
+
+            return description is { Length: > 0 }
+                ? $"{description}."
+                : "How much this agent may do before it must ask.";
+        }
+    }
+
+    private string TextHelperText => this.mode == AgentProfileCardMode.Create
+        ? "Markdown. Becomes the agent's system prompt, placed after the Name, Title, Alias and Teams above — no front matter needed here."
+        : "Markdown. This is the whole Persona file, front matter included, and becomes the agent's system prompt. Saving restarts it, which clears what it remembers.";
+
+    /// <summary>The Name box's helper text - the same wording Create uses, or a note that the field can only be edited in the Persona text below while <see cref="nameLocked"/> is set.</summary>
+    private string NameHelperText => this.nameLocked
+        ? "This is written as a multi-line value in the Persona text below and can only be edited there."
+        : "Letters, digits, spaces, - and _. Spaces are fine.";
+
+    /// <summary>The Title box's helper text - the same wording Create uses, or a note that the field can only be edited in the Persona text below while <see cref="titleLocked"/> is set.</summary>
+    private string TitleHelperText => this.titleLocked
+        ? "This is written as a multi-line value in the Persona text below and can only be edited there."
+        : "A short role description, shown alongside the Name.";
+
+    /// <summary>The Alias box's helper text - the same wording Create uses, or a note that the field can only be edited in the Persona text below while <see cref="aliasLocked"/> is set.</summary>
+    private string AliasHelperText => this.aliasLocked
+        ? "This is written as a multi-line value in the Persona text below and can only be edited there."
+        : "A short working handle, for mentions and quick reference.";
+
+    private async Task BeginEditAsync()
+    {
+        this.mode = AgentProfileCardMode.Edit;
+        var persona = this.Personas.Get(this.name);
+        this.text = persona?.Text ?? this.text;
+        this.model = persona?.Model ?? this.model;
+        this.effort = persona?.Effort ?? this.effort;
+
+        // Assigned straight from the Persona, with no "?? this.workMode" fallback like the lines above:
+        // a null read-back must clear a stale value, never keep it.
+        this.workMode = persona?.WorkMode;
+        this.adapter = persona?.Adapter ?? this.adapter;
+        this.skills = ReadSkills(this.text);
+        this.SeedAvatarState();
+        this.error = null;
+        this.confirmingRemove = false;
+        this.confirmingReset = false;
+        this.effortResetByModelChange = false;
+        this.adapterResetModelAndEffort = false;
+        this.adapterResetWorkMode = false;
+        this.nameLocked = false;
+        this.titleLocked = false;
+        this.aliasLocked = false;
+
+        await this.LoadModelsAsync();
+
+        // Same three lines, and the same reasoning, as OnInitializedAsync - read the comment there. An
+        // event handler gets the two render points a lifecycle method does, so without this the Model
+        // select would wait on the effort probe before showing its own list.
+        Task efforts = this.LoadEffortsAsync();
+        this.StateHasChanged();
+        await efforts;
+    }
+
+    /// <summary>
+    /// Writes the Name box's edited <paramref name="value"/> into <see cref="text"/>'s frontmatter,
+    /// through <see cref="TryRejectIdentityFieldEdit"/>. Never touches disk - only <see cref="SaveAsync"/>
+    /// does that, per the file-level comment's "nothing here writes to disk" rule.
+    /// </summary>
+    /// <param name="value">The Name box's newly typed value.</param>
+    private void OnNameChanged(string value)
+    {
+        if (this.TryRejectIdentityFieldEdit("name", value, out var currentValue))
+        {
+            this.nameLocked = true;
+            this.name = currentValue;
+            return;
+        }
+
+        this.nameLocked = false;
+        this.name = value;
+    }
+
+    /// <summary>
+    /// Writes the Title box's edited <paramref name="value"/> into <see cref="text"/>'s frontmatter,
+    /// through <see cref="TryRejectIdentityFieldEdit"/>. Never touches disk - see <see cref="OnNameChanged"/>.
+    /// </summary>
+    /// <param name="value">The Title box's newly typed value.</param>
+    private void OnTitleChanged(string value)
+    {
+        if (this.TryRejectIdentityFieldEdit("title", value, out var currentValue))
+        {
+            this.titleLocked = true;
+            this.title = currentValue;
+            return;
+        }
+
+        this.titleLocked = false;
+        this.title = value;
+    }
+
+    /// <summary>
+    /// Writes the Alias box's edited <paramref name="value"/> into <see cref="text"/>'s frontmatter,
+    /// through <see cref="TryRejectIdentityFieldEdit"/>. Never touches disk - see <see cref="OnNameChanged"/>.
+    /// </summary>
+    /// <param name="value">The Alias box's newly typed value.</param>
+    private void OnAliasChanged(string value)
+    {
+        if (this.TryRejectIdentityFieldEdit("alias", value, out var currentValue))
+        {
+            this.aliasLocked = true;
+            this.alias = currentValue;
+            return;
+        }
+
+        this.aliasLocked = false;
+        this.alias = value;
+    }
+
+    /// <summary>
+    /// Re-seeds the Name/Title/Alias boxes from the raw Persona text whenever it changes, the reverse
+    /// direction of <see cref="OnNameChanged"/>/<see cref="OnTitleChanged"/>/<see cref="OnAliasChanged"/>.
+    /// <see cref="MudBlazor.MudTextField{T}"/> raises its <c>ValueChanged</c> on blur rather than per
+    /// keystroke, the same as the box-to-text direction, so the two can never fight each other for the
+    /// same field on the same input. A parse failure (malformed frontmatter typed by hand) leaves the
+    /// boxes exactly as they were rather than blanking them.
+    /// </summary>
+    /// <param name="value">The raw Persona text box's newly typed value.</param>
+    private void OnTextChanged(string value)
+    {
+        this.text = value;
+
+        if (PersonaFrontmatter.TryReadIdentity(this.text, out var identity, out _))
+        {
+            this.name = identity.Name;
+            this.title = identity.Title;
+            this.alias = identity.Alias;
+            this.nameLocked = false;
+            this.titleLocked = false;
+            this.aliasLocked = false;
+        }
+    }
+
+    /// <summary>
+    /// Writes <paramref name="value"/> into <paramref name="key"/>'s line inside <see cref="text"/>'s
+    /// frontmatter through <see cref="PersonaFrontmatter.WriteScalarField"/>, and reports whether that
+    /// write silently refused. <see cref="PersonaFrontmatter.WriteScalarField"/> returns its input
+    /// unchanged both when the write took no effect because the value already matched, and when the
+    /// field is a block scalar (<c>&gt;</c>/<c>|</c>) or a block list it deliberately will not flatten -
+    /// this method tells the two apart by re-reading the field's current value with
+    /// <see cref="PersonaFrontmatter.TryReadIdentity"/> and comparing it against <paramref name="value"/>.
+    /// </summary>
+    /// <param name="key">The frontmatter key being edited - <c>name</c>, <c>title</c> or <c>alias</c>.</param>
+    /// <param name="value">The box's newly typed value.</param>
+    /// <param name="currentValue">
+    /// The value still on file, to revert the box to, when this returns <see langword="true"/>;
+    /// otherwise <see langword="null"/> - a successful or a no-op write both leave <see cref="text"/>
+    /// already correct, so the caller only needs to mirror <paramref name="value"/> into its own field.
+    /// </param>
+    /// <returns><see langword="true"/> if the write refused because the field is a block scalar or a block list.</returns>
+    private bool TryRejectIdentityFieldEdit(string key, string value, [NotNullWhen(true)] out string? currentValue)
+    {
+        var updated = PersonaFrontmatter.WriteScalarField(this.text, key, value);
+        if (!string.Equals(updated, this.text, StringComparison.Ordinal))
+        {
+            this.text = updated;
+            currentValue = null;
+            return false;
+        }
+
+        if (PersonaFrontmatter.TryReadIdentity(this.text, out var identity, out _))
+        {
+            var parsedValue = key switch
+            {
+                "name" => identity.Name,
+                "title" => identity.Title,
+                "alias" => identity.Alias,
+                _ => value,
+            };
+
+            if (!string.Equals(parsedValue, value, StringComparison.Ordinal))
+            {
+                currentValue = parsedValue;
+                return true;
+            }
+        }
+
+        currentValue = null;
+        return false;
+    }
+
+    private void Close()
+    {
+        this.MudDialog.Close();
+    }
+
+    /// <summary>
+    /// Sets the selected Adapter, keeps <see cref="text"/>'s frontmatter in step through
+    /// <see cref="PersonaFrontmatter.WriteScalarField"/> - the same mechanism
+    /// <see cref="OnTitleChanged"/> and <see cref="OnAliasChanged"/> use (Spec §7.2, "The
+    /// WriteScalarField path") and a no-op in Create mode, where <see cref="text"/> is the Persona
+    /// BODY only and has no frontmatter yet to rewrite - and runs the full cascade Spec §6.6/§8.3
+    /// describes: a Model and an Effort chosen for the previous Adapter mean nothing against this
+    /// one's catalog, so both are discarded and both catalogs are re-probed against the NEW
+    /// Adapter. Mirrors <see cref="OnModelChangedAsync"/>'s two-probes-in-a-row shape exactly,
+    /// including the mandatory intermediate <c>StateHasChanged</c> call (rules.md / issue #39):
+    /// without it, the Model select would repaint only once the Effort probe also answered.
+    /// </summary>
+    /// <param name="value">The Adapter select's newly chosen id, or blank for the installation's default.</param>
+    private async Task OnAdapterChangedAsync(string value)
+    {
+        this.adapter = string.IsNullOrWhiteSpace(value) ? null : value;
+        this.text = PersonaFrontmatter.WriteScalarField(this.text, "adapter", this.adapter ?? string.Empty);
+        this.adapterResetModelAndEffort = this.model is not null || this.effort is not null;
+
+        // A mode chosen for one Adapter means nothing against another's list, so it is discarded with
+        // Model and Effort (ADR-0033, extending ADR-0015). Model and Effort ARE restricted to the
+        // Adapter that advertised them; the mode list is too, since each Adapter has its own.
+        this.adapterResetWorkMode = this.workMode is not null;
+        this.model = null;
+        this.effort = null;
+        this.workMode = null;
+        this.effortResetByModelChange = false;
+
+        await this.LoadModelsAsync();
+        Task efforts = this.LoadEffortsAsync();
+        this.StateHasChanged();          // MANDATORY - rules.md / issue #39
+        await efforts;
+    }
+
+    /// <summary>
+    /// Parses <paramref name="personaText"/>'s frontmatter and returns its <c>skills</c> field, or an
+    /// empty list when the text has no frontmatter block (Create mode's Persona BODY-only <see cref="text"/>)
+    /// or none was written. The only source of the Skills select's selection (Spec §6.7): unlike
+    /// <see cref="model"/>/<see cref="effort"/>/<see cref="adapter"/>, a Skill assignment has no
+    /// [Parameter]/store counterpart to seed from - it lives only in the frontmatter itself.
+    /// </summary>
+    /// <param name="personaText">The Persona's raw file text, or body-only text in Create mode.</param>
+    private static IReadOnlyList<string> ReadSkills(string personaText) =>
+        PersonaFrontmatter.TryReadIdentity(personaText, out var identity, out _) ? identity.Skills ?? [] : [];
+
+    /// <summary>
+    /// The assigned Skills in <see cref="skills"/> that <see cref="Skills"/> (the store) no longer
+    /// resolves - a folder removed or renamed since this Persona last saved (Spec §6.7). Rendered as
+    /// removable warning chips beneath the select.
+    /// </summary>
+    private IReadOnlyList<string> MissingSkillNames =>
+        [.. this.skills.Where(name => this.Skills.Get(name) is null && this.Registry?.Of(name) is not (Agency.Huddle.App.Teams.SkillAvailability.Copyable or Agency.Huddle.App.Teams.SkillAvailability.NotDownloaded))];
+
+    /// <summary>
+    /// Sets the selected Skills, keeping <see cref="text"/>'s frontmatter in step through
+    /// <see cref="PersonaFrontmatter.WriteListField"/> - the list-field counterpart of
+    /// <see cref="OnAdapterChangedAsync"/>'s <see cref="PersonaFrontmatter.WriteScalarField"/> write,
+    /// and a no-op in Create mode for the same reason that one is (Spec §6.7). Unlike the Adapter
+    /// select, picking a Skill starts no probe: this is a synchronous, in-memory rewrite only.
+    /// </summary>
+    /// <param name="value">Every Skill name now selected in the picker.</param>
+    private void OnSkillsChanged(IReadOnlyCollection<string> value)
+    {
+        this.skills = [.. value];
+        this.text = PersonaFrontmatter.WriteListField(this.text, "skills", this.skills);
+    }
+
+    /// <summary>
+    /// Drops <paramref name="name"/> from <see cref="skills"/> and rewrites <see cref="text"/> through
+    /// <see cref="PersonaFrontmatter.WriteListField"/> - the Close action on one of
+    /// <see cref="MissingSkillNames"/>'s warning chips (Spec §6.7: "so it can be removed").
+    /// </summary>
+    /// <param name="name">The missing Skill name to remove.</param>
+    private void RemoveSkill(string name)
+    {
+        this.skills = [.. this.skills.Where(existing => !string.Equals(existing, name, StringComparison.Ordinal))];
+        this.text = PersonaFrontmatter.WriteListField(this.text, "skills", this.skills);
+    }
+
+    /// <summary>The role this Agent was hired as (<c>_role</c>), or <see langword="null"/> for an Agent hired by hand.</summary>
+    private Agency.Huddle.App.Teams.RoleRef? roleRef;
+
+    /// <summary>The team-type role <see cref="roleRef"/> names, or <see langword="null"/> when the catalog is absent or no longer defines it.</summary>
+    private RoleSpec? roleSpec;
+
+    /// <summary>The Packs SKILLS.md offers this role, without the Broken ones (those show on the Packs tab) unless this
+    /// Agent holds one; empty without a <see cref="roleSpec"/> or a registry.</summary>
+    private IReadOnlyList<Agency.Huddle.SkillPacks.Resolving.PackEntry> rolePacks = [];
+
+    /// <summary>Whether the "Not on this computer yet" list is open.</summary>
+    private bool notHereOpen;
+
+    /// <summary>Whether Save is copying Skills into Skills/.</summary>
+    private bool copying;
+
+    /// <summary>The registry, when the host registers one.</summary>
+    private Agency.Huddle.App.SkillSources.SkillRegistry? Registry => this.Services.GetService<Agency.Huddle.App.SkillSources.SkillRegistry>();
+
+    /// <summary>Registry Skills Huddle can copy that have no folder in Skills/ yet: not hidden or withdrawn unless selected.</summary>
+    private IReadOnlyList<Agency.Huddle.SkillPacks.Resolving.SkillEntry> CopyableSkills => this.RegistrySkills(Agency.Huddle.App.Teams.SkillAvailability.Copyable);
+
+    /// <summary>Registry Skills with no folder on this computer, for the collapsed list.</summary>
+    private IReadOnlyList<Agency.Huddle.SkillPacks.Resolving.SkillEntry> NotDownloadedSkills => this.RegistrySkills(Agency.Huddle.App.Teams.SkillAvailability.NotDownloaded);
+
+    /// <summary>The registry Skills of one availability that are not in Skills/, left out when hidden unless already selected.</summary>
+    private IReadOnlyList<Agency.Huddle.SkillPacks.Resolving.SkillEntry> RegistrySkills(Agency.Huddle.App.Teams.SkillAvailability wanted)
+    {
+        if (this.Registry is not { } registry)
+        {
+            return [];
+        }
+
+        return [.. registry.Current.Resolved.Skills
+            .Where(entry => this.Skills.Get(entry.Name) is null && registry.Of(entry.Name) == wanted
+                && (!registry.IsHidden(entry) || this.skills.Contains(entry.Name, StringComparer.Ordinal)))
+            .OrderBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase)];
+    }
+
+    /// <summary>The state a Pack is drawn in.</summary>
+    private Agency.Huddle.SkillPacks.Resolving.ItemState PackState(Agency.Huddle.SkillPacks.Resolving.PackEntry pack) =>
+        this.Registry?.DisplayState(pack) ?? Agency.Huddle.SkillPacks.Resolving.ItemState.Available;
+
+    /// <summary>The Source's reason for a deprecated or withdrawn Pack.</summary>
+    private string ReasonOf(Agency.Huddle.SkillPacks.Resolving.PackEntry pack) =>
+        (this.Registry?.Current.Resolved.FindSource(pack.Source)?.File?.StatusReason ?? "no reason given").Trim().TrimEnd('.');
+
+    /// <summary>The chip's leading icon for a state, or none.</summary>
+    private static string? PackIcon(Agency.Huddle.SkillPacks.Resolving.ItemState state) => state switch
+    {
+        Agency.Huddle.SkillPacks.Resolving.ItemState.UpdateAvailable => Icons.Material.Filled.SystemUpdateAlt,
+        Agency.Huddle.SkillPacks.Resolving.ItemState.Deprecated => Icons.Material.Filled.NotInterested,
+        _ => null,
+    };
+
+    /// <summary>Opens the update card for a Pack.</summary>
+    private Task OpenPackUpdateAsync(Agency.Huddle.SkillPacks.Resolving.PackEntry pack) =>
+        Agency.Huddle.App.Components.Settings.Skills.SkillDialogs.OpenUpdateAsync(this.DialogService, pack.Title, pack.Id);
+
+    /// <summary>Opens the prompt dialog on Find Packs for a role, with this role.</summary>
+    private Task FindPacksAsync(RoleSpec role) =>
+        Agency.Huddle.App.Components.Settings.Skills.SkillDialogs.OpenAddWithAiAsync(this.DialogService, "find", role.Id);
+
+    /// <summary>Copies the Needs setup prompt for a Pack that is not downloaded.</summary>
+    private async Task CopyPackPromptAsync(Agency.Huddle.SkillPacks.Resolving.PackEntry pack)
+    {
+        if (this.Registry is not { } registry || this.Services.GetService<Agency.Huddle.App.SkillSources.SkillPromptBuilder>() is not { } prompts || this.roleSpec is null)
+        {
+            return;
+        }
+
+        IReadOnlyList<Agency.Huddle.App.SkillSources.MissingItem> missing = registry.CheckReady([pack.Id], []).Missing;
+        string prompt = prompts.NeedsSetup(this.roleSpec.Id, this.roleSpec.Title, missing, this.PathFormat);
+        await this.CopyPromptAsync(prompt);
+    }
+
+    /// <summary>Copies the prompt that asks the AI tool to fetch one Skill.</summary>
+    private async Task CopyFetchPromptAsync(Agency.Huddle.SkillPacks.Resolving.SkillEntry entry)
+    {
+        if (this.Registry is not { } registry || this.Services.GetService<Agency.Huddle.App.SkillSources.SkillPromptBuilder>() is not { } prompts)
+        {
+            return;
+        }
+
+        string? catalogId = entry.Claims.Select(static claim => claim.ViaCatalog ?? (claim.Kind == Agency.Huddle.SkillPacks.Reading.RowKind.Catalog ? claim.Provider["catalog:".Length..] : null))
+            .FirstOrDefault(static id => id is not null);
+        Agency.Huddle.SkillPacks.Resolving.ResolvedCatalog? catalog = catalogId is null ? null : registry.Current.Resolved.FindCatalog(catalogId);
+        await this.CopyPromptAsync(prompts.FetchSkill(entry.Name, catalog?.Id ?? string.Empty, catalog?.FilePath, entry.Origin, this.PathFormat));
+    }
+
+    /// <summary>The circuit's path form.</summary>
+    private Agency.Huddle.App.SkillSources.PathFormat PathFormat =>
+        this.Services.GetService<Agency.Huddle.App.SkillSources.PathFormatChoice>()?.Format ?? Agency.Huddle.App.SkillSources.PathFormat.Windows;
+
+    /// <summary>Copies a prompt with the shared snackbar.</summary>
+    private async Task CopyPromptAsync(string prompt)
+    {
+        if (this.Services.GetService<IJSRuntime>() is { } js && this.Services.GetService<ISnackbar>() is { } snackbar)
+        {
+            _ = await Agency.Huddle.App.Skills.Ui.PromptClipboard.CopyAsync(js, snackbar, prompt, CancellationToken.None);
+        }
+    }
+
+    /// <summary>Reads <c>_role</c> from <see cref="text"/> and looks up its role and packs once, at open.</summary>
+    private void ResolveRole()
+    {
+        if (!PersonaFrontmatter.TryReadIdentity(this.text, out var identity, out _) || identity.Role is not { } role)
+        {
+            return;
+        }
+
+        this.roleRef = role;
+        this.roleSpec = this.Services.GetService<TeamTypeCatalog>()?.Find(role.TypeId)?.Roles
+            .FirstOrDefault(spec => string.Equals(spec.Id, role.RoleId, StringComparison.Ordinal));
+        if (this.roleSpec is not null && this.Registry is { } registry)
+        {
+            this.rolePacks = [.. registry.PacksForRole(role.RoleId)
+                .Where(pack => registry.DisplayState(pack) != Agency.Huddle.SkillPacks.Resolving.ItemState.Broken || this.IsPackActive(pack.Id))];
+        }
+
+        if (this.roleSpec is { Manager: true } && this.Services.GetService<Agency.Huddle.App.Library.ITeamFolders>() is { } folders)
+        {
+            this.managedTeam = this.Teams
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .FirstOrDefault(team => string.Equals(folders.ReadTeamFile(team)?.Manager, this.Name, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    /// <summary>The Team this member manages, or <see langword="null"/> when the member's role is not the manager role (PR-2).</summary>
+    private string? managedTeam;
+
+    /// <summary>The packs recorded in <see cref="text"/> (<c>_packs</c>).</summary>
+    private IReadOnlyList<Agency.Huddle.App.Teams.VersionedRef> ActivePacks =>
+        PersonaFrontmatter.TryReadIdentity(this.text, out var identity, out _) ? identity.Packs ?? [] : [];
+
+    /// <summary>Whether the Pack with <paramref name="packId"/> is recorded in <see cref="text"/>.</summary>
+    /// <param name="packId">The Pack id to look for.</param>
+    private bool IsPackActive(string packId) =>
+        this.ActivePacks.Any(active => string.Equals(active.Id, packId, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Adds or removes <paramref name="pack"/>: its skills, its <c>consultWhenAdds</c> clause in the
+    /// <c>consult_when</c> line, and its <c>_packs</c> entry (MS-4, MS-6). A skill the role itself carries,
+    /// or another active pack provides, stays when this pack is removed.
+    /// </summary>
+    /// <param name="pack">The pack to toggle.</param>
+    private void TogglePack(Agency.Huddle.SkillPacks.Resolving.PackEntry pack)
+    {
+        Agency.Huddle.App.Teams.PackContents contents = Agency.Huddle.App.Teams.PackContents.From(pack);
+        if (this.IsPackActive(pack.Id))
+        {
+            IReadOnlyList<Agency.Huddle.App.Teams.PackContents> others = [.. this.ActivePacks
+                .Where(entry => !string.Equals(entry.Id, pack.Id, StringComparison.OrdinalIgnoreCase))
+                .Select(entry => this.Registry?.FindPack(entry.Id))
+                .OfType<Agency.Huddle.SkillPacks.Resolving.PackEntry>()
+                .Select(Agency.Huddle.App.Teams.PackContents.From)];
+            this.text = Agency.Huddle.App.Teams.PackMembership.Remove(this.text, contents, [.. this.roleSpec?.Skills.Select(static skill => skill.Name) ?? []], others);
+        }
+        else
+        {
+            this.text = Agency.Huddle.App.Teams.PackMembership.Add(this.text, contents);
+        }
+
+        this.skills = ReadSkills(this.text);
+    }
+
+
+    /// <summary>
+    /// The MS-3 and MS-5 warnings for this Agent against the rest of its Team: <c>Model</c> holds the
+    /// shared-vendor ones, <c>Skills</c> the skill-count and Sub Category ones. The Sub Category of a skill
+    /// comes from the skills catalog index; without one registered no two skills are reported as sharing one.
+    /// </summary>
+    private (IReadOnlyList<string> Model, IReadOnlyList<string> Skills) SetupWarnings
+    {
+        get
+        {
+            if (this.roleRef is null || this.roleSpec is null)
+            {
+                return ([], []);
+            }
+
+            IReadOnlyList<string> teamNames = AgentProfileCard.ParseTeams(this.teams);
+            List<Agency.Huddle.App.Teams.MemberView> members = [];
+            foreach (PersonaEntry entry in this.Personas.Entries)
+            {
+                if (!string.Equals(entry.Name, this.persistedName, StringComparison.Ordinal)
+                    && entry.Teams.Any(team => teamNames.Contains(team, StringComparer.OrdinalIgnoreCase))
+                    && PersonaFrontmatter.TryReadIdentity(entry.Text, out var other, out _)
+                    && other.Role is { } otherRole)
+                {
+                    members.Add(new Agency.Huddle.App.Teams.MemberView(entry.Name, otherRole.RoleId, entry.Adapter, entry.Skills ?? []));
+                }
+            }
+
+            Agency.Huddle.App.Teams.MemberView self = new(this.name, this.roleRef.RoleId, this.adapter, this.skills);
+            Agency.Huddle.App.SkillSources.SkillRegistry? registry = this.Registry;
+            Func<string, string?> subCategoryOf = registry is null ? static _ => null : registry.SubCategoryOf;
+            IReadOnlyList<string> vendorOnly = Agency.Huddle.App.Teams.MemberWarnings.For(self with { Skills = [] }, this.roleSpec, members, subCategoryOf);
+            IReadOnlyList<string> all = Agency.Huddle.App.Teams.MemberWarnings.For(self, this.roleSpec, members, subCategoryOf);
+            IReadOnlyList<string> sources = registry is null
+                ? []
+                : Agency.Huddle.App.Teams.MemberWarnings.ForSources(this.name, this.skills, this.ActivePacks, registry, packId => this.DeprecatedReason(registry, packId));
+            return (vendorOnly, [.. all.Where(warning => !vendorOnly.Contains(warning, StringComparer.Ordinal)), .. sources]);
+        }
+    }
+
+    private async Task OnModelChangedAsync(string value)
+    {
+        this.model = string.IsNullOrWhiteSpace(value) ? null : value;
+
+        // The effort ladder belongs to the model. The adapter rebuilds thought_level on every model
+        // switch and silently clamps a level the new model does not support, so a level chosen
+        // against the old model is not a level for this one: clear it rather than carry a choice
+        // across that the user never made for this model.
+
+        // Plain assignment, never |=: a second Model change made while no Effort is chosen must clear
+        // a notice left over from the first, not leave it standing over a reset that did not happen.
+        this.effortResetByModelChange = this.effort is not null;
+        this.effort = null;
+
+        await this.LoadEffortsAsync();
+    }
+
+    private void OnEffortChanged(string value)
+    {
+        this.effort = string.IsNullOrWhiteSpace(value) ? null : value;
+        this.effortResetByModelChange = false;
+        this.adapterResetModelAndEffort = false;
+        this.adapterResetWorkMode = false;
+    }
+
+    private void OnWorkModeChanged(string value)
+    {
+        this.workMode = string.IsNullOrWhiteSpace(value) ? null : value;
+        this.adapterResetWorkMode = false;
+    }
+
+    // Runs on form-open, never on page-load: spawning the throwaway adapter this probes with costs a
+    // real process, so it must never happen just from browsing to /agents. Awaiting it here yields
+    // at least once, so Blazor renders this card (with modelsLoading true) before the probe answers -
+    // ENTERING the loading state needs no manual StateHasChanged(). Leaving it does, because both
+    // callers await a second probe afterwards: see the StateHasChanged in each of them (issue #39).
+    //
+    // Guards a superseded probe, mirroring LoadEffortsAsync's own effortProbeGeneration below.
+    // Changing the Adapter twice quickly starts two model probes (Spec §8.3, "Generation counters"),
+    // and without this a slower answer for the abandoned Adapter can land after a faster one for the
+    // Adapter actually selected and overwrite it - a new defect class this feature introduces
+    // (Spec §12, E-4). Nothing could re-enter this method before an Adapter select existed, which is
+    // why it had no equivalent until now.
+    private async Task LoadModelsAsync()
+    {
+        var generation = ++this.modelProbeGeneration;
+        this.modelsLoading = true;
+        try
+        {
+            var models = await this.ModelCatalog.GetAsync(this.adapter, CancellationToken.None);
+            if (generation == this.modelProbeGeneration)
+            {
+                this.availableModels = models;
+            }
+        }
+        finally
+        {
+            if (generation == this.modelProbeGeneration)
+            {
+                this.modelsLoading = false;
+            }
+        }
+    }
+
+    // Runs on card-open AND on every Model change - the effort catalog is per model, so unlike the
+    // model catalog it cannot be read once and reused. Awaiting yields at least once, so Blazor
+    // renders with effortsLoading true before the probe answers; entering the loading state needs no
+    // manual StateHasChanged. Leaving it needs none either, unlike LoadModelsAsync above: this is the
+    // LAST await in all three of its callers, so the completion render already covers it.
+    //
+    // Also reads the Work Modes (ADR-0033), because the same throwaway session answers both: the second
+    // call is a cache hit on the entry the first filled, so it costs no extra spawn. One generation
+    // counter and one loading flag cover both, which is what keeps the faster-probe-wins rule intact
+    // with no second in-flight path to repaint.
+    private async Task LoadEffortsAsync()
+    {
+        var generation = ++this.effortProbeGeneration;
+        this.effortsLoading = true;
+        try
+        {
+            var efforts = await this.ModelCatalog.GetEffortLevelsAsync(this.adapter, this.model, CancellationToken.None);
+            var workModes = await this.ModelCatalog.GetWorkModesAsync(this.adapter, this.model, CancellationToken.None);
+            if (generation == this.effortProbeGeneration)
+            {
+                this.availableEfforts = efforts;
+                this.availableWorkModes = workModes;
+            }
+        }
+        finally
+        {
+            if (generation == this.effortProbeGeneration)
+            {
+                this.effortsLoading = false;
+            }
+        }
+    }
+
+    // One handler for both writing modes: Create adds a file, Edit overwrites one. A failure keeps
+    // the card open and shows why, so the text the user typed is never thrown away by an error.
+    private async Task SaveAsync()
+    {
+        var creating = this.mode == AgentProfileCardMode.Create;
+        if (creating && this.OnDraftSaved.HasDelegate)
+        {
+            await this.SaveDraftAsync();
+            return;
+        }
+
+        // Skill Packs spec §6.10.4: an Agent's file names a Skill only after its copy is in Skills/, so the copy runs before
+        // the write, and a Skill that cannot be copied keeps the file as it was.
+        if (this.Services.GetService<Agency.Huddle.App.SkillSources.ISkillCopier>() is { } copier && this.skills.Count > 0)
+        {
+            IReadOnlyList<Agency.Huddle.App.Teams.SkillSetupItem> notReady;
+            this.copying = true;
+            try
+            {
+                notReady = await copier.EnsureAvailableAsync([.. this.skills], CancellationToken.None);
+            }
+            finally
+            {
+                this.copying = false;
+            }
+
+            if (notReady.Count > 0)
+            {
+                this.error = AgentProfileCard.NotReadyMessage(notReady);
+                return;
+            }
+        }
+
+        Persona persona;
+
+        try
+        {
+            if (creating)
+            {
+                var identity = new PersonaIdentity(this.name, this.title, this.alias, AgentProfileCard.ParseTeams(this.teams), this.adapter, this.skills);
+                persona = this.Personas.Add(identity, this.text, this.model, this.effort, this.workMode);
+            }
+            else
+            {
+                // Unconditional even for an avatar-only edit that changed nothing else: Avatar lives
+                // in AvatarStore, never on the Persona record, so an otherwise-untouched save reads back
+                // text/model/effort/adapter unchanged and Update returns a Persona equal (by whole-record
+                // value equality) to the one PersonaSupervisor last started. NeedsRestart compares exactly
+                // that equality (rules.md), so it is false and no ACP session restarts merely because the
+                // Human picked a background colour. That is the entire reason Avatar was kept off the
+                // Persona record in the first place - invisible at this call site otherwise.
+                persona = this.Personas.Update(this.persistedName, this.text, this.model, this.effort, this.workMode);
+            }
+        }
+        catch (ChatException ex)
+        {
+            this.error = ex.Message;
+            return;
+        }
+
+        this.error = null;
+
+        // PersonaStore.Update reads the NEW name out of text and returns it on the Persona it hands
+        // back - this.name must follow it before the lookups below, or a rename leaves every one of
+        // them searching for a Persona that no longer exists under the OLD (stale) name. persistedName
+        // follows it too, so a second Edit/Save cycle in this same open dialog still passes Update the
+        // Name it is actually indexed under - see persistedName's own remarks.
+        this.name = persona.Name;
+        this.persistedName = persona.Name;
+
+        // Nothing before this point ever touched disk for the avatar - see the field group's own
+        // remarks. Only now, with persona.Name (mirrored into this.name above) known - a Create mints
+        // a brand new one - can the avatar the editor applied, and any image it carries, be filed
+        // under the right key. SaveAvatar writes exactly what the card has been showing.
+        this.SaveAvatar();
+
+        // Land on the saved Agent's details rather than closing outright, so a new agent can be
+        // read back immediately and an edit visibly took.
+        this.RefreshFromStore();
+        this.mode = AgentProfileCardMode.View;
+
+        // A Create has no Agent user or status yet, and a rename moves both to the new name: resolve
+        // them for the Agent this card now shows instead of leaving the status the card opened with.
+        this.agentId = null;
+        await this.ResolveAgentIdAsync();
+        this.RefreshStatus();
+        this.confirmingRemove = false;
+        this.confirmingReset = false;
+        this.effortResetByModelChange = false;
+        this.adapterResetModelAndEffort = false;
+        this.adapterResetWorkMode = false;
+        this.nameLocked = false;
+        this.titleLocked = false;
+        this.aliasLocked = false;
+    }
+
+    /// <summary>"Skills not ready: x (not downloaded). Copy a prompt below, then save again."</summary>
+    internal static string NotReadyMessage(IReadOnlyList<Agency.Huddle.App.Teams.SkillSetupItem> notReady)
+    {
+        IEnumerable<string> names = notReady.Select(static item => $"{item.Name} ({AgentProfileCard.ProblemWords(item.Problem)})");
+        string list = string.Join(", ", names);
+        return $"Skills not ready: {list}. Copy a prompt below, then save again.";
+    }
+
+    /// <summary>The few words for a setup problem.</summary>
+    private static string ProblemWords(Agency.Huddle.App.Teams.SkillAvailability problem) => problem switch
+    {
+        Agency.Huddle.App.Teams.SkillAvailability.NotDownloaded => "not downloaded",
+        Agency.Huddle.App.Teams.SkillAvailability.Broken => "broken",
+        Agency.Huddle.App.Teams.SkillAvailability.Withdrawn => "withdrawn",
+        _ => "not in any catalog",
+    };
+
+    /// <summary>The Source's reason when it marks the Pack deprecated, else null.</summary>
+    private string? DeprecatedReason(Agency.Huddle.App.SkillSources.SkillRegistry registry, string packId)
+    {
+        return registry.FindPack(packId) is { } pack && registry.DisplayState(pack) == Agency.Huddle.SkillPacks.Resolving.ItemState.Deprecated ? this.ReasonOf(pack) : null;
+    }
+
+    /// <summary>Hands the draft's fields to <see cref="OnDraftSaved"/> and closes, once the Name is free; a refusal keeps the card open and says why.</summary>
+    private async Task SaveDraftAsync()
+    {
+        string draftName = this.name.Trim();
+        if (draftName.Length == 0)
+        {
+            this.error = "An Agent needs a Name.";
+            return;
+        }
+
+        bool taken = this.Personas.Entries.Select(static entry => entry.Name).Concat(this.TakenNames)
+            .Any(existing => string.Equals(existing, draftName, StringComparison.OrdinalIgnoreCase));
+        if (taken)
+        {
+            this.error = "An Agent with that Name exists.";
+            return;
+        }
+
+        this.error = null;
+        await this.OnDraftSaved.InvokeAsync((draftName, this.title.Trim(), this.text, this.model, this.effort, this.avatar, this.avatarPendingBytes, this.avatarPendingExtension, this.adapter, this.skills));
+        this.MudDialog.Close();
+    }
+
+    /// <summary>
+    /// Re-reads this Agent's Title, Alias, Teams, Text, Model, Effort and Persona file path from
+    /// <see cref="Personas"/> under the current <see cref="name"/>, the same way a successful Save
+    /// lands on what it just wrote rather than closing outright. Shared with
+    /// <see cref="ConfirmReset"/>, whose whole point is to land on the just-reset defaults the same
+    /// way.
+    /// </summary>
+    private void RefreshFromStore()
+    {
+        var savedPersona = this.Personas.Get(this.name);
+        var entry = this.Personas.Entries.FirstOrDefault(candidate => string.Equals(candidate.Name, this.name, StringComparison.Ordinal));
+        this.title = entry?.Title ?? this.title;
+        this.alias = entry?.Alias ?? this.alias;
+        this.teams = entry is null ? this.teams : string.Join(", ", entry.Teams);
+        this.text = savedPersona?.Text ?? this.text;
+        this.model = savedPersona?.Model;
+        this.effort = savedPersona?.Effort;
+        this.workMode = savedPersona?.WorkMode;
+        this.adapter = savedPersona?.Adapter;
+        this.skills = ReadSkills(savedPersona?.Text ?? this.text);
+        this.filePath = AgentProfileCard.TryPathFor(this.Personas, this.name);
+    }
+
+    // The Create card's Teams input is one comma-separated text field, mirroring the comma form
+    // PersonaFrontmatter.TryReadIdentity itself accepts, so what a user types here round-trips through
+    // Add -> ValidateCandidate -> TryReadIdentity unchanged.
+    private static IReadOnlyList<string> ParseTeams(string raw) =>
+        raw.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+    private void BeginRemove()
+    {
+        this.confirmingRemove = true;
+        this.error = null;
+    }
+
+    private void CancelRemove()
+    {
+        this.confirmingRemove = false;
+        this.restoreActionFocus = true;
+    }
+
+    private void ConfirmRemove()
+    {
+        try
+        {
+            this.Personas.Remove(this.name);
+        }
+        catch (ChatException ex)
+        {
+            this.error = ex.Message;
+            this.confirmingRemove = false;
+            return;
+        }
+
+        this.MudDialog.Close();
+    }
+
+    private void BeginReset()
+    {
+        this.confirmingReset = true;
+        this.error = null;
+    }
+
+    private void CancelReset()
+    {
+        this.confirmingReset = false;
+        this.restoreActionFocus = true;
+    }
+
+    /// <summary>
+    /// After a cancelled Reset or Remove confirm has re-rendered, puts focus back on the button the confirm replaced,
+    /// so a keyboard user does not lose their place in the dialog.
+    /// </summary>
+    /// <param name="firstRender">True on the first render, which never restores focus.</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!this.restoreActionFocus)
+        {
+            return;
+        }
+
+        this.restoreActionFocus = false;
+        if (this.resetButton is not null)
+        {
+            await this.resetButton.FocusAsync();
+        }
+        else if (this.removeButton is not null)
+        {
+            await this.removeButton.FocusAsync();
+        }
+    }
+
+    /// <summary>
+    /// Confirms Reset to default (Spec §6.12): unlike <see cref="ConfirmRemove"/>, a successful reset
+    /// does not close the dialog - the Agent still exists, so this lands on its just-restored
+    /// defaults through <see cref="RefreshFromStore"/>, the same way a successful Save does. Catches
+    /// both <see cref="ChatException"/> and <see cref="IOException"/> - <see cref="BuiltinAgentReset.ResetToDefault"/>
+    /// can raise either, from <see cref="PersonaStore.Update"/>'s own validation or its file write -
+    /// and reports whichever the same way <see cref="ConfirmRemove"/> reports a <see cref="ChatException"/>,
+    /// so a failed Reset never crashes the circuit.
+    /// </summary>
+    private void ConfirmReset()
+    {
+        try
+        {
+            this.Reset.ResetToDefault(this.name);
+        }
+        catch (ChatException ex)
+        {
+            this.error = ex.Message;
+            this.confirmingReset = false;
+            return;
+        }
+        catch (IOException ex)
+        {
+            this.error = ex.Message;
+            this.confirmingReset = false;
+            return;
+        }
+
+        this.error = null;
+        this.confirmingReset = false;
+        this.RefreshFromStore();
+    }
+
+    /// <summary>
+    /// Restarts this card's Persona on demand - the Human-triggered counterpart to the automatic
+    /// restart a file edit causes. Busy-flagged like <c>Chat.razor</c>'s Continue button, and any
+    /// exception is surfaced through <see cref="error"/> rather than left to crash the circuit -
+    /// <see cref="PersonaSupervisor.RestartAsync"/> already reports an ordinary start failure through
+    /// its health table instead of throwing, so this catch exists only for whatever it does not
+    /// anticipate.
+    /// </summary>
+    private async Task RestartAsync()
+    {
+        if (this.restarting)
+        {
+            return;
+        }
+
+        this.restarting = true;
+        try
+        {
+            await this.Supervisor.RestartAsync(this.name, CancellationToken.None);
+            this.error = null;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            this.error = ex.Message;
+        }
+        finally
+        {
+            this.restarting = false;
+        }
+    }
+
+    // Opens a Persona's file in whatever the OS has registered for .md. This launches a process on
+    // the SERVER, not the browser (a browser cannot open a local file from an http:// page). It is
+    // deliberately ungated: this app is expected to run on the user's own machine, where "open the
+    // file I'm looking at" on the same machine is unsurprising. If this app were ever hosted for
+    // remote users, this action would need to be removed rather than gated.
+    private void OpenInEditor()
+    {
+        try
+        {
+            var path = this.Personas.PathFor(this.name);
+            using var process = Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+
+            // Process.Start returns null - rather than throwing - whenever no new process was
+            // started, which is exactly what happens with UseShellExecute when no application is
+            // registered for the extension. Without this check, that failure is invisible: no
+            // exception, no dialog, no log line, and the line below would even clear a prior error.
+            this.error = process is null
+                ? $"Could not open '{this.name}': no application is registered for .md on this machine."
+                : null;
+        }
+        catch (ChatException ex)
+        {
+            this.error = ex.Message;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            this.error = $"Could not open '{this.name}': {ex.Message}";
+        }
+    }
+
+    private static string? TryPathFor(PersonaStore personas, string personaName)
+    {
+        try
+        {
+            return personas.PathFor(personaName);
+        }
+        catch (ChatException)
+        {
+            return null;
+        }
+    }
+}

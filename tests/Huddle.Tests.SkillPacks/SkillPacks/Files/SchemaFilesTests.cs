@@ -20,7 +20,7 @@ public sealed class SchemaFilesTests
             Assert.Equal(JsonValueKind.Object, document.RootElement.ValueKind);
         }
 
-        Assert.Null(SchemaFiles.Read("teammate"));
+        Assert.Null(SchemaFiles.Read("agent"));
     }
 
     /// <summary>The pack schema's required list is the set of fields whose absence the reader rejects.</summary>

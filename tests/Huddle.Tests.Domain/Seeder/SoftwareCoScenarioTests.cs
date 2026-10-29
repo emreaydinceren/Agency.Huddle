@@ -21,59 +21,59 @@ public sealed partial class SoftwareCoScenarioTests
     public void Description_NamesTheCoveredFeatures()
     {
         Assert.Equal(
-            "A software company: Platform, Growth and Support (7 Projects, shared Teammates, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Archive.",
+            "A software company: Platform, Growth and Support (7 Projects, shared Agents, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Archive.",
             new SoftwareCoScenario().Description);
     }
 
-    /// <summary>The request: at least three Teams, each with at least two Projects, sharing Teammates between them.</summary>
+    /// <summary>The request: at least three Teams, each with at least two Projects, sharing Agents between them.</summary>
     [Fact]
-    public void Plan_HasThreeTeamsWithTwoProjectsEachAndSharedTeammates()
+    public void Plan_HasThreeTeamsWithTwoProjectsEachAndSharedAgents()
     {
         SeedPlan plan = Plan();
 
         string[] working = [.. plan.Teams.Where(t => t.Projects.Count >= 2).Select(t => t.Name)];
 
         Assert.Equal(["Platform", "Growth", "Support"], working);
-        Assert.Contains(plan.Teammates, t => t.Teams.Intersect(working, StringComparer.OrdinalIgnoreCase).Count() >= 2);
-        Assert.Equal(3, plan.Teammates.Count(t => t.Teams.Intersect(working, StringComparer.OrdinalIgnoreCase).Count() >= 2));
+        Assert.Contains(plan.Agents, t => t.Teams.Intersect(working, StringComparer.OrdinalIgnoreCase).Count() >= 2);
+        Assert.Equal(3, plan.Agents.Count(t => t.Teams.Intersect(working, StringComparer.OrdinalIgnoreCase).Count() >= 2));
     }
 
-    /// <summary>The cast agreed in the interview: nine Teammates with these Team memberships.</summary>
+    /// <summary>The cast agreed in the interview: nine Agents with these Team memberships.</summary>
     [Fact]
     public void Plan_HasTheAgreedCast()
     {
         SeedPlan plan = Plan();
 
-        Assert.Equal(["Grace", "Marcus", "Lena", "Owen", "Sofia", "Dana", "Alan", "Maya", "Ben"], plan.Teammates.Select(t => t.Name));
-        Assert.Equal(["Platform", "Growth"], plan.Teammates.Single(t => t.Name == "Lena").Teams);
-        Assert.Equal(["Growth"], plan.Teammates.Single(t => t.Name == "Maya").Teams);
-        Assert.Equal(["Support", "Archive"], plan.Teammates.Single(t => t.Name == "Dana").Teams);
-        Assert.Empty(plan.Teammates.Single(t => t.Name == "Ben").Teams);
-        Assert.Equal(["incident-postmortem"], plan.Teammates.Single(t => t.Name == "Alan").Skills);
+        Assert.Equal(["Grace", "Marcus", "Lena", "Owen", "Sofia", "Dana", "Alan", "Maya", "Ben"], plan.Agents.Select(t => t.Name));
+        Assert.Equal(["Platform", "Growth"], plan.Agents.Single(t => t.Name == "Lena").Teams);
+        Assert.Equal(["Growth"], plan.Agents.Single(t => t.Name == "Maya").Teams);
+        Assert.Equal(["Support", "Archive"], plan.Agents.Single(t => t.Name == "Dana").Teams);
+        Assert.Empty(plan.Agents.Single(t => t.Name == "Ben").Teams);
+        Assert.Equal(["incident-postmortem"], plan.Agents.Single(t => t.Name == "Alan").Skills);
     }
 
-    /// <summary>Every Team a Teammate names exists, and the two edge-case Teams are what the interview asked for.</summary>
+    /// <summary>Every Team an Agent names exists, and the two edge-case Teams are what the interview asked for.</summary>
     [Fact]
     public void Plan_HasTheEdgeTeams()
     {
         SeedPlan plan = Plan();
 
-        Assert.All(plan.Teammates.SelectMany(t => t.Teams), team => Assert.Contains(plan.Teams, t => t.Name == team));
-        Assert.DoesNotContain(plan.Teammates, t => t.Teams.Contains("Sandbox"));
+        Assert.All(plan.Agents.SelectMany(t => t.Teams), team => Assert.Contains(plan.Teams, t => t.Name == team));
+        Assert.DoesNotContain(plan.Agents, t => t.Teams.Contains("Sandbox"));
         Assert.Empty(plan.Teams.Single(t => t.Name == "Sandbox").Projects);
         Assert.Empty(plan.Teams.Single(t => t.Name == "Archive").Projects);
-        Assert.Equal(["Grace", "Dana"], plan.Teammates.Where(t => t.Teams.Contains("Archive")).Select(t => t.Name));
+        Assert.Equal(["Grace", "Dana"], plan.Agents.Where(t => t.Teams.Contains("Archive")).Select(t => t.Name));
     }
 
-    /// <summary>Names and aliases are unique, and no alias equals another Teammate's Name, as the Persona loader requires.</summary>
+    /// <summary>Names and aliases are unique, and no alias equals another Agent's Name, as the Persona loader requires.</summary>
     [Fact]
-    public void Plan_TeammateNamesAndAliasesAreUnique()
+    public void Plan_AgentNamesAndAliasesAreUnique()
     {
         SeedPlan plan = Plan();
 
-        Assert.Equal(plan.Teammates.Count, plan.Teammates.Select(t => t.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count());
-        Assert.Equal(plan.Teammates.Count, plan.Teammates.Select(t => t.Alias).Distinct(StringComparer.OrdinalIgnoreCase).Count());
-        Assert.All(plan.Teammates, t => Assert.DoesNotContain(plan.Teammates.Where(o => o != t), o => string.Equals(o.Name, t.Alias, StringComparison.OrdinalIgnoreCase)));
+        Assert.Equal(plan.Agents.Count, plan.Agents.Select(t => t.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Equal(plan.Agents.Count, plan.Agents.Select(t => t.Alias).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.All(plan.Agents, t => Assert.DoesNotContain(plan.Agents.Where(o => o != t), o => string.Equals(o.Name, t.Alias, StringComparison.OrdinalIgnoreCase)));
     }
 
     /// <summary>All eight statuses appear, and 46 Tasks are seeded: 41 ordinary ones and 5 Requests.</summary>
@@ -101,13 +101,13 @@ public sealed partial class SoftwareCoScenarioTests
         });
     }
 
-    /// <summary>Every reference between Tasks, Teammates, Teams and Projects points at something that exists.</summary>
+    /// <summary>Every reference between Tasks, Agents, Teams and Projects points at something that exists.</summary>
     [Fact]
     public void Plan_ReferencesResolve()
     {
         SeedPlan plan = Plan();
         HashSet<string> ids = [.. plan.Tasks.Select(t => t.Id)];
-        HashSet<string> people = [plan.HumanName, .. plan.Teammates.Select(t => t.Name)];
+        HashSet<string> people = [plan.HumanName, .. plan.Agents.Select(t => t.Name)];
 
         Assert.All(plan.Tasks, task =>
         {
@@ -207,10 +207,10 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.True(links.Count(l => l.Value.Contains("Personas", StringComparer.OrdinalIgnoreCase)) >= 3);
         string[] unresolved = [.. links.SelectMany(l => l.Value).Where(target => !links.ContainsKey(target)).Distinct(StringComparer.OrdinalIgnoreCase)];
         Assert.Equal(["Legal-Checklist"], unresolved);
-        Assert.Contains(plan.Files, f => f.RelativePath.StartsWith("Teammates/Alan/work/", StringComparison.Ordinal) && !f.RelativePath.Contains("/memory/", StringComparison.Ordinal));
+        Assert.Contains(plan.Files, f => f.RelativePath.StartsWith("Agents/Alan/work/", StringComparison.Ordinal) && !f.RelativePath.Contains("/memory/", StringComparison.Ordinal));
     }
 
-    /// <summary>Team memory, Project memory and Teammate memory each exist.</summary>
+    /// <summary>Team memory, Project memory and Agent memory each exist.</summary>
     [Fact]
     public void Plan_HasThreeKindsOfMemory()
     {
@@ -218,7 +218,7 @@ public sealed partial class SoftwareCoScenarioTests
 
         Assert.Contains(plan.Files, f => Regex.IsMatch(f.RelativePath, "^Teams/[^/]+/memory/[^/]+\\.md$"));
         Assert.Contains(plan.Files, f => Regex.IsMatch(f.RelativePath, "^Teams/[^/]+/[^/]+/memory/[^/]+\\.md$"));
-        Assert.Contains(plan.Files, f => Regex.IsMatch(f.RelativePath, "^Teammates/[^/]+/work/memory/[^/]+\\.md$"));
+        Assert.Contains(plan.Files, f => Regex.IsMatch(f.RelativePath, "^Agents/[^/]+/work/memory/[^/]+\\.md$"));
     }
 
     /// <summary>
@@ -247,7 +247,7 @@ public sealed partial class SoftwareCoScenarioTests
 
         Assert.All(plan.Rooms, room =>
         {
-            Assert.All(room.Members, m => Assert.Contains(plan.Teammates, t => t.Name == m));
+            Assert.All(room.Members, m => Assert.Contains(plan.Agents, t => t.Name == m));
             Assert.All(room.Messages, m => Assert.True(m.Sender == plan.HumanName || room.Members.Contains(m.Sender), $"{room.Key}: {m.Sender}"));
             DateTime[] times = [.. room.Messages.Select(m => plan.Today.AddDays(-m.DaysAgo).ToDateTime(TimeOnly.ParseExact(m.Time, "HH:mm", System.Globalization.CultureInfo.InvariantCulture)))];
             Assert.Equal([.. times.Order()], times);
@@ -290,7 +290,7 @@ public sealed partial class SoftwareCoScenarioTests
         string[] research = [.. tagged.Where(static n => n.Value.Contains("growth/research", StringComparer.OrdinalIgnoreCase)).Select(static n => n.Key).Order(StringComparer.Ordinal)];
 
         Assert.Equal(
-            ["Teammates/Alan/work/Postmortem-Draft-0412.md", "Teams/Platform/Observability/Runbook.md", "Teams/Support/Escalation-Guide.md", "Teams/Support/Incident Tooling/Incident-0412.md"],
+            ["Agents/Alan/work/Postmortem-Draft-0412.md", "Teams/Platform/Observability/Runbook.md", "Teams/Support/Escalation-Guide.md", "Teams/Support/Incident Tooling/Incident-0412.md"],
             incident);
         Assert.Equal(["Teams/Growth/Onboarding Revamp/Interview-Notes.md", "Teams/Growth/Personas.md", "Teams/Growth/Pricing Page/Pricing-Research.md"], research);
         Assert.Equal(["growth/pricing", "Launch"], tagged["Teams/Growth/Pricing Page/Pricing-Brief.md"]);

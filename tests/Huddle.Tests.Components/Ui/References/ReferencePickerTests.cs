@@ -71,7 +71,7 @@ public sealed class ReferencePickerTests
     public async Task EmptyText_IsADisabledOption()
     {
         await using MudBunitContext ctx = new();
-        ReferencePickerView view = new([], "Nothing matches '@zz'.", "Narrow with teammate: task: room: team: lib:", "No results", 0);
+        ReferencePickerView view = new([], "Nothing matches '@zz'.", "Narrow with agent: task: room: team: lib:", "No results", 0);
 
         IRenderedComponent<ReferencePicker> cut = ctx.Render<ReferencePicker>(p => p
             .Add(c => c.View, view)
@@ -95,7 +95,7 @@ public sealed class ReferencePickerTests
 
         AngleSharp.Dom.IElement footer = cut.Find(".composer-picker-footer");
         Assert.Equal("true", footer.GetAttribute("aria-hidden"));
-        Assert.Equal("Narrow with teammate: task: room: team: lib:", footer.TextContent.Trim());
+        Assert.Equal("Narrow with agent: task: room: team: lib:", footer.TextContent.Trim());
     }
 
     /// <summary>The visually hidden status region is polite and carries the view's live text.</summary>
@@ -143,6 +143,6 @@ public sealed class ReferencePickerTests
         ReferencePickerRow roomRow = new("refs-1", platformHit, "[Platform](/teams/Platform)", true, "Not in this Room", "Platform, Not in this Room");
         ReferencePickerGroup teams = new("Teams", [teamRow]);
         ReferencePickerGroup rooms = new("Rooms", [roomRow]);
-        return new ReferencePickerView([teams, rooms], null, "Narrow with teammate: task: room: team: lib:", "2 results", highlight);
+        return new ReferencePickerView([teams, rooms], null, "Narrow with agent: task: room: team: lib:", "2 results", highlight);
     }
 }

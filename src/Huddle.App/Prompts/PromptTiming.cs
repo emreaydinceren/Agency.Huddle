@@ -15,7 +15,7 @@ public enum PromptTiming
 
     /// <summary>
     /// Baked into a Persona's system prompt at <c>session/new</c> and never re-read afterwards, so an
-    /// edit reaches only teammates started after the change; a Persona already running keeps the text
+    /// edit reaches only agents started after the change; a Persona already running keeps the text
     /// it started with until its session restarts.
     /// </summary>
     NextSession,

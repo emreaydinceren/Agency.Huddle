@@ -14,7 +14,7 @@ public sealed class TabPersistenceTests
         TabService source = new();
         Tab a = source.Open("/rooms/ab", "Design");
         source.Keep(a.Id);
-        Tab b = source.Open("/teammates");
+        Tab b = source.Open("/agents");
         source.Keep(b.Id);
         return source.Export().ToJson();
     }
@@ -38,7 +38,7 @@ public sealed class TabPersistenceTests
 
         var cut = ctx.Render<TabPersistence>();
 
-        cut.WaitForAssertion(() => Assert.Equal(["room:ab", "teammates"], tabs.Tabs.Select(static t => t.Key)));
+        cut.WaitForAssertion(() => Assert.Equal(["room:ab", "agents"], tabs.Tabs.Select(static t => t.Key)));
         Assert.Equal("room:ab", tabs.Active?.Key);
         Assert.Equal("Design", tabs.Tabs[0].Title);
     }

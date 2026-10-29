@@ -387,7 +387,7 @@ internal static class SoftwareCoTasks
             HumanGate = true,
             ExtraLog = [new(Human, "description edited"), new(SoftwareCoFeed.HelperActor, "human gate on (reason: Sends a follow-up to customers outside the Team)")],
             Body = "Every action from the postmortem, with owners. Alan's draft and the action list are attached.",
-            Attachments = ["Teammates/Alan/work/Postmortem-Draft-0412.md", SeedTaskUpload.PathFor("SUPP-0008", "action-items.txt")],
+            Attachments = ["Agents/Alan/work/Postmortem-Draft-0412.md", SeedTaskUpload.PathFor("SUPP-0008", "action-items.txt")],
         },
 
         // ---- Support team root ----

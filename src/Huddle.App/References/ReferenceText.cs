@@ -151,7 +151,7 @@ internal static class ReferenceText
     /// <returns>The text, or null for a kind the picker does not insert by this rule (a Library file).</returns>
     public static string? InsertFor(SearchHit hit) => hit switch
     {
-        TeammateHit teammate => string.Concat("@", teammate.Name),
+        AgentHit agent => string.Concat("@", agent.Name),
         TaskHit task => task.Id.ToString(),
         RoomHit room => string.Concat("[", ReferenceText.RoomLabelFor(room.RoomName, room.Team, room.IsTeamRoom), "](", ReferenceText.RoomHref(room.RoomId), ")"),
         TeamHit team => string.Concat("[", ReferenceText.LabelFor(team.Name, ReferenceKind.Team), "](", ReferenceText.TeamHref(team.Name), ")"),

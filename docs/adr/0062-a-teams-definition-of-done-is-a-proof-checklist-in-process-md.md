@@ -36,7 +36,7 @@ Each bullet is `- <Label>: <rule>`, and a rule is one of four:
 
 | Rule | Met when | Open item shows |
 | --- | --- | --- |
-| `evidence from <step>` | An Evidence line on the Task, with a command, by a member whose role covers `<step>` (the same test as `qa-evidence-before-done`) | The first Team member whose role covers `<step>` |
+| `evidence from <step>` | An Evidence line on the Task, with a command, by a member whose role covers `<step>` (the same test as `qa-evidence-before-done`) | The first Agent whose role covers `<step>` |
 | `command `<cmd>` exits 0` | The latest Evidence line on the Task for `<cmd>` has exit code 0 | The Task's assignee |
 | `task tagged <tag>` | A child Task (its `parent` is this Task) tagged `<tag>` exists and is Done | The child's assignee, and its checked boxes against all boxes, for example "19 of 23 in #RSH-209"; "no Task yet" when there is none |
 | `document reviewed by <step>` | A Markdown document attached to the Task (a path line in its description) has, in its document history ([ADR-0060](0060-a-documents-history-is-what-its-editors-report.md)), a `Reviewed` entry by a member whose role covers `<step>`, later than its latest `Created` or `Edited` entry, with no `Objected` entry after it | "no document attached", "not reviewed yet", "edited after Ruth's review" or "Ruth objected: \<summary>"; the owner is the first member covering `<step>` |

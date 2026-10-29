@@ -34,7 +34,7 @@ using Agency.Huddle.App.Prompts;
 /// One exception to that, and it is the point of <see cref="catalog"/>: the tool <em>descriptions</em>
 /// quoted in the TOOLS block are captured once, here, rather than re-read per call. Every
 /// <c>tool.*.description</c> prompt is badged <b>Next session</b> on the settings page, and this type
-/// is built once per session — so reading them live let an edit reach a Teammate that was already
+/// is built once per session — so reading them live let an edit reach an Agent that was already
 /// running, which the badge promises it cannot. MCP's own <c>tools/list</c> honours that badge by
 /// construction, because it is sent once at session start; this is the surface that did not, and it
 /// is the one that decides what a model knows, since progressive discovery means the system prompt

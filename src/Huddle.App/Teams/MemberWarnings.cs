@@ -8,9 +8,9 @@ internal static class MemberWarnings
 {
     private const int MaxSkills = 10;
 
-    /// <summary>The warnings about what the Teammate holds from its Sources (Skill Packs spec §6.10.7): a withdrawn Pack or
+    /// <summary>The warnings about what the Agent holds from its Sources (Skill Packs spec §6.10.7): a withdrawn Pack or
     /// Skill, a deprecated Pack, and a Pack no SKILLS.md row provides any more. In that order.</summary>
-    /// <param name="name">The Teammate's name.</param>
+    /// <param name="name">The Agent's name.</param>
     /// <param name="skills">Its <c>skills:</c>.</param>
     /// <param name="packs">Its <c>_packs</c>.</param>
     /// <param name="availability">The registry.</param>

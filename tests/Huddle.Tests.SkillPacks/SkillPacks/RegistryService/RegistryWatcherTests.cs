@@ -1,6 +1,6 @@
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.SkillSources;
 using Agency.Huddle.SkillPacks.Checking;
 using Agency.Huddle.SkillPacks.Reading;
@@ -185,7 +185,7 @@ public sealed class RegistryWatcherTests
         List<IHostedService> hosted = [.. provider.GetServices<IHostedService>()];
 
         int watcher = hosted.FindIndex(static service => service is RegistryWatcher);
-        int seeder = hosted.FindIndex(static service => service is BuiltinTeammateSeeder);
+        int seeder = hosted.FindIndex(static service => service is BuiltinAgentSeeder);
         int supervisor = hosted.FindIndex(static service => service is PersonaSupervisor);
         Assert.InRange(watcher, 0, seeder - 1);
         Assert.True(watcher < supervisor || supervisor < 0);

@@ -30,11 +30,11 @@ it beat.
 ## 1. Goal
 
 1. **Two places a chat can live.** The root, for the Human's persistent chats with any
-   Teammates, and a Team, for chats started inside that Team.
+   Agents, and a Team, for chats started inside that Team.
 2. **Scope is stored.** It is chosen when the Room is created and never changes, so every
    later question ("whose folder does this file go in?") has one answer.
 3. **Every Team has a Team Room.** Created with the Team, holding the Human and every member,
-   and kept up to date as Teammates join.
+   and kept up to date as Agents join.
 4. **Root behaviour does not move.** Every Room that exists today is a root Room, and every
    code path that does not opt in keeps finding the same Room it finds today.
 
@@ -45,7 +45,7 @@ it beat.
 | # | Situation | What must happen |
 | --- | --- | --- |
 | T1 | The Human creates *Marketing* from a type with Nova and Ada | A Room named *Marketing* exists with the Human, Nova and Ada, listed under *Marketing* in the sidebar |
-| T2 | A Persona file gains `teams: [Research]`, and *Research* did not exist | *Research* appears in the Teams list and its Team Room holds the Human and that Teammate |
+| T2 | A Persona file gains `teams: [Research]`, and *Research* did not exist | *Research* appears in the Teams list and its Team Room holds the Human and that Agent |
 | T3 | Kim joins *Marketing* | Kim is added to the *Marketing* Team Room, which says so in the Transcript like any Invitation |
 | T4 | Kim leaves *Marketing* | Kim stays a Member of the Team Room (§3). Nothing is posted |
 | T5 | The Human chooses **New chat** on *Marketing*, ticks Nova and Bo (Bo is not in *Marketing*) | A new Room *Nova, Bo* scoped to *Marketing*, listed under it. Bo is allowed (D-4) |
@@ -74,7 +74,7 @@ it beat.
 | Not in scope | Why |
 | --- | --- |
 | **Uploading files** | Its own spec. §6.8 is the contract between the two |
-| **Removing a Teammate from a Room** | No code removes a Room Member today (`ITeamDirectory` has no such call). Leaving a Team leaves the Teammate in the Team Room; `known-limits.md` |
+| **Removing an Agent from a Room** | No code removes a Room Member today (`ITeamDirectory` has no such call). Leaving a Team leaves the Agent in the Team Room; `known-limits.md` |
 | **Moving a Room between scopes** | Files already filed in one Team's folder would be in the wrong place |
 | **Scoping a Room to a Project** | A Project lives inside a Team; the Team is the unit the Human asked for. A Project scope can be added later on the same table |
 | **Moving onboarding into the Team Room** | The manager would reply only when Mentioned. The Human chose to keep it in the manager's root one-to-one (§11 Q-2) |
@@ -90,7 +90,7 @@ it beat.
 2. **A scoped Room is a Room.** Reply rule, Budget, Archive, Delete, Invitation and Room
    Sessions do not look at Scope. Only listing, the Turn label, `read_records` and uploads do.
 3. **One reconciler, many doors.** A Team appears from a type, from a Persona label, or from a
-   folder. A Teammate joins from hiring, from the Members tab, or from a hand-edited file. The
+   folder. An Agent joins from hiring, from the Members tab, or from a hand-edited file. The
    Team Room is not created by any of those doors; it is reconciled from the catalog after
    any of them.
 4. **Keyed by Team name, ignoring case.** The same rule `TeamCatalog.Find` and `cadence_state`
@@ -162,7 +162,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_room_teams_team_room ON room_teams(team) WH
 - `EnsureTeamOneToOneAsync(string team, User agent, CancellationToken ct)`: find with
   `team`, else create scoped. Returns the Room.
 - `EnsureRoomForAsync` stays root-only. Persona hello, onboarding (§11 Q-2), `create_room`
-  and the Teammates page keep today's Rooms. Task wakes and cadence change on purpose (§6.9).
+  and the Agents page keep today's Rooms. Task wakes and cadence change on purpose (§6.9).
 - `InviteAsync` ignores Scope. A Team Room's name is the Team name, which is not the derived
   name, so the existing "re-derive only when auto-named" rule keeps it.
 
@@ -199,7 +199,7 @@ Then, for each distinct `team` in `room_teams` that is not in the catalog: archi
 non-archived Room scoped to it through `ChatService.SetRoomArchivedAsync`, which already drops
 pending Questions and Forms.
 
-A member is a Teammate whose Persona carries the Team label and has a User row (has come
+A member is an Agent whose Persona carries the Team label and has a User row (has come
 online at least once), the same test `TeamMembers.razor` uses to show a Message link. A member
 that has never connected is added on the run after it does: User creation raises
 `RoomsChanged`, so the reconciler also listens to that.
@@ -219,7 +219,7 @@ that has never connected is added on the run after it does: User creation raises
   Start passes the Team to `CreateRoomForAsync`.
 - **`TeamMembers`**: the card's Message action becomes a button that calls
   `EnsureTeamOneToOneAsync` and navigates, instead of an `Href` to the root Room.
-  `TeammateCard` gains an `OnMessage` callback for this; the Teammates page keeps its `Href`.
+  `AgentProfileCard` gains an `OnMessage` callback for this; the Agents page keeps its `Href`.
 - **Archived chats dialog** shows the Team after a scoped Room's name.
 
 ### 6.6 What the Agent sees
@@ -328,10 +328,10 @@ whether it posted. Onboarding keeps calling `PostAsync`, which stays root-only (
 
 | # | Decision | Alternative it beat |
 | --- | --- | --- |
-| D-1 | Scope is stored at creation in `room_teams` | Inferred from members (ambiguous for multi-Team Teammates, moves as people post) |
+| D-1 | Scope is stored at creation in `room_teams` | Inferred from members (ambiguous for multi-Team Agents, moves as people post) |
 | D-2 | Keyed by Team name, ignoring case | A Team id. None exists; label-only Teams have no file |
 | D-3 | Scope never changes | Moving Rooms. Files already filed would be in the wrong folder |
-| D-4 | Any Teammate can join a scoped Room | Team members only. Chosen by the Human |
+| D-4 | Any Agent can join a scoped Room | Agents only. Chosen by the Human |
 | D-5 | Team Rooms are listed under their Team in `TeamsNav` | A badge in the Chats list; a Chats tab on the Team page. Chosen by the Human |
 | D-6 | Members tab **Message** opens the Team's one-to-one | The root one-to-one. Chosen by the Human |
 | D-7 | A Team gone from the catalog archives its Rooms | Delete them, or make them root. Chosen by the Human |
@@ -356,7 +356,7 @@ whether it posted. Onboarding keeps calling `PostAsync`, which stays root-only (
 | `src/Huddle.App/Data/Models.cs`, `ITeamDirectory.cs`, `SqliteTeamDirectory.cs` | chat | §6.1 |
 | `src/Huddle.App/Services/ChatService.cs` | chat | §6.2 |
 | `src/Huddle.App/Teams/TeamRoomReconciler.cs` | chat | New, §6.4 |
-| `src/Huddle.App/Components/Shared/RoomList.razor`, `NewChat.razor`, `RoomNavRow.razor` (new), `TeammateCard.razor`, `ArchivedChatsDialog.razor` | chat | §6.5 |
+| `src/Huddle.App/Components/Shared/RoomList.razor`, `NewChat.razor`, `RoomNavRow.razor` (new), `AgentProfileCard.razor`, `ArchivedChatsDialog.razor` | chat | §6.5 |
 | `src/Huddle.App/Components/Teams/TeamsNav.razor`, `TeamMembers.razor` (now `TeamRoster.razor`, whose roster cards carry Message) | chat | §6.5 |
 | `src/Huddle.App/Prompts/prompts.default.json`, `Acp/Sessions/RoomSession.cs`, `WorkItem` | chat | §6.6 |
 | `src/Huddle.App/Acp/Tools/ReadRecordsTool.cs` | chat | §6.7 |

@@ -5,7 +5,7 @@ date: 2026-10-19
 
 # A Human-gated Task waits in Needs You for the Human's acceptance
 
-Teammates do the work and the Human makes the calls. A Task that names an **Action** (something
+Agents do the work and the Human makes the calls. A Task that names an **Action** (something
 that leaves the Team or cannot easily be undone: sending, paying, signing, publishing, merging,
 deleting), or that the Human marked **Requires your acceptance**, is **Human-gated**. It cannot
 reach Done until its **Proof** is complete and the Human has **accepted** it. The full design is
@@ -13,7 +13,7 @@ reach Done until its **Proof** is complete and the Human has **accepted** it. Th
 
 ## The problem
 
-AI Teammates are fast and tireless, but they are not accountable. "The AI sent it" is not an
+AI Agents are fast and tireless, but they are not accountable. "The AI sent it" is not an
 answer a customer, an auditor or a lawyer accepts. A wrong email, payment, signature or merge is
 out before anyone looks, and a polished draft can hide a wrong number or a missing source.
 
@@ -67,10 +67,10 @@ ADR-0039 writes back a refused status, and logged as `outside edit refused by Hu
 | A fifth gate id in `Process.md` | A Team could then switch the Human's decision off. The decision must hold whatever the process says |
 | Gate every Task at Done | Internal notes, drafts and research would wait on the Human for nothing, and the Human would learn to click Accept without reading |
 | Accept moves every Task to Done | Done would be recorded before an outward Action happened. Done means the thing happened |
-| Huddle carries out the Action on Accept | Each kind of Action (mail, payment, merge, post) would need its own integration. The Teammate already has the tools |
+| Huddle carries out the Action on Accept | Each kind of Action (mail, payment, merge, post) would need its own integration. The Agent already has the tools |
 | Show Needs You as a variant of Review, keeping eight states | The board, Views and the Change log could not tell work under review from work waiting on the Human |
 | Keep "Move anyway" for the Human on gated Tasks | It is the button that waves through work nobody checked. The way forward is to ask for the missing Proof |
-| Record the decision in the Teammate's Memory | Memory is what an Agent deliberately keeps for itself. The decline reason reaches the Teammate in its wake Message and the Retro through the Change log. The Teammate decides what to remember |
+| Record the decision in the Agent's Memory | Memory is what an Agent deliberately keeps for itself. The decline reason reaches the Agent in its wake Message and the Retro through the Change log. The Agent decides what to remember |
 
 ## Consequences
 

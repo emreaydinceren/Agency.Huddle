@@ -42,7 +42,7 @@ adapter: agency
 names one by `Id`. `AdapterProfileResolver` turns that string into a profile and **never
 fails** — an absent, blank or unknown id all resolve to the first configured profile.
 
-One Huddle therefore runs Teammates on different Adapters simultaneously. Anything that reads a
+One Huddle therefore runs Agents on different Adapters simultaneously. Anything that reads a
 global "which backend" setting is wrong by construction.
 
 ## Why frontmatter and not a table
@@ -117,5 +117,5 @@ Claude for the Personas that write code, a local Model for the ones that summari
 unreachable. Item 12 spotted this and then proposed it anyway.
 
 **Rejecting a Persona whose Adapter is unknown.** Symmetry with the stale-Model contract
-matters more than strictness: a Teammate that cannot start is harder to diagnose than one that
+matters more than strictness: an Agent that cannot start is harder to diagnose than one that
 starts and says why it is unhappy.

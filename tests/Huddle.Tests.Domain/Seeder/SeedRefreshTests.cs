@@ -16,7 +16,7 @@ using Agency.Huddle.Seeder.Model;
 using Agency.Huddle.Seeder.Scenarios;
 using Agency.Huddle.Seeder.Writing;
 using Agency.Huddle.Tests.Library;
-using Agency.Huddle.Tests.Teammates;
+using Agency.Huddle.Tests.Agents;
 using Agency.Huddle.Tests.Teams;
 
 namespace Agency.Huddle.Tests.Seeder;
@@ -29,7 +29,7 @@ namespace Agency.Huddle.Tests.Seeder;
 public sealed class SeedRefreshTests
 {
     private static PersonaStore Personas(IOptions<TeamOptions> options) =>
-        new(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
+        new(new AgentPaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
 
     private static string ReferenceKey(MessageReference reference, SeedPlan plan)
     {
@@ -38,7 +38,7 @@ public sealed class SeedRefreshTests
         return $"{reference.Kind}|{reference.Key}|{reference.Label}|{reference.Status}|{title}";
     }
 
-    /// <summary>Each Team has exactly one Team Room holding the Human and the Team's Teammates, and the Team chats and the Team one-to-one are scoped without being the Team Room.</summary>
+    /// <summary>Each Team has exactly one Team Room holding the Human and the Team's Agents, and the Team chats and the Team one-to-one are scoped without being the Team Room.</summary>
     [Fact]
     public async Task TeamRooms_AreScopedAsSeeded()
     {
@@ -54,7 +54,7 @@ public sealed class SeedRefreshTests
             Assert.True(teamRoom.IsTeamRoom);
             Assert.Equal(team, teamRoom.Team);
             IReadOnlyList<User> members = await directory.GetRoomMembersAsync(teamRoom.Id, ct);
-            string[] expected = ["You", .. plan.Teammates.Where(t => t.Teams.Contains(team, StringComparer.OrdinalIgnoreCase)).Select(t => t.Name)];
+            string[] expected = ["You", .. plan.Agents.Where(t => t.Teams.Contains(team, StringComparer.OrdinalIgnoreCase)).Select(t => t.Name)];
             Assert.Equal(expected.Order(StringComparer.Ordinal), members.Select(m => m.Name).Order(StringComparer.Ordinal));
         }
 
@@ -341,7 +341,7 @@ public sealed class SeedRefreshTests
         Assert.Equal(".png", AvatarImage.SniffExtension(await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken)));
     }
 
-    /// <summary>Exactly one live Room ends with an unanswered Teammate Message that mentions the Human, by the rule the Needs you list uses.</summary>
+    /// <summary>Exactly one live Room ends with an unanswered Agent Message that mentions the Human, by the rule the Needs you list uses.</summary>
     [Fact]
     public async Task NeedsYou_OneRoomHoldsAnUnansweredMention()
     {

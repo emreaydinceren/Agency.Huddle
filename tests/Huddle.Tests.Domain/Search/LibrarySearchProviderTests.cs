@@ -31,33 +31,33 @@ public sealed class LibrarySearchProviderTests
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build(o => { o.Library.Roots = [new PinnedRootOption { Name = "Data", Path = o.DataDir }]; });
         WriteFile(Path.Combine(fixture.DataDir, "Teams", "Alpha", "_tasks", "PLAT-0001.md"), "The zebra is in the task.");
         fixture.RootStore.SetHidden("teams", true);
-        fixture.RootStore.SetHidden("teammates", true);
+        fixture.RootStore.SetHidden("agents", true);
 
         SearchResult result = await Provider(fixture, OptionsFor(fixture)).SearchAsync(Query("zebra"), TestContext.Current.CancellationToken);
 
         Assert.Empty(result.Hits);
     }
 
-    /// <summary>A Teammate definition's text matches the query, but it is listed under Teammates and never as a Library file.</summary>
+    /// <summary>An Agent definition's text matches the query, but it is listed under Agents and never as a Library file.</summary>
     [Fact]
-    public async Task PersonaFile_ExcludedThroughTheTeammatesRoot()
+    public async Task PersonaFile_ExcludedThroughTheAgentsRoot()
     {
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        _ = fixture.CreateTeammate("Ben", "Ben", "ben");
+        _ = fixture.CreateAgent("Ben", "Ben", "ben");
 
         SearchResult result = await Provider(fixture, OptionsFor(fixture)).SearchAsync(Query("Chief of Staff"), TestContext.Current.CancellationToken);
 
         Assert.Empty(result.Hits);
     }
 
-    /// <summary>With a pinned root that contains the data directory and the built-in roots hidden, a Teammate definition is still excluded by its full path.</summary>
+    /// <summary>With a pinned root that contains the data directory and the built-in roots hidden, an Agent definition is still excluded by its full path.</summary>
     [Fact]
     public async Task PersonaFile_ExcludedThroughAPinnedRootContainingDataDir()
     {
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build(o => { o.Library.Roots = [new PinnedRootOption { Name = "Data", Path = o.DataDir }]; });
-        _ = fixture.CreateTeammate("Ben", "Ben", "ben");
+        _ = fixture.CreateAgent("Ben", "Ben", "ben");
         fixture.RootStore.SetHidden("teams", true);
-        fixture.RootStore.SetHidden("teammates", true);
+        fixture.RootStore.SetHidden("agents", true);
 
         SearchResult result = await Provider(fixture, OptionsFor(fixture)).SearchAsync(Query("Chief of Staff"), TestContext.Current.CancellationToken);
 

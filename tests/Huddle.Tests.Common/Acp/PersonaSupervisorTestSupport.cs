@@ -27,7 +27,7 @@ internal static class PersonaSupervisorTestSupport
 
     internal static void WritePersonaFile(IOptions<TeamOptions> options, string name, string body = "You are a persona.")
     {
-        TestPersonaFiles.Write(new TeammatePaths(options), name, PersonaText(name, body));
+        TestPersonaFiles.Write(new AgentPaths(options), name, PersonaText(name, body));
     }
 
     /// <summary>Minimal valid Persona frontmatter (Name, Title and Alias all <paramref name="name"/>) wrapped around <paramref name="body"/> - identity is front-matter driven from this phase on, so every seeded Persona needs one to be discoverable at all.</summary>

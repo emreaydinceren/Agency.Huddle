@@ -156,7 +156,7 @@
     /// <summary>The sentence under the table for a warning code.</summary>
     internal static string WarningSentence(string code) => code switch
     {
-        "S008" => "Teammates read only the .md files directly in a Skill's folder, up to 64 KB each, so scripts/ and references/ are ignored. A Skill that depends on them may work less well in Huddle than in the tool it was written for.",
+        "S008" => "Agents read only the .md files directly in a Skill's folder, up to 64 KB each, so scripts/ and references/ are ignored. A Skill that depends on them may work less well in Huddle than in the tool it was written for.",
         _ => Agency.Huddle.SkillPacks.Checking.CheckCatalog.HintFor(code),
     };
 

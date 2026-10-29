@@ -28,13 +28,13 @@ internal static class FeedSummary
             RequestAwaitsPayload p => new([Text("finished the Request "), TaskChip(p.Id, p.Title), Text(" from "), Strong(p.FromTeam)], "only you can confirm it"),
             GateDecisionPayload p => new([Text("was stopped by a gate moving "), TaskChip(p.Id, p.Title), Text(" to " + p.ToStatus)], p.Message),
             RoomWaitPayload p => RoomWait(item.SourceType, p),
-            RoomCreatedPayload p => new([Text("opened "), RoomChip(p.RoomId, RoomLabel(p))], Teammates(p)),
+            RoomCreatedPayload p => new([Text("opened "), RoomChip(p.RoomId, RoomLabel(p))], Agents(p)),
             RoomJoinedPayload p => new([Strong(p.Member), Text(" joined "), RoomChip(p.RoomId, p.RoomName)], null, OmitActor: true),
             RoomArchivedPayload p => new([Text("archived "), RoomChip(p.RoomId, p.RoomName)], null),
             DocumentChangedPayload p => new([Text(DocumentVerb(p.Kind) + " "), DocumentChip(p)], p.Summary.Length > 0 ? p.Summary : null),
             HelperPausedPayload p => new(
                 [Text("paused "), HelperChip(p.HelperId, p.Name), Text(string.Create(CultureInfo.InvariantCulture, $": its daily cap of {p.DailyCap + p.Granted} calls is reached"))],
-                "Teammates' Tasks are not judged until you continue or the day ends"),
+                "Agents' Tasks are not judged until you continue or the day ends"),
             HelperFailingPayload p => new(
                 [HelperChip(p.HelperId, p.Name), Text(string.Create(CultureInfo.InvariantCulture, $" failed {p.Failures} times in a row"))],
                 p.LastError.Length > 0 ? p.LastError : null),
@@ -142,10 +142,10 @@ internal static class FeedSummary
     private static string RoomLabel(RoomCreatedPayload p) =>
         p.Members.Count == 2 ? p.Members[0] + " ↔ " + p.Members[1] : p.RoomName;
 
-    private static string? Teammates(RoomCreatedPayload p)
+    private static string? Agents(RoomCreatedPayload p)
     {
         int count = Math.Max(p.Members.Count - 1, 1);
-        return string.Create(CultureInfo.InvariantCulture, $"{count} Teammate{(count == 1 ? string.Empty : "s")}");
+        return string.Create(CultureInfo.InvariantCulture, $"{count} Agent{(count == 1 ? string.Empty : "s")}");
     }
 
     private static string? InTeam(string team) => team.Length > 0 ? "in " + team : null;

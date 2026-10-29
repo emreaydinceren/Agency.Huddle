@@ -3,7 +3,7 @@ namespace Agency.Huddle.Seeder.Model;
 /// <summary>A chat Room and its history.</summary>
 /// <param name="Key">A stable key Tasks use to refer to the Room.</param>
 /// <param name="Name">The Room name; when it equals the auto-derived name it is left as it is.</param>
-/// <param name="Members">The Teammates in the Room; the Human is always added.</param>
+/// <param name="Members">The Agents in the Room; the Human is always added.</param>
 /// <param name="Archived">Whether the Room is archived.</param>
 /// <param name="Messages">The transcript, oldest first.</param>
 /// <param name="Team">The Team the Room is scoped to, or <see langword="null"/> for a root Room.</param>

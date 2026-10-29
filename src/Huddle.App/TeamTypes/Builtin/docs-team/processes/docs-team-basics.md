@@ -48,7 +48,7 @@ retro: { every: 14, unit: 'days' }
 ## Escalation
 
 - A page that documents behaviour the code does not have goes to the Human with both quoted.
-- A disagreement between teammates goes to the Human with both views written on the Task.
+- A disagreement between agents goes to the Human with both views written on the Task.
 
 ## Onboarding
 

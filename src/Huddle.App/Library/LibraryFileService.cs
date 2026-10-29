@@ -51,9 +51,9 @@ internal sealed class LibraryFileService(
     /// failed: the target was held open without <see cref="FileShare.Delete"/>, or is read-only.</summary>
     private static readonly CompositeFormat SaveFailedReasonFormat = CompositeFormat.Parse("Couldn't save {0}: it's in use or read-only.");
 
-    /// <summary>Settled text (Spec §6.12; corrections-B4 item 18): a Teammate definition's frontmatter Name
-    /// changed, and the Teammates page is the only rename path.</summary>
-    private const string RenameOnTeammatesPageReason = "Rename teammates on the Teammates page.";
+    /// <summary>Settled text (Spec §6.12; corrections-B4 item 18): an Agent definition's frontmatter Name
+    /// changed, and the Agents page is the only rename path.</summary>
+    private const string RenameOnAgentsPageReason = "Rename agents on the Agents page.";
 
     /// <summary>The buffer size, in bytes, an upload is copied with.</summary>
     private const int UploadBufferSize = 80 * 1024;
@@ -74,16 +74,16 @@ internal sealed class LibraryFileService(
     /// definition rather than a copy.</summary>
     internal static readonly CompositeFormat CouldNotCreateReasonFormat = CompositeFormat.Parse("Couldn't create {0}.");
 
-    /// <summary>Settled text (corrections-B4 item 21) refusing a create directly at the Teammates root.</summary>
-    private const string CreateAtTeammatesRootReason = "Add teammates on the Teammates page.";
-    private const string PlaceAtTeammatesRootReason = "Files can't be renamed or moved directly in the Teammates folder. Teammates are managed on the Teammates page.";
+    /// <summary>Settled text (corrections-B4 item 21) refusing a create directly at the Agents root.</summary>
+    private const string CreateAtAgentsRootReason = "Add agents on the Agents page.";
+    private const string PlaceAtAgentsRootReason = "Files can't be renamed or moved directly in the Agents folder. Agents are managed on the Agents page.";
 
-    /// <summary>The app's own "layout already migrated" marker in the Teammates root; internal state, so never listed.</summary>
-    private const string TeammateLayoutMarker = ".layout-migrated";
+    /// <summary>The app's own "layout already migrated" marker in the Agents root; internal state, so never listed.</summary>
+    private const string AgentLayoutMarker = ".layout-migrated";
 
     /// <summary>Settled text (corrections-B4 item 21) refusing a <c>.md</c> file created directly in a
-    /// Teammate folder.</summary>
-    private const string CreateMdInTeammateFolderReason = "A teammate folder holds only its definition; use work/.";
+    /// Agent folder.</summary>
+    private const string CreateMdInAgentFolderReason = "An agent folder holds only its definition; use work/.";
 
     /// <summary>The default extension for a new note whose name has no known Spec §6.11 extension (corrections-B4 item 23).</summary>
     private const string DefaultNoteExtension = ".md";
@@ -118,8 +118,8 @@ internal sealed class LibraryFileService(
     /// <summary>Settled text (corrections-B5 D8 items 10-11) for a linking note with <see cref="TextFileFormat.MixedLineEndings"/>: ADR-0028 byte-exactness wins, so it is skipped rather than normalised.</summary>
     private static readonly CompositeFormat NoteMixedLineEndingsReasonFormat = CompositeFormat.Parse("{0} has mixed line endings; update its links by hand.");
 
-    /// <summary>Settled text (corrections-B5 D8 items 10, 12) for a linking note that is a Teammate definition: rewriting it would restart the teammate and clear its memory.</summary>
-    private static readonly CompositeFormat NoteIsTeammateDefinitionReasonFormat = CompositeFormat.Parse("{0} is a teammate definition; update its links by hand.");
+    /// <summary>Settled text (corrections-B5 D8 items 10, 12) for a linking note that is an Agent definition: rewriting it would restart the agent and clear its memory.</summary>
+    private static readonly CompositeFormat NoteIsAgentDefinitionReasonFormat = CompositeFormat.Parse("{0} is an agent definition; update its links by hand.");
 
     private readonly LibraryPathResolver resolver = resolver;
     private readonly IRecycleBin recycleBin = recycleBin;
@@ -214,7 +214,7 @@ internal sealed class LibraryFileService(
         return Task.FromResult<IReadOnlyList<LibraryEntry>>(entries);
     }
 
-    /// <summary>Whether a folder entry is left out of a listing by name alone: a hidden folder, an in-flight upload temp file, or the Teammates layout marker.</summary>
+    /// <summary>Whether a folder entry is left out of a listing by name alone: a hidden folder, an in-flight upload temp file, or the Agents layout marker.</summary>
     /// <param name="folder">The folder being listed.</param>
     /// <param name="child">The entry under consideration.</param>
     /// <param name="ignoredFolders">The folder names the listing hides.</param>
@@ -234,9 +234,9 @@ internal sealed class LibraryFileService(
         }
 
         return !isFolder
-            && folder.Root.Kind == LibraryRootKind.Teammates
+            && folder.Root.Kind == LibraryRootKind.Agents
             && folder.RelativePath.Length == 0
-            && string.Equals(child.Name, TeammateLayoutMarker, StringComparison.Ordinal);
+            && string.Equals(child.Name, AgentLayoutMarker, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -642,7 +642,7 @@ internal sealed class LibraryFileService(
     /// <summary>
     /// Writes <paramref name="editorText"/> to <paramref name="file"/> (Spec §6.4 <c>WriteTextAsync</c>;
     /// ADR-0028): re-resolves the path first (corrections-B4 item 12, never trusting the caller's
-    /// <c>FullPath</c>), re-checks editability at write time (item 13), refuses a Teammate definition's
+    /// <c>FullPath</c>), re-checks editability at write time (item 13), refuses an Agent definition's
     /// frontmatter Name change (Spec §6.12, item 18), then writes atomically through
     /// <see cref="AtomicFile"/> (item 15). A missing parent folder is created lazily only when it resolves as
     /// a Team or Project folder (Spec §6.2; item 17).
@@ -727,7 +727,7 @@ internal sealed class LibraryFileService(
         return new LibraryResult<LibraryEntry>(entry, null);
     }
 
-    /// <summary>Re-checks, at write time, that an existing file is still an editable Markdown file and that a Teammate definition's Name is unchanged.</summary>
+    /// <summary>Re-checks, at write time, that an existing file is still an editable Markdown file and that an Agent definition's Name is unchanged.</summary>
     /// <param name="fresh">The re-resolved file.</param>
     /// <param name="fileName">The file's name.</param>
     /// <param name="editorText">The text about to be written.</param>
@@ -750,12 +750,12 @@ internal sealed class LibraryFileService(
             return ViewOnlyWriteRefusalReason;
         }
 
-        if (fresh.Role == LibraryNodeRole.TeammateDefinition)
+        if (fresh.Role == LibraryNodeRole.AgentDefinition)
         {
             string oldText = await File.ReadAllTextAsync(fresh.FullPath, ct).ConfigureAwait(false);
-            if (TeammateNameChanged(oldText, editorText))
+            if (AgentNameChanged(oldText, editorText))
             {
-                return RenameOnTeammatesPageReason;
+                return RenameOnAgentsPageReason;
             }
         }
 
@@ -765,8 +765,8 @@ internal sealed class LibraryFileService(
     /// <summary>
     /// Creates a new note under <paramref name="folder"/> (Spec §6.4 create row): a name with no known
     /// Spec §6.11 extension gets <c>.md</c> appended (corrections-B4 item 23), otherwise it is kept as-is.
-    /// Validated with <see cref="LibraryNames.Validate"/>, refused directly at the Teammates root or for a
-    /// <c>.md</c> file directly in a Teammate folder (item 21). Uses <see cref="FileMode.CreateNew"/> so a
+    /// Validated with <see cref="LibraryNames.Validate"/>, refused directly at the Agents root or for a
+    /// <c>.md</c> file directly in an Agent folder (item 21). Uses <see cref="FileMode.CreateNew"/> so a
     /// race becomes an <see cref="IOException"/>, resolved to the settled exists text (item 19). The returned
     /// path is re-resolved after creation (item 22).
     /// </summary>
@@ -798,10 +798,10 @@ internal sealed class LibraryFileService(
 
         string finalName = LibraryFileKinds.HasKnownExtension(name) ? name : name + DefaultNoteExtension;
 
-        string? teammatesError = TeammatesDestinationRefusal(fresh, finalName);
-        if (teammatesError is not null)
+        string? agentsError = AgentsDestinationRefusal(fresh, finalName);
+        if (agentsError is not null)
         {
-            return new LibraryResult<LibraryPath>(null, teammatesError);
+            return new LibraryResult<LibraryPath>(null, agentsError);
         }
 
         if (!this.TryResolveCreateTarget(fresh, finalName, out LibraryPath? target, out string? targetError))
@@ -837,7 +837,7 @@ internal sealed class LibraryFileService(
     /// <summary>
     /// Creates a new folder under <paramref name="folder"/> (Spec §6.4 create row). Existence is checked
     /// BEFORE <see cref="Directory.CreateDirectory(string)"/> (corrections-B4 item 20: it is idempotent and
-    /// can't signal "exists" on its own). Refused directly at the Teammates root (item 21). The returned path
+    /// can't signal "exists" on its own). Refused directly at the Agents root (item 21). The returned path
     /// is re-resolved after creation (item 22).
     /// </summary>
     /// <param name="folder">The already-resolved folder to create the new folder in; re-resolved before use.</param>
@@ -866,10 +866,10 @@ internal sealed class LibraryFileService(
             return Task.FromResult(new LibraryResult<LibraryPath>(null, LibraryPath.ReadOnlyReason));
         }
 
-        string? teammatesError = TeammatesDestinationRefusal(fresh, null);
-        if (teammatesError is not null)
+        string? agentsError = AgentsDestinationRefusal(fresh, null);
+        if (agentsError is not null)
         {
-            return Task.FromResult(new LibraryResult<LibraryPath>(null, teammatesError));
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, agentsError));
         }
 
         if (!this.TryResolveCreateTarget(fresh, name, out LibraryPath? target, out string? targetError))
@@ -1099,7 +1099,7 @@ internal sealed class LibraryFileService(
     /// <summary>
     /// Renames <paramref name="item"/> within its own folder (Spec §6.4 rename/move row, minus the link
     /// rewrite (D8)). Checked in order: re-resolve, <see cref="LibraryNames.Validate"/>,
-    /// <see cref="LibraryProtection.For"/>, the Teammates destination rules (item 21/26, shared with
+    /// <see cref="LibraryProtection.For"/>, the Agents destination rules (item 21/26, shared with
     /// <see cref="CreateFileAsync"/>), then existence. A rename that only changes case
     /// (<see cref="FolderSnapshot.PathComparer"/> treats old and new as equal, item 24) routes through a
     /// temporary sibling so the platform's case-insensitive filesystem doesn't treat it as a no-op; the
@@ -1230,10 +1230,10 @@ internal sealed class LibraryFileService(
             return false;
         }
 
-        string? teammatesError = TeammatesDestinationRefusal(parent, newName, PlaceAtTeammatesRootReason);
-        if (teammatesError is not null)
+        string? agentsError = AgentsDestinationRefusal(parent, newName, PlaceAtAgentsRootReason);
+        if (agentsError is not null)
         {
-            refusal = teammatesError;
+            refusal = agentsError;
             return false;
         }
 
@@ -1344,10 +1344,10 @@ internal sealed class LibraryFileService(
 
         string name = Path.GetFileName(itemFullPath);
 
-        string? teammatesError = TeammatesDestinationRefusal(freshTarget, name, PlaceAtTeammatesRootReason);
-        if (teammatesError is not null)
+        string? agentsError = AgentsDestinationRefusal(freshTarget, name, PlaceAtAgentsRootReason);
+        if (agentsError is not null)
         {
-            refusal = teammatesError;
+            refusal = agentsError;
             return true;
         }
 
@@ -1411,7 +1411,7 @@ internal sealed class LibraryFileService(
     /// Moves <paramref name="item"/> into <paramref name="targetFolder"/> (Spec §6.4 rename/move row, minus
     /// the link rewrite (D8)). Checked in order: re-resolve both paths, <see cref="LibraryProtection.For"/>,
     /// same root (settled here), into its own subtree (settled here; corrections-B4 item 25, compared on
-    /// resolved full paths with <see cref="FolderSnapshot.PathComparer"/>), the Teammates destination rules
+    /// resolved full paths with <see cref="FolderSnapshot.PathComparer"/>), the Agents destination rules
     /// (item 21/26, shared with <see cref="CreateFileAsync"/>), the <c>_tasks</c> subtree rule under the Teams
     /// root (item 28), then existence.
     /// </summary>
@@ -1520,28 +1520,28 @@ internal sealed class LibraryFileService(
         return Task.FromResult(new LibraryResult<LibraryPath>(fresh, null));
     }
 
-    /// <summary>The Teammates destination rules (corrections-B4 item 21, applied to rename/move destinations
-    /// too by item 26): refuses a destination directly at the Teammates root, and a <c>.md</c>
-    /// <paramref name="finalName"/> landing directly in a Teammate folder. Shared by
+    /// <summary>The Agents destination rules (corrections-B4 item 21, applied to rename/move destinations
+    /// too by item 26): refuses a destination directly at the Agents root, and a <c>.md</c>
+    /// <paramref name="finalName"/> landing directly in an Agent folder. Shared by
     /// <see cref="CreateFileAsync"/>, <see cref="CreateFolderAsync"/>, <see cref="RenameAsync"/> and
     /// <see cref="MoveAsync"/> so the rule lives in one place.</summary>
     /// <param name="destinationFolder">The already-resolved destination folder.</param>
     /// <param name="finalName">The final file name being placed in <paramref name="destinationFolder"/>, or
     /// <see langword="null"/> when creating a folder (the <c>.md</c> check does not apply).</param>
-    /// <param name="rootReason">What to say when the destination is the Teammates root itself: the create wording
-    /// by default, or <see cref="PlaceAtTeammatesRootReason"/> for a rename or move.</param>
-    private static string? TeammatesDestinationRefusal(LibraryPath destinationFolder, string? finalName, string rootReason = CreateAtTeammatesRootReason)
+    /// <param name="rootReason">What to say when the destination is the Agents root itself: the create wording
+    /// by default, or <see cref="PlaceAtAgentsRootReason"/> for a rename or move.</param>
+    private static string? AgentsDestinationRefusal(LibraryPath destinationFolder, string? finalName, string rootReason = CreateAtAgentsRootReason)
     {
-        if (destinationFolder.Root.Kind == LibraryRootKind.Teammates && destinationFolder.RelativePath.Length == 0)
+        if (destinationFolder.Root.Kind == LibraryRootKind.Agents && destinationFolder.RelativePath.Length == 0)
         {
             return rootReason;
         }
 
         if (finalName is not null
-            && destinationFolder.Role == LibraryNodeRole.TeammateFolder
+            && destinationFolder.Role == LibraryNodeRole.AgentFolder
             && string.Equals(Path.GetExtension(finalName), ".md", StringComparison.OrdinalIgnoreCase))
         {
-            return CreateMdInTeammateFolderReason;
+            return CreateMdInAgentFolderReason;
         }
 
         return null;
@@ -1672,7 +1672,7 @@ internal sealed class LibraryFileService(
     /// <summary>
     /// Reads, rewrites and writes back the single note at <paramref name="newNote"/> (corrections-B5 D8
     /// items 9b, 10, and the 8.5.i-b listing/exception fix): the note is PLANNED first, from its raw bytes,
-    /// so a Teammate definition, a note no longer editable or over
+    /// so an Agent definition, a note no longer editable or over
     /// <see cref="LibraryOptions.MaxEditableBytes"/>, or one with <see cref="TextFileFormat.MixedLineEndings"/>
     /// is listed only when it actually has an edit to make - never merely because it matches one of those
     /// shapes. Once an edit is confirmed, the note's text is re-read through <see cref="ReadAsync"/> and
@@ -1721,9 +1721,9 @@ internal sealed class LibraryFileService(
             return;
         }
 
-        if (notePath.Role == LibraryNodeRole.TeammateDefinition)
+        if (notePath.Role == LibraryNodeRole.AgentDefinition)
         {
-            failed.Add(new LibraryNoteFailure(newNote, string.Format(CultureInfo.InvariantCulture, NoteIsTeammateDefinitionReasonFormat, fileName)));
+            failed.Add(new LibraryNoteFailure(newNote, string.Format(CultureInfo.InvariantCulture, NoteIsAgentDefinitionReasonFormat, fileName)));
             return;
         }
 
@@ -2196,12 +2196,12 @@ internal sealed class LibraryFileService(
     }
 
     /// <summary>
-    /// Whether a Teammate definition's frontmatter Name differs between its current on-disk text and the text
+    /// Whether an Agent definition's frontmatter Name differs between its current on-disk text and the text
     /// about to be saved, compared <see cref="StringComparison.Ordinal"/> (corrections-B4 item 18). Either text
     /// failing to parse an identity is not treated as a change here; <see cref="TextFileCodec"/> and the caller
     /// have already accepted the bytes as text.
     /// </summary>
-    private static bool TeammateNameChanged(string oldText, string newText)
+    private static bool AgentNameChanged(string oldText, string newText)
     {
         if (!PersonaFrontmatter.TryReadIdentity(oldText, out PersonaIdentity? oldIdentity, out _)
             || !PersonaFrontmatter.TryReadIdentity(newText, out PersonaIdentity? newIdentity, out _))

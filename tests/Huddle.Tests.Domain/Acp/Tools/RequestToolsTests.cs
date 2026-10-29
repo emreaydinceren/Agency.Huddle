@@ -2,7 +2,7 @@ using System.Text.Json.Nodes;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Tasks;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.Tests.Acp.Fakes;
@@ -265,7 +265,7 @@ public sealed class RequestToolsTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await CreateHarnessAsync(ct);
-        _ = harness.Personas.Add(new PersonaIdentity("Jarvis", "Chief of Staff", "jar", [], Builtin: BuiltinTeammate.ChiefOfStaffMarker), "You are Jarvis.");
+        _ = harness.Personas.Add(new PersonaIdentity("Jarvis", "Chief of Staff", "jar", [], Builtin: BuiltinAgent.ChiefOfStaffMarker), "You are Jarvis.");
         User cos = await harness.Directory.UpsertAgentUserAsync("Jarvis", null, ct) ?? throw new InvalidOperationException("Directory refused a user.");
         ListTeamsTool tool = new(Catalog(), harness.Store, harness.Personas, harness.Directory, cos.Id, new FakePromptSource());
 

@@ -952,7 +952,7 @@ public sealed class FileChangeTrackerTests
     /// <summary>
     /// An unresolvable declared entry produces the fixed warning text FC §6.10 defines, regardless
     /// of the resolver's own specific reason - proven by "../nope" (outside DataDir, refused by
-    /// <see cref="WatchedFolderResolver"/>). A bare word that resolves cleanly but names no Teammate
+    /// <see cref="WatchedFolderResolver"/>). A bare word that resolves cleanly but names no Agent
     /// and no existing folder ("Nope") also warns, per the delivery manager's settled correction:
     /// FC §6.10's own example is exactly this case, and D6 shipped it silently un-warned. A
     /// multi-segment entry that does not yet exist ("Shared/missing") and a bare word that resolves
@@ -971,12 +971,12 @@ public sealed class FileChangeTrackerTests
         IReadOnlyList<string> warnings = fixture.Tracker.CheckDeclared(["Nope", "../nope", "Shared/missing", "Docs"]);
 
         Assert.Equal(2, warnings.Count);
-        Assert.Contains($"Watched folder 'Nope' is not a Teammate or a folder inside {dataDirName}.", warnings);
-        Assert.Contains($"Watched folder '../nope' is not a Teammate or a folder inside {dataDirName}.", warnings);
+        Assert.Contains($"Watched folder 'Nope' is not an Agent or a folder inside {dataDirName}.", warnings);
+        Assert.Contains($"Watched folder '../nope' is not an Agent or a folder inside {dataDirName}.", warnings);
     }
 
-    /// <summary>The Agent's own Work Dir, per FC §6.7 step 1: <c>{DataDir}/Teammates/Nova/work</c>.</summary>
-    private static string WorkDir(Fixture fixture) => Path.Combine(fixture.DataDir.Path, "Teammates", "Nova", "work");
+    /// <summary>The Agent's own Work Dir, per FC §6.7 step 1: <c>{DataDir}/Agents/Nova/work</c>.</summary>
+    private static string WorkDir(Fixture fixture) => Path.Combine(fixture.DataDir.Path, "Agents", "Nova", "work");
 
     /// <summary>Creates a real Room through the fixture's <see cref="ITeamDirectory"/>, returning its id.</summary>
     private static async Task<string> CreateRoomAsync(Fixture fixture, string name, CancellationToken ct)
@@ -1001,22 +1001,22 @@ public sealed class FileChangeTrackerTests
         IOptions<TeamOptions> options = dataDir.Options();
         configureFileChanges?.Invoke(options.Value.FileChanges);
 
-        TeammatePaths teammatePaths = new(options);
+        AgentPaths agentPaths = new(options);
         string watchesLine = watches is null ? string.Empty : $"\nwatches: [{watches}]";
         string teamsLine = teams is null ? string.Empty : $"\nTeams: [{teams}]";
-        TestPersonaFiles.Write(teammatePaths, "nova", $"---\nName: Nova\nTitle: Nova\nAlias: Nova{teamsLine}{watchesLine}\n---\nYou are Nova.");
+        TestPersonaFiles.Write(agentPaths, "nova", $"---\nName: Nova\nTitle: Nova\nAlias: Nova{teamsLine}{watchesLine}\n---\nYou are Nova.");
 
         SqliteTeamDirectory directory = new(options);
         await directory.InitializeAsync("You", ct);
 
         PersonaStore personas = new(
-            teammatePaths,
+            agentPaths,
             new PersonaModelStore(options),
             new PersonaEffortStore(options), new PersonaWorkModeStore(options),
             NullLogger<PersonaStore>.Instance);
         FileStateStore store = new(options, NullLogger<FileStateStore>.Instance);
-        WatchedFolderResolver resolver = new(options, teammatePaths);
-        FileChangeTracker tracker = new(store, personas, directory, resolver, options, teammatePaths, NullLogger<FileChangeTracker>.Instance);
+        WatchedFolderResolver resolver = new(options, agentPaths);
+        FileChangeTracker tracker = new(store, personas, directory, resolver, options, agentPaths, NullLogger<FileChangeTracker>.Instance);
 
         return new Fixture(dataDir, directory, personas, store, tracker);
     }

@@ -17,7 +17,7 @@ internal sealed class LogChangeTool(
     DocHistoryRecorder recorder,
     LibraryPathResolver resolver,
     IOptions<TeamOptions> options,
-    TeammatePaths paths,
+    AgentPaths paths,
     string agentName,
     IPromptSource prompts) : IAppTool
 {

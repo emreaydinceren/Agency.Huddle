@@ -14,7 +14,7 @@ using Agency.Huddle.Tests.Factories;
 /// Pins <see cref="AskHumanTool"/> against Questions spec §6.2: the checks in their order, every
 /// problem reported at once, the success and replacement texts, and the rule that nothing is stored
 /// unless every check passes. Real collaborators throughout, the same style
-/// <c>ProposeTeammatesToolTests</c> uses for this layer.
+/// <c>ProposeAgentsToolTests</c> uses for this layer.
 /// </summary>
 public sealed class AskHumanToolTests
 {

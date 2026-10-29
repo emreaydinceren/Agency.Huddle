@@ -70,7 +70,7 @@ public sealed class SkillRegistryTests
         Assert.Equal(ItemState.Available, host.Registry.DisplayState(sheets));
     }
 
-    /// <summary>A Teammate holding the Pack makes it In use; the republish reuses the resolved registry.</summary>
+    /// <summary>An Agent holding the Pack makes it In use; the republish reuses the resolved registry.</summary>
     [Fact]
     public async Task Holders_RepublishedWithoutReread()
     {
@@ -78,7 +78,7 @@ public sealed class SkillRegistryTests
         await host.Registry.ReloadAsync(TestContext.Current.CancellationToken);
         ResolvedRegistry resolved = host.Registry.Current.Resolved;
 
-        host.Teammate("Jane", ["docx"], [new VersionedRef("documents", "1.0.0")]);
+        host.Agent("Jane", ["docx"], [new VersionedRef("documents", "1.0.0")]);
 
         PackEntry pack = host.Registry.FindPack("documents") ?? throw new InvalidOperationException("documents is missing");
         Assert.Same(resolved, host.Registry.Current.Resolved);
@@ -93,7 +93,7 @@ public sealed class SkillRegistryTests
         using RegistryHost host = WithPack();
         await host.Registry.ReloadAsync(TestContext.Current.CancellationToken);
 
-        host.Teammate("Jane", ["docx"], [new VersionedRef("documents", "0.9.0")]);
+        host.Agent("Jane", ["docx"], [new VersionedRef("documents", "0.9.0")]);
 
         PackEntry pack = host.Registry.FindPack("documents") ?? throw new InvalidOperationException("documents is missing");
         Assert.Equal(ItemState.UpdateAvailable, host.Registry.DisplayState(pack));

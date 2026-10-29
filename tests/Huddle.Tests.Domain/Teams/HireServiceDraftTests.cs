@@ -4,7 +4,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
-using Agency.Huddle.Tests.Teammates;
+using Agency.Huddle.Tests.Agents;
 
 namespace Agency.Huddle.Tests.Teams;
 
@@ -38,9 +38,9 @@ public sealed class HireServiceDraftTests : IDisposable
     private static DraftHire Draft(string name, RoleRef? role = null, byte[]? image = null) =>
         new(name, "Developer", "You build things.", role, Avatar.None with { Background = "#3e9fe0" }, image, image is null ? null : ".png");
 
-    /// <summary>A written draft is a Teammate of the Team with its title, text, role and avatar colour.</summary>
+    /// <summary>A written draft is an Agent of the Team with its title, text, role and avatar colour.</summary>
     [Fact]
-    public void HireDrafts_WritesTheTeammate_WithItsRoleAndAvatar()
+    public void HireDrafts_WritesTheAgent_WithItsRoleAndAvatar()
     {
         DraftHireResult result = this.service.HireDrafts("Garden", [Draft("Ada", new RoleRef("web", "dev", "1.0.0"))]);
 
@@ -54,7 +54,7 @@ public sealed class HireServiceDraftTests : IDisposable
         Assert.Equal("#3e9fe0", this.avatars.Get("Ada").Background);
     }
 
-    /// <summary>A draft's adapter, model, effort, Skills and packs are written to the Teammate.</summary>
+    /// <summary>A draft's adapter, model, effort, Skills and packs are written to the Agent.</summary>
     [Fact]
     public void HireDrafts_CarriesAdapterModelEffortSkillsAndPacks()
     {
@@ -91,7 +91,7 @@ public sealed class HireServiceDraftTests : IDisposable
         Assert.Equal(["a-skill"], Assert.Single(this.installer.Calls));
     }
 
-    /// <summary>A drafted library image is saved with the Teammate's avatar.</summary>
+    /// <summary>A drafted library image is saved with the Agent's avatar.</summary>
     [Fact]
     public void HireDrafts_WithAnImage_SavesItWithTheAvatar()
     {
@@ -102,7 +102,7 @@ public sealed class HireServiceDraftTests : IDisposable
         Assert.NotNull(this.avatars.Get("Ada").Image);
     }
 
-    /// <summary>A repeated name, or one an existing Teammate has, is refused before anything is written.</summary>
+    /// <summary>A repeated name, or one an existing Agent has, is refused before anything is written.</summary>
     [Fact]
     public void CheckDrafts_RepeatedOrUsedName_IsRefused()
     {

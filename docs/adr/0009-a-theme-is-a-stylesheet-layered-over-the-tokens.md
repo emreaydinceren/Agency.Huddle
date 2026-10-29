@@ -288,7 +288,7 @@ worth more than one asserted, so:
   decision. Fenced code blocks gained a monospace family they never had. The reconnect
   modal's button moved off the framework's own blue (`#6b9ed2`) onto `--accent`, so it now
   matches the rest of the application.
-- **`.teammate-card-persona` deliberately keeps `font: inherit`.** It shows a Persona's
+- **`.agent-profile-card-persona` deliberately keeps `font: inherit`.** It shows a Persona's
   Markdown source, and the obvious "improvement" — pointing it at `--font-mono` — would be a
   design change smuggled in under a tokenisation diff. `CssSource.FindFontFamilyLiterals`
   accepts the four CSS-wide keywords (`inherit`, `initial`, `unset`, `revert`) for exactly

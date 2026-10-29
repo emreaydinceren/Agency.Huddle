@@ -36,7 +36,7 @@
   <rect x="34" y="324" width="14" height="12" rx="3" fill="none" stroke="#45443f" stroke-width="1.5"/>
   <text x="58" y="334" font-size="14" font-weight="600" fill="#141413">Teams</text>
   <rect x="34" y="356" width="14" height="12" rx="3" fill="none" stroke="#45443f" stroke-width="1.5"/>
-  <text x="58" y="366" font-size="14" font-weight="600" fill="#141413">Teammates</text>
+  <text x="58" y="366" font-size="14" font-weight="600" fill="#141413">Agents</text>
   <rect x="34" y="388" width="14" height="12" rx="3" fill="none" stroke="#45443f" stroke-width="1.5"/>
   <text x="58" y="398" font-size="14" font-weight="600" fill="#141413">Tasks</text>
   <rect x="34" y="420" width="14" height="12" rx="3" fill="none" stroke="#45443f" stroke-width="1.5"/>

@@ -32,7 +32,7 @@
                     <div class="doc-history-body">
                         <div class="doc-history-head">
                             <DocHistoryActor Name="@entry.Actor" Kind="entry.ActorKind" />
-                            <span class="doc-history-chip">@(entry.ActorKind == DocActorKind.Human ? "you" : "Teammate")</span>
+                            <span class="doc-history-chip">@(entry.ActorKind == DocActorKind.Human ? "you" : "Agent")</span>
                             <StatusChip Color="DocHistoryKindStyle.ColorFor(entry)" Icon="@DocHistoryKindStyle.IconFor(entry)" Class="doc-history-kind">@DocHistoryView.KindLabel(entry)</StatusChip>
                         </div>
                         @if (entry.Summary.Length > 0)

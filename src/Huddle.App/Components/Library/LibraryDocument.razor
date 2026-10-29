@@ -142,7 +142,7 @@
 @code {
     /// <summary>
     /// Renders <paramref name="text"/> as the Library's rendered Markdown. A leading YAML frontmatter block
-    /// (a Teammate definition's <c>name:</c>/<c>title:</c>/<c>skills:</c> header) is split off with
+    /// (an Agent definition's <c>name:</c>/<c>title:</c>/<c>skills:</c> header) is split off with
     /// <see cref="PersonaFrontmatter.Parse(string)"/> and shown as a <see cref="LibraryProperties"/> block, because left in the
     /// body the closing <c>---</c> reads as a setext underline and folds the whole block into one heading.
     /// </summary>
@@ -348,7 +348,7 @@
 
         this.previewText = this.content.Text;
 
-        if (this.Path.Role == LibraryNodeRole.TeammateDefinition
+        if (this.Path.Role == LibraryNodeRole.AgentDefinition
             && this.content.Text is not null
             && PersonaFrontmatter.TryReadIdentity(this.content.Text, out PersonaIdentity? identity, out _))
         {
@@ -388,7 +388,7 @@
     /// <summary>
     /// The save sequence (Spec §6.4, §6.12; corrections-B6 items 11, 15, 21; judgement 44):
     /// stat the file first and refuse without writing if it is gone; ask to overwrite if it
-    /// changed since it was loaded; ask the Teammate-definition confirm; write through
+    /// changed since it was loaded; ask the Agent-definition confirm; write through
     /// <see cref="LibraryFileService.WriteTextAsync"/> and show any refusal reason; on success,
     /// refresh the loaded stamp and clear the dirty marker.
     /// </summary>

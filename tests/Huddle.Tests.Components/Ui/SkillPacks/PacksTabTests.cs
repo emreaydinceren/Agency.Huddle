@@ -72,7 +72,7 @@ public sealed class PacksTabTests : IDisposable
         Assert.Equal("Consult when: \"when documents applies\"", cut.Find(".pack-details-consult").TextContent.Trim());
         Assert.Single(cut.FindAll(".pack-details-skill"));
         Assert.Equal(Agency.Huddle.App.Skills.Ui.SkillStateText.For(Agency.Huddle.SkillPacks.Resolving.ItemState.Available).Sentence, cut.Find(".pack-details-sentence").TextContent.Trim());
-        Assert.Equal("Unread files: Teammates read only the .md files directly in a Skill's folder, up to 64 KB each, so scripts/ and references/ are ignored. A Skill that depends on them may work less well in Huddle than in the tool it was written for.", cut.Find(".pack-details-warning-s008").TextContent.Trim());
+        Assert.Equal("Unread files: Agents read only the .md files directly in a Skill's folder, up to 64 KB each, so scripts/ and references/ are ignored. A Skill that depends on them may work less well in Huddle than in the tool it was written for.", cut.Find(".pack-details-warning-s008").TextContent.Trim());
     }
 
     /// <summary>A Pack becoming usable raises one success snackbar naming it; the first snapshot

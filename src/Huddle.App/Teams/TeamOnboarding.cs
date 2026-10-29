@@ -15,7 +15,7 @@ internal sealed class TeamOnboarding(ITeamFolders folders, IPromptSource prompts
 {
     /// <summary>Posts the onboarding prompt to the manager unless the Team was already onboarded.</summary>
     /// <param name="team">The Team's name.</param>
-    /// <param name="managerName">The manager Teammate's Name.</param>
+    /// <param name="managerName">The manager Agent's Name.</param>
     /// <param name="ct">Cancels the post.</param>
     /// <returns><see langword="true"/> when the prompt was posted and the marker written.</returns>
     public async Task<bool> PostIfDueAsync(string team, string managerName, CancellationToken ct)

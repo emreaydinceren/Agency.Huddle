@@ -19,7 +19,7 @@ using Agency.Huddle.Tests.NeedsYou;
 /// its row menu is a <c>MudMenu</c>, which paints its popover as a sibling rather than a descendant
 /// (see <see cref="MudBunitContext"/>'s own remarks), so a plain <c>Render&lt;T&gt;</c> could never see
 /// it open. Real <see cref="SqliteTeamDirectory"/> and <see cref="ChatService"/> over a
-/// <see cref="TempDataDir"/> throughout - no mocking framework, matching <see cref="InviteTeammateTests"/>.
+/// <see cref="TempDataDir"/> throughout - no mocking framework, matching <see cref="InviteAgentTests"/>.
 /// The seeded Agent is deliberately named "coo" rather than "agent" - the empty-state copy itself
 /// contains the word "agent" ("Start an agent to create one"), which would make a Room named "agent"
 /// pass a DoesNotContain assertion for the wrong reason.

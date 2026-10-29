@@ -5,7 +5,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Tasks;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Teams;
 using static Agency.Huddle.Tests.Tasks.TaskTriggerTestSupport;
@@ -51,7 +51,7 @@ public sealed class RequestWakeOnceTests
         Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct, catalog);
         Cast cast = await StartWakingAsync(harness, ct);
         _ = harness.Personas.Add(new PersonaIdentity("Mia", "Mia", "mia", ["Design"]), "You are Mia.");
-        _ = harness.Personas.Add(new PersonaIdentity("Alfred", "Chief of Staff", "alf", [], Builtin: BuiltinTeammate.ChiefOfStaffMarker), "You are Alfred.");
+        _ = harness.Personas.Add(new PersonaIdentity("Alfred", "Chief of Staff", "alf", [], Builtin: BuiltinAgent.ChiefOfStaffMarker), "You are Alfred.");
         User mia = await harness.Directory.UpsertAgentUserAsync("Mia", null, ct) ?? throw new InvalidOperationException("No Mia.");
         User alfred = await harness.Directory.UpsertAgentUserAsync("Alfred", null, ct) ?? throw new InvalidOperationException("No Alfred.");
         harness.Prompts.SetOverride(WakeMessageKey, Probe);

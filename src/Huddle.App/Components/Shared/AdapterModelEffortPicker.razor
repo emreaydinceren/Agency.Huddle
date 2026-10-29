@@ -32,11 +32,11 @@
     </MudAlert>
 }
 
-<div class="teammate-card-row mb-1">
-    <div class="teammate-card-cell">
+<div class="agent-profile-card-row mb-1">
+    <div class="agent-profile-card-cell">
         <MudSelect T="string" Label="Model" Value="@(this.model ?? string.Empty)" ValueChanged="this.OnModelChangedAsync"
                    Disabled="@(this.Disabled || this.modelsLoading)" aria-busy="@(this.modelsLoading ? "true" : null)"
-                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="@(this.modelsLoading ? "teammate-card-probing" : null)">
+                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="@(this.modelsLoading ? "agent-profile-card-probing" : null)">
             <MudSelectItem T="string" Value="@string.Empty">@DefaultOptionText</MudSelectItem>
             @foreach (AgentModelOption choice in this.ModelChoices)
             {
@@ -45,14 +45,14 @@
         </MudSelect>
         @if (this.modelsLoading)
         {
-            <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="teammate-card-probe" aria-label="Reading the models this adapter offers" />
+            <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="agent-profile-card-probe" aria-label="Reading the models this adapter offers" />
         }
     </div>
 
-    <div class="teammate-card-cell">
+    <div class="agent-profile-card-cell">
         <MudSelect T="string" Label="Effort" Value="@(this.effort ?? string.Empty)" ValueChanged="this.OnEffortChangedAsync"
                    Disabled="@(this.Disabled || this.effortsLoading)" aria-busy="@(this.effortsLoading ? "true" : null)"
-                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="@(this.effortsLoading ? "teammate-card-probing" : null)">
+                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="@(this.effortsLoading ? "agent-profile-card-probing" : null)">
             <MudSelectItem T="string" Value="@string.Empty">@DefaultOptionText</MudSelectItem>
             @foreach (AgentEffortOption choice in this.EffortChoices)
             {
@@ -61,7 +61,7 @@
         </MudSelect>
         @if (this.effortsLoading)
         {
-            <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="teammate-card-probe" aria-label="Reading the effort levels this model offers" />
+            <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="agent-profile-card-probe" aria-label="Reading the effort levels this model offers" />
         }
     </div>
 </div>

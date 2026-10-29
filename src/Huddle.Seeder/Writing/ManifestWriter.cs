@@ -28,7 +28,7 @@ internal static partial class ManifestWriter
         text.Append("| Data folder | `").Append(Path.Combine(root, "data")).Append("` |\n");
         text.Append("| Human | ").Append(plan.HumanName).Append(" |\n\n");
 
-        AppendTeammates(text, plan, ids);
+        AppendAgents(text, plan, ids);
         AppendTeams(text, plan);
         AppendTasks(text, plan);
         AppendSprints(text, plan);
@@ -84,10 +84,10 @@ internal static partial class ManifestWriter
 
     private static string NoteName(SeedFile file) => Path.GetFileNameWithoutExtension(file.RelativePath);
 
-    private static void AppendTeammates(StringBuilder text, SeedPlan plan, DatabaseResult ids)
+    private static void AppendAgents(StringBuilder text, SeedPlan plan, DatabaseResult ids)
     {
-        text.Append("## Teammates\n\n| Name | Alias | Title | Teams | Skills | User id |\n| --- | --- | --- | --- | --- | --- |\n");
-        foreach (SeedTeammate t in plan.Teammates)
+        text.Append("## Agents\n\n| Name | Alias | Title | Teams | Skills | User id |\n| --- | --- | --- | --- | --- | --- |\n");
+        foreach (SeedAgent t in plan.Agents)
         {
             text.Append(CultureInfo.InvariantCulture, $"| {t.Name} | {t.Alias} | {t.Title} | {Join(t.Teams, "none")} | {Join(t.Skills, "none")} | `{ids.UserIds[t.Name]}` |\n");
         }
@@ -100,7 +100,7 @@ internal static partial class ManifestWriter
         text.Append("## Teams\n\n| Team | Members | Projects | Tasks | Memory facts |\n| --- | --- | --- | --- | --- |\n");
         foreach (SeedTeam team in plan.Teams)
         {
-            string[] members = [.. plan.Teammates.Where(t => t.Teams.Contains(team.Name, StringComparer.OrdinalIgnoreCase)).Select(t => t.Name)];
+            string[] members = [.. plan.Agents.Where(t => t.Teams.Contains(team.Name, StringComparer.OrdinalIgnoreCase)).Select(t => t.Name)];
             int tasks = plan.Tasks.Count(t => t.Location.Team == team.Name);
             int memory = plan.Files.Count(f => f.RelativePath.StartsWith($"Teams/{team.Name}/", StringComparison.Ordinal) && f.RelativePath.Contains("/memory/", StringComparison.Ordinal));
             text.Append(CultureInfo.InvariantCulture, $"| {team.Name} | {Join(members, "none")} | {Join(team.Projects, "none")} | {tasks} | {memory} |\n");
@@ -333,9 +333,9 @@ internal static partial class ManifestWriter
         text.Append("- Duplicates: ").Append(Join(plan.Tasks.Where(t => t.DuplicateOf is not null).Select(t => $"{t.Id} of {t.DuplicateOf}").ToList(), "none")).Append('\n');
         text.Append("- Unassigned: ").Append(Join(plan.Tasks.Where(t => t.Assignee is null).Select(t => t.Id).ToList(), "none")).Append('\n');
         text.Append("- Assigned to the Human: ").Append(Join(plan.Tasks.Where(t => t.Assignee == plan.HumanName).Select(t => t.Id).ToList(), "none")).Append('\n');
-        text.Append("- Teammates in two or more Teams: ").Append(Join(plan.Teammates.Where(t => t.Teams.Count >= 2).Select(t => t.Name).ToList(), "none")).Append('\n');
-        text.Append("- Teammates in no Team: ").Append(Join(plan.Teammates.Where(t => t.Teams.Count == 0).Select(t => t.Name).ToList(), "none")).Append('\n');
-        text.Append("- Teams with no members: ").Append(Join(plan.Teams.Where(t => !plan.Teammates.Any(m => m.Teams.Contains(t.Name, StringComparer.OrdinalIgnoreCase))).Select(t => t.Name).ToList(), "none")).Append('\n');
+        text.Append("- Agents in two or more Teams: ").Append(Join(plan.Agents.Where(t => t.Teams.Count >= 2).Select(t => t.Name).ToList(), "none")).Append('\n');
+        text.Append("- Agents in no Team: ").Append(Join(plan.Agents.Where(t => t.Teams.Count == 0).Select(t => t.Name).ToList(), "none")).Append('\n');
+        text.Append("- Teams with no members: ").Append(Join(plan.Teams.Where(t => !plan.Agents.Any(m => m.Teams.Contains(t.Name, StringComparer.OrdinalIgnoreCase))).Select(t => t.Name).ToList(), "none")).Append('\n');
         text.Append("- Teams with no Projects: ").Append(Join(plan.Teams.Where(t => t.Projects.Count == 0).Select(t => t.Name).ToList(), "none")).Append('\n');
         text.Append("- Projects with no Tasks: ").Append(Join(plan.Teams.SelectMany(t => t.Projects.Select(p => (Team: t.Name, Project: p))).Where(x => !plan.Tasks.Any(t => t.Location.Team == x.Team && t.Location.Project == x.Project)).Select(x => $"{x.Team}/{x.Project}").ToList(), "none")).Append('\n');
     }

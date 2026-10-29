@@ -95,7 +95,7 @@ public sealed partial class AppStylesheetTests
 
     /// <summary>
     /// An image inside any <c>.mud-avatar</c> is scaled to fill the circle and cropped to it, never shown at its natural
-    /// size. <c>TeammateAvatar</c> renders a bare <c>&lt;img&gt;</c> and MudBlazor styles only its own <c>MudImage</c>, so
+    /// size. <c>AgentAvatar</c> renders a bare <c>&lt;img&gt;</c> and MudBlazor styles only its own <c>MudImage</c>, so
     /// without this rule a 256 px library picture sat at full size inside a 56 px avatar, clipped to a corner of the face.
     /// </summary>
     [Fact]
@@ -130,17 +130,17 @@ public sealed partial class AppStylesheetTests
     }
 
     /// <summary>
-    /// <c>.teammates-danger</c> was a dead rule: every destructive button is now a
-    /// <c>MudButton Color="Color.Error"</c> (<c>ResetAllControl.razor</c>, <c>TeammateCard.razor</c>),
+    /// <c>.agents-danger</c> was a dead rule: every destructive button is now a
+    /// <c>MudButton Color="Color.Error"</c> (<c>ResetAllControl.razor</c>, <c>AgentProfileCard.razor</c>),
     /// so nothing in the app referenced the class any more. Asserts it stays deleted rather than
     /// creeping back in.
     /// </summary>
     [Fact]
-    public void AppCss_DoesNotDeclareTeammatesDangerClass()
+    public void AppCss_DoesNotDeclareAgentsDangerClass()
     {
         string text = CssText.AppCss(CssNewlines.AsIs);
 
-        Assert.DoesNotContain(".teammates-danger", text, StringComparison.Ordinal);
+        Assert.DoesNotContain(".agents-danger", text, StringComparison.Ordinal);
     }
 
     [GeneratedRegex("<link\\s+rel=\"stylesheet\"\\s+href=\"(?<href>[^\"]+)\"", RegexOptions.CultureInvariant)]

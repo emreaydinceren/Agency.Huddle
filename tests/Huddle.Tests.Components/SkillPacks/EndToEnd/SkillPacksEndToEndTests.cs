@@ -24,7 +24,7 @@ public sealed class SkillPacksEndToEndTests
     /// <summary>The Pack every test adds, and its first version.</summary>
     private const string PackId = "documents";
 
-    /// <summary>The Teammate who chooses the Pack.</summary>
+    /// <summary>The Agent who chooses the Pack.</summary>
     private const string Holder = "Jane";
 
     /// <summary>The Pack once it is resolved, or null.</summary>
@@ -33,7 +33,7 @@ public sealed class SkillPacksEndToEndTests
     /// <summary>The Pack's display state, or null while it is not resolved.</summary>
     private static ItemState? StateOf(SkillPacksWorld world) => Pack(world) is { } pack ? world.Registry.DisplayState(pack) : null;
 
-    /// <summary>The Teammate's identity read from their file.</summary>
+    /// <summary>The Agent's identity read from their file.</summary>
     private static PersonaIdentity IdentityOf(SkillPacksWorld world)
     {
         Persona persona = world.Host.Personas.Get(Holder) ?? throw new InvalidOperationException($"{Holder} is missing");
@@ -51,8 +51,8 @@ public sealed class SkillPacksEndToEndTests
         return tool;
     }
 
-    /// <summary>What the Teammate card does when the Pack chip is set and the card saved: copy every Skill, then write the
-    /// Teammate's <c>skills</c>, <c>_packs</c> and <c>consult_when</c>.</summary>
+    /// <summary>What the Agent card does when the Pack chip is set and the card saved: copy every Skill, then write the
+    /// Agent's <c>skills</c>, <c>_packs</c> and <c>consult_when</c>.</summary>
     private static async Task ChoosePackAsync(SkillPacksWorld world)
     {
         PackEntry pack = Pack(world) ?? throw new InvalidOperationException("the Pack is not resolved");
@@ -86,14 +86,14 @@ public sealed class SkillPacksEndToEndTests
         Assert.Equal("Documents is ready", Assert.Single(snackbar.ShownSnackbars).Message);
     }
 
-    /// <summary>U2: choosing the Pack copies both Skills with their provenance before the Teammate's file changes, then the
-    /// file lists the Skills, the Pack and its phrase, and the registry counts the Teammate as a holder.</summary>
+    /// <summary>U2: choosing the Pack copies both Skills with their provenance before the Agent's file changes, then the
+    /// file lists the Skills, the Pack and its phrase, and the registry counts the Agent as a holder.</summary>
     [Fact]
-    public async Task U2_ChoosePack_CopiesThenChangesTeammate()
+    public async Task U2_ChoosePack_CopiesThenChangesAgent()
     {
         await using SkillPacksWorld world = await SkillPacksWorld.StartAsync();
         _ = await AddPackAsync(world, "docx", "pdf");
-        world.Host.Teammate(Holder, [], []);
+        world.Host.Agent(Holder, [], []);
         PackEntry pack = Pack(world) ?? throw new InvalidOperationException("the Pack is not resolved");
         IReadOnlyList<SkillEntry> entries = [.. pack.SkillNames.Select(name => world.Registry.Current.Resolved.FindSkill(name) ?? throw new InvalidOperationException(name))];
 
@@ -119,34 +119,34 @@ public sealed class SkillPacksEndToEndTests
     }
 
     /// <summary>U3: a Skill file that changes in the clone marks the Pack Update available and changes nothing else: the copy
-    /// and the Teammate's file stay as they were.</summary>
+    /// and the Agent's file stay as they were.</summary>
     [Fact]
     public async Task U3_PointerChanges_ShowsUpdateAvailable_NothingElseChanges()
     {
         await using SkillPacksWorld world = await SkillPacksWorld.StartAsync();
         FakeAiTool tool = await AddPackAsync(world, "docx");
-        world.Host.Teammate(Holder, [], []);
+        world.Host.Agent(Holder, [], []);
         await ChoosePackAsync(world);
         string copy = Path.Combine(world.Host.Settings.SkillsDir, "docx", "SKILL.md");
         string copyBefore = File.ReadAllText(copy);
-        string teammateBefore = File.ReadAllText(world.Host.Personas.PathFor(Holder));
+        string agentBefore = File.ReadAllText(world.Host.Personas.PathFor(Holder));
 
         tool.ChangeSkill("docx", "A new paragraph.");
 
         await world.SettleUntilAsync(() => StateOf(world) == ItemState.UpdateAvailable, "Update available");
         Assert.Equal(copyBefore, File.ReadAllText(copy));
-        Assert.Equal(teammateBefore, File.ReadAllText(world.Host.Personas.PathFor(Holder)));
+        Assert.Equal(agentBefore, File.ReadAllText(world.Host.Personas.PathFor(Holder)));
     }
 
     /// <summary>U4: the AI tool updates the Pack (a changed Skill and a new one); Update copies the files first, then takes
-    /// the ticked Teammate to the new list and version, and the Pack is back in use.</summary>
+    /// the ticked Agent to the new list and version, and the Pack is back in use.</summary>
     [Fact]
     public async Task U4_ApplyUpdate_CopiesFilesThenMembership()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         await using SkillPacksWorld world = await SkillPacksWorld.StartAsync();
         FakeAiTool tool = await AddPackAsync(world, "docx");
-        world.Host.Teammate(Holder, [], []);
+        world.Host.Agent(Holder, [], []);
         await ChoosePackAsync(world);
         tool.ChangeSkill("docx", "A new paragraph.");
         (int exit, string output) = tool.UpdatePack(PackId, "2.0.0", ["docx", "pdf"]);
@@ -208,16 +208,16 @@ public sealed class SkillPacksEndToEndTests
     }
 
     /// <summary>U13: a withdrawn Source makes the Pack Withdrawn, so a new hire needs setup and cannot take it, while the
-    /// Teammate who holds it keeps the Skills, their copies and their file.</summary>
+    /// Agent who holds it keeps the Skills, their copies and their file.</summary>
     [Fact]
     public async Task U13_WithdrawnSource_BlocksNewHire_HoldersKeepWorking()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         await using SkillPacksWorld world = await SkillPacksWorld.StartAsync();
         FakeAiTool tool = await AddPackAsync(world, "docx", "pdf");
-        world.Host.Teammate(Holder, [], []);
+        world.Host.Agent(Holder, [], []);
         await ChoosePackAsync(world);
-        string teammateBefore = File.ReadAllText(world.Host.Personas.PathFor(Holder));
+        string agentBefore = File.ReadAllText(world.Host.Personas.PathFor(Holder));
 
         tool.Withdraw("Licence changed.");
 
@@ -227,6 +227,6 @@ public sealed class SkillPacksEndToEndTests
         Assert.Equal("Licence changed.", blocked.Detail);
         Assert.Empty(await world.Copier.EnsureAvailableAsync(["docx", "pdf"], ct));
         Assert.True(File.Exists(Path.Combine(world.Host.Settings.SkillsDir, "docx", "SKILL.md")));
-        Assert.Equal(teammateBefore, File.ReadAllText(world.Host.Personas.PathFor(Holder)));
+        Assert.Equal(agentBefore, File.ReadAllText(world.Host.Personas.PathFor(Holder)));
     }
 }

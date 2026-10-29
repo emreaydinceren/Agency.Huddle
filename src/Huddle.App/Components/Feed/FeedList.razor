@@ -30,12 +30,12 @@
                 {
                     @if (this.Mode == FeedListMode.Cards)
                     {
-                        <FeedCard @key="group.Lead.Id" Group="group" TabSeenUpTo="this.TabSeenUpTo" OnTeammate="this.OnTeammate"
+                        <FeedCard @key="group.Lead.Id" Group="group" TabSeenUpTo="this.TabSeenUpTo" OnAgent="this.OnAgent"
                                   Expanded="this.expandedId == group.Lead.Id" OnToggle="@(() => this.Toggle(group.Lead.Id))" />
                     }
                     else
                     {
-                        <FeedItemRow @key="group.Lead.Id" Group="group" OnDismiss="this.OnDismiss" OnDismissMany="this.OnDismissMany" OnTeammate="this.OnTeammate" />
+                        <FeedItemRow @key="group.Lead.Id" Group="group" OnDismiss="this.OnDismiss" OnDismissMany="this.OnDismissMany" OnAgent="this.OnAgent" />
                     }
                 }
             </div>
@@ -68,9 +68,9 @@
     [Parameter]
     public EventCallback<IReadOnlyList<FeedItem>> OnNewItemsInserted { get; set; }
 
-    /// <summary>Passed to every row: called with a Teammate's Name when its avatar is clicked.</summary>
+    /// <summary>Passed to every row: called with an Agent's Name when its avatar is clicked.</summary>
     [Parameter]
-    public EventCallback<string> OnTeammate { get; set; }
+    public EventCallback<string> OnAgent { get; set; }
 
     /// <summary>Whether each group is a compact row (the Right sidebar panel) or an expandable card (the Feed Tab).</summary>
     [Parameter]

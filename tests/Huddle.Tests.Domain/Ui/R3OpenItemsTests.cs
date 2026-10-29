@@ -5,8 +5,8 @@ using Agency.Huddle.Tests.Css;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Pins the last round-3 open items (UX-E14 to UX-E16 and the avatar editor's B8i): the Move dialog names a Teammate
-/// folder by the Teammate, the New teammate form is sized to fit 1440x900, the role and roster scrollbars hide until
+/// Pins the last round-3 open items (UX-E14 to UX-E16 and the avatar editor's B8i): the Move dialog names an Agent
+/// folder by the Agent, the New agent form is sized to fit 1440x900, the role and roster scrollbars hide until
 /// hover, and the avatar editor reserves its tallest mode's height with swatches that have distinct names.
 /// </summary>
 public sealed partial class R3OpenItemsTests
@@ -16,23 +16,23 @@ public sealed partial class R3OpenItemsTests
     [GeneratedRegex(@"\s+", RegexOptions.CultureInvariant)]
     private static partial Regex Whitespace();
 
-    /// <summary>UX-E14: the Move dialog's folder list names a Teammate folder through the Persona store, and the tooltip still carries the path.</summary>
+    /// <summary>UX-E14: the Move dialog's folder list names an Agent folder through the Persona store, and the tooltip still carries the path.</summary>
     [Fact]
-    public void MoveDialog_NamesATeammateFolderByTheTeammate()
+    public void MoveDialog_NamesAAgentFolderByTheAgent()
     {
         string ops = ReadSource("src", "Huddle.App", "Components", "Library", "LibraryFileOps.razor");
         string dialog = ReadSource("src", "Huddle.App", "Components", "Library", "MoveDialog.razor");
 
-        Assert.Contains("entry.Path.Role == LibraryNodeRole.TeammateFolder ? this.TeammateDisplayName(name) : name", ops, StringComparison.Ordinal); // contains-ok: component source text
+        Assert.Contains("entry.Path.Role == LibraryNodeRole.AgentFolder ? this.AgentDisplayName(name) : name", ops, StringComparison.Ordinal); // contains-ok: component source text
         Assert.Contains("ResolveByNameOrAlias(folderName)", ops, StringComparison.Ordinal); // contains-ok: component source text
         Assert.Contains("title=\"@folder.Path.RelativePath\"", dialog, StringComparison.Ordinal); // contains-ok: component source text
     }
 
-    /// <summary>UX-E15: the New teammate form's Persona text is four lines and its fields sit 12px apart, so the dialog fits a 900px-high window.</summary>
+    /// <summary>UX-E15: the New agent form's Persona text is four lines and its fields sit 12px apart, so the dialog fits a 900px-high window.</summary>
     [Fact]
-    public void TeammateCard_PersonaTextIsFourLines_AndFieldsUseTheTighterGap()
+    public void AgentProfileCard_PersonaTextIsFourLines_AndFieldsUseTheTighterGap()
     {
-        string card = ReadSource("src", "Huddle.App", "Components", "Shared", "TeammateCard.razor");
+        string card = ReadSource("src", "Huddle.App", "Components", "Shared", "AgentProfileCard.razor");
         int form = card.IndexOf("Label=\"Persona text\"", StringComparison.Ordinal);
         string tail = card[form..];
 
@@ -42,36 +42,36 @@ public sealed partial class R3OpenItemsTests
 
     /// <summary>UX-E15: the three-up row's selects carry no helper text (it wrapped to 4-5 lines), one shared line sits under the row, and the default option reads in full.</summary>
     [Fact]
-    public void TeammateCard_ModelRow_HasOneSharedHelperAndAShortDefault()
+    public void AgentProfileCard_ModelRow_HasOneSharedHelperAndAShortDefault()
     {
-        string card = ReadSource("src", "Huddle.App", "Components", "Shared", "TeammateCard.razor");
-        int start = card.IndexOf("teammate-card-model-row", StringComparison.Ordinal);
-        int end = card.IndexOf("teammate-card-row-helper", StringComparison.Ordinal);
+        string card = ReadSource("src", "Huddle.App", "Components", "Shared", "AgentProfileCard.razor");
+        int start = card.IndexOf("agent-profile-card-model-row", StringComparison.Ordinal);
+        int end = card.IndexOf("agent-profile-card-row-helper", StringComparison.Ordinal);
         string row = card[start..end];
 
         Assert.True(end > start);
         Assert.DoesNotContain("HelperText=", row, StringComparison.Ordinal);
         Assert.Equal(3, Regex.Count(row, "@DefaultOptionText", RegexOptions.CultureInvariant));
         Assert.Contains("DefaultOptionText = \"Agent default\"", card, StringComparison.Ordinal); // contains-ok: component source text
-        Assert.Contains("Changing any of these restarts the teammate, which clears what it remembers.", card, StringComparison.Ordinal); // contains-ok: component source text
+        Assert.Contains("Changing any of these restarts the agent, which clears what it remembers.", card, StringComparison.Ordinal); // contains-ok: component source text
         Assert.Contains("HelperText=\"Shown beside the name.\"", card, StringComparison.Ordinal); // contains-ok: component source text
         Assert.Contains("HelperText=\"For @@mentions.\"", card, StringComparison.Ordinal); // contains-ok: component source text
     }
 
     /// <summary>UX-E15: the row container is a flex row whose cells share the width, and the card puts Model, Effort and Work mode in it.</summary>
     [Fact]
-    public void TeammateCard_ModelEffortWorkModeAreOneRow()
+    public void AgentProfileCard_ModelEffortWorkModeAreOneRow()
     {
-        string card = ReadSource("src", "Huddle.App", "Components", "Shared", "TeammateCard.razor");
+        string card = ReadSource("src", "Huddle.App", "Components", "Shared", "AgentProfileCard.razor");
         string css = Whitespace().Replace(CssText.AppCss(CssNewlines.AsIs), " ");
-        int row = card.IndexOf("teammate-card-model-row", StringComparison.Ordinal);
+        int row = card.IndexOf("agent-profile-card-model-row", StringComparison.Ordinal);
         string rowTail = card[row..];
         string rowBody = rowTail[..rowTail.IndexOf("The reset below is deliberate", StringComparison.Ordinal)];
 
         Assert.Contains("Label=\"Model\"", rowBody, StringComparison.Ordinal); // contains-ok: component source text
         Assert.Contains("Label=\"Effort\"", rowBody, StringComparison.Ordinal); // contains-ok: component source text
         Assert.Contains("Label=\"Work mode\"", rowBody, StringComparison.Ordinal); // contains-ok: component source text
-        Assert.Contains(".teammate-card-row { display: flex;", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains(".agent-profile-card-row { display: flex;", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
     /// <summary>UX-E16: the role and roster grids use a thin scrollbar that is transparent at rest and takes the Edge rung on hover or focus-within.</summary>

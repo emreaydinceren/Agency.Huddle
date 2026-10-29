@@ -186,9 +186,9 @@
     [Parameter]
     public EventCallback OnToggle { get; set; }
 
-    /// <summary>Called with a Teammate's Name when the avatar is clicked. Huddle and the Human have no such click, and without a handler the avatar is not a button.</summary>
+    /// <summary>Called with an Agent's Name when the avatar is clicked. Huddle and the Human have no such click, and without a handler the avatar is not a button.</summary>
     [Parameter]
-    public EventCallback<string> OnTeammate { get; set; }
+    public EventCallback<string> OnAgent { get; set; }
 
     private FeedItem Lead => this.Group.Lead;
 
@@ -316,16 +316,16 @@
     private RenderFragment AvatarContent => builder =>
     {
         FeedActor actor = this.Lead.Actor;
-        if (actor.Kind == FeedActorKind.Agent && this.OnTeammate.HasDelegate)
+        if (actor.Kind == FeedActorKind.Agent && this.OnAgent.HasDelegate)
         {
             builder.OpenElement(8, "button");
             builder.AddAttribute(9, "type", "button");
             builder.AddAttribute(10, "class", "feed-card-avatar-button");
             builder.AddAttribute(11, "aria-label", actor.Name);
-            builder.AddAttribute(12, "onclick", EventCallback.Factory.Create<MouseEventArgs>(this, () => this.OnTeammate.InvokeAsync(actor.Name)));
-            builder.OpenComponent<TeammateAvatar>(0);
-            builder.AddComponentParameter(1, nameof(TeammateAvatar.Name), this.ActorName);
-            builder.AddComponentParameter(2, nameof(TeammateAvatar.Size), Size.Medium);
+            builder.AddAttribute(12, "onclick", EventCallback.Factory.Create<MouseEventArgs>(this, () => this.OnAgent.InvokeAsync(actor.Name)));
+            builder.OpenComponent<AgentAvatar>(0);
+            builder.AddComponentParameter(1, nameof(AgentAvatar.Name), this.ActorName);
+            builder.AddComponentParameter(2, nameof(AgentAvatar.Size), Size.Medium);
             builder.CloseComponent();
             builder.CloseElement();
             return;
@@ -333,9 +333,9 @@
 
         if (actor.Kind is FeedActorKind.Agent or FeedActorKind.Human)
         {
-            builder.OpenComponent<TeammateAvatar>(0);
-            builder.AddComponentParameter(1, nameof(TeammateAvatar.Name), this.ActorName);
-            builder.AddComponentParameter(2, nameof(TeammateAvatar.Size), Size.Medium);
+            builder.OpenComponent<AgentAvatar>(0);
+            builder.AddComponentParameter(1, nameof(AgentAvatar.Name), this.ActorName);
+            builder.AddComponentParameter(2, nameof(AgentAvatar.Size), Size.Medium);
             builder.CloseComponent();
             return;
         }

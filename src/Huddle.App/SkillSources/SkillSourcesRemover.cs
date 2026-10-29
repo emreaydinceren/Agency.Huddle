@@ -7,7 +7,7 @@ using Agency.Huddle.SkillPacks.Resolving;
 namespace Agency.Huddle.App.SkillSources;
 
 /// <summary>The remove and hide flows of §6.12. Huddle deletes only inside the Skill Sources folder and only what each flow
-/// names; a clone, a file outside the folder and a <c>Skills/</c> copy are never deleted. Order is safest first, Teammates,
+/// names; a clone, a file outside the folder and a <c>Skills/</c> copy are never deleted. Order is safest first, Agents,
 /// then the row, then the file, then notes, so a failure leaves something re-runnable. Every flow logs to the Source's
 /// <c>log.jsonl</c> when it has one. Callers rebuild the registry afterwards.</summary>
 internal sealed partial class SkillSourcesRemover(
@@ -60,23 +60,23 @@ internal sealed partial class SkillSourcesRemover(
 
         (bool deleted, RemovalOutcome? fileFailure) = this.DeleteIfInside(pack.FilePath);
         _ = hidden.Unhide(HiddenKind.Pack, pack.Id);
-        string teammates = choice == HolderChoice.RemoveToo ? "removed" : "kept";
+        string agents = choice == HolderChoice.RemoveToo ? "removed" : "kept";
         if (holders.Count == 0)
         {
-            teammates = "none";
+            agents = "none";
         }
 
         log.Append(pack.Source, new LogLine("removed", $"pack:{pack.Id}", Data: new Dictionary<string, object?>(StringComparer.Ordinal)
         {
             ["row"] = this.Relative(pack.FilePath),
             ["fileDeleted"] = deleted,
-            ["teammates"] = teammates,
+            ["agents"] = agents,
             ["holders"] = holders,
         }));
         return fileFailure ?? new RemovalOutcome(true, $"{pack.Title} removed.");
     }
 
-    /// <summary>Takes a withdrawn Pack off every Teammate that holds it (step 1 of Remove too only); its row and file stay.</summary>
+    /// <summary>Takes a withdrawn Pack off every Agent that holds it (step 1 of Remove too only); its row and file stay.</summary>
     public RemovalOutcome UnholdPack(PackEntry pack)
     {
         ArgumentNullException.ThrowIfNull(pack);
@@ -87,7 +87,7 @@ internal sealed partial class SkillSourcesRemover(
         }
 
         log.Append(pack.Source, new LogLine("unheld", $"pack:{pack.Id}", Data: new Dictionary<string, object?>(StringComparer.Ordinal) { ["holders"] = holders }));
-        string count = Agency.Huddle.App.Components.Shared.Plural.Of(holders.Count, "Teammate", "Teammates");
+        string count = Agency.Huddle.App.Components.Shared.Plural.Of(holders.Count, "Agent", "Agents");
         return new RemovalOutcome(true, $"{pack.Title} was taken off {count}.");
     }
 
@@ -167,7 +167,7 @@ internal sealed partial class SkillSourcesRemover(
 
         LogSourceRemoved(logger, sourceId, rows.Count);
         string removed = Agency.Huddle.App.Components.Shared.Plural.Of(rows.Count, "row", "rows");
-        return new RemovalOutcome(true, $"Source removed. {removed} and their files are gone; the clone and Teammates' copies are untouched.");
+        return new RemovalOutcome(true, $"Source removed. {removed} and their files are gone; the clone and Agents' copies are untouched.");
     }
 
     /// <summary>Hides or unhides a Pack or Skill in <c>hidden.json</c> and logs it in its Source's log (§6.12.4).</summary>
@@ -254,7 +254,7 @@ internal sealed partial class SkillSourcesRemover(
         return null;
     }
 
-    /// <summary>The Skills the Teammate's role carries.</summary>
+    /// <summary>The Skills the Agent's role carries.</summary>
     private IReadOnlyList<string> RoleSkills(string text)
     {
         if (!PersonaFrontmatter.TryReadIdentity(text, out PersonaIdentity? identity, out _) || identity.Role is not { } role)
@@ -266,7 +266,7 @@ internal sealed partial class SkillSourcesRemover(
         return [.. spec?.Skills.Select(static skill => skill.Name) ?? []];
     }
 
-    /// <summary>The Teammate's other Packs, as the registry has them.</summary>
+    /// <summary>The Agent's other Packs, as the registry has them.</summary>
     private IReadOnlyList<PackContents> OtherPacks(string text, string removing)
     {
         if (!PersonaFrontmatter.TryReadIdentity(text, out PersonaIdentity? identity, out _))

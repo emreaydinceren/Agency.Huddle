@@ -14,7 +14,7 @@ retro: { every: 14, unit: 'days' }
 ## Stages
 
 1. **Ready**: the Task names the opening or goal and states its acceptance in one line. Done when the Career Coach assigns it.
-2. **In progress**: a teammate drafts the short list, the resume, the cover letter, the practice questions or the follow-up. Done when the draft is in the Task.
+2. **In progress**: an agent drafts the short list, the resume, the cover letter, the practice questions or the follow-up. Done when the draft is in the Task.
 3. **Verify**: the Career Coach checks the draft against the posting and the Human's own facts and posts an Evidence line. Done when that line exists.
 4. **Done**: the Human submits, sends or practises and marks the Task Done.
 
@@ -49,7 +49,7 @@ retro: { every: 14, unit: 'days' }
 ## Escalation
 
 - An offer, a salary question, or anything that commits the Human goes to the Human.
-- A disagreement between teammates goes to the Human with both views written on the Task.
+- A disagreement between agents goes to the Human with both views written on the Task.
 
 ## Onboarding
 

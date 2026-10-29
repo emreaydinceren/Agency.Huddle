@@ -7,7 +7,7 @@ namespace Agency.Huddle.App.Search;
 /// <summary>
 /// The Library group's provider (Global Search spec §8.3 and §8.6): walks every visible Library Root
 /// concurrently through <c>LibraryFileService.SearchTextAsync</c>, and leaves out Persona and
-/// Task files, which the Teammates and Tasks groups list instead. Under the Reference purpose (D-8, D-29) it
+/// Task files, which the Agents and Tasks groups list instead. Under the Reference purpose (D-8, D-29) it
 /// matches file names only, opens no file, and drops folders and paths that contain a backtick.
 /// </summary>
 /// <remarks>
@@ -100,14 +100,14 @@ internal sealed class LibrarySearchProvider(
     private static bool IsReferenceable(LibraryEntry entry) => !entry.IsFolder && !entry.Path.FullPath.Contains('`');
 
     /// <summary>
-    /// Whether an entry is never a Library hit (OP-10, §8.6): a Teammate's definition file, or a Task file
+    /// Whether an entry is never a Library hit (OP-10, §8.6): an Agent's definition file, or a Task file
     /// under the Teams root. Tested on the full path, so a pinned root that contains the data directory is covered too.
     /// </summary>
     /// <param name="entry">The entry the walk visited.</param>
     /// <param name="teamsRoot">The full path of the Teams root.</param>
     /// <returns><see langword="true"/> when the entry must not be a hit.</returns>
     private static bool IsExcluded(LibraryEntry entry, string teamsRoot) =>
-        entry.Path.Role == LibraryNodeRole.TeammateDefinition
+        entry.Path.Role == LibraryNodeRole.AgentDefinition
         || (!entry.IsFolder && TaskLayout.TryMap(teamsRoot, entry.Path.FullPath, out _, out _));
 
     /// <summary>Maps one walked entry to a Library hit, naming its Team when it sits under the Teams root (OP-4).</summary>

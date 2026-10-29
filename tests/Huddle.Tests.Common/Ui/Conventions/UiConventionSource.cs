@@ -40,7 +40,7 @@ internal static class UiConventionSource
         ("Shared/MessageDisplay", "Room"),
         ("Shared/RendererDispatch", "Room"),
         ("Shared/Composer", "Room"),
-        ("Shared/InviteTeammate", "Room"),
+        ("Shared/InviteAgent", "Room"),
         ("Shared/EditPreview", "Room"),
         ("Shared/ElicitationCard", "Room"),
         ("Shared/ProposalCard", "Room"),

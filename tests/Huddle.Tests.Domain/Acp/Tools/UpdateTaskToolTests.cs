@@ -92,7 +92,7 @@ public sealed class UpdateTaskToolTests
         string result = await tool.InvokeAsync(arguments, ct);
 
         Assert.Equal(
-            "Unknown teammate 'Ghost'.\nduplicate_of is only allowed when status is Duplicate.",
+            "Unknown agent 'Ghost'.\nduplicate_of is only allowed when status is Duplicate.",
             result);
     }
 
@@ -164,7 +164,7 @@ public sealed class UpdateTaskToolTests
         Assert.Equal(TaskPriority.Urgent, updated.Priority);
     }
 
-    /// <summary>The <c>assignee</c> argument sets <see cref="TaskItem.Assignee"/> to a named Teammate.</summary>
+    /// <summary>The <c>assignee</c> argument sets <see cref="TaskItem.Assignee"/> to a named Agent.</summary>
     [Fact]
     public async Task InvokeAsync_AssigneeGiven_SetsAssignee()
     {
@@ -518,7 +518,7 @@ public sealed class UpdateTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Equal("Could not identify caller 'ghost-id' as a Teammate.", result);
+        Assert.Equal("Could not identify caller 'ghost-id' as an Agent.", result);
         TaskItem? stored = harness.Store.Get(task.Id);
         Assert.NotNull(stored);
         Assert.Equal(task.Title, stored.Title);

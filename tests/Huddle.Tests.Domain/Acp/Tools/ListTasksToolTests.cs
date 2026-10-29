@@ -112,7 +112,7 @@ public sealed class ListTasksToolTests
 
         string result = await tool.InvokeAsync(new JsonObject { ["assignee"] = "me" }, ct);
 
-        Assert.Equal("Could not identify caller 'ghost-id' as a Teammate.", result);
+        Assert.Equal("Could not identify caller 'ghost-id' as an Agent.", result);
     }
 
     /// <summary><c>assignee: "unassigned"</c> maps to <c>"@unassigned"</c> (corrections-B4 D10 item 3), matching Tasks with no Assignee.</summary>

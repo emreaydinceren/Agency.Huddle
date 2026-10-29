@@ -48,12 +48,12 @@ public sealed partial class PageBreadcrumbsTests
         Assert.Equal("Teams › Core", Words(bar.Find(".page-breadcrumbs").TextContent));
     }
 
-    /// <summary>A page with no ancestor (Teammates) draws no breadcrumb at all: no one-crumb trail repeating its h1.</summary>
+    /// <summary>A page with no ancestor (Agents) draws no breadcrumb at all: no one-crumb trail repeating its h1.</summary>
     [Fact]
     public async Task PageWithNoAncestor_DrawsNoBreadcrumb()
     {
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
-        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teammates");
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/agents");
         _ = ctx.Render<TabHost>();
         IRenderedComponent<TopBar> bar = ctx.Render<TopBar>();
 

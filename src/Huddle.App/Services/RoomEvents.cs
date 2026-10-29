@@ -120,7 +120,7 @@ public sealed class RoomEvents
 
     /// <summary>
     /// Publishes <see cref="ProposalChanged"/> for <paramref name="roomId"/>. Called by
-    /// <see cref="Teammates.ProposalStore"/> after its own lock is released, never while held.
+    /// <see cref="Agents.ProposalStore"/> after its own lock is released, never while held.
     /// </summary>
     /// <param name="roomId">The Room whose pending Proposal changed.</param>
     internal void PublishProposalChanged(string roomId)

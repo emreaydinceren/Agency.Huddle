@@ -16,7 +16,7 @@ using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
-using Agency.Huddle.Tests.Teammates;
+using Agency.Huddle.Tests.Agents;
 using Agency.Huddle.Tests.Teams;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
@@ -350,17 +350,17 @@ public sealed class BuildTeamTests
         Assert.Empty(cut.FindAll(".build-team-hire .role-suggested"));
     }
 
-    /// <summary>Add puts a draft Teammate for the role on the roster with a Name, the step strip counts it, and the role can be added again.</summary>
+    /// <summary>Add puts a draft Agent for the role on the roster with a Name, the step strip counts it, and the role can be added again.</summary>
     [Fact]
-    public async Task Hire_AddingARole_PutsADraftTeammateOnTheRoster()
+    public async Task Hire_AddingARole_PutsADraftAgentOnTheRoster()
     {
         using Fixture fixture = new(typeCount: 3);
         await using MudBunitContext ctx = fixture.NewContext();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
         await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
-        Assert.Equal("No Teammates yet. Add a role above.", cut.Find(".build-team-roster-summary").TextContent.Trim());
-        Assert.Equal("Draft Teammates appear here, each with a name and an avatar.", cut.Find(".roster-empty").TextContent.Trim());
+        Assert.Equal("No Agents yet. Add a role above.", cut.Find(".build-team-roster-summary").TextContent.Trim());
+        Assert.Equal("Draft Agents appear here, each with a name and an avatar.", cut.Find(".roster-empty").TextContent.Trim());
 
         await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
 
@@ -368,8 +368,8 @@ public sealed class BuildTeamTests
         Assert.Equal("Bookkeeper", card.QuerySelector(".roster-title")?.TextContent.Trim());
         Assert.NotEqual(string.Empty, card.QuerySelector(".roster-name")?.TextContent.Trim());
         Assert.Equal("balanced", card.QuerySelector(".roster-tier")?.TextContent.Trim());
-        Assert.Equal("1 Teammate drafted", cut.FindAll("ol.build-stepper > li")[2].QuerySelector(".build-step-detail")?.TextContent.Trim());
-        Assert.Equal("1 draft Teammate · dashed ring = not hired yet", cut.Find(".build-team-roster-summary").TextContent.Trim());
+        Assert.Equal("1 Agent drafted", cut.FindAll("ol.build-stepper > li")[2].QuerySelector(".build-step-detail")?.TextContent.Trim());
+        Assert.Equal("1 draft Agent · dashed ring = not hired yet", cut.Find(".build-team-roster-summary").TextContent.Trim());
         Assert.Empty(cut.FindAll(".roster-empty"));
         Assert.Equal("On the draft roster", Assert.Single(cut.FindAll(".role-card-taken")).TextContent.Trim());
         Assert.Equal("Bookkeeper", cut.Find(".role-card-taken").Closest(".role-card")?.QuerySelector(".team-type-name")?.TextContent.Trim());
@@ -404,9 +404,9 @@ public sealed class BuildTeamTests
         Assert.Equal(3, fixture.Library.Reads.Count);
     }
 
-    /// <summary>Approve &amp; hire stays off until the details are complete and the roster has a Teammate; then it creates the Team, hires the roster into it and opens it.</summary>
+    /// <summary>Approve &amp; hire stays off until the details are complete and the roster has an Agent; then it creates the Team, hires the roster into it and opens it.</summary>
     [Fact]
-    public async Task Approve_NeedsDetailsAndATeammate_ThenCreatesTheTeamAndHires()
+    public async Task Approve_NeedsDetailsAndAAgent_ThenCreatesTheTeamAndHires()
     {
         using Fixture fixture = new(typeCount: 3);
         await using MudBunitContext ctx = fixture.NewContext();
@@ -414,7 +414,7 @@ public sealed class BuildTeamTests
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
         const string Button = "button.build-team-approve-button";
         Assert.True(cut.Find(Button).HasAttribute("disabled"));
-        Assert.Equal("Add at least one Teammate to the roster.", cut.Find(".build-team-approve-hint").TextContent.Trim());
+        Assert.Equal("Add at least one Agent to the roster.", cut.Find(".build-team-approve-hint").TextContent.Trim());
 
         await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync(string.Empty));
 
@@ -426,7 +426,7 @@ public sealed class BuildTeamTests
 
         Assert.False(cut.Find(Button).HasAttribute("disabled"));
         Assert.Equal("Approve & hire", cut.Find(Button).TextContent.Trim());
-        Assert.Equal("1 draft Teammate · dashed ring = not hired yet", cut.Find(".build-team-roster-summary").TextContent.Trim());
+        Assert.Equal("1 draft Agent · dashed ring = not hired yet", cut.Find(".build-team-roster-summary").TextContent.Trim());
 
         await cut.InvokeAsync(() => cut.Find(Button).ClickAsync());
 
@@ -437,9 +437,9 @@ public sealed class BuildTeamTests
         Assert.Equal("/teams/Garden", new Uri(ctx.Services.GetRequiredService<NavigationManager>().Uri).AbsolutePath);
     }
 
-    /// <summary>A role's Skills show on its draft, are copied into Skills/ before anything is written, and are carried by the hired Teammate.</summary>
+    /// <summary>A role's Skills show on its draft, are copied into Skills/ before anything is written, and are carried by the hired Agent.</summary>
     [Fact]
-    public async Task Approve_CopiesTheRolesSkills_AndTheTeammateCarriesThem()
+    public async Task Approve_CopiesTheRolesSkills_AndTheAgentCarriesThem()
     {
         using Fixture fixture = new(typeCount: 3);
         await using MudBunitContext ctx = fixture.NewContext();
@@ -496,7 +496,7 @@ public sealed class BuildTeamTests
         Assert.False(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
     }
 
-    /// <summary>A name an existing Teammate already has is refused before the Team is created, and nothing is written.</summary>
+    /// <summary>A name an existing Agent already has is refused before the Team is created, and nothing is written.</summary>
     [Fact]
     public async Task Approve_NameInUse_IsRefusedBeforeAnythingIsWritten()
     {
@@ -723,7 +723,7 @@ public sealed class BuildTeamTests
         Assert.All(cut.FindAll($"{Card} .team-type-icon"), icon => Assert.Equal("team-type-icon", icon.ClassName));
     }
 
-    /// <summary>A new draft saved into an existing Team is the only Teammate hired; the members are left as they were and the tab stays, with nothing pending.</summary>
+    /// <summary>A new draft saved into an existing Team is the only Agent hired; the members are left as they were and the tab stays, with nothing pending.</summary>
     [Fact]
     public async Task Members_AddingADraft_HiresOnlyTheNewOne()
     {
@@ -744,9 +744,9 @@ public sealed class BuildTeamTests
         Assert.Empty(cut.FindAll(".build-team-savebar"));
     }
 
-    /// <summary>Remove marks a member, Undo keeps them; saving asks first, then deletes the Teammate (not only their Team label) and takes them off the roster.</summary>
+    /// <summary>Remove marks a member, Undo keeps them; saving asks first, then deletes the Agent (not only their Team label) and takes them off the roster.</summary>
     [Fact]
-    public async Task Members_RemovingAMember_DeletesTheTeammateAfterAsking()
+    public async Task Members_RemovingAMember_DeletesTheAgentAfterAsking()
     {
         using Fixture fixture = new(typeCount: 3);
         fixture.SeedGarden();
@@ -760,7 +760,7 @@ public sealed class BuildTeamTests
         await PickRemoveAsync(cut, "Bo", ".menu-item-destructive");
 
         _ = cut.InvokeAsync(() => { _ = cut.Find("button.build-team-approve-button").ClickAsync(); });
-        cut.WaitForAssertion(() => Assert.Equal("Delete 1 Teammate?", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("Delete 1 Agent?", cut.Find(".mud-dialog-title").TextContent.Trim()));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog button").Single(button => string.Equals(button.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Null(fixture.Personas.Get("Bo"));
@@ -808,13 +808,13 @@ public sealed class BuildTeamTests
         await PickRemoveAsync(cut, "Bo", ".roster-leave");
 
         Assert.True(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
-        Assert.Equal("Keep at least one Teammate on the roster.", cut.Find(".build-team-approve-hint").TextContent.Trim());
+        Assert.Equal("Keep at least one Agent on the roster.", cut.Find(".build-team-approve-hint").TextContent.Trim());
         Assert.Equal("2 members · 1 leaving · 1 to delete", cut.Find(".build-team-roster-summary").TextContent.Trim());
     }
 
-    /// <summary>Remove from team takes the member's Team label away on save without asking, and the Teammate stays.</summary>
+    /// <summary>Remove from team takes the member's Team label away on save without asking, and the Agent stays.</summary>
     [Fact]
-    public async Task Members_RemoveFromTeam_KeepsTheTeammate()
+    public async Task Members_RemoveFromTeam_KeepsTheAgent()
     {
         using Fixture fixture = new(typeCount: 3);
         fixture.SeedGarden();
@@ -1056,7 +1056,7 @@ public sealed class BuildTeamTests
 
         Assert.NotEmpty(cut.FindAll(".roster-copy-prompt"));
         Assert.True(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
-        Assert.Equal("Some Teammates need setup. Copy their prompt, paste it into your AI tool, and they update here by themselves.", cut.Find(".build-team-approve-hint").TextContent.Trim());
+        Assert.Equal("Some Agents need setup. Copy their prompt, paste it into your AI tool, and they update here by themselves.", cut.Find(".build-team-approve-hint").TextContent.Trim());
 
         host.Catalog("extra", ["ext-skill"], name => host.CloneSkill(name));
         await Task.Run(host.ReadAsync, Xunit.TestContext.Current.CancellationToken);
@@ -1167,7 +1167,7 @@ public sealed class BuildTeamTests
 
         public TeamMembership Membership { get; }
 
-        /// <summary>Seeds a Team of type Type 01 with a Lead (its manager) and a Developer, as the catalog and the Teammates report it.</summary>
+        /// <summary>Seeds a Team of type Type 01 with a Lead (its manager) and a Developer, as the catalog and the Agents report it.</summary>
         public void SeedGarden()
         {
             this.Personas.Add(new PersonaIdentity("Ada", "Lead", "ada", Teams: ["Garden"], Role: new RoleRef("t01", "tutor", "1.0.0")), "You lead.");

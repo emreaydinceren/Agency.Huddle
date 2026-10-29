@@ -31,19 +31,19 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
     public string DataDirPath => this.dataDir.Path;
 
     /// <summary>
-    /// The Teammate folders directory this factory's data dir resolves to, matching
-    /// <see cref="Agency.Huddle.App.Acp.AcpOptions"/>'s default <c>TeammatesDir</c> ("Teammates"), which is
-    /// never overridden by <see cref="ConfigureWebHost"/>. Tests use this to seed Persona/Teammate
+    /// The Agent folders directory this factory's data dir resolves to, matching
+    /// <see cref="Agency.Huddle.App.Acp.AcpOptions"/>'s default <c>AgentsDir</c> ("Agents"), which is
+    /// never overridden by <see cref="ConfigureWebHost"/>. Tests use this to seed Persona/Agent
     /// definition files directly; prefer <see cref="WriteDefinitionAsync"/> for that instead of
     /// combining this path by hand.
     /// </summary>
-    public string TeammatesDirPath => Path.Combine(this.dataDir.Path, "Teammates");
+    public string AgentsDirPath => Path.Combine(this.dataDir.Path, "Agents");
 
     /// <summary>
     /// The Skills directory this factory's data dir resolves to, matching
     /// <see cref="Agency.Huddle.App.Acp.AcpOptions"/>'s default <c>SkillsDir</c> ("Skills"), which is
     /// never overridden by <see cref="ConfigureWebHost"/>. Tests use this to seed Skill override
-    /// folders directly, the same reasoning <see cref="TeammatesDirPath"/>'s own doc records.
+    /// folders directly, the same reasoning <see cref="AgentsDirPath"/>'s own doc records.
     /// </summary>
     public string SkillsDirPath => Path.Combine(this.dataDir.Path, "Skills");
 
@@ -51,7 +51,7 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
     /// The Tasks scan root this factory's data dir resolves to, matching
     /// <see cref="Agency.Huddle.App.TeamsOptions.Dir"/>'s default ("Teams"), which is never
     /// overridden by <see cref="ConfigureWebHost"/>. Tests use this to seed Task files directly, the
-    /// same reasoning <see cref="TeammatesDirPath"/>'s own doc records.
+    /// same reasoning <see cref="AgentsDirPath"/>'s own doc records.
     /// </summary>
     public string TasksDirPath => TestTaskStore.Root(this.dataDir);
 
@@ -164,12 +164,12 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
     }
 
     /// <summary>
-    /// Writes a Persona/Teammate definition file for <paramref name="stem"/> under
-    /// <see cref="TeammatesDirPath"/>, creating that directory first. The one seed path UI tests
-    /// should use instead of combining <see cref="TeammatesDirPath"/> and <see cref="Path.Combine(string, string)"/>
+    /// Writes a Persona/Agent definition file for <paramref name="stem"/> under
+    /// <see cref="AgentsDirPath"/>, creating that directory first. The one seed path UI tests
+    /// should use instead of combining <see cref="AgentsDirPath"/> and <see cref="Path.Combine(string, string)"/>
     /// themselves, so a later change to the on-disk layout (Spec §6.15) touches this method only.
     /// </summary>
-    /// <param name="stem">The Persona/Teammate's file stem (its Alias), e.g. "coo".</param>
+    /// <param name="stem">The Persona/Agent's file stem (its Alias), e.g. "coo".</param>
     /// <param name="text">The definition file's full text (frontmatter and system prompt).</param>
     /// <param name="cancellationToken">Propagated to the file write.</param>
     public async Task WriteDefinitionAsync(string stem, string text, CancellationToken cancellationToken)
@@ -177,15 +177,15 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
         ArgumentException.ThrowIfNullOrWhiteSpace(stem);
         ArgumentNullException.ThrowIfNull(text);
 
-        Directory.CreateDirectory(this.TeammateFolder(stem));
+        Directory.CreateDirectory(this.AgentFolder(stem));
         await File.WriteAllTextAsync(this.DefinitionFile(stem), text, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>The teammate's own folder under <see cref="TeammatesDirPath"/>, named after <paramref name="stem"/>.</summary>
-    private string TeammateFolder(string stem) => Path.Combine(this.TeammatesDirPath, stem);
+    /// <summary>The agent's own folder under <see cref="AgentsDirPath"/>, named after <paramref name="stem"/>.</summary>
+    private string AgentFolder(string stem) => Path.Combine(this.AgentsDirPath, stem);
 
-    /// <summary>The path to <paramref name="stem"/>'s definition file inside <see cref="TeammateFolder"/>.</summary>
-    private string DefinitionFile(string stem) => Path.Combine(this.TeammateFolder(stem), $"{stem}.md");
+    /// <summary>The path to <paramref name="stem"/>'s definition file inside <see cref="AgentFolder"/>.</summary>
+    private string DefinitionFile(string stem) => Path.Combine(this.AgentFolder(stem), $"{stem}.md");
 
     protected override void Dispose(bool disposing)
     {

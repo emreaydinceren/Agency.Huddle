@@ -4,11 +4,11 @@ using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.Tests.References;
 
-/// <summary>Pins <see cref="ReferencePickerModel"/>: the group order, the caps, the Teammate and Room notes, the insert texts, the live text and the empty texts of spec §5.3, §5.7 and §11 (AT-T10).</summary>
+/// <summary>Pins <see cref="ReferencePickerModel"/>: the group order, the caps, the Agent and Room notes, the insert texts, the live text and the empty texts of spec §5.3, §5.7 and §11 (AT-T10).</summary>
 public sealed class ReferencePickerModelTests
 {
     /// <summary>The footer line of spec §5.7.</summary>
-    private const string FooterText = "Narrow with teammate: task: room: team: lib:";
+    private const string FooterText = "Narrow with agent: task: room: team: lib:";
 
     /// <summary>A group that finished with the given hits and was not truncated, keyed by its filter and side.</summary>
     /// <param name="group">The filter the group belongs to.</param>
@@ -58,12 +58,12 @@ public sealed class ReferencePickerModelTests
             highlight);
     }
 
-    /// <summary>A Teammate hit whose Title is the name.</summary>
-    /// <param name="name">The Teammate's name.</param>
+    /// <summary>An Agent hit whose Title is the name.</summary>
+    /// <param name="name">The Agent's name.</param>
     /// <returns>The hit.</returns>
-    private static TeammateHit TeammateNamed(string name)
+    private static AgentHit AgentNamed(string name)
     {
-        return new TeammateHit(name, "Engineer", name.ToLowerInvariant(), Array.Empty<string>(), MatchTier.NamePrefix);
+        return new AgentHit(name, "Engineer", name.ToLowerInvariant(), Array.Empty<string>(), MatchTier.NamePrefix);
     }
 
     /// <summary>A Task hit whose Title is the task's title.</summary>
@@ -118,9 +118,9 @@ public sealed class ReferencePickerModelTests
                 Done(SearchFilter.Teams, SearchScope.Active, TeamNamed("Marketing")),
                 Done(SearchFilter.Rooms, SearchScope.Active, RoomNamed("room-1", "Lobby")),
                 Done(SearchFilter.Tasks, SearchScope.Active, TaskNumbered(1)),
-                Done(SearchFilter.Teammates, SearchScope.Active, TeammateNamed("Ann")))));
+                Done(SearchFilter.Agents, SearchScope.Active, AgentNamed("Ann")))));
 
-        Assert.Equal(["Teammates", "Tasks", "Rooms", "Teams", "Library"], view.Groups.Select(group => group.Heading).ToArray());
+        Assert.Equal(["Agents", "Tasks", "Rooms", "Teams", "Library"], view.Groups.Select(group => group.Heading).ToArray());
     }
 
     /// <summary>A single filter shows only its own group, capped at 8 for Tasks and 20 for the other groups.</summary>
@@ -128,50 +128,50 @@ public sealed class ReferencePickerModelTests
     public void Build_SingleFilter_CapsTasksAt8AndOthersAt20()
     {
         SearchHit[] tasks = Enumerable.Range(1, 10).Select(TaskNumbered).ToArray();
-        SearchHit[] mates = Enumerable.Range(1, 25).Select(number => TeammateNamed("Mate " + number.ToString(System.Globalization.CultureInfo.InvariantCulture))).ToArray();
+        SearchHit[] mates = Enumerable.Range(1, 25).Select(number => AgentNamed("Mate " + number.ToString(System.Globalization.CultureInfo.InvariantCulture))).ToArray();
 
         ReferencePickerView taskView = ReferencePickerModel.Build(Input(SearchFilter.Tasks, Groups(Done(SearchFilter.Tasks, SearchScope.Active, tasks))));
-        ReferencePickerView mateView = ReferencePickerModel.Build(Input(SearchFilter.Teammates, Groups(Done(SearchFilter.Teammates, SearchScope.Active, mates))));
+        ReferencePickerView mateView = ReferencePickerModel.Build(Input(SearchFilter.Agents, Groups(Done(SearchFilter.Agents, SearchScope.Active, mates))));
 
         Assert.Equal(8, taskView.Groups.Single().Rows.Count);
         Assert.Equal(20, mateView.Groups.Single().Rows.Count);
     }
 
-    /// <summary>Members come first among the Teammates, each part in the ranker's order.</summary>
+    /// <summary>Members come first among the Agents, each part in the ranker's order.</summary>
     [Fact]
     public void Build_MembersFirst()
     {
         ReferencePickerView view = ReferencePickerModel.Build(Input(
-            SearchFilter.Teammates,
-            Groups(Done(SearchFilter.Teammates, SearchScope.Active, TeammateNamed("Ann"), TeammateNamed("Bo"), TeammateNamed("Cy"), TeammateNamed("Dee"))),
+            SearchFilter.Agents,
+            Groups(Done(SearchFilter.Agents, SearchScope.Active, AgentNamed("Ann"), AgentNamed("Bo"), AgentNamed("Cy"), AgentNamed("Dee"))),
             members: ["bo", "DEE"]));
 
         Assert.Equal(["Bo", "Dee", "Ann", "Cy"], Titles(view.Groups.Single()));
     }
 
-    /// <summary>After <c>/invite </c> only the Teammates group shows, and non-Members come first.</summary>
+    /// <summary>After <c>/invite </c> only the Agents group shows, and non-Members come first.</summary>
     [Fact]
     public void Build_InviteCommand_NonMembersFirst()
     {
         ReferencePickerView view = ReferencePickerModel.Build(Input(
             SearchFilter.All,
             Groups(
-                Done(SearchFilter.Teammates, SearchScope.Active, TeammateNamed("Ann"), TeammateNamed("Bo"), TeammateNamed("Cy"), TeammateNamed("Dee")),
+                Done(SearchFilter.Agents, SearchScope.Active, AgentNamed("Ann"), AgentNamed("Bo"), AgentNamed("Cy"), AgentNamed("Dee")),
                 Done(SearchFilter.Tasks, SearchScope.Active, TaskNumbered(1))),
             members: ["bo", "Dee"],
             invite: true));
 
-        Assert.Equal(["Teammates"], view.Groups.Select(group => group.Heading).ToArray());
+        Assert.Equal(["Agents"], view.Groups.Select(group => group.Heading).ToArray());
         Assert.Equal(["Ann", "Cy", "Bo", "Dee"], Titles(view.Groups.Single()));
     }
 
-    /// <summary>A Teammate who is not a Member is dimmed with the note of spec §5.7; a Member is neither.</summary>
+    /// <summary>An Agent who is not a Member is dimmed with the note of spec §5.7; a Member is neither.</summary>
     [Fact]
     public void Build_NonMember_DimmedWithNote()
     {
         ReferencePickerView view = ReferencePickerModel.Build(Input(
-            SearchFilter.Teammates,
-            Groups(Done(SearchFilter.Teammates, SearchScope.Active, TeammateNamed("Ann"), TeammateNamed("Bo"))),
+            SearchFilter.Agents,
+            Groups(Done(SearchFilter.Agents, SearchScope.Active, AgentNamed("Ann"), AgentNamed("Bo"))),
             members: ["Bo"]));
 
         ReferencePickerRow ann = view.Groups.Single().Rows[1];
@@ -226,7 +226,7 @@ public sealed class ReferencePickerModelTests
         Assert.Equal(string.Empty, view.Footer);
     }
 
-    /// <summary>The <c>#</c> picker is Tasks only, so its footer does not suggest the teammate, room, team or library prefixes (spec §5.5).</summary>
+    /// <summary>The <c>#</c> picker is Tasks only, so its footer does not suggest the agent, room, team or library prefixes (spec §5.5).</summary>
     [Fact]
     public void Build_HashTrigger_HasNoPrefixFooter()
     {
@@ -235,13 +235,13 @@ public sealed class ReferencePickerModelTests
         Assert.Equal(string.Empty, view.Footer);
     }
 
-    /// <summary>Under All the Teammates group cuts to five AFTER the Members are moved first, so a Member the ranker listed late is not hidden behind non-Members (spec §5.3).</summary>
+    /// <summary>Under All the Agents group cuts to five AFTER the Members are moved first, so a Member the ranker listed late is not hidden behind non-Members (spec §5.3).</summary>
     [Fact]
     public void Build_All_MembersListedLateStillComeFirst()
     {
-        SearchHit[] mates = [TeammateNamed("Alan"), TeammateNamed("Ben"), TeammateNamed("Cleo"), TeammateNamed("Dana"), TeammateNamed("Emily"), TeammateNamed("Grace"), TeammateNamed("Marcus")];
+        SearchHit[] mates = [AgentNamed("Alan"), AgentNamed("Ben"), AgentNamed("Cleo"), AgentNamed("Dana"), AgentNamed("Emily"), AgentNamed("Grace"), AgentNamed("Marcus")];
 
-        ReferencePickerView view = ReferencePickerModel.Build(Input(SearchFilter.All, Groups(Done(SearchFilter.Teammates, SearchScope.Active, mates)), members: ["Grace", "Marcus"]));
+        ReferencePickerView view = ReferencePickerModel.Build(Input(SearchFilter.All, Groups(Done(SearchFilter.Agents, SearchScope.Active, mates)), members: ["Grace", "Marcus"]));
 
         Assert.Equal(["Grace", "Marcus", "Alan", "Ben", "Cleo"], Titles(Assert.Single(view.Groups)));
     }
@@ -262,14 +262,14 @@ public sealed class ReferencePickerModelTests
         Assert.Equal(expected, view.LiveText);
     }
 
-    /// <summary>Each kind of hit inserts the text spec §6 gives it: a Teammate's name, a Task id, and the links of a Room and a Team.</summary>
+    /// <summary>Each kind of hit inserts the text spec §6 gives it: an Agent's name, a Task id, and the links of a Room and a Team.</summary>
     [Fact]
     public void Build_InsertText_EachKind()
     {
         ReferencePickerView view = ReferencePickerModel.Build(Input(
             SearchFilter.All,
             Groups(
-                Done(SearchFilter.Teammates, SearchScope.Active, TeammateNamed("Ann")),
+                Done(SearchFilter.Agents, SearchScope.Active, AgentNamed("Ann")),
                 Done(SearchFilter.Tasks, SearchScope.Active, TaskNumbered(1)),
                 Done(SearchFilter.Rooms, SearchScope.Active, RoomNamed("room-1", "Lobby")),
                 Done(SearchFilter.Teams, SearchScope.Active, TeamNamed("Marketing")))));

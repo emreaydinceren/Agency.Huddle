@@ -1,6 +1,6 @@
 using Agency.Huddle.App.Search;
 using Agency.Huddle.App.Teams;
-using Agency.Huddle.Tests.Teammates;
+using Agency.Huddle.Tests.Agents;
 using Agency.Huddle.Tests.Teams;
 
 namespace Agency.Huddle.Tests.Search;
@@ -109,9 +109,9 @@ public sealed class TeamSearchProviderTests
         Assert.False(result.Truncated);
     }
 
-    /// <summary>A Team hit carries its Teammate count (the Team's Members) and its type label, and its TeamName is its own name.</summary>
+    /// <summary>A Team hit carries its Agent count (the Team's Members) and its type label, and its TeamName is its own name.</summary>
     [Fact]
-    public async Task Hit_CarriesTeammateCountAndTypeLabel()
+    public async Task Hit_CarriesAgentCountAndTypeLabel()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
@@ -128,13 +128,13 @@ public sealed class TeamSearchProviderTests
         Assert.Equal("Platform", result.Hits[0].TeamName);
     }
 
-    /// <summary>Builds a Team with the given Teammate count and team type id.</summary>
+    /// <summary>Builds a Team with the given Agent count and team type id.</summary>
     /// <param name="name">The Team's name.</param>
-    /// <param name="members">How many Teammates the Team has.</param>
+    /// <param name="members">How many Agents the Team has.</param>
     /// <param name="typeId">The team type id, or null for a Team with no type.</param>
     /// <returns>The Team summary.</returns>
     private static TeamSummary Team(string name, int members = 0, string? typeId = null) =>
-        new(name, [], Enumerable.Repeat("Teammate", members).ToList(), true)
+        new(name, [], Enumerable.Repeat("Agent", members).ToList(), true)
         {
             TeamType = typeId is null ? null : new VersionedRef(typeId, "1.0.0"),
         };

@@ -8,9 +8,9 @@ namespace Agency.Huddle.Tests.FileChanges;
 /// </summary>
 public sealed class WatchedFolderResolverTests
 {
-    /// <summary>A Teammate Name resolves to their Work Dir under <c>{DataDir}/{Acp:WorkDir}</c>.</summary>
+    /// <summary>An Agent Name resolves to their Work Dir under <c>{DataDir}/{Acp:WorkDir}</c>.</summary>
     [Fact]
-    public void TryResolve_TeammateName_IsTheirWorkDir()
+    public void TryResolve_AgentName_IsTheirWorkDir()
     {
         using TempDataDir dataDir = new();
         WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
@@ -21,12 +21,12 @@ public sealed class WatchedFolderResolverTests
         Assert.Null(reason);
         Assert.NotNull(folder);
         Assert.Equal("nova", folder.Entry);
-        Assert.Equal(Path.Combine(dataDir.Path, "Teammates", "Nova", "work"), folder.FullPath);
+        Assert.Equal(Path.Combine(dataDir.Path, "Agents", "Nova", "work"), folder.FullPath);
     }
 
-    /// <summary>A Teammate Name wins over a same-named folder directly under <c>DataDir</c>.</summary>
+    /// <summary>An Agent Name wins over a same-named folder directly under <c>DataDir</c>.</summary>
     [Fact]
-    public void TryResolve_TeammateNameWinsOverSameNamedFolder()
+    public void TryResolve_AgentNameWinsOverSameNamedFolder()
     {
         using TempDataDir dataDir = new();
         Directory.CreateDirectory(Path.Combine(dataDir.Path, "Nova"));
@@ -37,10 +37,10 @@ public sealed class WatchedFolderResolverTests
         Assert.True(resolved);
         Assert.Null(reason);
         Assert.NotNull(folder);
-        Assert.Equal(Path.Combine(dataDir.Path, "Teammates", "Nova", "work"), folder.FullPath);
+        Assert.Equal(Path.Combine(dataDir.Path, "Agents", "Nova", "work"), folder.FullPath);
     }
 
-    /// <summary>A leading <c>./</c> or <c>.\</c> means the folder under <c>DataDir</c>, overriding a Teammate Name match.</summary>
+    /// <summary>A leading <c>./</c> or <c>.\</c> means the folder under <c>DataDir</c>, overriding an Agent Name match.</summary>
     [Theory]
     [InlineData("./Nova")]
     [InlineData(".\\Nova")]

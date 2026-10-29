@@ -131,7 +131,7 @@ public sealed class SkillFolderChecksTests
         Finding finding = Assert.Single(fixture.Check().Findings);
 
         Assert.Equal("S008", finding.Code);
-        Assert.Equal("scripts/ and 1 other files are never read by Teammates.", finding.Message);
+        Assert.Equal("scripts/ and 1 other files are never read by Agents.", finding.Message);
     }
 
     /// <summary>No licence anywhere is S009; a licence in SKILL.md is silent.</summary>

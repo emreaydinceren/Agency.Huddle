@@ -419,7 +419,7 @@ public sealed class CadenceServiceTests
         public void WriteProcess(string text) =>
             File.WriteAllText(Path.Combine(this.dir.Path, TeamPaths.ProcessFileName), text);
 
-        /// <summary>Hires the Teammate holding the type's retro role.</summary>
+        /// <summary>Hires the Agent holding the type's retro role.</summary>
         public void HireRetroAgent() =>
             _ = this.personas.Add(
                 new PersonaIdentity(RetroAgent, "Retro", "rae", [Team], Role: new RoleRef("web", "retro", "1.2.0")),

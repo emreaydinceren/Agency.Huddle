@@ -183,7 +183,7 @@ public sealed partial class ChromeTraitsTests
         string quote = Body("reading", "book", ".library-rendered blockquote");
         string outline = Body("reading", "book", ".outline-row.active");
         string empty = Body("reading", "book", ".empty-state .empty-state-text");
-        string hero = Body("reading", "book", ".mud-dialog:has(.teammate-card-avatar) .mud-dialog-title .mud-typography-h6");
+        string hero = Body("reading", "book", ".mud-dialog:has(.agent-profile-card-avatar) .mud-dialog-title .mud-typography-h6");
 
         Assert.Contains("font-family: var(--font-read);", prose, StringComparison.Ordinal);
         Assert.Contains("line-height: 1.72;", prose, StringComparison.Ordinal);

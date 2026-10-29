@@ -26,10 +26,10 @@ public sealed class PageTitleLayoutTests
         Assert.DoesNotContain("max-width", body, StringComparison.Ordinal);
     }
 
-    /// <summary>The reading pages (Settings, Teammates, Build a team) and the capped Team notice are left-aligned and still use MaxWidth.Large.</summary>
+    /// <summary>The reading pages (Settings, Agents, Build a team) and the capped Team notice are left-aligned and still use MaxWidth.Large.</summary>
     [Theory]
     [InlineData("Settings.razor")]
-    [InlineData("Teammates.razor")]
+    [InlineData("Agents.razor")]
     [InlineData("BuildTeam.razor")]
     [InlineData("TeamPage.razor")]
     public void ReadingPages_AreLeftAlignedAtLargeWidth(string page)

@@ -32,13 +32,13 @@ internal static class StubPages
     public static TabPageRoutes Routes() => new(typeof(StubPages).Assembly);
 }
 
-/// <summary>Stands in for the Teammates page.</summary>
-[Route("/teammates")]
-internal sealed class StubTeammatesPage : ComponentBase
+/// <summary>Stands in for the Agents page.</summary>
+[Route("/agents")]
+internal sealed class StubAgentsPage : ComponentBase
 {
     /// <inheritdoc/>
     protected override void BuildRenderTree(RenderTreeBuilder builder) =>
-        builder.AddMarkupContent(0, "<p class=\"stub-page\" id=\"page-teammates\">teammates</p>");
+        builder.AddMarkupContent(0, "<p class=\"stub-page\" id=\"page-agents\">agents</p>");
 }
 
 /// <summary>Stands in for the Settings page.</summary>

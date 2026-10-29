@@ -190,7 +190,7 @@ public sealed class LogChangeToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        string workDir = new TeammatePaths(fixture.BoundOptions).WorkDir("Nova");
+        string workDir = new AgentPaths(fixture.BoundOptions).WorkDir("Nova");
         Directory.CreateDirectory(workDir);
         File.WriteAllText(Path.Combine(workDir, "brief.md"), "x");
         LogChangeTool tool = Build(fixture, "Nova", out DocHistoryStore store);
@@ -207,7 +207,7 @@ public sealed class LogChangeToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        Directory.CreateDirectory(new TeammatePaths(fixture.BoundOptions).WorkDir("Nova"));
+        Directory.CreateDirectory(new AgentPaths(fixture.BoundOptions).WorkDir("Nova"));
         LogChangeTool tool = Build(fixture, "Nova", out _);
 
         string result = await tool.InvokeAsync(Args("later.md", "created", "x"), ct);
@@ -224,7 +224,7 @@ public sealed class LogChangeToolTests
     {
         store = new DocHistoryStore(fixture.BoundOptions, NullLogger<DocHistoryStore>.Instance);
         DocHistoryRecorder recorder = new(store, fixture.BoundOptions, NullLogger<DocHistoryRecorder>.Instance, new ConfiguredHumanIdentity("Emre"));
-        return new LogChangeTool(recorder, fixture.Resolver, fixture.BoundOptions, new TeammatePaths(fixture.BoundOptions), agentName, new FakePromptSource());
+        return new LogChangeTool(recorder, fixture.Resolver, fixture.BoundOptions, new AgentPaths(fixture.BoundOptions), agentName, new FakePromptSource());
     }
 
     /// <summary>The arguments of one call.</summary>

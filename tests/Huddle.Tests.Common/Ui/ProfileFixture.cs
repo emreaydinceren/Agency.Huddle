@@ -7,7 +7,7 @@ using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Teams;
@@ -17,8 +17,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// The real stores a Teammate's profile is built from, wired the way the app wires them, with only the
-/// gateway and the Team catalog faked. Shared by <c>TeammateProfilesTests</c> and
+/// The real stores an Agent's profile is built from, wired the way the app wires them, with only the
+/// gateway and the Team catalog faked. Shared by <c>AgentProfilesTests</c> and
 /// <c>ProfileAvatarTests</c>.
 /// </summary>
 internal sealed class ProfileFixture : IDisposable
@@ -45,7 +45,7 @@ internal sealed class ProfileFixture : IDisposable
         this.Directory = this.dir.CreateDirectory();
         this.Gateway = new FakeAgentGateway();
         this.Health = new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance);
-        this.Profiles = new TeammateProfiles(this.Personas, this.Types, this.Pool, this.Avatars, this.Catalog, this.Directory, this.Gateway, this.Health);
+        this.Profiles = new AgentProfiles(this.Personas, this.Types, this.Pool, this.Avatars, this.Catalog, this.Directory, this.Gateway, this.Health);
         FileChatStore store = new(this.dir.Options(), NullLogger<FileChatStore>.Instance);
         RoomEvents events = new(NullLogger<RoomEvents>.Instance);
         this.Chat = new ChatService(this.Directory, store, events, new FakeMentionAliasSource(), TestOptions.Create(), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance)
@@ -82,7 +82,7 @@ internal sealed class ProfileFixture : IDisposable
     public ContextFill ContextFill { get; } = new();
 
     /// <summary>The service under test.</summary>
-    public TeammateProfiles Profiles { get; }
+    public AgentProfiles Profiles { get; }
 
     /// <summary>The chat service, over the same directory and catalog.</summary>
     public ChatService Chat { get; }
@@ -91,17 +91,17 @@ internal sealed class ProfileFixture : IDisposable
     /// <param name="ct">Cancels the write.</param>
     public Task InitializeAsync(CancellationToken ct) => this.Directory.InitializeAsync("You", ct);
 
-    /// <summary>Saves a Teammate, optionally in a Team and with the tutor role of team type <c>t01</c>.</summary>
+    /// <summary>Saves an Agent, optionally in a Team and with the tutor role of team type <c>t01</c>.</summary>
     /// <param name="name">The Name.</param>
     /// <param name="title">The Title.</param>
     /// <param name="team">The Team label, or null.</param>
-    /// <param name="withRole">Whether the Teammate carries the <c>t01/tutor</c> role.</param>
-    public void AddTeammate(string name, string title, string? team = null, bool withRole = false) =>
+    /// <param name="withRole">Whether the Agent carries the <c>t01/tutor</c> role.</param>
+    public void AddAgent(string name, string title, string? team = null, bool withRole = false) =>
         this.Personas.Add(
             new PersonaIdentity(name, title, name.ToLowerInvariant(), Teams: team is null ? [] : [team], Skills: ["lint"], Role: withRole ? new RoleRef("t01", "tutor", "1.0.0") : null),
             "You help.");
 
-    /// <summary>Creates the Teammate's agent user, as its first connection does.</summary>
+    /// <summary>Creates the Agent's agent user, as its first connection does.</summary>
     /// <param name="name">The Name.</param>
     /// <param name="ct">Cancels the write.</param>
     public async Task<User> AddAgentAsync(string name, CancellationToken ct) =>
@@ -126,7 +126,7 @@ internal sealed class ProfileFixture : IDisposable
         ctx.Services.AddSingleton(this.ContextFill);
         ctx.Services.AddSingleton(this.Chat);
         ctx.Services.AddSingleton(this.Avatars);
-        ctx.Services.AddScoped<TeammateCardOpener>();
+        ctx.Services.AddScoped<AgentProfileCardOpener>();
         return ctx;
     }
 

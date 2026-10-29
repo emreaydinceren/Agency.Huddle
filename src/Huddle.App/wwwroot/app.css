@@ -155,7 +155,7 @@ button:focus-visible {
     font-size: var(--mud-typography-body2-size);
 }
 
-/* An image avatar fills its circle and is cropped to it. TeammateAvatar renders a bare <img> and MudBlazor
+/* An image avatar fills its circle and is cropped to it. AgentAvatar renders a bare <img> and MudBlazor
    sizes only its own MudImage, so without this a 256 px picture sat at full size inside a 56 px avatar. */
 .mud-avatar img {
     width: 100%;
@@ -502,7 +502,7 @@ a.team-ref,
 
 /* A heading over a group of fields or tiles on a page: subtitle2 at 600 in the primary text colour, so it is never
    smaller or quieter than what it heads, with a light rule under it. */
-.teammates-group-heading,
+.agents-group-heading,
 .prompts-group-heading,
 .group-heading {
     margin: 0 0 8px 0;
@@ -757,7 +757,7 @@ a.team-ref,
    40px on cards and tiles (Medium) and 72px on a profile (Large). Letters are 40% of the diameter and never
    under 10px, a floor set by the avatar spec rather than the 11px text floor, since a 24px row avatar has no room
    for more; the declaration uses max() so it stays a computed size, not a literal one.
-   Monogram: the Teammate's colour (TeammateAvatar overrides --mud-palette-primary on the avatar itself; the Theme
+   Monogram: the Agent's colour (AgentAvatar overrides --mud-palette-primary on the avatar itself; the Theme
    accent when none is chosen) at 20% over Surface, with letters mixed 75% toward TextPrimary at weight 600. A Dark
    Theme (MainLayout renders .theme-mode-dark) runs the colour at 35% over its Surface with letters mixed 75% toward
    white: a deep fill, light letters. There is no per-colour black or white. AvatarColours mirrors both recipes in C#
@@ -778,7 +778,7 @@ a.team-ref,
     vertical-align: middle;
 }
 
-/* Huddle's own mark in the Transcript (ADR-0065): a Message Huddle wrote itself has no Teammate, so it wears the outlined
+/* Huddle's own mark in the Transcript (ADR-0065): a Message Huddle wrote itself has no Agent, so it wears the outlined
    tile the Feed draws for Huddle, at the Transcript's 32px. */
 .huddle-mark {
     display: inline-flex;
@@ -1342,7 +1342,7 @@ body.sidebar-resizing {
 }
 
 /* ---- Left menu: a top-level MudNavLink vs. a MudNavGroup and everything inside it ------------
-   A top-level left-menu row (Teammates, Settings) is a MudNavLink with no MudNavGroup
+   A top-level left-menu row (Agents, Settings) is a MudNavLink with no MudNavGroup
    ancestor, rendering its label inside a ".mud-nav-link-text" element. The drawer's
    MudNavGroups ("Rooms" and "Tasks") render their own titles the exact same way, because a MudNavGroup's header
    is itself a MudNavLink - and every room or view link nested inside them is a
@@ -1365,7 +1365,7 @@ body.sidebar-resizing {
 }
 
 /* A section header - a group with children (Rooms, Teams, Tasks) - is 32px high like a row (audit B3b), and sits 16px below the
-   section above and 4px above its first row (S2). Teammates and Library are destinations, not headers: see .nav-row-link below. */
+   section above and 4px above its first row (S2). Agents and Library are destinations, not headers: see .nav-row-link below. */
 .mud-nav-group > .mud-nav-link {
     margin-top: 16px;
     margin-bottom: 4px;
@@ -1406,7 +1406,7 @@ body.sidebar-resizing {
 }
 
 /* Every view starts its first row the same distance from the top, whether that row is a section header (Rooms,
-   Teams, Tasks), a destination (Teammates, Library) or the Needs you card, so switching views moves nothing up or
+   Teams, Tasks), a destination (Agents, Library) or the Needs you card, so switching views moves nothing up or
    down. A section after another in the same view is 16px below it; a hidden Needs you card does not count. */
 .sidebar-view {
     padding-top: 16px;
@@ -1486,7 +1486,7 @@ body.sidebar-resizing {
     }
 }
 
-/* A top-level entry that is a single link (Teammates, Library) is a destination, not a header: an ordinary row, 32px
+/* A top-level entry that is a single link (Agents, Library) is a destination, not a header: an ordinary row, 32px
    high, with the 13px body-colour label and the 18px icon in the 24px slot of every other row. */
 .nav-row-link .mud-nav-link {
     min-height: var(--nav-row-height);
@@ -1534,7 +1534,7 @@ body.sidebar-resizing {
    .room-list already existed as a markup prompt with no rule behind it. Each row is a flex box so
    the NavLink can grow and the "..." button sits absolutely on the right; the button stays in the
    DOM (and in the Tab order) at all times, so it is reachable by keyboard even before it is
-   visible - only its opacity is gated on :hover/:focus-within, matching .teammate-tile's own
+   visible - only its opacity is gated on :hover/:focus-within, matching .agent-tile's own
    interactive-surface shape below. */
 
 .hover-reveal-row {
@@ -1702,9 +1702,9 @@ body.sidebar-resizing {
     border-bottom: none;
 }
 
-/* ---- Inviting a teammate into the open room ----------------------------- */
+/* ---- Inviting an agent into the open room ----------------------------- */
 
-.invite-teammate {
+.invite-agent {
     position: relative;
     flex: 0 0 auto;
 }
@@ -1851,7 +1851,7 @@ body.sidebar-resizing {
     font-weight: 400;
 }
 
-/* The Teammate's title, quiet beside the name: same caption ink as the time, and it gives way before the name does. */
+/* The Agent's title, quiet beside the name: same caption ink as the time, and it gives way before the name does. */
 .message-title {
     font-size: var(--mud-typography-caption-size);
     font-weight: 400;
@@ -2959,7 +2959,7 @@ body.sidebar-resizing {
 }
 
 /* Neutral, unlike .budget-prompt-text above: these two report a fact about a delivery, not an
-   alarming one - "nobody to wake" or "no teammate mentioned" ask for an ordinary next step, not a
+   alarming one - "nobody to wake" or "no agent mentioned" ask for an ordinary next step, not a
    warning read. */
 .reply-note,
 .continue-note {
@@ -2977,12 +2977,12 @@ body.sidebar-resizing {
     flex: 1 1 100%;
 }
 
-/* ---- Teammates: directory tiles and the profile card -------------------- */
+/* ---- Agents: directory tiles and the profile card -------------------- */
 
 /* A responsive grid of people, like Slack's Directories. The columns are at least 240px and share the width left
    over, so the grid fills the page rather than leaving fixed-width tiles with wide gaps; the column count follows the
    window with no media queries to keep in step. */
-.teammates-list {
+.agents-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 16px;
@@ -2993,7 +2993,7 @@ body.sidebar-resizing {
 
 /* The card: the <li> carries the border so the "Working on" Task link can sit inside it without being nested in the
    opening <button>. */
-.teammates-item {
+.agents-item {
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -3005,7 +3005,7 @@ body.sidebar-resizing {
     box-shadow: var(--hu-shadow-card);
 }
 
-.teammates-item:hover {
+.agents-item:hover {
     background: var(--hu-hover);
     border-color: var(--hu-line-control);
     box-shadow: var(--hu-shadow-card-hover);
@@ -3013,7 +3013,7 @@ body.sidebar-resizing {
 
 /* justify-content overrides MudBlazor's global button rule, which centres a flex button's content: the avatar and the
    text start at the tile's padding, so the "Working on" line's indent lands on the name's edge. */
-.teammate-tile {
+.agent-tile {
     display: flex;
     justify-content: flex-start;
     align-items: flex-start;
@@ -3029,14 +3029,14 @@ body.sidebar-resizing {
     cursor: pointer;
 }
 
-.teammate-tile-text {
+.agent-tile-text {
     display: flex;
     flex-direction: column;
     gap: 4px;
     min-width: 0;
 }
 
-.teammate-tile-chips {
+.agent-tile-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
@@ -3044,7 +3044,7 @@ body.sidebar-resizing {
 }
 
 /* "Working on SUPP-0002": 12px secondary, under the avatar's text column (12 padding + 40 avatar + 16 gap). */
-.teammate-tile-context {
+.agent-tile-context {
     padding: 0 12px 12px calc(12px + 40px + 16px);
     margin-top: -8px;
     text-align: left;
@@ -3052,12 +3052,12 @@ body.sidebar-resizing {
     color: var(--mud-palette-text-secondary);
 }
 
-.teammate-tile-task-link {
+.agent-tile-task-link {
     font-size: inherit;
 }
 
 /* The name is 14px at 600, the role 13px (below), the alias and state 12px, all in the tile's text column. */
-.teammates-item-name {
+.agents-item-name {
     font-size: var(--mud-typography-subtitle1-size);
     font-weight: 600;
 }
@@ -3217,55 +3217,55 @@ body.sidebar-resizing {
 }
 
 /* The card's sections are a Group label over their content, not boxes (audit B8b): spacing alone separates them. */
-.teammate-card-section {
+.agent-profile-card-section {
     margin-bottom: 16px;
 }
 
-.teammate-card-section:last-child {
+.agent-profile-card-section:last-child {
     margin-bottom: 0;
 }
 
 /* While the Model, Effort or Work mode list is being read, the field refuses to open but must not look switched off: it keeps
    its normal ink and border (the disabled colours are put back) and a thin progress bar sits under it (audit E5). */
-.mud-input-control.teammate-card-probing .mud-input.mud-disabled {
+.mud-input-control.agent-profile-card-probing .mud-input.mud-disabled {
     color: var(--mud-palette-text-primary);
 }
 
-.mud-input-control.teammate-card-probing .mud-input.mud-disabled > .mud-input-adornment {
+.mud-input-control.agent-profile-card-probing .mud-input.mud-disabled > .mud-input-adornment {
     color: var(--mud-palette-text-secondary);
 }
 
-.mud-input-control.teammate-card-probing .mud-input.mud-input-outlined.mud-disabled .mud-input-outlined-border {
+.mud-input-control.agent-profile-card-probing .mud-input.mud-input-outlined.mud-disabled .mud-input-outlined-border {
     border-color: var(--hu-line-control);
 }
 
-.mud-input-control.teammate-card-probing > .mud-input-control-input-container > .mud-input-label-inputcontrol.mud-disabled,
-.mud-input-control.teammate-card-probing .mud-input-helper-text.mud-disabled {
+.mud-input-control.agent-profile-card-probing > .mud-input-control-input-container > .mud-input-label-inputcontrol.mud-disabled,
+.mud-input-control.agent-profile-card-probing .mud-input-helper-text.mud-disabled {
     color: var(--mud-palette-text-secondary);
 }
 
-.teammate-card-probe {
+.agent-profile-card-probe {
     margin-top: 0;
 }
 
-/* UX-E15: the New teammate form's Title and Alias sit side by side, and Model, Effort and Work mode are one row of
+/* UX-E15: the New agent form's Title and Alias sit side by side, and Model, Effort and Work mode are one row of
    equal selects under the one Model label, so the dialog fits a 900px-high window without an inner scroll. */
-.teammate-card-row {
+.agent-profile-card-row {
     display: flex;
     gap: 12px;
     align-items: flex-start;
 }
 
-.teammate-card-row > .mud-input-control,
-.teammate-card-row > .teammate-card-cell {
+.agent-profile-card-row > .mud-input-control,
+.agent-profile-card-row > .agent-profile-card-cell {
     flex: 1 1 0;
     min-width: 0;
 }
 
-/* The Teammate card's avatar is a button that opens the avatar editor, in every mode. It wraps the
+/* The Agent card's avatar is a button that opens the avatar editor, in every mode. It wraps the
    avatar without restyling it; the pencil in its corner is the only cue, shown on hover and on keyboard
    focus (the ring itself is the global button:focus-visible rule), and always on a device with no hover. */
-.teammate-card-avatar {
+.agent-profile-card-avatar {
     position: relative;
     flex: none;
     align-self: flex-start;
@@ -3277,7 +3277,7 @@ body.sidebar-resizing {
     cursor: pointer;
 }
 
-.teammate-card-avatar-edit {
+.agent-profile-card-avatar-edit {
     position: absolute;
     right: -2px;
     bottom: -2px;
@@ -3290,8 +3290,8 @@ body.sidebar-resizing {
     transition: opacity 120ms ease;
 }
 
-.teammate-card-avatar:hover .teammate-card-avatar-edit,
-.teammate-card-avatar:focus-visible .teammate-card-avatar-edit {
+.agent-profile-card-avatar:hover .agent-profile-card-avatar-edit,
+.agent-profile-card-avatar:focus-visible .agent-profile-card-avatar-edit {
     opacity: 1;
 }
 
@@ -3304,7 +3304,7 @@ body.sidebar-resizing {
 }
 
 @media (hover: none) {
-    .teammate-card-avatar-edit,
+    .agent-profile-card-avatar-edit,
     .hover-reveal-row .hover-reveal-menu-button,
     /* [class] adds the specificity that beats the scoped sheet's .tab-close[b-xxxx] without the important flag. */
     .tab-item .tab-close[class],
@@ -3386,7 +3386,7 @@ body.sidebar-resizing {
 /* The Persona is Markdown the user wrote, so it is shown as written. It is NOT
    run through MarkdownRenderer: this is the source text being edited, and
    showing it rendered would hide the very characters the editor changes. */
-.teammate-card-persona {
+.agent-profile-card-persona {
     margin: 0;
     padding: 12px;
     max-height: 14rem;
@@ -3403,7 +3403,7 @@ body.sidebar-resizing {
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
 }
 
-.teammate-card-path {
+.agent-profile-card-path {
     margin: 0;
     font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);
@@ -3412,49 +3412,49 @@ body.sidebar-resizing {
 
 /* ---- Rejected Persona files: shown so a bad file is visible, not silently missing --------- */
 
-.teammates-rejected-list {
+.agents-rejected-list {
     margin: 0;
     padding: 0;
     list-style: none;
 }
 
-.teammates-rejected-item {
+.agents-rejected-item {
     padding: 4px 0;
     font-size: var(--mud-typography-body2-size);
 }
 
-.teammates-rejected-path {
+.agents-rejected-path {
     display: block;
     font-weight: 600;
     color: var(--mud-palette-error);
     overflow-wrap: anywhere;
 }
 
-.teammates-rejected-reason {
+.agents-rejected-reason {
     display: block;
     color: var(--mud-palette-error);
 }
 
-/* ---- The team filter above the grouped tiles, and its InviteTeammate sibling --------------- */
+/* ---- The team filter above the grouped tiles, and its InviteAgent sibling --------------- */
 
-.teammates-filter {
+.agents-filter {
     max-width: 16rem;
 }
 
 /* ---- Tiles grouped by Team ------------------------------------------------------------------ */
 
-.teammates-group {
+.agents-group {
     margin-bottom: 32px;
 }
 
 /* The count beside a group's name: caption size, secondary, normal weight. */
-.teammates-group-count {
+.agents-group-count {
     font-size: var(--mud-typography-caption-size);
     font-weight: 400;
     color: var(--mud-palette-text-secondary);
 }
 
-.teammate-tile-role {
+.agent-tile-role {
     font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);
     overflow-wrap: anywhere;
@@ -4985,7 +4985,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     padding: 2px;
 }
 
-/* A Library document's rendered Markdown. The global reset zeroes block margins, so without these the paragraphs of a Teammate definition run together. */
+/* A Library document's rendered Markdown. The global reset zeroes block margins, so without these the paragraphs of an Agent definition run together. */
 /* The reading styles, shared by Read mode and Split's preview. Long-form text is the one size derived from
    the scale rather than taken from it (design-system.md "Typography"): body1 x 8/7 is 16px, at a 1.65
    line height, and the headings step up from that so an h1 is a heading, not a banner. The 46.29em measure
@@ -6818,7 +6818,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     border-radius: var(--mud-default-borderradius);
 }
 
-/* The Settings Profile tab: the Human's card at roster width, the same width one Build a team column gives a Teammate's,
+/* The Settings Profile tab: the Human's card at roster width, the same width one Build a team column gives an Agent's,
    and the fields under it at a readable form width rather than the whole panel. */
 .profile-panel-card {
     max-width: 24rem;
@@ -6999,7 +6999,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     word-break: break-all;
 }
 
-/* ---- Profile avatar: an avatar that opens the Teammate's profile popover ---------------------- */
+/* ---- Profile avatar: an avatar that opens the Agent's profile popover ---------------------- */
 
 /* The button looks like the bare avatar: no chrome of its own. The ring is the global
    button:focus-visible rule; the radius makes it follow the circle. */
@@ -7416,7 +7416,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 /* ---- Reading pages start at the same left edge as every other page (DS-10) ---------------------
-   A reading page (Settings, Teammates, Build a team) limits the width of its content, not its position:
+   A reading page (Settings, Agents, Build a team) limits the width of its content, not its position:
    MudContainer centres itself with auto margins, and this drops them so the title does not move when
    the Human switches Tabs. */
 .mud-container.page-reading {
@@ -8768,17 +8768,17 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     background: var(--hu-line-control);
 }
 
-/* -- surface=paper: Teammates, cards (13) ------------------------------------------------------------------------- */
-:root:has([data-hu-surface="paper"]) .teammates-item {
+/* -- surface=paper: Agents, cards (13) ------------------------------------------------------------------------- */
+:root:has([data-hu-surface="paper"]) .agents-item {
     border-radius: calc(var(--mud-default-borderradius) * 1.5);
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-:root:has([data-hu-surface="paper"]) .teammates-item:hover {
+:root:has([data-hu-surface="paper"]) .agents-item:hover {
     border-color: var(--hu-line-control);
 }
 
-:root:has([data-hu-surface="paper"]) .teammate-tile-role {
+:root:has([data-hu-surface="paper"]) .agent-tile-role {
     color: var(--mud-palette-text-secondary);
 }
 
@@ -8983,7 +8983,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 /* ---- Traits: reading ----------------------------------------------------------------------------------------
-   reading=book: the Library's reading view, the Teammate card's read face and the empty state, set in the reading face. */
+   reading=book: the Library's reading view, the Agent card's read face and the empty state, set in the reading face. */
 
 /* -- reading=book: the Library document's path, mono (11) ------------------------------------------------------- */
 :root:has([data-hu-reading="book"]) .library-document-path {
@@ -9122,12 +9122,12 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     background: none;
 }
 
-/* -- reading=book: the Teammate read face, serif group headings, hero name and a mono persona (13) --------------- */
-:root:has([data-hu-reading="book"]) .teammates-group-heading {
+/* -- reading=book: the Agent read face, serif group headings, hero name and a mono persona (13) --------------- */
+:root:has([data-hu-reading="book"]) .agents-group-heading {
     font-family: var(--font-read);
 }
 
-:root:has([data-hu-reading="book"]) .mud-dialog:has(.teammate-card-avatar) .mud-dialog-title .mud-typography-h6 {
+:root:has([data-hu-reading="book"]) .mud-dialog:has(.agent-profile-card-avatar) .mud-dialog-title .mud-typography-h6 {
     font-family: var(--font-read);
     font-size: calc(var(--mud-typography-h5-size) * 1.5);
     font-weight: 600;
@@ -9135,7 +9135,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     line-height: 1.15;
 }
 
-:root:has([data-hu-reading="book"]) .teammate-card-persona {
+:root:has([data-hu-reading="book"]) .agent-profile-card-persona {
     font-family: var(--font-mono);
     line-height: 1.7;
     background: var(--hu-ground-page);

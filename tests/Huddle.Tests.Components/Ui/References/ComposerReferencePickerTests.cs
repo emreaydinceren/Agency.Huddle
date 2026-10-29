@@ -22,7 +22,7 @@ using Agency.Huddle.Tests.Search;
 /// </summary>
 public sealed class ComposerReferencePickerTests
 {
-    private static readonly TeammateHit emily = new("Emily Lee", "Designer", "emily", [], MatchTier.NamePrefix);
+    private static readonly AgentHit emily = new("Emily Lee", "Designer", "emily", [], MatchTier.NamePrefix);
     private static readonly TaskHit task = new(new TaskId("PLAT", 1), "Sample import", TaskState.ToDo, null, "Platform", false, MatchTier.NamePrefix);
     private static readonly RoomHit room = new("room-1", "Findings", 0, null, null, null, null, false, MatchTier.NamePrefix);
     private static readonly TeamHit team = new("Growth Ops", null, 2, MatchTier.NamePrefix);
@@ -39,7 +39,7 @@ public sealed class ComposerReferencePickerTests
         await cut.InvokeAsync(() => composer.Instance.ReferenceQueryAsync("e", "@", false));
 
         cut.WaitForAssertion(() => Assert.Equal(
-            ["Teammates", "Tasks", "Rooms", "Teams"],
+            ["Agents", "Tasks", "Rooms", "Teams"],
             cut.FindAll("[role='listbox'] > [role='group']").Select(static group => group.GetAttribute("aria-label")).ToArray()));
         Assert.Equal("true", cut.Find("textarea").GetAttribute("aria-expanded"));
     }
@@ -50,7 +50,7 @@ public sealed class ComposerReferencePickerTests
     {
         using TaskToolHarness harness = new();
         EmptyProvider tasks = new(SearchFilter.Tasks);
-        await using MudBunitContext ctx = NewContext(harness, [tasks, new StubProvider(SearchFilter.Teammates, emily)]);
+        await using MudBunitContext ctx = NewContext(harness, [tasks, new StubProvider(SearchFilter.Agents, emily)]);
         IRenderedComponent<ContainerFragment> cut = RenderComposer(ctx);
         IRenderedComponent<Composer> composer = cut.FindComponent<Composer>();
 
@@ -88,14 +88,14 @@ public sealed class ComposerReferencePickerTests
         IRenderedComponent<Composer> composer = cut.FindComponent<Composer>();
 
         Dictionary<string, string?> picked = [];
-        foreach (string prefix in new[] { "teammate:", "task:", "room:", "team:" })
+        foreach (string prefix in new[] { "agent:", "task:", "room:", "team:" })
         {
             await cut.InvokeAsync(() => composer.Instance.ReferenceQueryAsync(prefix, "@", false));
             cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[role='option']")));
             picked[prefix] = await cut.InvokeAsync(() => composer.Instance.PickAsync());
         }
 
-        Assert.Equal("@Emily Lee", picked["teammate:"]);
+        Assert.Equal("@Emily Lee", picked["agent:"]);
         Assert.Equal("PLAT-0001", picked["task:"]);
         Assert.Equal("[Findings](/rooms/room-1)", picked["room:"]);
         Assert.Equal("[Growth Ops](/teams/Growth%20Ops)", picked["team:"]);
@@ -146,7 +146,7 @@ public sealed class ComposerReferencePickerTests
     public async Task SpacedTokenWithNoHits_Closes()
     {
         using TaskToolHarness harness = new();
-        await using MudBunitContext ctx = NewContext(harness, [new StubProvider(SearchFilter.Teammates)]);
+        await using MudBunitContext ctx = NewContext(harness, [new StubProvider(SearchFilter.Agents)]);
         IRenderedComponent<ContainerFragment> cut = RenderComposer(ctx);
         IRenderedComponent<Composer> composer = cut.FindComponent<Composer>();
 
@@ -195,9 +195,9 @@ public sealed class ComposerReferencePickerTests
         _ = ctx.JSInterop.VerifyInvoke("teamComposer.pickerClosed");
     }
 
-    /// <summary>After <c>/invite </c> the picker lists the Teammates group alone.</summary>
+    /// <summary>After <c>/invite </c> the picker lists the Agents group alone.</summary>
     [Fact]
-    public async Task InviteCommand_PinsTeammates()
+    public async Task InviteCommand_PinsAgents()
     {
         using TaskToolHarness harness = new();
         await using MudBunitContext ctx = NewContext(harness, All());
@@ -207,7 +207,7 @@ public sealed class ComposerReferencePickerTests
         await cut.InvokeAsync(() => composer.Instance.ReferenceQueryAsync("", "@", true));
 
         cut.WaitForAssertion(() => Assert.Equal(
-            ["Teammates"],
+            ["Agents"],
             cut.FindAll("[role='listbox'] > [role='group']").Select(static group => group.GetAttribute("aria-label")).ToArray()));
     }
 
@@ -231,7 +231,7 @@ public sealed class ComposerReferencePickerTests
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = new();
-        GatedSearchProvider gated = new(SearchFilter.Teammates, isExpensive: false);
+        GatedSearchProvider gated = new(SearchFilter.Agents, isExpensive: false);
         await using MudBunitContext ctx = NewContext(harness, [gated]);
         IRenderedComponent<ContainerFragment> cut = RenderComposer(ctx);
         IRenderedComponent<Composer> composer = cut.FindComponent<Composer>();
@@ -248,7 +248,7 @@ public sealed class ComposerReferencePickerTests
     /// <summary>One stub provider per group, each with a hit that the picker can pick.</summary>
     private static ISearchProvider[] All() =>
     [
-        new StubProvider(SearchFilter.Teammates, emily),
+        new StubProvider(SearchFilter.Agents, emily),
         new StubProvider(SearchFilter.Tasks, task),
         new StubProvider(SearchFilter.Rooms, room),
         new StubProvider(SearchFilter.Teams, team),

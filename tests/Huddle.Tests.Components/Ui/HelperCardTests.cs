@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using static Agency.Huddle.Tests.Ui.TeammateCardTestSupport;
+using static Agency.Huddle.Tests.Ui.AgentProfileCardTestSupport;
 
 namespace Agency.Huddle.Tests.Ui;
 

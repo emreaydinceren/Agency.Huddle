@@ -8,7 +8,7 @@ public sealed class TabServiceTests
     {
         TabService service = new();
 
-        Tab tab = service.Open("/teammates");
+        Tab tab = service.Open("/agents");
 
         Assert.True(tab.IsPreview);
         Assert.Equal(tab, service.Active);
@@ -20,7 +20,7 @@ public sealed class TabServiceTests
     public void Open_WhilePreviewExists_ReplacesItInPlace()
     {
         TabService service = new();
-        service.Open("/teammates");
+        service.Open("/agents");
 
         service.Open("/settings");
 
@@ -34,7 +34,7 @@ public sealed class TabServiceTests
     public void Open_AfterPin_AddsPreviewRightOfActive()
     {
         TabService service = new();
-        Tab first = service.Open("/teammates");
+        Tab first = service.Open("/agents");
         service.Keep(first.Id);
         Tab second = service.Open("/settings");
         service.Keep(second.Id);
@@ -42,7 +42,7 @@ public sealed class TabServiceTests
 
         Tab third = service.Open("/library");
 
-        Assert.Equal(["teammates", "library", "settings"], service.Tabs.Select(static t => t.Key));
+        Assert.Equal(["agents", "library", "settings"], service.Tabs.Select(static t => t.Key));
         Assert.Equal(third, service.Active);
     }
 
@@ -53,7 +53,7 @@ public sealed class TabServiceTests
         TabService service = new();
         Tab library = service.Open("/library?scopeRoot=a&scopePath=");
         service.Keep(library.Id);
-        service.Open("/teammates");
+        service.Open("/agents");
 
         Tab again = service.Open("/library?scopeRoot=b&scopePath=");
 
@@ -69,11 +69,11 @@ public sealed class TabServiceTests
     public void Open_UnchangedActiveTab_DoesNotRaiseChanged()
     {
         TabService service = new();
-        service.Open("/teammates");
+        service.Open("/agents");
         int raised = 0;
         service.Changed += () => raised++;
 
-        service.Open("/teammates");
+        service.Open("/agents");
 
         Assert.Equal(0, raised);
     }
@@ -108,7 +108,7 @@ public sealed class TabServiceTests
     public void Close_Active_ActivatesRightNeighbour()
     {
         TabService service = new();
-        Tab a = service.Open("/teammates");
+        Tab a = service.Open("/agents");
         service.Keep(a.Id);
         Tab b = service.Open("/settings");
         service.Keep(b.Id);
@@ -126,7 +126,7 @@ public sealed class TabServiceTests
     public void Close_LastTabs_FallsLeftThenNone()
     {
         TabService service = new();
-        Tab a = service.Open("/teammates");
+        Tab a = service.Open("/agents");
         service.Keep(a.Id);
         Tab b = service.Open("/settings");
 
@@ -143,7 +143,7 @@ public sealed class TabServiceTests
     public void Close_Background_KeepsActive()
     {
         TabService service = new();
-        Tab a = service.Open("/teammates");
+        Tab a = service.Open("/agents");
         service.Keep(a.Id);
         Tab b = service.Open("/settings");
 
@@ -211,7 +211,7 @@ public sealed class TabServiceTests
     public void Restore_ThenOpen_MintsFreshId()
     {
         TabService source = new();
-        Tab a = source.Open("/teammates");
+        Tab a = source.Open("/agents");
         source.Keep(a.Id);
         TabService target = new();
         target.Restore(source.Export());
@@ -231,7 +231,7 @@ public sealed class TabServiceTests
     public void Restore_UnusableStorage_IsRefusedAndKeepsTabs(string? json)
     {
         TabService service = new();
-        service.Open("/teammates");
+        service.Open("/agents");
 
         bool accepted = service.Restore(TabSnapshot.TryParse(json));
 
@@ -266,7 +266,7 @@ public sealed class TabServiceTests
             new TabGroupSnapshot(
                 TabGroupSnapshot.GroupKind,
                 "t1",
-                [new TabSnapshotEntry("t1", "/settings", "Settings", "settings", true), new TabSnapshotEntry("t2", "/teammates", "Teammates", "teammates", true)]));
+                [new TabSnapshotEntry("t1", "/settings", "Settings", "settings", true), new TabSnapshotEntry("t2", "/agents", "Agents", "agents", true)]));
         TabService service = new();
 
         Assert.False(service.Restore(snapshot));
@@ -277,7 +277,7 @@ public sealed class TabServiceTests
     public void ActivateRelative_WrapsAtBothEnds()
     {
         TabService service = new();
-        Tab a = service.Open("/teammates");
+        Tab a = service.Open("/agents");
         service.Keep(a.Id);
         Assert.Null(service.ActivateRelative(1));
         Tab b = service.Open("/settings");

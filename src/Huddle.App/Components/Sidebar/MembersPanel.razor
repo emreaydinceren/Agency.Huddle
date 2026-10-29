@@ -150,7 +150,7 @@
         }
     }
 
-    /// <summary>An Agent's state, resolved as the Teammates page resolves it.</summary>
+    /// <summary>An Agent's state, resolved as the Agents page resolves it.</summary>
     /// <param name="member">The Agent user.</param>
     private PersonaState StateOf(User member) =>
         PersonaStatusResolver.Resolve(this.Gateway.IsOnline(member.Id), this.Health.Get(member.Name)).State;

@@ -21,13 +21,13 @@
     THE BACKGROUND: "no background chosen" is null, and the background changes only in OnBackgroundPickedAsync, which
     only a press on a swatch reaches, so nothing is written on first render (docs/engineering/traps.md). The swatches
     are a radio group of 32px circles drawn with the avatar recipe for the current mode (audit B8h), one per
-    AvatarPalette.Swatches entry, the same set a new Teammate's random colour is drawn from, each with its colour name.
+    AvatarPalette.Swatches entry, the same set a new Agent's random colour is drawn from, each with its colour name.
     A stored colour outside the palette highlights no swatch and is kept until one is pressed. A background sits behind
     initials or a label; an image covers it, so under "An image" the swatches are not offered - the stored colour is
     left alone.
 
     The library (audit B8k): "Choose from library" opens the Avatar Library. Outside a dialog (Settings) that is a dialog
-    of its own. Inside one (the Teammate card's avatar dialog) a third dialog would stack three deep, so the library
+    of its own. Inside one (the Agent card's avatar dialog) a third dialog would stack three deep, so the library
     replaces the editor's content in the same dialog, with a Back button, and the dialog is widened to the library's
     width meanwhile; the editor's working state stays in this component's fields, so Back returns to it untouched.
     LibraryOpenChanged tells the hosting dialog so it can retitle itself and hide its own buttons.
@@ -55,7 +55,7 @@ else
 {
 <div class="avatar-editor">
     <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
-        <TeammateAvatar Name="@this.Name" Avatar="this.Working" Size="Size.Large"
+        <AgentAvatar Name="@this.Name" Avatar="this.Working" Size="Size.Large"
                         PendingImage="this.pendingBytes" PendingImageExtension="@this.pendingExtension" />
     </MudStack>
 
@@ -217,7 +217,7 @@ else
         }
     }
 
-    /// <summary>Sets every field from <paramref name="avatar"/>, deriving the choice from which of image and label is set - the precedence <see cref="TeammateAvatar"/> renders by - and dropping any pending image and error.</summary>
+    /// <summary>Sets every field from <paramref name="avatar"/>, deriving the choice from which of image and label is set - the precedence <see cref="AgentAvatar"/> renders by - and dropping any pending image and error.</summary>
     /// <param name="avatar">The avatar to show.</param>
     private void Seed(Avatar avatar)
     {

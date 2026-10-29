@@ -58,7 +58,7 @@ layout table names, with the frontmatter fields in the canonical order and nothi
 **Before you start**
 
 - `E-FREE` app running, `Team:Tasks:Enabled` at its default `true`.
-- A Team named `Platform` exists. On fresh data the only Teams are those the built-in Teammate
+- A Team named `Platform` exists. On fresh data the only Teams are those the built-in Agent
   labels, and the Task **Team** field is a pick list, not free text (`TaskDetail.razor:334`), so
   create it first: make the folder `<data>\Teams\Platform` and reload the page.
 - No Task named `PLAT-` exists yet, or you accept whatever id the allocator gives next.
@@ -413,7 +413,7 @@ couple of seconds after the file save before clicking Save in the panel and retr
 
 **Free** · about 10 min
 
-*Proves `RenameTeammate`'s Tasks-side cascade: every Task assigned to the renamed Persona, and
+*Proves `RenameAgent`'s Tasks-side cascade: every Task assigned to the renamed Persona, and
 every View filtering on its old name, follows the rename — and that a rename itself never wakes
 anyone (D-25).*
 
@@ -426,7 +426,7 @@ anyone (D-25).*
 **Steps**
 
 1. Note the assigned Task's file path and the filtering View's saved filter before the rename.
-2. Rename the Persona on its Teammate card (Edit → change **Name** → Save).
+2. Rename the Persona on its Agent card (Edit → change **Name** → Save).
 3. In `T-B`, read the Task's `.md` file and confirm the `assignee:` field.
 4. Reopen the View and read its Assignee filter.
 5. Open the Task's Change log and read its newest entries.
@@ -561,7 +561,7 @@ otherwise sustain, and that the Human's Allow N more resumes it.*
   indefinitely, and the Room did not hit its own Budget first (the banner below is what stopped
   it).
 - The TaskDetail banner reads exactly `Wake-ups for this task are paused after 10 changes by
-  Teammates.` with a button reading `Allow 10 more`.
+  Agents.` with a button reading `Allow 10 more`.
 - Clicking **Allow 10 more** resumes wake-ups (visible as further Change log entries / Turns), and
   a second exhaustion pauses again at the same message.
 - No non-Task Room's Budget is affected by this loop.

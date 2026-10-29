@@ -34,7 +34,7 @@ public sealed partial class R3FixTests
         Assert.True(unexpected.Count == 0, $"Chip text under 4.5:1: {string.Join(", ", unexpected)}");
     }
 
-    /// <summary>No field wearing <c>toolbar-compact</c> sets a Label: a 28px box cannot carry a floating label, and the rule hides one so it can never be drawn over the value (round 3: Teammates "Team" over "All teams").</summary>
+    /// <summary>No field wearing <c>toolbar-compact</c> sets a Label: a 28px box cannot carry a floating label, and the rule hides one so it can never be drawn over the value (round 3: Agents "Team" over "All teams").</summary>
     [Fact]
     public void ToolbarCompactFields_HaveNoLabel()
     {

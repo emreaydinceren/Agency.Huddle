@@ -32,7 +32,7 @@ public sealed class ReferenceQueryParserTests
     /// <param name="filter">The filter the prefix sets.</param>
     /// <param name="phrase">The phrase after the prefix.</param>
     [Theory]
-    [InlineData("teammate:nova", SearchFilter.Teammates, "nova")]
+    [InlineData("agent:nova", SearchFilter.Agents, "nova")]
     [InlineData("task:fix", SearchFilter.Tasks, "fix")]
     [InlineData("room:launch", SearchFilter.Rooms, "launch")]
     [InlineData("team:market", SearchFilter.Teams, "market")]
@@ -64,13 +64,13 @@ public sealed class ReferenceQueryParserTests
         Assert.Equal(new SearchParse(SearchFilter.Tasks, string.Empty, true), parse);
     }
 
-    /// <summary>After <c>/invite </c>, the picker lists Teammates whatever the prefix typed.</summary>
+    /// <summary>After <c>/invite </c>, the picker lists Agents whatever the prefix typed.</summary>
     [Fact]
-    public void InviteCommand_PinsTeammates()
+    public void InviteCommand_PinsAgents()
     {
         SearchParse parse = ReferenceQueryParser.Parse("task:nova", '@', true);
 
-        Assert.Equal(new SearchParse(SearchFilter.Teammates, "nova", true), parse);
+        Assert.Equal(new SearchParse(SearchFilter.Agents, "nova", true), parse);
     }
 
     /// <summary>The prefix is read whatever its case, as the search box reads it.</summary>

@@ -19,7 +19,7 @@ public static class SearchDropdownModel
     private static readonly SearchFilter[] AllGroups =
     [
         SearchFilter.Teams,
-        SearchFilter.Teammates,
+        SearchFilter.Agents,
         SearchFilter.Library,
         SearchFilter.Tasks,
         SearchFilter.Rooms,
@@ -29,7 +29,7 @@ public static class SearchDropdownModel
     private static readonly SearchSlot[] Slots =
     [
         new(SearchFilter.Teams, SearchScope.Active, "Teams", "search-group-teams-active"),
-        new(SearchFilter.Teammates, SearchScope.Active, "Teammates", "search-group-teammates-active"),
+        new(SearchFilter.Agents, SearchScope.Active, "Agents", "search-group-agents-active"),
         new(SearchFilter.Library, SearchScope.Active, "Library", "search-group-library-active"),
         new(SearchFilter.Tasks, SearchScope.Active, "Tasks", "search-group-tasks-active"),
         new(SearchFilter.Tasks, SearchScope.Archived, "Closed Tasks", "search-group-tasks-archived"),
@@ -162,7 +162,7 @@ public static class SearchDropdownModel
         rows.Add(new SearchHeadingRow(slot.Id, slot.Heading, slot.Scope == SearchScope.Archived, false));
         if (noMatchLine)
         {
-            // Browsing Teams or Teammates with an empty box has no term to name.
+            // Browsing Teams or Agents with an empty box has no term to name.
             string noMatch = parse.Phrase.Length == 0
                 ? $"Nothing in {slot.Heading}."
                 : $"Nothing in {slot.Heading} matches '{parse.Phrase}'.";

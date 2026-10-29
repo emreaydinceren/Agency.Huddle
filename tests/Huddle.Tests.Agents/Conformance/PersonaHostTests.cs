@@ -118,11 +118,11 @@ public sealed class PersonaHostTests
 
     /// <summary>
     /// Manager's review of 3.4.i: nothing in 3.4.t proves <see cref="DotAcpAgentHostFactory"/> itself
-    /// waits on a pending Teammate-folder move (corrections-B2 item 20) - only that
-    /// <see cref="TeammateFolderMoves.WhenSettledAsync"/> behaves correctly in isolation. A pending
-    /// <see cref="TeammateFolderMoves.Begin"/> for the Persona's Name holds
+    /// waits on a pending Agent-folder move (corrections-B2 item 20) - only that
+    /// <see cref="AgentFolderMoves.WhenSettledAsync"/> behaves correctly in isolation. A pending
+    /// <see cref="AgentFolderMoves.Begin"/> for the Persona's Name holds
     /// <see cref="IAgentHostFactory.StartAsync"/> from creating its Work Dir until
-    /// <see cref="TeammateFolderMoves.Complete"/> releases it - gate-driven via the pending Task, no
+    /// <see cref="AgentFolderMoves.Complete"/> releases it - gate-driven via the pending Task, no
     /// sleeps.
     /// </summary>
     [Fact]
@@ -131,7 +131,7 @@ public sealed class PersonaHostTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         await using Fixture fixture = await Fixture.StartAsync(ct);
         TaskCompletionSource handle = fixture.Moves.Begin(fixture.Persona.Name);
-        string workDir = Path.Combine(fixture.DataDir, "Teammates", fixture.Persona.Name, "work");
+        string workDir = Path.Combine(fixture.DataDir, "Agents", fixture.Persona.Name, "work");
 
         Task<IPersonaHost> starting = fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
 
@@ -177,7 +177,7 @@ public sealed class PersonaHostTests
         string firstPrompt = await fixture.AppendedSystemPromptAsync(occurrence: 1, ct);
         Assert.DoesNotContain("Porto trip notes", firstPrompt, StringComparison.Ordinal);
 
-        string memoryDir = Path.Combine(fixture.DataDir, "Teammates", fixture.Persona.Name, "work", "memory");
+        string memoryDir = Path.Combine(fixture.DataDir, "Agents", fixture.Persona.Name, "work", "memory");
         await File.WriteAllTextAsync(Path.Combine(memoryDir, "porto.md"), "# Porto trip notes\n", ct);
 
         _ = await host.OpenAsync(ct);
@@ -363,8 +363,8 @@ public sealed class PersonaHostTests
 
         internal IAgentHostFactory Factory => this.host.Services.GetRequiredService<IAgentHostFactory>();
 
-        /// <summary>The same <see cref="TeammateFolderMoves"/> singleton <see cref="Factory"/> awaits before creating a Persona's Work Dir.</summary>
-        internal TeammateFolderMoves Moves => this.host.Services.GetRequiredService<TeammateFolderMoves>();
+        /// <summary>The same <see cref="AgentFolderMoves"/> singleton <see cref="Factory"/> awaits before creating a Persona's Work Dir.</summary>
+        internal AgentFolderMoves Moves => this.host.Services.GetRequiredService<AgentFolderMoves>();
 
         /// <summary>Starts the harness, optionally pinning <c>Acp:AdvertiseElicitation</c>.</summary>
         /// <param name="cancellationToken">Cancels startup.</param>

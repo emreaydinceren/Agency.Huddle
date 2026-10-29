@@ -263,7 +263,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         }
     }
 
-    /// <summary>Replaces every <c>@</c> with <c>@</c> + U+2060 (word joiner), so Task text can't Mention a Teammate (corrections-B3 D9 item 16).</summary>
+    /// <summary>Replaces every <c>@</c> with <c>@</c> + U+2060 (word joiner), so Task text can't Mention an Agent (corrections-B3 D9 item 16).</summary>
     /// <param name="text">Task-authored text: a title or a Change log summary.</param>
     /// <returns>The text with every Mention neutralised.</returns>
     private static string NeutraliseMentions(string text) =>
@@ -828,7 +828,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     /// OR-2: wakes the Team's manager (from <c>_team.md</c>) about the same change, unless wake-ups
     /// are off, the manager made the change, already is the assignee (so was woken above), is the
     /// Human, or is no known Persona. The wake goes through <see cref="DeliverAsync"/>, so it consumes
-    /// the same per-Task Teammate-made wake budget as the assignee's. A Team with no manager, or no
+    /// the same per-Task Agent-made wake budget as the assignee's. A Team with no manager, or no
     /// catalog, behaves as before.
     /// </summary>
     /// <param name="batch">The batch, already removed from <see cref="batches"/>.</param>

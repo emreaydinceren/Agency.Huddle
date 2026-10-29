@@ -30,7 +30,7 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
     /// <summary>The most known-extension boundaries tried per plain-text candidate start (corrections-B6 item 2).</summary>
     private const int MaxCandidateEnds = 8;
 
-    /// <summary>The Teammates-root Work Dir folder name, matching <see cref="LibraryPathResolver"/>'s own
+    /// <summary>The Agents-root Work Dir folder name, matching <see cref="LibraryPathResolver"/>'s own
     /// (currently unconfigurable) convention for classifying a folder as a Work Dir.</summary>
     private const string WorkDirFolderName = "work";
 
@@ -319,7 +319,7 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
 
     /// <summary>
     /// Builds a document's §6.14 location label from its <see cref="LibraryPath"/>: <c>Team {Team}</c>,
-    /// <c>Team {Team}, Project {Project}</c>, <c>{Name}'s Work Dir</c>, <c>teammate {Name}</c> (corrections-B6
+    /// <c>Team {Team}, Project {Project}</c>, <c>{Name}'s Work Dir</c>, <c>agent {Name}</c> (corrections-B6
     /// item 4), <c>pinned root "{Name}"</c> or <c>upload</c> for a file in the Uploads root.
     /// </summary>
     private async Task<string> ResolveLocationAsync(LibraryPath path, CancellationToken ct)
@@ -348,15 +348,15 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
                 : string.Create(CultureInfo.InvariantCulture, $"Team {segments[0]}");
         }
 
-        string teammateFolder = segments[0];
-        string name = await this.ResolveTeammateNameAsync(path.Root, teammateFolder, ct).ConfigureAwait(false) ?? teammateFolder;
+        string agentFolder = segments[0];
+        string name = await this.ResolveAgentNameAsync(path.Root, agentFolder, ct).ConfigureAwait(false) ?? agentFolder;
 
         if (segments.Length >= 3 && FolderSnapshot.PathComparer.Equals(segments[1], LibraryDocumentCollector.WorkDirFolderName))
         {
             return string.Create(CultureInfo.InvariantCulture, $"{name}'s Work Dir");
         }
 
-        return string.Create(CultureInfo.InvariantCulture, $"teammate {name}");
+        return string.Create(CultureInfo.InvariantCulture, $"agent {name}");
     }
 
     /// <summary>
@@ -371,11 +371,11 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
             : "upload";
     }
 
-    /// <summary>Reads a Teammate's definition file and returns its frontmatter <c>Name</c>, or
+    /// <summary>Reads an Agent's definition file and returns its frontmatter <c>Name</c>, or
     /// <see langword="null"/> when the definition can't be resolved, read or parsed.</summary>
-    private async Task<string?> ResolveTeammateNameAsync(LibraryRoot teammatesRoot, string teammateFolder, CancellationToken ct)
+    private async Task<string?> ResolveAgentNameAsync(LibraryRoot agentsRoot, string agentFolder, CancellationToken ct)
     {
-        if (!this.resolver.TryResolve(teammatesRoot.Id, $"{teammateFolder}/{teammateFolder}.md", out LibraryPath? definitionPath, out _))
+        if (!this.resolver.TryResolve(agentsRoot.Id, $"{agentFolder}/{agentFolder}.md", out LibraryPath? definitionPath, out _))
         {
             return null;
         }

@@ -11,7 +11,7 @@ For which file holds what, see [Code map](code-map.md). Back to the hub:
   Browser (Blazor Server circuit)
       │
       ├── /            Chat.razor ──────┐
-      └── /teammates   Teammates.razor  │
+      └── /agents   Agents.razor  │
                                         ↓
                               ChatService          the only writer of Messages
                                     │
@@ -80,7 +80,7 @@ thrown exception — the model reads the text and corrects itself.
 
 **Anyone issues an Invitation.** Three entry points, one body. The Human types
 `/invite @name` (`ChatService.SubmitFromComposerAsync`) or clicks **Add
-teammate** (`InviteTeammate.razor`); an Agent calls `mcp__team__invite_agent`
+agent** (`InviteAgent.razor`); an Agent calls `mcp__team__invite_agent`
 (`InviteAgentTool`, on a Kestrel thread). All three reach
 `ChatService.InviteAsync`, which adds the Member, renames the Room after its
 Agents and publishes `RoomsChanged`. Adding a fourth entry point means finding

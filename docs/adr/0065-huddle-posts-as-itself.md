@@ -53,6 +53,6 @@ Notification. The Human loses an ask they never saw, because of something they n
 | Alternative | Why not |
 | --- | --- |
 | Keep posting as the Human | It clears the Human's own asks. The Human did nothing |
-| Post as the Helper, as a Room Member | A Helper is not a Teammate (ADR-0064): no Room, no Membership, no Messages |
+| Post as the Helper, as a Room Member | A Helper is not an Agent (ADR-0064): no Room, no Membership, no Messages |
 | Don't wake the assignee on a Helper's change | The assignee needs to know the Task now waits for the Human (ADR-0026) |
-| Add Huddle as a `User` and a Member of every Room | It would show in Members lists, `@` pickers and Search as if it were a Teammate |
+| Add Huddle as a `User` and a Member of every Room | It would show in Members lists, `@` pickers and Search as if it were an Agent |

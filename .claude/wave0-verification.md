@@ -52,7 +52,7 @@ that do not measure the same thing.
 ## Two traps that will silently waste your run
 
 **1. Check order is load-bearing.** Check C needs a **cold model catalog**, which
-only exists on the first teammate-card open of an app run. Check B **stops the
+only exists on the first agent-profile-card open of an app run. Check B **stops the
 server**, ending the session. So C runs first and B runs last. Any other order
 costs a relaunch.
 
@@ -100,14 +100,14 @@ build.
 
 ## Step 3 — Warm run (sets up Check C only)
 
-Check C needs a teammate whose stored Model **is** in the adapter's catalog.
+Check C needs an agent whose stored Model **is** in the adapter's catalog.
 Setting one warms the catalog, so it must happen in a throwaway run.
 
 ```powershell
 dotnet run --project src\Huddle.App -- --urls http://localhost:5100 --Team:Acp:Enabled=false
 ```
 
-1. Open `http://localhost:5100/teammates`, click **Nova**, click **Edit**.
+1. Open `http://localhost:5100/agents`, click **Nova**, click **Edit**.
 2. Wait for the Model dropdown to populate (up to ~10 seconds). A
    `claude-agent-acp` adapter process appears for about a second — this is
    expected and documented in `docs/engineering/known-limits.md`. It is **not**
@@ -135,7 +135,7 @@ Haiku until the adapter probe returns.
 
 ### Action
 
-Navigate to `/teammates`, click **Nova**, click **Edit** — within a second or two
+Navigate to `/agents`, click **Nova**, click **Edit** — within a second or two
 of the page being ready. Immediately run:
 
 ```js
@@ -178,7 +178,7 @@ what you could and could not observe.
 # Check D — #28, the danger colour
 
 **Issue #28:** *Every destructive button renders in plain text colour:
-`.teammate-card-action` overrides `.teammates-danger`.*
+`.agent-profile-card-action` overrides `.agents-danger`.*
 
 ### Action
 
@@ -202,7 +202,7 @@ character.
 | `Reset all to defaults` renders a red/error colour, visibly different from the plain per-field `Reset` | `#28 FIXED` |
 | Both render the same colour | `#28 SURVIVES` |
 
-Expected outcome is FIXED: `.teammate-card-action` no longer exists on `main`,
+Expected outcome is FIXED: `.agent-profile-card-action` no longer exists on `main`,
 and all four destructive buttons are now `<MudButton Color="Color.Error">`.
 
 ---
@@ -258,7 +258,7 @@ room-change guard.
 
 ### F2 — #20, `Open` silently doing nothing
 
-Go to `/teammates`, click any teammate, click **Open**. Watch for: a window
+Go to `/agents`, click any agent, click **Open**. Watch for: a window
 opening, a red line on the card, and any new line in the app console.
 
 | Observation | Verdict |

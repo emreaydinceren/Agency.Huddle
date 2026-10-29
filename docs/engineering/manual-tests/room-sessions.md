@@ -32,7 +32,7 @@ V-3 and V-5, which this page numbers RS-V3 and RS-V5 so they do not collide with
 Run [`P-BUILD`](common.md#p-build), then `P-LAUNCH-PAID` — every test here spends money, so
 there is no free lane to start from. This area adds:
 
-1. **One Teammate, Nova, created through [`P-NEW-PERSONA`](common.md#p-new-persona)** with Model
+1. **One Agent, Nova, created through [`P-NEW-PERSONA`](common.md#p-new-persona)** with Model
    Haiku and Effort `low` (§0.3), alias `nova`. The built-in Chief of Staff is already Haiku / low
    after `P-LAUNCH-PAID`'s first step; RS-M10 uses it. Several tests name a before/after
    comparison (RS-M1, RS-M3): keep the Model and the Effort identical between the two runs and
@@ -44,7 +44,7 @@ there is no free lane to start from. This area adds:
    **every** prompt with `@Nova`: a Room of three or more answers only a Mention
    (`ReplyGate.cs`). The bot answers only when mentioned, so it stays silent. "Room A" and
    "Room B" below are two such Rooms, named as the test says.
-3. **A Room with no baseline lists nothing.** The first Turn a Teammate takes in a Room reports
+3. **A Room with no baseline lists nothing.** The first Turn an Agent takes in a Room reports
    no File Changes at all (`FileChangeTracker.cs:38-40, 66-69`), so a test that reads a File
    Changes line takes one throwaway Turn (`@Nova hello`) in that Room first.
 4. **`Team:Acp:Adapters` replaces the built-in `claude` Adapter Profile, it does not add to it**
@@ -64,15 +64,15 @@ there is no free lane to start from. This area adds:
    ] } }
    ```
 
-   A Teammate picks its Adapter on its card's **Adapter** select, which renders only when more
-   than one Profile exists (`TeammateCard.razor:310`). Keep the stock `claude` Profile's settings
+   An Agent picks its Adapter on its card's **Adapter** select, which renders only when more
+   than one Profile exists (`AgentProfileCard.razor:310`). Keep the stock `claude` Profile's settings
    in both entries (`AdapterCatalog.cs:62-75`) so the only difference between them is
    `SessionPerRoom`. `agency-acp` is a separate binary this repository does not supply; RS-V5
    needs it on `PATH`.
 5. **`TraceWire` is not used on this page.** It prints the tool server's bearer token and common.md
    forbids it ([Standing conventions](common.md#standing-conventions)). The oracles instead are
    the Room Session store, `<data>\room-sessions\<Name>.json` (`RoomSessionStore.cs:51, 225`),
-   one file per Teammate holding, per Room id, the Adapter's `SessionId`, the `AdapterId` and
+   one file per Agent holding, per Room id, the Adapter's `SessionId`, the `AdapterId` and
    `LastTurnUtc`; `O-TOOLCALLS` for tool calls; the Rooms themselves; and `O-ADAPTERS-LIST`. A
    `SessionId` that is unchanged across an idle close, a restart or a rename means the session
    was **resumed**; a different one means a **fresh** session replaced it. Copy the file's
@@ -101,7 +101,7 @@ merges them, and a recap never invents what it cannot see (RS §2 U0).*
 - Nova exists (Setup 1), on the `claude-shared` Profile for the **before** run and on `claude`
   for the **after** run (Setup 4), with the same Model and Effort in both.
 - Two Rooms named "Lisbon trip" and "Porto trip", each with Nova and the pipe bot (Setup 2).
-- Nova's Work Dir is `<data>\Teammates\Nova\work`.
+- Nova's Work Dir is `<data>\Agents\Nova\work`.
 
 **Steps**
 
@@ -115,7 +115,7 @@ merges them, and a recap never invents what it cannot see (RS §2 U0).*
 4. Push towards compaction: send `@Nova /compact` in each Room (the leading `/` must follow the
    Mention; a bare `/compact` is refused with a red `Unknown command`, `ChatService.cs:414-419`).
    The **Adapter's commands** list on Nova's card names `/compact` if the Profile offers it
-   (`TeammateCard.razor:135`). The oracle is the Message Nova posts back, starting
+   (`AgentProfileCard.razor:135`). The oracle is the Message Nova posts back, starting
    `Compacted my conversation` (`AdapterCommandOutcome.cs:57`). If the Adapter reports no token
    figures that Message may not appear; then paste long filler text instead and record that
    compaction was not observed.
@@ -159,7 +159,7 @@ route, attributed.*
 **Steps**
 
 1. In Room A: `@Nova answer in French from now on`, then `@Nova I prefer C# for any code`.
-2. Open Nova's Work Dir, `<data>\Teammates\Nova\work`, and read whichever memory file Nova
+2. Open Nova's Work Dir, `<data>\Agents\Nova\work`, and read whichever memory file Nova
    wrote or changed, if any ([`O-FILE`](common.md#o-file)). Copy what it says about French and C#.
 3. In Room B ask a coding question: `@Nova write a function that reverses a string`.
 
@@ -301,7 +301,7 @@ what it knew, both across an idle window and across the app itself restarting.*
 
 **Paid** · about 15 min · one Restart, one follow-up
 
-*Proves RS D-14: the Restart button on a Teammate's card is not the same thing as an app
+*Proves RS D-14: the Restart button on an Agent's card is not the same thing as an app
 restart — it forgets every Room Session on purpose.*
 
 **Before you start**
@@ -313,7 +313,7 @@ restart — it forgets every Room Session on purpose.*
 **Steps**
 
 1. On Nova's card press **Restart** (shown in every state except Starting,
-   `TeammateCard.razor:182, 234`) and wait for Online.
+   `AgentProfileCard.razor:182, 234`) and wait for Online.
 2. Copy `<data>\room-sessions\Nova.json`: the Room's entry should be gone.
 3. In the Room: `@Nova what is the code word?`
 4. Copy the file again (**id after**).
@@ -346,7 +346,7 @@ shape stays available and correct for an Adapter Room Sessions is not yet verifi
 **Before you start**
 
 - The two-Profile array of Setup 4 is configured and the app relaunched.
-- A second Teammate **Wren** (`P-NEW-PERSONA`, Haiku / low) with **Adapter** set to
+- A second Agent **Wren** (`P-NEW-PERSONA`, Haiku / low) with **Adapter** set to
   `Claude (shared session)` on its card, and Nova still on `Claude`.
 - Two Rooms each with Wren and the pipe bot (Setup 2), each with a baseline `@Wren hello`.
 
@@ -562,7 +562,7 @@ Persona configured on `agency-acp` keeps `SessionPerRoom: false`.*
     "SessionPerRoom": true }
   ```
 
-- A Teammate on that Profile, in two Rooms each with the pipe bot (Setup 2).
+- An Agent on that Profile, in two Rooms each with the pipe bot (Setup 2).
 
 **Steps**
 

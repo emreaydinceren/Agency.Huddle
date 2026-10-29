@@ -35,7 +35,7 @@ internal sealed record LibraryProtection(bool CanRename, bool CanMove, bool CanD
         {
             LibraryNodeRole.Root => new LibraryProtection(false, false, false, "A Library root can't be renamed, moved or deleted."),
             LibraryNodeRole.TeamFolder or LibraryNodeRole.ProjectFolder => new LibraryProtection(false, false, false, "Team and Project folders can't be renamed, moved or deleted here."),
-            LibraryNodeRole.TeammateFolder or LibraryNodeRole.TeammateDefinition or LibraryNodeRole.WorkDir => new LibraryProtection(false, false, false, "Teammate folders can't be renamed, moved or deleted here."),
+            LibraryNodeRole.AgentFolder or LibraryNodeRole.AgentDefinition or LibraryNodeRole.WorkDir => new LibraryProtection(false, false, false, "Agent folders can't be renamed, moved or deleted here."),
             LibraryNodeRole.Folder or LibraryNodeRole.File => new LibraryProtection(true, true, true, null),
             _ => throw new InvalidOperationException($"Unknown role: {path.Role}"),
         };

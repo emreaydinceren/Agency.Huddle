@@ -6,7 +6,7 @@ namespace Agency.Huddle.Tests.Library;
 
 /// <summary>
 /// Tests for <see cref="LibraryFileService.WriteTextAsync"/> (Spec §6.4 <c>WriteTextAsync</c>,
-/// ADR-0028 byte-exact round trips, §6.8 freshness, §6.12 Teammates-page-only rename), and
+/// ADR-0028 byte-exact round trips, §6.8 freshness, §6.12 Agents-page-only rename), and
 /// corrections-B4 items 12-18.
 /// </summary>
 public sealed class LibraryFileServiceWriteTests
@@ -383,15 +383,15 @@ public sealed class LibraryFileServiceWriteTests
         Assert.Equal("hi", File.ReadAllText(filePath));
     }
 
-    /// <summary>Saving a Teammate definition with a changed frontmatter Name is refused (Spec §6.12; corrections-B4 item 18).</summary>
+    /// <summary>Saving an Agent definition with a changed frontmatter Name is refused (Spec §6.12; corrections-B4 item 18).</summary>
     [Fact]
-    public async Task Write_TeammateDefinitionNameChanged_Refused()
+    public async Task Write_AgentDefinitionNameChanged_Refused()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        string originalText = fixture.CreateTeammate("ada", "Ada", "ada");
+        string originalText = fixture.CreateAgent("ada", "Ada", "ada");
         LibraryFileService service = fixture.CreateService();
-        LibraryPath path = fixture.ResolveTeammates("ada");
+        LibraryPath path = fixture.ResolveAgents("ada");
         LibraryDocumentContent content = await service.ReadAsync(path, ct);
         Assert.NotNull(content.Format);
         string changedText = "---\nName: Beatrice\nTitle: Chief of Staff\nAlias: ada\n_builtin: chief-of-staff\n---\nbody";
@@ -399,19 +399,19 @@ public sealed class LibraryFileServiceWriteTests
         LibraryResult<LibraryEntry> result = await service.WriteTextAsync(path, changedText, content.Format, ct);
 
         Assert.Null(result.Value);
-        Assert.Equal("Rename teammates on the Teammates page.", result.Error);
+        Assert.Equal("Rename agents on the Agents page.", result.Error);
         Assert.Equal(originalText, File.ReadAllText(path.FullPath));
     }
 
-    /// <summary>Saving a Teammate definition with the frontmatter Name unchanged succeeds (Spec §6.12; corrections-B4 item 18).</summary>
+    /// <summary>Saving an Agent definition with the frontmatter Name unchanged succeeds (Spec §6.12; corrections-B4 item 18).</summary>
     [Fact]
-    public async Task Write_TeammateDefinitionNameUnchanged_Succeeds()
+    public async Task Write_AgentDefinitionNameUnchanged_Succeeds()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        _ = fixture.CreateTeammate("ada", "Ada", "ada");
+        _ = fixture.CreateAgent("ada", "Ada", "ada");
         LibraryFileService service = fixture.CreateService();
-        LibraryPath path = fixture.ResolveTeammates("ada");
+        LibraryPath path = fixture.ResolveAgents("ada");
         LibraryDocumentContent content = await service.ReadAsync(path, ct);
         Assert.NotNull(content.Format);
         string sameNameText = "---\nName: Ada\nTitle: Chief of Staff Updated\nAlias: ada\n_builtin: chief-of-staff\n---\nbody";

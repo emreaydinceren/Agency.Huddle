@@ -1,6 +1,6 @@
 # Helpers
 
-Prove, in a real browser, that the Needs Human Helper turns the Human gate on for a Task a Teammate wrote that leaves the team, leaves a harmless Task alone, never judges a Task the Human turned the gate off on, pauses at its daily cap and asks before it spends more, and fails without touching the Task; and that Settings › Helpers shows and saves all of that. The automated suite proves the dispatcher, the budget, the trigger, the Helper's apply step and the card with a fake process in place of the adapter (no test may reach the real runner, [Rules](../rules.md)); this page proves what only the real adapter and a browser show: that a Haiku call returns JSON the Helper can read, what the card prints, and that a restart loses nothing. The design is [the Helpers spec](../../Huddle.Helpers-Specifications.md); its use cases U-1 to U-12 map to the tests below, and the decision record is [ADR-0064](../../adr/0064-a-helper-judges-an-event-and-the-app-applies-its-verdict.md).
+Prove, in a real browser, that the Needs Human Helper turns the Human gate on for a Task an Agent wrote that leaves the team, leaves a harmless Task alone, never judges a Task the Human turned the gate off on, pauses at its daily cap and asks before it spends more, and fails without touching the Task; and that Settings › Helpers shows and saves all of that. The automated suite proves the dispatcher, the budget, the trigger, the Helper's apply step and the card with a fake process in place of the adapter (no test may reach the real runner, [Rules](../rules.md)); this page proves what only the real adapter and a browser show: that a Haiku call returns JSON the Helper can read, what the card prints, and that a restart loses nothing. The design is [the Helpers spec](../../Huddle.Helpers-Specifications.md); its use cases U-1 to U-12 map to the tests below, and the decision record is [ADR-0064](../../adr/0064-a-helper-judges-an-event-and-the-app-applies-its-verdict.md).
 
 **8 tests** · 3 free · 5 paid 💰 · about 1.4 hours. Written 2026-10-20; **not yet run by a person**. The real adapter was driven by the HL-0 spike on 2026-10-20 (Haiku at low effort: one call cost $0.0024 with the toolless session settings) and by the opt-in automated lane `TEAM_E2E_HELPERS=1 dotnet test tests/Huddle.Tests.Agents -- --filter-class "*HelperLiveTests"` (seven calls: a parseable Verdict with no tool call and under two cents, and the right answer for one outward and one internal Task; it passed on 2026-10-20). None of the browser tests below has been run end to end.
 
@@ -10,7 +10,7 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 Run [`P-BUILD`](common.md#p-build). The paid tests need the **real** Claude adapter, not the mock cast: run `tools/acp/install.ps1` once, sign in to Claude on this computer, and launch the app with `Team:Acp:Enabled` set to true and the default Adapter. Each paid call is one Haiku call at low effort, a fraction of a cent. This area adds:
 
-1. Hire or have two Teammates **Online** on `/teammates`: **Leo**, who writes Tasks, and **Miriam**, a second assignee. Both may run on the real adapter; their own Turns are not what this page tests.
+1. Hire or have two Agents **Online** on `/agents`: **Leo**, who writes Tasks, and **Miriam**, a second assignee. Both may run on the real adapter; their own Turns are not what this page tests.
 2. Open **Settings › Helpers** and note the **Needs Human** card: **On**, `0 of 50 calls today`.
 3. Task files are `{DataDir}\Teams\<Team>\_tasks\<ID>.md`; the Helper's choices and counts are in `{DataDir}\team.db` (tables `helper_settings`, `helper_usage`, `helper_status`, `needs_human_overrides`).
 4. The exact interface strings below are those of the Helpers tab, the Task panel and the Change log. A pass means the text matches, not just the meaning.
@@ -65,7 +65,7 @@ Run [`P-BUILD`](common.md#p-build). The paid tests need the **real** Claude adap
 - At step 3 the card still shows the cap `7`, the switch off and the chip `Off`.
 - At step 4 the cap returns to `50`, the switch to on, and the chip to `On`.
 
-### HELPERS-03 — A Teammate's Task that leaves the team gets the gate (U-1, U-5)
+### HELPERS-03 — An Agent's Task that leaves the team gets the gate (U-1, U-5)
 
 **Paid 💰** · about 12 min · one Haiku call
 
@@ -136,7 +136,7 @@ Run [`P-BUILD`](common.md#p-build). The paid tests need the **real** Claude adap
 
 **Paid 💰** · about 15 min · up to four Haiku calls
 
-*Proves U-7: the pause, the skipped count, Continue's bounded grant, and that Teammates' saves are still saved.*
+*Proves U-7: the pause, the skipped count, Continue's bounded grant, and that Agents' saves are still saved.*
 
 **Before you start**
 
@@ -193,7 +193,7 @@ Run [`P-BUILD`](common.md#p-build). The paid tests need the **real** Claude adap
 
 **Pass if — all of these**
 
-- At step 2 the line is a muted one-line row `<ID> changed by Needs Human (Helper) · human gate on …`, and hovering or opening it shows no avatar or name of yours; Leo answers it as a Teammate would.
+- At step 2 the line is a muted one-line row `<ID> changed by Needs Human (Helper) · human gate on …`, and hovering or opening it shows no avatar or name of yours; Leo answers it as an Agent would.
 - At step 3 the Room is still in **Needs you** with its Mention, and the Budget bar did not reset (the count of Leo's Messages since you last spoke did not fall to 0 because of the wake-up).
 
 ---

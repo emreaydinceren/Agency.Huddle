@@ -11,7 +11,7 @@ feature before it is designed.
 > built 2026-10-18. Where this page and the specification differ, the specification wins; the corrections
 > it made are folded in here (the update card, the catalog's count, the Skills repository, **Learn more**
 > and the move's Source ids). What Packs and Skills do now is in the
-> [User Guide](Huddle.UserGuide.md#giving-teammates-skills).
+> [User Guide](Huddle.UserGuide.md#giving-agents-skills).
 
 This page does not cover writing your own Skill, or Theme style packs, which are a different
 feature that shares the word.
@@ -26,7 +26,7 @@ writing JSON by hand.
 **The answer.** Huddle stops fetching Skills altogether. Your AI tool, which already has your
 sign-ins, clones or downloads them **wherever it likes** and records a **pointer**, a local
 path, in a registry file, **SKILLS.md**. Huddle reads the pointers, checks what they point at,
-and offers the result to your Teammates.
+and offers the result to your Agents.
 
 | Piece | What it is |
 | --- | --- |
@@ -39,14 +39,14 @@ and offers the result to your Teammates.
 
 - **No approval step.** A Pack or Skill that passes the checks is usable as soon as its row
   appears. The checks, not a click, keep out what Huddle cannot use safely.
-- **Teammates do not change behind your back.** Taking a Pack copies its Skills into `Skills/`.
+- **Agents do not change behind your back.** Taking a Pack copies its Skills into `Skills/`.
   When the files at a pointer change, cards show **Update available** and you choose when to
   apply it.
 - **Huddle never goes online for Skills,** never signs in, and never deletes a clone it did not
   make.
 - **Moving to it is automatic.** On first start, today's Packs become `.skillpack.json` files,
   the catalog becomes six `.skillcatalog.json` files, one per repository, and every imported
-  Skill is pointed at. No Teammate restarts.
+  Skill is pointed at. No Agent restarts.
 
 **What it means for the code.** The downloader, the importer and the hire-time installer go.
 A registry reader, one shared library of checks, the `huddle-packs` command and the
@@ -63,7 +63,7 @@ is partly superseded and needs a successor ADR.
   - [Who does what](#who-does-what)
   - [The Skills page at a glance](#the-skills-page-at-a-glance)
   - [Discovering and adding Packs and Skills](#discovering-and-adding-packs-and-skills)
-  - [Choosing a Pack or Skill for a Teammate](#choosing-a-pack-or-skill-for-a-teammate)
+  - [Choosing a Pack or Skill for an Agent](#choosing-a-pack-or-skill-for-an-agent)
   - [Keeping Packs and Skills up to date](#keeping-packs-and-skills-up-to-date)
   - [Deprecated, withdrawn and moved Sources](#deprecated-withdrawn-and-moved-sources)
   - [Removing a Pack, a Skill or a Source](#removing-a-pack-a-skill-or-a-source)
@@ -109,7 +109,7 @@ Settled while envisioning, 2026-10-17. Requirements start from these.
 | A catalog of 263 Skills ships inside the app as `SkillsCatalog.json` | It becomes six `.skillcatalog.json` files, one per repository, each a row in the Catalogs table. Its Skills show as **Not downloaded** until your AI tool fetches them |
 | Huddle downloads Skills from public GitHub: on **Import skill**, and during **Approve & hire** | Huddle downloads nothing. Both places build a prompt for your AI tool, which can reach anything you can sign in to |
 | To add a Pack you write a JSON file in `SkillPacks/` by hand | You paste a prompt into your AI tool. It fetches, writes the Pack file, checks it and adds the row |
-| A Pack never says it is out of date; `_packs` records a version nobody compares | When the files at a pointer differ from what Teammates use, cards show **Update available** |
+| A Pack never says it is out of date; `_packs` records a version nobody compares | When the files at a pointer differ from what Agents use, cards show **Update available** |
 | A Pack cannot be retired | A Source can mark a Pack **Deprecated** or **Withdrawn**, with a reason |
 | Nothing records how a Pack was found | Every Source has a `NOTES.md` the AI tool keeps, and a `source.json` |
 
@@ -117,7 +117,7 @@ Settled while envisioning, 2026-10-17. Requirements start from these.
 
 | Word | Meaning |
 | --- | --- |
-| **Pack** | A named, versioned set of Skills suited to some roles, which a Teammate's card adds or removes as one chip; it can also add a phrase to the Teammate's `consult_when` line ([language.md](engineering/language.md) owns the term) |
+| **Pack** | A named, versioned set of Skills suited to some roles, which an Agent's card adds or removes as one chip; it can also add a phrase to the Agent's `consult_when` line ([language.md](engineering/language.md) owns the term) |
 | **Skill pack file** | `<id>.skillpack.json`: one Pack, with its roles, its `consult_when` phrase, and every Skill in it with its `path` |
 | **Skill catalog file** | `<id>.skillcatalog.json`: any number of Skills from one Source, each with its name, description, publisher, licence, category and `path`, if it has been fetched |
 | **Pointer** | A local path, absolute or relative to the file it is written in. A SKILLS.md row points at a skill pack or skill catalog file; inside those files, each Skill's `path` points at its folder. A path may hold [one entry per computer](#one-path-per-computer). Huddle follows pointers and nothing else |
@@ -136,8 +136,8 @@ Settled while envisioning, 2026-10-17. Requirements start from these.
 | Clones or downloads the Skills, pinned to one commit, to any local path | Does not care where; follows the pointer |
 | Writes the skill pack or skill catalog file, `source.json` and `NOTES.md` | Reads them; shows as **Broken** what fails the schema |
 | Runs the validate command until it passes | Runs the same checks whenever SKILLS.md or a file it points at changes |
-| Adds or updates the row in SKILLS.md, then tells you | Offers the Pack or Skill on Teammate cards as soon as it passes |
-| Checks for updates when you ask | Notices when the files at a pointer differ from Teammates' copies, and shows **Update available** |
+| Adds or updates the row in SKILLS.md, then tells you | Offers the Pack or Skill on Agent cards as soon as it passes |
+| Checks for updates when you ask | Notices when the files at a pointer differ from Agents' copies, and shows **Update available** |
 
 ## The Skills page at a glance
 
@@ -181,12 +181,12 @@ A Pack or Skill shows one of these states:
 | State | Meaning |
 | --- | --- |
 | **New** | Its row appeared since you last opened this tab. It is usable already; the chip only draws your eye |
-| **Available** | Passes the checks; no Teammate holds it |
-| **In use by N** | N Teammates carry it, in `_packs` for a Pack or `skills:` for a Skill |
-| **Update available** | The files at its pointer differ from the copies its Teammates use |
+| **Available** | Passes the checks; no Agent holds it |
+| **In use by N** | N Agents carry it, in `_packs` for a Pack or `skills:` for a Skill |
+| **Update available** | The files at its pointer differ from the copies its Agents use |
 | **Not downloaded** | The file the row points at is fine, but a Skill's `path` in it is empty, leads nowhere, or has no entry for this computer. Every Skill from the shipped catalog starts here |
 | **Deprecated** | Its Source still lists it but advises against it, with a reason |
-| **Withdrawn** | Its Source pulled it. New hires cannot take it; Teammates who hold it are flagged |
+| **Withdrawn** | Its Source pulled it. New hires cannot take it; Agents who hold it are flagged |
 | **Broken** | The pointer leads nowhere, or a check fails. The card names the check and the file |
 
 ### Guidance text on every tab
@@ -202,7 +202,7 @@ The rules:
 | Rule | Why |
 | --- | --- |
 | **Every tab opens with a `SettingsIntro`** of three to five short sentences, using the drafts below as a starting point | The intro is the one place everyone reads; it carries the model |
-| **Define the tab's word in its first sentence**: Skill, Pack or Source | People arrive from a Teammate card without knowing the terms |
+| **Define the tab's word in its first sentence**: Skill, Pack or Source | People arrive from an Agent card without knowing the terms |
 | **Say what Huddle does not do**: it does not download, sign in or delete a clone it did not make | Otherwise people wait for a download that never starts |
 | **Say what happens next** after each action: a copied prompt goes to your AI tool, and a new row is usable once it passes the checks | Nothing visible happens in Huddle between the copy and the new row |
 | **Every state chip and every button has a one-sentence explanation**, shown on hover, on keyboard focus and in Details (`G6`). The chip text uses the [states table](#the-skills-page-at-a-glance) meanings | A chip such as **Not downloaded** means nothing without its cause |
@@ -218,13 +218,13 @@ Draft intros:
 
 | Tab | Intro (draft) |
 | --- | --- |
-| **Skills** | A Skill is a folder of instructions a Teammate reads when its work calls for it. This list shows every Skill Huddle knows about: built in, fetched by your AI tool, or listed in a catalog but not on this computer yet. A Skill marked **Not downloaded** has no folder here yet; **Copy prompt** gives your AI tool what it needs to fetch it. Huddle never downloads Skills itself. Giving a Teammate a Skill copies it to them, so later changes reach them only when you apply an update. |
-| **Packs** | A Pack is a named set of Skills for some roles, such as MSBuild Authoring for developers. Adding a Pack to a Teammate gives them all its Skills at once, and tells them when to use it. Packs come from SKILLS.md, a list your AI tool keeps. To add one, select **Add with your AI tool**, say where it is, and paste the prompt into Claude Code, Codex or a similar tool. Whatever passes Huddle's checks is ready to use; there is no approval step. |
+| **Skills** | A Skill is a folder of instructions an Agent reads when its work calls for it. This list shows every Skill Huddle knows about: built in, fetched by your AI tool, or listed in a catalog but not on this computer yet. A Skill marked **Not downloaded** has no folder here yet; **Copy prompt** gives your AI tool what it needs to fetch it. Huddle never downloads Skills itself. Giving an Agent a Skill copies it to them, so later changes reach them only when you apply an update. |
+| **Packs** | A Pack is a named set of Skills for some roles, such as MSBuild Authoring for developers. Adding a Pack to an Agent gives them all its Skills at once, and tells them when to use it. Packs come from SKILLS.md, a list your AI tool keeps. To add one, select **Add with your AI tool**, say where it is, and paste the prompt into Claude Code, Codex or a similar tool. Whatever passes Huddle's checks is ready to use; there is no approval step. |
 | **Sources** | A Source is one place Skills come from: a GitHub repository, another Git server or a folder on this computer. Your AI tool keeps notes for each Source on how it found and fetched it, so the next update starts from what it learned. Everything here lives in the Skill Sources folder, which you can share with another Huddle. Removing a Source removes its rows and notes, but never the clone itself. Your AI tool reads the install file first; **Copy path** copies its location. |
 
 ## Discovering and adding Packs and Skills
 
-This section is the whole experience, from noticing you need something to a Teammate using it.
+This section is the whole experience, from noticing you need something to an Agent using it.
 
 ### Where you start
 
@@ -237,8 +237,8 @@ gives you a ready prompt, and the prompt carries the path.
 | The Pack bar (`G4b`) | **Add with your AI tool** | Opens `G5` on **Add from a link or folder** |
 | Settings › Skills › Skills tab | **Import skill** | Opens `G5` on **Add from a link or folder** |
 | The Pack bar | **Check for updates** | Opens `G5` on **Check for updates** |
-| A Teammate's card, under its Pack chips | **Find more Packs for Developer** | Opens `G5` on **Find Packs for a role**, with the role filled in |
-| A Teammate's card, the role form or a draft's Skills list | A Skill marked **Not downloaded**, with **Copy prompt** | Copies a prompt to fetch that one Skill |
+| An Agent's card, under its Pack chips | **Find more Packs for Developer** | Opens `G5` on **Find Packs for a role**, with the role filled in |
+| An Agent's card, the role form or a draft's Skills list | A Skill marked **Not downloaded**, with **Copy prompt** | Copies a prompt to fetch that one Skill |
 | A draft card in Build a team | **Needs setup: Pack "MSBuild Authoring" not downloaded** and **Copy prompt** | Copies a prompt to fetch what the role needs |
 | A **Not downloaded** or **Broken** card | **Copy fix prompt** | Copies a prompt that names the row and the failed checks |
 | The Sources tab | **Copy path ▾** beside "Install file" | Copies the path of `InstallSkillPack.md` in the format you pick |
@@ -330,7 +330,7 @@ in Settings › Prompts like every other prompt
    and tells Emre the Pack is ready in Huddle.
 5. Huddle notices the new row within a second. A snackbar says **Document skills is ready ·
    Show**, and the card wears **New**.
-6. On his bookkeeper's card Emre selects the **Document skills** chip. The Teammate restarts
+6. On his bookkeeper's card Emre selects the **Document skills** chip. The Agent restarts
    with the four Skills.
 
 If the AI tool stops halfway, nothing appears in Huddle until a row is in SKILLS.md. If a row
@@ -508,9 +508,9 @@ fetched: it shows in every Skills list as **Not downloaded**, with **Copy prompt
 the shipped catalog appears after [the move](#plan-moving-todays-packs-and-skills). Fetching a
 Skill means the AI tool fills in its `path`; the catalog's row in SKILLS.md stays as it is.
 
-Once its `path` leads to a folder, the Skill can be picked in a Teammate's Skills list, the
+Once its `path` leads to a folder, the Skill can be picked in an Agent's Skills list, the
 role form and a draft's Skills list. `category` and `subCategory` feed the same overlap warning
-a Teammate card shows today.
+an Agent card shows today.
 ### Pack details
 
 ```text
@@ -538,23 +538,23 @@ a Teammate card shows today.
 | --- | --- | --- |
 | `G6` | Details card | Opened from a card's **⋯** › **Details**. The Source and commit, the SKILLS.md row's Last updated and Notes, the roles, the `consult_when` phrase, one row per Skill with licence, file count and the validate warnings, and the Source notes. **Show in Library** opens the Pack file; **Remove** is as in [Removing](#removing-a-pack-a-skill-or-a-source) |
 
-**Unread files** means the Skill has files a Teammate never sees: Teammates read only the
+**Unread files** means the Skill has files an Agent never sees: Agents read only the
 `.md` files directly in a Skill's folder, up to 64 KB each, so `scripts/` and `references/` are
 ignored. A Skill that depends on them may work less well in Huddle than in the tool it was
 written for.
 
-## Choosing a Pack or Skill for a Teammate
+## Choosing a Pack or Skill for an Agent
 
-1. On a Teammate's card, or on a draft in Build a team, select a Pack's chip, or pick a Skill
+1. On an Agent's card, or on a draft in Build a team, select a Pack's chip, or pick a Skill
    in the Skills list. Only what passes the checks and is downloaded can be chosen.
 2. Huddle copies each Skill folder from where its `path` leads into `Skills/`, with a
    `.source.json` naming the Source, origin, commit and the hash of the copy. This is a copy on
    your disk, not a download.
-3. The Teammate's `skills:`, `consult_when:` and `_packs:` lines change as they do today, and
-   the Teammate restarts.
+3. The Agent's `skills:`, `consult_when:` and `_packs:` lines change as they do today, and
+   the Agent restarts.
 
-A Teammate uses the copy in `Skills/`, never the clone, so your AI tool can pull a new version
-without changing any Teammate until you apply it.
+An Agent uses the copy in `Skills/`, never the clone, so your AI tool can pull a new version
+without changing any Agent until you apply it.
 
 **Build a team** works the same way. A role that needs a Pack or Skill that is not downloaded
 shows **Needs setup** on its draft card with **Copy prompt**, and **Approve & hire** waits
@@ -569,8 +569,8 @@ does it when you ask.
 2. Paste it into your AI tool. For each Source that moved on, it pulls the new commit, rewrites
    the pack and catalog files and `source.json`, updates the rows' Last updated, and runs the
    validate command.
-3. Huddle compares the files at each pointer with the copies its Teammates use. Where they
-   differ, the card and every Teammate card that holds it show **Update available**.
+3. Huddle compares the files at each pointer with the copies its Agents use. Where they
+   differ, the card and every Agent card that holds it show **Update available**.
 
 ```text
 ┌ Update: MSBuild Authoring  1.0.0 → 1.1.0 ────────────────────── G7 ┐
@@ -597,12 +597,12 @@ does it when you ask.
 
 | Code (proposed) | Container | What it holds |
 | --- | --- | --- |
-| `G7` | Update card | The version change; **Skill files that change for everyone** (`~`, with how many files and who uses it), shared by every holder and with no checkbox; Skills added (`+`) or removed (`−`); the `consult_when` change; and a checkbox per Teammate for the **membership** change only. Huddle works it out on disk ([the specification](Huddle.SkillPacks-Specifications.md) §8.4) |
+| `G7` | Update card | The version change; **Skill files that change for everyone** (`~`, with how many files and who uses it), shared by every holder and with no checkbox; Skills added (`+`) or removed (`−`); the `consult_when` change; and a checkbox per Agent for the **membership** change only. Huddle works it out on disk ([the specification](Huddle.SkillPacks-Specifications.md) §8.4) |
 
 - **Update N** first copies the changed Skill files into `Skills/` for every holder, which needs no
-  restart, then rewrites each ticked Teammate's `skills:`, `consult_when:` and `_packs:` lines and
-  restarts those Teammates. With nobody ticked the button reads **Update files**.
-- **Not now** changes nothing. Unchecked Teammates keep their copies and keep showing
+  restart, then rewrites each ticked Agent's `skills:`, `consult_when:` and `_packs:` lines and
+  restarts those Agents. With nobody ticked the button reads **Update files**.
+- **Not now** changes nothing. Unchecked Agents keep their copies and keep showing
   **Update available**.
 
 > [!TIP]
@@ -612,18 +612,18 @@ does it when you ask.
 ## Deprecated, withdrawn and moved Sources
 
 Your AI tool records what it learns about a Source in `source.json`, for example from a README
-that says the repository is deprecated. Huddle never strips a Pack or Skill from your Teammates
+that says the repository is deprecated. Huddle never strips a Pack or Skill from your Agents
 on its own; it tells you and lets you choose.
 
 | `source.json` says | What you see | What Huddle does |
 | --- | --- | --- |
-| **Deprecated**, with a reason | A grey chip on the card and on Teammate cards, with the reason on hover | Nothing else. You can still choose it |
-| **Withdrawn**, with a reason | A red chip and a warning on every Teammate card that holds it | New hires cannot choose it. **Remove from Teammates** is one click on the card |
-| **Moved** to another place | "This Source moved to openai/plugins" on the Source row | Offers **Copy prompt** to add the new Source. Teammates keep their copies until you update them |
+| **Deprecated**, with a reason | A grey chip on the card and on Agent cards, with the reason on hover | Nothing else. You can still choose it |
+| **Withdrawn**, with a reason | A red chip and a warning on every Agent card that holds it | New hires cannot choose it. **Remove from Agents** is one click on the card |
+| **Moved** to another place | "This Source moved to openai/plugins" on the Source row | Offers **Copy prompt** to add the new Source. Agents keep their copies until you update them |
 
 > **Example.** After a **Check for updates**, Emre's `openai/skills` Source shows "Deprecated:
 > moved to openai/plugins (from the repository's README, seen 2026-10-17)". He copies the
-> prompt into Codex, which adds two Packs from `openai/plugins`, and he updates the Teammates
+> prompt into Codex, which adds two Packs from `openai/plugins`, and he updates the Agents
 > who held the old ones.
 
 ## Removing a Pack, a Skill or a Source
@@ -633,10 +633,10 @@ it is: delete it yourself, or ask your AI tool.
 
 | You remove | From | What happens |
 | --- | --- | --- |
-| A Pack | Its card's **⋯** › **Remove** | Removes its row from SKILLS.md, and its `.skillpack.json` if that is in the Skill Sources folder. If Teammates hold it, Huddle asks first: **Keep their Skills** leaves their `skills:` lists and copies alone and only drops `_packs`; **Remove from Teammates too** also takes off the Skills that no other Pack or role gave them |
-| A catalog | Sources tab › the catalog › **Remove** | Removes its row from SKILLS.md, and its `.skillcatalog.json` if that is in the Skill Sources folder. Teammates keep their copies of its Skills |
+| A Pack | Its card's **⋯** › **Remove** | Removes its row from SKILLS.md, and its `.skillpack.json` if that is in the Skill Sources folder. If Agents hold it, Huddle asks first: **Keep their Skills** leaves their `skills:` lists and copies alone and only drops `_packs`; **Remove from Agents too** also takes off the Skills that no other Pack or role gave them |
+| A catalog | Sources tab › the catalog › **Remove** | Removes its row from SKILLS.md, and its `.skillcatalog.json` if that is in the Skill Sources folder. Agents keep their copies of its Skills |
 | One Skill from a catalog | Its row in a Skills list › **Hide** | Huddle never edits a catalog file, so it hides the Skill instead: it stops showing in Skills lists. **Show hidden** brings it back. Ask your AI tool to take it out of the catalog for good |
-| A Source | Sources tab › its row › **Remove** | Asks **Remove Source?** first. Deletes `sources/<source>/` (its `NOTES.md`, `source.json` and `log.jsonl`), every row whose file names that Source, and those files if they are in the Skill Sources folder. Teammates keep their copies in `Skills/`, whose provenance line then shows **Source removed** |
+| A Source | Sources tab › its row › **Remove** | Asks **Remove Source?** first. Deletes `sources/<source>/` (its `NOTES.md`, `source.json` and `log.jsonl`), every row whose file names that Source, and those files if they are in the Skill Sources folder. Agents keep their copies in `Skills/`, whose provenance line then shows **Source removed** |
 
 > [!CAUTION]
 > Removing a Source deletes its notes for good. If the Skill Sources folder is shared, they
@@ -647,7 +647,7 @@ it is: delete it yourself, or ask your AI tool.
 ```text
 App_Data\
 ├── InstallSkillPack.md                 written by this Huddle; never shared
-├── Skills\                             the copies Teammates use, as today
+├── Skills\                             the copies Agents use, as today
 └── SkillSources\                       can be shared; a read-only Library root
     ├── SKILLS.md                       the registry of pointers
     ├── packs\                          *.skillpack.json, if the AI tool keeps them here
@@ -701,7 +701,7 @@ a Pack. Plugins carry no version of their own; use the short commit.
 **Quirks**
 - The repository has no licence. Each Skill has a LICENSE.txt and a `license:` line;
   docx, xlsx, pptx and pdf are Proprietary.
-- The document Skills ship `scripts/`, which Teammates never read.
+- The document Skills ship `scripts/`, which Agents never read.
 
 **To update:** pull, reread the manifest, compare each plugin's `skills[]` with our Packs, and
 rewrite only the Packs whose folders changed.
@@ -726,7 +726,7 @@ files, and notes.
 | Shared, in the Skill Sources folder | Not shared, stays in each Huddle |
 | --- | --- |
 | SKILLS.md, the pack and catalog files kept there, each Source's `source.json`, `NOTES.md` and `log.jsonl` | `InstallSkillPack.md` and its appendix |
-| Hidden Packs, deprecation and withdrawal states | The copies in `Skills/`, and which Teammates hold what |
+| Hidden Packs, deprecation and withdrawal states | The copies in `Skills/`, and which Agents hold what |
 
 A path is a path on one computer. A relative path into the shared folder works everywhere.
 For a clone elsewhere, each computer adds its own entry to the path, as in
@@ -744,13 +744,13 @@ the Huddle that wrote each line.
 
 ## What changes on disk
 
-| Action | Who | Files touched | Effect on Teammates |
+| Action | Who | Files touched | Effect on Agents |
 | --- | --- | --- | --- |
 | Huddle starts, or your roles, Skills or SKILLS.md change | Huddle | `App_Data/InstallSkillPack.md` | None |
 | First start of this version | Huddle | The Skill Sources folder, with SKILLS.md (including rows pointing at the two Packs in the skills repository), six catalog files and your imported Skills | None; see [the move](#plan-moving-todays-packs-and-skills) |
 | Add or update a Pack or Skill | Your AI tool | Its clone, wherever it is; its pack or catalog file; `sources/<source>/`; one row in SKILLS.md | None until you choose it or apply the update |
-| Choose a Pack or Skill on a Teammate | Huddle | `Skills/<name>/` copied from the pointer, with `.source.json`; the Teammate's `<Name>.md` | Restarts |
-| Apply an update | Huddle | `Skills/<name>/` for new or changed Skills; each checked Teammate's `<Name>.md` | Each checked Teammate restarts |
+| Choose a Pack or Skill on an Agent | Huddle | `Skills/<name>/` copied from the pointer, with `.source.json`; the Agent's `<Name>.md` | Restarts |
+| Apply an update | Huddle | `Skills/<name>/` for new or changed Skills; each checked Agent's `<Name>.md` | Each checked Agent restarts |
 | Remove a Pack or a catalog | Huddle | The SKILLS.md row, and its file if it is in the Skill Sources folder; optionally each holder's `<Name>.md` | Holders restart if their files changed |
 | Remove a Source | Huddle | `sources/<source>/`, the rows and files that name it, inside the Skill Sources folder | None; copies in `Skills/` stay; clones stay |
 
@@ -792,13 +792,13 @@ one by name:
 | # | Heading | What it tells the AI tool |
 | --- | --- | --- |
 | 1 | **What you are doing** | You add or update Skills and Packs for one Huddle. Huddle does not download; you do. Finish by telling the Human what is ready in Huddle |
-| 2 | **Rules** | Clone or download wherever suits you, and record where. Write Huddle's files only in the Skill Sources folder or beside your clone, never in `Skills/`, Teammate files or settings. Never run, build or install anything a Skill contains. Never store a token, password or cookie in any file. Ask the Human before fetching more than 20 Skills or 50 MB, and before using a Source that needs sign-in |
+| 2 | **Rules** | Clone or download wherever suits you, and record where. Write Huddle's files only in the Skill Sources folder or beside your clone, never in `Skills/`, Agent files or settings. Never run, build or install anything a Skill contains. Never store a token, password or cookie in any file. Ask the Human before fetching more than 20 Skills or 50 MB, and before using a Source that needs sign-in |
 | 3 | **Where things go** | Suggested places: `*.skillpack.json` in `packs/`, `*.skillcatalog.json` in `catalogs/`, notes in `sources/<host>/<owner>/<repo>/`. Add a single Skill to its Source's catalog rather than starting a new one. Never touch `log.jsonl` |
 | 4 | **The skill pack and skill catalog files** | Every field of both schemas, with the examples on this page; that every Skill in either carries a `path`, empty until fetched; how managers use `appliesTo` and `consultWhenAdds`; `id` is lowercase with hyphens, matches the file name, and is unique across SKILLS.md |
 | 5 | **The SKILLS.md tables** | The Packs and Catalogs tables, one row per file and never one per Skill, their four columns, that **Local path** is the only required one and may be absolute, relative to SKILLS.md, or one entry per computer; to add or update only this computer's entry (from the front matter's `computer`); the date format; and to touch only your own rows. Name a catalog's Skill in a Pack with `catalog` rather than copying its path |
 | 6 | **source.json and NOTES.md** | Both schemas; read `NOTES.md` first on every visit; keep it under 16 KB; record a move or a deprecation in `source.json` with a reason |
 | 7 | **Reading a repository** | Known layouts: a Claude Code `marketplace.json` (a plugin with `skills[]` is a Pack); a skills folder with tiers such as OpenAI's `.system` and `.curated`; a single `SKILL.md`; a list of links. For anything else, describe it in `NOTES.md` and ask the Human |
-| 8 | **What Huddle can use** | Teammates read only the `.md` files directly in a Skill's folder, up to 64 KB each; a Skill's `tools:` line cannot grant App Tools; licences are per Skill. Say so to the Human when it matters |
+| 8 | **What Huddle can use** | Agents read only the `.md` files directly in a Skill's folder, up to 64 KB each; a Skill's `tools:` line cannot grant App Tools; licences are per Skill. Say so to the Human when it matters |
 | 9 | **Tasks** | One subsection per task in `G5`: Add, Find for a role, Check for updates, Fix. Each is a numbered list of steps ending in the validate command |
 | 10 | **Checking your work** | The validate command line from the front matter, with `--strict` for what you just added; what each check code means and how to fix it; repeat until `Errors=0` |
 | 11 | **Telling the Human** | One short message: what is ready, what its details card will flag, and anything you could not do |
@@ -858,7 +858,7 @@ huddle-packs validate --strict --data-dir "E:\Huddle\App_Data" "E:\Huddle\App_Da
 ```text
 ERROR  P005  packs/document-skills.skillpack.json     appliesTo: "accountant" is not a role in this Huddle; see huddle-packs roles
 ERROR  S001  E:\Clones\anthropics-skills\skills\pdf   path leads to no folder
-WARN   S008  E:\Clones\anthropics-skills\skills\docx  scripts/ and 9 other files are never read by Teammates
+WARN   S008  E:\Clones\anthropics-skills\skills\docx  scripts/ and 9 other files are never read by Agents
 WARN   S009  E:\Clones\anthropics-skills\skills\docx  licence is Proprietary (LICENSE.txt)
 WARN   S010  E:\Clones\anthropics-skills\skills\docx  ships scripts: scripts/office/unpack.py and 3 more
 OK           SKILLS.md                                Packs row 3 points at packs/document-skills.skillpack.json
@@ -899,7 +899,7 @@ Warnings appear on the details card. Codes never change meaning; a retired code 
 | `P003` | Error | `id` is lowercase letters, digits and single hyphens, and the file is `<id>.skillpack.json` |
 | `P004` | Error | No other Pack in SKILLS.md has the same `id` |
 | `P005` | Error | Every `appliesTo` entry is a role in this Huddle |
-| `P006` | Warning | `appliesTo` is empty, so no Teammate card will offer the Pack |
+| `P006` | Warning | `appliesTo` is empty, so no Agent card will offer the Pack |
 | `P007` | Warning | `consultWhenAdds` is empty or longer than 200 characters |
 | `P008` | Error | No Skill name appears twice in one Pack |
 | `P009` | Error | A Skill given by `catalog` names a catalog in SKILLS.md that lists a Skill of that name, and gives no `path` of its own |
@@ -913,8 +913,8 @@ Warnings appear on the details card. Codes never change meaning; a retired code 
 | `S004` | Error | No symbolic link or junction inside the folder, no name Windows cannot store, and no two names that differ only in case |
 | `S005` | Error | The name is not one of Huddle's built-in Skills |
 | `S006` | Error | The name is not taken in `Skills/` by a Skill from a different origin |
-| `S007` | Warning | A `.md` file over 64 KB, which Teammates skip |
-| `S008` | Warning | Files in sub-folders or not ending in `.md`, which Teammates never read |
+| `S007` | Warning | A `.md` file over 64 KB, which Agents skip |
+| `S008` | Warning | Files in sub-folders or not ending in `.md`, which Agents never read |
 | `S009` | Warning | The licence: none found, proprietary, or not the same as the Source's |
 | `S010` | Warning | Scripts, shell commands, network calls or paths outside the Work Dir, the same flags as today's Skill review |
 | `S011` | Error | `SKILL.md`'s `tools:` names an App Tool such as `propose_sprint`. Only Huddle's built-in Skills grant App Tools; a Pack or a fetched Skill never can |
@@ -929,7 +929,7 @@ Warnings appear on the details card. Codes never change meaning; a retired code 
 
 The move happens once, the first time a Huddle with this feature starts. It writes rows and
 files exactly as an AI tool following `InstallSkillPack.md` would have, so from then on there is
-one way in. No Teammate restarts, no Teammate file changes, and nothing is downloaded.
+one way in. No Agent restarts, no Agent file changes, and nothing is downloaded.
 
 ### What exists today
 
@@ -938,9 +938,9 @@ one way in. No Teammate restarts, no Teammate file changes, and nothing is downl
 | `TeamTypes/Builtin/SkillPacks/msbuild-authoring.json` (embedded) | MSBuild Authoring 1.0.0: `target-authoring` from `dotnet/skills`, path `plugins/dotnet-msbuild/skills/target-authoring`; for developer and release-engineer | `SkillPackStore` |
 | `TeamTypes/Builtin/SkillPacks/code-review-and-quality.json` (embedded) | Code Review and Quality 1.0.0: `code-review-and-quality` from `addyosmani/agent-skills`, path `skills/code-review-and-quality`; for reviewer | `SkillPackStore` |
 | `App_Data/SkillPacks/*.json` | Your own Packs; one with a built-in's id replaces it | `SkillPackStore` |
-| `Skills/SkillsCatalog.json` (embedded) | 263 Skills from six repositories (this page first said 265; `retro` and `test-driven-development` are each in two repositories and are kept once), each pinned to a commit, with licence, category and sub-category: dotnet/skills (106), garrytan/gstack (61), mattpocock/skills (37), addyosmani/agent-skills (25), anthropics/skills (20) and obra/superpowers (14) | `SkillsCatalogIndex`, used by Import skill, the role form, Build a team, the Teammate card and `ImportingSkillInstaller` |
+| `Skills/SkillsCatalog.json` (embedded) | 263 Skills from six repositories (this page first said 265; `retro` and `test-driven-development` are each in two repositories and are kept once), each pinned to a commit, with licence, category and sub-category: dotnet/skills (106), garrytan/gstack (61), mattpocock/skills (37), addyosmani/agent-skills (25), anthropics/skills (20) and obra/superpowers (14) | `SkillsCatalogIndex`, used by Import skill, the role form, Build a team, the Agent card and `ImportingSkillInstaller` |
 | `hiringpool.json` | `developer` and `release-engineer` suggest `msbuild-authoring`; `reviewer` suggests `code-review-and-quality` | `CardResolver` |
-| Each Teammate's `<Name>.md` | `_packs: ['msbuild-authoring@1.0.0']` and the Skills the Pack added | `PersonaFrontmatter`, `TeammateCard` |
+| Each Agent's `<Name>.md` | `_packs: ['msbuild-authoring@1.0.0']` and the Skills the Pack added | `PersonaFrontmatter`, `AgentProfileCard` |
 | `App_Data/Skills/<name>/.source.json` | Skills already imported, from the catalog or a GitHub link, with repository, path, commit and hash | `SkillStore` |
 
 The old Pack schema names a Skill by `name`, `source` (`owner/repo`) and `path`, with no
@@ -949,7 +949,7 @@ commit. The catalog already pins both Pack Skills: `target-authoring` at `a660de
 
 ### What the move does
 
-1. **Detect.** If `SkillSources/SKILLS.md` does not exist, the move runs, before any Teammate
+1. **Detect.** If `SkillSources/SKILLS.md` does not exist, the move runs, before any Agent
    starts. If it exists, the move is skipped, so running it twice is safe.
 2. **Split the catalog.** For each of the six repositories, write
    `sources/github.com/<owner>/<repo>/source.json` (`kind: github`, `fetchedBy: "Huddle
@@ -982,10 +982,10 @@ commit. The catalog already pins both Pack Skills: `target-authoring` at `a660de
 6. **Write SKILLS.md,** with the "We do not recommend editing this file by hand" note at the
    top, a Packs row per moved Pack ("Shipped with Huddle; moved from the old format" or "Your
    own Pack; moved from SkillPacks/") and a Catalogs row per catalog file.
-7. **Leave Teammates alone.** The files in `fetched/` are the ones Teammates already use, so no
+7. **Leave Agents alone.** The files in `fetched/` are the ones Agents already use, so no
    card shows **Update available**. `_packs` keeps its ids and versions
    (`msbuild-authoring@1.0.0` still matches `1.0.0`) and `skills:` keeps its names. No
-   `<Name>.md` is rewritten and nobody restarts. A Teammate whose `_packs` names a Pack the move
+   `<Name>.md` is rewritten and nobody restarts. An Agent whose `_packs` names a Pack the move
    could not bring over shows a warning on its card.
 8. **Keep the hiring pool working.** Roles keep suggesting Packs and Skills by name.
    `CardResolver` now looks them up in SKILLS.md; one that is not downloaded makes the draft
@@ -1007,10 +1007,10 @@ commit. The catalog already pins both Pack Skills: `target-authoring` at `a660de
 | New: `huddle-packs` | None | A standalone console program in the chat surface's subtree. Adding it to `Huddle.slnx` is a shared root change and is announced first |
 | New: `InstallSkillPack.md` writer | None | Builds the file from Settings › Prompts and the appendix, at start-up and on change |
 | New: the registry watcher | None | Watches SKILLS.md and every folder its rows point at, and re-runs the checks for what changed |
-| `TeammateCard.TogglePack`, the Skills picker, the role form | Change Skill names, then rely on hiring to install | Copy the Skill folders into `Skills/` before they change the Teammate; offer **Copy prompt** for anything not downloaded |
+| `AgentProfileCard.TogglePack`, the Skills picker, the role form | Change Skill names, then rely on hiring to install | Copy the Skill folders into `Skills/` before they change the Agent; offer **Copy prompt** for anything not downloaded |
 | `CardResolver` | Skips a Pack id it cannot find | Reports **Needs setup** for a Pack or Skill that is missing or not downloaded |
 | `PersonaFrontmatter`, `HireService.MergeConsultWhen` | Read and write `_packs`, merge `consult_when` | Unchanged |
-| The Library | Teams, Teammates and pinned roots | Adds the read-only **Skill Sources** root |
+| The Library | Teams, Agents and pinned roots | Adds the read-only **Skill Sources** root |
 
 [ADR-0043](adr/0043-imported-skills-are-pinned-by-commit-and-hash.md) is partly superseded:
 pinning, hashing, the review flags and the safe copy stay; the download moves to your AI tool.
@@ -1024,7 +1024,7 @@ That change needs its own ADR before it is built.
   them. Only fetching, which your AI tool does, needs it.
 - **A row Huddle cannot use** (a pointer that leads nowhere, a file that fails its schema) shows
   as a **Broken** card with the reason. The rest of SKILLS.md still loads.
-- **A clone you move or delete** turns its rows **Not downloaded** or **Broken**. Teammates keep
+- **A clone you move or delete** turns its rows **Not downloaded** or **Broken**. Agents keep
   working from their copies in `Skills/`.
 - **An AI tool that wrote somewhere it should not** is not something Huddle can see or undo.
   Huddle reads only what SKILLS.md points at.
@@ -1033,8 +1033,8 @@ That change needs its own ADR before it is built.
 > Your AI tool runs with its own permissions and your sign-ins, not Huddle's.
 > `InstallSkillPack.md` tells it where to write and what it must never run, but only your AI
 > tool's permission prompts enforce that on your computer. With no approval step, the checks
-> are what stand between a fetched Skill and your Teammates: Huddle refuses anything that fails
-> them, never runs anything in a Skill, and copies a Skill to a Teammate only when you choose it.
+> are what stand between a fetched Skill and your Agents: Huddle refuses anything that fails
+> them, never runs anything in a Skill, and copies a Skill to an Agent only when you choose it.
 
 ## Open questions for requirements
 

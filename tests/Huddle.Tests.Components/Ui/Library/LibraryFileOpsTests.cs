@@ -1080,7 +1080,7 @@ public sealed class LibraryFileOpsTests : IDisposable
         /// <summary>The real Library stack (resolver, root store, file service) over this fixture's temp <c>DataDir</c>.</summary>
         public LibraryFileServiceFixture LibraryFixture { get; }
 
-        /// <summary>Builds a fixture with the standard Teams/Teammates layout, optionally customising
+        /// <summary>Builds a fixture with the standard Teams/Agents layout, optionally customising
         /// <see cref="TeamOptions"/> first (e.g. <see cref="LibraryOptions.MaxIndexedFiles"/>).</summary>
         /// <param name="configure">An optional callback to customise the bound <see cref="TeamOptions"/> before use.</param>
         public static OpsFixture Build(Action<TeamOptions>? configure = null)

@@ -8,7 +8,7 @@ internal static class BoardLayout
     /// <summary>Separates the raw grouping-field values that make up a lane's Key. A control character, so it never collides with user text.</summary>
     private const char KeySeparator = '\u001f';
 
-    /// <summary>Replaces a null grouping value in a lane's Key, so a Teammate literally named "Unassigned" cannot collide with the null group.</summary>
+    /// <summary>Replaces a null grouping value in a lane's Key, so an Agent literally named "Unassigned" cannot collide with the null group.</summary>
     private const string NullSentinel = "\u0000";
 
     /// <summary>The seven columns for a new Board View: Spec §12.3's six, plus Needs You between Review and Done (Human gate Spec §6.2).</summary>

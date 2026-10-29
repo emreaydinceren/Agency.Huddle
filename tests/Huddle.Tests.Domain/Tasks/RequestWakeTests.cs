@@ -3,7 +3,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Tasks;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Elicitation;
 using Agency.Huddle.Tests.Teams;
@@ -33,7 +33,7 @@ public sealed class RequestWakeTests
     private static async Task<Room> AddCastAsync(Harness harness, Cast cast, CancellationToken ct)
     {
         _ = harness.Personas.Add(new PersonaIdentity("Mia", "Mia", "mia", ["Design"]), "You are Mia.");
-        _ = harness.Personas.Add(new PersonaIdentity("Alfred", "Chief of Staff", "alf", [], Builtin: BuiltinTeammate.ChiefOfStaffMarker), "You are Alfred.");
+        _ = harness.Personas.Add(new PersonaIdentity("Alfred", "Chief of Staff", "alf", [], Builtin: BuiltinAgent.ChiefOfStaffMarker), "You are Alfred.");
         User? mia = await harness.Directory.UpsertAgentUserAsync("Mia", null, ct);
         User? alfred = await harness.Directory.UpsertAgentUserAsync("Alfred", null, ct);
         Assert.NotNull(mia);
@@ -100,9 +100,9 @@ public sealed class RequestWakeTests
         Assert.Equal(["Nova|PLAT-0001|Mia|- Request event: Filed"], harness.Posts.Select(p => p.Message.Text).ToArray());
     }
 
-    /// <summary>The Chief of Staff target wakes the built-in Teammate, found by its marker rather than its name.</summary>
+    /// <summary>The Chief of Staff target wakes the built-in Agent, found by its marker rather than its name.</summary>
     [Fact]
-    public async Task Notify_ChiefOfStaff_WakesBuiltinTeammate()
+    public async Task Notify_ChiefOfStaff_WakesBuiltinAgent()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();

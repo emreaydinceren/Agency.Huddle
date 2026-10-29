@@ -3,7 +3,7 @@ namespace Agency.Huddle.App.Tabs;
 /// <summary>
 /// Works out the breadcrumb trail of a Tab from its URL: the ancestors of the page, never the page itself
 /// (design-system "A page"). Every page shows its name as its h1, so the trail never repeats it; a page with
-/// no ancestor (Teammates, Settings) has an empty trail and the bar draws none.
+/// no ancestor (Agents, Settings) has an empty trail and the bar draws none.
 /// Pure and synchronous, like <see cref="TabKeys"/>, whose table of URLs it follows.
 /// </summary>
 internal static class TabTrail

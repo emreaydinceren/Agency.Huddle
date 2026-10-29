@@ -208,7 +208,7 @@ internal sealed class CheckRun(ResolvedRegistry registry, CheckContext context, 
 
         if (file.AppliesTo.Count == 0)
         {
-            this.Add(Finding.Warning("P006", path, "appliesTo is empty, so no Teammate card will offer this Pack."), row, key);
+            this.Add(Finding.Warning("P006", path, "appliesTo is empty, so no Agent card will offer this Pack."), row, key);
         }
 
         if (string.IsNullOrWhiteSpace(file.ConsultWhenAdds))
@@ -515,13 +515,13 @@ internal sealed class CheckRun(ResolvedRegistry registry, CheckContext context, 
                     this.Add(Finding.Warning("S012", Path.Combine(folder, "SKILL.md"), issue.Message), row, key);
                     break;
                 case FolderRule.LargeFile:
-                    this.Add(Finding.Warning("S007", Path.Combine(folder, issue.Message.Split('\'')[1]), issue.Message.Replace("(skipped)", "(Teammates skip it)", StringComparison.Ordinal)), row, key);
+                    this.Add(Finding.Warning("S007", Path.Combine(folder, issue.Message.Split('\'')[1]), issue.Message.Replace("(skipped)", "(Agents skip it)", StringComparison.Ordinal)), row, key);
                     break;
             }
         }
     }
 
-    /// <summary>S008: files no Teammate reads.</summary>
+    /// <summary>S008: files no Agent reads.</summary>
     private void UnreadCheck(List<string> unread, string folder, RegistryRow? row, string key)
     {
         if (unread.Count > 0)
@@ -531,7 +531,7 @@ internal sealed class CheckRun(ResolvedRegistry registry, CheckContext context, 
                 ? unread.Count(item => item.StartsWith(firstUnread, StringComparison.Ordinal))
                 : 1;
             int others = unread.Count - covered;
-            string message = others == 0 ? $"{firstUnread} is never read by Teammates." : string.Create(CultureInfo.InvariantCulture, $"{firstUnread} and {others} other files are never read by Teammates.");
+            string message = others == 0 ? $"{firstUnread} is never read by Agents." : string.Create(CultureInfo.InvariantCulture, $"{firstUnread} and {others} other files are never read by Agents.");
             this.Add(Finding.Warning("S008", folder, message), row, key);
         }
     }

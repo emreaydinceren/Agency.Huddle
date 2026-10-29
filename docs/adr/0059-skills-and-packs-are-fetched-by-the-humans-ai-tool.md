@@ -24,11 +24,11 @@ repository layout.
 3. **Huddle reads pointers and checks what they lead to.** The checks live in the `Huddle.SkillPacks` library;
    Huddle and the `huddle-packs` command run the same code, so their findings cannot drift.
 4. **There is no approval step.** The checks are the gate.
-5. **A Teammate uses a copy in `Skills/`, never a clone.** The copy is made, and checked, before the Teammate's file
+5. **An Agent uses a copy in `Skills/`, never a clone.** The copy is made, and checked, before the Agent's file
    changes.
 6. **Only built-in Skills grant App Tools.** A fetched Skill whose `tools:` names one is Broken (`S011`).
 7. **One copy per Skill name, shared by every holder.** A change to a Skill's files reaches all holders at once;
-   membership changes are per Teammate.
+   membership changes are per Agent.
 8. **The first row wins every tie** between two rows, two catalogs or two origins of a name. The loser carries the
    finding.
 9. **Huddle deletes only inside the Skill Sources folder and `Skills/.staging` and `Skills/.trash`.** It never deletes
@@ -53,6 +53,6 @@ repository layout.
 - `SkillDownloader`, `SkillImporter`, `ImportingSkillInstaller`, `SkillsCatalogIndex`, `SkillPackStore` and the
   shipped Pack files are deleted once their replacements land.
 - A first start of this version runs the move. It writes SKILLS.md, six catalog files and the Source notes, and
-  changes no Teammate file.
+  changes no Agent file.
 - A Skill Sources folder shared between computers needs a per-computer path entry for each clone that lives in a
   different place.

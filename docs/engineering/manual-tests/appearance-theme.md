@@ -282,7 +282,7 @@ If the marked row is ambiguous — MudBlazor's selected-row styling is a backgro
 **Steps**
 
 1. Go to http://localhost:5100/ and press Ctrl+Shift+R five times in a row, watching the page each time.
-2. Go to http://localhost:5100/teammates and press Ctrl+Shift+R five times, watching each time.
+2. Go to http://localhost:5100/agents and press Ctrl+Shift+R five times, watching each time.
 3. Go to http://localhost:5100/settings/appearance and press Ctrl+Shift+R five times, watching each time.
 4. Open DevTools -> Network and set the throttling dropdown to `Slow 4G`.
 5. Press Ctrl+Shift+R on each of those three routes again and watch the paint closely - the slow load exaggerates any flash into something you cannot miss.
@@ -551,7 +551,7 @@ If your editor holds the file open with a lock while the app tries to write, clo
 1. Set the file to exactly `{ "theme": "lumen-light" }` and save. Confirm the page is light and the picker marks `Lumen Light`.
 2. Now WITHOUT touching the browser at all, change the file in your editor to exactly `{ "theme": "lumen-dark" }` and save it.
 3. Keep your eyes on the browser for the next 2 seconds. Note whether the picker's marked row moves to `Lumen Dark` by itself AND whether the page's COLOURS change, with no click and no reload.
-4. Click `Teammates` in the sidebar (an in-app navigation). Confirm the colours stay dark.
+4. Click `Agents` in the sidebar (an in-app navigation). Confirm the colours stay dark.
 5. Check the `dotnet run` console for any unhandled exception during the above.
 
 **Pass if — all of these**
@@ -653,7 +653,7 @@ If the click produced neither of the two outcomes above — no file change AND n
 
 **Before you start**
 
-- The application is running in the free lane with Teammates: `P-LAUNCH-UAT` has been run and Ada and Bo are Online.
+- The application is running in the free lane with Agents: `P-LAUNCH-UAT` has been run and Ada and Bo are Online.
 - The file reads exactly `{ "theme": "lumen-dark" }`.
 - The operating system is in LIGHT mode, so anything that failed to switch is obvious.
 - For the rejected-persona part, you will hand-edit a Persona file (see steps). If you create or edit a Persona through the UI, set Model = Haiku and Effort = low - the standing convention. Nothing here needs a model and nothing here costs money.
@@ -662,19 +662,19 @@ If the click produced neither of the two outcomes above — no file change AND n
 
 1. Press Ctrl+Shift+R on http://localhost:5100/ and confirm the whole application is dark.
 2. In DevTools -> Elements, select `<body>` and read Computed `background-color`. It must be `rgb(11, 11, 15)` (Lumen Dark's Background, `#0b0b0f`; `Themes/Skins/lumen.dark.json`).
-3. (a) With no room selected, inspect: the page body; the sidebar drawer; the `New chat` button; the room list; and the two nav links `Teammates` and `Settings`. Note anything light.
+3. (a) With no room selected, inspect: the page body; the sidebar drawer; the `New chat` button; the room list; and the two nav links `Agents` and `Settings`. Note anything light.
 4. (b) Click `New chat`. Inspect the panel: the agent rows for `Ada` and `Bo`, their coloured status dots, and the `Start chat` button.
-5. (c) Close the panel and click the `Ada` Room in the sidebar. In the Room, inspect: the chat header, the member line, each message row (sender name, timestamp, body), the composer textarea including its placeholder `Message {Room name}… (/invite @Teammate)`, and the budget note line.
+5. (c) Close the panel and click the `Ada` Room in the sidebar. In the Room, inspect: the chat header, the member line, each message row (sender name, timestamp, body), the composer textarea including its placeholder `Message {Room name}… (/invite @Agent)`, and the budget note line.
 6. (d) Type `hello` and press Enter. WATCH THE DRAFT STREAM IN: inspect the streaming row, its caret, the stop control (a small outlined button), and any tool-activity line while they are on screen.
 7. (e) Type a fenced code block: type three backticks, then `code`, then three backticks, and press Enter. Inspect the rendered code block - it exercises the monospace token, still declared in `wwwroot/app-vars.css` since MudBlazor's theme has no monospace equivalent.
-8. (f) Click `Teammates` in the sidebar. Inspect the tiles, the avatar monograms, the team filter select, and the `New teammate` button.
-9. (g) Click a teammate tile to open the card. It is now a real dialog with a dimmed, scrollable-page-behind backdrop: inspect the dialog surface, the scrim behind it, the `Persona`, `Model` and `Effort` sections, and the Edit / Open / Remove buttons (and the Close icon). Close the dialog with Escape.
-10. (h) Create a rejected persona file so the rejected block renders: in `C:\seeds\huddle\uat\data\Teammates\`, create `broken.md` containing exactly:
+8. (f) Click `Agents` in the sidebar. Inspect the tiles, the avatar monograms, the team filter select, and the `New agent` button.
+9. (g) Click an agent tile to open the card. It is now a real dialog with a dimmed, scrollable-page-behind backdrop: inspect the dialog surface, the scrim behind it, the `Persona`, `Model` and `Effort` sections, and the Edit / Open / Remove buttons (and the Close icon). Close the dialog with Escape.
+10. (h) Create a rejected persona file so the rejected block renders: in `C:\seeds\huddle\uat\data\Agents\`, create `broken.md` containing exactly:
 ---
 name: broken
 ---
 A persona with no title.
-Save it, then press F5 on /teammates.
+Save it, then press F5 on /agents.
 11. (i) Find the section headed `Files that didn't load` and inspect its heading, the path and the reason text.
 12. (j) Go to http://localhost:5100/settings/prompts and inspect the whole panel, then click `Appearance` and inspect that panel.
 13. Now check native controls specifically: open every MudSelect popup you can find (the team filter, the card's Model and Effort selects) and check the popup itself is dark, not a white system menu. Check the Theme picker's own lists too — it is a `MudList`, not a popup, so it is always on screen.
@@ -697,16 +697,16 @@ Save it, then press F5 on /teammates.
 
 - ANY element that stays light -> a colour literal survived the migration onto `--mud-*` variables; that is the entire point of this step.
 - A white page ground behind everything -> the body background is missing or wrong.
-- A light hover highlight on a sidebar row, or a light scrim behind the teammate dialog -> a literal escaped in that specific rule.
+- A light hover highlight on a sidebar row, or a light scrim behind the agent dialog -> a literal escaped in that specific rule.
 - White scrollbars or a white native select popup -> `color-scheme` is not reaching `:root`.
 - A blank or empty surface where a colour should be -> a `--mud-*` variable resolved to nothing.
 
 **Inconclusive if**
 
-If the sidebar has no `Ada` Room or `New chat` lists no agents, parts (c), (d) and (e) are INCONCLUSIVE - the app was not launched with `P-LAUNCH-UAT`; relaunch it (the seeder run is the reset) and repeat. If /teammates shows `No Personas yet. Choose New teammate to add one.`, parts (f) and (g) are INCONCLUSIVE until you add a Persona.
+If the sidebar has no `Ada` Room or `New chat` lists no agents, parts (c), (d) and (e) are INCONCLUSIVE - the app was not launched with `P-LAUNCH-UAT`; relaunch it (the seeder run is the reset) and repeat. If /agents shows `No Personas yet. Choose New agent to add one.`, parts (f) and (g) are INCONCLUSIVE until you add a Persona.
 
 > [!NOTE]
-> TWO THINGS MUST NOT SWITCH AND ARE NOT BUGS. (1) The `An unhandled error has occurred.` banner stays LIGHT YELLOW in dark mode on purpose - it is shown when the application has already failed, the one moment a Theme cannot be trusted. (2) The Persona's Markdown source shown on the teammate dialog deliberately keeps the inherited font rather than the monospace token. Free: Ada runs on the mock adapter and needs no Claude turn.
+> TWO THINGS MUST NOT SWITCH AND ARE NOT BUGS. (1) The `An unhandled error has occurred.` banner stays LIGHT YELLOW in dark mode on purpose - it is shown when the application has already failed, the one moment a Theme cannot be trusted. (2) The Persona's Markdown source shown on the agent dialog deliberately keeps the inherited font rather than the monospace token. Free: Ada runs on the mock adapter and needs no Claude turn.
 
 ### APPEARANCETHEME-23 — Hover, selection and focus surfaces all switch, and the four old hover colours are still one
 
@@ -717,17 +717,17 @@ If the sidebar has no `Ada` Room or `New chat` lists no agents, parts (c), (d) a
 **Before you start**
 
 - The application is running with `{ "theme": "lumen-dark" }` and the operating system in LIGHT mode.
-- At least one Room exists and at least one Teammate tile is visible (`P-LAUNCH-UAT` supplies Ada and Bo and their Rooms for free; if you add a Persona, use Model = Haiku and Effort = low).
+- At least one Room exists and at least one Agent tile is visible (`P-LAUNCH-UAT` supplies Ada and Bo and their Rooms for free; if you add a Persona, use Model = Haiku and Effort = low).
 
 **Steps**
 
 1. Go to http://localhost:5100/ and hover a room row in the sidebar. Note the highlight colour.
 2. In DevTools -> Elements, select that room row, click the `:hov` button in the Styles pane, tick `:hover`, and read Computed `background-color`. Write the value down.
 3. Click `New chat` and hover a row in the agent list. Force `:hover` on it the same way and read Computed `background-color`. Write it down.
-4. Click `Teammates` in the sidebar and hover a teammate tile. Force `:hover` and read Computed `background-color`. Write it down.
+4. Click `Agents` in the sidebar and hover an agent tile. Force `:hover` and read Computed `background-color`. Write it down.
 5. Compare the three values.
 6. Go back to a Room and click it so it shows as the ACTIVE/selected room in the sidebar. Read that row's Computed `background-color` and confirm it is a dark selected-surface colour, visibly different from the hover colour but still dark.
-7. Press Tab repeatedly to move keyboard focus through the composer textarea, then through the Appearance tab's Theme picker rows, then through a teammate dialog's fields. At each stop, look at whether the focus outline is clearly visible against the dark ground.
+7. Press Tab repeatedly to move keyboard focus through the composer textarea, then through the Appearance tab's Theme picker rows, then through an agent dialog's fields. At each stop, look at whether the focus outline is clearly visible against the dark ground.
 
 **Pass if — all of these**
 
@@ -850,7 +850,7 @@ If the Appearance panel will not render, this is INCONCLUSIVE, not a failure —
 
 **Steps**
 
-1. Select Theme `Lumen Dark`. Without reloading, look at the sidebar, the transcript, a Teammate card, and the fenced code block.
+1. Select Theme `Lumen Dark`. Without reloading, look at the sidebar, the transcript, an Agent card, and the fenced code block.
 2. Open DevTools → Elements → `<body>` → Computed, and read `background-color`. It must be `rgb(11, 11, 15)` — Lumen Dark's own `#0b0b0f`, not Lumen Dark's `rgb(11, 11, 15)`.
 3. Hover a Room in the sidebar and confirm the row changes colour. Tab to a link or button and confirm a visible focus outline.
 4. Select Theme `Cobalt Soft Dark`. Confirm the whole surface changes again, and that nothing is left painted in Lumen Dark's colours.

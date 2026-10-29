@@ -1,5 +1,5 @@
 @*
-    The Team card (spec §6.6): a Team icon, its Name, then its type and Teammate count. The action
+    The Team card (spec §6.6): a Team icon, its Name, then its type and Agent count. The action
     slot at the right is empty in V1 and holds its width (D-12).
 *@
 
@@ -26,7 +26,7 @@
     {
         get
         {
-            string count = Plural.Of(this.Hit.TeammateCount, "teammate", "teammates");
+            string count = Plural.Of(this.Hit.AgentCount, "agent", "agents");
             return this.Hit.TypeLabel is { } type ? $"{type} · {count}" : count;
         }
     }

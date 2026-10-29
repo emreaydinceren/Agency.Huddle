@@ -27,7 +27,7 @@ public sealed class TaskTriggerOutcomeTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         _ = harness.Personas.Add(new PersonaIdentity("Zeta", "Zeta", "zeta", ["Platform"]), "You are Zeta.");
         Room direct = await harness.Directory.CreateRoomAsync("Direct", [KnownIds.Human, agents.Nova.Id], ct);
         harness.Prompts.SetOverride(WakeMessageKey, "{{taskId}}");
@@ -52,7 +52,7 @@ public sealed class TaskTriggerOutcomeTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         Room origin = await harness.Directory.CreateRoomAsync("Origin", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova", originRoomId: origin.Id));
 
@@ -75,7 +75,7 @@ public sealed class TaskTriggerOutcomeTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         Room origin = await harness.Directory.CreateRoomAsync("Origin", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
         harness.Prompts.SetOverride(WakeMessageKey, "{{taskId}}");
         TaskItem blocked = harness.Seed(TestTasks.Make(id: "PLAT-0001", creator: "You", assignee: "Nova", originRoomId: origin.Id));
@@ -329,7 +329,7 @@ public sealed class TaskTriggerOutcomeTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
-        Agents agents = await RegisterAgentsAsync(harness, ct);
+        AgentPair agents = await RegisterAgentsAsync(harness, ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova"));
         harness.Directory.HideUserId = agents.Kai.Id;
 

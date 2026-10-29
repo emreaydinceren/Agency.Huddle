@@ -1,9 +1,9 @@
 @*
     The update card (Skill Packs spec §6.9.8, G7), with §8.4 applied: a change to a Skill's files is shared by every holder,
     so that section lists who is affected and has no checkboxes; only membership (Skills added, the consult when phrase, the
-    _packs version) has a checkbox per Teammate, all checked. The primary button reads Update N, Update files when nobody is
+    _packs version) has a checkbox per Agent, all checked. The primary button reads Update N, Update files when nobody is
     ticked, or Update and replace my edits when a copy was edited here; it is disabled for an empty plan. Not now writes
-    nothing. Update copies first and changes Teammates only when every copy succeeded.
+    nothing. Update copies first and changes Agents only when every copy succeeded.
 *@
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Skills
@@ -46,21 +46,21 @@
             }
         }
 
-        @if (this.plan.Added.Count > 0 || this.plan.Teammates.Count > 0)
+        @if (this.plan.Added.Count > 0 || this.plan.Agents.Count > 0)
         {
             <MudText Typo="Typo.subtitle2" Class="update-dialog-membership-heading mt-2">Skills added or removed</MudText>
             @foreach (SkillMembershipChange added in this.plan.Added)
             {
                 <MudText Typo="Typo.body2" Class="update-dialog-added">Added: @added.Name   @string.Join(" ", new[] { added.Source, added.Commit.Length > 0 ? "@ " + added.Commit : string.Empty, added.License ?? string.Empty }.Where(static part => part.Length > 0))</MudText>
             }
-            @if (this.plan.Teammates.Any(static change => change.ConsultWhenChanges) && this.plan.ConsultWhenTo is { } phrase)
+            @if (this.plan.Agents.Any(static change => change.ConsultWhenChanges) && this.plan.ConsultWhenTo is { } phrase)
             {
                 <MudText Typo="Typo.body2" Class="update-dialog-consult">Consult when adds "@phrase"</MudText>
             }
-            @foreach (TeammateChange change in this.plan.Teammates)
+            @foreach (AgentChange change in this.plan.Agents)
             {
                 string name = change.Name;
-                <MudCheckBox T="bool" Value="@this.ticked.Contains(name)" ValueChanged="@((bool on) => this.Tick(name, on))" Dense="true" Class="update-dialog-teammate"
+                <MudCheckBox T="bool" Value="@this.ticked.Contains(name)" ValueChanged="@((bool on) => this.Tick(name, on))" Dense="true" Class="update-dialog-agent"
                              Label="@($"{change.Name}   {change.Role}   {change.Summary}")" />
             }
         }
@@ -136,22 +136,22 @@
         }
     }
 
-    /// <summary>Builds the plan once and ticks every Teammate.</summary>
+    /// <summary>Builds the plan once and ticks every Agent.</summary>
     protected override void OnInitialized()
     {
-        IReadOnlyList<Persona> teammates = [.. this.Personas.Entries.Select(entry => this.Personas.Get(entry.Name)).OfType<Persona>()];
+        IReadOnlyList<Persona> agents = [.. this.Personas.Entries.Select(entry => this.Personas.Get(entry.Name)).OfType<Persona>()];
         this.plan = this.PackId is { } id
-            ? PackUpdatePlanner.Plan(id, this.Registry, this.Store, teammates, this.Registry.Files)
+            ? PackUpdatePlanner.Plan(id, this.Registry, this.Store, agents, this.Registry.Files)
             : PackUpdatePlanner.PlanSkill(this.SkillName ?? string.Empty, this.Registry, this.Store, this.Registry.Files);
-        this.ticked.UnionWith(this.plan.Teammates.Select(static change => change.Name));
+        this.ticked.UnionWith(this.plan.Agents.Select(static change => change.Name));
     }
 
     /// <summary>"Used by Jane and Omar. Their copy changes as soon as you update; they do not restart."</summary>
-    private static string Affected(SkillFileChange change) => change.AffectedTeammates.Count == 0
-        ? "No Teammate has it yet."
-        : $"Used by {SkillStateText.AndList(change.AffectedTeammates)}. Their copy changes as soon as you update; they do not restart.";
+    private static string Affected(SkillFileChange change) => change.AffectedAgents.Count == 0
+        ? "No Agent has it yet."
+        : $"Used by {SkillStateText.AndList(change.AffectedAgents)}. Their copy changes as soon as you update; they do not restart.";
 
-    /// <summary>Ticks or unticks a Teammate.</summary>
+    /// <summary>Ticks or unticks an Agent.</summary>
     private void Tick(string name, bool on)
     {
         if (on)
@@ -164,7 +164,7 @@
         }
     }
 
-    /// <summary>Copies, then changes the ticked Teammates, then re-reads.</summary>
+    /// <summary>Copies, then changes the ticked Agents, then re-reads.</summary>
     private async Task ApplyAsync()
     {
         this.applying = true;

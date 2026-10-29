@@ -135,7 +135,7 @@ internal static class ReferencedItemsFormatter
                 {
                     ["{{name}}"] = ReferencedItemsFormatter.Quote(team.Name),
                     ["{{type}}"] = team.TypeLabel is null ? "none" : ReferencedItemsFormatter.Quote(team.TypeLabel),
-                    ["{{members}}"] = ReferencedItemsFormatter.Teammates(team.Members),
+                    ["{{members}}"] = ReferencedItemsFormatter.Agents(team.Members),
                     ["{{teamRoom}}"] = team.TeamRoomId ?? "none",
                 });
 
@@ -163,10 +163,10 @@ internal static class ReferencedItemsFormatter
         string team => string.Concat("Team ", ReferencedItemsFormatter.Quote(team)),
     };
 
-    /// <summary>The Teammates of a Team: the first eight Names quoted and joined, then how many more there are.</summary>
-    /// <param name="members">Every Teammate's Name.</param>
+    /// <summary>The Agents of a Team: the first eight Names quoted and joined, then how many more there are.</summary>
+    /// <param name="members">Every Agent's Name.</param>
     /// <returns>The members text, or <c>none</c> when there are none.</returns>
-    private static string Teammates(IReadOnlyList<string> members)
+    private static string Agents(IReadOnlyList<string> members)
     {
         if (members.Count == 0)
         {

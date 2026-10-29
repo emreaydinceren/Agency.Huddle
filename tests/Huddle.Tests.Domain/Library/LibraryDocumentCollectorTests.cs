@@ -75,8 +75,8 @@ public sealed class LibraryDocumentCollectorTests
         Assert.Equal(0, report.NotListed);
     }
 
-    /// <summary>Every §6.14 location shape: Team+Project, Team alone, a Teammate's Work Dir, a Teammate's
-    /// definition file ("teammate {Name}", corrections-B6 item 4) and a pinned root.</summary>
+    /// <summary>Every §6.14 location shape: Team+Project, Team alone, an Agent's Work Dir, an Agent's
+    /// definition file ("agent {Name}", corrections-B6 item 4) and a pinned root.</summary>
     [Fact]
     public async Task Collect_LocationLabels()
     {
@@ -94,13 +94,13 @@ public sealed class LibraryDocumentCollectorTests
         string projectFile = Path.Combine(projectDir, "plan.md");
         File.WriteAllText(projectFile, "plan");
 
-        fixture.CreateTeammate("nova", "Nova", "nova");
-        TeammatePaths teammatePaths = new(options);
-        string workDir = teammatePaths.WorkDir("nova");
+        fixture.CreateAgent("nova", "Nova", "nova");
+        AgentPaths agentPaths = new(options);
+        string workDir = agentPaths.WorkDir("nova");
         Directory.CreateDirectory(workDir);
         string workDirFile = Path.Combine(workDir, "notes.md");
         File.WriteAllText(workDirFile, "notes");
-        string definitionFile = teammatePaths.DefinitionFile("nova");
+        string definitionFile = agentPaths.DefinitionFile("nova");
 
         string pinnedRoot = fixture.CreatePinnedRoot("Huddle docs");
         string pinnedFile = Path.Combine(pinnedRoot, "readme.md");
@@ -122,11 +122,11 @@ public sealed class LibraryDocumentCollectorTests
         Assert.Equal("Team Marketing", report.Items[0].Location, StringComparer.Ordinal);
         Assert.Equal("Team Marketing, Project Launch Q4", report.Items[1].Location, StringComparer.Ordinal);
         Assert.Equal("Nova's Work Dir", report.Items[2].Location, StringComparer.Ordinal);
-        Assert.Equal("teammate Nova", report.Items[3].Location, StringComparer.Ordinal);
+        Assert.Equal("agent Nova", report.Items[3].Location, StringComparer.Ordinal);
         Assert.Equal("pinned root \"Huddle docs\"", report.Items[4].Location, StringComparer.Ordinal);
     }
 
-    /// <summary>A file in the Uploads root is labelled <c>upload</c>, not <c>teammate {roomId}</c>; a file under a Team's Uploads folder keeps its Team label.</summary>
+    /// <summary>A file in the Uploads root is labelled <c>upload</c>, not <c>agent {roomId}</c>; a file under a Team's Uploads folder keeps its Team label.</summary>
     [Fact]
     public async Task Collect_UploadsRootFile_LabelledUpload_TeamUploadKeepsTeamLabel()
     {

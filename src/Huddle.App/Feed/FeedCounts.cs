@@ -1,6 +1,6 @@
 namespace Agency.Huddle.App.Feed;
 
-/// <summary>The number on each Category segment under the Teammate and Team filters. The numbers are not meant to add up.</summary>
+/// <summary>The number on each Category segment under the Agent and Team filters. The numbers are not meant to add up.</summary>
 /// <param name="All">Every item.</param>
 /// <param name="NeedsYou">Unresolved Notifications.</param>
 /// <param name="Tasks">Items in the Tasks segment.</param>

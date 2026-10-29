@@ -18,7 +18,7 @@ public sealed class CssStructureTests
     /// <c>app.css</c> opens a "Global MudBlazor overrides" section within its first 150 lines, and
     /// the section holds the four rules that restyle MudBlazor for the whole app: the button
     /// <c>.mud-button-root</c>, <c>.mud-drawer</c>, <c>.mud-avatar img</c> and the tab typography.
-    /// They used to sit in the Task List, the Task media queries and Teammates (UX-V17).
+    /// They used to sit in the Task List, the Task media queries and Agents (UX-V17).
     /// </summary>
     [Fact]
     public void AppCss_HasGlobalMudBlazorOverridesSectionNearTheTop_HoldingTheFourRules()

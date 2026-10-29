@@ -289,7 +289,7 @@ internal static class TaskQuery
 
     /// <summary>
     /// The sentinel a null grouping value maps to when grouping, so a real value that reads like the null group's
-    /// label (a Teammate literally named "Unassigned", a Project literally named "No project") gets its own group
+    /// label (an Agent literally named "Unassigned", a Project literally named "No project") gets its own group
     /// instead of merging with it (corrections-B1 D7 item 11).
     /// </summary>
     private const string NullGroupSentinel = "\u0000";

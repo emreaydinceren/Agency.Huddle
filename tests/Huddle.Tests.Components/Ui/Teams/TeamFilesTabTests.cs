@@ -344,7 +344,7 @@ public sealed class TeamFilesTabTests : IDisposable
         /// <summary>The Teams root on disk, the folder the <c>teams</c> Library Root points at.</summary>
         public string TeamsPath => Path.Combine(this.libraryFixture.DataDir, "Teams");
 
-        /// <summary>Builds a fixture with the standard Teams/Teammates layout.</summary>
+        /// <summary>Builds a fixture with the standard Teams/Agents layout.</summary>
         public static TabFixture Build()
         {
             TempDataDir dir = new();

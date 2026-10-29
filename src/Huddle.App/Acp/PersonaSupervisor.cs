@@ -45,7 +45,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
     private readonly ReferenceExpander? references;
 
     // Every runner this supervisor builds writes the cost its Adapter reports into this table, which
-    // the Teammate card reads. Null where a supervisor is built without a container.
+    // the Agent card reads. Null where a supervisor is built without a container.
     private readonly PersonaSpend? spend;
     private readonly PersonaCommands? commands;
 
@@ -638,12 +638,12 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
     /// exists for "it is not running, and here is why".
     /// </remarks>
     /// <param name="name">The Persona being started.</param>
-    /// <returns><see langword="true"/> when Teammates are switched off and the start must not go ahead.</returns>
+    /// <returns><see langword="true"/> when Agents are switched off and the start must not go ahead.</returns>
     private bool TryRefuseWhenAcpDisabled(string name)
     {
         if (!this.options.Acp.Enabled)
         {
-            this.health.Report(name, PersonaState.Offline, "Teammates are switched off in this configuration, so nothing was started.");
+            this.health.Report(name, PersonaState.Offline, "Agents are switched off in this configuration, so nothing was started.");
             return true;
         }
 

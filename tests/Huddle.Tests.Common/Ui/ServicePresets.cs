@@ -14,7 +14,7 @@ using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Tasks;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -45,7 +45,7 @@ internal static class ServicePresets
         typeof(PersonaHealth),
         typeof(RoomFollows),
 
-        // Chat.razor renders InviteTeammate as a child, which injects PersonaStore for its Team
+        // Chat.razor renders InviteAgent as a child, which injects PersonaStore for its Team
         // filter - needed even though these tests never open that panel.
         typeof(PersonaStore),
 
@@ -62,7 +62,7 @@ internal static class ServicePresets
         typeof(IMentionAliasSource),
 
         // Chat.razor now renders ProposalCard directly above the Budget prompt (Task 12.1), which
-        // injects these three even though these tests never propose a Teammate - PersonaStore and
+        // injects these three even though these tests never propose an Agent - PersonaStore and
         // RoomEvents are already copied above, for the same reason.
         typeof(ProposalStore),
         typeof(ProposalService),
@@ -96,10 +96,10 @@ internal static class ServicePresets
     ];
 
     /// <summary>
-    /// What the <c>Teammates</c> page and its card inject: the Teammate stores, the gateway and health that
+    /// What the <c>Agents</c> page and its card inject: the Agent stores, the gateway and health that
     /// drive a card's status, and the catalogs its Skill and adapter pickers read.
     /// </summary>
-    internal static readonly Type[] Teammates =
+    internal static readonly Type[] Agents =
     [
         typeof(PersonaStore),
         typeof(ITeamDirectory),
@@ -113,7 +113,7 @@ internal static class ServicePresets
         typeof(AdapterCatalog),
         typeof(AvatarStore),
         typeof(SkillStore),
-        typeof(BuiltinTeammateReset),
+        typeof(BuiltinAgentReset),
     ];
 
     /// <summary>

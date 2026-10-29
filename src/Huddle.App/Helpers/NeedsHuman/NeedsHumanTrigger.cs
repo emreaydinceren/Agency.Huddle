@@ -5,7 +5,7 @@ using Agency.Huddle.App.Tasks.HumanGate;
 namespace Agency.Huddle.App.Helpers.NeedsHuman;
 
 /// <summary>
-/// Watches Task changes and queues a judgement for each Task a Teammate creates or rewrites (Helpers Spec §6.9). It does
+/// Watches Task changes and queues a judgement for each Task an Agent creates or rewrites (Helpers Spec §6.9). It does
 /// only fast, in-memory work, because <see cref="TaskEvents"/> runs handlers on the saver's thread and lets a throwing one
 /// propagate: a Helper must never turn a successful save into an error.
 /// </summary>
@@ -71,7 +71,7 @@ internal sealed class NeedsHumanTrigger(TaskEvents events, HelperDispatcher disp
             return;
         }
 
-        // 2. Teammates only: not the Human, an outside edit, or the Helper's own writes.
+        // 2. Agents only: not the Human, an outside edit, or the Helper's own writes.
         if (change.Actor.Kind != TaskActorKind.Agent)
         {
             return;

@@ -1,6 +1,6 @@
 # Questions
 
-Prove, in a real browser against a real model, that an Agent asks the Human with `ask_human` when it should and does not when it should not; that it ends its Turn after asking and does not guess the answer; that the card appears only after the asker's framing Message; that an answer wakes only the asker in a Room of three; and that a Claude Teammate has no second, built-in way to ask. The automated suite proves the card, the store, the tool's refusals and the Reply Gate; this page proves what only a model can show: whether it calls the tool at the right moment, ends its Turn when told to, and does not reach for `AskUserQuestion`. **Written and run once on 2026-10-01, in the app** (Haiku, Budget 4, a scratch data directory): 02, 05 and 06 pass, 03 passes weakly, 04 is inconclusive for want of an `agency-acp` Profile, and 01 **failed** until `systemPrompt.askHuman` was added, then passed on a re-run the same day (one sample). Why it failed: the Claude Adapter defers every MCP tool, so the model never read `ask_human`'s description; see the [tracker](tracker.md#questions) and the spec's header note. Nine of the ten spend money, because each of those needs a Turn; QUESTIONS-07 does not.
+Prove, in a real browser against a real model, that an Agent asks the Human with `ask_human` when it should and does not when it should not; that it ends its Turn after asking and does not guess the answer; that the card appears only after the asker's framing Message; that an answer wakes only the asker in a Room of three; and that a Claude Agent has no second, built-in way to ask. The automated suite proves the card, the store, the tool's refusals and the Reply Gate; this page proves what only a model can show: whether it calls the tool at the right moment, ends its Turn when told to, and does not reach for `AskUserQuestion`. **Written and run once on 2026-10-01, in the app** (Haiku, Budget 4, a scratch data directory): 02, 05 and 06 pass, 03 passes weakly, 04 is inconclusive for want of an `agency-acp` Profile, and 01 **failed** until `systemPrompt.askHuman` was added, then passed on a re-run the same day (one sample). Why it failed: the Claude Adapter defers every MCP tool, so the model never read `ask_human`'s description; see the [tracker](tracker.md#questions) and the spec's header note. Nine of the ten spend money, because each of those needs a Turn; QUESTIONS-07 does not.
 
 **10 tests** · 1 free, 9 paid 💰 · about 3.1 hours.
 
@@ -17,9 +17,9 @@ QM-1 to QM-10) and [ADR-0022](../../adr/0022-an-agent-asks-the-human-with-a-ques
 | QUESTIONS-01 | QM-1 | Paid 💰 | Does a model call `ask_human`, with a framing sentence, when it needs preferences |
 | QUESTIONS-02 | QM-2 | Paid 💰 | Does it end its Turn without guessing, and does the framing land before you can tap |
 | QUESTIONS-03 | QM-3 | Paid 💰 | Does it leave the tool alone when the answer is a fact or an opinion |
-| QUESTIONS-04 | QM-4 | Paid 💰 | Does a Teammate on `agency-acp` behave as QUESTIONS-01 does, or is the failure recorded |
+| QUESTIONS-04 | QM-4 | Paid 💰 | Does an Agent on `agency-acp` behave as QUESTIONS-01 does, or is the failure recorded |
 | QUESTIONS-05 | QM-5 | Paid 💰 | In a Room of three, does an answer wake only the asker |
-| QUESTIONS-06 | QM-6 | Paid 💰 | With `Acp:AdvertiseElicitation` **off**, does a Claude Teammate have no `AskUserQuestion`, and does the Turn not hang (§6.8) |
+| QUESTIONS-06 | QM-6 | Paid 💰 | With `Acp:AdvertiseElicitation` **off**, does a Claude Agent have no `AskUserQuestion`, and does the Turn not hang (§6.8) |
 | QUESTIONS-07 | QM-7 | Free | Does a scripted Adapter's form reach the Human as a card, with typed fields and the right typed answer (§6.8a) |
 | QUESTIONS-08 | QM-8 | Paid 💰 | With the default **on**, does Claude's `AskUserQuestion` reach the Human as a card, does the Turn survive the wait, and does the answer land in the Transcript without waking the asker |
 | QUESTIONS-09 | QM-9 | Paid 💰 | Do Dismiss and Stop end a waiting form cleanly |
@@ -29,14 +29,14 @@ QM-1 to QM-10) and [ADR-0022](../../adr/0022-an-agent-asks-the-human-with-a-ques
 
 Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures](common.md). This area adds:
 
-1. Use **scratch** Teammates (`P-NEW-PERSONA`), Haiku, never ones that matter. Create **Coach**
+1. Use **scratch** Agents (`P-NEW-PERSONA`), Haiku, never ones that matter. Create **Coach**
    (body: *"You are a fitness coach."*), and for QUESTIONS-05 a second, **Nova**, and a third,
    **Sable**, each with one sentence of body. Set Haiku / `low` as
    [§0.3](../manual-tests.md#03-the-model-and-effort-convention) says. Whether Haiku advertises an effort
    ladder is a runtime fact of the installed Adapter that [MODELEFFORT-02](model-effort.md) records: if
    the card offers no `low` for Haiku, leave Effort on `Model default` and note it in the result.
-2. The tool is offered to **every** Teammate, so no Skill is needed. A Teammate's tool descriptions are
-   read when its session starts: a Teammate started before this build must be restarted from its card.
+2. The tool is offered to **every** Agent, so no Skill is needed. An Agent's tool descriptions are
+   read when its session starts: an Agent started before this build must be restarted from its card.
 3. "The card" means the panel headed *"<Name> is asking"* between the Transcript and the composer.
    "The framing" is the sentence the asker writes in the same Turn, saying why it is asking. **Two
    different cards carry that header**, and `AdvertiseElicitation` defaults to `true`, so the model may
@@ -60,9 +60,9 @@ Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures]
    (spec §6.8a); a substring search for `elicitation` finds both spellings.
 6. QUESTIONS-07 to QUESTIONS-10 use `Acp:AdvertiseElicitation`, which defaults to **`true`**: do not set it
    to `false` for them. QUESTIONS-07 is **free** and runs on the scripted adapter: launch `P-LAUNCH-UAT`, whose only Adapter Profile is
-   `mock-acp`; a one-entry profile list makes it the default, so every Teammate there, **Ada** and **Bo**
+   `mock-acp`; a one-entry profile list makes it the default, so every Agent there, **Ada** and **Bo**
    and the Chief of Staff alike, is on the mock. It spends nothing, because no real model is started. A
-   message to a Teammate on it that contains `[elicit:form]`, `[elicit:ask]`,
+   message to an Agent on it that contains `[elicit:form]`, `[elicit:ask]`,
    `[elicit:one]`, `[elicit:refusal]` or `[elicit:unsupported]` makes it put that form to you and reply with
    exactly what it received. QUESTIONS-08 to QUESTIONS-10 need the stock Claude Adapter and a scratch
    `Team__DataDir`, with Coach on **Haiku**. Point `Team__Acp__AdapterPath` at the installed
@@ -105,7 +105,7 @@ Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures]
 
 - The card has typed fields with **Send** and **Dismiss**, or `O-TOOLCALLS` shows `AskUserQuestion` -> the model picked Claude's own tool; this is the Elicitation card of QUESTIONS-08, not `ask_human`. Record it and fail QM-1.
 - Coach wrote its questions out as a list in the Message and no card appeared -> the model did not call the tool; record the wording it used and check `systemPrompt.askHuman` (the system prompt, `prompts.default.json`), which is what asks the model to use the tool.
-- Coach said it has no such tool -> the tool is not offered; restart the Teammate from its card and check [get_help](app-tools.md).
+- Coach said it has no such tool -> the tool is not offered; restart the Agent from its card and check [get_help](app-tools.md).
 - The card appeared with no framing sentence at all -> the description's "say why you are asking" is not being followed.
 
 ### QUESTIONS-02 — The asker ends its Turn without guessing, and the framing lands before the card can be tapped
@@ -161,7 +161,7 @@ Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures]
 - A card appeared for the first question -> the description is not restraining the model enough on a plain fact.
 - A card appeared for the second -> likewise, for a request for an opinion. Either is a wording change to the Prompt, not a code defect: record what it asked.
 
-### QUESTIONS-04 — The same on a Teammate running on `agency-acp`
+### QUESTIONS-04 — The same on an Agent running on `agency-acp`
 
 **Paid** 💰 · about 20 min
 
@@ -169,7 +169,7 @@ Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures]
 
 **Before you start**
 
-- A Teammate on the `agency-acp` Adapter, in a Room with you.
+- An Agent on the `agency-acp` Adapter, in a Room with you.
 
 **Steps**
 
@@ -186,7 +186,7 @@ Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures]
 
 **Fail if — any of these**
 
-- The Teammate called the tool, got a success, and no card appeared -> the arguments were mangled in transit; compare the wire with the schema.
+- The Agent called the tool, got a success, and no card appeared -> the arguments were mangled in transit; compare the wire with the schema.
 
 ### QUESTIONS-05 — In a Room of three, an answer wakes only the asker
 
@@ -202,7 +202,7 @@ Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures]
 
 1. Send *"@Coach help me plan a workout routine"*. Wait for the card. If it has typed fields with **Dismiss**, Coach picked `AskUserQuestion`, not `ask_human` (setup step 3): record it and fail the test; do not continue.
 2. Tap an option on each Question and press **Send** (or tap once if the card holds one Question).
-3. Watch which Teammates start a Turn, and run `O-TRANSCRIPT`.
+3. Watch which Agents start a Turn, and run `O-TRANSCRIPT`.
 4. Then send *"@Nova what did Coach just ask me?"*.
 
 **Pass if — all of these**
@@ -216,7 +216,7 @@ Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures]
 - Nova or Sable replied to the answer -> the Mention is not the only thing waking them.
 - The answer is not rendered under each quoted Question, but inside the quote -> the blank line between a quote and its answer has been lost.
 
-### QUESTIONS-06 — A Claude Teammate has no built-in `AskUserQuestion`
+### QUESTIONS-06 — A Claude Agent has no built-in `AskUserQuestion`
 
 **Paid** 💰 · about 20 min
 
@@ -257,7 +257,7 @@ Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures]
 **Steps**
 
 1. Send `[elicit:form] plan this`. The card "Plan the delivery" appears. Try **Send** with only Title filled: it is disabled. Fill Title `Move the office`, Due date `2026-10-15`, Boxes `25`, and note that **Send stays disabled** (the schema's maximum is 20, and the field says so); change Boxes to `7`, Budget `12.5`, switch **Insured** on, choose **High**, tick **Fragile** and **Cold chain**, type `Pianos <b>first</b> & "quotes"` in Notes, and press **Send**.
-2. Read the Transcript and the Teammate's reply.
+2. Read the Transcript and the Agent's reply.
 3. Send `[elicit:ask] two`. In the first question tap **Green**, then type `Teal` in **Other**. Tick two options of the second question and press **Send**.
 4. Send `[elicit:unsupported]`, then `[elicit:one]` (press **Dismiss**), then `[elicit:refusal]` (choose the second option and press **Send**).
 5. Send `[elicit:ask] again`, and while its card is open type `never mind` in the composer and send it.
@@ -274,7 +274,7 @@ Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures]
 
 - Send, Dismiss or the composer cannot be reached on a 720-pixel window -> the card's height cap is not applying; check that its rules are in `app.css`, not a scoped stylesheet.
 - A number or boolean arrives as text (`"7"`, `"true"`) -> the answer's typing is broken (D-17).
-- The Teammate replied to the Transcript Message as if you had spoken to it -> the answer is being delivered to the asker (D-16).
+- The Agent replied to the Transcript Message as if you had spoken to it -> the answer is being delivered to the asker (D-16).
 - A card stays after step 5 -> a typed Message no longer ends a waiting form.
 
 ### QUESTIONS-08 — Claude's `AskUserQuestion` reaches the Human, and the Turn survives the wait

@@ -2,7 +2,7 @@ using Agency.Huddle.App.Acp;
 
 namespace Agency.Huddle.App.Teams;
 
-/// <summary>The one rule for adding and removing a Pack on a Teammate (Skill Packs spec §6.10.4): the card's chip, the
+/// <summary>The one rule for adding and removing a Pack on an Agent (Skill Packs spec §6.10.4): the card's chip, the
 /// Remove Pack flow and the update card all use it, so one rule decides which Skills leave with a Pack. Pure: text in, text
 /// out; nothing is written.</summary>
 internal static class PackMembership
@@ -33,10 +33,10 @@ internal static class PackMembership
 
     /// <summary>Removes the Pack: its <c>_packs</c> entry, its clause, and each of its Skills that neither the role nor
     /// another of <paramref name="otherPacks"/> provides.</summary>
-    /// <param name="text">The Teammate file.</param>
+    /// <param name="text">The Agent file.</param>
     /// <param name="pack">The Pack to remove.</param>
-    /// <param name="roleSkills">The Skills the Teammate's role carries; they stay.</param>
-    /// <param name="otherPacks">The Teammate's other Packs; their Skills stay.</param>
+    /// <param name="roleSkills">The Skills the Agent's role carries; they stay.</param>
+    /// <param name="otherPacks">The Agent's other Packs; their Skills stay.</param>
     public static string Remove(string text, PackContents pack, IReadOnlyCollection<string> roleSkills, IReadOnlyList<PackContents> otherPacks)
     {
         ArgumentNullException.ThrowIfNull(text);

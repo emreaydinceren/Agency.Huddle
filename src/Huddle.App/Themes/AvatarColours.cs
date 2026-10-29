@@ -5,46 +5,46 @@ namespace Agency.Huddle.App.Themes;
 /// <summary>
 /// The monogram colour recipe, in C#: the same <c>color-mix(in srgb, ...)</c> that <c>app.css</c> applies to
 /// <c>.avatar-monogram</c>, so a test can run the recipe through <see cref="ContrastColour.Ratio(MudColor, MudColor)"/>
-/// for any Teammate colour in any Theme. A Light Theme: the fill is the Teammate's colour at <see cref="LightFillPercent"/>%
+/// for any Agent colour in any Theme. A Light Theme: the fill is the Agent's colour at <see cref="LightFillPercent"/>%
 /// over Surface and the letters are that colour mixed <see cref="LettersTowardPercent"/>% toward <c>TextPrimary</c>. A Dark
 /// Theme: the colour at <see cref="DarkFillPercent"/>% over its Surface (a deep fill) and the letters mixed
 /// <see cref="LettersTowardPercent"/>% toward white (light letters).
 /// </summary>
 internal static class AvatarColours
 {
-    /// <summary>How much of the Teammate's colour is in a Light Theme's monogram fill; the rest is Surface.</summary>
+    /// <summary>How much of the Agent's colour is in a Light Theme's monogram fill; the rest is Surface.</summary>
     internal const int LightFillPercent = 20;
 
-    /// <summary>How much of the Teammate's colour is in a Dark Theme's monogram fill; the rest is Surface.</summary>
+    /// <summary>How much of the Agent's colour is in a Dark Theme's monogram fill; the rest is Surface.</summary>
     internal const int DarkFillPercent = 35;
 
-    /// <summary>How far the letters are pulled from the Teammate's colour toward <c>TextPrimary</c> (Light) or white (Dark).</summary>
+    /// <summary>How far the letters are pulled from the Agent's colour toward <c>TextPrimary</c> (Light) or white (Dark).</summary>
     internal const int LettersTowardPercent = 75;
 
     /// <summary>
-    /// The inline style that gives a monogram <paramref name="teammateColour"/>: it replaces the avatar's own copy of the
+    /// The inline style that gives a monogram <paramref name="agentColour"/>: it replaces the avatar's own copy of the
     /// primary colour, which <c>app.css</c> turns into the fill and the letters for the Theme in force (Light or Dark), so
     /// the recipe lives in one place and each Theme resolves it for itself.
     /// </summary>
-    /// <param name="teammateColour">The Teammate's colour, as the stored <c>#rrggbb</c> text.</param>
+    /// <param name="agentColour">The Agent's colour, as the stored <c>#rrggbb</c> text.</param>
     /// <returns>The style declaration.</returns>
-    internal static string MonogramStyle(string teammateColour) => $"--mud-palette-primary: {teammateColour};";
+    internal static string MonogramStyle(string agentColour) => $"--mud-palette-primary: {agentColour};";
 
-    /// <summary>The monogram fill: <paramref name="teammate"/> over <paramref name="surface"/>, at 20% (Light) or 35% (Dark).</summary>
-    /// <param name="teammate">The Teammate's colour.</param>
+    /// <summary>The monogram fill: <paramref name="agent"/> over <paramref name="surface"/>, at 20% (Light) or 35% (Dark).</summary>
+    /// <param name="agent">The Agent's colour.</param>
     /// <param name="surface">The Theme's Surface.</param>
     /// <param name="dark">Whether the Theme is a Dark one.</param>
     /// <returns>The opaque fill colour.</returns>
-    internal static MudColor Fill(MudColor teammate, MudColor surface, bool dark) =>
-        Mix(surface, teammate, dark ? DarkFillPercent : LightFillPercent);
+    internal static MudColor Fill(MudColor agent, MudColor surface, bool dark) =>
+        Mix(surface, agent, dark ? DarkFillPercent : LightFillPercent);
 
-    /// <summary>The monogram letters: <paramref name="teammate"/> mixed 75% toward <paramref name="textPrimary"/> (Light) or white (Dark).</summary>
-    /// <param name="teammate">The Teammate's colour.</param>
+    /// <summary>The monogram letters: <paramref name="agent"/> mixed 75% toward <paramref name="textPrimary"/> (Light) or white (Dark).</summary>
+    /// <param name="agent">The Agent's colour.</param>
     /// <param name="textPrimary">The Theme's TextPrimary, used by a Light Theme.</param>
     /// <param name="dark">Whether the Theme is a Dark one.</param>
     /// <returns>The opaque letter colour.</returns>
-    internal static MudColor Letters(MudColor teammate, MudColor textPrimary, bool dark) =>
-        Mix(teammate, dark ? new MudColor("#ffffff") : textPrimary, LettersTowardPercent);
+    internal static MudColor Letters(MudColor agent, MudColor textPrimary, bool dark) =>
+        Mix(agent, dark ? new MudColor("#ffffff") : textPrimary, LettersTowardPercent);
 
     /// <summary>
     /// Mixes two opaque colours in sRGB space, as <c>color-mix(in srgb, from, to N%)</c> does.

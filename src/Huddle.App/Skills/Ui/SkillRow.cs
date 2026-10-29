@@ -9,7 +9,7 @@ namespace Agency.Huddle.App.Skills.Ui;
 /// <param name="Entry">The registry's entry, when a catalog or Pack lists it.</param>
 /// <param name="Origin">Which of the three it is.</param>
 /// <param name="State">The registry's display state; null for a built-in or Yours Skill, which carries none.</param>
-/// <param name="Holders">The Teammates whose <c>skills:</c> holds it.</param>
+/// <param name="Holders">The Agents whose <c>skills:</c> holds it.</param>
 /// <param name="Hidden">Whether <c>hidden.json</c> hides it.</param>
 /// <param name="IsNew">Whether its key is new since the Human last left this tab (the registry's display state says so).</param>
 internal sealed record SkillRow(

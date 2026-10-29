@@ -213,14 +213,14 @@ public sealed class TeamFolderProvisionerCreateTeamTests
         {
             this.dir = new TempDataDir();
             Directory.CreateDirectory(Path.Combine(this.dir.Path, "Teams"));
-            Directory.CreateDirectory(Path.Combine(this.dir.Path, "Teammates"));
+            Directory.CreateDirectory(Path.Combine(this.dir.Path, "Agents"));
             foreach (string seed in seedFolders)
             {
                 Directory.CreateDirectory(Path.Combine(this.dir.Path, "Teams", seed));
             }
 
             IOptions<TeamOptions> options = this.dir.Options();
-            TeammatePaths paths = new(options);
+            AgentPaths paths = new(options);
             this.personas = new PersonaStore(paths, new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
             this.roots = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
             this.resolver = new LibraryPathResolver(this.roots, options, NullLogger<LibraryPathResolver>.Instance);

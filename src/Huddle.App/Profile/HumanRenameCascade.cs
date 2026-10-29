@@ -78,12 +78,12 @@ internal sealed class HumanRenameCascade(
             logger.LogWarning(ex, "Could not move the Human's Avatar from '{OldName}' to '{NewName}'.", oldName, newName);
         }
 
-        // TaskService.RenameTeammate never throws; only the View store's file write can.
-        tasks.RenameTeammate(oldName, newName);
+        // TaskService.RenameAgent never throws; only the View store's file write can.
+        tasks.RenameAgent(oldName, newName);
 
         try
         {
-            views.RenameTeammate(oldName, newName);
+            views.RenameAgent(oldName, newName);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

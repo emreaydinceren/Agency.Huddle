@@ -424,7 +424,7 @@ public sealed class LibraryCopyAndFreshnessTests : IDisposable
         /// <c>DataDir</c>.</summary>
         public LibraryFileServiceFixture LibraryFixture { get; }
 
-        /// <summary>Builds a fixture with the standard Teams/Teammates layout.</summary>
+        /// <summary>Builds a fixture with the standard Teams/Agents layout.</summary>
         public static CopyFixture Build() => new(LibraryFileServiceFixture.Build());
 
         /// <summary>A <see cref="MudBunitContext"/> with this fixture's real <see cref="LibraryFileService"/>,

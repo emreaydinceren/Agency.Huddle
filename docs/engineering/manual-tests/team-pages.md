@@ -22,7 +22,7 @@ and the routing and component layout in `src/Huddle.App/Components/Teams/` and
 
 Every test on this page is free. Run [`P-BUILD`](common.md#p-build), then
 [`P-LAUNCH-UAT`](common.md#p-launch-uat): it gives the page **Ada** and **Bo**, two mock-adapter
-Teammates in no Team (data folder `<data>` = `C:\seeds\huddle\uat\data`). Nothing on this page
+Agents in no Team (data folder `<data>` = `C:\seeds\huddle\uat\data`). Nothing on this page
 spends tokens. The tests share one fixture and run in order: TP-T1 adds Bo to Business and TP-T2
 removes Ada, and later tests rely on both.
 
@@ -32,8 +32,8 @@ removes Ada, and later tests rely on both.
 1. Create `Nova` with [`P-NEW-PERSONA`](common.md#p-new-persona): Title `VP Product`, Alias `nova`,
    **Teams** = `Business`. Saving it creates the folder `<data>\Teams\Business\` (the Teams
    provisioner, `TeamFolderProvisioner.cs:10-12`).
-2. Open **Teammates** → **Ada** → **Edit**, type `Business` in **Teams** and click **Save**. Ada's
-   Title stays `Test Teammate`. Leave Bo with no Team.
+2. Open **Agents** → **Ada** → **Edit**, type `Business` in **Teams** and click **Save**. Ada's
+   Title stays `Test Agent`. Leave Bo with no Team.
 3. In the sidebar Teams group hover `Business`, click its `Team actions` button (⋯), then `New project`, type `Marketing Project` and click `Create`.
 4. On the Marketing Project page open **Tasks** → `New task`, set Title `Seed task` (Team
    `Business` and Project `Marketing Project` are pre-filled) and save it. Then go to
@@ -69,7 +69,7 @@ with the Team row highlighted and a list of members with avatars, names, titles 
 
 **Steps**
 
-1. Verify `<data>\Teams\Business\` exists and that Nova and Ada are the Teammates whose **Teams**
+1. Verify `<data>\Teams\Business\` exists and that Nova and Ada are the Agents whose **Teams**
    field holds `Business` (the Setup fixture).
 2. In the sidebar Teams group, click `Business`.
 
@@ -78,7 +78,7 @@ with the Team row highlighted and a list of members with avatars, names, titles 
 - The URL is `/teams/Business`.
 - The Members tab is active (first tab).
 - The members list shows Nova and Ada, each with a status dot, an avatar, the Name and a second line
-  `Title · Alias` (Nova: `VP Product`, `nova`; Ada: `Test Teammate` and her alias).
+  `Title · Alias` (Nova: `VP Product`, `nova`; Ada: `Test Agent` and her alias).
 - The `Business` Team link in the sidebar is highlighted (selected state).
 
 **Fail if**
@@ -93,11 +93,11 @@ with the Team row highlighted and a list of members with avatars, names, titles 
 
 *Proves the Members tab is Build a team's Hire section for the Team: the role cards, then the
 roster with each member's presence badge on the avatar, the *Member* meta text, Edit, Message (for a member that has
-connected) and a Remove menu on one row of actions; and that a Teammate joins through its `teams:` line.*
+connected) and a Remove menu on one row of actions; and that an Agent joins through its `teams:` line.*
 
 **Steps**
 
-1. Open **Teammates** → **Bo** → **Edit**, add `Business` to the `teams:` line of the text and
+1. Open **Agents** → **Bo** → **Edit**, add `Business` to the `teams:` line of the text and
    click **Save**. Wait until Bo is **Online** again.
 2. Open Business, then the **Members** tab.
 3. Click **Remove** on Bo's card and look at the menu, then press Escape.
@@ -107,7 +107,7 @@ connected) and a Remove menu on one row of actions; and that a Teammate joins th
 - The tab shows the role cards (**Roles**, *Available roles*) and, under them, **Roster** with
   Ada, Bo and Nova, each with a presence badge on the 40px avatar (no status dot beside the Name) and *Member* as meta text.
 - Each member has **Edit** and **Message**; the Remove menu has **Remove from team** and
-  **Delete teammate**.
+  **Delete agent**.
 - There is no **Save changes** bar yet: the save bar (sticky at the bottom of the pane) appears only once something is changed.
 - There is no Add member button and no search box.
 
@@ -116,12 +116,12 @@ connected) and a Remove menu on one row of actions; and that a Teammate joins th
 - The tab still shows the old member list, or Bo is missing from the roster.
 - A member has no presence badge on its avatar, or Message is missing for an Online member.
 
-### TP-T2 — Remove from team keeps the Teammate
+### TP-T2 — Remove from team keeps the Agent
 
 **Free** · about 2 min
 
 *Proves Remove from team marks a member until Save changes, then takes away only the Team label:
-the Teammate stays.*
+the Agent stays.*
 
 **Steps**
 
@@ -133,12 +133,12 @@ the Teammate stays.*
 - Ada's card reads "Will leave the Team when you save", her Name is struck through, and it has
   **Undo**; the roster summary reads "3 members · 1 leaving".
 - Saving asks nothing (nobody is deleted), and Ada then leaves the roster.
-- Ada is still on the **Teammates** page, and her `<data>\Teammates\Ada\Ada.md` `teams` field no
+- Ada is still on the **Agents** page, and her `<data>\Agents\Ada\Ada.md` `teams` field no
   longer includes `Business`.
 
 **Fail if**
 
-- Ada is deleted as a Teammate, or still lists `Business` after saving.
+- Ada is deleted as an Agent, or still lists `Business` after saving.
 - Anything changes before **Save changes** is clicked.
 
 ### TP-T4 — Open Files tab and create new note
@@ -337,7 +337,7 @@ Changes list is Turn prompt text, not UI — ADR-0023.)*
 
 **Steps**
 
-1. Open Bo's Room (**Teammates** → **Bo** → `Message`) and send `first`. Wait for the reply; this fixes Bo's baseline.
+1. Open Bo's Room (**Agents** → **Bo** → `Message`) and send `first`. Wait for the reply; this fixes Bo's baseline.
 2. Create the folder `<data>\Teams\Business\memory\` if it is missing, and in it a file `launch-date.md` whose content is `Date: Q4 2026` (a text editor, [`O-FILE`](common.md#o-file)). The Human writes it; nothing here spawns a real Agent.
 3. Send `second` in Bo's Room and wait for the reply.
 4. Read the reply, which is the echoed prompt.
@@ -360,13 +360,13 @@ writing the file itself with its own tools, judged by the model) is not covered 
 
 **Free** · about 2 min
 
-*Proves that a Team folder with no Teammate carrying its label (an orphaned Team) is listed in the
+*Proves that a Team folder with no Agent carrying its label (an orphaned Team) is listed in the
 sidebar with a count of `0` (its tooltip reads "No members"), its Members page opens and works, and hiring a draft
 there makes it active.*
 
 **Steps**
 
-1. Create the folder `<data>\Teams\Legal\` in a file explorer. Add no Teammate to it.
+1. Create the folder `<data>\Teams\Legal\` in a file explorer. Add no Agent to it.
 2. In the sidebar, verify `Legal` appears in the Teams list (open the Teams group first) with a trailing count of `0`; hover it and the tooltip reads "No members" (wait a few seconds; reload the page if it has not appeared).
 3. Click `Legal` in the sidebar.
 4. On the Members page, click **Add** on any role card, then **Save changes**.
@@ -375,8 +375,8 @@ there makes it active.*
 
 - The Team is listed and clickable even with no members.
 - The count beside `Legal` is `0` in plain caption text, its tooltip reads "No members", and it is not an error.
-- The Members page opens with the role cards and an empty roster ("No Teammates yet. Add a role above.") before the add.
-- After saving, the count rises to `1` and the tooltip no longer reads "No members", and the new Teammate is on the roster as a member.
+- The Members page opens with the role cards and an empty roster ("No Agents yet. Add a role above.") before the add.
+- After saving, the count rises to `1` and the tooltip no longer reads "No members", and the new Agent is on the roster as a member.
 
 **Fail if**
 
@@ -388,15 +388,15 @@ there makes it active.*
 
 **Free** · about 3 min
 
-*Proves that a Teammate carries a Team label (`Ops`) whose folder does not exist, the Team is still
+*Proves that an Agent carries a Team label (`Ops`) whose folder does not exist, the Team is still
 listed in the sidebar, its Files tab shows an empty tree, and the first save creates the folder.
-The Teams provisioner makes the folder the moment the Teammate is saved
+The Teams provisioner makes the folder the moment the Agent is saved
 (`TeamFolderProvisioner.cs:10-12`), so the test removes it by hand first.*
 
 **Steps**
 
 1. Create `Ivy` with [`P-NEW-PERSONA`](common.md#p-new-persona): Teams = `Ops`.
-2. Delete the folder `<data>\Teams\Ops\` by hand (the app keeps running; do not save any Teammate afterwards, since that re-creates the folder).
+2. Delete the folder `<data>\Teams\Ops\` by hand (the app keeps running; do not save any Agent afterwards, since that re-creates the folder).
 3. Click the sidebar `Ops` Team link, then the `Files` tab, and observe the empty tree.
 4. Click `New note` and create a file `ops-note`.
 5. Confirm the file is saved.
@@ -420,7 +420,7 @@ The Teams provisioner makes the folder the moment the Teammate is saved
 
 *Proves that the **Details** tab shows Build a team's type and details for an existing Team with
 its type and name fixed and no Hire step, and writes "What it's for" to `_team.md`; and that the Members tab hires a new
-draft and deletes a removed member (the Teammate, not only the label).*
+draft and deletes a removed member (the Agent, not only the label).*
 
 **Steps**
 
@@ -431,7 +431,7 @@ draft and deletes a removed member (the Teammate, not only the label).*
    field cannot be typed in.
 4. Change **What it's for** to `Grows vegetables.` and click **Save changes**.
 5. On the Garden **Members** tab, add any role from the role cards, then click **Remove** on the
-   first of the two members and choose **Delete teammate**.
+   first of the two members and choose **Delete agent**.
 6. Click **Save changes**, then **Delete** in the confirmation.
 
 **Pass if**
@@ -440,13 +440,13 @@ draft and deletes a removed member (the Teammate, not only the label).*
 - The roster showed the two members with *Member* meta text and the new draft with *New* meta text,
   and the removed member's card said "Will be deleted when you save" with an **Undo** button.
 - The confirmation named the removed member.
-- After saving, the roster lists the second member and the new Teammate as members, and the
-  removed member is gone from the **Teammates** page.
+- After saving, the roster lists the second member and the new Agent as members, and the
+  removed member is gone from the **Agents** page.
 
 **Fail if**
 
 - The type cards or the Team name can be changed, or the Details tab shows role cards.
-- The removed member is still on the Teammates page, or only lost the `Garden` label.
+- The removed member is still on the Agents page, or only lost the `Garden` label.
 - The new draft was not hired, or a member was hired a second time.
 
 ### TP-REAL-02 — Dark theme and narrow-window styling

@@ -10,7 +10,7 @@ using Agency.Huddle.Contracts;
 
 /// <summary>Adds an existing Agent to a Room that already exists — the Invitation, issued by an Agent.</summary>
 /// <remarks>
-/// The counterpart of the Human's <c>/invite @name</c> composer command and the Add teammate control
+/// The counterpart of the Human's <c>/invite @name</c> composer command and the Add agent control
 /// on the Room header: all three end in <see cref="ChatService.InviteAsync(string, string, CancellationToken)"/>, so a Room renames
 /// itself after its Agents the same way whoever issued the Invitation.
 /// </remarks>

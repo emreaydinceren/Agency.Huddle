@@ -5,7 +5,7 @@ using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Factories;
-using Agency.Huddle.Tests.Teammates;
+using Agency.Huddle.Tests.Agents;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Agency.Huddle.Tests.Teams;
@@ -25,12 +25,12 @@ public sealed class HireServicePooledRoleTests
           "jobs": [ { "id": "lead", "title": "Lead" }, { "id": "tutor", "title": "Tutor", "suggestedNames": [ "Tess" ] } ] }
         """;
 
-    /// <summary>Hiring a pooled role writes a Teammate whose role reference names the type, the pooled role and the type's version, with the job's persona as its stance.</summary>
+    /// <summary>Hiring a pooled role writes an Agent whose role reference names the type, the pooled role and the type's version, with the job's persona as its stance.</summary>
     [Fact]
-    public void Hire_PooledRole_WritesTeammateWithThePoolPersona()
+    public void Hire_PooledRole_WritesAgentWithThePoolPersona()
     {
         using TempDataDir dir = new();
-        PersonaStore personas = new(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        PersonaStore personas = new(new AgentPaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         Dictionary<string, string> poolFiles = new(StringComparer.Ordinal)
         {
             ["hiringpool.json"] = PoolJson,

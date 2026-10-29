@@ -61,9 +61,9 @@ public sealed class ComposerTests
         Assert.False(Assert.Single(tabs.Tabs).IsPreview);
     }
 
-    /// <summary>The placeholder names the Room, uses a real ellipsis and the defined term Teammate.</summary>
+    /// <summary>The placeholder names the Room, uses a real ellipsis and the defined term Agent.</summary>
     [Fact]
-    public async Task Placeholder_NamesTheRoomAndTheTeammateTerm()
+    public async Task Placeholder_NamesTheRoomAndTheAgentTerm()
     {
         using TaskToolHarness harness = new();
         await using MudBunitContext ctx = ComposerTests.NewContext(harness);
@@ -76,7 +76,7 @@ public sealed class ComposerTests
             builder.CloseComponent();
         });
 
-        Assert.Equal("Message Grace… (/invite @Teammate)", cut.Find("textarea.composer-input").GetAttribute("placeholder"));
+        Assert.Equal("Message Grace… (/invite @Agent)", cut.Find("textarea.composer-input").GetAttribute("placeholder"));
     }
 
     /// <summary>With no Room name the placeholder still reads as a message prompt, with no stray space.</summary>
@@ -88,7 +88,7 @@ public sealed class ComposerTests
 
         IRenderedComponent<ContainerFragment> cut = ComposerTests.RenderComposer(ctx);
 
-        Assert.Equal("Message… (/invite @Teammate)", cut.Find("textarea.composer-input").GetAttribute("placeholder"));
+        Assert.Equal("Message… (/invite @Agent)", cut.Find("textarea.composer-input").GetAttribute("placeholder"));
     }
 
     /// <summary>Renders a bare <see cref="Composer"/> the same way <c>ChatPageTests.Composer_StatusLine_DoesNotFollowARoomSwitch</c> does, through <see cref="MudBunitContext.RenderWithPopovers"/> so a floating list renders in the same subtree (corrections-B6 "D15.3" item 5).</summary>

@@ -39,7 +39,7 @@ public sealed class AvatarSizesAndPresenceTests
     }
 
     /// <summary>
-    /// The Transcript's avatars (a Teammate's Message, a Draft, and the Human's own Message, which a style pack shows
+    /// The Transcript's avatars (an Agent's Message, a Draft, and the Human's own Message, which a style pack shows
     /// per ADR-0057) carry the 32px class.
     /// </summary>
     [Fact]

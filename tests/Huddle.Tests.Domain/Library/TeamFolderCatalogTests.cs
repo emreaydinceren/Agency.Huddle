@@ -176,9 +176,9 @@ public sealed class TeamFolderCatalogTests
     {
         private readonly TempDataDir dir;
         private readonly PersonaStore personas;
-        private readonly TeammatePaths paths;
+        private readonly AgentPaths paths;
 
-        private Fixture(TempDataDir dir, PersonaStore personas, TeammatePaths paths, LibraryPathResolver resolver, LibraryPath teamsRoot)
+        private Fixture(TempDataDir dir, PersonaStore personas, AgentPaths paths, LibraryPathResolver resolver, LibraryPath teamsRoot)
         {
             this.dir = dir;
             this.personas = personas;
@@ -201,24 +201,24 @@ public sealed class TeamFolderCatalogTests
         /// <summary>The Teams scan root's absolute path on disk.</summary>
         public string TeamsPath => this.TeamsRoot.FullPath;
 
-        /// <summary>Builds a fixture with an empty <c>Teams/</c> and <c>Teammates/</c> layout under a fresh temp <c>DataDir</c>.</summary>
+        /// <summary>Builds a fixture with an empty <c>Teams/</c> and <c>Agents/</c> layout under a fresh temp <c>DataDir</c>.</summary>
         /// <param name="supportsReparsePoints"><see langword="true"/> for a test that creates directory links, so the data directory sits on the system temp folder.</param>
         public static Fixture Build(bool supportsReparsePoints = false)
         {
             TempDataDir dir = new(supportsReparsePoints);
             Directory.CreateDirectory(Path.Combine(dir.Path, "Teams"));
-            Directory.CreateDirectory(Path.Combine(dir.Path, "Teammates"));
+            Directory.CreateDirectory(Path.Combine(dir.Path, "Agents"));
 
             IOptions<TeamOptions> options = dir.Options();
             PersonaStore personas = dir.CreatePersonaStore();
 
-            TeammatePaths teammatePaths = new(options);
-            LibraryRootStore rootStore = new(options, teammatePaths, NullLogger<LibraryRootStore>.Instance);
+            AgentPaths agentPaths = new(options);
+            LibraryRootStore rootStore = new(options, agentPaths, NullLogger<LibraryRootStore>.Instance);
             LibraryPathResolver resolver = new(rootStore, options, NullLogger<LibraryPathResolver>.Instance);
             Assert.True(resolver.TryResolve("teams", string.Empty, out LibraryPath? teamsRoot, out _));
             Assert.NotNull(teamsRoot);
 
-            return new Fixture(dir, personas, teammatePaths, resolver, teamsRoot);
+            return new Fixture(dir, personas, agentPaths, resolver, teamsRoot);
         }
 
         /// <summary>Writes a minimal Persona definition naming <paramref name="team"/> in its <c>teams</c> frontmatter field.</summary>

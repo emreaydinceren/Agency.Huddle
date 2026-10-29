@@ -15,12 +15,12 @@
     toasts) and the Closed chip (Spec §13.13.3 step 3) - none shown in create mode.
 
     TaskDetailDialog (Components/Tasks/TaskDetailDialog.razor) passes only Id (or a Draft for
-    create/copy), because MudBlazor freezes a dialog's parameters once it opens (TeammateCard.razor:12-24)
+    create/copy), because MudBlazor freezes a dialog's parameters once it opens (AgentProfileCard.razor:12-24)
     - TaskDetail loads the Task itself and subscribes to TaskEvents (Spec §13.6). Create mode (Id null,
     Draft set) builds a throwaway TaskItem from the Draft so it can flow through the same
     Effective/pending machinery as an existing Task; Save calls TaskService.Create instead of Update,
     and a successful Create flips the component into ordinary edit mode on the newly created Task
-    (the TeammateCard.SaveAsync create/edit convention, J51 item 4).
+    (the AgentProfileCard.SaveAsync create/edit convention, J51 item 4).
 *@
 @using System.Globalization
 @using Microsoft.Extensions.Options
@@ -138,7 +138,7 @@ else if (this.loaded is { } task)
     @if (budgetExhausted)
     {
         <MudAlert Severity="Severity.Warning" role="status" Class="task-detail-budget-banner">
-            <span class="task-detail-budget-banner-text">@($"Wake-ups for this task are paused after {agentWakeBudget} changes by Teammates.")</span>
+            <span class="task-detail-budget-banner-text">@($"Wake-ups for this task are paused after {agentWakeBudget} changes by Agents.")</span>
             <MudButton Size="Size.Medium" OnClick="this.AllowMore">@($"Allow {agentWakeBudget} more")</MudButton>
         </MudAlert>
     }
@@ -1771,7 +1771,7 @@ else if (this.loaded is { } task)
     /// <summary>
     /// In create mode (corrections-B7 "14.4" item 2), calls <see cref="TaskService.Create"/> with a
     /// <see cref="TaskDraft"/> built from <see cref="Effective"/> and, on success, flips into ordinary
-    /// edit mode on the newly created Task (the <c>TeammateCard.SaveAsync</c> create/edit convention).
+    /// edit mode on the newly created Task (the <c>AgentProfileCard.SaveAsync</c> create/edit convention).
     /// Otherwise saves <see cref="pending"/> through <see cref="TaskService.Update"/> with the panel's
     /// own <see cref="baseVersion"/> (corrections-B5 D14 item 6) - never <see langword="null"/> or the
     /// just-refreshed version, so a concurrent edit to the same field is reported as a conflict rather
@@ -1779,7 +1779,7 @@ else if (this.loaded is { } task)
     /// <see cref="TaskResult.Refused"/> leave <see cref="pending"/> untouched, so a caller (such as
     /// <see cref="CloseOrReopenAsync"/>) can tell a stopped save from a completed one by checking
     /// <see cref="HasPending"/> afterwards. An <see cref="IOException"/> from the store (Spec §13.6
-    /// "Save errors") is shown in <see cref="saveError"/>, following <c>TeammateCard.SaveAsync</c>.
+    /// "Save errors") is shown in <see cref="saveError"/>, following <c>AgentProfileCard.SaveAsync</c>.
     /// </summary>
     public Task SaveAsync() => this.SaveCore(humanOverridesGates: false);
 

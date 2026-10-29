@@ -267,7 +267,7 @@ public sealed class BuildPromptReferencesTests
         AgentPrompt prompt = await BuildPromptReferencesTests.RunTurnAsync(
             BuildPromptReferencesTests.MessageWith("PLAT-0001"), BuildPromptReferencesTests.ExpanderOver(fixture), usesPrefix: true);
 
-        Assert.Equal("To learn more, list Teammates and their Teams with mcp__team__list_agents. You cannot read the Messages of a Room you are not a Member of.", BuildPromptReferencesTests.HintLine(prompt.Text)[..138]);
+        Assert.Equal("To learn more, list Agents and their Teams with mcp__team__list_agents. You cannot read the Messages of a Room you are not a Member of.", BuildPromptReferencesTests.HintLine(prompt.Text)[..135]);
         Assert.Contains("with mcp__team__get_task", prompt.Text, StringComparison.Ordinal); // contains-ok: prompt text, not markup
     }
 
@@ -281,7 +281,7 @@ public sealed class BuildPromptReferencesTests
         AgentPrompt prompt = await BuildPromptReferencesTests.RunTurnAsync(
             BuildPromptReferencesTests.MessageWith("PLAT-0001"), BuildPromptReferencesTests.ExpanderOver(fixture), usesPrefix: false);
 
-        Assert.Equal("To learn more, list Teammates and their Teams with list_agents. You cannot read the Messages of a Room you are not a Member of.", BuildPromptReferencesTests.HintLine(prompt.Text)[..127]);
+        Assert.Equal("To learn more, list Agents and their Teams with list_agents. You cannot read the Messages of a Room you are not a Member of.", BuildPromptReferencesTests.HintLine(prompt.Text)[..124]);
         Assert.DoesNotContain("mcp__team__", prompt.Text, StringComparison.Ordinal);
     }
 

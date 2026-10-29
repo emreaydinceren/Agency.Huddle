@@ -62,7 +62,7 @@ internal sealed class SkillSourcesSettings
     /// <summary>The folder set on the Sources tab, or null when none is (the configuration key or default applies).</summary>
     public string? FileDir => this.fileDir;
 
-    /// <summary>The <c>Skills/</c> folder that holds the copies Teammates use.</summary>
+    /// <summary>The <c>Skills/</c> folder that holds the copies Agents use.</summary>
     public string SkillsDir => Path.GetFullPath(this.options.Acp.SkillsDir, this.DataDir);
 
     /// <summary>The keys the Human has seen; null means "no baseline yet" (§6.5, the New overlay).</summary>

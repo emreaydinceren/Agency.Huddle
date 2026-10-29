@@ -6,7 +6,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp;
-using Agency.Huddle.Tests.Teammates;
+using Agency.Huddle.Tests.Agents;
 
 namespace Agency.Huddle.Tests.Teams;
 
@@ -25,13 +25,13 @@ namespace Agency.Huddle.Tests.Teams;
 /// of them from a valid definition, and an IO failure needs a held file that the persona watcher
 /// races. (2) The lost update WITHOUT the read-modify-write lock has no deterministic mutation: the
 /// concurrency row is probabilistic. (3) The card-vs-membership last-write-wins race (S17,
-/// correction 13): <c>TeammateCard</c> saves its stale text unconditionally; accepted, recorded in
+/// correction 13): <c>AgentProfileCard</c> saves its stale text unconditionally; accepted, recorded in
 /// the Spec by Task 8.2, no code.
 /// </para>
 /// </summary>
 public sealed class TeamMembershipTests
 {
-    private const string UnwritableText = "This Team's name can't be written to a Teammate's definition.";
+    private const string UnwritableText = "This Team's name can't be written to an Agent's definition.";
 
     /// <summary>Adding a Persona to a Team rewrites only the <c>teams</c> line, quoting every value, and leaves every other file and byte alone.</summary>
     [Fact]
@@ -516,7 +516,7 @@ public sealed class TeamMembershipTests
         private static readonly DateTime SeededWriteTime = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         private readonly TempDataDir dir = new();
-        private readonly TeammatePaths paths;
+        private readonly AgentPaths paths;
 
         /// <summary>Seeds every definition, model and effort, THEN constructs the store.</summary>
         /// <param name="files">The definition files as (stem, text) pairs.</param>
@@ -526,7 +526,7 @@ public sealed class TeamMembershipTests
         public Fixture(IReadOnlyList<(string Stem, string Text)> files, string? model = null, string? effort = null, string? workMode = null)
         {
             IOptions<TeamOptions> options = this.dir.Options();
-            this.paths = new TeammatePaths(options);
+            this.paths = new AgentPaths(options);
             foreach ((string stem, string text) in files)
             {
                 TestPersonaFiles.Write(this.paths, stem, text);

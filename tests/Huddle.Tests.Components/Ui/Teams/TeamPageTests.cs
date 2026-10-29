@@ -225,12 +225,12 @@ public sealed class TeamPageTests
         Assert.Equal([nameof(TeamTasksTab)], RenderedTabs(cut));
     }
 
-    /// <summary>An unknown Team shows the Warning alert naming it with a link to the Teammates page, and renders no tabs.</summary>
+    /// <summary>An unknown Team shows the Warning alert naming it with a link to the Agents page, and renders no tabs.</summary>
     /// <param name="project">A Project route value, or <see langword="null"/>: an unknown Team wins either way.</param>
     [Theory]
     [InlineData(null)]
     [InlineData("Marketing Project")]
-    public async Task UnknownTeam_ShowsTheAlertWithTheTeammatesLink(string? project)
+    public async Task UnknownTeam_ShowsTheAlertWithTheAgentsLink(string? project)
     {
         await using MudBunitContext ctx = NewContext(Catalog());
 
@@ -239,8 +239,8 @@ public sealed class TeamPageTests
         Assert.Equal("There is no Team named \"Nope\".", cut.Find($"{AlertSelector} .team-page-notice-text").TextContent.Trim());
         Assert.Equal(Severity.Warning, cut.FindComponent<MudAlert>().Instance.Severity);
         AngleSharp.Dom.IElement link = cut.Find($"{AlertSelector} a.team-page-notice-link");
-        Assert.Equal("/teammates", link.GetAttribute("href"));
-        Assert.Equal("Teammates", link.TextContent.Trim());
+        Assert.Equal("/agents", link.GetAttribute("href"));
+        Assert.Equal("Agents", link.TextContent.Trim());
         Assert.Empty(TabHeaders(cut));
         Assert.Empty(RenderedTabs(cut));
     }
@@ -451,7 +451,7 @@ public sealed class TeamPageTests
         Assert.Contains("pa-4", cut.Find(".mud-container").ClassList);
     }
 
-    /// <summary>The tab rail takes its icons from <c>TabIcons</c>, the entity table of design-system.md (UX-008): Teammates for Members, Library for Files, Tasks for Tasks; Details, which has no entity, takes the Info icon.</summary>
+    /// <summary>The tab rail takes its icons from <c>TabIcons</c>, the entity table of design-system.md (UX-008): Agents for Members, Library for Files, Tasks for Tasks; Details, which has no entity, takes the Info icon.</summary>
     [Fact]
     public async Task TabRail_IconsComeFromTabIcons()
     {
@@ -460,7 +460,7 @@ public sealed class TeamPageTests
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
 
         string?[] icons = [.. cut.FindComponents<MudTabPanel>().Select(panel => panel.Instance.Icon)];
-        Assert.Equal([TabIcons.For("teammates"), TabIcons.For("library"), TabIcons.For("tasks"), Icons.Material.Outlined.Info], icons);
+        Assert.Equal([TabIcons.For("agents"), TabIcons.For("library"), TabIcons.For("tasks"), Icons.Material.Outlined.Info], icons);
     }
 
     /// <summary>The "turned off" notice is a status, not an alert: it says nothing went wrong (UX-V13 family, U19 carry-over).</summary>

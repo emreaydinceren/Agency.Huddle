@@ -4,7 +4,7 @@ using System.Text;
 namespace Agency.Huddle.App.Avatars;
 
 /// <summary>
-/// What a Teammate or the Human shows for themselves in the chat surface: an optional image, an
+/// What an Agent or the Human shows for themselves in the chat surface: an optional image, an
 /// optional text label standing in for it, and an optional background colour. Public because a Razor
 /// <c>[Parameter]</c> may not be of an <c>internal</c> type (<c>CS0053</c>), and a later task binds one.
 /// </summary>
@@ -38,7 +38,7 @@ public sealed record Avatar(string? Label, string? Image, string? Background)
     /// </summary>
     internal const int MaxLabelTextElements = 3;
 
-    /// <summary>The avatar of a Teammate or the Human who has not customised one - today's rendering exactly, with all three fields unset.</summary>
+    /// <summary>The avatar of an Agent or the Human who has not customised one - today's rendering exactly, with all three fields unset.</summary>
     public static Avatar None { get; } = new(Label: null, Image: null, Background: null);
 
     /// <summary>Whether every field is unset, meaning nothing overrides the default rendering.</summary>

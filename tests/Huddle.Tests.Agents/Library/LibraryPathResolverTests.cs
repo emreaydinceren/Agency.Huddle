@@ -31,15 +31,15 @@ public sealed class LibraryPathResolverTests
     [InlineData("teams", "Marketing/Launch Q4/plan.md", "Marketing/Launch Q4/plan.md", "File", null)]
     [InlineData("teams", "Marketing\\Launch Q4\\plan.md", "Marketing/Launch Q4/plan.md", "File", null)]
     [InlineData("teams", "Marketing/_tasks/MKT-0001.md", null, null, "That folder is reserved.")]
-    [InlineData("teams", "../Teammates/Nova/Nova.md", null, null, "That path isn't inside the Library.")]
+    [InlineData("teams", "../Agents/Nova/Nova.md", null, null, "That path isn't inside the Library.")]
     [InlineData("teams", "Marketing/../../x", null, null, "That path isn't inside the Library.")]
     [InlineData("teams", "./Marketing", null, null, "That path isn't inside the Library.")]
     [InlineData("teams", "Marketing//plan.md", null, null, "That path isn't inside the Library.")]
     [InlineData("teams", "Marketing./x", null, null, "That path isn't inside the Library.")]
-    [InlineData("teammates", "Nova", "Nova", "TeammateFolder", null)]
-    [InlineData("teammates", "Nova/Nova.md", "Nova/Nova.md", "TeammateDefinition", null)]
-    [InlineData("teammates", "Nova/work", "Nova/work", "WorkDir", null)]
-    [InlineData("teammates", "Nova/work/memory/x.md", "Nova/work/memory/x.md", "File", null)]
+    [InlineData("agents", "Nova", "Nova", "AgentFolder", null)]
+    [InlineData("agents", "Nova/Nova.md", "Nova/Nova.md", "AgentDefinition", null)]
+    [InlineData("agents", "Nova/work", "Nova/work", "WorkDir", null)]
+    [InlineData("agents", "Nova/work/memory/x.md", "Nova/work/memory/x.md", "File", null)]
     [InlineData("vault", "../Vault-evil/secret.md", null, null, "That path isn't inside the Library.")]
     [InlineData("nope", "x", null, null, "Unknown Library root 'nope'.")]
     [InlineData("teams", "C:\\x", null, null, "That path isn't inside the Library.")]
@@ -133,19 +133,19 @@ public sealed class LibraryPathResolverTests
         Assert.Equal("That folder is reserved.", error);
     }
 
-    /// <summary>Item 19: a Teammate definition reached through a pinned root above <c>DataDir</c> still gets the Teammates root's role.</summary>
+    /// <summary>Item 19: an Agent definition reached through a pinned root above <c>DataDir</c> still gets the Agents root's role.</summary>
     [Fact]
-    public void TryResolve_PinnedRootAboveDataDir_TeammateDefinition_ResolvesRole()
+    public void TryResolve_PinnedRootAboveDataDir_AgentDefinition_ResolvesRole()
     {
         using Fixture fixture = BuildFixture(new PinnedRootOption { Name = "Parent", Path = "PLACEHOLDER" });
         fixture.SetParentRootPath();
 
-        bool resolved = fixture.Resolver.TryResolve("parent", "App_Data/Teammates/Nova/Nova.md", out LibraryPath? path, out string? error);
+        bool resolved = fixture.Resolver.TryResolve("parent", "App_Data/Agents/Nova/Nova.md", out LibraryPath? path, out string? error);
 
         Assert.True(resolved);
         Assert.NotNull(path);
         Assert.Null(error);
-        Assert.Equal(LibraryNodeRole.TeammateDefinition, path.Role);
+        Assert.Equal(LibraryNodeRole.AgentDefinition, path.Role);
     }
 
     /// <summary>A pinned root at DataDir's parent resolves DataDir itself as a Folder without crashing.</summary>
@@ -207,13 +207,13 @@ public sealed class LibraryPathResolverTests
         Assert.Equal("That folder is reserved.", error);
     }
 
-    /// <summary>Item 20: an ordinary file under a Teammate folder (not the definition, not the Work Dir) is a plain <c>File</c>.</summary>
+    /// <summary>Item 20: an ordinary file under an Agent folder (not the definition, not the Work Dir) is a plain <c>File</c>.</summary>
     [Fact]
-    public void TryResolve_TeammatesOrdinaryFile_IsFile()
+    public void TryResolve_AgentsOrdinaryFile_IsFile()
     {
         using Fixture fixture = BuildFixture();
 
-        bool resolved = fixture.Resolver.TryResolve("teammates", "Nova/notes.md", out LibraryPath? path, out string? error);
+        bool resolved = fixture.Resolver.TryResolve("agents", "Nova/notes.md", out LibraryPath? path, out string? error);
 
         Assert.True(resolved);
         Assert.NotNull(path);
@@ -221,13 +221,13 @@ public sealed class LibraryPathResolverTests
         Assert.Equal(LibraryNodeRole.File, path.Role);
     }
 
-    /// <summary>Item 20: an underscore-prefixed folder directly under Teammates is an ordinary <c>Folder</c> (the Teams underscore rule does not apply here).</summary>
+    /// <summary>Item 20: an underscore-prefixed folder directly under Agents is an ordinary <c>Folder</c> (the Teams underscore rule does not apply here).</summary>
     [Fact]
-    public void TryResolve_TeammatesUnderscoreFolder_IsFolder()
+    public void TryResolve_AgentsUnderscoreFolder_IsFolder()
     {
         using Fixture fixture = BuildFixture();
 
-        bool resolved = fixture.Resolver.TryResolve("teammates", "_unsorted", out LibraryPath? path, out string? error);
+        bool resolved = fixture.Resolver.TryResolve("agents", "_unsorted", out LibraryPath? path, out string? error);
 
         Assert.True(resolved);
         Assert.NotNull(path);
@@ -235,28 +235,28 @@ public sealed class LibraryPathResolverTests
         Assert.Equal(LibraryNodeRole.Folder, path.Role);
     }
 
-    /// <summary>Item 20: the definition file's name matches its Teammate folder's name case-insensitively
+    /// <summary>Item 20: the definition file's name matches its Agent folder's name case-insensitively
     /// (<c>vega/VEGA.md</c>). Both exist on disk exactly as spelled, so this holds on case-sensitive file
     /// systems too.</summary>
     [Fact]
-    public void TryResolve_TeammatesCaseInsensitiveDefinition_IsTeammateDefinition()
+    public void TryResolve_AgentsCaseInsensitiveDefinition_IsAgentDefinition()
     {
         using Fixture fixture = BuildFixture();
-        string vega = Path.Combine(fixture.DataDir, "Teammates", "vega");
+        string vega = Path.Combine(fixture.DataDir, "Agents", "vega");
         Directory.CreateDirectory(vega);
         File.WriteAllText(Path.Combine(vega, "VEGA.md"), "---\nname: vega\n---\n");
 
-        bool resolved = fixture.Resolver.TryResolve("teammates", "vega/VEGA.md", out LibraryPath? path, out string? error);
+        bool resolved = fixture.Resolver.TryResolve("agents", "vega/VEGA.md", out LibraryPath? path, out string? error);
 
         Assert.True(resolved);
         Assert.NotNull(path);
         Assert.Null(error);
-        Assert.Equal(LibraryNodeRole.TeammateDefinition, path.Role);
+        Assert.Equal(LibraryNodeRole.AgentDefinition, path.Role);
     }
 
     /// <summary>Item 20: on Windows, an upper-case <c>WORK</c> still matches the lower-case <c>work</c> folder (<see cref="Agency.Huddle.App.FileChanges.FileState"/>'s <c>PathComparer</c>); off Windows the file system is case-sensitive, so this is Windows-only.</summary>
     [Fact]
-    public void TryResolve_TeammatesUppercaseWorkFolder_IsWorkDirOnWindowsOnly()
+    public void TryResolve_AgentsUppercaseWorkFolder_IsWorkDirOnWindowsOnly()
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -266,7 +266,7 @@ public sealed class LibraryPathResolverTests
 
         using Fixture fixture = BuildFixture();
 
-        bool resolved = fixture.Resolver.TryResolve("teammates", "Nova/WORK", out LibraryPath? path, out string? error);
+        bool resolved = fixture.Resolver.TryResolve("agents", "Nova/WORK", out LibraryPath? path, out string? error);
 
         Assert.True(resolved);
         Assert.NotNull(path);
@@ -692,7 +692,7 @@ public sealed class LibraryPathResolverTests
             this.Vault = vault;
             this.Outside = outside;
             this.teamOptions = teamOptions;
-            TeammatePaths paths = new(Options.Create(teamOptions));
+            AgentPaths paths = new(Options.Create(teamOptions));
             this.RootStore = new LibraryRootStore(Options.Create(teamOptions), paths, NullLogger<LibraryRootStore>.Instance);
             this.Resolver = new LibraryPathResolver(this.RootStore, Options.Create(teamOptions), NullLogger<LibraryPathResolver>.Instance);
         }
@@ -722,7 +722,7 @@ public sealed class LibraryPathResolverTests
             int index = roots.FindIndex(r => string.Equals(r.Name, name, StringComparison.Ordinal));
             roots[index] = new PinnedRootOption { Name = name, Path = path };
             this.teamOptions.Library.Roots = roots;
-            TeammatePaths paths = new(Options.Create(this.teamOptions));
+            AgentPaths paths = new(Options.Create(this.teamOptions));
             this.RootStore = new LibraryRootStore(Options.Create(this.teamOptions), paths, NullLogger<LibraryRootStore>.Instance);
             this.Resolver = new LibraryPathResolver(this.RootStore, Options.Create(this.teamOptions), NullLogger<LibraryPathResolver>.Instance);
         }
@@ -756,11 +756,11 @@ public sealed class LibraryPathResolverTests
         File.WriteAllText(Path.Combine(dataDir, "Teams", "Marketing", "_tasks", "MKT-0001.md"), string.Empty);
         File.WriteAllText(Path.Combine(dataDir, "Teams", "readme.md"), string.Empty);
 
-        Directory.CreateDirectory(Path.Combine(dataDir, "Teammates", "Nova", "work", "memory"));
-        File.WriteAllText(Path.Combine(dataDir, "Teammates", "Nova", "Nova.md"), string.Empty);
-        File.WriteAllText(Path.Combine(dataDir, "Teammates", "Nova", "work", "memory", "x.md"), string.Empty);
-        File.WriteAllText(Path.Combine(dataDir, "Teammates", "Nova", "notes.md"), string.Empty);
-        Directory.CreateDirectory(Path.Combine(dataDir, "Teammates", "_unsorted"));
+        Directory.CreateDirectory(Path.Combine(dataDir, "Agents", "Nova", "work", "memory"));
+        File.WriteAllText(Path.Combine(dataDir, "Agents", "Nova", "Nova.md"), string.Empty);
+        File.WriteAllText(Path.Combine(dataDir, "Agents", "Nova", "work", "memory", "x.md"), string.Empty);
+        File.WriteAllText(Path.Combine(dataDir, "Agents", "Nova", "notes.md"), string.Empty);
+        Directory.CreateDirectory(Path.Combine(dataDir, "Agents", "_unsorted"));
 
         Directory.CreateDirectory(Path.Combine(dataDir, "rooms"));
         File.WriteAllText(Path.Combine(dataDir, "rooms", "r.jsonl"), string.Empty);

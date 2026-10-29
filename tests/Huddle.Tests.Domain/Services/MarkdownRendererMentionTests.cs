@@ -8,14 +8,14 @@ namespace Agency.Huddle.Tests.Services;
 /// </summary>
 public sealed class MarkdownRendererMentionTests
 {
-    /// <summary>A Room holding Emily, Emily Lee and a Teammate with the Alias "ops", seen by a Human named Sam (Alias "me").</summary>
+    /// <summary>A Room holding Emily, Emily Lee and an Agent with the Alias "ops", seen by a Human named Sam (Alias "me").</summary>
     private static readonly MentionMarks Marks = new(["Emily", "Emily Lee", "Morgan", "ops"], ["Sam", "me"]);
 
     /// <summary>Renders <paramref name="markdown"/> with <see cref="Marks"/> and no Task or Library resolver.</summary>
     /// <param name="markdown">The Message text.</param>
     private static string Render(string markdown) => MarkdownRenderer.ToHtml(markdown, null, null, MarkdownRendererMentionTests.Marks);
 
-    /// <summary>A known Teammate Name becomes a <c>mention</c> span holding the <c>@</c> and the Name.</summary>
+    /// <summary>A known Agent Name becomes a <c>mention</c> span holding the <c>@</c> and the Name.</summary>
     [Fact]
     public void ToHtml_KnownName_IsWrappedInMentionSpan()
     {

@@ -6,7 +6,7 @@ using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using static Agency.Huddle.Tests.Ui.TeammateCardTestSupport;
+using static Agency.Huddle.Tests.Ui.AgentProfileCardTestSupport;
 
 namespace Agency.Huddle.Tests.Ui;
 

@@ -15,7 +15,7 @@ namespace Agency.Huddle.App.Acp;
 /// docs/engineering/acp-session-config.md says not to cache a model list across spawns. That rule protects
 /// *selection*: which model id a real session actually starts against. Selection is re-resolved
 /// live, inside Huddle.Acp, on every session start — this class has no say in it. What is cached here
-/// is purely presentational, for populating a &lt;select&gt; in the Teammate card, and a slightly
+/// is purely presentational, for populating a &lt;select&gt; in the Agent card, and a slightly
 /// stale presentational list is far cheaper than spawning a fresh adapter process on every card
 /// open.
 /// </remarks>
@@ -25,7 +25,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     // for, and nothing has asked to tune how long a one-off probe is allowed to hang.
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(20);
 
-    private readonly TeammatePaths teammatePaths;
+    private readonly AgentPaths agentPaths;
     private readonly ILogger<ModelCatalogProbe> logger;
     private readonly AdapterProfileResolver resolver;
     private readonly IAdapterProbeRunner probeRunner;
@@ -63,7 +63,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     private readonly WorkModePolicy workModePolicy;
 
     /// <summary>Builds the probe over its resolver and its process-spawning seam.</summary>
-    /// <param name="teammatePaths">Locates the Work Dir root the probe spawns into.</param>
+    /// <param name="agentPaths">Locates the Work Dir root the probe spawns into.</param>
     /// <param name="loggerFactory">Used to create this type's own logger.</param>
     /// <param name="resolver">Turns a requested Adapter id into a profile; never fails (Spec §6.2).</param>
     /// <param name="probeRunner">
@@ -73,19 +73,19 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     /// </param>
     /// <param name="workModePolicy">Decides which advertised Work Modes are offered (ADR-0033).</param>
     public ModelCatalogProbe(
-        TeammatePaths teammatePaths,
+        AgentPaths agentPaths,
         ILoggerFactory loggerFactory,
         AdapterProfileResolver resolver,
         IAdapterProbeRunner probeRunner,
         WorkModePolicy workModePolicy)
     {
-        ArgumentNullException.ThrowIfNull(teammatePaths);
+        ArgumentNullException.ThrowIfNull(agentPaths);
         ArgumentNullException.ThrowIfNull(loggerFactory);
         ArgumentNullException.ThrowIfNull(resolver);
         ArgumentNullException.ThrowIfNull(probeRunner);
         ArgumentNullException.ThrowIfNull(workModePolicy);
 
-        this.teammatePaths = teammatePaths;
+        this.agentPaths = agentPaths;
         this.logger = loggerFactory.CreateLogger<ModelCatalogProbe>();
         this.resolver = resolver;
         this.probeRunner = probeRunner;
@@ -223,7 +223,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     /// cref="IAgentSession.EffortLevels"/> must stay a faithful report of what the agent actually
     /// advertised, because a protocol reader that silently drops an advertised option is exactly the
     /// class of failure <c>docs/engineering/traps.md</c> exists for. The reason the filter belongs
-    /// somewhere is that the Teammate card's blank "Agent default" option already IS this
+    /// somewhere is that the Agent card's blank "Agent default" option already IS this
     /// choice, and already stores <c>null</c> for it — offering the sentinel too would be two
     /// options with one meaning, and would let the literal string <c>"default"</c> reach
     /// <c>persona_efforts</c>, where it would be sent on the wire as a real, named selection: a
@@ -273,12 +273,12 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
 
     private async Task<(bool Succeeded, ProbeResult Result)> ProbeAsync(AdapterProfile profile, string? model, CancellationToken cancellationToken)
     {
-        // The Teammates ROOT, Directory.CreateDirectory'd — not a Persona's own folder, since this
+        // The Agents ROOT, Directory.CreateDirectory'd — not a Persona's own folder, since this
         // probe is not a Persona and has no name to scope a subdirectory to. Never the repo root or
         // AppContext.BaseDirectory either: the adapter auto-loads CLAUDE.md and
         // .claude/settings.json from its cwd, so either of those would silently hand the repo's own
         // instructions to a process that is only being asked what models it offers.
-        var probeCwd = this.teammatePaths.DefinitionsRoot;
+        var probeCwd = this.agentPaths.DefinitionsRoot;
         Directory.CreateDirectory(probeCwd);
 
         // profile is already resolved by the caller (GetAsync/GetEffortLevelsAsync) - resolving

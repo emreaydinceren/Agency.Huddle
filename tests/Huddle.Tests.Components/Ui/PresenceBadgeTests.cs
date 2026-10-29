@@ -95,7 +95,7 @@ public sealed class PresenceBadgeTests
 
         var cut = ctx.Render<PresenceAnchor>(parameters => parameters
             .Add(p => p.Cue, PresenceCue.From(PersonaState.Online))
-            .AddChildContent<TeammateAvatar>(avatar => avatar.Add(p => p.Name, "Helen")));
+            .AddChildContent<AgentAvatar>(avatar => avatar.Add(p => p.Name, "Helen")));
 
         var anchor = cut.Find("span.presence-anchor");
         Assert.NotNull(anchor.QuerySelector(".mud-avatar"));
@@ -110,19 +110,19 @@ public sealed class PresenceBadgeTests
         await using MudBunitContext ctx = new();
 
         var cut = ctx.Render<PresenceAnchor>(parameters => parameters
-            .AddChildContent<TeammateAvatar>(avatar => avatar.Add(p => p.Name, "Helen")));
+            .AddChildContent<AgentAvatar>(avatar => avatar.Add(p => p.Name, "Helen")));
 
         Assert.Empty(cut.FindAll("span.agent-dot"));
         Assert.NotEmpty(cut.FindAll(".mud-avatar"));
     }
 
-    /// <summary>The Teammate label puts the badge on its avatar rather than as a bare dot beside it.</summary>
+    /// <summary>The Agent label puts the badge on its avatar rather than as a bare dot beside it.</summary>
     [Fact]
-    public async Task TeammateLabel_PutsTheBadgeOnTheAvatar()
+    public async Task AgentLabel_PutsTheBadgeOnTheAvatar()
     {
         await using MudBunitContext ctx = new();
 
-        var cut = ctx.Render<TeammateLabel>(parameters => parameters
+        var cut = ctx.Render<AgentLabel>(parameters => parameters
             .Add(p => p.Name, "Helen")
             .Add(p => p.State, PersonaState.Degraded));
 

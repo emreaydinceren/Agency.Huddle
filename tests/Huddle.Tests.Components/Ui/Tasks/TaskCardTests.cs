@@ -27,7 +27,7 @@ public sealed class TaskCardTests : IDisposable
     private readonly TempDataDir dataDir = new();
     private readonly AvatarStore avatarStore;
 
-    /// <summary>Builds a real, empty <see cref="AvatarStore"/> - every Name resolves to <see cref="Avatar.None"/> - since <see cref="TaskCard"/> injects it to draw <c>TeammateAvatar</c> (corrections-B5 D12-3).</summary>
+    /// <summary>Builds a real, empty <see cref="AvatarStore"/> - every Name resolves to <see cref="Avatar.None"/> - since <see cref="TaskCard"/> injects it to draw <c>AgentAvatar</c> (corrections-B5 D12-3).</summary>
     public TaskCardTests()
     {
         this.avatarStore = new AvatarStore(this.dataDir.Options(), NullLogger<AvatarStore>.Instance);
@@ -58,7 +58,7 @@ public sealed class TaskCardTests : IDisposable
     /// <param name="element">The element whose class list to split.</param>
     private static string[] ClassTokens(IElement element) => (element.ClassName ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-    /// <summary>The open control - the element that raises <see cref="TaskCard.OnOpen"/> - is a plain <c>&lt;button type="button"&gt;</c>, per corrections-B5 D12-1 and the Spec's keyboard-focus rationale (<c>Teammates.razor:85-90</c>).</summary>
+    /// <summary>The open control - the element that raises <see cref="TaskCard.OnOpen"/> - is a plain <c>&lt;button type="button"&gt;</c>, per corrections-B5 D12-1 and the Spec's keyboard-focus rationale (<c>Agents.razor:85-90</c>).</summary>
     [Fact]
     public async Task OpenControl_IsAButtonTypeButton()
     {

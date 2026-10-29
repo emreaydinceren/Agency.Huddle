@@ -69,9 +69,9 @@ public sealed class FeedStoreTests
         Assert.Equal(["GRO-5", "GRO-4", "GRO-3", "GRO-2", "GRO-1"], targets);
     }
 
-    /// <summary>The Teammate and Team filters match case-insensitively and combine.</summary>
+    /// <summary>The Agent and Team filters match case-insensitively and combine.</summary>
     [Fact]
-    public void Page_TeammateAndTeamFilters_MatchCaseInsensitivelyAndCombine()
+    public void Page_AgentAndTeamFilters_MatchCaseInsensitivelyAndCombine()
     {
         using TempDataDir dir = new();
         FeedStore store = new(dir.Options());
@@ -235,17 +235,17 @@ public sealed class FeedStoreTests
         _ = store.Apply([new ResolveCommand("target-3", FeedSourceType.TaskNeedsYou, T0)]);
         FeedTestSupport.InsertRaw(dir.Path, "from-the-future", "{}", notify: true);
 
-        foreach ((string? teammate, string? team) in new (string?, string?)[] { (null, null), ("Nova", null), (null, "Growth"), ("Sage", "Sales") })
+        foreach ((string? agent, string? team) in new (string?, string?)[] { (null, null), ("Nova", null), (null, "Growth"), ("Sage", "Sales") })
         {
-            FeedCounts counts = store.Counts(teammate, team);
+            FeedCounts counts = store.Counts(agent, team);
 
-            Assert.Equal(Length(store, FeedCategory.All, teammate, team), counts.All);
-            Assert.Equal(Length(store, FeedCategory.NeedsYou, teammate, team), counts.NeedsYou);
-            Assert.Equal(Length(store, FeedCategory.Tasks, teammate, team), counts.Tasks);
-            Assert.Equal(Length(store, FeedCategory.Documents, teammate, team), counts.Documents);
-            Assert.Equal(Length(store, FeedCategory.Rooms, teammate, team), counts.Rooms);
-            Assert.Equal(Length(store, FeedCategory.Gates, teammate, team), counts.Gates);
-            Assert.Equal(Length(store, FeedCategory.Helpers, teammate, team), counts.Helpers);
+            Assert.Equal(Length(store, FeedCategory.All, agent, team), counts.All);
+            Assert.Equal(Length(store, FeedCategory.NeedsYou, agent, team), counts.NeedsYou);
+            Assert.Equal(Length(store, FeedCategory.Tasks, agent, team), counts.Tasks);
+            Assert.Equal(Length(store, FeedCategory.Documents, agent, team), counts.Documents);
+            Assert.Equal(Length(store, FeedCategory.Rooms, agent, team), counts.Rooms);
+            Assert.Equal(Length(store, FeedCategory.Gates, agent, team), counts.Gates);
+            Assert.Equal(Length(store, FeedCategory.Helpers, agent, team), counts.Helpers);
         }
 
         FeedCounts unfiltered = store.Counts(null, null);
@@ -266,6 +266,6 @@ public sealed class FeedStoreTests
         Assert.Equal(0, store.Counts(null, "Growth").Documents);
     }
 
-    private static int Length(FeedStore store, FeedCategory category, string? teammate, string? team) =>
-        store.Page(new FeedQuery(null, 1000, teammate, team, category)).Count;
+    private static int Length(FeedStore store, FeedCategory category, string? agent, string? team) =>
+        store.Page(new FeedQuery(null, 1000, agent, team, category)).Count;
 }

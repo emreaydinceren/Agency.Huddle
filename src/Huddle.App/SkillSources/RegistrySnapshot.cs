@@ -8,8 +8,8 @@ namespace Agency.Huddle.App.SkillSources;
 /// <param name="Resolved">What the resolver produced.</param>
 /// <param name="Checked">What <c>Checks.Run</c> produced: every finding, and the state of every Pack, catalog and Skill.</param>
 /// <param name="NewKeys">Row keys and <c>skill:&lt;name&gt;</c> keys in this snapshot and not in <c>seen</c>.</param>
-/// <param name="PackHolders">Pack id to the names of the Teammates whose <c>_packs</c> names it.</param>
-/// <param name="SkillHolders">Skill name to the names of the Teammates whose <c>skills:</c> holds it.</param>
+/// <param name="PackHolders">Pack id to the names of the Agents whose <c>_packs</c> names it.</param>
+/// <param name="SkillHolders">Skill name to the names of the Agents whose <c>skills:</c> holds it.</param>
 /// <param name="HiddenPacks">Pack ids in <c>hidden.json</c>.</param>
 /// <param name="HiddenSkills">Skill names in <c>hidden.json</c>.</param>
 /// <param name="PackHeldVersions">Pack id to the versions its holders' <c>_packs</c> entries name.</param>

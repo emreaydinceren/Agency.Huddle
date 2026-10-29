@@ -22,7 +22,7 @@ Tasks need a home on disk that a person can browse and edit in any editor. Two p
 existing design constrain it.
 
 - **`Teams/` is scanned recursively for Personas** (`PersonaStore.cs:635-649`). Every `.md` file
-  under it that isn't a valid Persona is listed on the Teammates page as a rejected file. Task
+  under it that isn't a valid Persona is listed on the Agents page as a rejected file. Task
   files can't live there.
 - **Persona identity is deliberately not a path.** On 2026-09-12 the Teams feature moved a
   Persona's identity into its frontmatter and made Team membership a field. Moving a Persona file

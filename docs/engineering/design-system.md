@@ -40,7 +40,7 @@ earlier design, a `theme.css` of 39 tokens. It is superseded; do not rebuild it.
 
 **Consistency comes from one place per decision.** A colour comes from a palette role, a
 status colour from a pure mapping function, an icon from an icon map, an avatar from
-`TeammateAvatar`, and a recurring shape from a shared component. If you are about to
+`AgentAvatar`, and a recurring shape from a shared component. If you are about to
 write the same markup or declaration block a second time, extract it instead.
 
 ## Foundations
@@ -147,7 +147,7 @@ read as one band and the content as another. The band has 12px above and below i
 controls; the line runs the full width of the pane, not just the toolbar's content, and the
 content starts 24px below it. It is the same line as the top bar's and the tab strip's, so a
 toolbar reads as chrome, never as a card. A toolbar under a page title takes `.toolbar-hairline`
-(the Teammates toolbar, the Tasks toolbar's last row); a toolbar that heads a pane, like the
+(the Agents toolbar, the Tasks toolbar's last row); a toolbar that heads a pane, like the
 Library document toolbar (`.library-document-toolbar`), runs its line the pane's full width. A
 stack of toolbar rows has one line, under the last row.
 
@@ -180,7 +180,7 @@ ground.
 **How to use colour in a component:**
 
 - Write `Color="Color.Primary"`, not a hex. Write `var(--mud-palette-primary)` in CSS.
-- Never write `Style="color: #..."` in a `.razor` file. Per-Teammate avatar colours are
+- Never write `Style="color: #..."` in a `.razor` file. Per-Agent avatar colours are
   user data and arrive as an inline `style` built in C#; a test still forbids a literal.
 - Don't colour body text with a status colour. Status colours mark a chip, a dot, an icon
   or a short value such as a date. A whole card of orange text fails contrast and hides the
@@ -209,7 +209,7 @@ mapping function, never at a call site (UX-V14).
 | Task state | Backlog default (its column dot is dashed), To Do default, In Progress info, Review tertiary, Done success, Cancelled/Duplicate/Rejected error | [`TaskColors.cs`](../../src/Huddle.App/Components/Tasks/TaskColors.cs), drawn by `TaskStatusChip` |
 | Task priority | Low default, Medium default, High warning (attention), Urgent error. Each also has its glyph | `TaskColors.cs`, drawn by `TaskPriorityChip` |
 | Task due date | Overdue is a warning icon plus the date in weight 600, in the error colour mixed 70% toward body text | `TaskDates.IsOverdue` decides |
-| Presence and Teammate health | Drawn as a [presence badge](#avatars-and-status): a glyph plus a tone. `TaskColors.For(PresenceState)` gives Awake Info, Asleep and Offline Default | `PresenceCue.From` |
+| Presence and Agent health | Drawn as a [presence badge](#avatars-and-status): a glyph plus a tone. `TaskColors.For(PresenceState)` gives Awake Info, Asleep and Offline Default | `PresenceCue.From` |
 | Needs You reason, search notice | `StatusColors.For(NeedsYouReason)`, `StatusColors.For(SearchNoticeKind)` | [`StatusColors.cs`](../../src/Huddle.App/Components/Shared/StatusColors.cs). The Composer's upload chip still colours itself inline (UX-V14) |
 
 A status colour never stands alone: a chip has its text, a dot has an accessible name
@@ -280,13 +280,13 @@ unitless and set with the sizes in `ThemeDefaults.WithSharedTypography`.
 | Role | `Typo` | `HtmlTag` | Rendered | Line height | Weight | Examples |
 | --- | --- | --- | --- | --- | --- | --- |
 | Page title | `h5` | `h1` | 20px | 1.3 | 600 | a Room's name (`C2`, UX-038), "Settings", a Team's name. Every page shows one; see [A page](#a-page), step 3 |
-| Dialog or drawer title | `h6` | MudBlazor's | 16px | 1.35 | 600 | The item's name, never its type: "Alan", not "Teammate"; "SUPP-0005 · Build the public status page"; "Duplicate Platform" |
-| Section heading inside a page | `subtitle2` | `h2` | 16px | 1.35 | 600 | Teammates groups, Prompts groups, "Roles", "Roster" (UX-001) |
+| Dialog or drawer title | `h6` | MudBlazor's | 16px | 1.35 | 600 | The item's name, never its type: "Alan", not "Agent"; "SUPP-0005 · Build the public status page"; "Duplicate Platform" |
+| Section heading inside a page | `subtitle2` | `h2` | 16px | 1.35 | 600 | Agents groups, Prompts groups, "Roles", "Roster" (UX-001) |
 | Group label inside a drawer or dialog | | | 12px | 1.35 | 600 | The Task drawer's groups. Quiet ink, sentence case, 8px below it: the global `.group-label` class |
-| Card title | `subtitle1` | | 14px | 1.4 | 600 | A Teammate tile's name, an agent card's "Nova is asking" (UX-031) |
+| Card title | `subtitle1` | | 14px | 1.4 | 600 | An Agent tile's name, an agent card's "Nova is asking" (UX-031) |
 | Overline label inside a panel, small and uppercase | `overline` | | 11px, 0.04em tracking | 1.3 | 600 | "Background", "Problems", the search group headings |
 | Prose, Transcript | `body1` | | 14px (the Library reader 16px at 1.65) | 1.55 | 400 | Intro paragraphs, "No tasks yet.", a message's body |
-| Editable long text | `body1` | | 14px | 1.55 | 400 | Prompt fields, Teammate instructions, a Skill's body. Monospace only when the content is code. Never the input's default weight or line height |
+| Editable long text | `body1` | | 14px | 1.55 | 400 | Prompt fields, Agent instructions, a Skill's body. Monospace only when the content is code. Never the input's default weight or line height |
 | Dense UI text, rows, cells, controls | `body2` | | 13px | 1.4 | 400, 500 for controls | List rows, table cells, menu items, sidebar rows, Small buttons |
 | Metadata, timestamps, helper lines, counts | `caption` | | 12px | 1.35 | 400 | "11:48", "3 Members + you" (UX-037) |
 | Button | `button` | | 14px | 1.4 | 500 | A button's label (a Small button's is 13px, see [Spacing, density and size](#spacing-density-and-size)) |
@@ -363,7 +363,7 @@ outlined and filled alike. The Status and Tag chips set their own shape; see [Ch
 | Place | Class |
 | --- | --- |
 | Page container, drawer content, dialog content | `pa-4` |
-| Card, panel, tile | `pa-3` (12px), with no exception: a Teammate tile is 12px like a Board card |
+| Card, panel, tile | `pa-3` (12px), with no exception: an Agent tile is 12px like a Board card |
 | Between sections | `mb-4` |
 | Between related fields | `mb-2` |
 | A stack | `MudStack` with `Spacing="2"` for fields and `Spacing="4"` for sections |
@@ -434,7 +434,7 @@ row here before it gets an icon in the code (UX-083, UX-084, UX-R26).
 | Room (chat) | `Filled.Chat` |
 | Team | `Outlined.Groups` |
 | Project | `Filled.LibraryBooks`, for nothing else |
-| Teammates, a Team's members | `Filled.Group` |
+| Agents, a Team's members | `Filled.Group` |
 | Tasks | `Outlined.TaskAlt` |
 | Library | `Filled.MenuBook` |
 | A folder, including a Library root | `Outlined.Folder` |
@@ -464,15 +464,15 @@ row here before it gets an icon in the code (UX-083, UX-084, UX-R26).
 
 Component parameters are in the [catalog](UXDesignGuidelines.md#display).
 
-- **`TeammateAvatar` is the only place an avatar becomes pixels.** Never draw a raw
-  `MudAvatar` for a Teammate, and never compute a monogram elsewhere (UX-051). Keep its
+- **`AgentAvatar` is the only place an avatar becomes pixels.** Never draw a raw
+  `MudAvatar` for an Agent, and never compute a monogram elsewhere (UX-051). Keep its
   single `MudAvatar` root.
 - **An avatar is a circle at one of four sizes.** `Small` (24px) in rows, the sidebar, the
   Board and the Room header; `.avatar-transcript` (32px) in the Transcript, where it fills the
-  32px `.message-gutter`; `Medium` (40px) on cards and tiles, the Teammates tile and roster
-  cards; `Large` (72px) on a `TeammateCard` and in the avatar editor. Pass the class and the
+  32px `.message-gutter`; `Medium` (40px) on cards and tiles, the Agents tile and roster
+  cards; `Large` (72px) on a `AgentProfileCard` and in the avatar editor. Pass the class and the
   `Size`; don't set a width or radius of your own.
-- **A Teammate's handle is written `@alias`**, wherever it is shown.
+- **An Agent's handle is written `@alias`**, wherever it is shown.
 - **An avatar-colour swatch is a 32px circle** drawn with the avatar recipe for the current
   mode, and the swatches are a radio group with colour names.
 
@@ -481,14 +481,14 @@ Component parameters are in the [catalog](UXDesignGuidelines.md#display).
 
 | Mode | Fill | Letters |
 | --- | --- | --- |
-| Light | The Teammate's colour at 20% over Surface | That colour mixed 75% toward `TextPrimary`, weight 600 |
+| Light | The Agent's colour at 20% over Surface | That colour mixed 75% toward `TextPrimary`, weight 600 |
 | Dark | The colour at 35% over Surface, a deep fill | That colour mixed 75% toward white, weight 600 |
 
 CSS can't read a Theme's mode, so `MainLayout.razor` renders a hidden
 `<span class="theme-mode-dark">` when the Theme is a Dark one, and
 `:root:has(.theme-mode-dark)` in `app.css` switches the recipe.
 `AvatarColours.MonogramStyle` emits only `--mud-palette-primary: #hex;` on the avatar, and the
-rule turns that into the fill and the letters. A Teammate with no colour uses the Theme's
+rule turns that into the fill and the letters. An Agent with no colour uses the Theme's
 accent through the same recipe. The contrast tests sweep and sample both modes.
 
 | Part | Rule |
@@ -497,7 +497,7 @@ accent through the same recipe. The contrast tests sweep and sample both modes.
 | Letter size | 40% of the diameter, never under 10px: 10px, 12.8px, 16px and 28.8px on 24px, 32px, 40px and 72px |
 | Image | A photo or illustration keeps the same circle with a 1px inset hairline on the Edge rung, so mixed kinds sit together. It shows from 32px up; at 24px (`Size.Small`) every avatar is the monogram, because an image at that size reads as a blur beside the letters. So a 1:1 Room's sidebar row shows the monogram |
 | Stacked members | The Room header's stack is 24px avatars, each with a 2px Surface ring |
-| Profile ring | On a `ProfileCard`, the avatar sits in a ring: 1px `TextSecondary`, 2px clear of the avatar. Dashed for a proposed Teammate, solid (`Existing`) for one that already exists. Nowhere else |
+| Profile ring | On a `ProfileCard`, the avatar sits in a ring: 1px `TextSecondary`, 2px clear of the avatar. Dashed for a proposed Agent, solid (`Existing`) for one that already exists. Nowhere else |
 
 **The presence badge.** A badge is a circle at the avatar's bottom-right rim, ringed in 2px
 of Surface, with a glyph as well as a colour. It is 10px, and 12px beside an avatar of 40px or
@@ -526,7 +526,7 @@ what an assignee is doing now. They stay two systems that share one glyph set th
 - **A status dot is `StatusDot`**: a 10px circle drawn through `PresenceBadge`, with an
   accessible name and a title from its own label function (UX-070, UX-V08). Don't copy its
   state-to-class switch.
-- **The Teammates tile carries no "Online" chip.** The badge on its avatar says it.
+- **The Agents tile carries no "Online" chip.** The badge on its avatar says it.
 
 ### Motion
 
@@ -559,7 +559,7 @@ that shows the control, or it can't be reached on a touch screen (UX-075).
   (UX-V08).
 - **An inert input uses `Disabled`, not `ReadOnly`.** MudBlazor 9.11.0 styles only the
   disabled state (UX-V04).
-- **An avatar image has an empty `alt`** because the Teammate's name is always rendered
+- **An avatar image has an empty `alt`** because the Agent's name is always rendered
   beside it.
 - **A drag handle also works from the keyboard**: `tabindex="0"`, `aria-value*` and the
   arrow keys (UX-V10).
@@ -575,8 +575,8 @@ container's code (`S2`, `C7a`, `T3`) is in [wireframes.md](wireframes.md).
 | Region | Component | Notes |
 | --- | --- | --- |
 | Top bar | `TopBar` (a `MudAppBar`) | Slots: `Search`, `Actions`. Shows the breadcrumb of the focused pane |
-| Activity bar | `ActivityBar`, 48px, in the left `MudDrawer` | A top toolbar with one button per Sidebar view (Chats, Teams, Teammates, Tasks, Library): the selected one is pressed, and clicking it again collapses the Sidebar. A bottom toolbar holds Archived chats and Settings |
-| Sidebar | `div#sidebar-views` beside the Activity bar, 240px | Shows one view: Chats (Needs you, Rooms), Teams, Teammates, Tasks or Library. Section headers are sentence case |
+| Activity bar | `ActivityBar`, 48px, in the left `MudDrawer` | A top toolbar with one button per Sidebar view (Chats, Teams, Agents, Tasks, Library): the selected one is pressed, and clicking it again collapses the Sidebar. A bottom toolbar holds Archived chats and Settings |
+| Sidebar | `div#sidebar-views` beside the Activity bar, 240px | Shows one view: Chats (Needs you, Rooms), Teams, Agents, Tasks or Library. Section headers are sentence case |
 | Workspace | `MudMainContent.main-column` | A flex column, `overflow: hidden`, holding `TabHost` |
 | Tab groups | `TabHost` then `TabGroupPane` | One or two panes side by side, each a `TabStrip` over a `.tab-body`. The focused pane owns the URL; the other dims its active tab |
 | Page | `TabPageHost` mounts a `DynamicComponent` | Only each group's active Tab is mounted |
@@ -603,7 +603,7 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
   view of the Sidebar uses it, so switching views moves nothing sideways.
 - **A section header and its rows share the lines.** The header heads its list; it is not a
   level above it.
-- **Every view starts at one top.** Its first row, a section header, a destination (Teammates,
+- **Every view starts at one top.** Its first row, a section header, a destination (Agents,
   Library) or the Needs you card, is 16px below the view's top, and a section that follows
   another in the same view is 16px below it. Every row is exactly 32px, an avatar row too, so
   rows fall on a 32px rhythm.
@@ -618,7 +618,7 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
 - **The selected pill is inset `--nav-inset` from the panel's sides on every row.** The Needs
   you card's sides sit on that inset, and its rows are pulled back by the card's offset, so they
   keep both lines.
-- **A destination is a row, not a header.** "Teammates" and "Library" are rows (13px body,
+- **A destination is a row, not a header.** "Agents" and "Library" are rows (13px body,
   18px icon in the leading slot); only a group with children wears the section-header style.
 - **The Needs you card is outlined in Edge.** Its row is 32px: the reason icon, the Room's
   name, and a trailing time, like every other sidebar row.
@@ -643,8 +643,8 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
 - **The first section is "Rooms"**, the defined term in [language.md](language.md).
 - **Rows at the same level share one indent**, set by the grid in `app.css` "Left menu".
   Within a level, either every row has an icon or none does (UX-015).
-- **A 1:1 Room shows the Teammate's small avatar; a group Room shows the Room icon**
-  (UX-016). At 24px the avatar is the monogram, even when the Teammate has an image.
+- **A 1:1 Room shows the Agent's small avatar; a group Room shows the Room icon**
+  (UX-016). At 24px the avatar is the monogram, even when the Agent has an image.
 - **Sidebar action links** ("New chat", "Build a team", "New view") take the
   `nav-action-link` class: secondary text colour (not the accent), the "+" in the leading slot
   and the label on the text line like any row. Don't set `IconColor` on them, and don't repeat
@@ -712,7 +712,7 @@ The Room is the Transcript over the Composer in one column.
   [Notices and snackbars](#notices-and-snackbars).
 - **The Composer shares the column.** Its box is the Transcript's 760px, centred, so it lines up
   with the messages ([catalog row](UXDesignGuidelines.md#actions-and-input)). Its placeholder is
-  "Message {Room name}… (/invite @Teammate)", or "Message… (/invite @Teammate)" without a name.
+  "Message {Room name}… (/invite @Agent)", or "Message… (/invite @Agent)" without a name.
 
 ### Tasks
 
@@ -788,15 +788,15 @@ The Room is the Transcript over the Composer in one column.
   Every team type is one quiet grey tile with a `TextSecondary` icon; only
   `.team-type-card-selected` is accent-tinted. "You have one" is meta text.
 
-### Teammates
+### Agents
 
 The grid is `repeat(auto-fill, minmax(240px, 1fr))`. The `<li>` is the bordered card and holds
-the opening `<button class="teammate-tile">`, so the Task link is not nested in a button. A
+the opening `<button class="agent-tile">`, so the Task link is not nested in a button. A
 tile has a 40px avatar with the badge, the name at 14px/600, the role at 13px `TextSecondary`,
 `@alias · State` as 12px meta text, and "Working on SUPP-0002" at 12px with the Task as a link
 to `/tasks/item/{id}`. A tile has 12px padding. Its content is left-aligned on one edge, the "Working on" line
 included. Group headings are the section heading (16px/600) with a 12px count
-(`.teammates-group-count`). The page's intro says what a Teammate is to the Human; how a
+(`.agents-group-count`). The page's intro says what an Agent is to the Human; how a
 Persona file works belongs in the User Guide.
 
 ### A page
@@ -811,7 +811,7 @@ Persona file works belongs in the User Guide.
 
    | Kind | `MaxWidth` | Pages |
    | --- | --- | --- |
-   | Reading page: forms, settings, a directory | `MaxWidth.Large` with `.page-reading` | Settings, Teammates, Build a team, the Team notice |
+   | Reading page: forms, settings, a directory | `MaxWidth.Large` with `.page-reading` | Settings, Agents, Build a team, the Team notice |
    | Wide page: boards, grids, split panes, tabs that hold those | `MaxWidth.False` | Tasks, Library, a Team or Project page |
 
    **Left alignment.** Every page's title starts at the same left edge. A reading page
@@ -1025,7 +1025,7 @@ The catalog of components, with paths and parameters, lives only in
 [UXDesignGuidelines.md](UXDesignGuidelines.md#reusable-parts-catalog). These are the
 rules that catalog's rows carry out.
 
-- **Use `TeammateAvatar` and `StatusDot`**; see [Avatars and status](#avatars-and-status).
+- **Use `AgentAvatar` and `StatusDot`**; see [Avatars and status](#avatars-and-status).
 - **A chip is one of the four looks.** `StatusChip` draws the tinted one; a Task's state and
   priority go through `TaskStatusChip` and `TaskPriorityChip`.
   [Catalog row](UXDesignGuidelines.md#display).
@@ -1049,7 +1049,7 @@ rules that catalog's rows carry out.
   selection; `ElicitationCard` uses radios and checkboxes (UX-030 to UX-035).
 - **Selection in a chip cloud** reads as text and `aria-pressed`, never by colour alone.
   Use `ChipCloud` wherever chips filter a list.
-- **A search box is `SearchField`**; a Teammate row is `TeammateLabel`; a Task filter is
+- **A search box is `SearchField`**; an Agent row is `AgentLabel`; a Task filter is
   `TaskFilterChip`.
 - **A right-hand drawer is `ResizableEndDrawer`** (see [Drawer anatomy](#drawer-anatomy)).
 - **An inline edit of a title keeps the title's size and replaces it.** The field renders at
@@ -1086,9 +1086,9 @@ Words follow [language.md](language.md). These rules decide the form.
 
 - **Controls are sentence case**: buttons, menu items, tab labels, field labels, column
   headers and dialog titles. Only the first word is capitalised, even when a defined term
-  follows: "New team", "Invite teammate", "Add folder", "New note", "Consult when" (UX-078).
+  follows: "New team", "Invite agent", "Add folder", "New note", "Consult when" (UX-078).
 - **Prose capitalises a defined term**, as language.md does: notices, helper text and
-  empty states write "This Task was deleted" and "No Teammates in this Team yet".
+  empty states write "This Task was deleted" and "No Agents in this Team yet".
 - **One verb per meaning:**
 
   | Verb | Means | Not |
@@ -1101,7 +1101,7 @@ Words follow [language.md](language.md). These rules decide the form.
   | Archive | Hide, recoverably | |
   | Dismiss | Hide a notice or request without acting on it | Skip, Close |
   | Decline | Refuse an Agent's proposal | Reject, Leave paused |
-  | Invite | Bring an existing Teammate into a Room | Add |
+  | Invite | Bring an existing Agent into a Room | Add |
   | Add | Put something into a set | Create |
   | Create | The primary action of a "New …" dialog | OK |
   | Save | Write pending edits | Save to view |
@@ -1173,7 +1173,7 @@ prefers `DateFormat="MMM d, yyyy"`.
 9. **Every feature has a section header** in the form
    `/* ---- Room list: the hover/focus-revealed row actions menu ---- */`. The headers are
    the index. Comment the reason, not the property (UX-V21).
-10. **Inline `style=` is for user data only**, such as a Teammate's avatar colour. Layout
+10. **Inline `style=` is for user data only**, such as an Agent's avatar colour. Layout
     and sizes go in a class (UX-V28).
 
 ## Adding a Theme or changing a palette
@@ -1245,7 +1245,7 @@ below.
 - [ ] Every `MudButton`, `MudIconButton` and `MudChip` is `Size.Small`; every input is
       `Variant.Outlined` and `Margin.Dense`.
 - [ ] Dialogs, drawers, confirms and action rows follow their anatomy and button order.
-- [ ] Every avatar is a `TeammateAvatar`; every chip is one of the four looks; every empty
+- [ ] Every avatar is a `AgentAvatar`; every chip is one of the four looks; every empty
       state says what to do next.
 - [ ] No markup or CSS block was copied from another component; a shared one was used or
       built.

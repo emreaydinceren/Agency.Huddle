@@ -72,7 +72,7 @@
 
     private string EmptyTitle => this.category == FeedCategory.NeedsYou ? "Nothing needs you" : "Nothing yet";
 
-    private string EmptyText => this.category == FeedCategory.NeedsYou ? "Asks from your Teammates appear here." : "What your Teammates do appears here.";
+    private string EmptyText => this.category == FeedCategory.NeedsYou ? "Asks from your Agents appear here." : "What your Agents do appears here.";
 
     /// <summary>Loads the first page of Needs you and listens for Feed changes.</summary>
     protected override void OnInitialized()

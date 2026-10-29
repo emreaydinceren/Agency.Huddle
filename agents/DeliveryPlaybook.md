@@ -164,7 +164,7 @@ edits to a test frozen by `Freeze-Tests.ps1`.
    `git diff --stat -- src/` was empty when it was recorded. Read each failing row's first failure
    line. A row failing on a DI or bUnit exception, a seeded value or a missing service is a `.t`
    arrange defect: send it back before the `.i`. Know the test-host defaults: the host seeds a
-   built-in Chief of Staff Teammate, bUnit services are resolved after `Render`, and a class
+   built-in Chief of Staff Agent, bUnit services are resolved after `Render`, and a class
    context registers a default fake for every service the `.i` will inject.
 3. **Check the Coverage table.** Every `NOT COVERED` row must cite the task that owns the item; a
    gap nobody owns is assigned now, not after the batch.

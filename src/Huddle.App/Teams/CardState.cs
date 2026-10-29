@@ -4,7 +4,7 @@ namespace Agency.Huddle.App.Teams;
 
 /// <summary>A hire card with every default resolved (HR-6, HR-7).</summary>
 /// <param name="RoleId">The role the card hires.</param>
-/// <param name="Name">The resolved Teammate name.</param>
+/// <param name="Name">The resolved Agent name.</param>
 /// <param name="Pick">The adapter and model, or <see langword="null"/> when no adapter qualified.</param>
 /// <param name="Skills">The role's skills plus its packs' skills, without duplicates.</param>
 /// <param name="Packs">The role's packs that exist, at their version.</param>
