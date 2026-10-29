@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.Seeder.Model;
 using Agency.Huddle.Seeder.Scenarios;
 using Agency.Huddle.Seeder.Writing;
@@ -254,6 +255,47 @@ public sealed partial class SoftwareCoScenarioTests
         });
         Assert.Contains(plan.Rooms, r => r.Messages.Any(m => TaskIdPattern().IsMatch(m.Text)));
         Assert.Contains(plan.Rooms, r => r.Members.Count > 1 && r.Messages.Any(m => m.Text.Contains('@', StringComparison.Ordinal)));
+    }
+
+    /// <summary>
+    /// Each tagged note shows one tag feature through ordinary content: a comma string, a quoted flow list, a block list with a
+    /// non-Latin tag and an emoji, a malformed <c>tags: #draft</c>, a <c>...</c> closer, tags in headings, and what is not a tag
+    /// (ticket numbers, Task ids, code, URLs and comments). The expected tags are exact.
+    /// </summary>
+    [Theory]
+    [InlineData("Teams/Platform/Meeting-Notes-2026-10-14.md", "platform|meeting/weekly|2026/q4|platform/ops|platform/api/v2")]
+    [InlineData("Teams/Platform/API v2/Deprecation-Plan.md", "platform/api|v1-sunset|Deprecation|2026/q4|2027/q2")]
+    [InlineData("Teams/Growth/Onboarding Revamp/Interview-Notes.md", "growth/research|user-interview|müşteri/geri-bildirim|persona/solo-founder|onboarding/import|persona/team-lead|onboarding/invite|\U0001F680")]
+    [InlineData("Teams/Growth/Pricing Page/Competitor-Teardown.md", "pricing/per-seat|pricing/usage|growth/pricing")]
+    [InlineData("Teams/Growth/Lifecycle Emails/Welcome-Email-Draft.md", "email/welcome|draft")]
+    [InlineData("Teams/Support/Help Center/Release-Notes-Draft.md", "support/docs|release-notes")]
+    [InlineData("Teams/Support/Customer-Feedback-Log.md", "feedback/bug|Reports|feedback/feature-request|feedback/praise|onboarding|billing")]
+    [InlineData("Teams/Support/Help Center/Style-Guide.md", "")]
+    public void Plan_TaggedNotes_HaveTheExpectedTags(string path, string expected)
+    {
+        SeedFile note = Plan().Files.Single(f => f.RelativePath == path);
+
+        Assert.Equal(expected, string.Join("|", NoteTags.Of(note.Content)));
+    }
+
+    /// <summary>The seeded Library has nested tags across all three Teams, a casing variant that merges, and a tag shared by several notes.</summary>
+    [Fact]
+    public void Plan_Library_HasNestedSharedTagsAcrossTeams()
+    {
+        Dictionary<string, IReadOnlyList<string>> tagged = Plan().Files
+            .Where(static f => f.RelativePath.EndsWith(".md", StringComparison.Ordinal))
+            .ToDictionary(static f => f.RelativePath, static f => NoteTags.Of(f.Content), StringComparer.Ordinal);
+
+        string[] incident = [.. tagged.Where(static n => n.Value.Contains("support/incident", StringComparer.OrdinalIgnoreCase)).Select(static n => n.Key).Order(StringComparer.Ordinal)];
+        string[] research = [.. tagged.Where(static n => n.Value.Contains("growth/research", StringComparer.OrdinalIgnoreCase)).Select(static n => n.Key).Order(StringComparer.Ordinal)];
+
+        Assert.Equal(
+            ["Teammates/Alan/work/Postmortem-Draft-0412.md", "Teams/Platform/Observability/Runbook.md", "Teams/Support/Escalation-Guide.md", "Teams/Support/Incident Tooling/Incident-0412.md"],
+            incident);
+        Assert.Equal(["Teams/Growth/Onboarding Revamp/Interview-Notes.md", "Teams/Growth/Personas.md", "Teams/Growth/Pricing Page/Pricing-Research.md"], research);
+        Assert.Equal(["growth/pricing", "Launch"], tagged["Teams/Growth/Pricing Page/Pricing-Brief.md"]);
+        Assert.Equal(["growth/email", "launch"], tagged["Teams/Growth/Lifecycle Emails/Email-Ideas.md"]);
+        Assert.Equal(["platform/api", "platform/api/v2"], tagged["Teams/Platform/API v2/API-v2-Design.md"]);
     }
 
     /// <summary>Every view id is unique and a saved View exists for a list, a kanban and a closed scope.</summary>
