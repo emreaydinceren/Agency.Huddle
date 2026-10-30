@@ -84,6 +84,25 @@ public sealed class ThemeAlignmentSourceTests
         Assert.Contains("background-color: transparent;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
+    /// <summary>
+    /// The Tags panel tree starts every label on one line (no centred 64px minimum) with no extra row padding; the Tasks
+    /// counts are one dot-separated secondary line; the List | Kanban toggle is a light 24px control (LL-L03, LL-T02).
+    /// </summary>
+    [Fact]
+    public void AppCss_TagsTreeCountsAndKindToggle_AreLight()
+    {
+        string css = CssText.AppCss();
+        string tagRow = CssText.RuleBody(css, ".tags-tree .tags-tree-row.mud-button-root", RuleMatch.Last);
+
+        Assert.Contains("min-width: 0;", tagRow, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("justify-content: flex-start;", tagRow, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("padding-block: 0;", CssText.RuleBody(css, ".tags-tree .mud-treeview-item-content", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("content: \"·\";", CssText.RuleBody(css, ".tasks-counts > * + *::before", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("font-weight: 500;", CssText.RuleBody(css, ".tasks-counts strong", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("height: 24px;", CssText.RuleBody(css, ".huddle-segmented-control.task-toolbar-kind .huddle-segmented-group .mud-toggle-item", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("top: 2px;", CssText.RuleBody(css, ".huddle-segmented-control.task-toolbar-kind .huddle-segmented-indicator", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
     /// <summary>One dot rule per entry of <c>TaskFieldView.TagClasses</c>.</summary>
     private static readonly string[] HueSelectors =
     [

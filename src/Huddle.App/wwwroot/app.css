@@ -1586,6 +1586,20 @@ body.sidebar-resizing {
     padding: 0 0 8px 0;
 }
 
+/* The Tags panel's tree: 28px rows, and each tag's label starts on one line whether or not its row has a chevron.
+   MudBlazor's button centres its text in a 64px minimum, which pushed short labels right (side-by-side audit,
+   2026-10-30, LL-L03). */
+.tags-tree .mud-treeview-item-content {
+    padding-block: 0;
+}
+
+.tags-tree .tags-tree-row.mud-button-root {
+    min-width: 0;
+    height: 28px;
+    justify-content: flex-start;
+    padding-inline: 4px;
+}
+
 /* A row is one line: 32px (28px in the Outline), the text in Ink and ellipsised, its full text in the title (B11a-b).
    Accent ink marks only the hovered or focused row; the current Outline heading wears .selected-shape. */
 .sidebar-row {
@@ -5299,18 +5313,24 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     gap: 8px;
 }
 
-/* The header row's counts ("14 open  3 need you  52 all"): quiet text, the numbers in the body weight, "need you" in the warning colour. */
+/* The header row's counts ("14 open · 3 need you · 52 all"): one quiet secondary line, the counts dot-separated and the
+   numbers only a step heavier, "need you" in the warning colour (side-by-side audit, 2026-10-30, LL-T02). */
 .tasks-counts {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 16px;
+    gap: 4px 8px;
     font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);
 }
 
+.tasks-counts > * + *::before {
+    content: "·";
+    margin-inline-end: 8px;
+    color: var(--mud-palette-text-secondary);
+}
+
 .tasks-counts strong {
-    color: var(--mud-palette-text-primary);
-    font-weight: 600;
+    font-weight: 500;
 }
 
 /* "need you" is the warning colour mixed toward body text so it keeps 4.5:1 on the page; the number stays body colour.
@@ -8229,6 +8249,30 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 .task-detail-description-toggle .huddle-segmented-indicator,
 .task-toolbar-kind .huddle-segmented-indicator {
     border-color: var(--hu-control-selected-line);
+}
+
+/* List | Kanban is a light toolbar control, as in every Theme's mockup: a 2px track around 24px items at 12px with 14px
+   icons, about 30px in all (side-by-side audit, 2026-10-30, LL-T02). The indicator moves to the same 2px inset; the
+   doubled class outranks the component's scoped 3px. */
+.huddle-segmented-control.task-toolbar-kind {
+    padding: 2px;
+}
+
+.huddle-segmented-control.task-toolbar-kind .huddle-segmented-indicator {
+    top: 2px;
+    bottom: 2px;
+    left: 2px;
+}
+
+.huddle-segmented-control.task-toolbar-kind .huddle-segmented-group .mud-toggle-item {
+    height: 24px;
+    padding-block: 0;
+    font-size: var(--mud-typography-caption-size);
+}
+
+.huddle-segmented-control.task-toolbar-kind .task-toolbar-kind-icon.mud-icon-root {
+    width: 14px;
+    height: 14px;
 }
 
 /* K3 and K3a: the Description editor is one card holding the toolbar and the writing surface (Huddle-DescriptionEditor-Theming.md),
