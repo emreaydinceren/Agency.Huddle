@@ -122,6 +122,14 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
     /// </summary>
     public int? AgentMessageBudget { get; set; }
 
+    /// <summary>
+    /// Whether every request this factory's clients make carries a fixed paired loopback admin session (C-2): the factory then replaces
+    /// <see cref="Agency.Huddle.App.Gateway.IGatewaySessionResolver"/> with <c>LoopbackAdminSessionResolver</c>, so each client path
+    /// (<c>CreateClient</c>, <c>Server.CreateClient</c>, <c>Server.CreateWebSocketClient</c>, <c>WithWebHostBuilder</c>) is connected without a handshake.
+    /// Gateway tests set it to <see langword="false"/> and use the real resolver. No configuration key reaches the seam, so production cannot opt in.
+    /// </summary>
+    public bool ConnectedAsAdmin { get; init; } = true;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -160,6 +168,10 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
             services.AddSingleton<IModelCatalog>(this.FakeModelCatalog);
             services.AddSingleton<IAgentGateway>(this.FakeAgentGateway);
             services.AddSingleton<IHelperProcessRunner>(this.FakeHelperProcessRunner);
+            if (this.ConnectedAsAdmin)
+            {
+                services.AddSingleton<Agency.Huddle.App.Gateway.IGatewaySessionResolver, Agency.Huddle.Tests.Gateway.LoopbackAdminSessionResolver>();
+            }
         });
     }
 

@@ -78,6 +78,8 @@ internal sealed class MudBunitContext : BunitContext
     /// <summary>The wait budget every bUnit wait in this project gets unless a call passes its own.</summary>
     private static readonly TimeSpan WaitBudget = TimeSpan.FromSeconds(10);
 
+    private readonly Bunit.TestDoubles.BunitAuthorizationContext authorization;
+
     /// <summary>
     /// Creates the context: registers MudBlazor's services and switches bUnit's JSInterop to loose
     /// mode. See the type-level remarks for why each is needed.
@@ -91,9 +93,27 @@ internal sealed class MudBunitContext : BunitContext
         this.Services.AddSingleton<TeamShortcutStore>();
         this.JSInterop.Mode = JSRuntimeMode.Loose;
 
+        // Settings reads the viewer's scopes from the cascading authentication state (C-13). Every context starts as the paired admin,
+        // so a test that is not about access keeps rendering the page as it always did; SignInWithScopes narrows that.
+        this.Services.AddCascadingAuthenticationState();
+        this.authorization = this.AddAuthorization();
+        this.SignInWithScopes("operator.read", "operator.write", "operator.pairing", "operator.admin");
+
         // The Right sidebar opens by itself unless the viewer last closed it. Tests start from "closed" so each opens it on purpose;
         // a test of the remembered state replaces this answer.
         this.RememberSidebarOpen(false);
+    }
+
+    /// <summary>Signs the viewer in as a paired device holding exactly <paramref name="scopes"/> (<c>huddle:scope</c> claims, C-4).</summary>
+    /// <param name="scopes">The scopes; none makes the viewer a signed-in device with no scope.</param>
+    public void SignInWithScopes(params string[] scopes)
+    {
+        ArgumentNullException.ThrowIfNull(scopes);
+
+        this.authorization.SetAuthorized("test-device");
+        this.authorization.SetClaims(
+            [new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "test-device"),
+             .. scopes.Select(scope => new System.Security.Claims.Claim("huddle:scope", scope))]);
     }
 
     /// <summary>Sets what local storage answers when the Right sidebar asks whether the viewer left it open; <see langword="null"/> is nothing remembered.</summary>

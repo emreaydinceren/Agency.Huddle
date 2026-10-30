@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using Agency.Huddle.App.Gateway;
 using Microsoft.Extensions.Primitives;
 
 namespace Agency.Huddle.App.Desktop;
@@ -26,8 +27,7 @@ internal static class DesktopStopEndpoint
     /// <returns>403 for a non-loopback caller, 401 for a missing, repeated or wrong token, otherwise 202.</returns>
     internal static IResult HandleAsync(HttpContext context, DesktopSession session, IDesktopShutdown shutdown)
     {
-        IPAddress? remote = context.Connection.RemoteIpAddress;
-        if (remote is not null && !IPAddress.IsLoopback(remote))
+        if (!IsLoopbackCaller(context))
         {
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
@@ -42,6 +42,22 @@ internal static class DesktopStopEndpoint
 
         shutdown.Stop();
         return Results.StatusCode(StatusCodes.Status202Accepted);
+    }
+
+    /// <summary>
+    /// Whether the caller is local (C-1): the ingress classifier's verdict the gate stored for the request is Loopback, which a forwarded or LAN
+    /// request is not. A request that never went through the gate (a direct call) falls back to the socket address, where a null address is allowed.
+    /// </summary>
+    /// <param name="context">The request.</param>
+    private static bool IsLoopbackCaller(HttpContext context)
+    {
+        if (GatewayHttpItems.GetIngress(context) is { } ingress)
+        {
+            return ingress.Kind == IngressKind.Loopback;
+        }
+
+        IPAddress? remote = context.Connection.RemoteIpAddress;
+        return remote is null || IPAddress.IsLoopback(remote);
     }
 
     /// <summary>

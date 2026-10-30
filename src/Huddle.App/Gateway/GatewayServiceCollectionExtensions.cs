@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
@@ -25,7 +27,15 @@ internal static class GatewayServiceCollectionExtensions
         services.AddSingleton<SessionRegistry>();
         services.AddSingleton<PairingService>();
         services.AddSingleton<GatewayConnectService>();
+        services.AddSingleton<PreAuthConnectionLimiter>();
         services.TryAddSingleton<IIngressWhois, NullIngressWhois>();
+        services.AddSingleton<IGatewaySessionResolver, CookieSessionResolver>();
+        services.AddSingleton<GatewayConnectionGuard>();
+        services.AddSignalR(options => options.AddFilter<GatewayConnectionGuard>());
+        services.AddAuthentication(GatewayClaims.AuthenticationType)
+            .AddScheme<AuthenticationSchemeOptions, GatewayAuthenticationHandler>(GatewayClaims.AuthenticationType, null);
+        services.AddAuthorization();
+        services.AddCascadingAuthenticationState();
         return services;
     }
 

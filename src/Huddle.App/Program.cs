@@ -80,6 +80,13 @@ AgentLayoutMigration.Run(
     app.Services.GetRequiredService<IOptions<TeamOptions>>(),
     app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Agency.Huddle.App.Acp.AgentLayoutMigration"));
 
+// Gateway order (C-3): the gate classifies the ingress first, authentication then reads it, the session
+// requirement refuses a request with no session, and only then does antiforgery run (it binds to the
+// principal's NameIdentifier).
+app.UseGatewayGate();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseGatewaySessionRequirement();
 app.UseAntiforgery();
 
 app.MapStaticAssets();

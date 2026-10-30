@@ -123,7 +123,7 @@ internal static class ConnectEndpoints
         NoStore(http);
         IngressResult ingress = await ClassifyAsync(http, cancellationToken).ConfigureAwait(false);
         string? login = settings.Options.Auth.AllowTailscale && !ingress.IsFunnel ? ingress.TailscaleLogin : null;
-        bool authenticated = sessions.IsValid(http.Request.Cookies[CookieName(settings.InstanceId)]);
+        bool authenticated = sessions.TryGet(http.Request.Cookies[CookieName(settings.InstanceId)], ingress.TailscaleLogin) is not null;
         string mode = settings.Options.Auth.Mode switch
         {
             GatewayAuthMode.Password => "password",
@@ -212,7 +212,7 @@ internal static class ConnectEndpoints
         return origin.Length == 0 || (Uri.TryCreate(origin, UriKind.Absolute, out Uri? uri) && IsLoopbackName(uri.Host));
     }
 
-    private static bool IsLoopbackName(string host)
+    internal static bool IsLoopbackName(string host)
     {
         string name = host.Trim('[', ']');
         return string.Equals(name, "localhost", StringComparison.OrdinalIgnoreCase)

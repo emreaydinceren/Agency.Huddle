@@ -37,6 +37,7 @@ internal sealed class DeviceRegistry
     private readonly string connectionString;
     private readonly TimeProvider timeProvider;
     private readonly Lock gate = new();
+    private readonly List<Action<string>> endedCallbacks = [];
 
     /// <summary>Opens <c>team.db</c> under <paramref name="dataDir"/>, creating the table when missing.</summary>
     /// <param name="dataDir">The data directory.</param>
@@ -186,7 +187,28 @@ internal sealed class DeviceRegistry
         int changed = this.Execute(
             "UPDATE gateway_devices SET token_hash = $hash WHERE device_id = $id;",
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["$id"] = deviceId, ["$hash"] = HashToken(token) });
-        return changed > 0 ? token : null;
+        if (changed == 0)
+        {
+            return null;
+        }
+
+        this.NotifyEnded(deviceId);
+        return token;
+    }
+
+    /// <summary>
+    /// Registers a callback run, outside the registry's lock, after a device is revoked, removed or rotated (Spec 6.8): the session registry
+    /// ends the device's sessions and the connection guard closes its sockets.
+    /// </summary>
+    /// <param name="onDeviceEnded">Receives the device id.</param>
+    public void Subscribe(Action<string> onDeviceEnded)
+    {
+        ArgumentNullException.ThrowIfNull(onDeviceEnded);
+
+        lock (this.gate)
+        {
+            this.endedCallbacks.Add(onDeviceEnded);
+        }
     }
 
     /// <summary>Removes the device's token; it stays listed, unable to present a device token.</summary>
@@ -196,9 +218,15 @@ internal sealed class DeviceRegistry
     {
         ArgumentNullException.ThrowIfNull(deviceId);
 
-        return this.Execute(
+        bool changed = this.Execute(
             "UPDATE gateway_devices SET token_hash = NULL WHERE device_id = $id;",
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["$id"] = deviceId }) > 0;
+        if (changed)
+        {
+            this.NotifyEnded(deviceId);
+        }
+
+        return changed;
     }
 
     /// <summary>Deletes the device.</summary>
@@ -208,9 +236,15 @@ internal sealed class DeviceRegistry
     {
         ArgumentNullException.ThrowIfNull(deviceId);
 
-        return this.Execute(
+        bool existed = this.Execute(
             "DELETE FROM gateway_devices WHERE device_id = $id;",
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["$id"] = deviceId }) > 0;
+        if (existed)
+        {
+            this.NotifyEnded(deviceId);
+        }
+
+        return existed;
     }
 
     /// <summary>Deletes devices paired via <c>loopback</c> or <c>bootstrap</c> and unseen for <see cref="StaleAfter"/> (C-11).</summary>
@@ -263,6 +297,20 @@ internal sealed class DeviceRegistry
         reader.IsDBNull(10) ? null : reader.GetString(10));
 
     private static DateTimeOffset ParseTime(string text) => DateTimeOffset.Parse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+
+    private void NotifyEnded(string deviceId)
+    {
+        Action<string>[] callbacks;
+        lock (this.gate)
+        {
+            callbacks = [.. this.endedCallbacks];
+        }
+
+        foreach (Action<string> callback in callbacks)
+        {
+            callback(deviceId);
+        }
+    }
 
     private string Now() => Format(this.timeProvider.GetUtcNow());
 
