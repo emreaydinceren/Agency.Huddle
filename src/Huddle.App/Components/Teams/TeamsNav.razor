@@ -15,12 +15,14 @@
     handler arrive in tasks 7.3 and 7.4; this file only lists.
 
     With Team set (a Team shortcut in the Activity bar, TeamShortcutBar.razor) it lists that one Team's folders and
-    nothing else: no Team row, no "Show all" and no "Build a team", and the folders are always shown.
+    nothing else: no Team row, no "Show all" and no "Build a team", and the folders are always shown. Its Rooms folder is
+    drawn even when empty, splits into "Needs you" and "All" while a Room waits on the Human, and ends with "New chat".
 *@
 
 @using System.Text.Json
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Library
+@using Agency.Huddle.App.NeedsYou
 @using Microsoft.Extensions.Options
 @implements IDisposable
 @inject ITeamCatalog Catalog
@@ -33,6 +35,7 @@
 @inject IOptions<TeamOptions> TeamConfig
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject NeedsYouTracker Tracker
 
 <div class="teams-nav-host">
     <MudNavMenu Class="teams-nav">
@@ -74,7 +77,7 @@
                     </MudMenu>
                 </div>
             }
-            @if (string.Equals(this.newChatTeam, team.Name, StringComparison.OrdinalIgnoreCase))
+            @if (this.Team is null && string.Equals(this.newChatTeam, team.Name, StringComparison.OrdinalIgnoreCase))
             {
                 <NewChat Team="@team.Name" OnStarted="this.EndNewChat" OnClosed="this.EndNewChat" />
             }
@@ -87,7 +90,46 @@
                     <NavTabLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}")" TabTitle="@team.Name" Icon="@Icons.Material.Outlined.Groups"
                                 Class="nav-action-link">Open @team.Name</NavTabLink>
                 }
-                @if (teamRooms.Count > 0)
+                @if (this.Team is not null)
+                {
+                    @* A shortcut's Rooms folder is the Chats view's All grouping for one Team (RoomList.razor): the Rooms waiting
+                       on the Human in a "Needs you" folder, the rest in "All", every Room listed with no "Show all", and New chat
+                       last. With nothing waiting there is nothing to split, so the Rooms are listed flat. *@
+                    string roomsKey = FolderKey(team.Name, RoomsFolder);
+                    List<Room> waiting = [.. teamRooms.Where(this.IsWaiting)];
+                    <MudNavGroup Class="teams-nav-folder teams-nav-rooms" Title="Rooms" Icon="@Icons.Material.Outlined.Folder"
+                                 Expanded="this.IsFolderOpen(roomsKey)" ExpandedChanged="@(open => this.SetFolderOpen(roomsKey, open))">
+                        @if (waiting.Count > 0)
+                        {
+                            string needsYouKey = FolderKey(team.Name, NeedsYouFolder);
+                            string allKey = FolderKey(team.Name, AllFolder);
+                            <MudNavGroup Class="teams-nav-subfolder room-folder-needs-you" Title="Needs you" Icon="@Icons.Material.Outlined.NotificationsActive"
+                                         Expanded="this.IsFolderOpen(needsYouKey)" ExpandedChanged="@(open => this.SetFolderOpen(needsYouKey, open))">
+                                @foreach (Room room in waiting)
+                                {
+                                    <RoomNavRow @key="room.Id" Room="room" Class="nav-team-room-link" OnError="this.OnRoomError" />
+                                }
+                            </MudNavGroup>
+                            <MudNavGroup Class="teams-nav-subfolder teams-nav-all" Title="All" Icon="@Icons.Material.Outlined.Folder"
+                                         Expanded="this.IsFolderOpen(allKey)" ExpandedChanged="@(open => this.SetFolderOpen(allKey, open))">
+                                @foreach (Room room in teamRooms.Where(room => !this.IsWaiting(room)))
+                                {
+                                    <RoomNavRow @key="room.Id" Room="room" Class="nav-team-room-link" OnError="this.OnRoomError" />
+                                }
+                                @this.NewChatRow(team.Name)
+                            </MudNavGroup>
+                        }
+                        else
+                        {
+                            @foreach (Room room in teamRooms)
+                            {
+                                <RoomNavRow @key="room.Id" Room="room" Class="nav-team-room-link" OnError="this.OnRoomError" />
+                            }
+                            @this.NewChatRow(team.Name)
+                        }
+                    </MudNavGroup>
+                }
+                else if (teamRooms.Count > 0)
                 {
                     string roomsKey = FolderKey(team.Name, RoomsFolder);
                     <MudNavGroup Class="teams-nav-folder teams-nav-rooms" Title="Rooms" Icon="@Icons.Material.Outlined.Folder"
@@ -161,6 +203,26 @@
     private const string LibraryFolder = "\u0001library";
     private const string TasksFolder = "\u0001tasks";
 
+    /// <summary>The two folders inside a shortcut's Rooms folder while a Room waits on the Human.</summary>
+    private const string NeedsYouFolder = RoomsFolder + "\u0001needs-you";
+    private const string AllFolder = RoomsFolder + "\u0001all";
+
+    /// <summary>The ids of the Rooms waiting on the Human, as the tracker holds them.</summary>
+    private HashSet<string> waitingIds = new(StringComparer.Ordinal);
+
+    private bool IsWaiting(Room room) => this.waitingIds.Contains(room.Id);
+
+    /// <summary>The "New chat" row at the bottom of a shortcut's Rooms folder, and the panel it opens for <paramref name="team"/>.</summary>
+    /// <param name="team">The shortcut's Team.</param>
+    private RenderFragment NewChatRow(string team) =>
+        @<div class="teams-nav-new-chat">
+            <MudNavLink Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.ToggleNewChat(team))" Class="nav-action-link">New chat</MudNavLink>
+            @if (string.Equals(this.newChatTeam, team, StringComparison.OrdinalIgnoreCase))
+            {
+                <NewChat Team="@team" OnStarted="this.EndNewChat" OnClosed="this.EndNewChat" />
+            }
+        </div>;
+
     /// <summary>Folder keys of the folders the Human closed. Every folder starts open, and the choice lasts for this circuit only.</summary>
     private readonly HashSet<string> closedFolders = new(StringComparer.OrdinalIgnoreCase);
 
@@ -187,6 +249,7 @@
         this.Catalog.Changed += this.OnCatalogChanged;
         this.Events.RoomsChanged += this.OnRoomsChanged;
         this.Views.ViewsChanged += this.OnViewsChanged;
+        this.Tracker.Changed += this.OnTrackerChanged;
         this.locationChanged = (_, _) => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.UpdateRoute();
@@ -251,6 +314,7 @@
         this.Catalog.Changed -= this.OnCatalogChanged;
         this.Events.RoomsChanged -= this.OnRoomsChanged;
         this.Views.ViewsChanged -= this.OnViewsChanged;
+        this.Tracker.Changed -= this.OnTrackerChanged;
         if (this.locationChanged is not null)
         {
             this.Navigation.LocationChanged -= this.locationChanged;
@@ -381,6 +445,8 @@
         if (!inTeam)
         {
             this.closedFolders.Remove(FolderKey(this.routeTeam, RoomsFolder));
+            this.closedFolders.Remove(FolderKey(this.routeTeam, NeedsYouFolder));
+            this.closedFolders.Remove(FolderKey(this.routeTeam, AllFolder));
         }
         else if (segments.Length >= 3 && string.Equals(segments[2], "projects", StringComparison.OrdinalIgnoreCase))
         {
@@ -400,6 +466,17 @@
     });
 
     private void OnViewsChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+
+    private void OnTrackerChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+    {
+        this.ReadWaiting();
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    /// <summary>Reads the ids of the Rooms waiting on the Human (see <see cref="waitingIds"/>).</summary>
+    private void ReadWaiting() =>
+        this.waitingIds = new HashSet<string>(this.Tracker.Snapshot().Select(static entry => entry.RoomId), StringComparer.Ordinal);
 
     private void OnRoomsChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
     {
@@ -429,6 +506,7 @@
             ];
         }
 
+        this.ReadWaiting();
         this.roomsByTeam.Clear();
         foreach ((string name, IReadOnlyList<Room> rooms) in loaded)
         {

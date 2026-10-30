@@ -6701,6 +6701,17 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     --nav-level: 0.25;
 }
 
+/* The shortcut's Rooms folder splits into Needs you and All while a Room waits on the Human: those two headers sit at the
+   Rooms folder's row step, and their own rows step a quarter level further. */
+.sidebar-view-team .teams-nav-host .teams-nav-folder .teams-nav-subfolder .mud-collapse-container {
+    --nav-level: 0.5;
+}
+
+.sidebar-views .teams-nav-host .teams-nav-subfolder.mud-nav-group > .mud-nav-link {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
 /* A folder header is a row, not a section: no gap above or below it. Outranks the section rules in Left menu. */
 .sidebar-views .teams-nav-host .teams-nav-folder.mud-nav-group > .mud-nav-link {
     margin-top: 0;
