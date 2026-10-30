@@ -2,7 +2,7 @@ using Agency.Huddle.Seeder.Model;
 
 namespace Agency.Huddle.Seeder.Scenarios;
 
-/// <summary>The chat Rooms and their history for the <c>software-co</c> scenario.</summary>
+/// <summary>The chat Rooms and their history for the <c>software-co</c> scenario. Seeder spec SEED-SC-9, SEED-INV-8; Appendix A.2 (Add a Room or Messages).</summary>
 internal static class SoftwareCoRooms
 {
     /// <summary>Key of the one-to-one Room with Grace.</summary>

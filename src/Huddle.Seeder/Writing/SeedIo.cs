@@ -2,7 +2,7 @@ using System.Text;
 
 namespace Agency.Huddle.Seeder.Writing;
 
-/// <summary>Writes text files the way Huddle expects them: UTF-8 without a byte-order mark, LF line endings, a final newline.</summary>
+/// <summary>Writes text files the way Huddle expects them: UTF-8 without a byte-order mark, LF line endings, a final newline. Seeder spec §5.</summary>
 internal static class SeedIo
 {
     private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);

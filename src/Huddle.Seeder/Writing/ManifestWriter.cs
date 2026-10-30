@@ -6,7 +6,7 @@ using Agency.Huddle.Seeder.Model;
 
 namespace Agency.Huddle.Seeder.Writing;
 
-/// <summary>Renders <c>manifest.md</c>: every entity that was created and the facts a tester can assert, generated from the same plan that was written.</summary>
+/// <summary>Renders <c>manifest.md</c>: every entity that was created and the facts a tester can assert, generated from the same plan that was written. Seeder spec §5, step 10; SEED-RT-7.</summary>
 internal static partial class ManifestWriter
 {
     private static readonly string[] Finished = ["Done", "Cancelled", "Duplicate", "Rejected"];

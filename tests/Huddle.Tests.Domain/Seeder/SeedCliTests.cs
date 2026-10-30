@@ -3,12 +3,12 @@ using Agency.Huddle.Seeder;
 
 namespace Agency.Huddle.Tests.Seeder;
 
-/// <summary>The command line: defaults, errors, and one full run through the real wipe guard.</summary>
+/// <summary>The command line: defaults, errors, and one full run through the real wipe guard. Seeder spec §3.</summary>
 public sealed class SeedCliTests
 {
     private static readonly FakeTimeProvider Clock = new(new DateTimeOffset(2026, 9, 29, 23, 30, 0, TimeSpan.Zero));
 
-    /// <summary>With no arguments the default scenario is built into the default root, dated by the clock's UTC day.</summary>
+    /// <summary>SEED-CLI-1: With no arguments the default scenario is built into the default root, dated by the clock's UTC day.</summary>
     [Fact]
     public void Parse_NoArguments_UsesDefaults()
     {
@@ -22,7 +22,7 @@ public sealed class SeedCliTests
         Assert.Equal(SeedCli.DefaultRoot("software-co"), request.Root);
     }
 
-    /// <summary>Every option overrides its default.</summary>
+    /// <summary>SEED-CLI-1: Every option overrides its default.</summary>
     [Fact]
     public void Parse_AllOptions_AreApplied()
     {
@@ -34,7 +34,7 @@ public sealed class SeedCliTests
         Assert.Equal(new DateOnly(2027, 1, 31), request.Today);
     }
 
-    /// <summary>Bad input is exit code 2 with a message, and never a request.</summary>
+    /// <summary>SEED-CLI-2: Bad input is exit code 2 with a message, and never a request.</summary>
     [Theory]
     [InlineData("--scenario", "nope")]
     [InlineData("--today", "31/01/2027")]
@@ -49,7 +49,7 @@ public sealed class SeedCliTests
         Assert.Equal(2, exitCode);
     }
 
-    /// <summary>Help exits successfully and explains the wipe.</summary>
+    /// <summary>SEED-CLI-3: Help exits successfully and explains the wipe.</summary>
     [Fact]
     public void Parse_Help_ExitsZeroAndMentionsTheWipe()
     {
@@ -60,7 +60,7 @@ public sealed class SeedCliTests
         Assert.Contains(".huddle-seed", message, StringComparison.Ordinal);
     }
 
-    /// <summary>A refused root ends with exit code 1, an explanation, and nothing deleted.</summary>
+    /// <summary>SEED-CLI-2, SEED-SAFE-5: A refused root ends with exit code 1, an explanation, and nothing deleted.</summary>
     [Fact]
     public async Task Run_RefusedRoot_ExitsOneAndLeavesTheFolderAlone()
     {
@@ -84,7 +84,7 @@ public sealed class SeedCliTests
         }
     }
 
-    /// <summary>A full run through the real protected-folder list succeeds and prints the launch command.</summary>
+    /// <summary>SEED-CLI-4, SEED-INV-10: A full run through the real protected-folder list succeeds and prints the launch command.</summary>
     [Fact]
     public async Task Run_FreshRoot_SeedsAndPrintsTheLaunchCommand()
     {
@@ -98,7 +98,7 @@ public sealed class SeedCliTests
             Assert.Equal(0, exit);
             Assert.Equal(string.Empty, error.ToString());
             // contains-ok: console output, not markup: the summary line sits among the launch command lines, so only the counts are pinned.
-            Assert.Contains("Seeded 9 Agents, 5 Teams, 46 Tasks", output.ToString(), StringComparison.Ordinal);
+            Assert.Contains("Seeded 13 Agents, 6 Teams, 64 Tasks", output.ToString(), StringComparison.Ordinal);
             Assert.Contains("--Team:Acp:Adapters:0:Args:0=--mock", output.ToString(), StringComparison.Ordinal);
             Assert.Contains("--Team:DemoAgent:Enabled=false", output.ToString(), StringComparison.Ordinal);
         }

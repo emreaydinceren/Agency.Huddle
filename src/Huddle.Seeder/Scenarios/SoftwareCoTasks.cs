@@ -2,7 +2,7 @@ using Agency.Huddle.Seeder.Model;
 
 namespace Agency.Huddle.Seeder.Scenarios;
 
-/// <summary>The Tasks for the <c>software-co</c> scenario.</summary>
+/// <summary>The Tasks for the <c>software-co</c> scenario. Seeder spec SEED-SC-4, SEED-INV-1 to -5; Appendix A.2 (Add a Task).</summary>
 internal static class SoftwareCoTasks
 {
     private const string Human = "You";

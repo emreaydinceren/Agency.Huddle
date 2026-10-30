@@ -1,6 +1,6 @@
 namespace Agency.Huddle.Seeder.Scenarios;
 
-/// <summary>The scenarios the seeder knows about.</summary>
+/// <summary>The scenarios the seeder knows about. Seeder spec §8; Appendix A.2 (Add a scenario).</summary>
 internal static class ScenarioCatalog
 {
     /// <summary>The scenario used when none is named.</summary>

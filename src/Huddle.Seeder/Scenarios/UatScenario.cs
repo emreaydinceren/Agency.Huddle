@@ -7,6 +7,7 @@ namespace Agency.Huddle.Seeder.Scenarios;
 /// replaces the built-in <c>echo</c> and <c>alpha</c> demo agents, which are off by default, with Agents that run
 /// on the free mock adapter and so go through the real Reply Gate, stream Drafts and cost nothing. It exists only
 /// when someone builds it with <c>--scenario uat</c>; a normal install never has it.
+/// Seeder spec §8 (SEED-UAT-1 to -3).
 /// </summary>
 internal sealed class UatScenario : IScenario
 {
@@ -20,14 +21,6 @@ internal sealed class UatScenario : IScenario
         {
           "version": 1,
           "views": []
-        }
-        """;
-
-    private const string AvatarsJson = """
-        {
-          "You": { "label": "ME", "background": "#d46002" },
-          "Ada": { "label": "AD", "background": "#2e7d6b" },
-          "Bo": { "label": "BO", "background": "#3b6ea5" }
         }
         """;
 
@@ -53,7 +46,11 @@ internal sealed class UatScenario : IScenario
                 """
                 You are Ada, an Agent that exists only so a manual test has someone to talk to.
                 Keep every reply short.
-                """),
+                """)
+            {
+                Gender = SeedGender.Woman,
+                AvatarFile = "scientist_fair_f_01.png",
+            },
             new(
                 Bo,
                 "Test Agent",
@@ -63,7 +60,11 @@ internal sealed class UatScenario : IScenario
                 """
                 You are Bo, a second Agent that exists only so a manual test has someone to talk to.
                 Keep every reply short.
-                """),
+                """)
+            {
+                Gender = SeedGender.Man,
+                AvatarFile = "student_tan_m_01.png",
+            },
         ],
         Skills = [],
         Teams = [],
@@ -75,7 +76,6 @@ internal sealed class UatScenario : IScenario
             new("dm-bo", Bo, [Bo], false, []),
         ],
         ViewsJson = EmptyViewsJson,
-        AvatarsJson = AvatarsJson,
         Today = today,
     };
 }

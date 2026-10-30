@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Agency.Huddle.Seeder.Writing;
 
-/// <summary>Turns a <see cref="SeedTask"/> into the Markdown the Tasks feature reads, and decides where it goes.</summary>
+/// <summary>Turns a <see cref="SeedTask"/> into the Markdown the Tasks feature reads, and decides where it goes. Seeder spec §5, step 7; SEED-INV-3 to -5.</summary>
 internal static class TaskFileWriter
 {
     private const string Empty = "—";

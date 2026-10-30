@@ -3,8 +3,9 @@ using Agency.Huddle.Seeder.Model;
 namespace Agency.Huddle.Seeder.Scenarios;
 
 /// <summary>
-/// A small software company: three working Teams (Platform, Growth, Support) with shared Agents, plus two
-/// edge-case Teams (Sandbox with nobody in it, Archive with people but no Projects).
+/// A small software company and the family of the Human who runs it: three working Teams (Platform, Growth, Support) with
+/// shared Agents, the household Team Home and Family (<see cref="SoftwareCoHome"/>), plus two edge-case Teams (Sandbox with
+/// nobody in it, Archive with people but no Projects). Seeder spec §8 (SEED-SC-1 to -15) and §9 (SEED-HOME-1 to -9).
 /// </summary>
 internal sealed class SoftwareCoScenario : IScenario
 {
@@ -117,23 +118,48 @@ internal sealed class SoftwareCoScenario : IScenario
               "grouping": ["team"],
               "sort": [{ "field": "closed", "direction": "descending" }],
               "columns": []
+            },
+            {
+              "id": "home-this-week",
+              "name": "Home this week",
+              "kind": "list",
+              "scope": "active",
+              "fields": ["project", "status", "assignee", "due_date", "tags"],
+              "filter": { "teams": ["Home and Family"] },
+              "grouping": [],
+              "sort": [{ "field": "due_date", "direction": "ascending" }],
+              "columns": []
+            },
+            {
+              "id": "who-owns-what",
+              "name": "Who owns what",
+              "kind": "list",
+              "scope": "active",
+              "fields": ["project", "status", "due_date", "tags"],
+              "filter": { "teams": ["Home and Family"] },
+              "grouping": ["assignee"],
+              "sort": [{ "field": "due_date", "direction": "ascending" }],
+              "columns": []
+            },
+            {
+              "id": "home-board",
+              "name": "Home board",
+              "kind": "kanban",
+              "scope": "active",
+              "fields": ["priority", "assignee", "due_date"],
+              "filter": { "teams": ["Home and Family"] },
+              "grouping": ["project"],
+              "sort": [],
+              "columns": [
+                { "label": "Backlog", "states": ["Backlog"] },
+                { "label": "To Do", "states": ["To Do"] },
+                { "label": "In Progress", "states": ["In Progress"] },
+                { "label": "Review", "states": ["Review"] },
+                { "label": "Done", "states": ["Done"] },
+                { "label": "Won't do", "states": ["Cancelled", "Duplicate", "Rejected"] }
+              ]
             }
           ]
-        }
-        """;
-
-    private const string AvatarsJson = """
-        {
-          "You": { "label": "ME", "background": "#d46002" },
-          "Grace": { "label": "GR", "background": "#2e7d6b" },
-          "Marcus": { "image": "5eed00000000000000000000000000a1.png", "background": "#3b6ea5" },
-          "Lena": { "label": "LE", "background": "#8a4f9e" },
-          "Owen": { "label": "OW", "background": "#b5651d" },
-          "Sofia": { "label": "SO", "background": "#c2456b" },
-          "Dana": { "label": "DA", "background": "#4a7c59" },
-          "Alan": { "label": "AL", "background": "#5b5f97" },
-          "Maya": { "label": "MY", "background": "#d18a00" },
-          "Ben": { "label": "BE", "background": "#6b7280" }
         }
         """;
 
@@ -141,27 +167,26 @@ internal sealed class SoftwareCoScenario : IScenario
     public string Name => "software-co";
 
     /// <inheritdoc/>
-    public string Description => "A software company: Platform, Growth and Support (7 Projects, shared Agents, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Archive.";
+    public string Description => "A software company and a family: Platform, Growth, Support and Home and Family (12 Projects, shared Agents, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Archive.";
 
     /// <inheritdoc/>
     public SeedPlan Build(DateOnly today) => new()
     {
         Scenario = this.Name,
         HumanName = "You",
-        Agents = SoftwareCoAgents.All,
+        Agents = [.. SoftwareCoAgents.All, .. SoftwareCoHome.Agents],
         Skills = SoftwareCoAgents.Skills,
-        Teams = SoftwareCoLibrary.Teams,
-        Tasks = SoftwareCoTasks.All,
-        Files = SoftwareCoLibrary.Files,
-        Rooms = SoftwareCoRooms.All,
+        Teams = [.. SoftwareCoLibrary.Teams, SoftwareCoHome.Definition],
+        Tasks = [.. SoftwareCoTasks.All, .. SoftwareCoHome.Tasks],
+        Files = [.. SoftwareCoLibrary.Files, .. SoftwareCoNotes.Documents, .. SoftwareCoNotes.Memory, .. SoftwareCoHomeNotes.Documents, .. SoftwareCoHomeNotes.Memory],
+        Rooms = [.. SoftwareCoRooms.All, .. SoftwareCoHome.Rooms],
         BinaryFiles = SoftwareCoLibrary.BinaryFiles,
         Uploads = SoftwareCoLibrary.Uploads,
         TaskUploads = SoftwareCoLibrary.TaskUploads,
         DocHistory = SoftwareCoLibrary.DocHistory,
         Sprints = SoftwareCoTasks.Sprints,
-        Feed = SoftwareCoFeed.All,
+        Feed = [.. SoftwareCoFeed.All, .. SoftwareCoHome.Feed],
         ViewsJson = ViewsJson,
-        AvatarsJson = AvatarsJson,
         Today = today,
     };
 }

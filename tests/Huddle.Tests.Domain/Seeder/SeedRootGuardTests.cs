@@ -2,7 +2,7 @@ using Agency.Huddle.Seeder;
 
 namespace Agency.Huddle.Tests.Seeder;
 
-/// <summary>The wipe guard is what makes "start from a clean slate" safe, so each way it must refuse is pinned here.</summary>
+/// <summary>The wipe guard is what makes "start from a clean slate" safe, so each way it must refuse is pinned here. Seeder spec §4.</summary>
 public sealed class SeedRootGuardTests : IDisposable
 {
     private readonly string sandbox = Path.Combine(Path.GetTempPath(), "seed-guard-tests", Guid.NewGuid().ToString("N"));
@@ -16,7 +16,7 @@ public sealed class SeedRootGuardTests : IDisposable
         }
     }
 
-    /// <summary>A drive root is never wiped.</summary>
+    /// <summary>SEED-SAFE-2: A drive root is never wiped.</summary>
     [Fact]
     public void Check_DriveRoot_IsRefused()
     {
@@ -26,7 +26,7 @@ public sealed class SeedRootGuardTests : IDisposable
         Assert.Contains("drive root", refusal, StringComparison.Ordinal);
     }
 
-    /// <summary>A folder directly under the drive root is too shallow to be a seed root.</summary>
+    /// <summary>SEED-SAFE-2: A folder directly under the drive root is too shallow to be a seed root.</summary>
     [Fact]
     public void Check_OneLevelBelowDriveRoot_IsRefused()
     {
@@ -38,14 +38,14 @@ public sealed class SeedRootGuardTests : IDisposable
         Assert.Contains("too close", refusal, StringComparison.Ordinal);
     }
 
-    /// <summary>A folder that does not exist yet is fine: there is nothing to wipe.</summary>
+    /// <summary>SEED-SAFE-1: A folder that does not exist yet is fine: there is nothing to wipe.</summary>
     [Fact]
     public void Check_AbsentFolder_IsAllowed()
     {
         Assert.Null(SeedRootGuard.Check(Path.Combine(this.sandbox, "new"), []));
     }
 
-    /// <summary>An empty existing folder is fine.</summary>
+    /// <summary>SEED-SAFE-1: An empty existing folder is fine.</summary>
     [Fact]
     public void Check_EmptyFolder_IsAllowed()
     {
@@ -54,7 +54,7 @@ public sealed class SeedRootGuardTests : IDisposable
         Assert.Null(SeedRootGuard.Check(root, []));
     }
 
-    /// <summary>A non-empty folder without the marker is somebody else's data and is refused.</summary>
+    /// <summary>SEED-SAFE-1: A non-empty folder without the marker is somebody else's data and is refused.</summary>
     [Fact]
     public void Check_NonEmptyFolderWithoutMarker_IsRefused()
     {
@@ -67,7 +67,7 @@ public sealed class SeedRootGuardTests : IDisposable
         Assert.Contains(SeedRootGuard.MarkerFileName, refusal, StringComparison.Ordinal);
     }
 
-    /// <summary>A folder carrying the marker is a previous seed and may be wiped.</summary>
+    /// <summary>SEED-SAFE-1: A folder carrying the marker is a previous seed and may be wiped.</summary>
     [Fact]
     public void Check_NonEmptyFolderWithMarker_IsAllowed()
     {
@@ -78,7 +78,7 @@ public sealed class SeedRootGuardTests : IDisposable
         Assert.Null(SeedRootGuard.Check(root, []));
     }
 
-    /// <summary>A folder inside a protected tree, such as the repository, is refused.</summary>
+    /// <summary>SEED-SAFE-3: A folder inside a protected tree, such as the repository, is refused.</summary>
     [Fact]
     public void Check_InsideProtectedTree_IsRefused()
     {
@@ -91,7 +91,7 @@ public sealed class SeedRootGuardTests : IDisposable
         Assert.Contains("protected", refusal, StringComparison.Ordinal);
     }
 
-    /// <summary>A folder inside a profile-style protected folder is allowed, because seeds may live under the profile or the temp folder.</summary>
+    /// <summary>SEED-SAFE-3: A folder inside a profile-style protected folder is allowed, because seeds may live under the profile or the temp folder.</summary>
     [Fact]
     public void Check_InsideProtectedAncestorOnlyFolder_IsAllowed()
     {
@@ -101,7 +101,7 @@ public sealed class SeedRootGuardTests : IDisposable
         Assert.Null(SeedRootGuard.Check(inside, [new ProtectedFolder(profile, BlocksDescendants: false)]));
     }
 
-    /// <summary>A root that would contain a protected folder, such as the whole user profile, is refused.</summary>
+    /// <summary>SEED-SAFE-3: A root that would contain a protected folder, such as the whole user profile, is refused.</summary>
     [Fact]
     public void Check_ContainingProtectedFolder_IsRefused()
     {
@@ -113,7 +113,7 @@ public sealed class SeedRootGuardTests : IDisposable
         Assert.NotNull(refusal);
     }
 
-    /// <summary>A link inside a marked seed root would make a recursive delete leave the root, so the root is refused.</summary>
+    /// <summary>SEED-SAFE-4: A link inside a marked seed root would make a recursive delete leave the root, so the root is refused.</summary>
     [Fact]
     public void Check_LinkInsideMarkedRoot_IsRefused()
     {
@@ -136,7 +136,7 @@ public sealed class SeedRootGuardTests : IDisposable
         Assert.Contains("link", refusal, StringComparison.Ordinal);
     }
 
-    /// <summary>Wipe removes a marked root and everything in it.</summary>
+    /// <summary>SEED-SAFE-1: Wipe removes a marked root and everything in it.</summary>
     [Fact]
     public void Wipe_MarkedRoot_DeletesIt()
     {
@@ -149,7 +149,7 @@ public sealed class SeedRootGuardTests : IDisposable
         Assert.False(Directory.Exists(root));
     }
 
-    /// <summary>Wipe throws rather than deleting when the guard refuses.</summary>
+    /// <summary>SEED-SAFE-5: Wipe throws rather than deleting when the guard refuses.</summary>
     [Fact]
     public void Wipe_UnmarkedNonEmptyRoot_ThrowsAndKeepsTheFiles()
     {

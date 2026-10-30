@@ -2,7 +2,7 @@ using Agency.Huddle.Seeder.Model;
 
 namespace Agency.Huddle.Seeder.Scenarios;
 
-/// <summary>The cast and the Skill for the <c>software-co</c> scenario.</summary>
+/// <summary>The cast and the Skill for the <c>software-co</c> scenario. Seeder spec SEED-SC-3, §6.1; Appendix A.2 (Add or rename an Agent).</summary>
 internal static class SoftwareCoAgents
 {
     /// <summary>The Skill Alan holds.</summary>
@@ -30,7 +30,11 @@ internal static class SoftwareCoAgents
 
             Boundaries: you do not write marketing copy and you do not schedule support staff.
             Hand copy to Maya and support rotas to Dana.
-            """),
+            """)
+        {
+            Gender = SeedGender.Woman,
+            AvatarFile = "software-development-manager_brown_f_01.png",
+        },
         new(
             "Marcus",
             "Backend Engineer",
@@ -48,7 +52,11 @@ internal static class SoftwareCoAgents
             - You update your Task status as soon as it changes, and you leave a note when you are blocked.
 
             Boundaries: you do not decide product scope. Ask Owen. You hand front-end questions to Lena.
-            """),
+            """)
+        {
+            Gender = SeedGender.Man,
+            AvatarFile = "software-developer_dark_m_01.png",
+        },
         new(
             "Lena",
             "Frontend Engineer",
@@ -67,7 +75,11 @@ internal static class SoftwareCoAgents
 
             Boundaries: you do not choose copy or colours; you ask Maya and Sofia. You hand API shape
             questions to Marcus.
-            """),
+            """)
+        {
+            Gender = SeedGender.Woman,
+            AvatarFile = "software-developer_fair_f_01.png",
+        },
         new(
             "Owen",
             "Growth PM",
@@ -87,7 +99,11 @@ internal static class SoftwareCoAgents
 
             Boundaries: you do not design screens or write copy. You brief Sofia and Maya and review
             what they produce.
-            """),
+            """)
+        {
+            Gender = SeedGender.Man,
+            AvatarFile = "data-analyst_light_m_01.png",
+        },
         new(
             "Sofia",
             "Designer",
@@ -106,7 +122,11 @@ internal static class SoftwareCoAgents
             - You attach mockups to Tasks and mark them Review when they are ready to critique.
 
             Boundaries: you do not write production code. You hand builds to Lena.
-            """),
+            """)
+        {
+            Gender = SeedGender.Woman,
+            AvatarFile = "designer_tan_f_01.png",
+        },
         new(
             "Dana",
             "Support Lead",
@@ -125,7 +145,11 @@ internal static class SoftwareCoAgents
 
             Boundaries: you do not diagnose root causes. Ask Alan or Grace. You do not approve
             refunds above the policy limit; ask the Human.
-            """),
+            """)
+        {
+            Gender = SeedGender.Woman,
+            AvatarFile = "customer-support_dark_f_01.png",
+        },
         new(
             "Alan",
             "Site Reliability Engineer",
@@ -145,7 +169,11 @@ internal static class SoftwareCoAgents
 
             Boundaries: you do not change product behaviour. You hand fixes to Marcus and customer
             messaging to Dana.
-            """),
+            """)
+        {
+            Gender = SeedGender.Man,
+            AvatarFile = "software-developer_tan_m_01.png",
+        },
         new(
             "Maya",
             "Marketing Writer",
@@ -164,7 +192,11 @@ internal static class SoftwareCoAgents
 
             Boundaries: you do not invent product facts. You ask Owen for numbers and Lena for what a
             screen can actually do.
-            """),
+            """)
+        {
+            Gender = SeedGender.Woman,
+            AvatarFile = "marketing-manager_fair_f_01.png",
+        },
         new(
             "Ben",
             "Contract Accountant",
@@ -182,7 +214,11 @@ internal static class SoftwareCoAgents
             - You record anything you learn about how the company pays suppliers as memory.
 
             Boundaries: you do not give legal advice and you do not touch product or support work.
-            """),
+            """)
+        {
+            Gender = SeedGender.Man,
+            AvatarFile = "accountant_light_m_01.png",
+        },
     ];
 
     /// <summary>The Skills; Alan is the only holder of <see cref="PostmortemSkill"/>.</summary>

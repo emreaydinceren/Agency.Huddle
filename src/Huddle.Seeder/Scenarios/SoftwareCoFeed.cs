@@ -8,6 +8,7 @@ namespace Agency.Huddle.Seeder.Scenarios;
 /// that came and went. Every unresolved Notification is true of the rest of the seed, because Huddle resolves the ones that are not
 /// when it starts: the Tasks assigned to the Human exist, the Launch crew Mention is unanswered, the gated Task carries the Helper's
 /// line, and the Helper's usage and status say it is at its cap and failing.
+/// Seeder spec SEED-SC-11, SEED-INV-13; Appendix A.2 (Add a Feed item).
 /// </summary>
 internal static class SoftwareCoFeed
 {

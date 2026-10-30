@@ -11,6 +11,7 @@ namespace Agency.Huddle.Seeder.Writing;
 /// Writes the History of Library Markdown documents the way the app's <c>DocHistoryStore</c> does: one JSON Lines file per
 /// document at <c>doc-history/{rootId}/{relativePath}.jsonl</c>, oldest entry first. The seeder cannot see the store's
 /// internals, so the path and the line format are mirrored here and pinned by a test that compares them with the store.
+/// Seeder spec §5, step 9; SEED-INV-11.
 /// </summary>
 internal static class DocHistoryWriter
 {
