@@ -871,6 +871,81 @@ See
   directory.
 : *Avoid*: database, registry, store.
 
+## Remote access
+
+The words for using Huddle from another device ([Huddle.RemoteAccess-Specifications.md](../Huddle.RemoteAccess-Specifications.md)).
+OpenClaw's own word is kept wherever Huddle has no clash. In interface copy, a person is "you", and a device is a
+"device", never a "client".
+
+**Gateway**
+: Huddle's HTTP surface as a whole: every page, asset, endpoint and the `/_blazor` connection. Named as OpenClaw names
+  its own.
+: *Avoid*: server, API.
+
+**Gateway auth**
+: The shared secret every connection presents: the gateway token (48 hex characters, the default) or the gateway
+  password (`Auth:Mode`), or Tailscale identity, or trusted-proxy identity.
+: *Avoid*: login.
+
+**Device identity**
+: An Ed25519 key pair the browser generates and keeps in its local storage. The **device id** is the SHA-256 hex of
+  the public key.
+: *Avoid*: fingerprint, client id.
+
+**Connect handshake**
+: What `/auth` does: the browser asks for a challenge, signs it with its device key together with its credential, and
+  receives a **Session**.
+: *Avoid*: login, sign-in.
+
+**Session**
+: The proof of one successful handshake: an HttpOnly cookie that Huddle's pages and `/_blazor` carry. It lasts 12
+  hours. Huddle's equivalent of an authenticated OpenClaw WebSocket.
+: *Avoid*: login session.
+
+**Pairing**
+: A device becoming known. A pairing request waits up to 5 minutes for an admin's **Approve** or **Reject**, unless
+  it is auto-approved.
+: *Avoid*: registration.
+
+**Device token**
+: The per-device credential issued on approval, scoped to a role and scopes, kept by the browser in local storage and
+  presented on later handshakes instead of the gateway token.
+: *Avoid*: API key.
+
+**Scope**
+: What a session may do: `operator.read`, `operator.write`, `operator.pairing`, `operator.admin`.
+: *Avoid*: permission, role.
+
+**Limited access**
+: A device without `operator.admin`. It may **Request admin**, which needs approval. Limited is not read-only: there is
+  no read-only device ([known-limits.md](known-limits.md)).
+: *Avoid*: read-only.
+
+**Bootstrap token**
+: A single-use credential, valid 10 minutes and bound to the first device that redeems it, that opens one browser
+  already authenticated. Minted for the host's own browser by the desktop launcher or the `dashboard` verb, or for
+  another device as a **setup link**. Carried in the URL fragment.
+: *Avoid*: magic link.
+
+**Ingress**
+: How a request arrives: loopback, managed (through Huddle's own Tailscale Serve or Funnel), direct (a tailnet or LAN
+  bind), or trusted proxy. Decided only by the ingress classifier.
+: *Avoid*: transport.
+
+**Managed listener**
+: The extra loopback listener on a random port that only Huddle's own `tailscale serve` points at.
+: *Avoid*: proxy port.
+
+**Downgraded**
+: OpenClaw's word for plain HTTP off loopback: it works, but nothing is encrypted and the page can be altered in
+  transit.
+: *Avoid*: insecure mode.
+
+**Instance id**
+: A random id stored once per `{DataDir}`, part of every cookie name, because cookies ignore ports and copies run side
+  by side.
+: *Avoid*: port.
+
 ## Model-facing text
 
 **Prompt**

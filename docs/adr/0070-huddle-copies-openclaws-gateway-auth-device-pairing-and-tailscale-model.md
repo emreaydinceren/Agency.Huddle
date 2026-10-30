@@ -50,3 +50,4 @@ always need approval, since Huddle has no native app for OpenClaw's setup codes.
   configured, as rules.md requires.
 - `AllowedHosts` stops being `*` now, before any of this ships.
 - Deferred items are in [backlog.md](../engineering/backlog.md#hardening-remote-access).
+- Built 2026-10-30 on `feat/remote-access`, not merged: the commits from `fd5739c7` on (`git log origin/main..feat/remote-access`).

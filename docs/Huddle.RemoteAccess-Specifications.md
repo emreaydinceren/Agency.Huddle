@@ -1,6 +1,6 @@
 # Remote access
 
-**Status:** designed 2026-10-30 as a faithful port of OpenClaw's gateway model; not built · **Decision:**
+**Status:** built 2026-10-30 on `feat/remote-access`, not merged; a faithful port of OpenClaw's gateway model. Where the build differs from the first design, the text below is already corrected and [Deviations from the first design](#deviations-from-the-first-design) lists each change · **Decision:**
 [ADR-0070](adr/0070-huddle-copies-openclaws-gateway-auth-device-pairing-and-tailscale-model.md) · **Extends:** Settings
 (`G`, [wireframes.md](engineering/wireframes.md) Figure 6), the desktop host, the Feed
 ([Huddle.Feed-Specifications.md](Huddle.Feed-Specifications.md)) · **Deferred:** [backlog.md](engineering/backlog.md#hardening-remote-access)
@@ -48,6 +48,7 @@ behaviour is not documented, this spec says **(not in OpenClaw)** and makes a ch
 - [12. Edge cases and failure modes](#12-edge-cases-and-failure-modes)
 - [13. End-to-end flows](#13-end-to-end-flows)
 - [14. Decisions and rationale](#14-decisions-and-rationale)
+- [Deviations from the first design](#deviations-from-the-first-design)
 - [Appendix A. Configuration](#appendix-a-configuration)
 - [Appendix B. The Remote access section (`G10`)](#appendix-b-the-remote-access-section-g10)
 - [Appendix C. Delivery plan, tests first](#appendix-c-delivery-plan-tests-first)
@@ -227,7 +228,7 @@ shown only by `auth-token --show` on a terminal (OpenClaw refuses to print it to
 | --- | --- | --- |
 | `loopback` (default) | As configured today (`127.0.0.1:{port}` or `localhost`) | |
 | `tailnet` | `127.0.0.1:{port}` and the Tailscale IPv4 `100.x.y.z:{port}` | Downgraded. Falls back to loopback when no tailnet address exists, as OpenClaw does |
-| `lan` | `0.0.0.0:{port}` and `[::]:{port}` | Downgraded |
+| `lan` | One any-address (dual-mode) listener on `{port}` | Downgraded. `0.0.0.0` and `[::]` on one port fails on Windows, so Huddle binds `ListenAnyIP` once |
 | `auto` | `0.0.0.0` inside a container (`DOTNET_RUNNING_IN_CONTAINER`), loopback elsewhere | OpenClaw's container default |
 | `custom` | `CustomBindHost:{port}` | |
 
@@ -237,13 +238,30 @@ shown only by `auth-token --show` on a terminal (OpenClaw refuses to print it to
   Security check shows `gateway.bind_no_auth` as critical.
 - **The managed listener.** When `Tailscale:Mode` is `serve` or `funnel`, Huddle adds `127.0.0.1:0`. Kestrel writes the
   bound port back into the `ListenOptions` endpoint, so `GatewayListener` records it and hands it to the Tailscale
-  controller and to the classifier. Each listener carries `IIngressListenerFeature { Kind: App | Managed }` (set with
-  `ListenOptions.Use`).
-- Calling `Listen*` in code makes Kestrel ignore `--urls`; when any listener is added in code, `GatewayListener`
-  re-applies every configured URL itself. With `Bind = loopback` and Tailscale off it calls nothing, and Kestrel binds
-  exactly as today.
-- `DesktopLifetimeService.Publish` **excludes the recorded managed endpoint** and maps an any-address to `127.0.0.1`,
-  so the instance record and the browser opener always use the app listener, even when both are `127.0.0.1:{random}`.
+  controller and to the classifier. The port is read after start (`StartedAsync`); the first `KestrelAppHost` test
+  proved Kestrel writes it back. `GatewayListener` (singleton) records the bound managed `IPEndPoint`, and
+  `KindOf(ConnectionInfo)` returns `Managed` when the connection's local address (IPv4-mapped form normalised) and port
+  match it, else `App`. There is no `ListenOptions.Use` and no listener feature.
+- **The listener plan.** `GatewayListenerPlan` is pure and Domain-tested. Calling `Listen*` in code makes Kestrel
+  ignore every configured URL, so the plan re-applies and de-duplicates them. Sources, in order: `Configuration["urls"]`
+  (covers `ASPNETCORE_URLS`, `DOTNET_URLS`, `--urls` and launch settings), else `http_ports` and `https_ports`
+  (`*:{port}`), else `http://localhost:5000`. Each is parsed with `BindingAddress.Parse`: `localhost` →
+  `ListenLocalhost(p)`; an IP literal → `Listen(ip, p)`; `*`, `+` or another name → `ListenAnyIP(p)`; `https` adds
+  `UseHttps()`; `unix:` and `pipe:` make remote access unavailable (logged, loopback-only). `ListenLocalhost(0)` throws,
+  so the plan never emits it. A configured loopback URL on the same port as an any-address bind is dropped. `tailnet`
+  adds `Listen(100.x.y.z, AppPort)`, the address taken from the machine's unicast addresses in `100.64.0.0/10`. Each
+  non-zero port is probed with an `ExclusiveAddressUse` socket, disposed at once; a busy port starts the app
+  loopback-only with the reason recorded (the race between probe and bind is accepted). `GatewayListener` makes no
+  `Listen*` call only when `Bind = loopback`, Tailscale is off and desktop mode is off, so Kestrel binds exactly as today.
+- **Desktop mode has a stable port.** The installer binds `127.0.0.1:0`, which would change the browser's origin, and so
+  its device key, on every launch. In desktop mode the plan replaces `127.0.0.1:0` with
+  `127.0.0.1:{DesktopPortChoice.Choose(stored, IsFree)}`: the first port Huddle got is stored in `gateway_settings`
+  (`desktop_port`) and bound on the next start, falling back to `0` when busy (and stored again).
+  `Team:Gateway:Port`, when set, wins; a non-loopback bind in desktop mode still needs it. Devices paired through
+  loopback or bootstrap and unseen for 30 days are deleted by housekeeping.
+- `GatewayListener.AppUrl` is the first app endpoint, an any-address mapped to `127.0.0.1`. `DesktopLifetimeService.Publish`
+  uses it when set, else `IServerAddressesFeature` skipping the managed endpoint, so the instance record and the browser
+  opener always use the app listener. The dev console skips the managed endpoint too.
 - A busy port or a missing tailnet address starts the app loopback-only and reports why. Startup never fails over it.
 
 **Constraints.** The first non-loopback bind triggers the Windows or macOS firewall prompt; the section says to allow
@@ -257,7 +275,7 @@ shown only by `auth-token --show` on a terminal (OpenClaw refuses to print it to
 | --- | --- | --- |
 | Status | `tailscale status --json` | `BackendState`, `Self.DNSName`, `Self.TailscaleIPs`, the node owner. 3 attempts 500 ms apart (OpenClaw's constants). The JSON format is undocumented ("subject to change"); tests pin a captured sample |
 | Claim | `tailscale serve --bg=false --yes --https={tsPort} http://127.0.0.1:{managed}`; Funnel: `tailscale funnel --bg=false --yes --https={tsPort} …` | A foreground child process holds the route. 15 s start timeout. If the output says "listener already exists for port N", stop with **Tailscale port N belongs to something else** (OpenClaw's `TailscaleRouteOwnershipConflictError`), never take it over |
-| Release | Stop the child: terminate, then kill after 15 s | No `tailscale serve reset`, ever |
+| Release | Kill the child's process tree at once (`Process.Kill(entireProcessTree: true)`; Windows has no Ctrl-C) | No `tailscale serve reset`, ever. On Windows the child is assigned to a Job object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` (`[LibraryImport]`, which needs `AllowUnsafeBlocks` in `Huddle.App.csproj`), so a Huddle crash does not orphan it. That the route disappears when the child dies is checked by hand (manual tests) |
 | Restart | On an unexpected exit, retry with backoff from 1 s to 1 min | As OpenClaw |
 | Who | `tailscale whois --json {ip}` | `UserProfile.LoginName`, `Node` (tags). Cached per `IPAddress` for 60 s, failures for 5 s |
 | Stray routes | `tailscale serve status --json` every 30 s | Routes that point at Huddle's **app** port were set up by hand; listed in the Security check |
@@ -265,8 +283,12 @@ shown only by `auth-token --show` on a terminal (OpenClaw refuses to print it to
 - **Tailscale HTTPS port:** `Team:Gateway:Tailscale:HttpsPort`, else the app's own fixed port (copies on 5101 and 5102
   get `…ts.net:5101` and `:5102`), else Tailscale's default. Funnel accepts only 443, 8443 and 10000.
 - The CLI is `tailscale` on `PATH`, else the platform default path, else `Team:Gateway:Tailscale:Command`. All calls go
-  through `ITailscaleCli` (arguments in; exit code, output and a 10 s timeout out) so tests use canned output.
-- `TailscaleServeClaim` owns a `Process`, so it is `IAsyncDisposable`.
+  through `ITailscaleCli`: `RunAsync(args, timeout, ct)` returns exit code, stdout and stderr; `StartAsync(args, ct)`
+  returns an `ITailscaleChild` (`Id`, `Lines`, `Exited`, `KillAsync()`), so tests fake both with channels. The child runs
+  with `UseShellExecute=false`, `CreateNoWindow=true` and all three streams redirected, stdout and stderr read into one
+  channel. The claim succeeds when `tailscale serve status --json` shows `tsPort → http://127.0.0.1:{managed}` within
+  15 s; it fails on a line containing `listener already exists for port` or on the enable-HTTPS link.
+- `TailscaleServeClaim` owns the child, so it is `IAsyncDisposable`.
 
 **Constraints.** `Auth:AllowTailscale` applies only to routes Huddle created. A hand-made route never gets
 tokenless auth (OpenClaw: "`allowTailscale` is ignored on externally managed Serve routes").
@@ -277,8 +299,11 @@ tokenless auth (OpenClaw: "`allowTailscale` is ignored on externally managed Ser
 
 - **Phase 0, ships alone and now:** `AllowedHosts` in `appsettings.json` becomes `localhost;127.0.0.1;[::1]` (it is
   `*` today). The installer already sets `localhost;127.0.0.1`.
-- While bound beyond loopback: add the bound addresses, `Dns.GetHostName()`, `{name}.local`,
-  `CustomBindHost`, and `Team:Gateway:ExtraHosts`.
+- While bound beyond loopback: add the bound addresses, `{name}.local` (not the bare machine name),
+  `CustomBindHost`, and `Team:Gateway:ExtraHosts`. An any-address bind adds every non-loopback unicast address (IPv6
+  bracketed, no zone), refreshed on `NetworkChange.NetworkAddressChanged`. A default port is stripped before comparison.
+- The dynamic hosts are added in `services.PostConfigure<HostFilteringOptions>`, not `Configure`, so they extend what
+  `AllowedHosts` produced; the trailing dot of `Self.DNSName` is stripped.
 - While Serve or Funnel runs: add the MagicDNS name. Serve keeps the browser's original `Host`
   (`desktop-a.tail1234.ts.net:5101`; Tailscale's `serve.go` sets `r.Out.Host = r.In.Host`). The name is only known
   after `tailscale status`, which runs after start, so the list is fed through an
@@ -424,9 +449,25 @@ session is Huddle's equivalent of OpenClaw's authenticated socket.
 - **The gate** (`GatewayGate` + the `HuddleGateway` authentication scheme, registered first in `Program.cs`): the
   origin check (§8.7), the classifier (§8.6), then: `/auth`, `/auth/*`, `auth.js`, `auth.css` and the vendored noble
   files pass unauthenticated; `/_gateway/*` is loopback-only and checks the gateway token in `Authorization: Bearer`;
-  `/health` is loopback-only and unauthenticated (liveness for `test-health.ps1`); everything else needs a valid
-  session. A session from the managed listener must still arrive there with the same verified Tailscale login it was
-  issued to. Otherwise, an HTML `GET` → `302 /auth?return={path}`; anything else → 401.
+  `/health` is loopback-only and unauthenticated (liveness for `test-health.ps1`); `/_desktop/*` passes without a
+  session **only when the classifier says Loopback** (else 403) and keeps its own instance-token check
+  (`X-Huddle-Token`); everything else needs a valid session. A session from the managed listener must still arrive
+  there with the same verified Tailscale login it was issued to. Otherwise, an HTML `GET` → `302 /auth?return={path}`
+  (a local path: starts with `/`, not `//`, query kept); anything else → 401.
+- **Middleware order.** `WebApplication` inserts `UseRouting`, `UseAuthentication` and `UseAuthorization` ahead of
+  user middleware unless the code calls them, so `Program.cs` calls them explicitly, in this order, before
+  `UseAntiforgery`: `UseGatewayGate()` (origin check, classifier, pre-auth limit; the ingress goes into
+  `HttpContext.Items`), `UseAuthentication()`, `UseAuthorization()`, `UseGatewaySessionRequirement()` (302 `/auth` for an
+  HTML GET, else 401), `UseAntiforgery()`. The `HuddleGateway` handler reads the ingress from `HttpContext.Items`.
+  The classifier runs once, in the gate, with `GatewayOptions.TrustedProxies`.
+- **The principal** carries `ClaimTypes.NameIdentifier` = the device id (antiforgery binds to it), `huddle:session` =
+  the session hash, `huddle:scope` (one per scope) and `huddle:ingress`.
+- **Effective scheme.** After classification, for managed ingress, or trusted-proxy ingress with a valid
+  `X-Forwarded-Proto`, the gate sets `Request.Scheme` from it, so the session cookie is `Secure` over Serve and Funnel
+  and redirects are `https`. `RemoteIpAddress` is left alone. §8.8 uses this effective scheme.
+- **A dead session must not strand a tab.** `GET /auth/status` (unauthenticated) returns `{ "authenticated": bool }`.
+  `ReconnectModal.razor.js` calls it in its `failed` branch and both `catch` blocks, and when the answer is false goes to
+  `/auth?return=` plus the current path and query.
 - **Scopes in the app.** The scheme puts `huddle:device`, `huddle:scope` claims and `huddle:ingress` on the principal.
   Blazor carries them into the circuit through `ServerAuthenticationStateProvider`. `Settings.razor` renders only for
   `operator.admin`; otherwise it shows "Settings need admin access" and **Request admin**. Services that change remote
@@ -434,9 +475,13 @@ session is Huddle's equivalent of OpenClaw's authenticated socket.
 - **Revocation disconnects** (OpenClaw's fix for CVE-2026-34503): a global `IHubFilter`, `GatewayConnectionGuard`,
   remembers each connection's device in `OnConnectedAsync` and calls `Abort()` on all of them when the device is
   revoked, removed or rotated. `InvokeMethodAsync` re-checks to close the race. Revocation also deletes the device's
-  sessions. **This rests on an assumption**: a global hub filter reaches Blazor's `ComponentHub`. Slice 4 opens with a
-  spike that proves it; if it fails, the fallback is a `CircuitHandler` that throws on inbound activity and forces a
-  reload, which lets an idle tab receive renders until it next sends something.
+  sessions. `GatewayConnectionGuard` is a singleton; it stores the session hash per connection and, in
+  `InvokeMethodAsync`, re-runs the in-memory §8.5 checks (expiry, device still paired, token not rotated; no whois) and
+  aborts on failure. **Confirmed by the slice 4 spike** (raw Blazor protocol on `TestServer`): a global `IHubFilter`
+  reaches `ComponentHub`, and `Abort()` closes the socket in about 1.3 s. `OnConnectedAsync` can run after the handshake
+  reply, so tests poll `GatewayConnectionGuard.ConnectionCount(deviceId)`. The `CircuitHandler` fallback was not needed.
+  Housekeeping's `PruneStale` does not notify the guard: pruned devices are 30 days unseen and their sessions are
+  already gone.
 
 ### 6.9 The dashboard handoff, bootstrap tokens and setup links
 
@@ -446,11 +491,17 @@ session is Huddle's equivalent of OpenClaw's authenticated socket.
   that redeems it**: a second device, or another browser profile, cannot use it. It is carried in the URL **fragment**,
   `#bootstrapToken=…`, which never reaches a server log, and cleared after load.
 - **The desktop launcher** (`DesktopLifetimeService`) mints an admin bootstrap token at start and opens
-  `http://127.0.0.1:{port}/#bootstrapToken=…`. A **second launch** (`DesktopHandOff`) asks the running instance for a
-  fresh one through `POST /_desktop/bootstrap`, authenticated like `/_desktop/stop` with the instance token from
-  `instance.json`, then opens that URL.
-- **`Agency.Huddle.App.exe dashboard`** does the same for any running copy found through `instance.json` in its
-  `{DataDir}`, and prints the URL with `--json`.
+  `http://127.0.0.1:{port}/auth?return=%2F#bootstrapToken=…`. Every bootstrap URL (launcher, hand-off, `dashboard`, the
+  dev console) opens `/auth`, never `/`. A **second launch** (`DesktopHandOff`) asks the running instance for a
+  fresh one through `POST /_desktop/bootstrap`, authenticated like `/_desktop/stop` with the **instance token** from
+  `instance.json`, then opens that URL. If that call fails (an older copy, 401, 404 or 405), it opens `{url}/auth`
+  instead. If `auth.js` holds a device token while a bootstrap fragment is present, it connects with the device token
+  and posts the bootstrap token to `/auth/bootstrap/burn` so it cannot be used later. A bootstrap token is accepted in
+  password mode too, because the launcher always uses one.
+- **`Agency.Huddle.App.exe dashboard`** is desktop-only: it finds the running copy through `instance.json` in its
+  `{DataDir}` and prints the URL with `--json`. With no running desktop copy it prints "No desktop copy is running." and
+  exits 1. `devices …` reads `instance.json`, or takes `--url http://127.0.0.1:{port}` for a `dotnet run` copy. The
+  launcher sets `Team__DataDir`; the bare exe does not, so user-facing text says `huddle devices approve …`.
 - **Development runs** (`dotnet run`, no desktop mode) write `Huddle is ready: http://localhost:5100/#bootstrapToken=…`
   to the console with `Console.Out`, never through `ILogger`, so the file log never holds it.
 - **Setup links** are Huddle's browser version of OpenClaw's setup codes. **Pair a device** in Settings (admin) mints a
@@ -469,14 +520,19 @@ session is Huddle's equivalent of OpenClaw's authenticated socket.
   `TrustedProxy:UserHeader`; otherwise 403 `proxy_attribution_required`.
 - Gateway auth is satisfied by the proxy; **device identity is still required**, and pairing follows
   `TrustedProxy:DeviceAutoApprove` (§6.7). The origin check still applies (`trusted_proxy_origin_not_allowed`).
+- The classifier takes `requireProxyAttribution` and `userHeader`: a trusted-proxy source in `trusted-proxy` mode needs a
+  single non-loopback `X-Forwarded-For` and a non-empty user header, else `Rejected(proxy_attribution_required)`. The
+  result carries `ProxyUser`.
+- A loopback request in this mode may still use a bootstrap or device token, so the launcher is not locked out.
 - No Tailscale identity is believed through a trusted proxy (no `whois`).
 - Listing `127.0.0.1` means same-host processes may supply attribution; the Security check warns.
 - `AllowRealIpFallback` (default false) stays false; Huddle never reads `X-Real-IP` as identity.
 
 ### 6.11 Funnel
 
-- `Tailscale:Mode = funnel` **refuses to start unless `Auth:Mode` is `password`**, and reports **Funnel needs password
-  auth**.
+- `Tailscale:Mode = funnel` **is refused unless `Auth:Mode` is `password`**: the Funnel claim is not made and the
+  section reports **Funnel needs password auth**; the app itself still starts.
+- When the ingress is Funnel, the password check is mandatory: a device token or bootstrap token never replaces it.
 - Funnel requests are recognised by Tailscale's `Tailscale-Funnel-Request: ?1` header on the managed listener. They have
   no identity, so they always present the password, are rate-limited per `X-Forwarded-For`, and always need approval.
 - A tailnet peer using the Funnel URL arrives with an identity but still presents the password, as in OpenClaw.
@@ -676,17 +732,19 @@ socket address in TrustedProxies → TrustedProxy (§6.10)
 
 ### 8.7 Origin check
 
-OpenClaw's `checkBrowserOrigin`, run for every request that carries `Origin` (and for every `/_blazor` and `/auth/*`
-request, which must carry it):
+OpenClaw's `checkBrowserOrigin`, run for every request that carries `Origin`. `Origin` is **required** only on non-GET
+`/_blazor` and `/auth/*` requests and on WebSocket upgrades; browsers send none on same-origin GETs (the `/auth` page,
+`GET /auth/status`, Blazor long-poll GETs), so an absent `Origin` on GET, HEAD or OPTIONS passes. Test WebSocket clients
+set `Origin` explicitly.
 
 1. Behind remote ingress (managed or trusted proxy) with `PublicOrigin` set: only an exact `PublicOrigin` match passes.
-2. Parse strictly: `null`, paths, queries, fragments and credentials are refused.
+2. Parse strictly (`Uri.TryCreate`): `null`, any path other than `/`, queries, fragments and credentials are refused.
 3. `AllowedOrigins` (lower-cased): an exact match or `*` passes. When unset, it defaults to `PublicOrigin`.
 4. `DangerouslyAllowHostHeaderOriginFallback`: if set, the Origin's host equal to `Host` passes. The Security check
    flags it.
-5. **Default same-origin:** the Origin's host equals `Host`, **and** that host is loopback, a private or loopback IP
-   literal, or ends in `.local` or `.ts.net`.
-6. A loopback socket with a loopback Origin passes.
+5. **Default same-origin:** the Origin's host **and port** (the default for the scheme when absent) equal those of
+   `Host`, **and** that host is loopback, a private or loopback IP literal, or ends in `.local` or `.ts.net`.
+6. The ingress is Loopback (the classifier's verdict, not the socket) and the Origin is loopback: passes.
 7. Otherwise 403 "origin not allowed".
 
 Serve keeps the original `Host`, so a Serve page passes rule 5 through `.ts.net`. A LAN bind passes through the private
@@ -696,7 +754,9 @@ IP literal. A bare machine name (`http://desktop-a:5101`) does not, and needs `A
 
 OpenClaw allows plain `ws://` only to loopback, private IP literals, `.local` and `*.ts.net`. Huddle applies the same
 rule to the whole gateway: an `http` request whose `Host` is anything else is refused with a page explaining that
-plain HTTP is only for local and private addresses. Everything off loopback over `http` is labelled **downgraded**.
+plain HTTP is only for local and private addresses. Everything off loopback over `http` is labelled **downgraded**. The
+rule uses the effective scheme (§6.8). Hosts listed explicitly in `CustomBindHost` or `ExtraHosts` are exempt, and
+labelled downgraded. The automatic host list drops the bare `Dns.GetHostName()` and keeps `{name}.local`.
 
 ### 8.9 Security check
 
@@ -864,6 +924,46 @@ page would open a Blazor connection before authentication, and an interactive pa
 
 **D-7. Phase 0 tightens `AllowedHosts` now**, alone: it closes today's DNS-rebinding exposure before any of this exists.
 
+## Deviations from the first design
+
+Found in review during delivery and settled; the sections above already say the corrected thing. Each line names the
+change and where it lives.
+
+- **/_desktop/* gate (C-1).** `/_desktop/*` passes the gate without a session only when the ingress is Loopback; the
+  instance-token check stays. §6.8.
+- **Test seam (C-2).** A server-side `IGatewaySessionResolver` replaces "a handshake per client"; the factory does not
+  set `Auth:Mode = none`. Appendix C.
+- **Middleware order (C-3).** Authentication and authorization are called explicitly after the gate. §6.8.
+- **Stable principal (C-4).** `NameIdentifier` is the device id. §6.8.
+- **Socket re-check (C-5, C-6).** The singleton guard re-checks the session on every hub invocation. §6.8.
+- **Dead sessions (C-7).** `GET /auth/status` and a redirect from the reconnect modal. §6.8.
+- **Revocation spike (C-8).** Run on the raw Blazor protocol; confirmed. Appendix E, OP-1.
+- **Bootstrap URLs (C-9, C-12).** Always `/auth?return=%2F#bootstrapToken=…`; a hand-off falls back to `{url}/auth`;
+  `/auth/bootstrap/burn`. §6.9.
+- **CLI without `instance.json` (C-10).** `dashboard` is desktop-only; `devices` takes `--url`. §6.9, §6.13.
+- **Stable desktop port (C-11, D-4).** Stored in `gateway_settings.desktop_port`. §6.2.
+- **Settings and bUnit (C-13).** `Settings.razor` reads the cascaded authentication state and fails closed;
+  `MudBunitContext` signs in an admin. §6.12.
+- **Small fixes (C-14).** Local `return=` paths only; Request admin navigates with `forceLoad: true`;
+  `auth-token --show` refuses redirected output (also true under mintty and Git Bash); an unknown first argument prints
+  usage and exits 2; the credential of `/_desktop/*` is called the instance token. §6.9, §6.13.
+- **Origin presence (D-1).** `Origin` is required only on non-GET `/_blazor` and `/auth/*` and on upgrades. §8.7.
+- **Managed listener lookup (D-2, D-5).** Found by local endpoint, classified once, port read after start. §6.2.
+- **Listener plan (D-3).** Pure, re-applies every configured URL, one any-address listener for `lan`. §6.2.
+- **Test host (D-6).** `KestrelAppHost` binds port 0 through `urls`. Appendix C.
+- **Host filtering (D-7, D-10).** `PostConfigure`, no bare machine name, explicit hosts exempt from §8.8. §6.4, §8.8.
+- **Effective scheme (D-8).** Set from `X-Forwarded-Proto` on managed and trusted-proxy ingress. §6.8.
+- **Origin rules (D-9).** Host and port compared; rule 6 uses the ingress; rule 2 strict. §8.7.
+- **Tailscale processes (D-11).** Kill the tree at once; Job object on Windows; `ITailscaleChild`. §6.3.
+- **Trusted-proxy attribution (D-12, D-14).** In the classifier; a loopback request may still use a token. §6.10.
+- **Funnel password (D-13).** Mandatory for Funnel ingress; a refused claim does not stop the app. §6.11.
+- **Bootstrap in password mode.** Accepted, because the launcher always uses one. §6.9.
+- **Case.** Tailscale logins compare ignoring case everywhere, §8.6 included.
+- **Project setting.** `Huddle.App.csproj` gained `AllowUnsafeBlocks` for the Job object imports (SYSLIB1062).
+
+D-5 (Kestrel writes the bound port back) and D-7 (`PostConfigure` host filtering follows live updates) were marked
+unverified in the review; both held when their first tests ran.
+
 ## Appendix A. Configuration
 
 All under `Team:Gateway` (`GatewayOptions`). Values an admin saves in Settings win. Added to
@@ -892,7 +992,8 @@ All under `Team:Gateway` (`GatewayOptions`). Values an admin saves in Settings w
 | `DangerouslyAllowHostHeaderOriginFallback` | `false` | `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback` |
 | `ExtraHosts` | `[]` | — (host filtering) |
 
-And at the root: `AllowedHosts` becomes `localhost;127.0.0.1;[::1]` (Phase 0).
+And at the root: `AllowedHosts` became `localhost;127.0.0.1;[::1]` (Phase 0, its own commit). The stored `gateway_settings`
+row also holds `desktop_port` (§6.2). The gateway and the CLI also read `HUDDLE_GATEWAY_TOKEN` and `HUDDLE_GATEWAY_PASSWORD`.
 
 ## Appendix B. The Remote access section (`G10`)
 
@@ -932,13 +1033,21 @@ Every implementation task follows a test task that is written first and seen to 
 pass (green), as [agents/Testing.md](../agents/Testing.md) requires. Pure logic goes in `Huddle.Tests.Domain`, the
 pipeline in `Huddle.Tests.Hosted`, components in `Huddle.Tests.Components`.
 
-**Harness.** `TeamWebApplicationFactory` is `TestServer` only (no sockets, `RemoteIpAddress` null). It sets
-`Team:Gateway:Auth:Mode = none`, and its clients come out **already connected**: the factory's client creation runs
-one handshake with a test device key (`GatewayTestClient`, signing with BouncyCastle) and keeps the session cookie, so
-every existing hosted test keeps passing unchanged as a loopback admin. Gateway tests set
-`Auth:Mode = token`, simulate addresses and the managed listener with a test-project startup filter, and fake
-`ITailscaleCli`. Tests that need real sockets (binds, the managed listener, the WebSocket abort) use a new
-`KestrelAppHost` helper in `Huddle.Tests.Common` that starts the app on real ports.
+**Harness.** `TeamWebApplicationFactory` is `TestServer` only (no sockets, `RemoteIpAddress` null). Session resolution
+sits behind the internal `IGatewaySessionResolver`. The factory has `public bool ConnectedAsAdmin { get; init; } = true;`
+and, when true, `ConfigureTestServices` replaces the resolver with `LoopbackAdminSessionResolver`, a fixed paired
+loopback admin session for every request. Every client path inherits it (`CreateClient`, `CreateDefaultClient`,
+`Server.CreateClient`, `Server.CreateWebSocketClient`, `WithWebHostBuilder`), so every existing hosted test keeps passing
+unchanged. The factory does not change `Auth:Mode`. No configuration key reaches the seam, so it cannot be switched on in
+production; one hosted test proves it (real resolver, no session → 302 `/auth`). Gateway tests set
+`ConnectedAsAdmin = false`, use the real resolver and `GatewayTestClient` (a handshake with a test device key, signing
+with BouncyCastle), simulate addresses and the managed listener with a test startup filter that sets
+`Connection.LocalIpAddress` and `LocalPort` to an endpoint registered in a test `GatewayListener`, and fake
+`ITailscaleCli`. `MudBunitContext` signs in an admin principal by default (`SignInWithScopes` changes it). Tests that
+need real sockets (binds, the managed listener, the WebSocket abort) use `KestrelAppHost` in
+`tests/Huddle.Tests.Common/Gateway/`, which calls `UseKestrel()` with `UseSetting("urls", "http://127.0.0.1:0")` so the
+listener plan is the only source of endpoints (never `UseKestrel(port)`) and builds its own `HttpClient` from
+`GatewayListener.AppUrl`. All ports are 0; the lan socket test carries the `FirewallPrompt` trait so it can be skipped.
 
 | Slice | Test task first | Then |
 | --- | --- | --- |
@@ -977,13 +1086,13 @@ A new page `engineering/manual-tests/remote-access.md`, written when built. None
 
 | # | Point | Choice until checked |
 | --- | --- | --- |
-| OP-1 | Does a global `IHubFilter` reach Blazor's `ComponentHub`? | Yes; slice 4's spike proves it or switches to the fallback |
-| OP-2 | Is a foreground `serve` route removed when its process is killed on Windows? | Yes (OpenClaw relies on it); checked by hand in REMOTE-09's setup |
+| OP-1 | Does a global `IHubFilter` reach Blazor's `ComponentHub`? | **Settled: confirmed** by the slice 4 spike; `Abort()` closes the socket in about 1.3 s; no fallback needed |
+| OP-2 | Is a foreground `serve` route removed when its process is killed on Windows? | Yes (OpenClaw relies on it); still open: checked by hand ([manual tests](engineering/manual-tests/remote-access.md), D2 checks) |
 | OP-3 | Does a second claim on a port fail with "listener already exists"? | Yes (OpenClaw's conflict error depends on it) |
 | OP-4 | Scopes for a verified-Serve auto-pairing | Limited (OpenClaw does not document them) |
 | OP-5 | Nonce lifetime and signature skew | 60 s and ±60 s (OpenClaw does not document them) |
-| OP-6 | Feed Category for the four items | A new **Devices** Category, decided with the Feed owner |
-| OP-7 | The Open action: remove whenever remote access is configured (as written), or only for non-loopback sessions | As written until rules.md is amended |
+| OP-6 | Feed Category for the four items | **Settled:** a new **Devices** Category |
+| OP-7 | The Open action: remove whenever remote access is configured (as written), or only for non-loopback sessions | **Settled: as written**, in [rules.md](engineering/rules.md) |
 | OP-8 | Loopback failure delay curve; pending-request cap of 10; 12-hour sessions | Huddle's choices (not in OpenClaw) |
 | OP-9 | Packages: BouncyCastle.Cryptography, QRCoder, vendored `@noble/ed25519` and `@noble/hashes` | Record them in [backlog.md](engineering/backlog.md)'s packages list when added; check the vulnerable-dependency job |
 

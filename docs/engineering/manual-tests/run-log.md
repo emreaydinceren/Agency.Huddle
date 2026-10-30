@@ -5801,6 +5801,99 @@ File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-17--a-helper-at-its
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+## Remote access: the connect page, pairing, Tailscale Serve and Funnel, the LAN bind, revocation and the Open action
+
+### REMOTE-01 — The installed app opens signed in, and a second launch opens another signed-in tab
+
+File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-01--the-installed-app-opens-signed-in-and-a-second-launch-opens-another-signed-in-tab)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REMOTE-02 — A second browser on the host sees the connect page, and dashboard and auth-token work as documented
+
+File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-02--a-second-browser-on-the-host-sees-the-connect-page-and-dashboard-and-auth-token-work-as-documented)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REMOTE-03 — Tailscale Serve: a phone gets in with no token and no approval, limited, then asks for admin
+
+File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-03--tailscale-serve-a-phone-gets-in-with-no-token-and-no-approval-limited-then-asks-for-admin)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REMOTE-04 — Tailscale Serve: a shared tailnet user is marked, and revoking disconnects them
+
+File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-04--tailscale-serve-a-shared-tailnet-user-is-marked-and-revoking-disconnects-them)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REMOTE-05 — LAN: the QR setup link on iPhone and Android, with approval and the downgraded warnings
+
+File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-05--lan-the-qr-setup-link-on-iphone-and-android-with-approval-and-the-downgraded-warnings)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REMOTE-06 — Rate limit: ten wrong tokens lock a phone out for five minutes, and loopback is only slowed
+
+File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-06--rate-limit-ten-wrong-tokens-lock-a-phone-out-for-five-minutes-and-loopback-is-only-slowed)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REMOTE-07 — Revoking a phone with a Room streaming disconnects it at once
+
+File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-07--revoking-a-phone-with-a-room-streaming-disconnects-it-at-once)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REMOTE-08 — Two copies on ports 5101 and 5102 keep separate devices and no sign-outs
+
+File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-08--two-copies-on-ports-5101-and-5102-keep-separate-devices-and-no-sign-outs)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REMOTE-09 — A hand-made Serve route is refused and shown in the Security check
+
+File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-09--a-hand-made-serve-route-is-refused-and-shown-in-the-security-check)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REMOTE-10 — Funnel: refused in token mode, and in password mode a phone off the tailnet needs the password and approval
+
+File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-10--funnel-refused-in-token-mode-and-in-password-mode-a-phone-off-the-tailnet-needs-the-password-and-approval)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REMOTE-11 — With remote access configured, the Open action and Library open and reveal are gone
+
+File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-11--with-remote-access-configured-the-open-action-and-library-open-and-reveal-are-gone)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REMOTE-12 — A Huddle crash kills the Tailscale child (Job object)
+
+File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-12--a-huddle-crash-kills-the-tailscale-child-job-object)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REMOTE-13 — Killing the Tailscale child removes the Serve route
+
+File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-13--killing-the-tailscale-child-removes-the-serve-route)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ---
 
 Back to [the manual test script](../manual-tests.md).

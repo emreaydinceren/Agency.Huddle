@@ -796,3 +796,16 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
 - **Only the first Huddle to start moves its old Skills into a shared Skill Sources folder.** The move from the old `SkillPacks/` runs only while `SKILLS.md` does not exist. A second Huddle pointed at a folder another one already filled skips it: its Agents keep their copies in `Skills/`, but those Skills' catalog entries show **Not downloaded** on that computer and never **Update available**, until an AI tool adds a path for it (the row's **Copy fix prompt**). Accepted because the copy in `Skills/` is what an Agent uses ([the Skill Packs design](../Huddle.SkillPacks-Specifications.md) §6.13).
 - **A computer whose name is one letter cannot have a computer line in `SKILLS.md`.** `E: C:\x` reads as a plain entry that is not a path (`R003`), because a computer name is 2 to 15 characters and a drive path such as `E:\x` must never look like one. The JSON object form `{ "E": "C:\\x" }` works, and the move writes a plain path with a warning when `Team:ComputerName` is one letter ([the Skill Packs design](../Huddle.SkillPacks-Specifications.md) §8.2).
 - **A file linked into a Task is not tracked.** The Task keeps only the path line in its description. If the file is renamed or moved in the Library, the Preview dims the link, and nothing updates the Task. Deleting a path line leaves the uploaded file in `Uploads/Tasks/<ID>/`. See [TaskAttachments](../Huddle.TaskAttachments-Specifications.md).
+- **A bind beyond loopback is plain HTTP.** `tailnet`, `lan`, `auto` in a container and `custom` serve `http`, which Huddle
+  labels downgraded: nothing is encrypted and the page can be altered in transit. Tailscale Serve is the encrypted route.
+- **There is no read-only device.** A device is Limited (`operator.read` and `operator.write`) or Admin. Read-only is
+  backlog H-2 ([backlog.md](backlog.md#hardening-remote-access)).
+- **Bind and Tailscale changes need a restart.** Settings › Remote access shows "Restart Huddle to apply" until then.
+- **A proxy that does not forward headers looks like loopback.** Without `X-Forwarded-For` a local reverse proxy
+  reaches Huddle from `127.0.0.1`, so the classifier sees loopback. List the proxy in `Team:Gateway:TrustedProxies` and use
+  `Auth:Mode = trusted-proxy`.
+- **Funnel and the real-phone Tailscale flows are tested by hand only.** They need a second device and a tailnet, so
+  no automated test covers them ([manual tests](manual-tests/remote-access.md)). The live host-list refresh, the
+  tailnet address lookup and the Job object that stops an orphaned `tailscale serve` child are manual too.
+- **The `allowed_origins_required` Security item cannot fire yet.** It depends on `GatewayRuntimeView.BareNameHostInUse`,
+  which always returns `false` today, so a bare machine name that needs `AllowedOrigins` is not detected.

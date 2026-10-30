@@ -30,6 +30,7 @@ see [design-system.md](design-system.md).
 - [Figure 11: The Task read view](#figure-11-the-task-read-view)
 - [Figure 12: The Task edit page](#figure-12-the-task-edit-page)
 - [Figure 13: The Feed page](#figure-13-the-feed-page)
+- [Figure 14: The connect page](#figure-14-the-connect-page)
 - [Using the codes](#using-the-codes)
 - [Sources and upkeep](#sources-and-upkeep)
 - [See also](#see-also)
@@ -59,6 +60,7 @@ A code is **a letter, a number and sometimes a lowercase letter**.
 | `N` | The Needs you page | [10](#figure-10-the-needs-you-page) |
 | `K` | The Task edit page (`/tasks/item/{id}/edit`), in a Tab of its own | [12](#figure-12-the-task-edit-page) |
 | `F` | The Feed page (`/feed`), in a Tab of its own | [13](#figure-13-the-feed-page) |
+| `A` | The connect page (`/auth`), outside the shell | [14](#figure-14-the-connect-page) |
 
 **Rules for keeping them stable**
 
@@ -307,8 +309,8 @@ slate `B` badges name the same containers.
 | `G1` | Settings container | `MudContainer`, `MaxWidth.Large`, `.settings-page` | Content is left-aligned, not centred, and capped at 1184px: the 200px menu, a 24px gap and a 960px reading column |
 | `G1a` | Reset all | `ResetAllControl` | In the Prompts panel's action row beside Save; "Reset all to defaults", disabled until a prompt has been changed, then asks inline (`InlineConfirm`) |
 | `G2` | Section layout | `.settings-layout` | Two columns at the top of the page: the menu (200px) and the active section. Below 600px the menu stacks above the section. The page opens with the `PageHeader` "Settings" (an h1); a Settings page shows no breadcrumb. `/settings/team-types` redirects to `/settings/teamtypes` |
-| `G2a` | Section menu | `nav.settings-nav` (`aria-label` "Settings sections") holding a `MudNavMenu` of `MudNavLink`s | Profile, Prompts, Helpers, Appearance, Personas, Skills, Team types, Library, each with an icon and a link to `/settings/{section}`. The Skills row carries an Error-tinted count chip (`.settings-nav-badge`) when any Pack, catalog or Skill is Broken or the Skill store has an issue; zero shows none. Sticky while the section scrolls. The highlight follows the parsed route, not NavLink's URL match, so `/settings`, an unknown segment and a blank system all highlight Profile; the rows are 32px and the active row takes the inset rounded Selected shape (Primary 14% over Surface, accent-text label and icon) and `aria-current="page"` |
-| `G3` | Active section | `.settings-section`: `ProfilePanel`, `PromptsPanel`, `HelpersPanel` (`G9`), `Appearance`, `Personas`, `SkillsPanel`, `TeamTypesPanel` or `LibraryPanel` | Each opens with `SettingsIntro` (14px TextSecondary, 75ch), `StoredAt` ("Overrides stored at", 12px TextSecondary, the path in 12px mono) and an action row. `{{tokens}}` are tag chips in 12px mono. The Prompts and Skills panels mark placeholders, status and source with tinted chips that carry an icon. Appearance lists the Light and Dark Themes at full height with a Ground, Ink and Accent swatch before each name, no Group labels, and a "Licences" disclosure under the picker. Library's inline add row is one 28px height with Name and Path placeholders and a "Hide" switch per root. The fourth built-in, **Skill Sources**, carries a 12px TextSecondary *Read only* caption before its Hide switch and no remove control. Skills is now three tabs (`G4`, `G4a`) whose Skills tab (`G4e`) lists display names ("Team building") with the description below the name |
+| `G2a` | Section menu | `nav.settings-nav` (`aria-label` "Settings sections") holding a `MudNavMenu` of `MudNavLink`s | Profile, Prompts, Helpers, Appearance, Personas, Skills, Team types, Library, Remote access (admin only, after Library), each with an icon and a link to `/settings/{section}`. The Skills row carries an Error-tinted count chip (`.settings-nav-badge`) when any Pack, catalog or Skill is Broken or the Skill store has an issue; zero shows none. Sticky while the section scrolls. The highlight follows the parsed route, not NavLink's URL match, so `/settings`, an unknown segment and a blank system all highlight Profile; the rows are 32px and the active row takes the inset rounded Selected shape (Primary 14% over Surface, accent-text label and icon) and `aria-current="page"` |
+| `G3` | Active section | `.settings-section`: `ProfilePanel`, `PromptsPanel`, `HelpersPanel` (`G9`), `Appearance`, `Personas`, `SkillsPanel`, `TeamTypesPanel`, `LibraryPanel` or `RemoteAccessPanel` (`G10`) | Each opens with `SettingsIntro` (14px TextSecondary, 75ch), `StoredAt` ("Overrides stored at", 12px TextSecondary, the path in 12px mono) and an action row. `{{tokens}}` are tag chips in 12px mono. The Prompts and Skills panels mark placeholders, status and source with tinted chips that carry an icon. Appearance lists the Light and Dark Themes at full height with a Ground, Ink and Accent swatch before each name, no Group labels, and a "Licences" disclosure under the picker. Library's inline add row is one 28px height with Name and Path placeholders and a "Hide" switch per root. The fourth built-in, **Skill Sources**, carries a 12px TextSecondary *Read only* caption before its Hide switch and no remove control. Skills is now three tabs (`G4`, `G4a`) whose Skills tab (`G4e`) lists display names ("Team building") with the description below the name |
 | `G3a` | Save | `MudButton` Filled | Prompts panel only, in a sticky action row with Reset all |
 | `G3b` | Profile card | `ProfileCard` with `OnAvatarClick` | The Human's own card at the top of the Profile panel: the avatar is a **Change avatar** button opening `AvatarEditorDialog` (saves at once), with Name, Alias, Title and Description fields and a Save below. A welcome `MudAlert` sits above it until `profile.json` exists A quiet text button **Edit avatar…** (`MudButton`, `Variant.Text`, `Size.Small`, no icon) under the avatar says plainly that it can be changed and raises the same handler; the avatar keeps its pencil. |
 | `G4` | Skills section | `SkillsPanel` | Replaces the single table of `G3`. Three tabs over one registry snapshot. The Skills row in the section menu (`G2a`) shows a badge: the count of Broken rows plus Skill issues |
@@ -327,6 +329,12 @@ slate `B` badges name the same containers.
 | `G9` | Helpers section | `HelpersPanel` (`/settings/helpers`) | Opens with `SettingsIntro` ("Helpers are small background agents that make one judgement and let Huddle act on it. They don't chat, keep memory or use tools.") and `StoredAt` (the `team.db` path), then one `HelperCard` (`G9a`) per registered Helper in registration order. When `Team:Acp:Enabled` is false a `role="status"` Info notice reads "Helpers run on an Adapter, and Adapters are off in this installation." and every card is read only |
 | `G9a` | Helper card | `HelperCard`: a `MudPaper` Outlined, `.helper-card` | Top to bottom: the Helper's name (an h2) with a state chip (**On**, **Off** or **Paused**, each with an icon so the state is not colour alone); its one-sentence description; the **On** `MudSwitch`; the `AdapterModelEffortPicker` (Adapter when more than one is configured, then Model and Effort in one row, each Disabled with a progress bar while its catalog is read, and a `role="status"` note when a choice cleared the ones after it); the **Daily cap** `MudNumericField` (minimum 1, helper text "Calls a day before it pauses and asks you."); the link **Edit the prompt** to `/settings/prompts?highlight=<key>`; "12 of 50 calls today", then "· 3 skipped while paused" and the reported cost when there are any; "Last run 10:42 · Turned the gate on for RSH-0208"; a Warning `MudAlert` `role="status"` "Last error 10:40 · Timed out after 60 s" while the latest run failed; when paused, a Warning `MudAlert` "Paused — daily cap reached" with the button **Continue (+10 today)**; and **Save** (enabled when the draft differs) and **Reset to defaults**. It repaints when the dispatcher reports a finished judgement |
 | `G8` | Skills help | `SkillsHelpDialog` | In-app help for one tab, opened by **Learn more** at the end of each intro and by the empty state. Titled with the tab; **Close** only; the text is the tab's User Guide subsection, word for word |
+| `G10` | Remote access section | `RemoteAccessPanel` (`/settings/remoteaccess`) | Admin only. A limited session sees the "Settings need admin access" notice with **Request admin** instead of every Settings section. Opens with `SettingsIntro` ("Reach Huddle from other devices. Every device needs the gateway secret and your approval.") |
+| `G10a` | Gateway card | `MudPaper` Outlined | The Bind, Auth and Tailscale settings with stored and running values; a state chip with an icon; the addresses with **Copy link**; Tailscale's messages and links; "Restart Huddle to apply" lists changes not yet running; the gateway token with **Show** and **Rotate** |
+| `G10e` | Waiting for approval | List of pairing requests | One row per request: device name, address, ingress (with **downgraded** where it applies), Tailscale login with **You** or **Shared user**, requested scopes, countdown, **Approve** with a scope menu capped at the approver's, **Reject** |
+| `G10b` | Pair a device | QR at 160px on a white plate | The setup link, **New link**, and the sentence that approval still follows. The link is good once, for 10 minutes |
+| `G10d` | Devices | Table of paired devices | Name (rename), Limited or Admin, how paired, last address, last seen, **This device**, **Rotate**, **Revoke**, **Remove** with an inline confirm |
+| `G10f` | Security check | List of findings | Each with a severity icon, the condition and the fix (Spec §8.9) |
 
 ### Figure 6b: The Project page
 
@@ -546,6 +554,31 @@ from the Activity bar's "Feed" link (`S5a`) and the Notifications panel's "See a
 | `F11d` | Navigation buttons | `MudButton`s: filled, outlined, text | Open Task (or Open Room, Open document), Review in Needs you (only for an unresolved gated Task in Needs You), Open Room. None changes anything |
 | `F12` | Card list | `FeedList` in card mode: `F8` day headings over `F10` `FeedCard`s | The Feed Tab body. The Right sidebar panel draws `F9` rows instead |
 | `F13` | End note | `p.feed-end` in `FeedPage`, after `F5` | A centred closing note under the last card: "Older entries stay in the Feed. It remembers that you were asked, when, and how it was handled, even after a restart." Drawn only while no further page exists and the list is not empty (not on `F6`), and only in Themes whose `reading` trait is `book` (Nordic Paper), where it is italic Literata, 13.5px, Quiet ink, 52ch wide. It carries no role and no message text |
+
+## Figure 14: The connect page
+
+`/auth` is the one page that renders without the shell, because a browser reaches it before it has a session. It is a
+static page (`ConnectPage`, `auth.js`, `auth.css`), not a Razor component. Its family letter is `A` (auth): the letters
+`C` and `S` were taken, and `A` was the first free letter that reads as what it names.
+
+```text
+┌ Connect to Huddle ────────────────────────────────────┐
+│ Connecting to desktop-a.tail1234.ts.net                │  A2
+│ Signed in through Tailscale as ada@example.com         │  A3
+│ Gateway token  [ •••••••••••••••• ]  [Connect]         │  A4
+│ Waiting for approval… Request 7f3a  [Check now]        │  A5
+│ A message line (errors and status)                     │  A6
+└────────────────────────────────────────────────────────┘
+```
+
+| Code | Container | Component | Notes |
+| --- | --- | --- | --- |
+| `A1` | Page | `ConnectPage` with the h1 "Connect to Huddle" | Reached by a redirect from any page without a session, with `?return=` set to the path to go back to |
+| `A2` | Where line | `p#where` | Which address the browser is connecting to |
+| `A3` | Tailscale line | `p#tailscale`, hidden unless the request arrived through Serve | Names the verified Tailscale login |
+| `A4` | Secret form | `form#form`: a password field labelled "Gateway token" (or "Gateway password") and **Connect** | Shown only when the browser has no device token and no bootstrap fragment |
+| `A5` | Waiting panel | `section#waiting` | "Waiting for approval…", where to approve (Settings › Remote access, or `huddle devices approve`), the request id and **Check now**. Polls until approved or rejected |
+| `A6` | Message | `p#message`, `role="alert"` | A failed connect: the reason and, when rate limited, how long to wait |
 
 ## Using the codes
 
