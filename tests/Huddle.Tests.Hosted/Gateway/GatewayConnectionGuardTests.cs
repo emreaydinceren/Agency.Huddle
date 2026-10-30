@@ -34,7 +34,11 @@ public sealed class GatewayConnectionGuardTests
         string token = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct)).RootElement.GetProperty("connectionToken").GetString() ?? string.Empty;
 
         WebSocketClient sockets = host.Factory.Server.CreateWebSocketClient();
-        sockets.ConfigureRequest = request => request.Headers.Cookie = cookie;
+        sockets.ConfigureRequest = request =>
+        {
+            request.Headers.Cookie = cookie;
+            request.Headers.Origin = "http://localhost";
+        };
         WebSocket socket = await sockets.ConnectAsync(new Uri("ws://localhost/_blazor?id=" + token), ct);
         await socket.SendAsync(Encoding.UTF8.GetBytes("{\"protocol\":\"blazorpack\",\"version\":1}\u001e"), WebSocketMessageType.Text, true, ct);
         byte[] buffer = new byte[256];

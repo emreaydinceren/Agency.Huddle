@@ -65,6 +65,7 @@ public sealed class ConnectEndpointsTests
                 builder.ConfigureTestServices(services => services.AddSingleton<IStartupFilter, TestRemoteAddressStartupFilter>());
             });
             this.Client = this.factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, HandleCookies = false });
+            this.Client.DefaultRequestHeaders.Add("Origin", "http://localhost");
         }
 
         public HttpClient Client { get; }

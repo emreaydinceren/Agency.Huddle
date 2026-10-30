@@ -13,4 +13,8 @@ internal sealed record IngressResult(
     IPAddress? Client,
     string? TailscaleLogin,
     bool IsFunnel,
-    string? Error);
+    string? Error)
+{
+    /// <summary>The user the trusted proxy authenticated (the <c>UserHeader</c> value), or <see langword="null"/> (D-12).</summary>
+    public string? ProxyUser { get; init; }
+}

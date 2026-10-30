@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.HostFiltering;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -32,6 +34,18 @@ internal static class GatewayServiceCollectionExtensions
         services.TryAddSingleton<IIngressWhois, NullIngressWhois>();
         services.AddSingleton<IGatewaySessionResolver, CookieSessionResolver>();
         services.AddSingleton<GatewayConnectionGuard>();
+        services.AddSingleton<GatewayListener>();
+        services.AddSingleton<IPostConfigureOptions<KestrelServerOptions>, GatewayKestrelConfigurator>();
+        services.AddHostedService<GatewayListenerStartup>();
+        services.AddSingleton<GatewayDynamicHosts>();
+        services.AddSingleton<IOptionsChangeTokenSource<HostFilteringOptions>>(static provider => provider.GetRequiredService<GatewayDynamicHosts>());
+        services.AddOptions<HostFilteringOptions>().PostConfigure<GatewayDynamicHosts>(static (options, dynamic) =>
+        {
+            if (options.AllowedHosts.Count > 0)
+            {
+                options.AllowedHosts = [.. options.AllowedHosts, .. dynamic.Current];
+            }
+        });
         services.AddSignalR(options => options.AddFilter<GatewayConnectionGuard>());
         services.AddAuthentication(GatewayClaims.AuthenticationType)
             .AddScheme<AuthenticationSchemeOptions, GatewayAuthenticationHandler>(GatewayClaims.AuthenticationType, null);

@@ -32,7 +32,7 @@ internal static class ConnectEndpoints
         _ = endpoints.MapGet("/auth/challenge", Challenge).DisableAntiforgery();
         _ = endpoints.MapPost("/auth/connect", ConnectAsync).DisableAntiforgery();
         _ = endpoints.MapGet("/auth/pairing/{requestId}", PairingStatus).DisableAntiforgery();
-        _ = endpoints.MapGet("/auth/status", StatusAsync).DisableAntiforgery();
+        _ = endpoints.MapGet("/auth/status", Status).DisableAntiforgery();
         _ = endpoints.MapPost("/auth/bootstrap/burn", BurnAsync).DisableAntiforgery();
         return endpoints;
     }
@@ -70,7 +70,7 @@ internal static class ConnectEndpoints
             return Results.Json(new ErrorBody("BAD_REQUEST", null), statusCode: StatusCodes.Status400BadRequest);
         }
 
-        IngressResult ingress = await ClassifyAsync(http, cancellationToken).ConfigureAwait(false);
+        IngressResult ingress = IngressOf(http);
         if (ingress.Kind == IngressKind.Rejected)
         {
             return Results.Json(new ErrorBody(ingress.Error ?? "forbidden", null), statusCode: StatusCodes.Status403Forbidden);
@@ -118,10 +118,10 @@ internal static class ConnectEndpoints
     /// <c>GET /auth/status</c>: whether the request's cookie names a live session (C-7), and what the connect page needs to draw itself:
     /// the auth <c>mode</c>, the verified <c>tailscaleLogin</c> (null unless a verified identity stands in for gateway auth), and the <c>host</c> and <c>port</c> asked for.
     /// </summary>
-    private static async Task<IResult> StatusAsync(HttpContext http, SessionRegistry sessions, GatewaySettings settings, CancellationToken cancellationToken)
+    private static IResult Status(HttpContext http, SessionRegistry sessions, GatewaySettings settings)
     {
         NoStore(http);
-        IngressResult ingress = await ClassifyAsync(http, cancellationToken).ConfigureAwait(false);
+        IngressResult ingress = IngressOf(http);
         string? login = settings.Options.Auth.AllowTailscale && !ingress.IsFunnel ? ingress.TailscaleLogin : null;
         bool authenticated = sessions.TryGet(http.Request.Cookies[CookieName(settings.InstanceId)], ingress.TailscaleLogin) is not null;
         string mode = settings.Options.Auth.Mode switch
@@ -188,18 +188,9 @@ internal static class ConnectEndpoints
         Auth = body.Auth ?? new ConnectAuth(),
     };
 
-    private static async ValueTask<IngressResult> ClassifyAsync(HttpContext http, CancellationToken cancellationToken)
-    {
-        Dictionary<string, string> headers = new(StringComparer.OrdinalIgnoreCase);
-        foreach ((string name, Microsoft.Extensions.Primitives.StringValues value) in http.Request.Headers)
-        {
-            headers[name] = value.ToString();
-        }
-
-        IngressRequest request = new(IngressListenerKind.App, http.Connection.RemoteIpAddress, headers);
-        IIngressWhois whois = http.RequestServices.GetRequiredService<IIngressWhois>();
-        return await IngressClassifier.ClassifyAsync(request, [], whois, cancellationToken).ConfigureAwait(false);
-    }
+    /// <summary>The verdict the gate stored (D-2): the request is classified once, in <see cref="GatewayGate"/>.</summary>
+    private static IngressResult IngressOf(HttpContext http) =>
+        GatewayHttpItems.GetIngress(http) ?? throw new InvalidOperationException("The gateway gate did not classify this request.");
 
     private static bool HostAndOriginAreLoopback(HttpRequest request)
     {

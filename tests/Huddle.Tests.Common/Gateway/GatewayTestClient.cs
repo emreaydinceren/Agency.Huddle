@@ -13,6 +13,9 @@ internal sealed class GatewayTestClient
     /// <summary>The JSON options the wire uses: camelCase.</summary>
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
+    /// <summary>The <c>Origin</c> a browser sends for the test server's own page (D-1: a POST to <c>/auth/*</c> must carry one).</summary>
+    public const string OriginHeader = "http://localhost";
+
     private readonly HttpClient http;
 
     /// <summary>Wraps a client. The device is random unless one is given.</summary>
@@ -57,9 +60,14 @@ internal sealed class GatewayTestClient
     /// <param name="request">The body.</param>
     /// <param name="ct">Cancellation.</param>
     /// <param name="returnPath">The <c>return</c> query value to send, or <see langword="null"/> for none.</param>
-    public Task<HttpResponseMessage> PostAsync(ConnectRequest request, CancellationToken ct, string? returnPath = null)
+    public async Task<HttpResponseMessage> PostAsync(ConnectRequest request, CancellationToken ct, string? returnPath = null)
     {
         string uri = returnPath is null ? "/auth/connect" : "/auth/connect?return=" + Uri.EscapeDataString(returnPath);
-        return this.http.PostAsJsonAsync(new Uri(uri, UriKind.Relative), request, Json, ct);
+        using HttpRequestMessage message = new(HttpMethod.Post, new Uri(uri, UriKind.Relative))
+        {
+            Content = JsonContent.Create(request, options: Json),
+        };
+        message.Headers.TryAddWithoutValidation("Origin", OriginHeader);
+        return await this.http.SendAsync(message, ct);
     }
 }

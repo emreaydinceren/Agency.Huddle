@@ -136,13 +136,28 @@ internal static class InstanceFile
     /// <param name="dataDir">The data directory.</param>
     internal static void Delete(string dataDir)
     {
-        try
+        string path = Path.Combine(dataDir, FileName);
+        for (int attempt = 1; attempt <= MoveAttempts; attempt++)
         {
-            File.Delete(Path.Combine(dataDir, FileName));
-        }
-        catch (DirectoryNotFoundException)
-        {
-            // The data directory does not exist, so there is no record to delete.
+            try
+            {
+                File.Delete(path);
+                return;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                // The data directory does not exist, so there is no record to delete.
+                return;
+            }
+            catch (UnauthorizedAccessException) when (attempt < MoveAttempts)
+            {
+                // A scanner or reader still holds the freshly written record without delete sharing; shutdown may block briefly.
+                Thread.Sleep(MoveRetryDelay);
+            }
+            catch (IOException) when (attempt < MoveAttempts)
+            {
+                Thread.Sleep(MoveRetryDelay);
+            }
         }
     }
 }

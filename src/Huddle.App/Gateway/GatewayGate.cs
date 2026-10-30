@@ -15,11 +15,18 @@ internal sealed class GatewayGate(RequestDelegate next)
     /// <param name="http">The request.</param>
     /// <param name="whois">The Tailscale identity lookup.</param>
     /// <param name="limiter">The pre-auth connection limiter.</param>
-    public async Task InvokeAsync(HttpContext http, IIngressWhois whois, PreAuthConnectionLimiter limiter)
+    /// <param name="listener">Tells which listener the connection arrived on.</param>
+    /// <param name="settings">The gateway settings (trusted proxies, origin and plain-HTTP rules).</param>
+    public async Task InvokeAsync(
+        HttpContext http,
+        IIngressWhois whois,
+        PreAuthConnectionLimiter limiter,
+        GatewayListener listener,
+        GatewaySettings settings)
     {
         ArgumentNullException.ThrowIfNull(http);
 
-        IngressResult ingress = await ClassifyAsync(http, whois).ConfigureAwait(false);
+        IngressResult ingress = await ClassifyAsync(http, whois, listener, settings.Options).ConfigureAwait(false);
         if (ingress.Kind == IngressKind.Rejected)
         {
             await RefuseAsync(http, StatusCodes.Status403Forbidden, ingress.Error ?? IngressClassifier.ProxyAttributionRequired).ConfigureAwait(false);
@@ -27,7 +34,14 @@ internal sealed class GatewayGate(RequestDelegate next)
         }
 
         GatewayHttpItems.SetIngress(http, ingress);
-        if (!GatewayOrigin.IsAllowed(http.Request, ingress))
+        ApplyEffectiveScheme(http, ingress);
+        if (!GatewayPlainHttp.IsAllowed(http.Request.Scheme, http.Request.Host.Host, settings.Options))
+        {
+            await RefusePlainHttpAsync(http).ConfigureAwait(false);
+            return;
+        }
+
+        if (!GatewayOrigin.IsAllowed(http.Request, ingress, settings.Options))
         {
             await RefuseAsync(http, StatusCodes.Status403Forbidden, OriginNotAllowed).ConfigureAwait(false);
             return;
@@ -68,7 +82,30 @@ internal sealed class GatewayGate(RequestDelegate next)
         await http.Response.WriteAsJsonAsync(new ErrorBody(code), http.RequestAborted).ConfigureAwait(false);
     }
 
-    private static async ValueTask<IngressResult> ClassifyAsync(HttpContext http, IIngressWhois whois)
+    private static async Task RefusePlainHttpAsync(HttpContext http)
+    {
+        http.Response.StatusCode = StatusCodes.Status403Forbidden;
+        http.Response.ContentType = "text/html; charset=utf-8";
+        await http.Response.WriteAsync(PlainHttpPage, http.RequestAborted).ConfigureAwait(false);
+    }
+
+    /// <summary>D-8: behind the managed listener or a trusted proxy the forwarded scheme is the one the browser used (so the cookie is Secure and redirects are https).</summary>
+    private static void ApplyEffectiveScheme(HttpContext http, IngressResult ingress)
+    {
+        if (ingress.Kind is not (IngressKind.Managed or IngressKind.TrustedProxy))
+        {
+            return;
+        }
+
+        string proto = http.Request.Headers["X-Forwarded-Proto"].ToString().Trim();
+        if (string.Equals(proto, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) || string.Equals(proto, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase))
+        {
+            http.Request.Scheme = proto.ToLowerInvariant();
+        }
+    }
+
+    /// <summary>The single classification of the request (D-2): the listener it arrived on and the configured trusted proxies decide.</summary>
+    private static async ValueTask<IngressResult> ClassifyAsync(HttpContext http, IIngressWhois whois, GatewayListener listener, GatewayOptions options)
     {
         Dictionary<string, string> headers = new(StringComparer.OrdinalIgnoreCase);
         foreach ((string name, Microsoft.Extensions.Primitives.StringValues value) in http.Request.Headers)
@@ -76,9 +113,25 @@ internal sealed class GatewayGate(RequestDelegate next)
             headers[name] = value.ToString();
         }
 
-        IngressRequest request = new(IngressListenerKind.App, http.Connection.RemoteIpAddress, headers);
-        return await IngressClassifier.ClassifyAsync(request, [], whois, http.RequestAborted).ConfigureAwait(false);
+        List<System.Net.IPAddress> trusted = [];
+        foreach (string text in options.TrustedProxies)
+        {
+            if (System.Net.IPAddress.TryParse(text, out System.Net.IPAddress? address))
+            {
+                trusted.Add(address);
+            }
+        }
+
+        ProxyAttribution? attribution = options.Auth.Mode == GatewayAuthMode.TrustedProxy ? new ProxyAttribution(options.TrustedProxy.UserHeader ?? string.Empty) : null;
+        IngressRequest request = new(listener.KindOf(http.Connection), http.Connection.RemoteIpAddress, headers);
+        return await IngressClassifier.ClassifyAsync(request, trusted, whois, attribution, http.RequestAborted).ConfigureAwait(false);
     }
+
+    private const string PlainHttpPage = """
+        <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Plain HTTP is not allowed here</title></head>
+        <body><h1>Plain HTTP is not allowed for this address</h1>
+        <p>Huddle serves plain HTTP only on this computer, on private network addresses and on .local or .ts.net names. Use https, or ask the administrator to list this host name in Team:Gateway:ExtraHosts.</p></body></html>
+        """;
 
     private sealed record ErrorBody(string Code);
 }

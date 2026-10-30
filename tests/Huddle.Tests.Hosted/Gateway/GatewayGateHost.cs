@@ -87,6 +87,11 @@ internal sealed class GatewayGateHost : IDisposable
     public static HttpRequestMessage Request(HttpMethod method, string path, string? cookie = null, string? ip = null, bool html = false)
     {
         HttpRequestMessage request = new(method, new Uri(path, UriKind.Relative));
+        if (method != HttpMethod.Get)
+        {
+            request.Headers.Add("Origin", "http://localhost");
+        }
+
         if (cookie is not null)
         {
             request.Headers.Add("Cookie", cookie);

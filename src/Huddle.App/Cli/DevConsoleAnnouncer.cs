@@ -13,12 +13,14 @@ namespace Agency.Huddle.App.Cli;
 /// <param name="links">Mints the bootstrap token.</param>
 /// <param name="output">The writer the line goes to.</param>
 /// <param name="configuration">Tells whether desktop mode is on.</param>
+/// <param name="gateway">The recorded listeners; its app URL is announced and the managed endpoint skipped (D-5).</param>
 internal sealed class DevConsoleAnnouncer(
     IServer server,
     IHostApplicationLifetime lifetime,
     BootstrapLinks links,
     DevConsoleOutput output,
-    IConfiguration configuration) : IHostedService
+    IConfiguration configuration,
+    GatewayListener? gateway = null) : IHostedService
 {
     private CancellationTokenRegistration startedRegistration;
 
@@ -45,6 +47,10 @@ internal sealed class DevConsoleAnnouncer(
     private void Announce()
     {
         IServerAddressesFeature? feature = server.Features.Get<IServerAddressesFeature>();
-        _ = DevConsole.Announce(feature?.Addresses, links, output.Writer);
+        int? managedPort = gateway?.ManagedEndpoint?.Port;
+        IEnumerable<string>? addresses = gateway?.AppUrl is { } appUrl
+            ? [appUrl]
+            : feature?.Addresses.Where(address => managedPort is null || !Uri.TryCreate(address, UriKind.Absolute, out Uri? uri) || uri.Port != managedPort);
+        _ = DevConsole.Announce(addresses, links, output.Writer);
     }
 }

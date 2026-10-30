@@ -167,12 +167,22 @@ internal sealed class GatewayConnectService
         GatewayAuthMode mode = this.settings.Options.Auth.Mode;
         IngressResult ingress = context.Ingress;
         ConnectAuth auth = request.Auth;
+        bool launcher = ingress.Kind == IngressKind.Loopback && PresentsOnlyATokenOfItsOwn(auth);
         bool refused = ingress.Kind == IngressKind.Rejected
             || (mode == GatewayAuthMode.None && ingress.Kind != IngressKind.Loopback)
-            || (mode == GatewayAuthMode.TrustedProxy && ingress.Kind != IngressKind.TrustedProxy);
+            || (mode == GatewayAuthMode.TrustedProxy && ingress.Kind != IngressKind.TrustedProxy && !launcher);
         if (refused)
         {
             return Gate.Refused(Failed(401, ConnectOutcome.AuthRequired));
+        }
+
+        if (ingress.IsFunnel)
+        {
+            Gate password = this.CheckSharedSecret(auth, GatewayAuthMode.Password, client, loopback);
+            if (password.Failure is not null || (string.IsNullOrEmpty(auth.DeviceToken) && string.IsNullOrEmpty(auth.BootstrapToken)))
+            {
+                return password;
+            }
         }
 
         if (!string.IsNullOrEmpty(auth.DeviceToken))
@@ -201,6 +211,11 @@ internal sealed class GatewayConnectService
 
         return this.CheckSharedSecret(auth, mode, client, loopback);
     }
+
+    /// <summary>D-14: a device token, or a bootstrap token alone, as the launcher presents one; no shared secret rides with it.</summary>
+    private static bool PresentsOnlyATokenOfItsOwn(ConnectAuth auth) =>
+        !string.IsNullOrEmpty(auth.DeviceToken)
+        || (string.IsNullOrEmpty(auth.Token) && string.IsNullOrEmpty(auth.Password) && !string.IsNullOrEmpty(auth.BootstrapToken));
 
     private Gate CheckSharedSecret(ConnectAuth auth, GatewayAuthMode mode, string client, bool loopback)
     {

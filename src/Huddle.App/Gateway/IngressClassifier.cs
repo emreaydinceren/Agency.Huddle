@@ -18,10 +18,27 @@ internal static class IngressClassifier
     /// <param name="trustedProxies">The configured trusted proxy addresses.</param>
     /// <param name="whois">The Tailscale identity lookup.</param>
     /// <param name="cancellationToken">Cancels the lookup.</param>
+    public static ValueTask<IngressResult> ClassifyAsync(
+        IngressRequest request,
+        IReadOnlyCollection<IPAddress> trustedProxies,
+        IIngressWhois whois,
+        CancellationToken cancellationToken) => ClassifyAsync(request, trustedProxies, whois, null, cancellationToken);
+
+    /// <summary>
+    /// Classifies with trusted-proxy attribution (D-12): a trusted-proxy source needs a single non-loopback <c>X-Forwarded-For</c> and a non-empty
+    /// <paramref name="attribution"/> user header, else <c>Rejected(proxy_attribution_required)</c>; the result carries <see cref="IngressResult.ProxyUser"/>.
+    /// With <paramref name="attribution"/> <see langword="null"/> it behaves as the four-argument overload.
+    /// </summary>
+    /// <param name="request">The request facts.</param>
+    /// <param name="trustedProxies">The configured trusted proxy addresses.</param>
+    /// <param name="whois">The Tailscale identity lookup.</param>
+    /// <param name="attribution">Set in <c>trusted-proxy</c> mode only.</param>
+    /// <param name="cancellationToken">Cancels the lookup.</param>
     public static async ValueTask<IngressResult> ClassifyAsync(
         IngressRequest request,
         IReadOnlyCollection<IPAddress> trustedProxies,
         IIngressWhois whois,
+        ProxyAttribution? attribution,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -51,13 +68,33 @@ internal static class IngressClassifier
 
         if (trusted)
         {
-            IPAddress client = TryGetForwardedClient(request.Headers, out IPAddress? forwarded)
-                ? forwarded
-                : socket ?? IPAddress.Loopback;
-            return new IngressResult(IngressKind.TrustedProxy, client, null, false, null);
+            return ClassifyTrustedProxy(request, socket, attribution);
         }
 
         return new IngressResult(IngressKind.Direct, socket, null, false, null);
+    }
+
+    private static IngressResult ClassifyTrustedProxy(IngressRequest request, IPAddress? socket, ProxyAttribution? attribution)
+    {
+        if (!TryGetForwardedClient(request.Headers, out IPAddress? forwardedClient))
+        {
+            return attribution is null
+                ? new IngressResult(IngressKind.TrustedProxy, socket ?? IPAddress.Loopback, null, false, null)
+                : Rejected();
+        }
+
+        if (attribution is null)
+        {
+            return new IngressResult(IngressKind.TrustedProxy, forwardedClient, null, false, null);
+        }
+
+        string? user = Header(request.Headers, attribution.UserHeader)?.Trim();
+        if (IPAddress.IsLoopback(forwardedClient) || string.IsNullOrEmpty(user))
+        {
+            return Rejected();
+        }
+
+        return new IngressResult(IngressKind.TrustedProxy, forwardedClient, null, false, null) { ProxyUser = user };
     }
 
     private static async ValueTask<IngressResult> ClassifyManagedAsync(IngressRequest request, IIngressWhois whois, CancellationToken cancellationToken)

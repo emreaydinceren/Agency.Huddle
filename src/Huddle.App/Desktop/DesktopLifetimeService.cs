@@ -19,6 +19,7 @@ namespace Agency.Huddle.App.Desktop;
 /// <param name="opener">Opens the instance URL in the browser.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="bootstrap">Mints the bootstrap token the opened URL carries (Spec 6.9, C-9); <see langword="null"/> opens the bare address.</param>
+/// <param name="gateway">The recorded listeners; its app URL wins over the server's address list and the managed endpoint is skipped (D-5).</param>
 internal sealed class DesktopLifetimeService(
     IServer server,
     IHostApplicationLifetime lifetime,
@@ -27,7 +28,8 @@ internal sealed class DesktopLifetimeService(
     DesktopSession session,
     IBrowserOpener opener,
     ILogger<DesktopLifetimeService> logger,
-    BootstrapLinks? bootstrap = null) : IHostedService
+    BootstrapLinks? bootstrap = null,
+    GatewayListener? gateway = null) : IHostedService
 {
     private readonly BootstrapLinks? bootstrap = bootstrap;
 
@@ -62,7 +64,7 @@ internal sealed class DesktopLifetimeService(
     /// </summary>
     private void Publish()
     {
-        string? url = server.Features.Get<IServerAddressesFeature>()?.Addresses.FirstOrDefault();
+        string? url = gateway?.AppUrl ?? this.FirstUnmanagedAddress();
 
         if (string.IsNullOrWhiteSpace(url))
         {
@@ -77,6 +79,14 @@ internal sealed class DesktopLifetimeService(
         {
             this.TryOpen(this.bootstrap?.AdminUrl(address) ?? address);
         }
+    }
+
+    /// <summary>The first address the server reports that is not the managed (Tailscale) loopback endpoint (D-5).</summary>
+    private string? FirstUnmanagedAddress()
+    {
+        int? managedPort = gateway?.ManagedEndpoint?.Port;
+        return server.Features.Get<IServerAddressesFeature>()?.Addresses.FirstOrDefault(
+            address => managedPort is null || !Uri.TryCreate(address, UriKind.Absolute, out Uri? uri) || uri.Port != managedPort);
     }
 
     /// <summary>
