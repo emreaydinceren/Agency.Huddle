@@ -2039,7 +2039,8 @@ The tab shows the install file and this computer's name, the Skill Sources folde
 
 By default Huddle runs in **Strict local**: only this computer can use it, and there is no sign-in. To use Huddle from
 another device, open **Settings › Remote access**, turn **Strict local** off, save and restart Huddle. Until you do,
-every other device is refused and the sections below stay disabled.
+every other device is refused (a browser shows a page titled **Huddle is local only** that says how to allow it), and
+the sections below stay disabled.
 
 Once Strict local is off, you can reach Huddle from a phone, a tablet or another computer in two ways. Tailscale is the
 one to use if you can. The other works on your home network without installing anything.
