@@ -61,6 +61,8 @@ public sealed class R3TeamsSourceTests
         Assert.Contains("border-radius: 50%;", dot, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("var(--mud-palette-primary) 40%, var(--mud-palette-surface)", dot, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("var(--mud-palette-primary) 40%, var(--mud-palette-surface)", dark, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("var(--mud-palette-surface)), var(--mud-palette-text-primary) 20%);", dot, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("var(--mud-palette-surface)), var(--mud-palette-white) 20%);", dark, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 
     /// <summary>The swatch radios are visually hidden, never <c>display: none</c>, so the group stays keyboard-reachable (B8h).</summary>

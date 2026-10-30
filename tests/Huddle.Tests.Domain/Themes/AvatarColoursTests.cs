@@ -50,7 +50,13 @@ public sealed class AvatarColoursTests
         Assert.Equal("--mud-palette-primary: #123456;", style);
     }
 
-    /// <summary>The stylesheet states the Light recipe (40% fill, letters 75% toward TextPrimary) and the Dark one (40% fill, letters 75% toward white) that this class mirrors.</summary>
+    /// <summary>The fill expression both Themes share, which the ring is mixed from.</summary>
+    private const string Fill = "color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-surface))";
+
+    /// <summary>
+    /// The stylesheet states the Light recipe (40% fill, letters 75% toward TextPrimary, a ring 20% darker toward TextPrimary) and the
+    /// Dark one (40% fill, letters 75% toward white, a ring 20% lighter toward white) that this class mirrors.
+    /// </summary>
     [Fact]
     public void Stylesheet_StatesBothRecipes()
     {
@@ -61,6 +67,8 @@ public sealed class AvatarColoursTests
         Assert.Contains(":root:has(.theme-mode-dark) .mud-avatar.mud-avatar-filled.avatar-monogram", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
         Assert.Contains("background-color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-surface));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
         Assert.Contains("color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-white));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
+        Assert.Contains($"box-shadow: inset 0 0 0 1px color-mix(in srgb, {Fill}, var(--mud-palette-text-primary) 20%);", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
+        Assert.Contains($"box-shadow: inset 0 0 0 1px color-mix(in srgb, {Fill}, var(--mud-palette-white) 20%);", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
         Assert.Equal(40, AvatarColours.LightFillPercent);
         Assert.Equal(40, AvatarColours.DarkFillPercent);
         Assert.Equal(75, AvatarColours.LettersTowardPercent);

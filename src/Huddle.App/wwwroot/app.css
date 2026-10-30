@@ -868,14 +868,19 @@ a.team-ref,
     letter-spacing: -0.02em;
 }
 
+/* The ring is the fill a few shades on: mixed 20% toward TextPrimary in a Light Theme (darker), toward white in a Dark
+   one (lighter), so the edge reads as the avatar's own colour rather than a grey hairline. It is an inset shadow, so it
+   follows the circle and a Team's rounded square alike and never changes the diameter. */
 .mud-avatar.mud-avatar-filled.avatar-monogram {
     background-color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-surface));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-surface)), var(--mud-palette-text-primary) 20%);
     color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-text-primary));
     font-weight: 600;
 }
 
 :root:has(.theme-mode-dark) .mud-avatar.mud-avatar-filled.avatar-monogram {
     background-color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-surface));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-surface)), var(--mud-palette-white) 20%);
     color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-white));
 }
 
@@ -3581,8 +3586,8 @@ body.sidebar-resizing {
 }
 
 /* The Background palette is a radio group of 32px circles drawn with the avatar recipe for the current mode: the
-   colour at 40% over Surface in either Theme (the same two rules as .avatar-monogram), so a swatch previews the avatar
-   it makes. The input is visually hidden but still the control: Tab reaches the group and the arrow keys move within it. */
+   colour at 40% over Surface in either Theme, ringed a few shades darker (Light) or lighter (Dark), the same two rules
+   as .avatar-monogram, so a swatch previews the avatar it makes. The input is visually hidden but still the control: Tab reaches the group and the arrow keys move within it. */
 .avatar-swatches {
     display: flex;
     flex-wrap: wrap;
@@ -3604,12 +3609,13 @@ body.sidebar-resizing {
     height: 32px;
     border-radius: 50%;
     background-color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-surface));
-    box-shadow: inset 0 0 0 1px var(--ink-edge);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-surface)), var(--mud-palette-text-primary) 20%);
     color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-text-primary));
 }
 
 :root:has(.theme-mode-dark) .avatar-swatch-dot {
     background-color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-surface));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-surface)), var(--mud-palette-white) 20%);
     color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-white));
 }
 
