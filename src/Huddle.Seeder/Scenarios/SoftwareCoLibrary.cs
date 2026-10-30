@@ -1,4 +1,5 @@
 using Agency.Huddle.App.DocHistory;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.Seeder.Model;
 using Agency.Huddle.Seeder.Writing;
 
@@ -14,6 +15,83 @@ internal static class SoftwareCoLibrary
     private const string Handbook = "Teams/Platform/Engineering-Handbook.md";
     private const string PricingBrief = "Teams/Growth/Pricing Page/Pricing-Brief.md";
     private const string Incident = "Teams/Support/Incident Tooling/Incident-0412.md";
+
+    /// <summary>
+    /// The example of the front matter properties spec, character for character: every type, a Mismatch (<c>due</c>), an Unsupported
+    /// value (<c>budget</c>), property links, aliases and a multi-line Text. The FP-T1 test reads this same text.
+    /// </summary>
+    internal const string AllTypesNote = """
+        ---
+        title: Project Plan
+        url: https://example.com/plan
+        pages: 320
+        reviewed: true
+        created: 2024-01-15
+        logged: 2024-01-15T09:00:00
+        due: next week
+        owner: "[[Architecture]]"
+        authors:
+          - Ada
+          - "[[Architecture]]"
+        tags:
+          - recipe
+          - cooking
+        aliases: [Plan, Q1 plan]
+        cssclasses:
+          - wide
+        budget:
+          amount: 1200
+          currency: EUR
+        notes: |
+          First line.
+          Second line.
+        empty:
+        ---
+        """;
+
+    /// <summary>The same properties as JSON front matter, without <c>budget</c> and <c>notes</c>: it draws the same rows as <see cref="AllTypesNote"/>.</summary>
+    internal const string AllTypesJsonNote = """
+        {
+          "title": "Project Plan",
+          "url": "https://example.com/plan",
+          "pages": 320,
+          "reviewed": true,
+          "created": "2024-01-15",
+          "logged": "2024-01-15T09:00:00",
+          "due": "next week",
+          "owner": "[[Architecture]]",
+          "authors": ["Ada", "[[Architecture]]"],
+          "tags": ["recipe", "cooking"],
+          "aliases": ["Plan", "Q1 plan"],
+          "cssclasses": ["wide"],
+          "empty": null
+        }
+        """;
+
+    /// <summary>The edge cases: a missing link, an unquoted link, a quoted boolean, deprecated and publish-only keys, a malformed entry and a repeated key.</summary>
+    internal const string EdgeCasesNote = """
+        ---
+        reviewer: "[[Nobody]]"
+        related: [[Architecture]]
+        flag: "true"
+        tag: legacy
+        cssclass: wide
+        publish: true
+        broken: "unclosed
+        status: draft
+        status: final
+        ---
+        """;
+
+    /// <summary>The types file of the seeded root: <c>pages</c> is a Number and <c>due</c> a Date, in the file's format.</summary>
+    internal const string PropertyTypesJson = """
+        {
+          "types": {
+            "pages": "number",
+            "due": "date"
+          }
+        }
+        """;
 
     /// <summary>The folders the scenario needs even where nothing is written into them yet; see <see cref="SeedTeam"/>.</summary>
     internal static IReadOnlyList<SeedTeam> Teams { get; } =
@@ -428,6 +506,21 @@ internal static class SoftwareCoLibrary
 
             #support/incident #draft
             """),
+
+        // ---- Front matter properties (docs/Huddle.FrontMatterProperties-Specifications.md, Seeded demo) ----
+        new("Teams/Platform/AllTypes.md", AllTypesNote),
+        new("Teams/Platform/AllTypes-Json.md", AllTypesJsonNote),
+        new("Teams/Platform/Properties-Edge-Cases.md", EdgeCasesNote),
+        new("Teams/Platform/Plan-Review.md", """
+            # Plan review
+
+            The plan is written up in [[AllTypes|Plan]], which is also found under that alias.
+
+            A bare alias is not a link target: [[Plan]] stays a missing link.
+            """),
+
+        // The reference app's settings folder in the Teams root: hidden from the Library tree, but read for the types of the properties above.
+        new("Teams/" + LibraryOptions.DefaultPropertyTypesFile, PropertyTypesJson),
 
         // ---- Team memory ----
         new("Teams/Platform/memory/api-versioning-policy.md", "Breaking changes ship only in a new major API version, never in a minor one.\n"),

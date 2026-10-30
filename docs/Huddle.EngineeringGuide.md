@@ -330,6 +330,7 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `Library:Roots` | `[]` | Pinned roots: `[{ "Name": "Huddle docs", "Path": "E:\\Repos\\Huddle\\docs" }]`. |
 | `Library:MaxEditableBytes` | `2097152` | Above this, a text file opens read-only. |
 | `Library:MaxIndexedFiles` | `5000` | Above this, a root's wikilink index is not built and backlinks say so. |
+| `Team:Library:PropertyTypesFile` | `.obsidian/types.json` | The file inside every Library Root that assigns a type to a front matter key, `/`-separated and relative to the root. It is read even though its folder is hidden; a missing or invalid file falls back to typing by value. Empty turns it off. See [Front matter properties](Huddle.FrontMatterProperties-Specifications.md). |
 | `Library:MaxReferencedDocuments` | `10` | The most Library documents listed in one Turn's prompt; the rest are counted. |
 | `Team:Library:MaxUploadBytes` | `26214400` | The largest file attached in the chat (25 MiB), enforced while the bytes stream in. Over it, the chip is refused and the partial file removed. See [ADR-0053](adr/0053-an-upload-is-saved-to-the-library-and-sent-as-its-path.md). |
 | `Team:Library:MaxUploadsPerMessage` | `10` | The most files attached to one Message, matching `MaxReferencedDocuments`. |

@@ -5614,6 +5614,31 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     margin: 0;
 }
 
+/* A Text value keeps its line breaks. Text is never Markdown, so a value is only ever text and links. */
+.library-properties-text {
+    white-space: pre-line;
+}
+
+/* A nested or unreadable value is its YAML source in a small monospace block, tinted like a code block. */
+.library-properties-source {
+    margin: 0;
+    padding: 4px 8px;
+    max-width: 100%;
+    overflow-x: auto;
+    background: var(--hu-ground-sunk);
+    border: 1px solid var(--hu-line-region);
+    border-radius: var(--mud-default-borderradius);
+    font-family: var(--font-mono);
+    font-size: calc(1em * 0.85);
+    line-height: 1.5;
+    white-space: pre;
+}
+
+/* A value that does not fit its assigned type: the value as written, and a warning mark whose title names the type. */
+.library-properties-mismatch {
+    color: var(--hu-tone-warning-ink);
+}
+
 /* References inside a rendered note. A wikilink is the accent colour over a soft dotted underline; one that
    resolves to no note is muted, with a dashed underline. A Task is a chip led by its status dot, and a Room
    is led by the speech-bubble glyph the sidebar uses for Chats, never a "#". The shared chat rule

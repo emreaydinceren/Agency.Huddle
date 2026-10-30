@@ -932,16 +932,8 @@ public static partial class MarkdownRenderer
             return new LiteralInline(rawToken);
         }
 
-        string text = link.Alias ?? (link.Heading is null ? link.Target : string.Concat(link.Target, "#", link.Heading));
-        string? title = null;
-        if (!reference.Exists)
-        {
-            title = string.Format(CultureInfo.InvariantCulture, MarkdownRenderer.UnresolvedNoteTitleFormat, link.Target);
-        }
-        else if (reference.IsAmbiguous)
-        {
-            title = string.Format(CultureInfo.InvariantCulture, MarkdownRenderer.AmbiguousNoteTitleFormat, link.Target);
-        }
+        string text = MarkdownRenderer.WikiLinkLabel(link);
+        string? title = MarkdownRenderer.WikiLinkTitle(reference, link.Target);
 
         LinkInline result = new(MarkdownRenderer.BuildLibraryHref(reference.RootId, reference.RelativePath), title ?? string.Empty);
         result.AppendChild(new LiteralInline(text));
@@ -954,12 +946,32 @@ public static partial class MarkdownRenderer
         return result;
     }
 
+    /// <summary>The text a wikilink shows: its alias when it has one, otherwise its target with the heading appended. Shared with the Properties block so a link in a property reads as it does in the body.</summary>
+    /// <param name="link">The parsed wikilink.</param>
+    internal static string WikiLinkLabel(WikiLink link) =>
+        link.Alias ?? (link.Heading is null ? link.Target : string.Concat(link.Target, "#", link.Heading));
+
+    /// <summary>The title of a wikilink that resolved to no note or tied between several, or <see langword="null"/> for a link that resolved cleanly (Spec §6.5 rules 3 and 4).</summary>
+    /// <param name="reference">What the wikilink resolved to.</param>
+    /// <param name="target">The link's target as written.</param>
+    internal static string? WikiLinkTitle(LibraryReference reference, string target)
+    {
+        if (!reference.Exists)
+        {
+            return string.Format(CultureInfo.InvariantCulture, MarkdownRenderer.UnresolvedNoteTitleFormat, target);
+        }
+
+        return reference.IsAmbiguous
+            ? string.Format(CultureInfo.InvariantCulture, MarkdownRenderer.AmbiguousNoteTitleFormat, target)
+            : null;
+    }
+
     /// <summary>Builds a <c>?library=</c> href: the root id, then the relative path with each <c>/</c>-separated
     /// segment individually percent-encoded (so a literal <c>/</c> stays a path separator; Spec §6.6). The
     /// heading, when the wikilink had one, is never included - v1 links to the file only.</summary>
     /// <param name="rootId">The Library root id.</param>
     /// <param name="relativePath">The forward-slash relative path from the root.</param>
-    private static string BuildLibraryHref(string rootId, string relativePath) =>
+    internal static string BuildLibraryHref(string rootId, string relativePath) =>
         MarkdownRenderer.BuildRootRelativeHref("?library=", rootId, relativePath);
 
     /// <summary>Builds a <c>/library-files/</c> href (Task 12.8's endpoint) for an image: the root id, then the

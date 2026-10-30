@@ -115,6 +115,33 @@ returns `null` with no Uploads root" cannot be set up, because the Uploads root 
 **Done when:** the three tests exist (add a hook to `TaskUploadService` only if there is no other way), the manual tests are written,
 and `dotnet build Huddle.slnx` and `dotnet test Huddle.slnx --` pass.
 
+## Linking URLs inside longer property text
+
+**Raised:** 2026-10-29, from the open point OP-3 of
+[Front matter properties](../Huddle.FrontMatterProperties-Specifications.md). Ships after the core of that spec.
+
+The spec links a property value only when the **whole** value is an `http:`, `https:` or `mailto:` URL. A Text value
+such as `See https://example.com/plan for details` shows the URL as plain text. The reference app's help says text
+properties may hold URLs, but not whether a URL inside longer text is clickable.
+
+**Change, if FP-M1 shows the reference app links it:**
+
+- `LibraryProperties.razor`: split a Text value into text runs and URL runs, and draw each URL run as a link with the
+  same scheme rule (D-11). Do not use a `MarkupString`: build the runs as Razor elements.
+- Find URLs with one `[GeneratedRegex]` that stops at whitespace, and drops trailing `.`, `,`, `)` and `;`, as an
+  autolink does.
+- The same splitting applies to List items.
+
+**If FP-M1 shows it does not:** close this entry, and change the spec's OP-3 to "No, as in the reference app".
+
+**Done when:**
+
+- The spec's OP-3 is closed one way or the other.
+- If built: bUnit tests show a URL in the middle of text becomes an `a` with the right `href`; `javascript:` inside text
+  stays text; trailing punctuation is not part of the link; text holding both a `[[link]]` and a URL draws both.
+
+**Risk:** the attribute rule (D-11). The `href` must come only from a matched, scheme-checked run.
+
 ## Packages evaluated and declined
 
 These were checked against the code they would supposedly replace, and rejected. Read

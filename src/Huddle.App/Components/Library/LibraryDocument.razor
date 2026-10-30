@@ -141,27 +141,29 @@
 
 @code {
     /// <summary>
-    /// Renders <paramref name="text"/> as the Library's rendered Markdown. A leading YAML frontmatter block
-    /// (an Agent definition's <c>name:</c>/<c>title:</c>/<c>skills:</c> header) is split off with
-    /// <see cref="PersonaFrontmatter.Parse(string)"/> and shown as a <see cref="LibraryProperties"/> block, because left in the
-    /// body the closing <c>---</c> reads as a setext underline and folds the whole block into one heading.
+    /// Renders <paramref name="text"/> as the Library's rendered Markdown. A leading front matter block (YAML between
+    /// <c>---</c> lines, or a JSON object) is split off with <see cref="NoteFrontmatter.Locate(string)"/>, read by
+    /// <see cref="NoteProperties"/>, typed by <see cref="PropertyTyping"/> against the root's types file and shown as a
+    /// <see cref="LibraryProperties"/> block, because left in the body the closing <c>---</c> reads as a setext underline and
+    /// folds the whole block into one heading.
     /// </summary>
     /// <param name="text">The document's raw Markdown, frontmatter included.</param>
     private RenderFragment RenderMarkdown(string text) => builder =>
     {
-        (string? block, int bodyStart) = NoteFrontmatter.Split(text);
-        IReadOnlyList<PersonaFrontmatterField> fields = block is null
+        NoteFrontmatterBlock located = NoteFrontmatter.Locate(text);
+        IReadOnlyList<NoteProperty> properties = located.Text is null
             ? []
-            : PersonaFrontmatter.Parse($"---\n{block}\n---\n").Fields;
-        string body = text[bodyStart..].TrimStart('\r', '\n');
+            : PropertyTyping.Apply(NoteProperties.Read(located), this.Services.GetService<PropertyTypes>()?.For(this.Path) ?? NoAssignedTypes);
+        string body = text[located.BodyStart..].TrimStart('\r', '\n');
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "class", "library-rendered");
         this.RenderTags(builder, text);
-        if (fields.Count > 0 && block is not null)
+        if (properties.Count > 0 && located.Text is not null)
         {
             builder.OpenComponent<LibraryProperties>(2);
-            builder.AddComponentParameter(3, nameof(LibraryProperties.Fields), fields);
-            builder.AddComponentParameter(4, nameof(LibraryProperties.Tags), NoteTagReader.Read(block).Distinct(StringComparer.OrdinalIgnoreCase).ToList());
+            builder.AddComponentParameter(3, nameof(LibraryProperties.Properties), properties);
+            builder.AddComponentParameter(4, nameof(LibraryProperties.Path), this.Path);
+            builder.AddComponentParameter(5, nameof(LibraryProperties.Tags), NoteTagReader.Read(located.Text, located.Form).Distinct(StringComparer.OrdinalIgnoreCase).ToList());
             builder.CloseComponent();
         }
 
@@ -234,6 +236,9 @@
     /// <summary>Asks the host to open this document in the operating system's default application.</summary>
     private Task OpenInDefaultAppAsync() =>
         this.OnAction.InvokeAsync(new LibraryTreeAction(LibraryTreeActionKind.OpenInDefaultApp, this.Path, null));
+
+    /// <summary>The types a root has when the host registers no <see cref="PropertyTypes"/>: none, so every property draws by its value.</summary>
+    private static readonly IReadOnlyDictionary<string, NotePropertyKind> NoAssignedTypes = new Dictionary<string, NotePropertyKind>(StringComparer.OrdinalIgnoreCase);
 
     private LibraryDocumentContent? content;
     private bool missing;

@@ -18,6 +18,7 @@ internal sealed class WikiLinkIndex : IDisposable
     private readonly LibraryPathResolver resolver;
     private readonly IOptions<TeamOptions> options;
     private readonly Action? afterWalkForTests;
+    private readonly Action? afterFileForTests;
     private readonly Lock gate = new();
     private readonly Dictionary<string, RootIndex> cache = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> generations = new(StringComparer.Ordinal);
@@ -41,8 +42,8 @@ internal sealed class WikiLinkIndex : IDisposable
     /// <summary>Test-only seam (fix card 8.4, item 1): <paramref name="afterWalkForTests"/> runs after a build
     /// finishes walking disk but before the generation check that decides whether to cache it, so a test can
     /// call <see cref="Invalidate"/> deterministically inside that window to prove the race fix without a
-    /// sleep.</summary>
-    internal WikiLinkIndex(LibraryRootStore roots, LibraryPathResolver resolver, IOptions<TeamOptions> options, Action? afterWalkForTests)
+    /// sleep. <paramref name="afterFileForTests"/> runs after each file the walk indexes, so a test can cancel the build between two files.</summary>
+    internal WikiLinkIndex(LibraryRootStore roots, LibraryPathResolver resolver, IOptions<TeamOptions> options, Action? afterWalkForTests, Action? afterFileForTests = null)
     {
         ArgumentNullException.ThrowIfNull(roots);
         ArgumentNullException.ThrowIfNull(resolver);
@@ -52,6 +53,7 @@ internal sealed class WikiLinkIndex : IDisposable
         this.resolver = resolver;
         this.options = options;
         this.afterWalkForTests = afterWalkForTests;
+        this.afterFileForTests = afterFileForTests;
         this.roots.RootsChanged += this.OnRootsChanged;
     }
 
@@ -270,25 +272,7 @@ internal sealed class WikiLinkIndex : IDisposable
             return [];
         }
 
-        List<(string Path, string Name, bool StartsWith, int Distance)> matches = [];
-        foreach (string file in index.AllFiles)
-        {
-            if (!LibraryFileKinds.IsMarkdown(file) || FolderSnapshot.PathComparer.Equals(file, from.RelativePath))
-            {
-                continue;
-            }
-
-            // A query with a '/' is a path suffix the human is spelling out, so it is matched against the whole path.
-            string name = query.Contains('/', StringComparison.Ordinal)
-                ? file[..^System.IO.Path.GetExtension(file).Length]
-                : System.IO.Path.GetFileNameWithoutExtension(file);
-            bool startsWith = name.StartsWith(query, StringComparison.OrdinalIgnoreCase);
-            if (startsWith || name.Contains(query, StringComparison.OrdinalIgnoreCase))
-            {
-                matches.Add((file, name, startsWith, WikiLinkResolver.FolderDistance(from.RelativePath, file)));
-            }
-        }
-
+        List<(string Path, string? Alias, bool StartsWith, int Distance)> matches = GatherSuggestions(index, from, query);
         matches.Sort(static (a, b) =>
         {
             int byDistance = a.Distance.CompareTo(b.Distance);
@@ -298,16 +282,90 @@ internal sealed class WikiLinkIndex : IDisposable
             }
 
             int byGroup = b.StartsWith.CompareTo(a.StartsWith);
-            return byGroup != 0 ? byGroup : string.CompareOrdinal(a.Path, b.Path);
+            if (byGroup != 0)
+            {
+                return byGroup;
+            }
+
+            int byPath = string.CompareOrdinal(a.Path, b.Path);
+            return byPath != 0 ? byPath : string.CompareOrdinal(a.Alias, b.Alias);
         });
 
         List<string> suggestions = [];
-        foreach ((string path, _, _, _) in matches.Take(max))
+        foreach ((string path, string? alias, _, _) in matches.Take(max))
         {
-            suggestions.Add(WikiLinkResolver.ShortestTarget(index.AllFiles, from.RelativePath, path));
+            string target = WikiLinkResolver.ShortestTarget(index.AllFiles, from.RelativePath, path);
+            suggestions.Add(alias is null ? target : string.Concat(target, "|", alias));
         }
 
         return suggestions;
+    }
+
+    /// <summary>Every note name, and every alias, in <paramref name="index"/> that matches <paramref name="query"/>, unsorted.</summary>
+    private static List<(string Path, string? Alias, bool StartsWith, int Distance)> GatherSuggestions(RootIndex index, LibraryPath from, string query)
+    {
+        List<(string Path, string? Alias, bool StartsWith, int Distance)> matches = [];
+        foreach (string file in index.AllFiles)
+        {
+            if (!LibraryFileKinds.IsMarkdown(file) || FolderSnapshot.PathComparer.Equals(file, from.RelativePath))
+            {
+                continue;
+            }
+
+            // A query with a '/' is a path suffix the human is spelling out, so it is matched against the whole path.
+            bool spellsPath = query.Contains('/', StringComparison.Ordinal);
+            string name = spellsPath
+                ? file[..^System.IO.Path.GetExtension(file).Length]
+                : System.IO.Path.GetFileNameWithoutExtension(file);
+            bool startsWith = name.StartsWith(query, StringComparison.OrdinalIgnoreCase);
+            int distance = WikiLinkResolver.FolderDistance(from.RelativePath, file);
+            if (startsWith || name.Contains(query, StringComparison.OrdinalIgnoreCase))
+            {
+                matches.Add((file, null, startsWith, distance));
+            }
+
+            // Each alias is its own entry (D-7): it finds the note, and choosing it writes [[Note|Alias]].
+            if (!spellsPath && index.NoteAliases.TryGetValue(file, out IReadOnlyList<string>? aliases))
+            {
+                foreach (string alias in aliases.Where(a => a.Contains(query, StringComparison.OrdinalIgnoreCase)))
+                {
+                    matches.Add((file, alias, alias.StartsWith(query, StringComparison.OrdinalIgnoreCase), distance));
+                }
+            }
+        }
+
+        return matches;
+    }
+
+    /// <summary>The notes in <paramref name="rootId"/> with an alias that contains <paramref name="phrase"/>, ignoring case (D-7): the data behind Global Search by alias. Empty when the root's index isn't available.</summary>
+    /// <param name="rootId">The Library Root id.</param>
+    /// <param name="phrase">The text to look for in an alias.</param>
+    /// <param name="ct">Cancels the lookup, including the disk walk that builds the index when it is not built yet.</param>
+    /// <returns>Each matching alias with its note's root-relative path, in ordinal path order.</returns>
+    internal IReadOnlyList<(string NotePath, string Alias)> NotesByAlias(string rootId, string phrase, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(rootId);
+        ArgumentNullException.ThrowIfNull(phrase);
+        ct.ThrowIfCancellationRequested();
+
+        RootIndex? index = this.GetOrBuild(rootId, ct);
+        if (index is not { Available: true } || phrase.Trim().Length == 0)
+        {
+            return [];
+        }
+
+        List<(string NotePath, string Alias)> found = [];
+        foreach (string notePath in index.SortedNotes)
+        {
+            if (!index.NoteAliases.TryGetValue(notePath, out IReadOnlyList<string>? aliases))
+            {
+                continue;
+            }
+
+            found.AddRange(aliases.Where(alias => alias.Contains(phrase.Trim(), StringComparison.OrdinalIgnoreCase)).Select(alias => (notePath, alias)));
+        }
+
+        return found;
     }
 
     /// <summary><see cref="SuggestTargets"/> off the caller's thread: the first call for a root walks its disk to build
@@ -390,7 +448,7 @@ internal sealed class WikiLinkIndex : IDisposable
     /// state the walk actually saw) but never cached — the next call rebuilds instead of reusing it forever
     /// (fix card 8.4 item 1).
     /// </summary>
-    private RootIndex? GetOrBuild(string rootId)
+    private RootIndex? GetOrBuild(string rootId, CancellationToken ct = default)
     {
         int startGeneration;
         lock (this.gate)
@@ -418,7 +476,7 @@ internal sealed class WikiLinkIndex : IDisposable
             return null;
         }
 
-        RootIndex built = this.BuildRootIndex(root);
+        RootIndex built = this.BuildRootIndex(root, ct);
         this.afterWalkForTests?.Invoke();
 
         lock (this.gate)
@@ -437,7 +495,7 @@ internal sealed class WikiLinkIndex : IDisposable
     /// resolution target) and, for Markdown files, its parsed links with their line text. Stops and marks the
     /// root unavailable the moment a file over <see cref="LibraryOptions.MaxIndexedFiles"/> is found. Once
     /// every file is known, resolves each link exactly once (fix card 8.4 item 3) rather than per query.</summary>
-    private RootIndex BuildRootIndex(LibraryRoot root)
+    private RootIndex BuildRootIndex(LibraryRoot root, CancellationToken ct)
     {
         int max = this.options.Value.Library.MaxIndexedFiles;
         IReadOnlyList<string> ignoredFolders = this.options.Value.FileChanges.EffectiveIgnore;
@@ -446,10 +504,11 @@ internal sealed class WikiLinkIndex : IDisposable
         List<string> allFiles = [];
         Dictionary<string, List<(WikiLink Link, string LineText)>> rawNoteLinks = new(StringComparer.Ordinal);
         Dictionary<string, IReadOnlyList<string>> noteTags = new(StringComparer.Ordinal);
+        Dictionary<string, IReadOnlyList<string>> noteAliases = new(StringComparer.Ordinal);
 
         if (!this.resolver.TryResolve(root.Id, string.Empty, out LibraryPath? rootPath, out _))
         {
-            return new RootIndex(false, allFiles, ToResolved(rawNoteLinks, allFiles), [], noteTags);
+            return new RootIndex(false, allFiles, ToResolved(rawNoteLinks, allFiles), [], noteTags, noteAliases);
         }
 
         HashSet<string> visitedFolders = new(FolderSnapshot.PathComparer) { rootPath.FullPath };
@@ -458,6 +517,7 @@ internal sealed class WikiLinkIndex : IDisposable
 
         while (pending.Count > 0)
         {
+            ct.ThrowIfCancellationRequested();
             LibraryPath folder = pending.Pop();
             List<FileSystemInfo>? children = TryEnumerateChildren(folder.FullPath);
             if (children is null)
@@ -467,6 +527,7 @@ internal sealed class WikiLinkIndex : IDisposable
 
             foreach (FileSystemInfo child in children)
             {
+                ct.ThrowIfCancellationRequested();
                 if (!this.TryResolveVisibleChild(folder, child, ignoredFolders, hideUnderscoreFolders, out LibraryPath? childPath))
                 {
                     continue;
@@ -482,16 +543,18 @@ internal sealed class WikiLinkIndex : IDisposable
                     continue;
                 }
 
-                if (!this.TryAddFile(childPath, max, allFiles, rawNoteLinks, noteTags))
+                if (!this.TryAddFile(childPath, max, allFiles, rawNoteLinks, noteTags, noteAliases))
                 {
-                    return new RootIndex(false, allFiles, ToResolved(rawNoteLinks, allFiles), [], noteTags);
+                    return new RootIndex(false, allFiles, ToResolved(rawNoteLinks, allFiles), [], noteTags, noteAliases);
                 }
+
+                this.afterFileForTests?.Invoke();
             }
         }
 
         List<string> sortedNotes = [.. rawNoteLinks.Keys];
         sortedNotes.Sort(StringComparer.Ordinal);
-        return new RootIndex(true, allFiles, ToResolved(rawNoteLinks, allFiles), sortedNotes, noteTags);
+        return new RootIndex(true, allFiles, ToResolved(rawNoteLinks, allFiles), sortedNotes, noteTags, noteAliases);
     }
 
     /// <summary>Lists the entries directly inside a folder, treating a folder that vanished or can't be read as empty.</summary>
@@ -546,13 +609,15 @@ internal sealed class WikiLinkIndex : IDisposable
     /// <param name="allFiles">Every file path collected so far; the file is appended.</param>
     /// <param name="rawNoteLinks">The parsed links per Markdown note; updated in place.</param>
     /// <param name="noteTags">The tags per Markdown note (Spec §6.17), read from the same text; updated in place.</param>
+    /// <param name="noteAliases">The aliases per Markdown note (front matter properties spec D-7), read from the same text; updated in place.</param>
     /// <returns><see langword="false"/> when the file count now exceeds <paramref name="max"/>, so the walk must stop.</returns>
     private bool TryAddFile(
         LibraryPath childPath,
         int max,
         List<string> allFiles,
         Dictionary<string, List<(WikiLink Link, string LineText)>> rawNoteLinks,
-        Dictionary<string, IReadOnlyList<string>> noteTags)
+        Dictionary<string, IReadOnlyList<string>> noteTags,
+        Dictionary<string, IReadOnlyList<string>> noteAliases)
     {
         allFiles.Add(childPath.RelativePath);
         if (allFiles.Count > max)
@@ -564,6 +629,7 @@ internal sealed class WikiLinkIndex : IDisposable
         {
             rawNoteLinks[childPath.RelativePath] = ParseNoteLinks(text);
             noteTags[childPath.RelativePath] = NoteTags.Of(text);
+            noteAliases[childPath.RelativePath] = NoteAliases.Of(text);
         }
 
         return true;
@@ -669,10 +735,12 @@ internal sealed class WikiLinkIndex : IDisposable
     /// resolved against <see cref="AllFiles"/> at build time.</param>
     /// <param name="SortedNotes"><see cref="NoteLinks"/>'s keys, sorted ordinally.</param>
     /// <param name="NoteTags">Each Markdown note's own tags (Spec §6.17), keyed like <see cref="NoteLinks"/>.</param>
+    /// <param name="NoteAliases">Each Markdown note's aliases (front matter properties spec D-7), keyed like <see cref="NoteLinks"/>.</param>
     private sealed record RootIndex(
         bool Available,
         IReadOnlyList<string> AllFiles,
         IReadOnlyDictionary<string, IReadOnlyList<(WikiLink Link, string LineText, string? ResolvedPath)>> NoteLinks,
         IReadOnlyList<string> SortedNotes,
-        IReadOnlyDictionary<string, IReadOnlyList<string>> NoteTags);
+        IReadOnlyDictionary<string, IReadOnlyList<string>> NoteTags,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> NoteAliases);
 }

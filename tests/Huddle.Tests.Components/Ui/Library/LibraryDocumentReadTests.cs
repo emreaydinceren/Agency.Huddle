@@ -55,6 +55,63 @@ public sealed class LibraryDocumentReadTests : IDisposable
         Assert.Equal(["Chief of Staff", "cos"], cut.FindAll(".library-properties dd").Select(dd => dd.TextContent.Trim()));
     }
 
+    /// <summary>FP-T18, B6: a note drawn with the root's types file shows the mismatch; after the file changes on disk the next draw of a note in that root uses the new types.</summary>
+    [Fact]
+    public async Task Markdown_ReadMode_ChangedTypesFile_IsUsedByTheNextDraw()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "plan.md"), "---\r\ndue: next week\r\npages: 320\r\n---\r\n\r\nBody");
+        string typesFile = Path.Combine(root, LibraryOptions.DefaultPropertyTypesFile.Replace('/', Path.DirectorySeparatorChar));
+        _ = Directory.CreateDirectory(Path.GetDirectoryName(typesFile) ?? root);
+        File.WriteAllText(typesFile, "{ \"types\": { \"due\": \"date\" } }");
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "plan.md");
+
+        PropertyTypes types = new(this.fixture.LibraryFixture.Resolver, this.fixture.LibraryFixture.BoundOptions);
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        ctx.Services.AddSingleton(types);
+        IRenderedComponent<ContainerFragment> first = RenderDoc(ctx, path);
+        first.WaitForAssertion(() => Assert.Equal("Type mismatch: expected Date", first.Find(".library-properties-mismatch").GetAttribute("title")));
+        Assert.Equal("320", first.Find(".library-properties-number").TextContent.Trim());
+
+        File.WriteAllText(typesFile, "{ \"types\": { \"due\": \"text\" } }");
+        File.SetLastWriteTimeUtc(typesFile, DateTime.UtcNow.AddMinutes(5));
+        await using MudBunitContext nextCtx = this.fixture.NewContext();
+        nextCtx.Services.AddSingleton(types);
+        IRenderedComponent<ContainerFragment> second = RenderDoc(nextCtx, path);
+
+        second.WaitForAssertion(() => Assert.Equal("next week", second.Find(".library-properties-text").TextContent.Trim()));
+        Assert.Empty(second.FindAll(".library-properties-mismatch"));
+    }
+
+    /// <summary>B1: a note with no front matter draws no Properties block.</summary>
+    [Fact]
+    public async Task Markdown_ReadMode_NoFrontmatter_HasNoPropertiesBlock()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "plain.md"), "# Plain\r\n\r\nText.");
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "plain.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
+
+        cut.WaitForAssertion(() => Assert.Equal("Plain", cut.Find(".library-rendered h1").TextContent.Trim()));
+        Assert.Empty(cut.FindAll(".library-properties"));
+    }
+
+    /// <summary>B2: a block whose every entry is empty is still drawn, one empty row per key.</summary>
+    [Fact]
+    public async Task Markdown_ReadMode_AllEmptyFrontmatter_DrawsOneEmptyRowPerKey()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "empty.md"), "---\r\na:\r\nb: ~\r\nc: null\r\n---\r\n\r\nBody");
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "empty.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
+
+        cut.WaitForAssertion(() => Assert.Equal(["a", "b", "c"], cut.FindAll(".library-properties-key").Select(static k => k.TextContent.Trim())));
+        Assert.Equal(["", "", ""], cut.FindAll(".library-properties-value").Select(static v => v.TextContent.Trim()));
+    }
     /// <summary>A frontmatter list draws one chip per item, block or flow syntax alike, and a tag's leading <c>#</c> is not shown.</summary>
     [Fact]
     public async Task Markdown_ReadMode_FrontmatterListIsChipsWithoutHash()

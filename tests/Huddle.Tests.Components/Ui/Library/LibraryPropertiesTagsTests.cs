@@ -1,7 +1,9 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Library;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.Tests.Library;
 
 namespace Agency.Huddle.Tests.Ui.Library;
 
@@ -10,10 +12,14 @@ public sealed class LibraryPropertiesTagsTests
 {
     private static IRenderedComponent<LibraryProperties> Render(MudBunitContext ctx, string block)
     {
-        IReadOnlyList<PersonaFrontmatterField> fields = PersonaFrontmatter.Parse($"---\n{block}\n---\n").Fields;
-        IReadOnlyList<string> tags = NoteTagReader.Read(block);
+        ctx.Services.AddSingleton<ILibraryNoteResolver>(new FakeLibraryNoteResolver());
+        ctx.Services.AddSingleton(TimeProvider.System);
+        IReadOnlyList<NoteProperty> properties = PropertyTyping.Apply(
+            NoteProperties.Read(NoteFrontmatter.Locate($"---\n{block}\n---\n")),
+            new Dictionary<string, NotePropertyKind>());
+        IReadOnlyList<string> tags = NoteTagReader.Read(block, NoteFrontmatterForm.Yaml);
         return ctx.Render<LibraryProperties>(p => p
-            .Add(c => c.Fields, fields)
+            .Add(c => c.Properties, properties)
             .Add(c => c.Tags, tags));
     }
 
