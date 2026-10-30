@@ -54,5 +54,11 @@ internal sealed class GatewayOptions
     {
         /// <summary><c>off</c>, <c>serve</c> or <c>funnel</c>.</summary>
         public string Mode { get; set; } = "off";
+
+        /// <summary>The Tailscale HTTPS port, or <see langword="null"/> for the app's own port (Spec 8.1).</summary>
+        public int? HttpsPort { get; set; }
+
+        /// <summary>The <c>tailscale</c> executable to use when it is neither on <c>PATH</c> nor at the platform default, or <see langword="null"/>.</summary>
+        public string? Command { get; set; }
     }
 }

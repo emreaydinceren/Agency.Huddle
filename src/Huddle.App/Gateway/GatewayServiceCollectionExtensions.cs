@@ -31,12 +31,17 @@ internal static class GatewayServiceCollectionExtensions
         services.AddSingleton<PairingService>();
         services.AddSingleton<GatewayConnectService>();
         services.AddSingleton<PreAuthConnectionLimiter>();
-        services.TryAddSingleton<IIngressWhois, NullIngressWhois>();
+        services.AddSingleton<ITailscaleCli>(static provider => new ProcessTailscaleCli(provider.GetRequiredService<GatewaySettings>().Options.Tailscale.Command));
+        services.AddSingleton<TailscaleServeClaim>(static provider => new TailscaleServeClaim(provider.GetRequiredService<ITailscaleCli>()));
+        services.TryAddSingleton<IIngressWhois>(static provider => TailscaleRuntime.IsOn(provider.GetRequiredService<GatewaySettings>().Options)
+            ? new TailscaleWhois(provider.GetRequiredService<ITailscaleCli>())
+            : new NullIngressWhois());
         services.AddSingleton<IGatewaySessionResolver, CookieSessionResolver>();
         services.AddSingleton<GatewayConnectionGuard>();
         services.AddSingleton<GatewayListener>();
         services.AddSingleton<IPostConfigureOptions<KestrelServerOptions>, GatewayKestrelConfigurator>();
         services.AddHostedService<GatewayListenerStartup>();
+        services.AddHostedService<TailscaleRuntime>();
         services.AddSingleton<GatewayDynamicHosts>();
         services.AddSingleton<IOptionsChangeTokenSource<HostFilteringOptions>>(static provider => provider.GetRequiredService<GatewayDynamicHosts>());
         services.AddOptions<HostFilteringOptions>().PostConfigure<GatewayDynamicHosts>(static (options, dynamic) =>

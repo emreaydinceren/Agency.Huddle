@@ -15,16 +15,17 @@ internal sealed class GatewayDynamicHosts : IOptionsChangeTokenSource<HostFilter
     private readonly Lock gate = new();
 
     private IReadOnlyList<string> current = [];
+    private IReadOnlyList<string> tailscale = [];
     private CancellationTokenSource changed = new();
 
-    /// <summary>The dynamic host names now in force.</summary>
+    /// <summary>The dynamic host names now in force (the automatic hosts and the Tailscale hosts).</summary>
     public IReadOnlyList<string> Current
     {
         get
         {
             lock (this.gate)
             {
-                return this.current;
+                return [.. this.current, .. this.tailscale];
             }
         }
     }
@@ -42,6 +43,33 @@ internal sealed class GatewayDynamicHosts : IOptionsChangeTokenSource<HostFilter
         lock (this.gate)
         {
             this.current = [.. hosts];
+            previous = this.changed;
+            this.changed = new CancellationTokenSource();
+        }
+
+        previous.Cancel();
+        previous.Dispose();
+    }
+
+    /// <summary>
+    /// Replaces the Tailscale part of <see cref="Current"/> (the MagicDNS name, with and without the port) and fires the change token when it differs.
+    /// <see cref="Set"/> leaves this part alone and this method leaves the <see cref="Set"/> part alone.
+    /// </summary>
+    /// <param name="hosts">The Tailscale hosts.</param>
+    public void SetTailscale(IEnumerable<string> hosts)
+    {
+        ArgumentNullException.ThrowIfNull(hosts);
+
+        string[] next = [.. hosts.Distinct(StringComparer.OrdinalIgnoreCase)];
+        CancellationTokenSource previous;
+        lock (this.gate)
+        {
+            if (this.tailscale.SequenceEqual(next, StringComparer.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            this.tailscale = next;
             previous = this.changed;
             this.changed = new CancellationTokenSource();
         }
