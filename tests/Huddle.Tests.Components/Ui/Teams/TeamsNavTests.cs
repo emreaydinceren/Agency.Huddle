@@ -20,7 +20,6 @@ using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Factories;
-using Agency.Huddle.Tests.NeedsYou;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
 
@@ -183,6 +182,87 @@ public sealed class TeamsNavTests
         string? href = Assert.Single(cut.FindAll(".teams-nav a[href]")).GetAttribute("href");
         Assert.Equal("/teams/Business", href);
     }
+
+    /// <summary>Under a Team shortcut with nothing waiting on the Human, the Rooms folder lists its Rooms flat, with no Needs you or All folder, and ends with "New chat".</summary>
+    [Fact]
+    public async Task Team_SetAndNothingWaiting_ListsTheRoomsFlat_ThenNewChat()
+    {
+        ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
+        script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true });
+        script.Rooms.Add(new Room("chat", "Ada", DateTimeOffset.UnixEpoch.AddDays(1)) { Team = "Business" });
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
+
+        await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false, directory: directory);
+        IRenderedComponent<ContainerFragment> cut = RenderShortcut(ctx, "Business");
+
+        cut.WaitForAssertion(() =>
+        {
+            string?[] rooms = ["/rooms/teamroom", "/rooms/chat"];
+            Assert.Equal(rooms, FolderHrefs(cut, "Rooms"));
+            Assert.Empty(cut.FindAll(".teams-nav-subfolder"));
+            Assert.Equal("New chat", Folder(cut, "Rooms").QuerySelectorAll(".mud-collapse-container .mud-nav-link-text")[^1].TextContent.Trim());
+        });
+    }
+
+    /// <summary>
+    /// Under a Team shortcut, a Room waiting on the Human splits the Rooms folder into "Needs you" (that Room) above "All"
+    /// (the rest, then "New chat"), as the Chats view's All grouping does; once nothing waits the Rooms are flat again.
+    /// </summary>
+    [Fact]
+    public async Task Team_SetAndARoomWaiting_SplitsTheRoomsIntoNeedsYouAndAll()
+    {
+        ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
+        script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true });
+        script.Rooms.Add(new Room("chat", "Ada", DateTimeOffset.UnixEpoch.AddDays(1)) { Team = "Business" });
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
+
+        await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false, directory: directory);
+        IRenderedComponent<ContainerFragment> cut = RenderShortcut(ctx, "Business");
+        Agency.Huddle.App.NeedsYou.NeedsYouTracker tracker = ctx.Services.GetRequiredService<Agency.Huddle.App.NeedsYou.NeedsYouTracker>();
+        cut.WaitForAssertion(() => Assert.Equal(2, FolderHrefs(cut, "Rooms").Length));
+
+        await cut.InvokeAsync(() => tracker.Seed("chat", DateTimeOffset.UnixEpoch, "coo"));
+
+        cut.WaitForAssertion(() =>
+        {
+            string[] subfolders = ["Needs you", "All"];
+            string[] actual = [.. cut.FindAll(".teams-nav-subfolder > .mud-nav-link .mud-nav-link-text").Select(text => text.TextContent.Trim())];
+            Assert.Equal(subfolders, actual);
+            IElement needsYou = cut.Find(".teams-nav-subfolder.room-folder-needs-you");
+            Assert.Equal("/rooms/chat", Assert.Single(needsYou.QuerySelectorAll("a[href]")).GetAttribute("href"));
+            IElement all = cut.Find(".teams-nav-subfolder.teams-nav-all");
+            Assert.Equal("/rooms/teamroom", Assert.Single(all.QuerySelectorAll("a[href]")).GetAttribute("href"));
+            Assert.Equal("New chat", all.QuerySelectorAll(".mud-nav-link-text")[^1].TextContent.Trim());
+        });
+
+        await cut.InvokeAsync(() => tracker.Dismiss("chat"));
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".teams-nav-subfolder")));
+    }
+
+    /// <summary>The "New chat" row under a Team shortcut opens the New chat panel for that Team.</summary>
+    [Fact]
+    public async Task Team_Set_NewChatRow_OpensTheTeamsNewChatPanel()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
+
+        await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false);
+        IRenderedComponent<ContainerFragment> cut = RenderShortcut(ctx, "Business");
+        Assert.Empty(cut.FindAll(".new-chat-panel"));
+
+        await cut.InvokeAsync(() => cut.Find(".teams-nav-new-chat .mud-nav-link").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal("New chat in Business", cut.Find(".new-chat-panel").GetAttribute("aria-label")));
+    }
+
+    /// <summary>Renders the nav narrowed to <paramref name="team"/>, as its Activity bar shortcut does.</summary>
+    private static IRenderedComponent<ContainerFragment> RenderShortcut(MudBunitContext ctx, string team) =>
+        ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<TeamsNav>(0);
+            builder.AddComponentParameter(1, nameof(TeamsNav.Team), team);
+            builder.CloseComponent();
+        });
 
     /// <summary>A Team no Persona is labelled with shows a trailing member count of 0 whose tooltip says "No members", inside its own row and never as row text.</summary>
     [Fact]
@@ -1187,7 +1267,13 @@ public sealed class TeamsNavTests
         ctx.Services.AddSingleton(rooms);
         ctx.Services.AddSingleton<TempDataDir>();
         ctx.Services.AddSingleton(new RoomEvents(NullLogger<RoomEvents>.Instance));
-        ctx.Services.AddNeedsYouTracker();
+        // The tracker prunes against a directory of its own, so its reads on RoomsChanged never count as (or take the gate of) one of the nav's loads.
+        ctx.Services.AddSingleton(sp => new Agency.Huddle.App.NeedsYou.NeedsYouTracker(
+            sp.GetRequiredService<RoomEvents>(),
+            new QuestionStore(sp.GetRequiredService<RoomEvents>()),
+            new Agency.Huddle.App.Elicitation.ElicitationStore(sp.GetRequiredService<RoomEvents>()),
+            ScriptedRoomsDirectory.Create(out _),
+            NullLogger<Agency.Huddle.App.NeedsYou.NeedsYouTracker>.Instance));
         ctx.Services.AddSingleton<ChatService>(sp =>
         {
             TempDataDir dir = sp.GetRequiredService<TempDataDir>();
