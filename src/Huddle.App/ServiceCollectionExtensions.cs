@@ -633,8 +633,10 @@ public static class ServiceCollectionExtensions
         // navigation once it is not (docs/engineering/rules.md).
         services.AddCircuitConnection();
 
-        // Scoped: the open Tabs of one circuit (docs/Huddle.Tabs-Specifications.md).
+        // Scoped: the open Tabs of one circuit (docs/Huddle.Tabs-Specifications.md), and which Teams have a shortcut at
+        // the top of its Activity bar.
         services.AddScoped<Tabs.TabService>();
+        services.AddScoped<Components.Layout.TeamShortcutStore>();
 
         // Scoped: whether this circuit's Right sidebar is open, and what each mounted page put in it.
         services.AddScoped<Tabs.RightSidebarService>();

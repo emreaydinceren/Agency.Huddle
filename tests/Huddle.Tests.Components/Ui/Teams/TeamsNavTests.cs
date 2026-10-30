@@ -131,6 +131,59 @@ public sealed class TeamsNavTests
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
+    /// <summary>
+    /// Narrowed to one Team (its Activity bar shortcut), the nav lists only that Team's folders, open without a click on
+    /// any chevron: no Team rows, no other Team's links, and no "Build a team".
+    /// </summary>
+    [Fact]
+    public async Task Team_Set_ListsOnlyThatTeamsFolders()
+    {
+        FakeTeamCatalog catalog = new()
+        {
+            Teams = [Team("Business", projects: ["Marketing"]), Team("Lab #2", projects: ["Item #1"])],
+        };
+
+        await using MudBunitContext ctx = NewContext(catalog);
+        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<TeamsNav>(0);
+            builder.AddComponentParameter(1, nameof(TeamsNav.Team), "lab #2");
+            builder.CloseComponent();
+        });
+
+        Assert.Empty(cut.FindAll("div.hover-reveal-row"));
+        string?[] expectedHrefs =
+        [
+            "/teams/Lab%20%232/projects/Item%20%231",
+            "/teams/Lab%20%232/tasks/all-tasks",
+            "/teams/Lab%20%232/tasks/my-tasks",
+        ];
+        cut.WaitForAssertion(() =>
+        {
+            string?[] actualHrefs = [.. cut.FindAll(".teams-nav a[href]").Select(a => a.GetAttribute("href"))];
+            Assert.Equal(expectedHrefs, actualHrefs);
+        });
+    }
+
+    /// <summary>A Team with no Rooms, Projects or Task Views says so under its shortcut and links to its Team page, rather than showing nothing.</summary>
+    [Fact]
+    public async Task Team_SetAndEmpty_ShowsAnEmptyStateAndTheTeamPageLink()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
+
+        await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false);
+        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<TeamsNav>(0);
+            builder.AddComponentParameter(1, nameof(TeamsNav.Team), "Business");
+            builder.CloseComponent();
+        });
+
+        cut.WaitForAssertion(() => Assert.Equal("Nothing in Business yet", cut.Find(".empty-state .empty-state-title").TextContent.Trim()));
+        string? href = Assert.Single(cut.FindAll(".teams-nav a[href]")).GetAttribute("href");
+        Assert.Equal("/teams/Business", href);
+    }
+
     /// <summary>A Team no Persona is labelled with shows a trailing member count of 0 whose tooltip says "No members", inside its own row and never as row text.</summary>
     [Fact]
     public async Task TeamWithNoMembers_ShowsATrailingZeroWithTheNoMembersTooltip()

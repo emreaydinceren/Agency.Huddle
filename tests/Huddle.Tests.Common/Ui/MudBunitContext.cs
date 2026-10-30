@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using MudBlazor.Services;
+using Agency.Huddle.App.Components.Layout;
 using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tabs;
 
@@ -81,12 +82,13 @@ internal sealed class MudBunitContext : BunitContext
     /// Creates the context: registers MudBlazor's services and switches bUnit's JSInterop to loose
     /// mode. See the type-level remarks for why each is needed.
     /// </summary>
-    /// <remarks>Also registers <see cref="RightSidebarService"/> and <see cref="PageCommandBus"/>: any page that publishes a Subject (<c>PageSubjectSource</c>) or handles page commands needs them to render.</remarks>
+    /// <remarks>Also registers <see cref="RightSidebarService"/> and <see cref="PageCommandBus"/>: any page that publishes a Subject (<c>PageSubjectSource</c>) or handles page commands needs them to render. And <see cref="TeamShortcutStore"/>, which the Team page's header and the Activity bar's shortcuts read.</remarks>
     public MudBunitContext()
     {
         this.Services.AddMudServices();
         this.Services.AddSingleton<RightSidebarService>();
         this.Services.AddSingleton<PageCommandBus>();
+        this.Services.AddSingleton<TeamShortcutStore>();
         this.JSInterop.Mode = JSRuntimeMode.Loose;
 
         // The Right sidebar opens by itself unless the viewer last closed it. Tests start from "closed" so each opens it on purpose;
