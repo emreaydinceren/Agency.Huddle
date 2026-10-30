@@ -3,6 +3,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components;
 using Agency.Huddle.App.Desktop;
+using Agency.Huddle.App.Gateway;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Logging;
 using Microsoft.AspNetCore.StaticFiles;
@@ -58,6 +59,8 @@ builder.Services.AddMudServices();
 builder.Services.AddTeamServices(builder.Configuration);
 
 builder.Services.AddDesktopHost(builder.Configuration);
+
+builder.Services.AddGateway();
 
 // Liveness only, and deliberately with zero registered checks: 200 here means the process is
 // up, Kestrel is bound and the endpoint pipeline is built - nothing more. That is exactly what
@@ -152,6 +155,9 @@ app.MapGet("/library-files/{rootId}/{**path}", LibraryFilesEndpoint.HandleAsync)
 app.MapHealthChecks("/health");
 
 app.MapDesktopEndpoints();
+
+// Mapping only: the gate that makes every other route require a session is Stage C.
+app.MapGatewayAuthEndpoints();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
