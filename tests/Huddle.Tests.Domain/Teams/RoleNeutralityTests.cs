@@ -66,6 +66,8 @@ public sealed class RoleNeutralityTests
                 "Development Manager", "development-manager", "Tech Lead", "tech-lead", "Developer", "Reviewer",
                 "Security Engineer", "security-engineer", "QA Engineer", "qa-engineer", "Release Engineer", "release-engineer",
                 "Retro Agent", "retro-agent", "Household Manager", "household-manager", "School Liaison", "school-liaison",
+                "Meal Planner", "meal-planner", "Home Keeper", "home-keeper", "Health Admin", "health-admin", "Schedule Keeper",
+                "schedule-keeper", "Finance Tracker", "finance-tracker", "Comparison Shopper", "comparison-shopper",
             ],
             names);
     }
