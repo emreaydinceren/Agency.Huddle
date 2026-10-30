@@ -278,7 +278,7 @@ id or a snapshot: an open dialog ignores new parameters.
 | `ThemeDefaults`, `ThemeCatalog`, `SkinLoader`, `AccentPalette` | `Themes/`, `Themes/Skins/` | The px type scale (`WithSharedTypography`), the Theme list built from the skin files, skin loading and customization, accent contrast clamping |
 | `ContrastColour` | `Themes/ContrastColour.cs` | `ReadableForeground`: black or white, whichever reads better, for `PrimaryContrastText` |
 | `StatusChipContrast` | `Themes/StatusChipContrast.cs` | `Fill`, `Text` and `Ratio`: the tinted chip's mixes in C#, so a test holds them to 4.5:1 |
-| `AvatarColours` | `Themes/AvatarColours.cs` | `MonogramStyle` (only `--mud-palette-primary: #hex;`; `app.css` draws both Themes), `Fill` and `Letters`: the recipe in C# for the tests. Light: 20% over Surface, letters 75% toward `TextPrimary`. Dark: 35% over Surface, letters 75% toward white |
+| `AvatarColours` | `Themes/AvatarColours.cs` | `MonogramStyle` (only `--mud-palette-primary: #hex;`; `app.css` draws both Themes), `Fill` and `Letters`: the recipe in C# for the tests. Light: 40% over Surface, letters 75% toward `TextPrimary`. Dark: 40% over Surface, letters 75% toward white |
 | `LibraryPathDisplay` | `Components/Library/LibraryPathDisplay.cs` | `Shorten(fullPath)`: a path middle-truncated to its root and first folder, an ellipsis and the file; the full path goes in a tooltip |
 | `TaskPresence` | `Tasks/TaskPresence.cs` | `For`: an assignee's `PresenceState`, for `PresenceCue` |
 

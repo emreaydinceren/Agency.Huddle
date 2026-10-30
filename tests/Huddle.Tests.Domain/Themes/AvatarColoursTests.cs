@@ -6,8 +6,8 @@ using Agency.Huddle.Tests.Css;
 namespace Agency.Huddle.Tests.Themes;
 
 /// <summary>
-/// Pins the monogram recipe (<see cref="AvatarColours"/>): in a Light Theme the Agent's colour at 20% over Surface for the fill and
-/// 75% toward TextPrimary for the letters; in a Dark Theme the colour at 35% over Surface and 75% toward white. The recipe replaces the
+/// Pins the monogram recipe (<see cref="AvatarColours"/>): in a Light Theme the Agent's colour at 40% over Surface for the fill and
+/// 75% toward TextPrimary for the letters; in a Dark Theme the colour at 40% over Surface and 75% toward white. The recipe replaces the
 /// old black-or-white choice, so the proof that matters is that the letters clear the WCAG 4.5:1 text floor on the fill for any colour,
 /// in the Huddle Light and Huddle Dark palettes.
 /// </summary>
@@ -50,19 +50,19 @@ public sealed class AvatarColoursTests
         Assert.Equal("--mud-palette-primary: #123456;", style);
     }
 
-    /// <summary>The stylesheet states the Light recipe (20% fill, letters 75% toward TextPrimary) and the Dark one (35% fill, letters 75% toward white) that this class mirrors.</summary>
+    /// <summary>The stylesheet states the Light recipe (40% fill, letters 75% toward TextPrimary) and the Dark one (40% fill, letters 75% toward white) that this class mirrors.</summary>
     [Fact]
     public void Stylesheet_StatesBothRecipes()
     {
         string css = CssText.AppCss(CssNewlines.AsIs);
 
-        Assert.Contains("background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
+        Assert.Contains("background-color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-surface));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
         Assert.Contains("color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-text-primary));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
         Assert.Contains(":root:has(.theme-mode-dark) .mud-avatar.mud-avatar-filled.avatar-monogram", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
-        Assert.Contains("background-color: color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-surface));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
+        Assert.Contains("background-color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-surface));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
         Assert.Contains("color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-white));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
-        Assert.Equal(20, AvatarColours.LightFillPercent);
-        Assert.Equal(35, AvatarColours.DarkFillPercent);
+        Assert.Equal(40, AvatarColours.LightFillPercent);
+        Assert.Equal(40, AvatarColours.DarkFillPercent);
         Assert.Equal(75, AvatarColours.LettersTowardPercent);
     }
 

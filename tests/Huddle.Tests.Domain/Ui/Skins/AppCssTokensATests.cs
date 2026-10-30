@@ -79,8 +79,8 @@ public sealed class AppCssTokensATests
         Assert.DoesNotContain("var(--mud-palette-action-default-hover)", range, StringComparison.Ordinal);
         Assert.DoesNotContain("outline: 2px solid var(--mud-palette-text-primary)", range, StringComparison.Ordinal);
 
-        // The avatar monogram's 20% fill is an avatar fill, not a selection (architecture C3); it stays literal.
-        Assert.Equal(1, CssText.CountOccurrences(range, "var(--mud-palette-primary) 20%, var(--mud-palette-surface))"));
+        // The avatar monogram's 40% fill (its Light and Dark rules) is an avatar fill, not a selection (architecture C3); it stays literal.
+        Assert.Equal(2,CssText.CountOccurrences(range, "var(--mud-palette-primary) 40%, var(--mud-palette-surface))"));
 
         // The tab group's inactive marker is an inset indicator, not a region line (architecture C4); it stays literal.
         Assert.Equal(1, CssText.CountOccurrences(range, "var(--mud-palette-lines-default)"));
