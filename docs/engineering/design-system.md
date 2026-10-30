@@ -481,10 +481,10 @@ Component parameters are in the [catalog](UXDesignGuidelines.md#display).
 **The look.** One recipe per Theme mode, drawn by one `app.css` rule, so every monogram clears
 4.5:1 without choosing black or white per colour.
 
-| Mode | Fill | Letters |
-| --- | --- | --- |
-| Light | The Agent's colour at 20% over Surface | That colour mixed 75% toward `TextPrimary`, weight 600 |
-| Dark | The colour at 35% over Surface, a deep fill | That colour mixed 75% toward white, weight 600 |
+| Mode | Fill | Ring (1px, inset) | Letters |
+| --- | --- | --- | --- |
+| Light | The Agent's colour at 40% over Surface | The fill mixed 20% toward `TextPrimary`, a few shades darker | That colour mixed 75% toward `TextPrimary`, weight 600 |
+| Dark | The colour at 40% over Surface, a deep fill | The fill mixed 20% toward white, a few shades lighter | That colour mixed 75% toward white, weight 600 |
 
 CSS can't read a Theme's mode, so `MainLayout.razor` renders a hidden
 `<span class="theme-mode-dark">` when the Theme is a Dark one, and

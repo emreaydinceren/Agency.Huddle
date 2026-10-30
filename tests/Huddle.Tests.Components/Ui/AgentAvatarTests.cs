@@ -231,7 +231,7 @@ public sealed class AgentAvatarTests
     }
 
     /// <summary>
-    /// A <see cref="Avatar.Background"/> on letters emits the monogram recipe: the fill is the colour at 20% over Surface and
+    /// A <see cref="Avatar.Background"/> on letters emits the monogram recipe: the fill is the colour at 40% over Surface and
     /// the letters are the colour mixed 75% toward TextPrimary, both through <c>color-mix</c> against the Theme's own tokens -
     /// never a fixed black or white.
     /// </summary>

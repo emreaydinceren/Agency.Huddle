@@ -13,10 +13,10 @@ namespace Agency.Huddle.App.Themes;
 internal static class AvatarColours
 {
     /// <summary>How much of the Agent's colour is in a Light Theme's monogram fill; the rest is Surface.</summary>
-    internal const int LightFillPercent = 20;
+    internal const int LightFillPercent = 40;
 
     /// <summary>How much of the Agent's colour is in a Dark Theme's monogram fill; the rest is Surface.</summary>
-    internal const int DarkFillPercent = 35;
+    internal const int DarkFillPercent = 40;
 
     /// <summary>How far the letters are pulled from the Agent's colour toward <c>TextPrimary</c> (Light) or white (Dark).</summary>
     internal const int LettersTowardPercent = 75;
@@ -30,7 +30,7 @@ internal static class AvatarColours
     /// <returns>The style declaration.</returns>
     internal static string MonogramStyle(string agentColour) => $"--mud-palette-primary: {agentColour};";
 
-    /// <summary>The monogram fill: <paramref name="agent"/> over <paramref name="surface"/>, at 20% (Light) or 35% (Dark).</summary>
+    /// <summary>The monogram fill: <paramref name="agent"/> over <paramref name="surface"/>, at 40% in either Theme.</summary>
     /// <param name="agent">The Agent's colour.</param>
     /// <param name="surface">The Theme's Surface.</param>
     /// <param name="dark">Whether the Theme is a Dark one.</param>

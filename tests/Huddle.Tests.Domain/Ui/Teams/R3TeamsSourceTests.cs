@@ -48,7 +48,7 @@ public sealed class R3TeamsSourceTests
         Assert.Contains("justify-content: flex-end;", CssText.RuleBodyLoose(css, ".avatar-choice-body"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 
-    /// <summary>A swatch is a 32px circle drawn with the avatar recipe: the colour at 20% over Surface, 35% in a Dark Theme (B8h).</summary>
+    /// <summary>A swatch is a 32px circle drawn with the avatar recipe: the colour at 40% over Surface, in a Light and a Dark Theme alike (B8h).</summary>
     [Fact]
     public void Swatch_IsA32pxCircleDrawnWithTheAvatarRecipeForTheMode()
     {
@@ -59,8 +59,10 @@ public sealed class R3TeamsSourceTests
         Assert.Contains("width: 32px;", dot, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("height: 32px;", dot, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("border-radius: 50%;", dot, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
-        Assert.Contains("var(--mud-palette-primary) 20%, var(--mud-palette-surface)", dot, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
-        Assert.Contains("var(--mud-palette-primary) 35%, var(--mud-palette-surface)", dark, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("var(--mud-palette-primary) 40%, var(--mud-palette-surface)", dot, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("var(--mud-palette-primary) 40%, var(--mud-palette-surface)", dark, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("var(--mud-palette-surface)), var(--mud-palette-text-primary) 20%);", dot, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("var(--mud-palette-surface)), var(--mud-palette-white) 20%);", dark, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 
     /// <summary>The swatch radios are visually hidden, never <c>display: none</c>, so the group stays keyboard-reachable (B8h).</summary>
