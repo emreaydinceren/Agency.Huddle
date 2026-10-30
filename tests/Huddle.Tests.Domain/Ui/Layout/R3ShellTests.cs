@@ -34,7 +34,7 @@ public sealed partial class R3ShellTests
         Assert.Equal(expected, SidebarViews.AreaOf(url));
     }
 
-    /// <summary>Entering an area shows that area's view; Settings collapses the Sidebar; a Room keeps the current view and opens Chats from a collapsed Sidebar.</summary>
+    /// <summary>Entering an area shows that area's view, but a Team page keeps a Team shortcut's view; Settings collapses the Sidebar; a Room keeps the current view and opens Chats from a collapsed Sidebar.</summary>
     /// <param name="area">The area entered.</param>
     /// <param name="current">The view shown before.</param>
     /// <param name="expected">The view shown after, or <see langword="null"/> for a collapsed Sidebar.</param>
@@ -42,6 +42,8 @@ public sealed partial class R3ShellTests
     [InlineData("library", SidebarView.Chats, SidebarView.Library)]
     [InlineData("agents", SidebarView.Chats, SidebarView.Agents)]
     [InlineData("teams", SidebarView.Chats, SidebarView.Teams)]
+    [InlineData("teams", SidebarView.Team, SidebarView.Team)]
+    [InlineData("rooms", SidebarView.Team, SidebarView.Team)]
     [InlineData("tasks", SidebarView.Library, SidebarView.Tasks)]
     [InlineData("settings", SidebarView.Chats, null)]
     [InlineData("rooms", SidebarView.Teams, SidebarView.Teams)]

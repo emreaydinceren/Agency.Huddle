@@ -71,7 +71,8 @@ internal static class SidebarViews
 
     /// <summary>
     /// The view the Sidebar shows once the focused page moves into <paramref name="area"/> (audit B3a): the area's own
-    /// view; <see langword="null"/> (the Sidebar collapsed) for Settings, whose sections are the page's own left menu;
+    /// view, except that a Team page keeps a Team shortcut's view open; <see langword="null"/> (the Sidebar collapsed) for
+    /// Settings, whose sections are the page's own left menu;
     /// and, for a Room, the current view, or Chats when the Sidebar was collapsed, because a Room is listed under
     /// Chats or under a Team and the Human may be looking at either.
     /// </summary>
@@ -79,11 +80,11 @@ internal static class SidebarViews
     /// <param name="current">The view selected now, or <see langword="null"/> while the Sidebar is collapsed.</param>
     public static SidebarView? ViewForArea(string area, SidebarView? current) => area switch
     {
-        "teams" => SidebarView.Teams,
+        "teams" => current == SidebarView.Team ? SidebarView.Team : SidebarView.Teams,
         "agents" => SidebarView.Agents,
         "tasks" => SidebarView.Tasks,
         "library" => SidebarView.Library,
         "settings" => null,
         _ => current ?? SidebarView.Chats,
     };
-}
+}

@@ -20,4 +20,7 @@ public enum SidebarView
 
     /// <summary>The link to the Library page.</summary>
     Library,
-}
+
+    /// <summary>One Team's Rooms, Library and Tasks folders, opened from its shortcut at the top of the Activity bar.</summary>
+    Team,
+}

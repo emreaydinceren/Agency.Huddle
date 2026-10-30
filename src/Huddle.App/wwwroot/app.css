@@ -1272,6 +1272,49 @@ emoji-picker {
     background-color: var(--hu-current-background-hover);
 }
 
+/* The Team shortcuts (TeamShortcutBar.razor) are the same 40px tiles, each holding the Team's 32px avatar, above a
+   hairline that sets them apart from the view buttons. The selected one wears the Selected treatment above. */
+.activity-bar-shortcuts {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.activity-bar-shortcut {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin: 4px;
+    padding: 0;
+    border: 0;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    background: transparent;
+    cursor: pointer;
+}
+
+.activity-bar-shortcut:hover {
+    background-color: var(--hu-hover);
+}
+
+.activity-bar-shortcut.activity-bar-item-selected {
+    background-color: var(--hu-current-background);
+    box-shadow: var(--hu-current-shadow);
+}
+
+.activity-bar-shortcut.activity-bar-item-selected:hover,
+.activity-bar-shortcut.activity-bar-item-selected:focus-visible {
+    background-color: var(--hu-current-background-hover);
+}
+
+.activity-bar-divider {
+    width: 24px;
+    margin: 4px auto;
+    border: 0;
+    border-top: 1px solid var(--hu-line-region);
+}
+
 /* The bottom toolbar's two links are the same 40px icon-only tiles as the buttons above them. */
 .activity-bar .nav-settings .mud-nav-link {
     justify-content: center;
@@ -6646,6 +6689,16 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 
 .teams-nav-host .teams-nav-folder .mud-collapse-container {
     --nav-level: 1.25;
+}
+
+/* A Team shortcut's view (TeamShortcutBar.razor) lists one Team's folders with no Team row above them, so they are
+   root rows, as the Chats view's folders are, and their rows step the same quarter level in. */
+.sidebar-view-team .teams-nav-host .teams-nav-folder {
+    --nav-level: 0;
+}
+
+.sidebar-view-team .teams-nav-host .teams-nav-folder .mud-collapse-container {
+    --nav-level: 0.25;
 }
 
 /* A folder header is a row, not a section: no gap above or below it. Outranks the section rules in Left menu. */

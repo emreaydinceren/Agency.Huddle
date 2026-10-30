@@ -51,6 +51,9 @@
        subscriptions when the Human switches away and back. *@
     <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Width="@this.DrawerWidth" Elevation="0" ClipMode="DrawerClipMode.Always" Class="shell-nav">
         <ActivityBar Selected="this.sidebarView" SelectedChanged="this.OnSidebarViewChanged">
+            <Shortcuts>
+                <TeamShortcutBar Selected="@this.ShortcutSelected" SelectedChanged="this.OnShortcutChanged" />
+            </Shortcuts>
             <Top>
                 @if (this.FeedOptions.Value.Feed.Enabled)
                 {
@@ -78,6 +81,14 @@
             <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Teams)">
                 <TeamsNav />
             </div>
+            @* The Team view a shortcut opens is its own TeamsNav, narrowed to that Team; it is mounted while a shortcut
+               has been used, so its open folders survive a switch to another view and back. *@
+            @if (this.shortcutTeam is not null)
+            {
+                <div class="sidebar-view sidebar-view-team" hidden="@(this.sidebarView != SidebarView.Team)">
+                    <TeamsNav Team="@this.shortcutTeam" />
+                </div>
+            }
             <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Agents)">
                 <MudNavMenu>
                     <NavTabLink Href="/agents" TabTitle="Agents" Icon="@Icons.Material.Filled.Group" Class="nav-row-link">Agents</NavTabLink>
@@ -113,6 +124,12 @@
     private ThemeDescriptor descriptor = ThemeCatalog.BuiltIn[0];
     private SidebarView? sidebarView = SidebarViews.Default;
 
+    /// <summary>The Team whose shortcut was last selected, or <see langword="null"/> before any was.</summary>
+    private string? shortcutTeam;
+
+    /// <summary>The Team whose shortcut is pressed: <see cref="shortcutTeam"/> while its view is the one shown.</summary>
+    private string? ShortcutSelected => this.sidebarView == SidebarView.Team ? this.shortcutTeam : null;
+
     /// <summary>The area the focused pane's page was last in (see <see cref="SidebarViews.AreaOf(string?)"/>), so the Sidebar follows a change of area and not every navigation.</summary>
     private string? followedArea;
 
@@ -139,6 +156,20 @@
     private void OnSidebarViewChanged(SidebarView? view)
     {
         this.sidebarView = view;
+    }
+
+    /// <summary>Shows the Team a shortcut selected, or collapses the Sidebar when the shortcut reports none.</summary>
+    /// <param name="team">The Team to show, or <see langword="null"/> to collapse.</param>
+    private void OnShortcutChanged(string? team)
+    {
+        if (team is null)
+        {
+            this.sidebarView = null;
+            return;
+        }
+
+        this.shortcutTeam = team;
+        this.sidebarView = SidebarView.Team;
     }
 
     /// <summary>

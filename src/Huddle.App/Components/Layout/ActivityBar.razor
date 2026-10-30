@@ -1,13 +1,15 @@
 @*
     The Activity bar (S5): a 48px strip at the left edge of the shell, like VS Code's. Its top toolbar holds one
     button per Sidebar view; the selected one is pressed and the others are not, and clicking the selected one
-    collapses the Sidebar. The Top slot puts the Feed link above them. Its bottom toolbar is the Bottom slot, which MainLayout
+    collapses the Sidebar. The Shortcuts slot comes first, above a hairline (MainLayout fills it with the Team
+    shortcuts); the Top slot puts the Feed link above the view buttons. Its bottom toolbar is the Bottom slot, which MainLayout
     fills with Archived chats and Settings. The bar holds no state: MainLayout owns the selected view.
 *@
 @using Microsoft.Extensions.Options
 @inject IOptions<TeamOptions> Options
 
 <nav class="activity-bar" aria-label="Activity bar">
+    @this.Shortcuts
     <div class="activity-bar-top" role="toolbar" aria-orientation="vertical" aria-label="Sidebar views">
         @this.Top
         @foreach (SidebarViewItem item in SidebarViews.Available(this.Options.Value))
@@ -41,6 +43,10 @@
     /// <summary>Raised with the view a click selects, or <see langword="null"/> when the click collapses the Sidebar.</summary>
     [Parameter]
     public EventCallback<SidebarView?> SelectedChanged { get; set; }
+
+    /// <summary>What comes before the top toolbar: the Team shortcuts, which draw their own hairline below them.</summary>
+    [Parameter]
+    public RenderFragment? Shortcuts { get; set; }
 
     /// <summary>The top toolbar's leading content, above the Sidebar view buttons: the Feed link.</summary>
     [Parameter]

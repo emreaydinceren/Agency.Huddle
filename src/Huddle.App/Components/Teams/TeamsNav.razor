@@ -13,6 +13,9 @@
     A MudNavGroup title toggles the group and has no Href, so a Team is a link plus a separate
     chevron rather than a nested group. The chevron's behaviour (expansion state) and the New project
     handler arrive in tasks 7.3 and 7.4; this file only lists.
+
+    With Team set (a Team shortcut in the Activity bar, TeamShortcutBar.razor) it lists that one Team's folders and
+    nothing else: no Team row, no "Show all" and no "Build a team", and the folders are always shown.
 *@
 
 @using System.Text.Json
@@ -33,41 +36,44 @@
 
 <div class="teams-nav-host">
     <MudNavMenu Class="teams-nav">
-        @foreach (TeamSummary team in SidebarRows.Visible(this.Catalog.Teams, this.showAllTeams, this.IsRouteTeam))
+        @foreach (TeamSummary team in this.ListedTeams())
         {
-            bool isExpanded = this.IsExpanded(team.Name);
-            <div class="hover-reveal-row"
-                 @oncontextmenu="@(e => this.OnRowContextMenuAsync(team.Name, e))"
-                 @oncontextmenu:preventDefault="true">
-                <MudIconButton Icon="@(isExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
-                               Size="Size.Small" Class="teams-nav-chevron"
-                               aria-label="@(isExpanded ? $"Collapse {team.Name}" : $"Expand {team.Name}")"
-                               aria-expanded="@(isExpanded ? "true" : "false")"
-                               OnClick="@(() => this.ToggleAsync(team.Name))" />
-                <NavTabLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}")" TabTitle="@team.Name" Match="NavLinkMatch.Prefix"
-                            Class="hover-reveal-link"><TeamAvatar Team="@team.Name" Avatar="team.Avatar" Size="Size.Small" Class="teams-nav-avatar" /><span class="sidebar-row-label" title="@team.Name">@team.Name</span></NavTabLink>
-                @* Meta never takes the row's text: the member count trails the name, and its tooltip says what it counts. *@
-                <span class="sidebar-row-meta" title="@(team.HasMembers ? Plural.Of(team.Members.Count, "member", "members") : "No members")">@team.Members.Count</span>
-                <MudMenu @ref="@this.menuRefs[team.Name]" Class="hover-reveal-menu" Dense="true">
-                    @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
-                       MudMenu does not wire a click listener around it automatically - the
-                       supplied MenuContext.ToggleAsync is how custom activator content opens
-                       the menu (TaskViewNav.razor's and RoomList.razor's own precedent). *@
-                    <ActivatorContent Context="menuContext">
-                        @* No hover tooltip (it would stay up over the first item); the label names the Team. *@
-                        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                       aria-label="@MenuDialogs.ActivatorLabel(team.Name)" Class="hover-reveal-menu-button"
-                                       OnClick="menuContext.ToggleAsync" />
-                    </ActivatorContent>
-                    <ChildContent>
-                        <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.ToggleNewChat(team.Name))">New chat</MudMenuItem>
-                        @if (this.ProjectsAllowed)
-                        {
-                            <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.NewProjectAsync(team.Name))">New project…</MudMenuItem>
-                        }
-                    </ChildContent>
-                </MudMenu>
-            </div>
+            bool isExpanded = this.Team is not null || this.IsExpanded(team.Name);
+            @if (this.Team is null)
+            {
+                <div class="hover-reveal-row"
+                     @oncontextmenu="@(e => this.OnRowContextMenuAsync(team.Name, e))"
+                     @oncontextmenu:preventDefault="true">
+                    <MudIconButton Icon="@(isExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
+                                   Size="Size.Small" Class="teams-nav-chevron"
+                                   aria-label="@(isExpanded ? $"Collapse {team.Name}" : $"Expand {team.Name}")"
+                                   aria-expanded="@(isExpanded ? "true" : "false")"
+                                   OnClick="@(() => this.ToggleAsync(team.Name))" />
+                    <NavTabLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}")" TabTitle="@team.Name" Match="NavLinkMatch.Prefix"
+                                Class="hover-reveal-link"><TeamAvatar Team="@team.Name" Avatar="team.Avatar" Size="Size.Small" Class="teams-nav-avatar" /><span class="sidebar-row-label" title="@team.Name">@team.Name</span></NavTabLink>
+                    @* Meta never takes the row's text: the member count trails the name, and its tooltip says what it counts. *@
+                    <span class="sidebar-row-meta" title="@(team.HasMembers ? Plural.Of(team.Members.Count, "member", "members") : "No members")">@team.Members.Count</span>
+                    <MudMenu @ref="@this.menuRefs[team.Name]" Class="hover-reveal-menu" Dense="true">
+                        @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
+                           MudMenu does not wire a click listener around it automatically - the
+                           supplied MenuContext.ToggleAsync is how custom activator content opens
+                           the menu (TaskViewNav.razor's and RoomList.razor's own precedent). *@
+                        <ActivatorContent Context="menuContext">
+                            @* No hover tooltip (it would stay up over the first item); the label names the Team. *@
+                            <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                           aria-label="@MenuDialogs.ActivatorLabel(team.Name)" Class="hover-reveal-menu-button"
+                                           OnClick="menuContext.ToggleAsync" />
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.ToggleNewChat(team.Name))">New chat</MudMenuItem>
+                            @if (this.ProjectsAllowed)
+                            {
+                                <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.NewProjectAsync(team.Name))">New project…</MudMenuItem>
+                            }
+                        </ChildContent>
+                    </MudMenu>
+                </div>
+            }
             @if (string.Equals(this.newChatTeam, team.Name, StringComparison.OrdinalIgnoreCase))
             {
                 <NewChat Team="@team.Name" OnStarted="this.EndNewChat" OnClosed="this.EndNewChat" />
@@ -75,6 +81,12 @@
             @if (isExpanded)
             {
                 IReadOnlyList<Room> teamRooms = this.RoomsOf(team);
+                @if (this.Team is not null && teamRooms.Count == 0 && team.Projects.Count == 0 && !this.ShowsTasksFolder)
+                {
+                    <EmptyState Title="@($"Nothing in {team.Name} yet")" Text="Its Rooms, Projects and Task Views will be listed here." />
+                    <NavTabLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}")" TabTitle="@team.Name" Icon="@Icons.Material.Outlined.Groups"
+                                Class="nav-action-link">Open @team.Name</NavTabLink>
+                }
                 @if (teamRooms.Count > 0)
                 {
                     string roomsKey = FolderKey(team.Name, RoomsFolder);
@@ -102,7 +114,7 @@
                         <ShowAllRow Total="team.Projects.Count" Expanded="this.showAllRows.Contains(libraryKey)" OnToggle="@(() => this.ToggleShowAllRows(libraryKey))" />
                     </MudNavGroup>
                 }
-                @if (this.TeamConfig.Value.Tasks.Enabled && this.Views.Views.Count > 0)
+                @if (this.ShowsTasksFolder)
                 {
                     string tasksKey = FolderKey(team.Name, TasksFolder);
                     string teamName = team.Name;
@@ -120,12 +132,19 @@
                 }
             }
         }
-        <ShowAllRow Total="this.Catalog.Teams.Count" Expanded="this.showAllTeams" OnToggle="this.ToggleShowAllTeams" />
-        <NavTabLink Href="/teams/build" TabTitle="Build a team" Icon="@Icons.Material.Filled.Add" Class="nav-action-link">Build a team</NavTabLink>
+        @if (this.Team is null)
+        {
+            <ShowAllRow Total="this.Catalog.Teams.Count" Expanded="this.showAllTeams" OnToggle="this.ToggleShowAllTeams" />
+            <NavTabLink Href="/teams/build" TabTitle="Build a team" Icon="@Icons.Material.Filled.Add" Class="nav-action-link">Build a team</NavTabLink>
+        }
     </MudNavMenu>
 </div>
 
 @code {
+    /// <summary>The one Team to list the folders of, from its Activity bar shortcut, or <see langword="null"/> for every Team.</summary>
+    [Parameter]
+    public string? Team { get; set; }
+
     private bool showAllTeams;
 
     /// <summary>Folder keys (see <see cref="FolderKey"/>) whose folder the Human opened with "Show all".</summary>
@@ -244,6 +263,14 @@
         string key = team.ToLowerInvariant();
         return (this.routeOpen && string.Equals(key, this.routeTeam, StringComparison.Ordinal)) || this.opened.Contains(key);
     }
+
+    /// <summary>The Teams to list: the catalog's rows (cut to the first few until "Show all"), or just <see cref="Team"/> when it is set.</summary>
+    private IEnumerable<TeamSummary> ListedTeams() => this.Team is { } only
+        ? this.Catalog.Teams.Where(team => string.Equals(team.Name, only, StringComparison.OrdinalIgnoreCase))
+        : SidebarRows.Visible(this.Catalog.Teams, this.showAllTeams, this.IsRouteTeam);
+
+    /// <summary>Whether a Team's Tasks folder is drawn: Tasks is on and there is a View to list.</summary>
+    private bool ShowsTasksFolder => this.TeamConfig.Value.Tasks.Enabled && this.Views.Views.Count > 0;
 
     private bool IsRouteTeam(TeamSummary team) => string.Equals(team.Name, this.routeTeam, StringComparison.OrdinalIgnoreCase);
 
