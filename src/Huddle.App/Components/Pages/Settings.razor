@@ -6,6 +6,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Agency.Huddle.App.Components.Settings
 @using Agency.Huddle.App.Components.Settings.Helpers
+@using Agency.Huddle.App.Components.Settings.RemoteAccess
 @using Agency.Huddle.App.Skills
 @using Agency.Huddle.App.Skills.Ui
 @using Agency.Huddle.App.SkillSources
@@ -119,6 +120,9 @@ else if (this.isAdmin == true)
                 case SettingsTab.Library:
                     <LibraryPanel />
                     break;
+                case SettingsTab.RemoteAccess:
+                    <RemoteAccessPanel />
+                    break;
                 default:
                     <ProfilePanel />
                     break;
@@ -176,6 +180,7 @@ else if (this.isAdmin == true)
         new(SettingsTab.Skills, "Skills", Icons.Material.Outlined.AutoAwesome),
         new(SettingsTab.TeamTypes, "Team types", Icons.Material.Outlined.AccountTree),
         new(SettingsTab.Library, "Library", Icons.Material.Outlined.FolderOpen),
+        new(SettingsTab.RemoteAccess, "Remote access", Icons.Material.Outlined.Devices),
     ];
 
     // Drives the Save button: nothing to commit means nothing to submit. Recomputed from groups

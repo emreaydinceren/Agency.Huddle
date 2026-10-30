@@ -247,6 +247,20 @@ internal sealed class DeviceRegistry
         return existed;
     }
 
+    /// <summary>Renames the device; the name is trimmed and cut to 60 characters, and a blank name becomes <c>Browser</c>.</summary>
+    /// <param name="deviceId">The device id.</param>
+    /// <param name="name">The new name.</param>
+    /// <returns>Whether the device existed.</returns>
+    public bool Rename(string deviceId, string name)
+    {
+        ArgumentNullException.ThrowIfNull(deviceId);
+        ArgumentNullException.ThrowIfNull(name);
+
+        return this.Execute(
+            "UPDATE gateway_devices SET name = $name WHERE device_id = $id;",
+            new Dictionary<string, object?>(StringComparer.Ordinal) { ["$id"] = deviceId, ["$name"] = CleanName(name) }) > 0;
+    }
+
     /// <summary>Deletes devices paired via <c>loopback</c> or <c>bootstrap</c> and unseen for <see cref="StaleAfter"/> (C-11).</summary>
     /// <returns>How many were deleted.</returns>
     public int PruneStale()

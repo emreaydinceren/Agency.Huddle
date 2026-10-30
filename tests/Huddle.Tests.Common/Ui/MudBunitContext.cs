@@ -116,6 +116,21 @@ internal sealed class MudBunitContext : BunitContext
              .. scopes.Select(scope => new System.Security.Claims.Claim("huddle:scope", scope))]);
     }
 
+    /// <summary>Signs the viewer in as the paired device <c>test-device</c> holding exactly <paramref name="scopes"/>, whose session came in over <paramref name="ingress"/> (<c>huddle:ingress</c>, for example <c>Loopback</c> or <c>Direct</c>).</summary>
+    /// <param name="ingress">The ingress kind as <c>IngressKindText</c> writes it.</param>
+    /// <param name="scopes">The scopes.</param>
+    public void SignInWithIngress(string ingress, params string[] scopes)
+    {
+        ArgumentNullException.ThrowIfNull(ingress);
+        ArgumentNullException.ThrowIfNull(scopes);
+
+        this.authorization.SetAuthorized("test-device");
+        this.authorization.SetClaims(
+            [new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "test-device"),
+             new System.Security.Claims.Claim("huddle:ingress", ingress),
+             .. scopes.Select(scope => new System.Security.Claims.Claim("huddle:scope", scope))]);
+    }
+
     /// <summary>Sets what local storage answers when the Right sidebar asks whether the viewer left it open; <see langword="null"/> is nothing remembered.</summary>
     /// <param name="open">The remembered state, or <see langword="null"/> for none.</param>
     public void RememberSidebarOpen(bool? open) =>

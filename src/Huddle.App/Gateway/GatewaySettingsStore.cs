@@ -59,6 +59,18 @@ internal sealed class GatewaySettingsStore
     /// <summary>The port desktop mode bound last time (C-11), or <see langword="null"/> when none was stored.</summary>
     public int? DesktopPort => this.Scalar("SELECT desktop_port FROM gateway_settings WHERE id = 1") is long port ? (int)port : null;
 
+    /// <summary>The overrides JSON saved from Settings (<c>{}</c> when none).</summary>
+    public string StoredOverrides => (string)(this.Scalar("SELECT overrides FROM gateway_settings WHERE id = 1") ?? "{}");
+
+    /// <summary>Replaces the overrides JSON: an object keyed by option path under <c>Team:Gateway</c> (<c>Bind</c>, <c>Auth:Mode</c>, <c>Tailscale:HttpsPort</c>, …).</summary>
+    /// <param name="json">The JSON object.</param>
+    public void SetOverrides(string json)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(json);
+
+        this.Update("UPDATE gateway_settings SET overrides = $value, updated_at = $now WHERE id = 1", json);
+    }
+
     /// <summary>Stores the port desktop mode bound (C-11).</summary>
     /// <param name="port">The port, 1 to 65535.</param>
     public void SetDesktopPort(int port)

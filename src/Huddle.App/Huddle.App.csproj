@@ -22,6 +22,7 @@
     <PackageReference Include="Microsoft.Data.Sqlite" />
     <PackageReference Include="Markdig" />
     <PackageReference Include="BouncyCastle.Cryptography" />
+    <PackageReference Include="QRCoder" />
     <PackageReference Include="MudBlazor" />
   </ItemGroup>
 

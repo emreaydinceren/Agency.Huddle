@@ -41,7 +41,12 @@ internal static class GatewayServiceCollectionExtensions
         services.AddSingleton<GatewayListener>();
         services.AddSingleton<IPostConfigureOptions<KestrelServerOptions>, GatewayKestrelConfigurator>();
         services.AddHostedService<GatewayListenerStartup>();
-        services.AddHostedService<TailscaleRuntime>();
+        services.AddSingleton<TailscaleRuntime>();
+        services.AddHostedService(static provider => provider.GetRequiredService<TailscaleRuntime>());
+        services.AddSingleton(static provider => new GatewaySettingsStore(provider.GetRequiredService<IOptions<TeamOptions>>().Value.DataDir));
+        services.AddSingleton<IQrPngEncoder, QrCoderPngEncoder>();
+        services.AddSingleton<IGatewayRuntimeView, GatewayRuntimeView>();
+        services.AddSingleton<GatewayAdminService>();
         services.AddSingleton<GatewayDynamicHosts>();
         services.AddSingleton<IOptionsChangeTokenSource<HostFilteringOptions>>(static provider => provider.GetRequiredService<GatewayDynamicHosts>());
         services.AddOptions<HostFilteringOptions>().PostConfigure<GatewayDynamicHosts>(static (options, dynamic) =>

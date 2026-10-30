@@ -62,7 +62,7 @@ public sealed class SettingsPageTests
 
         List<string?> hrefs = [.. cut.FindAll(".settings-nav a.mud-nav-link").Select(static link => link.GetAttribute("href"))];
         Assert.Equal(
-            ["/settings/profile", "/settings/prompts", "/settings/helpers", "/settings/appearance", "/settings/personas", "/settings/skills", "/settings/teamtypes", "/settings/library"],
+            ["/settings/profile", "/settings/prompts", "/settings/helpers", "/settings/appearance", "/settings/personas", "/settings/skills", "/settings/teamtypes", "/settings/library", "/settings/remoteaccess"],
             hrefs);
     }
 
@@ -85,6 +85,35 @@ public sealed class SettingsPageTests
         Assert.Equal("Profile", active.TextContent.Trim());
         Assert.Equal("page", active.GetAttribute("aria-current"));
         Assert.Single(cut.FindComponents<ProfilePanel>());
+    }
+
+    /// <summary>The <c>/settings/remoteaccess</c> route highlights the ninth row, "Remote access", after Library, and renders the Remote access panel (Spec 6.12, E1).</summary>
+    [Fact]
+    public async Task SettingsPage_RemoteAccessRoute_RendersRemoteAccessPanelAfterLibrary()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+
+        var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "remoteaccess"));
+
+        Assert.Single(cut.FindComponents<Agency.Huddle.App.Components.Settings.RemoteAccess.RemoteAccessPanel>());
+        List<AngleSharp.Dom.IElement> items = cut.FindAll(".settings-nav .mud-nav-item").ToList();
+        Assert.Equal(8, items.FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
+        Assert.Equal("Remote access", cut.Find(".settings-nav .settings-nav-item-active a.mud-nav-link").TextContent.Trim());
+    }
+
+    /// <summary>A paired device without the admin scope sees the "Settings need admin access." notice on the Remote access route, never the panel (C-13, regression).</summary>
+    [Fact]
+    public async Task SettingsPage_RemoteAccessRoute_LimitedSession_SeesTheNoticeNotThePanel()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+        ctx.SignInWithScopes("operator.read", "operator.write");
+
+        var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "remoteaccess"));
+
+        Assert.Equal("Settings need admin access.", cut.Find("[role=alert]").TextContent.Trim());
+        Assert.Empty(cut.FindComponents<Agency.Huddle.App.Components.Settings.RemoteAccess.RemoteAccessPanel>());
     }
 
     /// <summary>The <c>/settings/library</c> route highlights the eighth menu row and renders the Library panel (D3: the tab was unreachable).</summary>

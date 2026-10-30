@@ -20,6 +20,10 @@ internal sealed class TailscaleRuntime(
 {
     private readonly CancellationTokenSource stop = new();
     private Task? work;
+    private volatile TailscaleStatusPoller? poller;
+
+    /// <summary>The latest Tailscale status and stray Serve routes the poller read, or <see langword="null"/> before the first poll or when Tailscale is off.</summary>
+    public TailscaleStatusPoller.Snapshot? Snapshot => this.poller?.Current;
 
     /// <summary>Whether <c>Tailscale:Mode</c> is <c>serve</c> or <c>funnel</c>.</summary>
     /// <param name="options">The gateway options.</param>
@@ -90,8 +94,9 @@ internal sealed class TailscaleRuntime(
                 string mode = options.Tailscale.Mode;
                 logger.LogInformation("Tailscale {Mode} claim on port {Port}: {State}.", mode, port, state);
             }
-            TailscaleStatusPoller poller = new(cli, hosts, claim, appPort);
-            await poller.RunAsync(cancellationToken).ConfigureAwait(false);
+            TailscaleStatusPoller statusPoller = new(cli, hosts, claim, appPort);
+            this.poller = statusPoller;
+            await statusPoller.RunAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

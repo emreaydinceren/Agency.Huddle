@@ -30,4 +30,7 @@ public enum SettingsTab
 
     /// <summary>The Library settings: pinned roots and the pane side.</summary>
     Library,
+
+    /// <summary>Remote access: the gateway, pairing requests, devices and the Security check. Admin only (Spec 6.12).</summary>
+    RemoteAccess,
 }

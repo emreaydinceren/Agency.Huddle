@@ -11,8 +11,10 @@ internal sealed class GatewaySettings
 
     private static readonly string[] Placeholders = ["undefined", "null", "__OPENCLAW_REDACTED__", "__HUDDLE_REDACTED__"];
 
-    private readonly string? clearPassword;
-    private readonly byte[]? passwordHash;
+    private volatile string token;
+    private volatile GatewaySecretSource tokenSource;
+    private volatile string? clearPassword;
+    private volatile byte[]? passwordHash;
 
     private GatewaySettings(
         GatewayOptions options,
@@ -24,26 +26,29 @@ internal sealed class GatewaySettings
     {
         this.Options = options;
         this.InstanceId = instanceId;
-        this.Token = token;
-        this.TokenSource = tokenSource;
+        this.token = token;
+        this.tokenSource = tokenSource;
         this.clearPassword = clearPassword;
         this.passwordHash = passwordHash;
     }
 
-    /// <summary>The options bound from <c>Team:Gateway</c>.</summary>
+    /// <summary>The options bound from <c>Team:Gateway</c>, with the overrides saved from Settings applied.</summary>
     public GatewayOptions Options { get; }
 
     /// <summary>The Instance id.</summary>
     public string InstanceId { get; }
 
     /// <summary>The effective gateway token.</summary>
-    public string Token { get; }
+    public string Token => this.token;
 
     /// <summary>Where <see cref="Token"/> came from.</summary>
-    public GatewaySecretSource TokenSource { get; }
+    public GatewaySecretSource TokenSource => this.tokenSource;
 
     /// <summary>Whether any gateway password is configured, in the environment or stored.</summary>
     public bool HasPassword => this.clearPassword is not null || this.passwordHash is not null;
+
+    /// <summary>The length of the password when it is known (configuration or environment); a stored password is a hash, so its length is not.</summary>
+    internal int? KnownPasswordLength => this.clearPassword?.Length;
 
     /// <summary>Whether <paramref name="presented"/> is the gateway token.</summary>
     /// <param name="presented">The presented token.</param>
@@ -68,6 +73,26 @@ internal sealed class GatewaySettings
         return this.passwordHash is not null && GatewaySecrets.VerifyPassword(presented, this.passwordHash);
     }
 
+    /// <summary>Makes <paramref name="newToken"/> the running token at once (Settings rotated it); it is now the stored one.</summary>
+    /// <param name="newToken">The stored token.</param>
+    internal void ReplaceToken(string newToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(newToken);
+
+        this.token = newToken;
+        this.tokenSource = GatewaySecretSource.Stored;
+    }
+
+    /// <summary>Makes the stored password hash the one that verifies at once, in place of any password the environment or configuration supplied.</summary>
+    /// <param name="newHash">Salt followed by hash, as <see cref="GatewaySettingsStore.StoredPasswordHash"/> holds it.</param>
+    internal void ReplacePasswordHash(byte[] newHash)
+    {
+        ArgumentNullException.ThrowIfNull(newHash);
+
+        this.passwordHash = newHash;
+        this.clearPassword = null;
+    }
+
     /// <summary>
     /// Reads the settings before the app is built, with no dependency injection: binds <c>Team:Gateway</c>, opens the
     /// store, and resolves the token configuration, then environment, then stored (generating one when none).
@@ -89,9 +114,10 @@ internal sealed class GatewaySettings
         IGatewayEnvironment env = environment ?? new ProcessGatewayEnvironment();
         GatewayOptions options = new();
         configuration.GetSection(GatewayOptions.SectionName).Bind(options);
-        _ = options.Auth.Mode;
 
         GatewaySettingsStore store = new(dataDir, timeProvider);
+        GatewayOverrides.Apply(options, store.StoredOverrides);
+        _ = options.Auth.Mode;
 
         string? configToken = Supplied(options.Auth.Token, "Team:Gateway:Auth:Token");
         string? envToken = Supplied(env.Get(TokenEnvironmentVariable), TokenEnvironmentVariable);

@@ -131,6 +131,8 @@ internal static class ServicePresets
         typeof(AppearanceStore),
         typeof(SkillStore),
         typeof(LibraryRootStore),
+        typeof(Agency.Huddle.App.Gateway.GatewayAdminService),
+        typeof(Agency.Huddle.App.Gateway.IGatewayRuntimeView),
     ];
 
     /// <summary>Registers, as singletons in <paramref name="services"/>, the instance <paramref name="source"/> holds for each of <paramref name="types"/>.</summary>
