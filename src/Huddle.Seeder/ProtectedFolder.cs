@@ -1,6 +1,6 @@
 namespace Agency.Huddle.Seeder;
 
-/// <summary>A folder the seeder must never wipe.</summary>
+/// <summary>A folder the seeder must never wipe. Seeder spec §4 (SEED-SAFE-3).</summary>
 /// <param name="Path">The folder.</param>
 /// <param name="BlocksDescendants">
 /// <see langword="true"/> when nothing inside the folder may be wiped either (the repository);

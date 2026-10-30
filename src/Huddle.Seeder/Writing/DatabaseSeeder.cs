@@ -15,6 +15,7 @@ namespace Agency.Huddle.Seeder.Writing;
 /// <summary>
 /// Creates <c>team.db</c> and the Room transcripts through Huddle's own <see cref="ITeamDirectory"/> and
 /// <see cref="IChatStore"/>, so the schema and the transcript format stay the app's business.
+/// Seeder spec §5, step 3.
 /// </summary>
 internal static class DatabaseSeeder
 {

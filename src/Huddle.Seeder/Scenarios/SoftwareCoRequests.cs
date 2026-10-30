@@ -5,6 +5,7 @@ namespace Agency.Huddle.Seeder.Scenarios;
 /// <summary>
 /// Requests between Teams for the <c>software-co</c> scenario: Tasks one Team filed with another. One per triage state
 /// (untriaged, needs-info, accepted, declined) and one that is Done but not yet confirmed by the requesting Team's QA.
+/// Seeder spec SEED-SC-11; Appendix A.2 (Add a Request).
 /// </summary>
 internal static class SoftwareCoRequests
 {

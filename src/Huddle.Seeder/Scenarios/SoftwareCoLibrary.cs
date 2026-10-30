@@ -9,6 +9,7 @@ namespace Agency.Huddle.Seeder.Scenarios;
 /// Library notes, Team and Project memory, and Agent working files for the <c>software-co</c> scenario.
 /// Wikilinks resolve by file name, so <c>Personas</c> gains three backlinks, <c>Architecture</c> gains three,
 /// and <c>Legal-Checklist</c> is deliberately left unresolved.
+/// Seeder spec SEED-SC-1, -2 and -6 to -8; new notes and memory go in SoftwareCoNotes (Appendix A.2).
 /// </summary>
 internal static class SoftwareCoLibrary
 {
@@ -103,11 +104,10 @@ internal static class SoftwareCoLibrary
         new("Archive", []),
     ];
 
-    /// <summary>The picture files: a chart in a Team folder (Library image preview) and the avatar picture the Avatars file names.</summary>
+    /// <summary>The picture files: a chart in a Team folder (Library image preview). Agent avatars come from the Avatar Library (<c>AvatarWriter</c>).</summary>
     internal static IReadOnlyList<SeedBinaryFile> BinaryFiles { get; } =
     [
         new("Teams/Growth/Pricing Page/competitor-chart.png", SeedImages.Gradient(64, (0x2e, 0x7d, 0x6b), (0xd1, 0x8a, 0x00))),
-        new("avatars/5eed00000000000000000000000000a1.png", SeedImages.Gradient(32, (0x3b, 0x6e, 0xa5), (0xff, 0xff, 0xff))),
     ];
 
     /// <summary>

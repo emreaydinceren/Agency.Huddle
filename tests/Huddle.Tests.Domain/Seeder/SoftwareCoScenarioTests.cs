@@ -7,7 +7,7 @@ using Agency.Huddle.Tests.Library;
 
 namespace Agency.Huddle.Tests.Seeder;
 
-/// <summary>Pins the <c>software-co</c> plan against the requirements and against the coverage list in <c>agents/DataSeeding.md</c>. No files are written.</summary>
+/// <summary>Pins the <c>software-co</c> plan against the requirements and against the coverage list in <c>agents/DataSeeding.md</c>. No files are written. Seeder spec §6 and §8.</summary>
 public sealed partial class SoftwareCoScenarioTests
 {
     private static readonly string[] AllStatuses = ["Backlog", "To Do", "In Progress", "Review", "Done", "Cancelled", "Duplicate", "Rejected"];
@@ -17,35 +17,35 @@ public sealed partial class SoftwareCoScenarioTests
     [GeneratedRegex(@"\b[A-Z]{4}-\d{4}\b", RegexOptions.CultureInvariant)]
     private static partial Regex TaskIdPattern();
 
-    /// <summary>The scenario list shows what the seed now covers: Team Rooms, Sprints and Requests are named.</summary>
+    /// <summary>SEED-SC-12: The scenario list shows what the seed now covers: the household Team, Team Rooms, Sprints and Requests are named.</summary>
     [Fact]
     public void Description_NamesTheCoveredFeatures()
     {
         Assert.Equal(
-            "A software company: Platform, Growth and Support (7 Projects, shared Agents, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Archive.",
+            "A software company and a family: Platform, Growth, Support and Home and Family (12 Projects, shared Agents, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Archive.",
             new SoftwareCoScenario().Description);
     }
 
-    /// <summary>The request: at least three Teams, each with at least two Projects, sharing Agents between them.</summary>
+    /// <summary>SEED-SC-1: Four working Teams, each with at least two Projects; three work Agents span two or more of them, and the household Agents stay in their own Team.</summary>
     [Fact]
-    public void Plan_HasThreeTeamsWithTwoProjectsEachAndSharedAgents()
+    public void Plan_HasFourWorkingTeamsAndSharedAgents()
     {
         SeedPlan plan = Plan();
 
         string[] working = [.. plan.Teams.Where(t => t.Projects.Count >= 2).Select(t => t.Name)];
 
-        Assert.Equal(["Platform", "Growth", "Support"], working);
+        Assert.Equal(["Platform", "Growth", "Support", "Home and Family"], working);
         Assert.Contains(plan.Agents, t => t.Teams.Intersect(working, StringComparer.OrdinalIgnoreCase).Count() >= 2);
         Assert.Equal(3, plan.Agents.Count(t => t.Teams.Intersect(working, StringComparer.OrdinalIgnoreCase).Count() >= 2));
     }
 
-    /// <summary>The cast agreed in the interview: nine Agents with these Team memberships.</summary>
+    /// <summary>SEED-SC-3: The cast agreed in the interview: nine work Agents, then the four household Agents, with these Team memberships.</summary>
     [Fact]
     public void Plan_HasTheAgreedCast()
     {
         SeedPlan plan = Plan();
 
-        Assert.Equal(["Grace", "Marcus", "Lena", "Owen", "Sofia", "Dana", "Alan", "Maya", "Ben"], plan.Agents.Select(t => t.Name));
+        Assert.Equal(["Grace", "Marcus", "Lena", "Owen", "Sofia", "Dana", "Alan", "Maya", "Ben", "Hattie", "Theo", "Ravi", "Iris"], plan.Agents.Select(t => t.Name));
         Assert.Equal(["Platform", "Growth"], plan.Agents.Single(t => t.Name == "Lena").Teams);
         Assert.Equal(["Growth"], plan.Agents.Single(t => t.Name == "Maya").Teams);
         Assert.Equal(["Support", "Archive"], plan.Agents.Single(t => t.Name == "Dana").Teams);
@@ -53,7 +53,7 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.Equal(["incident-postmortem"], plan.Agents.Single(t => t.Name == "Alan").Skills);
     }
 
-    /// <summary>Every Team an Agent names exists, and the two edge-case Teams are what the interview asked for.</summary>
+    /// <summary>SEED-SC-2: Every Team an Agent names exists, and the two edge-case Teams are what the interview asked for.</summary>
     [Fact]
     public void Plan_HasTheEdgeTeams()
     {
@@ -66,7 +66,7 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.Equal(["Grace", "Dana"], plan.Agents.Where(t => t.Teams.Contains("Archive")).Select(t => t.Name));
     }
 
-    /// <summary>Names and aliases are unique, and no alias equals another Agent's Name, as the Persona loader requires.</summary>
+    /// <summary>SEED-INV-7: Names and aliases are unique, and no alias equals another Agent's Name, as the Persona loader requires.</summary>
     [Fact]
     public void Plan_AgentNamesAndAliasesAreUnique()
     {
@@ -77,17 +77,17 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.All(plan.Agents, t => Assert.DoesNotContain(plan.Agents.Where(o => o != t), o => string.Equals(o.Name, t.Alias, StringComparison.OrdinalIgnoreCase)));
     }
 
-    /// <summary>All eight statuses appear, and 46 Tasks are seeded: 41 ordinary ones and 5 Requests.</summary>
+    /// <summary>SEED-SC-4: All eight statuses appear, and 46 Tasks are seeded: 41 ordinary ones and 5 Requests.</summary>
     [Fact]
     public void Plan_CoversEveryTaskStatus()
     {
         SeedPlan plan = Plan();
 
-        Assert.Equal(46, plan.Tasks.Count);
+        Assert.Equal(64, plan.Tasks.Count);
         Assert.All(AllStatuses, status => Assert.Contains(plan.Tasks, t => t.Status == status));
     }
 
-    /// <summary>Ids are unique, the number is 4 digits, and the prefix is what the app would derive from the Team name.</summary>
+    /// <summary>SEED-INV-3: Ids are unique, the number is 4 digits, and the prefix is what the app would derive from the Team name.</summary>
     [Fact]
     public void Plan_TaskIdsAreUniqueAndUseTheDerivedPrefix()
     {
@@ -102,7 +102,7 @@ public sealed partial class SoftwareCoScenarioTests
         });
     }
 
-    /// <summary>Every reference between Tasks, Agents, Teams and Projects points at something that exists.</summary>
+    /// <summary>SEED-INV-6: Every reference between Tasks, Agents, Teams and Projects points at something that exists.</summary>
     [Fact]
     public void Plan_ReferencesResolve()
     {
@@ -125,7 +125,7 @@ public sealed partial class SoftwareCoScenarioTests
     }
 
     /// <summary>
-    /// A finished Task is closed and an unfinished one is open, so the <c>_closed</c> folder always agrees with the status. The one
+    /// SEED-INV-4: A finished Task is closed and an unfinished one is open, so the <c>_closed</c> folder always agrees with the status. The one
     /// exception is a Done Request nobody has confirmed: the app refuses to close it until the requesting Team's QA confirms.
     /// </summary>
     [Fact]
@@ -138,7 +138,7 @@ public sealed partial class SoftwareCoScenarioTests
         });
     }
 
-    /// <summary>Change log times must run forward, and the last entry must be in the past so Huddle does not see the file as newer.</summary>
+    /// <summary>SEED-INV-5: Change log times must run forward, and the last entry must be in the past so Huddle does not see the file as newer.</summary>
     [Fact]
     public void Plan_ChangeLogsRunForwardAndEndInThePast()
     {
@@ -157,7 +157,7 @@ public sealed partial class SoftwareCoScenarioTests
         });
     }
 
-    /// <summary>The derived states a tester needs: overdue, blocked, blocked only by a finished Task, sub-task, Duplicate, unassigned, Human-assigned.</summary>
+    /// <summary>SEED-SC-4: The derived states a tester needs: overdue, blocked, blocked only by a finished Task, sub-task, Duplicate, unassigned, Human-assigned.</summary>
     [Fact]
     public void Plan_CoversTheDerivedTaskStates()
     {
@@ -179,7 +179,7 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.Contains(plan.Tasks, t => t.Creator != plan.HumanName);
     }
 
-    /// <summary>Overdue dates are at least two days back so they stay overdue in every time zone.</summary>
+    /// <summary>SEED-INV-2: Overdue dates are at least two days back so they stay overdue in every time zone.</summary>
     [Fact]
     public void Plan_OverdueTasksAreAtLeastTwoDaysLate()
     {
@@ -188,7 +188,7 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.All(plan.Tasks.Where(t => ManifestWriter.Overdue(plan).Contains(t.Id)), t => Assert.True(t.DueOffset <= -2, t.Id));
     }
 
-    /// <summary>At least one Project has no Tasks, so the empty-Project state is testable.</summary>
+    /// <summary>SEED-SC-5: At least one Project has no Tasks, so the empty-Project state is testable.</summary>
     [Fact]
     public void Plan_HasAProjectWithNoTasks()
     {
@@ -198,7 +198,7 @@ public sealed partial class SoftwareCoScenarioTests
             x => !plan.Tasks.Any(t => t.Location.Team == x.Team && t.Location.Project == x.Project));
     }
 
-    /// <summary>Notes link to one another: one note has several backlinks and exactly one link is unresolved.</summary>
+    /// <summary>SEED-SC-7, SEED-SC-15: Notes link to one another: one note has several backlinks and exactly one link is unresolved.</summary>
     [Fact]
     public void Plan_LibraryHasBacklinksAndOneUnresolvedLink()
     {
@@ -213,7 +213,7 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.Contains(plan.Files, f => f.RelativePath.StartsWith("Agents/Alan/work/", StringComparison.Ordinal) && !f.RelativePath.Contains("/memory/", StringComparison.Ordinal));
     }
 
-    /// <summary>Team memory, Project memory and Agent memory each exist.</summary>
+    /// <summary>SEED-SC-6: Team memory, Project memory and Agent memory each exist.</summary>
     [Fact]
     public void Plan_HasThreeKindsOfMemory()
     {
@@ -225,7 +225,7 @@ public sealed partial class SoftwareCoScenarioTests
     }
 
     /// <summary>
-    /// Six root Rooms (two one-to-one, three groups and one archived; one custom-named) and six Team-scoped ones (three Team Rooms,
+    /// SEED-SC-9: Six root Rooms (two one-to-one, three groups and one archived; one custom-named) and six Team-scoped ones (three Team Rooms,
     /// two Team chats and a Team one-to-one); transcripts of 8 to 15 messages.
     /// </summary>
     [Fact]
@@ -234,14 +234,14 @@ public sealed partial class SoftwareCoScenarioTests
         SeedPlan plan = Plan();
 
         Assert.Equal(["Grace", "Owen", "Platform standup", "Launch crew", "Q2 retro", "Incident 0412 war room"], plan.Rooms.Where(r => r.Team is null).Select(r => r.Name));
-        Assert.Equal(["Platform", "Growth", "Support"], plan.Rooms.Where(r => r.IsTeamRoom).Select(r => r.Team));
-        Assert.Equal(3, plan.Rooms.Count(r => r.Team is not null && !r.IsTeamRoom));
+        Assert.Equal(["Platform", "Growth", "Support", "Home and Family"], plan.Rooms.Where(r => r.IsTeamRoom).Select(r => r.Team));
+        Assert.Equal(6, plan.Rooms.Count(r => r.Team is not null && !r.IsTeamRoom));
         Assert.Equal(2, plan.Rooms.Count(r => r.Team is null && r.Members.Count == 1));
         Assert.Equal(["Q2 retro"], plan.Rooms.Where(r => r.Archived).Select(r => r.Name));
         Assert.All(plan.Rooms, r => Assert.InRange(r.Messages.Count, 8, 15));
     }
 
-    /// <summary>Messages come only from the Human or a member, run forward in time, and every Task id they mention exists.</summary>
+    /// <summary>SEED-INV-6, SEED-INV-8: Messages come only from the Human or a member, run forward in time, and every Task id they mention exists.</summary>
     [Fact]
     public void Plan_RoomTranscriptsAreConsistent()
     {
@@ -261,7 +261,7 @@ public sealed partial class SoftwareCoScenarioTests
     }
 
     /// <summary>
-    /// Each tagged note shows one tag feature through ordinary content: a comma string, a quoted flow list, a block list with a
+    /// SEED-SC-8: Each tagged note shows one tag feature through ordinary content: a comma string, a quoted flow list, a block list with a
     /// non-Latin tag and an emoji, a malformed <c>tags: #draft</c>, a <c>...</c> closer, tags in headings, and what is not a tag
     /// (ticket numbers, Task ids, code, URLs and comments). The expected tags are exact.
     /// </summary>
@@ -281,7 +281,7 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.Equal(expected, string.Join("|", NoteTags.Of(note.Content)));
     }
 
-    /// <summary>The seeded Library has nested tags across all three Teams, a casing variant that merges, and a tag shared by several notes.</summary>
+    /// <summary>SEED-SC-8, SEED-SC-15: The seeded Library has nested tags across all three Teams, a casing variant that merges, and a tag shared by several notes.</summary>
     [Fact]
     public void Plan_Library_HasNestedSharedTagsAcrossTeams()
     {
@@ -301,7 +301,7 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.Equal(["platform/api", "platform/api/v2"], tagged["Teams/Platform/API v2/API-v2-Design.md"]);
     }
 
-    /// <summary>Every view id is unique and a saved View exists for a list, a kanban and a closed scope.</summary>
+    /// <summary>SEED-SC-10: Every view id is unique and a saved View exists for a list, a kanban and a closed scope.</summary>
     [Fact]
     public void Plan_ViewsCoverListKanbanAndClosed()
     {
@@ -402,4 +402,102 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.NotEmpty(links);
         Assert.All(links, link => Assert.NotNull(fixture.Index.Resolve(note, link).Path));
     }
+
+    /// <summary>SEED-SC-13: every Team root and every Project folder holds at least four Markdown or text documents of its own; Sandbox stays empty.</summary>
+    [Fact]
+    public void Plan_EveryTeamAndProjectHasFourDocuments()
+    {
+        SeedPlan plan = Plan();
+        string[] folders =
+        [
+            .. plan.Teams
+                .Where(static t => !string.Equals(t.Name, "Sandbox", StringComparison.Ordinal))
+                .SelectMany(static t => new[] { $"Teams/{t.Name}" }.Concat(t.Projects.Select(p => $"Teams/{t.Name}/{p}"))),
+        ];
+
+        Assert.All(folders, folder =>
+        {
+            int documents = plan.Files.Count(f => IsDocument(f.RelativePath) && string.Equals(FolderOf(f.RelativePath), folder, StringComparison.Ordinal));
+            Assert.True(documents >= 4, $"{folder} has {documents} documents.");
+        });
+    }
+
+    /// <summary>SEED-SC-14: three Team memory facts per Team with members, one per Project, two per Agent, and every fact is one line.</summary>
+    [Fact]
+    public void Plan_MemoryCoversEveryTeamProjectAndAgent()
+    {
+        SeedPlan plan = Plan();
+        HashSet<string> staffed = new(plan.Agents.SelectMany(static a => a.Teams), StringComparer.Ordinal);
+
+        Assert.All(plan.Teams.Where(t => staffed.Contains(t.Name)), team => Assert.True(MemoryIn(plan, $"Teams/{team.Name}/memory") >= 3, team.Name));
+        Assert.All(plan.Teams.SelectMany(static t => t.Projects.Select(p => $"Teams/{t.Name}/{p}/memory")), folder => Assert.True(MemoryIn(plan, folder) >= 1, folder));
+        Assert.All(plan.Agents, agent => Assert.True(MemoryIn(plan, $"Agents/{agent.Name}/work/memory") >= 2, agent.Name));
+        Assert.All(plan.Files.Where(static f => f.RelativePath.Contains("/memory/", StringComparison.Ordinal)), fact =>
+            Assert.DoesNotContain('\n', fact.Content.TrimEnd('\n')));
+    }
+
+    /// <summary>SEED-HOME-1, -2: Home and Family has its five Projects, and its four Agents belong to it and nothing else.</summary>
+    [Fact]
+    public void Plan_HomeAndFamily_HasItsProjectsAndCast()
+    {
+        SeedPlan plan = Plan();
+
+        SeedTeam home = Assert.Single(plan.Teams, t => t.Name == SoftwareCoHome.Team);
+        Assert.Equal(["Kids and School", "Meals", "Home Maintenance", "Family Admin", "Holidays and Events"], home.Projects);
+        Assert.Equal(["Hattie", "Theo", "Ravi", "Iris"], plan.Agents.Where(a => a.Teams.Contains(SoftwareCoHome.Team)).Select(a => a.Name));
+        Assert.All(plan.Agents.Where(a => a.Teams.Contains(SoftwareCoHome.Team)), a => Assert.Equal([SoftwareCoHome.Team], a.Teams));
+    }
+
+    /// <summary>SEED-HOME-3: family members are never users: no Task is assigned to them, no Room holds them, and Sam's card is tagged instead.</summary>
+    [Fact]
+    public void Plan_HomeAndFamily_FamilyAreCharactersNotUsers()
+    {
+        SeedPlan plan = Plan();
+        HashSet<string> people = new([plan.HumanName, .. plan.Agents.Select(a => a.Name)], StringComparer.Ordinal);
+
+        Assert.All(plan.Tasks.Select(t => t.Assignee).OfType<string>(), assignee => Assert.Contains(assignee, people));
+        Assert.All(plan.Rooms.SelectMany(r => r.Members), m => Assert.Contains(m, people));
+        SeedTask sams = Assert.Single(plan.Tasks, t => t.Tags.Contains("owner/sam") && t.Status != "Duplicate");
+        Assert.Null(sams.Assignee);
+    }
+
+    /// <summary>SEED-HOME-4: the household's Tasks use every status and show the states a family meets.</summary>
+    [Fact]
+    public void Plan_HomeAndFamily_TasksCoverEveryState()
+    {
+        SeedPlan plan = Plan();
+        SeedTask[] home = [.. plan.Tasks.Where(t => t.Location.Team == SoftwareCoHome.Team)];
+
+        Assert.All(AllStatuses, status => Assert.Contains(home, t => t.Status == status));
+        Assert.Contains(home, t => t.DueOffset == 1 && t.Assignee == plan.HumanName);
+        Assert.Contains(home, t => ManifestWriter.Overdue(plan).Contains(t.Id));
+        Assert.Contains(home, t => ManifestWriter.Blocked(plan).Contains(t.Id));
+        Assert.Contains(home, t => t.Parent is not null);
+        Assert.Contains(home, t => t.Assignee is null);
+        Assert.Contains(home, t => t.HumanGate);
+    }
+
+    /// <summary>SEED-HOME-6: Mia's peanut allergy is a Meals memory fact, and Theo quotes it in a household Room.</summary>
+    [Fact]
+    public void Plan_HomeAndFamily_AgentQuotesItsMemory()
+    {
+        SeedPlan plan = Plan();
+
+        SeedFile fact = Assert.Single(plan.Files, f => f.RelativePath == $"Teams/{SoftwareCoHome.Team}/Meals/memory/mia-peanut-allergy.md");
+        SeedRoom planning = Assert.Single(plan.Rooms, r => r.Key == SoftwareCoHome.ChatSundayPlanning);
+        SeedMessage quote = Assert.Single(planning.Messages, m => m.Sender == "Theo" && m.Time == "16:02");
+
+        Assert.Equal(SoftwareCoHome.Team, planning.Team);
+        Assert.Equal("Mia is allergic to peanuts: nothing with peanuts comes into the kitchen.\n", fact.Content);
+        Assert.Equal("Five dinners in {{lib:Teams/Home and Family/Meals/Weekly-Meal-Plan.md}}. No peanuts anywhere, as always for Mia's allergy.", quote.Text);
+    }
+
+    private static bool IsDocument(string path) =>
+        (path.EndsWith(".md", StringComparison.Ordinal) || path.EndsWith(".txt", StringComparison.Ordinal))
+        && !path.Contains("/memory/", StringComparison.Ordinal);
+
+    private static string FolderOf(string path) => path[..path.LastIndexOf('/')];
+
+    private static int MemoryIn(SeedPlan plan, string folder) =>
+        plan.Files.Count(f => string.Equals(FolderOf(f.RelativePath), folder, StringComparison.Ordinal));
 }

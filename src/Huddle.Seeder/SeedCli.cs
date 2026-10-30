@@ -3,7 +3,7 @@ using Agency.Huddle.Seeder.Scenarios;
 
 namespace Agency.Huddle.Seeder;
 
-/// <summary>The command line: parsing, running and reporting. Kept out of <c>Program</c> so it can be tested with fake writers and a fake clock.</summary>
+/// <summary>The command line: parsing, running and reporting. Kept out of <c>Program</c> so it can be tested with fake writers and a fake clock. Seeder spec §3 (SEED-CLI-1 to -4).</summary>
 internal static class SeedCli
 {
     /// <summary>Parses the arguments, runs the seeder and prints the result.</summary>

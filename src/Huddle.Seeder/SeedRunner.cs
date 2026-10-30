@@ -1,9 +1,10 @@
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.Seeder.Model;
 using Agency.Huddle.Seeder.Writing;
 
 namespace Agency.Huddle.Seeder;
 
-/// <summary>Wipes the seed root and builds a scenario into it. Huddle is never started; everything goes through files and Huddle's own public data API.</summary>
+/// <summary>Wipes the seed root and builds a scenario into it. Huddle is never started; everything goes through files and Huddle's own public data API. Seeder spec §5, the write order; Appendix A.2 (Seed a new kind of thing).</summary>
 internal static class SeedRunner
 {
     private const string LayoutMarker = ".layout-migrated";
@@ -39,7 +40,7 @@ internal static class SeedRunner
         WriteSprints(plan, dataDir);
         DocHistoryWriter.Write(plan, dataDir);
         SeedIo.WriteText(Path.Combine(dataDir, "views.json"), plan.ViewsJson);
-        SeedIo.WriteText(Path.Combine(dataDir, "avatars.json"), plan.AvatarsJson);
+        await AvatarWriter.WriteAsync(plan, dataDir, AvatarLibraryLocator.BundledDir, ct).ConfigureAwait(false);
         SeedIo.WriteText(Path.Combine(root, "manifest.md"), ManifestWriter.Render(plan, ids, root));
 
         return new SeedSummary(root, dataDir, plan, ids);
@@ -47,9 +48,9 @@ internal static class SeedRunner
 
     private static void WriteFolders(SeedPlan plan, string dataDir)
     {
+        TeamFileWriter.Write(plan, dataDir);
         foreach (SeedTeam team in plan.Teams)
         {
-            Directory.CreateDirectory(SeedIo.Resolve(dataDir, $"Teams/{team.Name}"));
             foreach (string project in team.Projects)
             {
                 Directory.CreateDirectory(SeedIo.Resolve(dataDir, $"Teams/{team.Name}/{project}"));

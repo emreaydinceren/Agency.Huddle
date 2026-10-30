@@ -4,6 +4,7 @@ namespace Agency.Huddle.Seeder;
 /// Decides whether a folder may be wiped and then deletes it. The seeder's "clean slate" promise is
 /// only safe because of this class: it deletes a folder wholesale, so it refuses everything it cannot
 /// prove is a seed root the seeder made itself.
+/// Seeder spec §4 (SEED-SAFE-1 to -5).
 /// </summary>
 internal static class SeedRootGuard
 {

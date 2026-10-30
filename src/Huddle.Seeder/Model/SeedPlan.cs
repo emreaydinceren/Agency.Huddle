@@ -1,6 +1,8 @@
+using Agency.Huddle.App.Avatars;
+
 namespace Agency.Huddle.Seeder.Model;
 
-/// <summary>Everything a scenario asks the seeder to create.</summary>
+/// <summary>Everything a scenario asks the seeder to create. Seeder spec §5 (The plan a scenario returns).</summary>
 internal sealed record SeedPlan
 {
     /// <summary>The scenario name, such as <c>software-co</c>.</summary>
@@ -30,8 +32,8 @@ internal sealed record SeedPlan
     /// <summary>The text of <c>views.json</c>.</summary>
     public required string ViewsJson { get; init; }
 
-    /// <summary>The text of <c>avatars.json</c>.</summary>
-    public required string AvatarsJson { get; init; }
+    /// <summary>The Human's avatar; the Agents' come from <see cref="SeedAgent.AvatarFile"/>.</summary>
+    public Avatar HumanAvatar { get; init; } = new(Label: "ME", Image: null, Background: "#d46002");
 
     /// <summary>Binary files under the data folder (Library images, avatar pictures).</summary>
     public IReadOnlyList<SeedBinaryFile> BinaryFiles { get; init; } = [];

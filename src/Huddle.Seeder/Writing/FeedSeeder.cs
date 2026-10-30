@@ -13,6 +13,7 @@ namespace Agency.Huddle.Seeder.Writing;
 /// <summary>
 /// Stores the plan's Feed through Huddle's own <see cref="FeedStore"/> (so the schema stays the app's business), and gives the Helper
 /// the usage and status its Feed items describe: at its daily cap, and failing.
+/// Seeder spec §5, step 4; SEED-INV-13.
 /// </summary>
 internal static class FeedSeeder
 {

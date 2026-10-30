@@ -3,7 +3,7 @@ using Agency.Huddle.Seeder.Model;
 
 namespace Agency.Huddle.Seeder.Writing;
 
-/// <summary>Renders Agent definition files and Skill files.</summary>
+/// <summary>Renders Agent definition files and Skill files. Seeder spec §5, step 6.</summary>
 internal static class AgentFileWriter
 {
     /// <summary>Renders <c>Agents/&lt;Name&gt;/&lt;Name&gt;.md</c>.</summary>
@@ -19,6 +19,11 @@ internal static class AgentFileWriter
         AppendList(text, "teams", agent.Teams);
         AppendList(text, "skills", agent.Skills);
         text.Append("specialty: ").Append(Quote(agent.Specialty)).Append('\n');
+        if (agent.Role is not null)
+        {
+            text.Append("_role: ").Append(Quote(agent.Role)).Append('\n');
+        }
+
         text.Append("---\n");
         text.Append(agent.Personality.ReplaceLineEndings("\n").Trim()).Append('\n');
         return text.ToString();

@@ -25,6 +25,7 @@ namespace Agency.Huddle.Tests.Seeder;
 /// Pins what the seeder writes for Team Rooms, Message References, Uploads, Sprints, Requests, Library variety, avatars and
 /// Needs you against the app's own readers and builders, so a format the app changes turns these red instead of silently
 /// leaving the seed stale.
+/// Seeder spec SEED-SC-11, SEED-INV-11.
 /// </summary>
 public sealed class SeedRefreshTests
 {
@@ -38,7 +39,7 @@ public sealed class SeedRefreshTests
         return $"{reference.Kind}|{reference.Key}|{reference.Label}|{reference.Status}|{title}";
     }
 
-    /// <summary>Each Team has exactly one Team Room holding the Human and the Team's Agents, and the Team chats and the Team one-to-one are scoped without being the Team Room.</summary>
+    /// <summary>SEED-SC-11: Each Team has exactly one Team Room holding the Human and the Team's Agents, and the Team chats and the Team one-to-one are scoped without being the Team Room.</summary>
     [Fact]
     public async Task TeamRooms_AreScopedAsSeeded()
     {
@@ -47,7 +48,7 @@ public sealed class SeedRefreshTests
         SeedPlan plan = seed.Summary.Plan;
         SqliteTeamDirectory directory = new(seed.Options());
 
-        foreach (string team in new[] { "Platform", "Growth", "Support" })
+        foreach (string team in new[] { "Platform", "Growth", "Support", SoftwareCoHome.Team })
         {
             Room? teamRoom = await directory.FindTeamRoomAsync(team, ct);
             Assert.NotNull(teamRoom);
@@ -60,7 +61,7 @@ public sealed class SeedRefreshTests
 
         IReadOnlyList<Room> scoped = [.. (await directory.GetRoomsAsync(ct)).Where(r => r.Team is not null)];
         Assert.Equal(plan.Rooms.Count(r => r.Team is not null), scoped.Count);
-        Assert.Equal(3, scoped.Count(r => r.IsTeamRoom));
+        Assert.Equal(4, scoped.Count(r => r.IsTeamRoom));
         Room chat = Assert.Single(scoped, r => r.Id == seed.Summary.Ids.RoomIds[SoftwareCoRooms.ChatPlatformPagination]);
         Assert.Equal("Platform", chat.Team);
         Assert.False(chat.IsTeamRoom);
@@ -70,7 +71,7 @@ public sealed class SeedRefreshTests
         Assert.Contains(plan.Rooms, r => r.Team is null);
     }
 
-    /// <summary>The seeder's labels, Room and Team links and Escape match <see cref="ReferenceText"/> for every Room and Team in the plan.</summary>
+    /// <summary>SEED-INV-11: The seeder's labels, Room and Team links and Escape match <see cref="ReferenceText"/> for every Room and Team in the plan.</summary>
     [Fact]
     public async Task ReferenceFormats_MatchTheAppsReferenceText()
     {
@@ -99,7 +100,7 @@ public sealed class SeedRefreshTests
     }
 
     /// <summary>
-    /// Every stored reference equals what the app's own snapshotter builds from the same text, apart from the deliberately renamed Task
+    /// SEED-INV-11: Every stored reference equals what the app's own snapshotter builds from the same text, apart from the deliberately renamed Task
     /// (the stored chip keeps the old title) and the one deleted document (the snapshotter drops a file that does not exist).
     /// </summary>
     [Fact]
@@ -150,7 +151,7 @@ public sealed class SeedRefreshTests
         Assert.True(renamed > 0);
     }
 
-    /// <summary>The archived Room keeps no stored References, and the app's text scanner still finds something to show in it.</summary>
+    /// <summary>SEED-SC-11: The archived Room keeps no stored References, and the app's text scanner still finds something to show in it.</summary>
     [Fact]
     public async Task ArchivedRoom_LeavesReferencesNullForTheScannerFallback()
     {
@@ -165,7 +166,7 @@ public sealed class SeedRefreshTests
         Assert.Contains(messages, m => ReferenceScanner.Scan(m.Text).Count > 0);
     }
 
-    /// <summary>No transcript keeps a <c>{{token}}</c>, and the Rooms cite documents so "Documents in this chat" has two to four rows in the three named Rooms.</summary>
+    /// <summary>SEED-INV-9: No transcript keeps a <c>{{token}}</c>, and the Rooms cite documents so "Documents in this chat" has two to four rows in the three named Rooms.</summary>
     [Fact]
     public async Task Tokens_NeverSurviveIntoATranscript_AndNamedRoomsCiteDocuments()
     {
@@ -190,7 +191,7 @@ public sealed class SeedRefreshTests
         Assert.Contains(standup.SelectMany(m => m.References ?? []).Where(r => r.Kind == ReferenceKind.LibraryFile).GroupBy(r => r.Key), g => g.Count() > 1);
     }
 
-    /// <summary>Uploads sit in the folder the app's upload flow resolves for the Room, and a Message cites each the way the composer writes it: a blank line, then the path in backticks.</summary>
+    /// <summary>SEED-INV-11: Uploads sit in the folder the app's upload flow resolves for the Room, and a Message cites each the way the composer writes it: a blank line, then the path in backticks.</summary>
     [Fact]
     public async Task Uploads_ExistWhereTheAppWouldLook_AndAreCitedLikeTheComposerWritesThem()
     {
@@ -228,7 +229,7 @@ public sealed class SeedRefreshTests
         Assert.All(plan.Uploads.Where(u => u.FileName.EndsWith(".png", StringComparison.Ordinal)), u => Assert.Equal(".png", AvatarImage.SniffExtension(u.Content)));
     }
 
-    /// <summary><c>sprints.md</c> parses with the app's own parser, every Task's Sprint is defined in it, 8 to 10 Tasks hold one, and the current-Sprint View loads.</summary>
+    /// <summary>SEED-INV-11: <c>sprints.md</c> parses with the app's own parser, every Task's Sprint is defined in it, 8 to 10 Tasks hold one, and the current-Sprint View loads.</summary>
     [Fact]
     public async Task Sprints_ParseWithTheAppsParser_AndTasksHoldThem()
     {
@@ -257,7 +258,7 @@ public sealed class SeedRefreshTests
         Assert.Contains("current-sprint", ManifestWriter.Render(plan, seed.Summary.Ids, seed.Root), StringComparison.Ordinal);
     }
 
-    /// <summary>The Requests parse with <see cref="RequestFields"/>: one per triage state, plus one Done and not yet confirmed, each with the sections its kind requires.</summary>
+    /// <summary>SEED-INV-11: The Requests parse with <see cref="RequestFields"/>: one per triage state, plus one Done and not yet confirmed, each with the sections its kind requires.</summary>
     [Fact]
     public async Task Requests_ParseWithTheAppsRequestFields()
     {
@@ -290,7 +291,7 @@ public sealed class SeedRefreshTests
         });
     }
 
-    /// <summary>The long note gives the Outline four heading levels, its wikilinks use every supported form and resolve with the app's resolver, and <c>Legal-Checklist</c> stays the one unresolved link.</summary>
+    /// <summary>SEED-SC-7: The long note gives the Outline four heading levels, its wikilinks use every supported form and resolve with the app's resolver, and <c>Legal-Checklist</c> stays the one unresolved link.</summary>
     [Fact]
     public async Task Library_OffersOutlineHeadings_AndEveryWikilinkForm()
     {
@@ -326,7 +327,7 @@ public sealed class SeedRefreshTests
         Assert.True(File.Exists(Path.Combine(seed.DataDir, "Teams", "Growth", "Pricing Page", "competitor-chart.png")));
     }
 
-    /// <summary>The avatar entry's image is a real PNG in the avatars folder and the app's store resolves it.</summary>
+    /// <summary>SEED-AV-4: The avatar entry's image is a real PNG in the avatars folder and the app's store resolves it.</summary>
     [Fact]
     public async Task Avatars_ImageEntryResolvesToAFileOnDisk()
     {
@@ -341,7 +342,7 @@ public sealed class SeedRefreshTests
         Assert.Equal(".png", AvatarImage.SniffExtension(await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken)));
     }
 
-    /// <summary>Exactly one live Room ends with an unanswered Agent Message that mentions the Human, by the rule the Needs you list uses.</summary>
+    /// <summary>SEED-SC-11, SEED-HOME-5: Exactly two live Rooms, Launch crew and Grandma's 70th, end with an unanswered Agent Message that mentions the Human, by the rule the Needs you list uses.</summary>
     [Fact]
     public async Task NeedsYou_OneRoomHoldsAnUnansweredMention()
     {
@@ -365,11 +366,11 @@ public sealed class SeedRefreshTests
             }
         }
 
-        Assert.Equal([SoftwareCoRooms.LaunchCrew], waiting);
+        Assert.Equal([SoftwareCoRooms.LaunchCrew, SoftwareCoHome.ChatGrandma], waiting);
     }
 
     /// <summary>
-    /// A Task's attachments read back as the description the app's attach buttons write (<see cref="TaskAttachmentText"/>), every
+    /// SEED-INV-11: A Task's attachments read back as the description the app's attach buttons write (<see cref="TaskAttachmentText"/>), every
     /// uploaded file sits in the folder <see cref="Agency.Huddle.App.Uploads.TaskUploadFolders"/> resolves, a closed Task keeps its
     /// uploads there, and every linked file is a real Library file.
     /// </summary>
@@ -412,7 +413,7 @@ public sealed class SeedRefreshTests
     }
 
     /// <summary>
-    /// Every seeded History line is the line <see cref="DocHistoryStore"/> would write, in the file the store reads for that
+    /// SEED-INV-11: Every seeded History line is the line <see cref="DocHistoryStore"/> would write, in the file the store reads for that
     /// document; the History covers every kind and both authors, has a document longer than the History panel shows, and groups two
     /// Human saves into one row.
     /// </summary>

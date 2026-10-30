@@ -1,9 +1,13 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using MudBlazor.Utilities;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
+using Agency.Huddle.App.Teams;
+using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Seeder;
 using Agency.Huddle.Seeder.Model;
@@ -15,13 +19,14 @@ namespace Agency.Huddle.Tests.Seeder;
 /// <summary>
 /// Seeds the scenario into a temp folder and reads it back with Huddle's own loaders. These tests fail when the
 /// app and <c>agents/DataSeeding.md</c> drift apart, which is the whole reason the seeder loads through the app.
+/// Seeder spec §7.
 /// </summary>
 public sealed class SeedRoundTripTests
 {
     private static readonly string[] SavedViewIds =
-        ["platform-board", "growth-by-project", "my-open-work", "blocked-work", "awaiting-review", "support-urgent", "unassigned", "current-sprint", "closed-work"];
+        ["platform-board", "growth-by-project", "my-open-work", "blocked-work", "awaiting-review", "support-urgent", "unassigned", "current-sprint", "closed-work", "home-this-week", "who-owns-what", "home-board"];
 
-    /// <summary>Every Agent loads, none is rejected, and Team membership survives.</summary>
+    /// <summary>SEED-RT-1: Every Agent loads, none is rejected, and Team membership survives.</summary>
     [Fact]
     public async Task Agents_AllLoadWithoutRejections()
     {
@@ -42,7 +47,7 @@ public sealed class SeedRoundTripTests
         });
     }
 
-    /// <summary>Every Task loads, none is rejected, the Change log dates round-trip, and start-up reconciliation adds nothing.</summary>
+    /// <summary>SEED-RT-2: Every Task loads, none is rejected, the Change log dates round-trip, and start-up reconciliation adds nothing.</summary>
     [Fact]
     public async Task Tasks_AllLoadAndKeepTheirBackdatedDates()
     {
@@ -74,7 +79,7 @@ public sealed class SeedRoundTripTests
         });
     }
 
-    /// <summary>A Task created from a Room carries that Room's real id.</summary>
+    /// <summary>SEED-RT-3: A Task created from a Room carries that Room's real id.</summary>
     [Fact]
     public async Task Tasks_OriginPointsAtTheSeededRoom()
     {
@@ -88,7 +93,7 @@ public sealed class SeedRoundTripTests
         Assert.Equal(seed.Summary.Ids.RoomIds[SoftwareCoRooms.IncidentWarRoom], task.OriginRoomId);
     }
 
-    /// <summary>The Skill loads for Alan and the Skill store reports no problems with it.</summary>
+    /// <summary>SEED-RT-4: The Skill loads for Alan and the Skill store reports no problems with it.</summary>
     [Fact]
     public async Task Skills_LoadWithoutIssues()
     {
@@ -100,7 +105,7 @@ public sealed class SeedRoundTripTests
         Assert.DoesNotContain(store.Issues, i => i.Skill == SoftwareCoAgents.PostmortemSkill);
     }
 
-    /// <summary>Every saved View in <c>views.json</c> is valid, and none is dropped.</summary>
+    /// <summary>SEED-RT-4: Every saved View in <c>views.json</c> is valid, and none is dropped.</summary>
     [Fact]
     public async Task Views_AllLoadWithoutErrors()
     {
@@ -113,7 +118,7 @@ public sealed class SeedRoundTripTests
         Assert.All(SavedViewIds, id => Assert.NotNull(store.Get(id)));
     }
 
-    /// <summary>The database holds the Human, every Agent under its seeded id, and the Rooms with their members, names and archive flag.</summary>
+    /// <summary>SEED-RT-5: The database holds the Human, every Agent under its seeded id, and the Rooms with their members, names and archive flag.</summary>
     [Fact]
     public async Task Database_HoldsUsersAndRooms()
     {
@@ -144,7 +149,7 @@ public sealed class SeedRoundTripTests
         }
     }
 
-    /// <summary>Each transcript reads back in full, in order, from its members.</summary>
+    /// <summary>SEED-RT-5: Each transcript reads back in full, in order, from its members.</summary>
     [Fact]
     public async Task Transcripts_ReadBackInOrderFromTheRoomMembers()
     {
@@ -167,7 +172,86 @@ public sealed class SeedRoundTripTests
         }
     }
 
-    /// <summary>The layout marker exists, so Huddle's one-time migration will not move the seeded notes.</summary>
+    /// <summary>
+    /// SEED-AV-4 and -6: every Agent's stored avatar is a copy of its library picture with a palette background no other Agent
+    /// has, read back through the app's <see cref="AvatarStore"/>; the Human keeps the label avatar.
+    /// </summary>
+    [Fact]
+    public async Task Avatars_EveryAgentsImageIsTheLibraryPicture()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using SeededFolder seed = await SeededFolder.CreateAsync(ct);
+        using AvatarStore store = new(seed.Options(), NullLogger<AvatarStore>.Instance);
+        HashSet<string> palette = new(AvatarPalette.Colours.Select(static c => c.ToString(MudColorOutputFormats.Hex)), StringComparer.OrdinalIgnoreCase);
+        List<string> backgrounds = [];
+
+        foreach (SeedAgent agent in seed.Summary.Plan.Agents)
+        {
+            Avatar avatar = store.Get(agent.Name);
+            Assert.NotNull(avatar.Image);
+            Assert.NotNull(avatar.Background);
+            Assert.Contains(avatar.Background, palette);
+            backgrounds.Add(avatar.Background);
+            byte[] stored = await File.ReadAllBytesAsync(Path.Combine(store.ImageDirectory, avatar.Image), ct);
+            byte[] library = await File.ReadAllBytesAsync(Path.Combine(AvatarLibraryLocator.BundledDir, agent.AvatarFile), ct);
+            Assert.Equal(library, stored);
+        }
+
+        Assert.Equal(backgrounds.Count, backgrounds.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Equal("ME", store.Get(seed.Summary.Plan.HumanName).Label);
+    }
+
+    /// <summary>SEED-AV-5: every Team has a <c>_team.md</c> the app parses, of its seeded type (blank unless named) with its seeded manager, and a palette colour no other Team has.</summary>
+    [Fact]
+    public async Task Teams_EachHasItsOwnAvatarColour()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using SeededFolder seed = await SeededFolder.CreateAsync(ct);
+        HashSet<string> palette = new(AvatarPalette.Colours.Select(static c => c.ToString(MudColorOutputFormats.Hex)), StringComparer.OrdinalIgnoreCase);
+        List<string> colours = [];
+
+        foreach (SeedTeam team in seed.Summary.Plan.Teams)
+        {
+            string text = await File.ReadAllTextAsync(Path.Combine(seed.DataDir, "Teams", team.Name, TeamPaths.TeamFileName), ct);
+            Assert.True(TeamFile.TryParse(text, out TeamFile? file));
+            Assert.Equal(team.TeamType ?? $"{BlankTeamType.Id}@{BlankTeamType.Manifest.Version}", file.TeamType.ToString());
+            Assert.Equal(team.Manager, file.Manager);
+            Assert.True(file.Onboarded);
+            Assert.NotNull(file.Avatar.Background);
+            Assert.Contains(file.Avatar.Background, palette);
+            colours.Add(file.Avatar.Background);
+        }
+
+        Assert.Equal(colours.Count, colours.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+    }
+
+    /// <summary>
+    /// SEED-HOME-8: Home and Family is set up as a hire from <c>household@1.1.0</c> would leave it: a typed, onboarded
+    /// <c>_team.md</c> naming Hattie as manager, the type's default process as <c>Process.md</c>, and a <c>_role</c> on every member.
+    /// </summary>
+    [Fact]
+    public async Task Teams_HomeAndFamilyIsSetUpFromTheHouseholdType()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using SeededFolder seed = await SeededFolder.CreateAsync(ct);
+        string folder = Path.Combine(seed.DataDir, "Teams", SoftwareCoHome.Team);
+        TeamTypeCatalog types = new(seed.Options(), NullLogger<TeamTypeCatalog>.Instance);
+
+        Assert.True(TeamFile.TryParse(await File.ReadAllTextAsync(Path.Combine(folder, TeamPaths.TeamFileName), ct), out TeamFile? file));
+        string process = await File.ReadAllTextAsync(Path.Combine(folder, TeamPaths.ProcessFileName), ct);
+        string? expected = types.ReadProcess("household", "household-basics");
+
+        Assert.Equal("household@1.1.0", file.TeamType.ToString());
+        Assert.Equal("Hattie", file.Manager);
+        Assert.True(file.Onboarded);
+        Assert.False(string.IsNullOrWhiteSpace(file.Owns));
+        Assert.NotNull(expected);
+        Assert.Equal(expected.ReplaceLineEndings("\n").TrimEnd('\n'), process.ReplaceLineEndings("\n").TrimEnd('\n'));
+        Assert.True(ProcessDocument.TryParse(process, out _));
+        Assert.Equal(["household/household-manager@1.1.0", "household/meal-planner@1.1.0", "household/home-keeper@1.1.0", "household/schedule-keeper@1.1.0"], await RolesAsync(seed, ["Hattie", "Theo", "Ravi", "Iris"], ct));
+    }
+
+    /// <summary>SEED-RT-6: The layout marker exists, so Huddle's one-time migration will not move the seeded notes.</summary>
     [Fact]
     public async Task Layout_MarkerIsWrittenAndNotesStayUnderTeams()
     {
@@ -181,7 +265,7 @@ public sealed class SeedRoundTripTests
         Assert.True(Directory.Exists(Path.Combine(seed.DataDir, "Teams", "Growth", "Lifecycle Emails")));
     }
 
-    /// <summary>Seeding again wipes what was there: a stray file and the old database are gone, and the run still succeeds.</summary>
+    /// <summary>SEED-SAFE-6: Seeding again wipes what was there: a stray file and the old database are gone, and the run still succeeds.</summary>
     [Fact]
     public async Task Rerun_StartsFromACleanSlate()
     {
@@ -198,7 +282,7 @@ public sealed class SeedRoundTripTests
         Assert.Equal(seed.Summary.Plan.Tasks.Count, Directory.EnumerateFiles(Path.Combine(second.DataDir, "Teams"), "*.md", SearchOption.AllDirectories).Count(f => f.Contains("_tasks", StringComparison.Ordinal)));
     }
 
-    /// <summary>The manifest lists every Task, every Room id and the derived-state facts.</summary>
+    /// <summary>SEED-RT-7: The manifest lists every Task, every Room id and the derived-state facts.</summary>
     [Fact]
     public async Task Manifest_ListsTheSeededEntities()
     {
@@ -211,5 +295,17 @@ public sealed class SeedRoundTripTests
         Assert.All(seed.Summary.Ids.RoomIds.Values, id => Assert.Contains(id, manifest, StringComparison.Ordinal));
         Assert.Contains("Legal-Checklist (unresolved)", manifest, StringComparison.Ordinal);
         Assert.Contains("Overdue: ", manifest, StringComparison.Ordinal);
+    }
+
+    private static async Task<string?[]> RolesAsync(SeededFolder seed, string[] names, CancellationToken ct)
+    {
+        List<string?> roles = [];
+        foreach (string name in names)
+        {
+            string persona = await File.ReadAllTextAsync(Path.Combine(seed.DataDir, "Agents", name, name + ".md"), ct);
+            roles.Add(PersonaFrontmatter.TryReadIdentity(persona, out PersonaIdentity? identity, out _) ? identity.Role?.ToString() : null);
+        }
+
+        return [.. roles];
     }
 }

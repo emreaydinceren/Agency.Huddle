@@ -8,10 +8,10 @@ using Agency.Huddle.Seeder.Model;
 
 namespace Agency.Huddle.Tests.Seeder;
 
-/// <summary>The seeded Feed loads through Huddle's own <see cref="FeedStore"/>, and every unresolved Notification is still true of the rest of the seed.</summary>
+/// <summary>The seeded Feed loads through Huddle's own <see cref="FeedStore"/>, and every unresolved Notification is still true of the rest of the seed. Seeder spec SEED-SC-11, SEED-INV-13.</summary>
 public sealed class SeedFeedTests
 {
-    /// <summary>Every planned item is stored, and the Notifications that wait are the ones the plan leaves unresolved.</summary>
+    /// <summary>SEED-SC-11, SEED-INV-13: Every planned item is stored, and the Notifications that wait are the ones the plan leaves unresolved.</summary>
     [Fact]
     public async Task Feed_StoresEveryItem_AndTheWaitingNotificationsMatchThePlan()
     {
@@ -30,7 +30,7 @@ public sealed class SeedFeedTests
         Assert.Equal(5, all.Count(static item => item.SourceType == FeedSourceType.TaskCreated && item.Actor.Name == "Owen"));
     }
 
-    /// <summary>The Helper's stored state says it is at its cap and failing, so its Feed items still hold when Huddle starts.</summary>
+    /// <summary>SEED-INV-13: The Helper's stored state says it is at its cap and failing, so its Feed items still hold when Huddle starts.</summary>
     [Fact]
     public async Task HelperState_MatchesItsWaitingFeedItems()
     {
@@ -45,7 +45,7 @@ public sealed class SeedFeedTests
         Assert.True(budget.IsPaused(id, 50));
     }
 
-    /// <summary>The Tasks the waiting Task Notifications name are in the state those Notifications need, so the startup reconciler leaves them alone.</summary>
+    /// <summary>SEED-INV-13: The Tasks the waiting Task Notifications name are in the state those Notifications need, so the startup reconciler leaves them alone.</summary>
     [Fact]
     public async Task WaitingTaskNotifications_HoldAgainstTheSeededTasks()
     {

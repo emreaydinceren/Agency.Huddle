@@ -2,7 +2,7 @@ using Agency.Huddle.Seeder.Model;
 
 namespace Agency.Huddle.Seeder.Scenarios;
 
-/// <summary>A named dataset the seeder can build. Adding a scenario means adding one implementation and listing it in <see cref="ScenarioCatalog"/>.</summary>
+/// <summary>A named dataset the seeder can build. Adding a scenario means adding one implementation and listing it in <see cref="ScenarioCatalog"/>. Seeder spec §5; Appendix A.2 (Add a scenario).</summary>
 internal interface IScenario
 {
     /// <summary>The name used on the command line, such as <c>software-co</c>.</summary>

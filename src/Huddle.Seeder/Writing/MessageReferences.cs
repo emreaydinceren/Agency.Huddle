@@ -11,6 +11,7 @@ namespace Agency.Huddle.Seeder.Writing;
 /// Expands the seed tokens in a Message and builds the <see cref="MessageReference"/> list the way the app's send
 /// path does (<c>ReferenceSnapshotter</c>, <c>ReferenceText</c>, <c>ReferencePickerModel.LibraryInsertFor</c>). The seeder cannot see
 /// those internals, so each format is mirrored here and pinned by a test that compares it with the app's own function.
+/// Seeder spec §5 (tokens); SEED-INV-9, SEED-INV-11.
 /// </summary>
 /// <remarks>
 /// Tokens: <c>{{lib:Teams/Platform/Architecture.md}}</c> (a Library file under the data folder), <c>{{upload:name.png}}</c> (a file

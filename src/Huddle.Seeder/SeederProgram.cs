@@ -3,6 +3,7 @@ namespace Agency.Huddle.Seeder;
 /// <summary>
 /// The <c>huddle-seed</c> entry point. It is an explicit, namespaced class rather than top-level statements
 /// so its generated <c>Program</c> type cannot clash with <c>Huddle.App</c>'s in a project that references both.
+/// Seeder spec §3.
 /// </summary>
 internal static class SeederProgram
 {
