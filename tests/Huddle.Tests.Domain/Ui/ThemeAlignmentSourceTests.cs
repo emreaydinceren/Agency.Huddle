@@ -59,6 +59,31 @@ public sealed class ThemeAlignmentSourceTests
         Assert.Contains("fill: none;", chevron, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
+    /// <summary>
+    /// The card surface puts the Library note, each Right sidebar panel and the open Settings section on a raised card
+    /// with the card shadow, and the note's sheet stays 16px in from a narrow pane (FL-01, FL-02, FL-07, FD-01).
+    /// </summary>
+    [Fact]
+    public void AppCss_CardSurface_PutsNoteSettingsAndPanelsOnCards()
+    {
+        string css = CssText.AppCss();
+        string cards = CssText.RuleBody(css, ":root:has([data-hu-surface=\"card\"]) .library-rendered,\n:root:has([data-hu-surface=\"card\"]) .right-sidebar .sidebar-panel,\n:root:has([data-hu-surface=\"card\"]) .settings-section", RuleMatch.Last);
+
+        Assert.Contains("background: var(--hu-ground-raised);", cards, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("box-shadow: var(--hu-shadow-card);", cards, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("width: min(calc(100% - 32px),", CssText.RuleBody(css, ":root:has([data-hu-surface=\"card\"]) .library-rendered", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
+    /// <summary>The navigation panel's Needs you block is flat rows on the sidebar's ground, not a bordered card (G03).</summary>
+    [Fact]
+    public void AppCss_NeedsYouBlock_IsFlat()
+    {
+        string body = CssText.RuleBody(CssText.AppCss(), ".needs-you-card.mud-paper-outlined", RuleMatch.Last);
+
+        Assert.Contains("border-color: transparent;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("background-color: transparent;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
     /// <summary>One dot rule per entry of <c>TaskFieldView.TagClasses</c>.</summary>
     private static readonly string[] HueSelectors =
     [

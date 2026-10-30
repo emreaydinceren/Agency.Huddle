@@ -11,4 +11,7 @@ internal enum SurfaceStyle
 
     /// <summary>Flat resting cards on a region line, no shadow, a plain radius step up, and floating layers lifted by a ring shadow instead of a border.</summary>
     Hairline,
+
+    /// <summary>Flat, with content on raised cards over the page ground: the Library note on a sheet, each Right sidebar panel and the open Settings section in a card.</summary>
+    Card,
 }

@@ -27,7 +27,7 @@ public sealed class FluentSkinTests
         Assert.Equal(LabelCase.Sentence, traits.Labels);
         Assert.Equal(ComposerStyle.Underlined, traits.Composer);
         Assert.Equal(NavStyle.Bar, traits.Nav);
-        Assert.Equal(SurfaceStyle.Flat, traits.Surface);
+        Assert.Equal(SurfaceStyle.Card, traits.Surface);
         Assert.Equal(MarkStyle.Chip, traits.Marks);
         Assert.Equal(ReadingStyle.Plain, traits.Reading);
     }

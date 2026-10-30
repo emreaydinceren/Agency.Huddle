@@ -6762,9 +6762,13 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     padding: 4px 0;
 }
 
-/* Outlined in Edge, not MudBlazor's Chrome line (audit B3e); the doubled class outranks .mud-paper-outlined. */
+/* Flat rows on the sidebar's ground, not a white bordered card (side-by-side audit, 2026-10-30, G03). The border stays,
+   transparent, because --needs-you-offset counts its 1px; the doubled class outranks .mud-paper-outlined. Nordic's
+   paper surface draws its own tinted card below. */
 .needs-you-card.mud-paper-outlined {
-    border-color: var(--ink-edge);
+    border-color: transparent;
+    background-color: transparent;
+    box-shadow: none;
 }
 
 .needs-you-card[hidden] {
@@ -8420,7 +8424,8 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     color: var(--hu-chip-set-ink);
 }
 
-:root:has([data-hu-surface="flat"]) .task-filter-chip-unset {
+:root:has([data-hu-surface="flat"]) .task-filter-chip-unset,
+:root:has([data-hu-surface="card"]) .task-filter-chip-unset {
     border-style: solid;
     border-color: var(--hu-line-control);
 }
@@ -10124,6 +10129,43 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 :root:has([data-hu-surface="hairline"]) .mud-checkbox .mud-checked,
 :root:has([data-hu-surface="hairline"]) .mud-radio .mud-checked {
     color: var(--mud-palette-primary);
+}
+
+/* -- surface=card: content on raised cards over the page ground (Fluent; side-by-side audit, 2026-10-30, FL-01, FL-02,
+   FL-07, FD-01, FD-02). The card is the field group's: its radius, the raised ground, the region line and the card
+   shadow, as on the Task edit page. -------------------------------------------------------------------------------- */
+:root:has([data-hu-surface="card"]) .library-rendered,
+:root:has([data-hu-surface="card"]) .right-sidebar .sidebar-panel,
+:root:has([data-hu-surface="card"]) .settings-section {
+    background: var(--hu-ground-raised);
+    border: 1px solid var(--hu-line-region);
+    border-radius: var(--hu-form-group-radius);
+    box-shadow: var(--hu-shadow-card);
+}
+
+/* The note's sheet: the reader's measure plus 32px of padding a side (so the measure is unchanged), centred, and kept
+   16px in from the pane's edges when the pane is narrower than that. */
+:root:has([data-hu-surface="card"]) .library-rendered {
+    box-sizing: border-box;
+    width: min(calc(100% - 32px), calc(calc(var(--mud-typography-body1-size) * 8 / 7 * 46.29) + 64px));
+    max-width: none;
+    margin-block: 16px;
+    padding: 24px 32px;
+}
+
+/* Each Right sidebar panel is its own card, so the cards' gap replaces the Edge line between panels. */
+:root:has([data-hu-surface="card"]) .right-sidebar .sidebar-panel {
+    padding: 4px 12px;
+}
+
+:root:has([data-hu-surface="card"]) .right-sidebar .sidebar-panel + .sidebar-panel {
+    margin-top: 8px;
+    padding-top: 4px;
+    border-top: 1px solid var(--hu-line-region);
+}
+
+:root:has([data-hu-surface="card"]) .settings-section {
+    padding: 16px 24px 24px;
 }
 
 /* -- nav=bar: the top bar reads the rail ground, so the chrome is one frame ------------------------------------------------- */

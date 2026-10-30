@@ -984,7 +984,8 @@
           "enum": [
             "flat",
             "paper",
-            "hairline"
+            "hairline",
+            "card"
           ]
         },
         "marks": {

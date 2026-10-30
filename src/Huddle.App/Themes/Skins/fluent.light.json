@@ -28,7 +28,7 @@
     "labels": "sentence",
     "composer": "underlined",
     "nav": "bar",
-    "surface": "flat",
+    "surface": "card",
     "marks": "chip",
     "reading": "plain",
     "ids": "mono"

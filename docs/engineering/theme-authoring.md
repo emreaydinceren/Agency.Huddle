@@ -121,7 +121,7 @@ layout renders it as a `data-hu-<trait>` attribute on `.theme-marker`.
 | `labels` | `sentence`, `upper` |
 | `composer` | `box`, `card`, `underlined` |
 | `nav` | `tint`, `tile`, `bar` |
-| `surface` | `flat`, `paper`, `hairline` |
+| `surface` | `flat`, `paper`, `hairline`, `card` |
 | `marks` | `plain`, `chip` |
 | `reading` | `plain`, `book` |
 | `ids` | `plain`, `mono` |

@@ -87,11 +87,14 @@ public sealed partial class R3ShellTests
         Assert.Matches(@"border-radius:\s*calc\(var\(--mud-default-borderradius\) \* 0\.75\)", tile);
     }
 
-    /// <summary>The Needs you card is outlined in Edge, and its row is one 32px line whose time trails (B3e).</summary>
+    /// <summary>
+    /// The Needs you block is flat, its outline transparent (side-by-side audit, 2026-10-30, G03, replacing B3e's Edge
+    /// outline), and its row is one 32px line whose time trails (B3e).
+    /// </summary>
     [Fact]
-    public void AppCss_NeedsYou_IsEdgeOutlined_AndOneRowHigh()
+    public void AppCss_NeedsYou_IsFlat_AndOneRowHigh()
     {
-        Assert.Matches(@"border-color:\s*var\(--ink-edge\)", R3ShellTests.DeclarationsFor(".needs-you-card.mud-paper-outlined"));
+        Assert.Matches(@"border-color:\s*transparent", R3ShellTests.DeclarationsFor(".needs-you-card.mud-paper-outlined"));
         Assert.Matches(@"min-height:\s*var\(--nav-row-height\)", R3ShellTests.DeclarationsFor(".sidebar-views .needs-you-row.needs-you-row .mud-nav-link"));
         Assert.DoesNotMatch(@"flex-direction:\s*column", R3ShellTests.DeclarationsFor(".needs-you-text"));
     }
