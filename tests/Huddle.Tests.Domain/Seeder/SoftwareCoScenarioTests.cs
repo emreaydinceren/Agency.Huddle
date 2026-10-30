@@ -3,6 +3,7 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.Seeder.Model;
 using Agency.Huddle.Seeder.Scenarios;
 using Agency.Huddle.Seeder.Writing;
+using Agency.Huddle.Tests.Library;
 
 namespace Agency.Huddle.Tests.Seeder;
 
@@ -206,7 +207,9 @@ public sealed partial class SoftwareCoScenarioTests
 
         Assert.True(links.Count(l => l.Value.Contains("Personas", StringComparer.OrdinalIgnoreCase)) >= 3);
         string[] unresolved = [.. links.SelectMany(l => l.Value).Where(target => !links.ContainsKey(target)).Distinct(StringComparer.OrdinalIgnoreCase)];
-        Assert.Equal(["Legal-Checklist"], unresolved);
+
+        // Missing on purpose: Legal-Checklist, plus the front matter properties demo's missing link ([[Nobody]]) and bare alias ([[Plan]]).
+        Assert.Equal(["Legal-Checklist", "Nobody", "Plan"], unresolved.Order(StringComparer.Ordinal));
         Assert.Contains(plan.Files, f => f.RelativePath.StartsWith("Agents/Alan/work/", StringComparison.Ordinal) && !f.RelativePath.Contains("/memory/", StringComparison.Ordinal));
     }
 
@@ -309,5 +312,94 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.Contains(items, v => v.GetProperty("kind").GetString() == "kanban");
         Assert.Contains(items, v => v.GetProperty("kind").GetString() == "list");
         Assert.Contains(items, v => v.GetProperty("scope").GetString() == "closed");
+    }
+
+    private static string Rows(SeedPlan plan, string path)
+    {
+        SeedFile note = plan.Files.Single(f => f.RelativePath == path);
+        IReadOnlyDictionary<string, NotePropertyKind> types = PropertyTypes.Parse(plan.Files.Single(f => f.RelativePath == "Teams/" + LibraryOptions.DefaultPropertyTypesFile).Content);
+        IReadOnlyList<NoteProperty> typed = PropertyTyping.Apply(NoteProperties.Read(NoteFrontmatter.Locate(note.Content)), types);
+        return string.Join("|", typed.Select(static p => $"{p.Key}={p.Kind}"));
+    }
+
+    /// <summary>FP-T16: the plan holds the four front matter property notes, and the types file at the option's default path, in the Teams root.</summary>
+    [Fact]
+    public void Plan_HoldsTheFrontMatterPropertyNotesAndTheTypesFile()
+    {
+        SeedPlan plan = Plan();
+        string[] paths = [.. plan.Files.Select(static f => f.RelativePath)];
+
+        Assert.Contains("Teams/Platform/AllTypes.md", paths);
+        Assert.Contains("Teams/Platform/AllTypes-Json.md", paths);
+        Assert.Contains("Teams/Platform/Properties-Edge-Cases.md", paths);
+        Assert.Contains("Teams/Platform/Plan-Review.md", paths);
+        SeedFile types = plan.Files.Single(static f => f.RelativePath == "Teams/" + LibraryOptions.DefaultPropertyTypesFile);
+        Assert.Equal(new Dictionary<string, NotePropertyKind> { ["pages"] = NotePropertyKind.Number, ["due"] = NotePropertyKind.Date }.OrderBy(static p => p.Key), PropertyTypes.Parse(types.Content).OrderBy(static p => p.Key));
+    }
+
+    /// <summary>FP-T16: <c>AllTypes.md</c> is the example's text, the same text the FP-T1 fixture reads.</summary>
+    [Fact]
+    public void Plan_AllTypes_EqualsTheExampleFixture()
+    {
+        SeedFile note = Plan().Files.Single(static f => f.RelativePath == "Teams/Platform/AllTypes.md");
+
+        Assert.Equal(SoftwareCoLibrary.AllTypesNote, note.Content);
+    }
+
+    /// <summary>FP-T16: reading each seeded note through the reader and the typing gives the rows the Seeded demo lists.</summary>
+    [Theory]
+    [InlineData("Teams/Platform/AllTypes.md", "title=Text|url=Text|pages=Number|reviewed=Checkbox|created=Date|logged=DateTime|due=Mismatch|owner=Text|authors=List|tags=Tags|aliases=Aliases|cssclasses=List|budget=Unsupported|notes=Text|empty=Text")]
+    [InlineData("Teams/Platform/AllTypes-Json.md", "title=Text|url=Text|pages=Number|reviewed=Checkbox|created=Text|logged=Text|due=Mismatch|owner=Text|authors=List|tags=Tags|aliases=Aliases|cssclasses=List|empty=Text")]
+    [InlineData("Teams/Platform/Properties-Edge-Cases.md", "reviewer=Text|related=Unsupported|flag=Text|tag=Text|cssclass=Text|publish=Checkbox|broken=Unsupported|status=Text")]
+    public void Plan_PropertyNotes_ReadToTheListedRows(string path, string expected) =>
+        Assert.Equal(expected, Rows(Plan(), path));
+
+    /// <summary>FP-T16: the edge-case note's last <c>status</c> wins, the quoted boolean stays Text, and the unquoted link is shown as its source.</summary>
+    [Fact]
+    public void Plan_EdgeCases_ShowTheirSpecificValues()
+    {
+        SeedFile note = Plan().Files.Single(static f => f.RelativePath == "Teams/Platform/Properties-Edge-Cases.md");
+
+        IReadOnlyList<NoteProperty> properties = NoteProperties.Read(NoteFrontmatter.Locate(note.Content));
+
+        Assert.Equal("final", properties.Single(static p => p.Key == "status").Value);
+        Assert.Equal("true", properties.Single(static p => p.Key == "flag").Value);
+        Assert.Equal("[[Architecture]]", properties.Single(static p => p.Key == "related").Source);
+        Assert.Equal("status", properties[^1].Key);
+    }
+
+    /// <summary>FP-T16: the Plan-Review note links the aliased note by its file name and writes the bare alias as a link that stays missing.</summary>
+    [Fact]
+    public void Plan_PlanReview_LinksThroughTheAliasAndKeepsTheBareAliasMissing()
+    {
+        SeedFile note = Plan().Files.Single(static f => f.RelativePath == "Teams/Platform/Plan-Review.md");
+
+        Assert.Equal(
+            "# Plan review\n\nThe plan is written up in [[AllTypes|Plan]], which is also found under that alias.\n\nA bare alias is not a link target: [[Plan]] stays a missing link.",
+            note.Content.ReplaceLineEndings("\n"));
+    }
+
+    /// <summary>FP-T16: every property link in the seeded AllTypes notes resolves through the real index in the note's own root (links never cross roots).</summary>
+    [Theory]
+    [InlineData("Teams/Platform/AllTypes.md")]
+    [InlineData("Teams/Platform/AllTypes-Json.md")]
+    public void Plan_PropertyLinks_ResolveInTheirOwnRoot(string path)
+    {
+        SeedPlan plan = Plan();
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        foreach (SeedFile file in plan.Files.Where(static f => f.RelativePath.StartsWith("Teams/", StringComparison.Ordinal)))
+        {
+            string target = Path.Combine(fixture.DataDir, file.RelativePath.Replace('/', Path.DirectorySeparatorChar));
+            _ = Directory.CreateDirectory(Path.GetDirectoryName(target) ?? fixture.DataDir);
+            File.WriteAllText(target, file.Content);
+        }
+
+        fixture.Reload();
+        LibraryPath note = fixture.ResolveTeams(path["Teams/".Length..]);
+        string content = plan.Files.Single(f => f.RelativePath == path).Content;
+        List<WikiLink> links = [.. NoteProperties.Read(NoteFrontmatter.Locate(content)).SelectMany(static p => p.Items.Append(p.Value)).SelectMany(static text => WikiLinkParser.ParseSlice(text))];
+
+        Assert.NotEmpty(links);
+        Assert.All(links, link => Assert.NotNull(fixture.Index.Resolve(note, link).Path));
     }
 }

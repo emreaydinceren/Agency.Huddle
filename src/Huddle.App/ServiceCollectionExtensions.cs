@@ -539,6 +539,7 @@ public static class ServiceCollectionExtensions
         // constructor dependency once the rewrite hooks land (8.5.i-a).
         services.AddSingleton<WikiLinkIndex>();
         services.AddSingleton<LibraryTagIndex>();
+        services.AddSingleton<PropertyTypes>();
 
         // The open Tasks that link to a document, for the Backlinks panel: WikiLinkIndex skips the Teams
         // root's underscore folders, so a Task never reaches it.

@@ -690,8 +690,11 @@ frontmatter. It is used by the tag pass, by `NoteTagReader` and by `LibraryDocum
 today splits with `PersonaFrontmatter`, so this changes it), so the Properties block and the index
 always agree on where the block is. The block starts with a first line of exactly `---` (after an
 optional BOM) and ends at the next line that is exactly `---` or `...`. A block that never closes
-is **not** frontmatter, and its text is scanned as body like any other. The other Properties rows
-are still parsed from the extracted block by `PersonaFrontmatter`.
+is **not** frontmatter, and its text is scanned as body like any other. A note whose first line
+starts with `{` and whose leading text is one closed JSON object has that object as its
+frontmatter; `NoteFrontmatter.Locate` reports which form it found. The other Properties rows are
+read and typed by `NoteProperties` and `PropertyTyping`, as
+[Front matter properties](Huddle.FrontMatterProperties-Specifications.md) specifies.
 
 **Inline syntax.**
 

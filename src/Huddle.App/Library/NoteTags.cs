@@ -12,12 +12,14 @@ internal static class NoteTags
     {
         ArgumentNullException.ThrowIfNull(text);
 
-        (string? block, int bodyStart) = NoteFrontmatter.Split(text);
+        NoteFrontmatterBlock located = NoteFrontmatter.Locate(text);
+        string? block = located.Text;
+        int bodyStart = located.BodyStart;
         List<string> tags = [];
         HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
         if (block is not null)
         {
-            NoteTags.AddDistinct(NoteTagReader.Read(block), seen, tags);
+            NoteTags.AddDistinct(NoteTagReader.Read(block, located.Form), seen, tags);
         }
 
         NoteTags.AddDistinct(NoteTagParser.Parse(text[bodyStart..]), seen, tags);

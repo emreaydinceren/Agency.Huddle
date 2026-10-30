@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
 
 
 namespace Agency.Huddle.App.Library;
@@ -15,9 +16,15 @@ internal static class NoteTagReader
 
     /// <summary>The normalised tags in <paramref name="block"/>, in source order, repeats kept; empty when the entry is missing, malformed or holds none.</summary>
     /// <param name="block">The lines between the frontmatter delimiters, from <see cref="NoteFrontmatter.Split"/>.</param>
-    internal static IReadOnlyList<string> Read(string block)
+    /// <param name="form">Which spelling the block is written in; a JSON object is read as JSON only when this says so.</param>
+    internal static IReadOnlyList<string> Read(string block, NoteFrontmatterForm form)
     {
         ArgumentNullException.ThrowIfNull(block);
+
+        if (form == NoteFrontmatterForm.Json && TryReadJsonValues(block, out List<string>? jsonValues))
+        {
+            return Normalise(jsonValues);
+        }
 
         string[] lines = block.Split(["\r\n", "\n", "\r"], StringSplitOptions.None);
         int keyLine = -1;
@@ -45,6 +52,12 @@ internal static class NoteTagReader
             return [];
         }
 
+        return Normalise(values);
+    }
+
+    /// <summary>Turns the raw values into tags: a leading <c>#</c> is dropped and a value that is not a whole tag is skipped.</summary>
+    private static List<string> Normalise(List<string> values)
+    {
         List<string> tags = [];
         foreach (string value in values)
         {
@@ -56,6 +69,63 @@ internal static class NoteTagReader
         }
 
         return tags;
+    }
+
+    /// <summary>
+    /// JSON front matter (D-9): when the block is one JSON object, its <c>tags</c> member is read as a flow list is. A string is one quoted value, an array
+    /// gives its string items (a number, a boolean or a null is not a string, so it is skipped), and any other member gives none. A repeated member keeps the last.
+    /// </summary>
+    /// <returns><see langword="false"/> when the block is not a JSON object, so the YAML reading applies.</returns>
+    private static bool TryReadJsonValues(string block, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out List<string>? values)
+    {
+        values = null;
+        if (!block.AsSpan().TrimStart().StartsWith("{", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(block);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            JsonElement? tags = null;
+            foreach (JsonProperty member in document.RootElement.EnumerateObject())
+            {
+                if (string.Equals(member.Name, "tags", StringComparison.Ordinal))
+                {
+                    tags = member.Value;
+                }
+            }
+
+            values = tags is { } found ? JsonStrings(found) : [];
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static List<string> JsonStrings(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            return [.. new[] { element.GetString() ?? string.Empty }.Where(static value => value.Length > 0)];
+        }
+
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return [.. element.EnumerateArray()
+            .Where(static item => item.ValueKind == JsonValueKind.String)
+            .Select(static item => item.GetString() ?? string.Empty)
+            .Where(static value => value.Length > 0)];
     }
 
     private static bool HasTabIndent(string line)

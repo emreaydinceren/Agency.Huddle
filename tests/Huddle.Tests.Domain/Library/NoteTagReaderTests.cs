@@ -5,7 +5,7 @@ namespace Agency.Huddle.Tests.Library;
 /// <summary>Pins the frontmatter <c>tags</c> forms and the frontmatter boundary of Spec §6.17.</summary>
 public sealed class NoteTagReaderTests
 {
-    private static string Read(string block) => string.Join("|", NoteTagReader.Read(block));
+    private static string Read(string block) => string.Join("|", NoteTagReader.Read(block, NoteFrontmatterForm.Yaml));
 
     /// <summary>Every accepted way of writing the list.</summary>
     [Theory]
