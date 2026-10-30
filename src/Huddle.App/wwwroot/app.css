@@ -33,6 +33,23 @@ html {
     box-sizing: border-box;
 }
 
+/* Native controls and scrollbars follow the Theme's mode. A dark Theme left at the default scheme drew light scrollbars,
+   date pickers and autofill on a dark page; MainLayout renders .theme-mode-dark for a dark Theme. */
+:root {
+    color-scheme: light;
+}
+
+:root:has(.theme-mode-dark) {
+    color-scheme: dark;
+}
+
+/* Every scroller shows a thin thumb in the edge colour on no track, as the mockups do, not the platform bar with arrow
+   buttons. A rule further down may still hide a thumb until hover (the hiring pool grid). */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ink-edge) transparent;
+}
+
 code, kbd, samp, pre {
     font-family: var(--font-mono);
 }
@@ -974,6 +991,25 @@ emoji-picker {
     max-width: 45ch;
 }
 
+/* The Right sidebar with nothing for the page says so quietly, like a panel's own "Nothing links here.": left at the
+   panel's padding, body2 in the secondary colour. A bold centred sentence was the loudest thing in an empty panel. */
+.right-sidebar .mud-drawer-content > .empty-state {
+    align-items: flex-start;
+    margin-inline: 0;
+    padding: 16px;
+    text-align: start;
+}
+
+.right-sidebar .mud-drawer-content > .empty-state .empty-state-title {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
+}
+
+.right-sidebar .mud-drawer-content > .empty-state .empty-state-text:empty {
+    display: none;
+}
+
 .tab-empty.empty-state-centered {
     display: flex;
     flex-direction: column;
@@ -1037,10 +1073,36 @@ emoji-picker {
     display: none;
 }
 
-/* The Top bar's "N Tasks need you" pill is for a style pack that draws it (ADR-0057); every Theme without one leaves
-   the count to the Tasks page and My Tasks. */
+/* The Top bar's "N Tasks need you" pill: every Theme's mockup shows it, so it is drawn in the needs hue unless a surface
+   trait below draws it its own way (paper, hairline). It used to be hidden for the flat surface, which left Fluent and
+   Cobalt Soft without it (side-by-side audit, 2026-10-30, FL-05 and CL-02). */
 .tasks-need-you-pill {
-    display: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 28px;
+    padding: 0 12px;
+    margin-inline-end: 4px;
+    border: 1px solid var(--hu-tone-warning-line);
+    border-radius: 999px;
+    background: var(--hu-tone-warning-soft);
+    color: var(--hu-tone-warning-ink);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: border-color 0.12s;
+}
+
+.tasks-need-you-pill:hover {
+    border-color: var(--hu-needs);
+}
+
+.tasks-need-you-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--hu-needs);
 }
 
 /* The groups of Tabs side by side. Each takes an equal share of the width; min-width: 0 lets a pane
@@ -1350,14 +1412,15 @@ emoji-picker {
     display: none;
 }
 
-/* A strip straddling the Sidebar's right (workspace-facing) edge, the mirror of .resizable-drawer-handle: the 8px width is
-   the pointer target and the 3px line (::before) is what reads as draggable once it is hovered or focused. It is hidden
+/* A strip along the Sidebar's right (workspace-facing) edge, the mirror of .resizable-drawer-handle: the 8px width is
+   the pointer target and the 2px line (::before) is what reads as draggable once it is hovered or focused. It is hidden
    while the Sidebar is collapsed. While a drag runs the cursor stays ew-resize over whatever the pointer crosses, and
-   text is not selected. */
+   text is not selected. It sits inside the edge, not across it: the drawer scrolls (overflow auto), so a strip reaching
+   4px past it gave the whole navigation panel a permanent horizontal scrollbar. */
 .sidebar-resize-handle {
     position: absolute;
     top: 0;
-    right: -4px;
+    right: 0;
     z-index: 2;
     width: 8px;
     height: 100%;
@@ -1369,7 +1432,7 @@ emoji-picker {
     content: "";
     position: absolute;
     top: 0;
-    left: 3px;
+    left: 6px;
     width: 2px;
     height: 100%;
     background-color: transparent;
@@ -2905,7 +2968,9 @@ body.sidebar-resizing {
     text-decoration: underline dotted;
 }
 
-/* A Task reference is an info chip with a mono id; Room and Team references are the same chip in the accent. */
+/* A Task, Room or Team reference is a chip in the accent, a Task's with a mono id and its status dot. The Theme's accent,
+   not Info: every mockup draws these chips in its own accent, and Info read as a foreign teal in Cobalt Soft and a blue in
+   Lumen (side-by-side audit, 2026-10-30, LL-C02 and CL-01). */
 :root:has([data-hu-marks="chip"]) .task-ref,
 :root:has([data-hu-marks="chip"]) a.room-ref,
 :root:has([data-hu-marks="chip"]) a.team-ref {
@@ -2914,26 +2979,19 @@ body.sidebar-resizing {
     gap: 4px;
     padding: 0 8px 0 4px;
     border-radius: calc(var(--mud-default-borderradius) * .75);
-    border: 1px solid color-mix(in srgb, var(--mud-palette-info) 30%, var(--hu-line-region));
-    background: var(--hu-tone-info-soft);
-    color: var(--hu-tone-info-ink);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 28%, var(--hu-line-region));
+    background: var(--hu-tone-primary-tint);
+    color: var(--hu-accent-ink);
     font-size: var(--mud-typography-body2-size);
     font-weight: 500;
     text-decoration: none;
     line-height: 20px;
 }
 
-:root:has([data-hu-marks="chip"]) a.room-ref,
-:root:has([data-hu-marks="chip"]) a.team-ref {
-    border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, var(--hu-line-region));
-    background: var(--hu-tone-primary-tint);
-    color: var(--hu-accent-ink);
-}
-
-/* A Mention is an info pill; a Mention of the Human is the warning "needs you" pill. */
+/* A Mention is an accent pill, the same family as the reference chips; a Mention of the Human is the warning "needs you" pill. */
 :root:has([data-hu-marks="chip"]) .mention {
-    color: var(--hu-tone-info-ink);
-    background: var(--hu-tone-info-soft);
+    color: var(--hu-accent-ink);
+    background: var(--hu-tone-primary-tint);
     padding: 0 4px;
     border-radius: calc(var(--mud-default-borderradius) * .5);
     font-weight: 500;
@@ -4203,6 +4261,28 @@ body.sidebar-resizing {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
+}
+
+/* "Blocked by PLAT-0001" on a blocked card: an error chip with a lock, the one blocked cue every Theme shares. A Theme's
+   tint or edge on .task-card-blocked only adds to it. */
+.task-card-blocked-by {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 4px;
+    padding: 0 8px 0 4px;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-error) 35%, transparent);
+    border-radius: calc(var(--mud-default-borderradius) * .75);
+    background: var(--hu-tone-error-soft);
+    color: var(--hu-tone-error-ink);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    line-height: 20px;
+}
+
+.task-card-blocked-by .mud-icon-root {
+    width: 14px;
+    height: 14px;
 }
 
 /* The card is the positioning context for its ⋮ menu, which sits outside the open button (it cannot nest in it) but is drawn as the last element of the first row. */

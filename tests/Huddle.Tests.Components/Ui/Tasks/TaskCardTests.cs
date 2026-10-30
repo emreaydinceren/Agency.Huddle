@@ -244,6 +244,34 @@ public sealed class TaskCardTests : IDisposable
         Assert.DoesNotContain(ClassTokens(card), token => token.StartsWith("task-col-edge", StringComparison.Ordinal));
     }
 
+    /// <summary>A blocked Task says so on its card: a "Blocked by" chip naming each blocker, in every Theme, not only a tint or an edge (side-by-side audit, NL-01).</summary>
+    [Fact]
+    public async Task Blocked_ShowsBlockedByChipNamingEachBlocker()
+    {
+        TaskItem task = TestTasks.Make(id: "PLAT-0003", title: "T", status: TaskState.ToDo, blockedBy: [ParseId("PLAT-0001"), ParseId("PLAT-0002")]);
+
+        await using MudBunitContext ctx = new();
+        IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task);
+
+        Assert.Equal("Blocked by PLAT-0001, PLAT-0002", cut.Find(".task-card-blocked-by").TextContent.Trim());
+    }
+
+    /// <summary>The chip is not repeated when the View already lists the <c>blocked_by</c> field, and an unblocked Task has none.</summary>
+    [Fact]
+    public async Task BlockedByChip_AbsentWhenUnblockedOrWhenTheViewListsTheField()
+    {
+        TaskItem blocked = TestTasks.Make(id: "PLAT-0003", title: "T", status: TaskState.ToDo, blockedBy: [ParseId("PLAT-0001")]);
+        TaskItem free = TestTasks.Make(id: "PLAT-0004", title: "T", status: TaskState.ToDo);
+
+        await using MudBunitContext listedCtx = new();
+        IRenderedComponent<ContainerFragment> listed = this.Render(listedCtx, blocked, fields: ["blocked_by"]);
+        await using MudBunitContext freeCtx = new();
+        IRenderedComponent<ContainerFragment> unblocked = this.Render(freeCtx, free);
+
+        Assert.Empty(listed.FindAll(".task-card-blocked-by"));
+        Assert.Empty(unblocked.FindAll(".task-card-blocked-by"));
+    }
+
     /// <summary>Spec §13.4 Cards ("The View's extra fields"): a field named in <see cref="TaskCard.Fields"/> shows its value, formatted the same way every Tasks surface formats a date (<see cref="HumanDate"/>, with the full date as the tooltip).</summary>
     [Fact]
     public async Task Fields_DueDateShownWhenInFields()
