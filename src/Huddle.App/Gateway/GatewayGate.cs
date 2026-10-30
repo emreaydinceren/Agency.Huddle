@@ -17,14 +17,17 @@ internal sealed class GatewayGate(RequestDelegate next)
     /// <param name="limiter">The pre-auth connection limiter.</param>
     /// <param name="listener">Tells which listener the connection arrived on.</param>
     /// <param name="settings">The gateway settings (trusted proxies, origin and plain-HTTP rules).</param>
+    /// <param name="bareNames">Records the admission of a bare-name <c>Host</c> (R-13).</param>
     public async Task InvokeAsync(
         HttpContext http,
         IIngressWhois whois,
         PreAuthConnectionLimiter limiter,
         GatewayListener listener,
-        GatewaySettings settings)
+        GatewaySettings settings,
+        BareNameHostMonitor bareNames)
     {
         ArgumentNullException.ThrowIfNull(http);
+        ArgumentNullException.ThrowIfNull(bareNames);
 
         IngressResult ingress = await ClassifyAsync(http, whois, listener, settings.Options).ConfigureAwait(false);
         if (ingress.Kind == IngressKind.Rejected)
@@ -47,6 +50,7 @@ internal sealed class GatewayGate(RequestDelegate next)
             return;
         }
 
+        bareNames.Note(http.Request.Host.Host);
         switch (GatewayPaths.Of(http.Request.Path))
         {
             case GatewayPaths.Kind.LoopbackOnly when ingress.Kind != IngressKind.Loopback:

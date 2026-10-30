@@ -48,6 +48,29 @@ internal sealed class AuthRateLimiter
     /// <param name="client">The client address text.</param>
     public static string Key(string scope, string client) => $"{scope}:{client}";
 
+    /// <summary>
+    /// The text that identifies a client in rate-limit keys: an IPv4 address as is, an IPv6 address by its /64 prefix (one subscriber owns a whole /64,
+    /// so counting single addresses lets an attacker rotate through them), and <c>unknown</c> without an address.
+    /// </summary>
+    /// <param name="address">The client address, or <see langword="null"/>.</param>
+    public static string ClientKey(System.Net.IPAddress? address)
+    {
+        if (address is null)
+        {
+            return "unknown";
+        }
+
+        System.Net.IPAddress normal = address.IsIPv4MappedToIPv6 ? address.MapToIPv4() : address;
+        if (normal.AddressFamily != System.Net.Sockets.AddressFamily.InterNetworkV6 || System.Net.IPAddress.IsLoopback(normal))
+        {
+            return normal.ToString();
+        }
+
+        byte[] bytes = normal.GetAddressBytes();
+        Array.Clear(bytes, 8, 8);
+        return new System.Net.IPAddress(bytes).ToString() + "/64";
+    }
+
     /// <summary>Builds <c>browser-origin:{origin}</c>.</summary>
     /// <param name="origin">The Origin header value.</param>
     public static string BrowserOriginKey(string origin) => BrowserOriginPrefix + origin;

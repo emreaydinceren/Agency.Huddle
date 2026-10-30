@@ -17,7 +17,12 @@ internal static class PairingPolicy
             return Approval(GatewayScopes.Limited, requested);
         }
 
-        if (input.Ingress == IngressKind.Loopback && input.AutoApproveLocal && input.HostAndOriginLoopback && input.GatewayAuthPassed)
+        if (input.IsFunnel)
+        {
+            return new Decision(false, requested, null);
+        }
+
+        if (input.Ingress == IngressKind.Loopback && input.AutoApproveLocal && input.HostAndOriginLoopback && input.GatewayAuthPassed && !input.Revoked)
         {
             return new Decision(true, GatewayScopes.AdminSet, "loopback");
         }
@@ -25,6 +30,11 @@ internal static class PairingPolicy
         if (input.Bootstrap == BootstrapTokenStore.Kind.Admin)
         {
             return new Decision(true, GatewayScopes.AdminSet, "bootstrap");
+        }
+
+        if (input.Revoked)
+        {
+            return new Decision(false, requested, null);
         }
 
         if (IsVerifiedTailscale(input) && GatewayScopes.HoldsAll(GatewayScopes.Limited, requested))
@@ -67,6 +77,7 @@ internal static class PairingPolicy
     /// <param name="Bootstrap">The kind of bootstrap token redeemed, or <see langword="null"/>.</param>
     /// <param name="TrustedProxy">The trusted-proxy auto-approval rule, or <see langword="null"/>.</param>
     /// <param name="Requested">The scopes asked for.</param>
+    /// <param name="Revoked">Whether the device was revoked or removed and not approved by a human since (R-1).</param>
     public sealed record Input(
         IngressKind Ingress,
         bool HostAndOriginLoopback,
@@ -77,7 +88,8 @@ internal static class PairingPolicy
         bool IsFunnel,
         BootstrapTokenStore.Kind? Bootstrap,
         TrustedProxyRule? TrustedProxy,
-        IReadOnlyList<string> Requested);
+        IReadOnlyList<string> Requested,
+        bool Revoked = false);
 
     /// <summary><c>TrustedProxy:DeviceAutoApprove</c>.</summary>
     /// <param name="Enabled">Whether auto-approval is on.</param>

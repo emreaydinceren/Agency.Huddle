@@ -250,6 +250,25 @@ internal sealed class PairingService
         }
     }
 
+    /// <summary>Rotates a device's token and holds the new one for the device's next successful connect, as an approval does (R-2).</summary>
+    /// <param name="deviceId">The device id.</param>
+    /// <returns>The new token, or <see langword="null"/> when the device is unknown.</returns>
+    public string? Rotate(string deviceId)
+    {
+        ArgumentNullException.ThrowIfNull(deviceId);
+
+        lock (this.gate)
+        {
+            string? token = this.devices.Rotate(deviceId);
+            if (token is not null)
+            {
+                this.pendingTokens[deviceId] = token;
+            }
+
+            return token;
+        }
+    }
+
     private static bool IsPending(Slot slot, DateTimeOffset now) => slot.Resolution == Resolution.Open && now < slot.Request.ExpiresAt;
 
     private static ApprovalOutcome? Refusal(IReadOnlyCollection<string> approverScopes, IReadOnlyList<string> granted)

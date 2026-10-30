@@ -6,7 +6,9 @@ namespace Agency.Huddle.App.Gateway;
 internal sealed class GatewayConnectService
 {
     private const int MaxNameLength = 60;
+    private const long PasswordBusyRetryMs = 1000;
 
+    private readonly PasswordVerificationGate passwordGate;
     private readonly GatewaySettings settings;
     private readonly AuthRateLimiter limiter;
     private readonly ChallengeNonceStore nonces;
@@ -23,6 +25,7 @@ internal sealed class GatewayConnectService
     /// <param name="pairing">The pairing requests.</param>
     /// <param name="bootstrap">The bootstrap tokens.</param>
     /// <param name="timeProvider">Defaults to <see cref="TimeProvider.System"/>.</param>
+    /// <param name="passwordGate">Caps concurrent password verifications; defaults to a gate of <see cref="PasswordVerificationGate.DefaultMaxConcurrent"/>.</param>
     public GatewayConnectService(
         GatewaySettings settings,
         AuthRateLimiter limiter,
@@ -30,7 +33,8 @@ internal sealed class GatewayConnectService
         DeviceRegistry devices,
         PairingService pairing,
         BootstrapTokenStore bootstrap,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        PasswordVerificationGate? passwordGate = null)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(limiter);
@@ -46,6 +50,7 @@ internal sealed class GatewayConnectService
         this.pairing = pairing;
         this.bootstrap = bootstrap;
         this.timeProvider = timeProvider ?? TimeProvider.System;
+        this.passwordGate = passwordGate ?? new PasswordVerificationGate();
     }
 
     /// <summary>Runs the handshake: limiter, nonce and signature, gateway auth, then pairing.</summary>
@@ -57,20 +62,21 @@ internal sealed class GatewayConnectService
         ArgumentNullException.ThrowIfNull(context);
 
         string client = ClientOf(context.Ingress);
+        string rateClient = AuthRateLimiter.ClientKey(context.Ingress.Client);
         bool loopback = context.Ingress.Kind == IngressKind.Loopback;
         string? credentialScope = CredentialScope(request.Auth);
 
-        if (this.LockedOut(client, credentialScope, loopback) is { } locked)
+        if (this.LockedOut(rateClient, credentialScope, loopback) is { } locked)
         {
             return locked;
         }
 
-        if (this.CheckDevice(request, client, loopback) is { } deviceFailure)
+        if (this.CheckDevice(request, rateClient, loopback) is { } deviceFailure)
         {
             return deviceFailure;
         }
 
-        Gate gate = this.Authenticate(request, context, client, loopback);
+        Gate gate = this.Authenticate(request, context, rateClient, loopback);
         if (gate.Failure is not null)
         {
             return gate.Failure;
@@ -78,7 +84,7 @@ internal sealed class GatewayConnectService
 
         if (credentialScope is not null)
         {
-            this.limiter.Reset(AuthRateLimiter.Key(credentialScope, client));
+            this.limiter.Reset(AuthRateLimiter.Key(credentialScope, rateClient));
         }
 
         return this.Admit(request, context, gate, client);
@@ -227,7 +233,22 @@ internal sealed class GatewayConnectService
             return Gate.Refused(this.Fail(AuthRateLimitScopes.SharedSecret, client, loopback, missing));
         }
 
-        bool matches = passwordMode ? this.settings.VerifyPassword(presented) : this.settings.VerifyToken(presented);
+        bool matches;
+        if (passwordMode)
+        {
+            using IDisposable? lease = this.passwordGate.TryEnter();
+            if (lease is null)
+            {
+                return Gate.Refused(Failed(429, AuthRateLimiter.ErrorCode) with { RetryAfterMs = PasswordBusyRetryMs });
+            }
+
+            matches = this.settings.VerifyPassword(presented);
+        }
+        else
+        {
+            matches = this.settings.VerifyToken(presented);
+        }
+
         if (matches)
         {
             return Gate.Passed(null);
@@ -252,17 +273,7 @@ internal sealed class GatewayConnectService
             return this.Admitted(device, null, client, context);
         }
 
-        PairingPolicy.Decision decision = PairingPolicy.Decide(new PairingPolicy.Input(
-            context.Ingress.Kind,
-            context.HostAndOriginLoopback,
-            this.settings.Options.AutoApproveLocal,
-            GatewayAuthPassed: true,
-            context.Ingress.TailscaleLogin,
-            this.settings.Options.Auth.AllowTailscale,
-            context.Ingress.IsFunnel,
-            gate.Bootstrap,
-            TrustedProxy: null,
-            requested));
+        PairingPolicy.Decision decision = this.Decide(request, context, gate, requested);
         if (!decision.AutoApprove)
         {
             return this.RequestPairing(request, context, decision.Scopes, client);
@@ -280,6 +291,25 @@ internal sealed class GatewayConnectService
             context.UserAgent));
         DeviceRecord? paired = this.devices.Find(request.DeviceId);
         return paired is null ? Failed(401, ConnectOutcome.AuthRequired) : Connected(paired, token);
+    }
+
+    private PairingPolicy.Decision Decide(ConnectRequest request, ConnectContext context, Gate gate, IReadOnlyList<string> requested)
+    {
+        GatewayOptions.DeviceAutoApproveOptions auto = this.settings.Options.TrustedProxy.DeviceAutoApprove;
+        IReadOnlyList<string> cap = auto.Scopes.Count == 0 ? GatewayOptions.DeviceAutoApproveOptions.DefaultScopes : auto.Scopes;
+        PairingPolicy.TrustedProxyRule? rule = auto.Enabled ? new PairingPolicy.TrustedProxyRule(true, cap) : null;
+        return PairingPolicy.Decide(new PairingPolicy.Input(
+            context.Ingress.Kind,
+            context.HostAndOriginLoopback,
+            this.settings.Options.AutoApproveLocal,
+            GatewayAuthPassed: true,
+            context.Ingress.TailscaleLogin,
+            this.settings.Options.Auth.AllowTailscale,
+            context.Ingress.IsFunnel,
+            gate.Bootstrap,
+            rule,
+            requested,
+            Revoked: this.devices.IsRevoked(request.DeviceId)));
     }
 
     private ConnectOutcome Admitted(DeviceRecord device, string? issuedToken, string client, ConnectContext context)

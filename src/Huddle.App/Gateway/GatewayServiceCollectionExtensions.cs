@@ -28,9 +28,13 @@ internal static class GatewayServiceCollectionExtensions
             provider.GetRequiredService<IOptions<TeamOptions>>().Value.DataDir,
             provider.GetService<TimeProvider>(),
             provider.GetRequiredService<GatewayFeed>()));
-        services.AddSingleton<IRemoteAccessState>(static provider => new RemoteAccessState(provider.GetRequiredService<GatewaySettings>().Options));
+        services.AddSingleton<IRemoteAccessState>(static provider => new RemoteAccessState(
+            provider.GetRequiredService<GatewaySettings>().Options,
+            () => provider.GetRequiredService<GatewayListener>().AppEndpoints));
         services.AddSingleton<HostActions>();
         services.AddSingleton<ChallengeNonceStore>();
+        services.AddSingleton<ChallengeRateLimiter>();
+        services.AddSingleton<BareNameHostMonitor>();
         services.AddSingleton<BootstrapTokenStore>();
         services.AddSingleton<BootstrapLinks>();
         services.AddSingleton<SessionRegistry>();

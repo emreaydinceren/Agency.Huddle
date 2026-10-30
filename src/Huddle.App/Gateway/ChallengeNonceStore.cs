@@ -10,7 +10,8 @@ internal sealed class ChallengeNonceStore
     public static readonly TimeSpan Lifetime = TimeSpan.FromSeconds(60);
 
     private const int PruneThreshold = 256;
-    private const int MaxOutstanding = 10_000;
+    /// <summary>The most unspent nonces kept; beyond it the oldest are evicted.</summary>
+    public const int MaxOutstanding = 10_000;
 
     private readonly TimeProvider timeProvider;
     private readonly Dictionary<string, DateTimeOffset> issued = new(StringComparer.Ordinal);
@@ -63,7 +64,7 @@ internal sealed class ChallengeNonceStore
         }
     }
 
-    /// <summary>Drops lapsed nonces, and everything when an unauthenticated flood has filled the store. Called under the lock.</summary>
+    /// <summary>Drops lapsed nonces, and the oldest tenth when an unauthenticated flood has filled the store. Called under the lock.</summary>
     /// <param name="now">The current time.</param>
     private void Prune(DateTimeOffset now)
     {
@@ -79,7 +80,11 @@ internal sealed class ChallengeNonceStore
 
         if (this.issued.Count >= MaxOutstanding)
         {
-            this.issued.Clear();
+            int surplus = this.issued.Count - (MaxOutstanding * 9 / 10);
+            foreach (string key in this.issued.OrderBy(pair => pair.Value).Take(surplus).Select(pair => pair.Key).ToList())
+            {
+                _ = this.issued.Remove(key);
+            }
         }
     }
 

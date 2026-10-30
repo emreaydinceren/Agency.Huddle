@@ -10,7 +10,13 @@ namespace Agency.Huddle.App.Gateway;
 /// <param name="listener">The recorded listeners.</param>
 /// <param name="claim">The Tailscale Serve claim.</param>
 /// <param name="runtime">The Tailscale runtime, which holds the latest poll.</param>
-internal sealed class GatewayRuntimeView(GatewaySettings settings, GatewayListener listener, TailscaleServeClaim claim, TailscaleRuntime runtime) : IGatewayRuntimeView
+/// <param name="bareNames">What the gate recorded about bare-name hosts (R-13).</param>
+internal sealed class GatewayRuntimeView(
+    GatewaySettings settings,
+    GatewayListener listener,
+    TailscaleServeClaim claim,
+    TailscaleRuntime runtime,
+    BareNameHostMonitor? bareNames = null) : IGatewayRuntimeView
 {
     /// <summary>The words for a bind refused because sign-in is off.</summary>
     internal const string BindNeedsSignIn = "Huddle stayed on this computer because sign-in is off. Choose token or password sign-in, then restart Huddle.";
@@ -65,7 +71,7 @@ internal sealed class GatewayRuntimeView(GatewaySettings settings, GatewayListen
     public IReadOnlyList<TailscaleServeStatus.Route> StrayRoutes => runtime.Snapshot?.StrayRoutes ?? [];
 
     /// <inheritdoc />
-    public bool BareNameHostInUse => false;
+    public bool BareNameHostInUse => bareNames?.InUse ?? false;
 
     /// <summary>The plain sentence for why the gateway is not fully up, or <see langword="null"/> when nothing is wrong.</summary>
     /// <param name="listenerReason">The reason the listener plan recorded.</param>

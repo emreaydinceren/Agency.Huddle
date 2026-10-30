@@ -50,9 +50,15 @@ internal static class ConnectEndpoints
         return requested.Any(char.IsControl) || requested.Contains('\\') ? "/" : requested;
     }
 
-    private static IResult Challenge(HttpContext http, ChallengeNonceStore nonces)
+    private static IResult Challenge(HttpContext http, ChallengeNonceStore nonces, ChallengeRateLimiter rate)
     {
         NoStore(http);
+        IngressResult ingress = IngressOf(http);
+        if (ingress.Kind != IngressKind.Loopback && !rate.TryAcquire(AuthRateLimiter.ClientKey(ingress.Client)))
+        {
+            return Results.Json(new ErrorBody(AuthRateLimiter.ErrorCode, null), statusCode: StatusCodes.Status429TooManyRequests);
+        }
+
         return Results.Json(nonces.Issue());
     }
 
@@ -116,7 +122,8 @@ internal static class ConnectEndpoints
 
     /// <summary>
     /// <c>GET /auth/status</c>: whether the request's cookie names a live session (C-7), and what the connect page needs to draw itself:
-    /// the auth <c>mode</c>, the verified <c>tailscaleLogin</c> (null unless a verified identity stands in for gateway auth), and the <c>host</c> and <c>port</c> asked for.
+    /// the auth <c>mode</c>, the verified <c>tailscaleLogin</c> (null unless a verified identity stands in for gateway auth), the <c>port</c> asked for and the
+    /// machine name as <c>host</c> (null unless the caller is on loopback or has a session, R-9).
     /// </summary>
     private static IResult Status(HttpContext http, SessionRegistry sessions, GatewaySettings settings)
     {
@@ -131,7 +138,8 @@ internal static class ConnectEndpoints
             GatewayAuthMode.None => "none",
             _ => "token",
         };
-        return Results.Json(new SessionBody(authenticated, mode, login, Environment.MachineName, http.Request.Host.Port));
+        string? machine = authenticated || ingress.Kind == IngressKind.Loopback ? Environment.MachineName : null;
+        return Results.Json(new SessionBody(authenticated, mode, login, machine, http.Request.Host.Port));
     }
 
     private static async Task<IResult> BurnAsync(HttpContext http, BootstrapTokenStore bootstrap, CancellationToken cancellationToken)
@@ -232,7 +240,7 @@ internal static class ConnectEndpoints
 
     private sealed record StatusBody(string Status);
 
-    private sealed record SessionBody(bool Authenticated, string Mode, string? TailscaleLogin, string Host, int? Port);
+    private sealed record SessionBody(bool Authenticated, string Mode, string? TailscaleLogin, string? Host, int? Port);
 
     private sealed record BurnRequest(string? BootstrapToken);
 }

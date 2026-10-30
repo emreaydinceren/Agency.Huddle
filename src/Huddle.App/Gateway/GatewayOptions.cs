@@ -36,6 +36,9 @@ internal sealed class GatewayOptions
     /// <summary>The source addresses of trusted proxies (Spec 6.10).</summary>
     public List<string> TrustedProxies { get; } = [];
 
+    /// <summary>Whether <c>X-Real-IP</c> may stand in for a missing <c>X-Forwarded-For</c>; never used as identity (R-4).</summary>
+    public bool AllowRealIpFallback { get; set; }
+
     /// <summary>The trusted-proxy settings (<c>Team:Gateway:TrustedProxy</c>).</summary>
     public TrustedProxyOptions TrustedProxy { get; set; } = new();
 
@@ -47,6 +50,22 @@ internal sealed class GatewayOptions
     {
         /// <summary>The header that carries the proxy-authenticated user, or <see langword="null"/>.</summary>
         public string? UserHeader { get; set; }
+
+        /// <summary>Whether a device that arrives through a trusted proxy pairs without an approver, and with which scopes (R-4).</summary>
+        public DeviceAutoApproveOptions DeviceAutoApprove { get; set; } = new();
+    }
+
+    /// <summary><c>Team:Gateway:TrustedProxy:DeviceAutoApprove</c>.</summary>
+    internal sealed class DeviceAutoApproveOptions
+    {
+        /// <summary>The scopes granted when none are configured.</summary>
+        public static readonly string[] DefaultScopes = [GatewayScopes.Read, GatewayScopes.Write];
+
+        /// <summary>Whether auto-approval is on; off by default.</summary>
+        public bool Enabled { get; set; }
+
+        /// <summary>The scope cap; empty means <see cref="DefaultScopes"/>.</summary>
+        public List<string> Scopes { get; } = [];
     }
 
     /// <summary><c>Team:Gateway:Tailscale</c>.</summary>

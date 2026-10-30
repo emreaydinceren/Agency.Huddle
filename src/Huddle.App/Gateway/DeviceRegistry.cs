@@ -29,6 +29,10 @@ internal sealed class DeviceRegistry
             last_seen_from  TEXT NOT NULL,
             user_agent      TEXT NULL
         );
+        CREATE TABLE IF NOT EXISTS gateway_revoked_devices (
+            device_id  TEXT PRIMARY KEY,
+            revoked_at TEXT NOT NULL
+        );
         """;
 
     private const string Columns =
@@ -104,6 +108,7 @@ internal sealed class DeviceRegistry
             command.Parameters.AddWithValue("$from", registration.From);
             command.Parameters.AddWithValue("$ua", (object?)registration.UserAgent ?? DBNull.Value);
             _ = command.ExecuteNonQuery();
+            ClearDenylist(connection, registration.DeviceId);
             issued = token;
             if (token is not null)
             {
@@ -117,6 +122,22 @@ internal sealed class DeviceRegistry
         }
 
         return issued;
+    }
+
+    /// <summary>Whether the device was revoked or removed and no human or admin bootstrap has paired it since (R-1).</summary>
+    /// <param name="deviceId">The device id.</param>
+    public bool IsRevoked(string deviceId)
+    {
+        ArgumentNullException.ThrowIfNull(deviceId);
+
+        lock (this.gate)
+        {
+            using SqliteConnection connection = this.Open();
+            using SqliteCommand command = connection.CreateCommand();
+            command.CommandText = "SELECT 1 FROM gateway_revoked_devices WHERE device_id = $id;";
+            command.Parameters.AddWithValue("$id", deviceId);
+            return command.ExecuteScalar() is not null;
+        }
     }
 
     /// <summary>The device, or <see langword="null"/>.</summary>
@@ -242,6 +263,7 @@ internal sealed class DeviceRegistry
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["$id"] = deviceId }) > 0;
         if (changed)
         {
+            this.Denylist(deviceId);
             this.Announce(before, "revoked");
             this.NotifyEnded(deviceId);
         }
@@ -262,6 +284,7 @@ internal sealed class DeviceRegistry
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["$id"] = deviceId }) > 0;
         if (existed)
         {
+            this.Denylist(deviceId);
             this.Announce(before, "removed");
             this.NotifyEnded(deviceId);
         }
@@ -291,6 +314,14 @@ internal sealed class DeviceRegistry
         return this.Execute(
             "DELETE FROM gateway_devices WHERE paired_via IN ('loopback', 'bootstrap') AND last_seen_at < $cutoff;",
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["$cutoff"] = cutoff });
+    }
+
+    private static void ClearDenylist(SqliteConnection connection, string deviceId)
+    {
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM gateway_revoked_devices WHERE device_id = $id;";
+        command.Parameters.AddWithValue("$id", deviceId);
+        _ = command.ExecuteNonQuery();
     }
 
     private static string Format(DateTimeOffset moment) => moment.UtcDateTime.ToString("O", CultureInfo.InvariantCulture);
@@ -333,6 +364,12 @@ internal sealed class DeviceRegistry
         reader.IsDBNull(10) ? null : reader.GetString(10));
 
     private static DateTimeOffset ParseTime(string text) => DateTimeOffset.Parse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+
+    /// <summary>Remembers that the device was revoked or removed, so no auto-approval pairs it again until a human or admin bootstrap does (R-1).</summary>
+    /// <param name="deviceId">The device id.</param>
+    private void Denylist(string deviceId) => _ = this.Execute(
+        "INSERT OR REPLACE INTO gateway_revoked_devices (device_id, revoked_at) VALUES ($id, $now);",
+        new Dictionary<string, object?>(StringComparer.Ordinal) { ["$id"] = deviceId });
 
     private void Announce(DeviceRecord? device, string action)
     {

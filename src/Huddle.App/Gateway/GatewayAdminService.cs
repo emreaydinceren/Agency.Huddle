@@ -318,7 +318,7 @@ internal sealed class GatewayAdminService
     {
         RequireAdmin(caller);
 
-        return this.devices.Rotate(deviceId) is not null;
+        return this.pairing.Rotate(deviceId) is not null;
     }
 
     /// <summary>Revokes a device's token and ends its sessions.</summary>

@@ -152,6 +152,8 @@ internal static class IngressClassifier
             if (string.Equals(key, ForwardedFor, StringComparison.OrdinalIgnoreCase)
                 || string.Equals(key, "Forwarded", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(key, "X-Real-IP", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(key, ForwardedProto, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(key, ForwardedHost, StringComparison.OrdinalIgnoreCase)
                 || key.StartsWith(TailscaleUserPrefix, StringComparison.OrdinalIgnoreCase))
             {
                 return true;

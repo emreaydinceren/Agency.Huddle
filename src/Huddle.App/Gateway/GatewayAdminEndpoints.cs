@@ -26,7 +26,7 @@ internal static class GatewayAdminEndpoints
         _ = group.MapPost("/devices/requests/{requestId}/reject", Reject);
         _ = group.MapPost("/devices/{deviceId}/revoke", (string deviceId, DeviceRegistry devices) => Done(devices.Revoke(deviceId)));
         _ = group.MapPost("/devices/{deviceId}/remove", (string deviceId, DeviceRegistry devices) => Done(devices.Remove(deviceId)));
-        _ = group.MapPost("/devices/{deviceId}/rotate", (string deviceId, DeviceRegistry devices) => Done(devices.Rotate(deviceId) is not null));
+        _ = group.MapPost("/devices/{deviceId}/rotate", (string deviceId, PairingService pairing) => Done(pairing.Rotate(deviceId) is not null));
         return app;
     }
 
