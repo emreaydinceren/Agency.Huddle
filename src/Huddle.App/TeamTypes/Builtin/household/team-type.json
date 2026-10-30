@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "household",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "order": 20,
   "workspace": {
     "kind": "none",
@@ -37,6 +37,65 @@
       "covers": [
         "generate"
       ]
+    },
+    {
+      "id": "meal-planner",
+      "job": "meal-planner",
+      "maxPerTeam": 1,
+      "covers": [
+        "generate"
+      ]
+    },
+    {
+      "id": "home-keeper",
+      "job": "home-keeper",
+      "maxPerTeam": 1,
+      "covers": [
+        "generate"
+      ]
+    },
+    {
+      "id": "health-admin",
+      "job": "health-admin",
+      "maxPerTeam": 1,
+      "covers": [
+        "generate"
+      ]
+    },
+    {
+      "id": "schedule-keeper",
+      "job": "schedule-keeper",
+      "maxPerTeam": 1,
+      "covers": [
+        "generate"
+      ]
+    },
+    {
+      "id": "finance-tracker",
+      "job": "finance-tracker",
+      "maxPerTeam": 1,
+      "covers": [
+        "generate"
+      ]
+    },
+    {
+      "id": "comparison-shopper",
+      "job": "comparison-shopper",
+      "maxPerTeam": 1,
+      "covers": [
+        "generate"
+      ]
+    },
+    {
+      "id": "retro-agent",
+      "job": "retro-agent",
+      "maxPerTeam": 1,
+      "model": {
+        "differentVendorFrom": [
+          "household-manager"
+        ]
+      }
     }
-  ]
+  ],
+  "retroRole": "retro-agent"
 }

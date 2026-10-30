@@ -890,8 +890,10 @@ same **Skills** field.
 ### Hiring a Team from a type
 
 A team type is a template for a kind of Team: its roles, the Agents that fill
-them, its process and its workspace. The built-in types are **Development Team**
-and **Household**. Your own types live in the `TeamTypes` folder under your data
+them, its process and its workspace. Huddle ships 26 built-in types, with
+**Development Team** and **Household** first. **Household** runs a family's shared
+home with a Household Manager; **Life Admin** runs one person's own admin with a
+Chief of Household. Your own types live in the `TeamTypes` folder under your data
 folder, and a folder there with the same id replaces the built-in one.
 
 The **Settings** page's **Team Types** tab lists every type Huddle can serve: its
@@ -1158,15 +1160,46 @@ evidence from after the change, linking a Task, a `logs/...#L12` line or a
 
 ### Household teams
 
-Household is a second team type, with a Household Manager and a School Liaison.
+Household runs a family's home: school mail, meals, upkeep, appointments, bills and
+renewals. Only the Household Manager is required; it gives every job one owner,
+checks each draft and leads the weekly check-in. Add the roles your family needs:
+
+| Role | Owns |
+| --- | --- |
+| School Liaison | School emails: parent to-dos, events, the weekly digest and draft replies. Needs `email:read`. |
+| Meal Planner | The week's menu around the family's allergies, the pantry list and the grocery list. |
+| Home Keeper | The upkeep calendar (boiler service, filters, bin day), contractors and warranties. |
+| Health Admin | Appointments, vaccinations, prescriptions and health forms. Needs `email:read`. |
+| Schedule Keeper | The family calendar and the renewals list: passports, insurance, car, memberships. |
+| Finance Tracker | Bills, subscriptions and spending against the household budget. |
+| Comparison Shopper | Quotes and prices for a big purchase or a renewal. |
+| Retro Agent | The monthly retro, on a different vendor from the manager. Without one, the manager runs it. |
+
+The default process, household basics, keeps a few family rules:
+
+- **One owner per job.** Whoever owns a job notices when it is needed and sees it
+  through. The "who owns what" note in Team Memory lists each area and its owner.
+- **A recurring chore is one Task each time.** Huddle has no repeating Tasks, so the
+  owner opens the next one a week before it is due.
+- **Every spend and signature waits for you.** Such a Task carries an `action:` line,
+  so it waits in **Needs You** however small the amount.
+- **Notes say where a document is kept, never its number.** "Passports in the blue
+  folder", never a passport, policy or account number.
+- **A weekly check-in.** Huddle wakes the Household Manager every 7 days, counted from
+  the day you adopt the process, for what is done, due and slipped, and who owns each
+  item. Adopt it on the day your family meets, such as a Sunday. A retro runs every 28
+  days.
+
+At onboarding the manager writes notes on allergies, emergency contacts, bin day, the
+check-in day and the school's usual senders.
+
 A card whose connector is not yet connected shows **Needs setup** and "Connect
 <connector> to finish setup", with the path of the file to edit. A connector counts
 as connected when it is listed in `connectors.json` in your data folder, such as
 `{"connected": ["email:read"]}`. Huddle rereads the file each time, so an edit
 shows at once; a missing or malformed file means nothing is connected. Once the
 connector is listed there, select **I connected it** on the card to check again.
-Huddle does not connect anything itself. A Household has no workspace requirement,
-and its default process runs a retro every 14 days.
+Huddle does not connect anything itself. A Household has no workspace requirement.
 
 > **Example (Scenario 5).** Emre picks **Household** and hires a School Liaison. The
 > card shows **Needs setup** until he connects email. After that the liaison's card
