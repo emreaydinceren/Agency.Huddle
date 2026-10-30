@@ -246,11 +246,12 @@ public sealed class FeedStoreTests
             Assert.Equal(Length(store, FeedCategory.Rooms, agent, team), counts.Rooms);
             Assert.Equal(Length(store, FeedCategory.Gates, agent, team), counts.Gates);
             Assert.Equal(Length(store, FeedCategory.Helpers, agent, team), counts.Helpers);
+            Assert.Equal(Length(store, FeedCategory.Devices, agent, team), counts.Devices);
         }
 
         FeedCounts unfiltered = store.Counts(null, null);
         Assert.Equal(Enum.GetValues<FeedSourceType>().Length + 1, unfiltered.All);
-        Assert.Equal(unfiltered.All - 1, unfiltered.Tasks + unfiltered.Documents + unfiltered.Rooms + unfiltered.Gates + unfiltered.Helpers);
+        Assert.Equal(unfiltered.All - 1, unfiltered.Tasks + unfiltered.Documents + unfiltered.Rooms + unfiltered.Gates + unfiltered.Helpers + unfiltered.Devices);
         Assert.True(unfiltered.NeedsYou > 0);
     }
 

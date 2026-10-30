@@ -91,6 +91,12 @@ internal sealed class MudBunitContext : BunitContext
         this.Services.AddSingleton<RightSidebarService>();
         this.Services.AddSingleton<PageCommandBus>();
         this.Services.AddSingleton<TeamShortcutStore>();
+
+        // The host actions (Agent card Open, folder picker) ask whether remote access is configured. Tests start with it off,
+        // as a stock install is; a test of the configured state registers its own answer.
+        Agency.Huddle.Tests.Gateway.FakeRemoteAccessState remoteAccess = new(configured: false);
+        this.Services.AddSingleton<Agency.Huddle.App.Gateway.IRemoteAccessState>(remoteAccess);
+        this.Services.AddSingleton(new Agency.Huddle.App.Gateway.HostActions(remoteAccess));
         this.JSInterop.Mode = JSRuntimeMode.Loose;
 
         // Settings reads the viewer's scopes from the cascading authentication state (C-13). Every context starts as the paired admin,

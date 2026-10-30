@@ -23,4 +23,7 @@ internal enum FeedCategory
 
     /// <summary>A Helper paused or failing.</summary>
     Helpers,
+
+    /// <summary>Remote access: pairing requests and devices.</summary>
+    Devices,
 }

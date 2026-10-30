@@ -59,6 +59,10 @@ internal static class FeedTestSupport
         FeedSourceType.DocumentChanged => new DocumentChangedPayload("C:/lib/a.md", "lib", "a.md", "edit", "Fixed a typo"),
         FeedSourceType.HelperPaused => new HelperPausedPayload("NeedsHuman", "Needs Human", 50, 0),
         FeedSourceType.HelperFailing => new HelperFailingPayload("NeedsHuman", "Needs Human", 3, "The adapter isn't signed in"),
+        FeedSourceType.PairingRequested => new PairingRequestedPayload("req-1", "iPad", "100.64.0.7", "Managed"),
+        FeedSourceType.AdminRequested => new AdminRequestedPayload("req-1", "iPad", "100.64.0.7", "Managed"),
+        FeedSourceType.DevicePaired => new DevicePairedPayload("dev-1", "iPad", "approval"),
+        FeedSourceType.DeviceRevoked => new DeviceRevokedPayload("dev-1", "iPad", "revoked"),
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
     };
 

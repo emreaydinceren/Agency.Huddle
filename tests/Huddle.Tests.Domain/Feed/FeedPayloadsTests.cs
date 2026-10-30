@@ -46,6 +46,10 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.DocumentChanged, "document-changed"),
             (FeedSourceType.HelperPaused, "helper-paused"),
             (FeedSourceType.HelperFailing, "helper-failing"),
+            (FeedSourceType.PairingRequested, "pairing-requested"),
+            (FeedSourceType.AdminRequested, "admin-requested"),
+            (FeedSourceType.DevicePaired, "device-paired"),
+            (FeedSourceType.DeviceRevoked, "device-revoked"),
         ];
 
         Assert.Equal(AllTypes.Length, expected.Length);
@@ -169,7 +173,7 @@ public sealed class FeedPayloadsTests
     [Fact]
     public void Categories_EveryType_IsInExactlyOneTypeSegment()
     {
-        FeedCategory[] segments = [FeedCategory.Tasks, FeedCategory.Gates, FeedCategory.Rooms, FeedCategory.Documents, FeedCategory.Helpers];
+        FeedCategory[] segments = [FeedCategory.Tasks, FeedCategory.Gates, FeedCategory.Rooms, FeedCategory.Documents, FeedCategory.Helpers, FeedCategory.Devices];
         foreach (FeedSourceType type in AllTypes)
         {
             int hits = segments.Count(segment => FeedCategories.SourceTypes(segment).Contains(type));

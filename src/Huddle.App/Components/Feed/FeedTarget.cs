@@ -30,6 +30,10 @@ internal sealed record FeedTarget(FeedTargetKind Kind, string Id)
             DocumentChangedPayload p => new(FeedTargetKind.Document, p.Path),
             HelperPausedPayload p => new(FeedTargetKind.Helper, p.HelperId),
             HelperFailingPayload p => new(FeedTargetKind.Helper, p.HelperId),
+            PairingRequestedPayload p => new(FeedTargetKind.Device, p.RequestId),
+            AdminRequestedPayload p => new(FeedTargetKind.Device, p.RequestId),
+            DevicePairedPayload p => new(FeedTargetKind.Device, p.DeviceId),
+            DeviceRevokedPayload p => new(FeedTargetKind.Device, p.DeviceId),
             _ => new(FeedTargetKind.None, string.Empty),
         };
     }
@@ -42,6 +46,9 @@ internal sealed record FeedTarget(FeedTargetKind Kind, string Id)
         absolutePath is not null && resolver.TryResolveAbsolute(absolutePath, out LibraryPath? path)
             ? LibraryLinkQuery.BuildPageUri(path)
             : null;
+
+    /// <summary>The address of Settings > Remote access, where every device item leads.</summary>
+    public const string DevicesAddress = "/settings/remoteaccess";
 
     /// <summary>The address of a Helper's card on Settings > Helpers.</summary>
     /// <param name="helperId">The Helper's id, such as <c>NeedsHuman</c>.</param>
@@ -62,6 +69,7 @@ internal sealed record FeedTarget(FeedTargetKind Kind, string Id)
         FeedTargetKind.Room => "/rooms/" + this.Id,
         FeedTargetKind.Document => DocumentAddress(resolver, this.Id),
         FeedTargetKind.Helper => HelperAddress(this.Id),
+        FeedTargetKind.Device => DevicesAddress,
         _ => null,
     };
 }

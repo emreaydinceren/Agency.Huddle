@@ -1,4 +1,7 @@
 @using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.Gateway
+@inject IRemoteAccessState RemoteAccess
+@inject HostActions Host
 
 @*
     A folder picker: the Human walks the folders of the machine the app runs on (the app runs on their own machine,
@@ -78,8 +81,15 @@
     /// <inheritdoc />
     protected override void OnInitialized()
     {
-        FolderListing first = FolderBrowser.List(this.Start);
-        this.Show(first.Error is null ? first : FolderBrowser.List(null));
+        if (this.RemoteAccess.IsConfigured)
+        {
+            // The host's folders are not shown to a remote session: HostActions answers with the refusal and no folders.
+            this.Show(this.Host.ListFolders(null));
+            return;
+        }
+
+        FolderListing first = this.Host.ListFolders(this.Start);
+        this.Show(first.Error is null ? first : this.Host.ListFolders(null));
     }
 
     private void Show(FolderListing next)
@@ -89,10 +99,10 @@
         this.trail = FolderBrowser.Crumbs(next.Current);
     }
 
-    private void Open(string path) => this.Show(FolderBrowser.List(path));
+    private void Open(string path) => this.Show(this.Host.ListFolders(path));
 
     /// <summary>Goes one level up; from a drive root or a root folder that is the top level.</summary>
-    private void Up() => this.Show(FolderBrowser.List(this.listing.Parent));
+    private void Up() => this.Show(this.Host.ListFolders(this.listing.Parent));
 
     private void OnTyped(string? value) => this.typed = value ?? string.Empty;
 
@@ -104,7 +114,7 @@
             return;
         }
 
-        FolderListing next = FolderBrowser.List(this.typed);
+        FolderListing next = this.Host.ListFolders(this.typed);
         if (next.Error is FolderBrowser.MissingMessage)
         {
             this.listing = this.listing with { Error = next.Error };

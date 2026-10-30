@@ -5,6 +5,7 @@
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Components.Teams
 @using Agency.Huddle.App.Data
+@using Agency.Huddle.App.Gateway
 @using Agency.Huddle.App.HiringPool
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Pipes
@@ -36,6 +37,7 @@
 @inject ITeamDirectory TeamDirectory
 @inject IAgentGateway Gateway
 @inject PersonaHealth Health
+@inject IRemoteAccessState RemoteAccess
 @implements IDisposable
 
 @*
@@ -118,7 +120,7 @@
                                   Lines="6" Value="this.purpose" ValueChanged="this.OnPurposeChanged" Class="build-team-purpose long-text-field" />
                     <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="@LibraryFolderLabel" Immediate="true"
                                   Value="this.workspace" ValueChanged="this.OnWorkspaceChanged"
-                                  Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Folder"
+                                  Adornment="@(this.RemoteAccess.IsConfigured ? Adornment.None : Adornment.End)" AdornmentIcon="@Icons.Material.Outlined.Folder"
                                   AdornmentAriaLabel="Browse for library folder" OnAdornmentClick="this.BrowseAsync"
                                   Error="@(this.WorkspaceProblem is not null)" ErrorText="@this.WorkspaceProblem" Class="build-team-workspace" />
 
@@ -817,6 +819,11 @@
     /// <summary>Opens the folder picker at the folder typed so far and, when one is chosen, puts it in the field.</summary>
     private async Task BrowseAsync()
     {
+        if (this.RemoteAccess.IsConfigured)
+        {
+            return;
+        }
+
         DialogParameters<FolderPickerDialog> parameters = new() { { x => x.Start, this.workspace } };
         IDialogReference reference = await this.Dialogs.ShowAsync<FolderPickerDialog>("Choose a folder", parameters, FolderPickerDialog.Options);
         DialogResult? result = await reference.Result;

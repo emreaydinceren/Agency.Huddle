@@ -36,16 +36,19 @@ internal sealed class DeviceRegistry
 
     private readonly string connectionString;
     private readonly TimeProvider timeProvider;
+    private readonly GatewayFeed? feed;
     private readonly Lock gate = new();
     private readonly List<Action<string>> endedCallbacks = [];
 
     /// <summary>Opens <c>team.db</c> under <paramref name="dataDir"/>, creating the table when missing.</summary>
     /// <param name="dataDir">The data directory.</param>
     /// <param name="timeProvider">Defaults to <see cref="TimeProvider.System"/>.</param>
-    public DeviceRegistry(string dataDir, TimeProvider? timeProvider = null)
+    /// <param name="feed">Tells the Feed about pairings and revocations; <see langword="null"/> for none.</param>
+    public DeviceRegistry(string dataDir, TimeProvider? timeProvider = null, GatewayFeed? feed = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dataDir);
 
+        this.feed = feed;
         this.timeProvider = timeProvider ?? TimeProvider.System;
         this.connectionString = SqliteTable.Open(new TeamOptions { DataDir = dataDir }, DdlCreate);
     }
@@ -62,6 +65,8 @@ internal sealed class DeviceRegistry
         string now = this.Now();
         string scopes = GatewayScopes.Join(GatewayScopes.Normalize(registration.Scopes));
         string name = CleanName(registration.Name);
+        string? issued;
+        DeviceRecord? announce = null;
         lock (this.gate)
         {
             using SqliteConnection connection = this.Open();
@@ -99,8 +104,19 @@ internal sealed class DeviceRegistry
             command.Parameters.AddWithValue("$from", registration.From);
             command.Parameters.AddWithValue("$ua", (object?)registration.UserAgent ?? DBNull.Value);
             _ = command.ExecuteNonQuery();
-            return token;
+            issued = token;
+            if (token is not null)
+            {
+                announce = ReadOne(connection, registration.DeviceId);
+            }
         }
+
+        if (announce is not null)
+        {
+            this.feed?.Paired(announce);
+        }
+
+        return issued;
     }
 
     /// <summary>The device, or <see langword="null"/>.</summary>
@@ -184,6 +200,7 @@ internal sealed class DeviceRegistry
         ArgumentNullException.ThrowIfNull(deviceId);
 
         string token = NewToken();
+        DeviceRecord? before = this.Find(deviceId);
         int changed = this.Execute(
             "UPDATE gateway_devices SET token_hash = $hash WHERE device_id = $id;",
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["$id"] = deviceId, ["$hash"] = HashToken(token) });
@@ -192,6 +209,7 @@ internal sealed class DeviceRegistry
             return null;
         }
 
+        this.Announce(before, "rotated");
         this.NotifyEnded(deviceId);
         return token;
     }
@@ -218,11 +236,13 @@ internal sealed class DeviceRegistry
     {
         ArgumentNullException.ThrowIfNull(deviceId);
 
+        DeviceRecord? before = this.Find(deviceId);
         bool changed = this.Execute(
             "UPDATE gateway_devices SET token_hash = NULL WHERE device_id = $id;",
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["$id"] = deviceId }) > 0;
         if (changed)
         {
+            this.Announce(before, "revoked");
             this.NotifyEnded(deviceId);
         }
 
@@ -236,11 +256,13 @@ internal sealed class DeviceRegistry
     {
         ArgumentNullException.ThrowIfNull(deviceId);
 
+        DeviceRecord? before = this.Find(deviceId);
         bool existed = this.Execute(
             "DELETE FROM gateway_devices WHERE device_id = $id;",
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["$id"] = deviceId }) > 0;
         if (existed)
         {
+            this.Announce(before, "removed");
             this.NotifyEnded(deviceId);
         }
 
@@ -311,6 +333,14 @@ internal sealed class DeviceRegistry
         reader.IsDBNull(10) ? null : reader.GetString(10));
 
     private static DateTimeOffset ParseTime(string text) => DateTimeOffset.Parse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+
+    private void Announce(DeviceRecord? device, string action)
+    {
+        if (device is not null)
+        {
+            this.feed?.Ended(device, action);
+        }
+    }
 
     private void NotifyEnded(string deviceId)
     {

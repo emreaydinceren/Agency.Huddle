@@ -23,7 +23,13 @@ internal static class GatewayServiceCollectionExtensions
             provider.GetRequiredService<IOptions<TeamOptions>>().Value.DataDir,
             provider.GetRequiredService<IConfiguration>()));
         services.AddSingleton(static provider => new AuthRateLimiter(provider.GetRequiredService<GatewaySettings>().Options.Auth.RateLimit));
-        services.AddSingleton(static provider => new DeviceRegistry(provider.GetRequiredService<IOptions<TeamOptions>>().Value.DataDir));
+        services.AddSingleton(static provider => new GatewayFeed(provider.GetRequiredService<Feed.IFeedPublisher>()));
+        services.AddSingleton(static provider => new DeviceRegistry(
+            provider.GetRequiredService<IOptions<TeamOptions>>().Value.DataDir,
+            provider.GetService<TimeProvider>(),
+            provider.GetRequiredService<GatewayFeed>()));
+        services.AddSingleton<IRemoteAccessState>(static provider => new RemoteAccessState(provider.GetRequiredService<GatewaySettings>().Options));
+        services.AddSingleton<HostActions>();
         services.AddSingleton<ChallengeNonceStore>();
         services.AddSingleton<BootstrapTokenStore>();
         services.AddSingleton<BootstrapLinks>();

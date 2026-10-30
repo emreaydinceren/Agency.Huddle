@@ -15,6 +15,7 @@ internal sealed class PairingService
     private static readonly TimeSpan ResolvedKeptFor = TimeSpan.FromMinutes(10);
 
     private readonly DeviceRegistry devices;
+    private readonly GatewayFeed? feed;
     private readonly TimeProvider timeProvider;
     private readonly List<Slot> slots = [];
     private readonly Dictionary<string, string> pendingTokens = new(StringComparer.Ordinal);
@@ -23,10 +24,12 @@ internal sealed class PairingService
     /// <summary>Creates the service over a registry.</summary>
     /// <param name="devices">The registry an approval pairs into.</param>
     /// <param name="timeProvider">Defaults to <see cref="TimeProvider.System"/>.</param>
-    public PairingService(DeviceRegistry devices, TimeProvider? timeProvider = null)
+    /// <param name="feed">Tells the Feed about requests; <see langword="null"/> for none.</param>
+    public PairingService(DeviceRegistry devices, TimeProvider? timeProvider = null, GatewayFeed? feed = null)
     {
         ArgumentNullException.ThrowIfNull(devices);
 
+        this.feed = feed;
         this.devices = devices;
         this.timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -82,6 +85,7 @@ internal sealed class PairingService
         IReadOnlyList<string> scopes = GatewayScopes.Normalize(candidate.Scopes);
         lock (this.gate)
         {
+            this.AnnounceExpired(now);
             this.Forget(now);
             Slot? same = this.slots.Find(slot => IsPending(slot, now) && string.Equals(slot.Request.DeviceId, candidate.DeviceId, StringComparison.Ordinal));
             if (same is not null)
@@ -92,6 +96,7 @@ internal sealed class PairingService
                 }
 
                 same.Resolution = Resolution.Superseded;
+                this.feed?.RequestEnded(same.Request);
             }
             else if (this.slots.Count(slot => IsPending(slot, now)) >= MaxPending)
             {
@@ -113,6 +118,7 @@ internal sealed class PairingService
                 ExpiresAt = now + RequestLifetime,
             };
             this.slots.Add(new Slot(request));
+            this.feed?.RequestOpened(request);
             return request;
         }
     }
@@ -126,6 +132,7 @@ internal sealed class PairingService
         DateTimeOffset now = this.timeProvider.GetUtcNow();
         lock (this.gate)
         {
+            this.AnnounceExpired(now);
             Slot? slot = this.slots.Find(candidate => string.Equals(candidate.Request.RequestId, requestId, StringComparison.Ordinal));
             return slot?.Resolution switch
             {
@@ -143,6 +150,7 @@ internal sealed class PairingService
         DateTimeOffset now = this.timeProvider.GetUtcNow();
         lock (this.gate)
         {
+            this.AnnounceExpired(now);
             return [.. this.slots.Where(slot => IsPending(slot, now)).Select(slot => slot.Request)];
         }
     }
@@ -162,6 +170,7 @@ internal sealed class PairingService
         DateTimeOffset now = this.timeProvider.GetUtcNow();
         lock (this.gate)
         {
+            this.AnnounceExpired(now);
             Slot? slot = this.FindPending(requestId, now);
             if (slot is null)
             {
@@ -191,6 +200,7 @@ internal sealed class PairingService
             }
 
             slot.Resolution = Resolution.Approved;
+            this.feed?.RequestEnded(request);
             return new ApprovalResult(ApprovalOutcome.Approved, this.devices.Find(request.DeviceId));
         }
     }
@@ -212,6 +222,7 @@ internal sealed class PairingService
         DateTimeOffset now = this.timeProvider.GetUtcNow();
         lock (this.gate)
         {
+            this.AnnounceExpired(now);
             Slot? slot = this.FindPending(requestId, now);
             if (slot is null)
             {
@@ -219,6 +230,7 @@ internal sealed class PairingService
             }
 
             slot.Resolution = Resolution.Rejected;
+            this.feed?.RequestEnded(slot.Request);
             return true;
         }
     }
@@ -261,6 +273,17 @@ internal sealed class PairingService
     private Slot? FindPending(string requestId, DateTimeOffset now)
         => this.slots.Find(slot => IsPending(slot, now) && string.Equals(slot.Request.RequestId, requestId, StringComparison.Ordinal));
 
+    /// <summary>Resolves, once, the Feed item of every request that lapsed unanswered. Called under the lock, from every look at the queue.</summary>
+    /// <param name="now">The current time.</param>
+    private void AnnounceExpired(DateTimeOffset now)
+    {
+        foreach (Slot slot in this.slots.Where(slot => slot.Resolution == Resolution.Open && !slot.ExpiryAnnounced && now >= slot.Request.ExpiresAt))
+        {
+            slot.ExpiryAnnounced = true;
+            this.feed?.RequestEnded(slot.Request);
+        }
+    }
+
     /// <summary>Forgets requests long past their end, so the list stays small. Called under the lock.</summary>
     /// <param name="now">The current time.</param>
     private void Forget(DateTimeOffset now) => _ = this.slots.RemoveAll(slot => now - slot.Request.ExpiresAt > ResolvedKeptFor);
@@ -294,5 +317,7 @@ internal sealed class PairingService
         public PairingRequest Request { get; } = request;
 
         public Resolution Resolution { get; set; } = Resolution.Open;
+
+        public bool ExpiryAnnounced { get; set; }
     }
 }

@@ -31,6 +31,7 @@
 
 .feed-kind-gates,
 .feed-kind-helpers,
+.feed-kind-devices,
 .feed-kind-needsyou {
     --feed-kind: var(--mud-palette-warning);
 }
@@ -157,6 +158,7 @@
 
 .feed-badge-gates,
 .feed-badge-helpers,
+.feed-badge-devices,
 .feed-badge-needsyou {
     color: var(--mud-palette-warning-text);
     background-color: var(--mud-palette-warning);

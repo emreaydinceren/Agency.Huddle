@@ -5,9 +5,9 @@ internal static class FeedCategories
 {
     private static readonly Dictionary<FeedCategory, IReadOnlyList<FeedSourceType>> TypesByCategory = BuildIndex();
 
-    /// <summary>The seven Categories in the order the Category control, the counts and the panel draw them.</summary>
+    /// <summary>The eight Categories in the order the Category control, the counts and the panel draw them.</summary>
     public static IReadOnlyList<FeedCategory> Order { get; } =
-        [FeedCategory.All, FeedCategory.NeedsYou, FeedCategory.Tasks, FeedCategory.Documents, FeedCategory.Rooms, FeedCategory.Gates, FeedCategory.Helpers];
+        [FeedCategory.All, FeedCategory.NeedsYou, FeedCategory.Tasks, FeedCategory.Documents, FeedCategory.Rooms, FeedCategory.Gates, FeedCategory.Helpers, FeedCategory.Devices];
 
     /// <summary>The label a Category carries in the Category control and the panel.</summary>
     /// <param name="category">The Category.</param>
@@ -20,6 +20,7 @@ internal static class FeedCategories
         FeedCategory.Rooms => "Rooms",
         FeedCategory.Gates => "Gates",
         FeedCategory.Helpers => "Helpers",
+        FeedCategory.Devices => "Devices",
         _ => "All",
     };
 
@@ -35,6 +36,7 @@ internal static class FeedCategories
         FeedCategory.Rooms => counts.Rooms,
         FeedCategory.Gates => counts.Gates,
         FeedCategory.Helpers => counts.Helpers,
+        FeedCategory.Devices => counts.Devices,
         _ => counts.All,
     };
 
@@ -49,6 +51,7 @@ internal static class FeedCategories
             or FeedSourceType.RoomCreated or FeedSourceType.RoomJoined or FeedSourceType.RoomArchived => FeedCategory.Rooms,
         FeedSourceType.DocumentChanged => FeedCategory.Documents,
         FeedSourceType.HelperPaused or FeedSourceType.HelperFailing => FeedCategory.Helpers,
+        FeedSourceType.PairingRequested or FeedSourceType.AdminRequested or FeedSourceType.DevicePaired or FeedSourceType.DeviceRevoked => FeedCategory.Devices,
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 
@@ -69,6 +72,7 @@ internal static class FeedCategories
         "rooms" => FeedCategory.Rooms,
         "gates" => FeedCategory.Gates,
         "helpers" => FeedCategory.Helpers,
+        "devices" => FeedCategory.Devices,
         _ => FeedCategory.All,
     };
 
@@ -83,6 +87,7 @@ internal static class FeedCategories
         FeedCategory.Rooms => "rooms",
         FeedCategory.Gates => "gates",
         FeedCategory.Helpers => "helpers",
+        FeedCategory.Devices => "devices",
         _ => "all",
     };
 

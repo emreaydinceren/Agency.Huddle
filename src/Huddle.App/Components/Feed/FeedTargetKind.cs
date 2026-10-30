@@ -17,4 +17,7 @@ internal enum FeedTargetKind
 
     /// <summary>A Helper, opened on Settings > Helpers.</summary>
     Helper,
+
+    /// <summary>A paired device or pairing request, opened on Settings > Remote access.</summary>
+    Device,
 }
