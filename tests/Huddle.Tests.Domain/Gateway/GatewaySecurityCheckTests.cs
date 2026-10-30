@@ -17,7 +17,7 @@ public sealed class GatewaySecurityCheckTests
         bool bareName = false,
         IReadOnlyList<TailscaleServeStatus.Route>? stray = null)
     {
-        GatewayOptions options = new();
+        GatewayOptions options = new() { StrictLocal = false };
         change?.Invoke(options);
         return GatewaySecurityCheck.Evaluate(new GatewaySecurityCheck.Input(options, tokenLength, passwordLength, tailscale, bareName, stray ?? []));
     }

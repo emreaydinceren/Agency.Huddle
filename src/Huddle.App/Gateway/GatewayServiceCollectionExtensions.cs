@@ -85,8 +85,14 @@ internal static class GatewayServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(app);
 
         _ = app.Services.GetRequiredService<GatewaySettings>();
-        _ = app.MapGet("/auth", static (HttpContext http) =>
+        _ = app.MapGet("/auth", static (HttpContext http, GatewaySettings settings) =>
         {
+            if (settings.Options.StrictLocal)
+            {
+                // Strict local has no sign-in: the page is not needed, so the host goes straight to the app.
+                return Results.Redirect(ConnectEndpoints.SafeReturn(http.Request.Query["return"].ToString()));
+            }
+
             http.Response.Headers.CacheControl = "no-store";
             return Results.Content(ConnectPage.Html, "text/html", System.Text.Encoding.UTF8);
         }).DisableAntiforgery();

@@ -130,7 +130,8 @@ internal static class ConnectEndpoints
         NoStore(http);
         IngressResult ingress = IngressOf(http);
         string? login = settings.Options.Auth.AllowTailscale && !ingress.IsFunnel ? ingress.TailscaleLogin : null;
-        bool authenticated = sessions.TryGet(http.Request.Cookies[CookieName(settings.InstanceId)], ingress.TailscaleLogin) is not null;
+        bool authenticated = (settings.Options.StrictLocal && ingress.Kind == IngressKind.Loopback)
+            || sessions.TryGet(http.Request.Cookies[CookieName(settings.InstanceId)], ingress.TailscaleLogin) is not null;
         string mode = settings.Options.Auth.Mode switch
         {
             GatewayAuthMode.Password => "password",

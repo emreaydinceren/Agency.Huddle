@@ -52,6 +52,7 @@ public sealed class ConnectEndpointsTests
             this.factory = this.root.WithWebHostBuilder(builder =>
             {
                 builder.UseSetting("Team:Gateway:Auth:Token", Token);
+                builder.UseSetting("Team:Gateway:StrictLocal", "false");
                 if (mode is not null)
                 {
                     builder.UseSetting("Team:Gateway:Auth:Mode", mode);

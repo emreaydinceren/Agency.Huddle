@@ -111,7 +111,7 @@ give the page more room. The sidebar opens on **Chats**.
 | **Agents** | A link to the page listing every Agent, grouped by Team. |
 | **Tasks** | Your saved Views of Tasks: **All Tasks**, **My Tasks**, any you saved, and **New view**. Not shown when Tasks are turned off. |
 | **Library** | One **Library** link. The Library's roots (**Teams**, **Agents**, and any folders you pinned) and **Add folder** are on the Library page. Not shown when the Library is turned off. |
-| **Remote access** | Who may reach Huddle from other devices: Bind, Auth and Tailscale, the gateway token, pairing, the Devices list and the Security check. Admin only; a change to Bind or Tailscale applies after a restart. See [Using Huddle from another device](#using-huddle-from-another-device). | `team.db` |
+| **Remote access** | Who may reach Huddle from other devices. **Strict local** (on by default) means only this computer, no sign-in; turn it off to use the rest: Bind, Auth and Tailscale, the gateway token, pairing, the Devices list and the Security check. Admin only; a change to Bind or Tailscale applies after a restart. See [Using Huddle from another device](#using-huddle-from-another-device). | `team.db` |
 
 The two buttons at the bottom of the Activity bar are **Archived chats** and **Settings**.
 
@@ -2037,11 +2037,17 @@ A Source is one place Skills come from: a GitHub repository, another Git server 
 The tab shows the install file and this computer's name, the Skill Sources folder with **Change…** to choose another, one row per Source and one row per catalog. A Source its owner deprecated, withdrew or moved says so on its row, in words. Withdrawn Skills cannot be given to new hires; Agents who already have them keep working and are flagged.
 ## Using Huddle from another device
 
-By default Huddle answers only on the computer it runs on. You can reach it from a phone, a tablet or another computer in
-two ways. Tailscale is the one to use if you can. The other works on your home network without installing anything.
+By default Huddle runs in **Strict local**: only this computer can use it, and there is no sign-in. To use Huddle from
+another device, open **Settings › Remote access**, turn **Strict local** off, save and restart Huddle. Until you do,
+every other device is refused and the sections below stay disabled.
+
+Once Strict local is off, you can reach Huddle from a phone, a tablet or another computer in two ways. Tailscale is the
+one to use if you can. The other works on your home network without installing anything.
 
 Every device has to do two things before it gets in: present Huddle's secret (the **gateway token**), and be approved by
-you. Huddle remembers each approved device, so you do this once per device.
+you. Huddle remembers each approved device, so you do this once per device. With Strict local off, the browser on this
+computer is also a device: Huddle's launcher signs it in for you, and another browser on this computer asks for the
+token.
 
 ### With Tailscale (recommended)
 
@@ -2051,7 +2057,7 @@ address. Nobody outside your Tailscale account can reach it.
 1. Install Tailscale on the computer that runs Huddle and on the phone. Sign in to the same account on both.
 2. In the Tailscale admin page, turn on **MagicDNS** and **HTTPS Certificates** for your network (Tailscale's own
    documentation shows where).
-3. In Huddle open **Settings › Remote access**. Set **Tailscale** to **Serve** and save.
+3. In Huddle open **Settings › Remote access**. Make sure **Strict local** is off, set **Tailscale** to **Serve** and save.
 4. Restart Huddle. The Gateway card shows a green **Running** chip and a link that ends in `ts.net`. Press **Copy link**.
 5. Open that link on the phone.
 
@@ -2069,7 +2075,7 @@ You do not need Tailscale when your devices share one network. This costs you th
 - The computer's address can change. Reserve it on your router (a DHCP reservation), or use
   `http://<computer-name>.local:<port>`.
 
-1. In **Settings › Remote access** set **Bind** to **lan** and save.
+1. In **Settings › Remote access** make sure **Strict local** is off, set **Bind** to **lan** and save.
 2. Restart Huddle. When Windows or macOS asks about the firewall, allow **Private networks**.
 3. Under **Pair a device** a QR code appears, with a link beneath it. Scan it with the phone's camera, or type the link.
 4. The phone shows "Waiting for approval". On the computer, the request appears under **Waiting for approval**. Press

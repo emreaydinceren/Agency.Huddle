@@ -118,6 +118,7 @@ internal sealed class GatewaySettings
         GatewaySettingsStore store = new(dataDir, timeProvider);
         GatewayOverrides.Apply(options, store.StoredOverrides);
         _ = options.Auth.Mode;
+        ForceLocal(options);
 
         string? configToken = Supplied(options.Auth.Token, "Team:Gateway:Auth:Token");
         string? envToken = Supplied(env.Get(TokenEnvironmentVariable), TokenEnvironmentVariable);
@@ -134,6 +135,19 @@ internal sealed class GatewaySettings
         byte[]? hash = clearPassword is null ? store.StoredPasswordHash : null;
 
         return new GatewaySettings(options, store.InstanceId, token, source, clearPassword, hash);
+    }
+
+    /// <summary>Strict local forces the remote options off for this run: loopback bind, no Tailscale, no trusted proxies.</summary>
+    private static void ForceLocal(GatewayOptions options)
+    {
+        if (!options.StrictLocal)
+        {
+            return;
+        }
+
+        options.Bind = "loopback";
+        options.Tailscale.Mode = "off";
+        options.TrustedProxies.Clear();
     }
 
     /// <summary>Null or empty means not supplied; whitespace or a placeholder literal is refused.</summary>

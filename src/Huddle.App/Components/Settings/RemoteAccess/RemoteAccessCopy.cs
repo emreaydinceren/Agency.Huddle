@@ -36,6 +36,15 @@ internal static class RemoteAccessCopy
     /// <summary>The next step when Tailscale is chosen and not running.</summary>
     public const string TailscaleNotRunning = "Tailscale is not running. Start Tailscale, then restart Huddle.";
 
+    /// <summary>The helper text under the Strict local switch.</summary>
+    public const string StrictLocalHelper = "Only this computer can use Huddle, with no sign-in. Turn off to let other devices connect.";
+
+    /// <summary>The one line shown while strict local is on and the other Gateway controls are disabled.</summary>
+    public const string StrictLocalHint = "Turn off Strict local to set up remote access.";
+
+    /// <summary>Shown when strict local was switched on while a network listener or Tailscale route is still running.</summary>
+    public const string CloseListenersLine = "Restart Huddle to close the network listeners.";
+
     /// <summary>The warning on the Gateway card while plain HTTP is offered to other devices (Spec Appendix B).</summary>
     public const string DowngradedNotice = "Plain HTTP: anyone on this network can read what Huddle sends.";
 

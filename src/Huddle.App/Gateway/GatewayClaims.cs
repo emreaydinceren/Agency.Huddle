@@ -14,4 +14,10 @@ internal static class GatewayClaims
 
     /// <summary>The ingress kind the session was issued over, as <see cref="IngressKindText"/> writes it.</summary>
     public const string Ingress = "huddle:ingress";
+
+    /// <summary>Who is viewing; <see cref="ViewerHost"/> for the host principal of strict local mode.</summary>
+    public const string Viewer = "huddle:viewer";
+
+    /// <summary>The value of <see cref="Viewer"/> for the host.</summary>
+    public const string ViewerHost = "host";
 }

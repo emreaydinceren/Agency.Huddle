@@ -294,6 +294,7 @@ public sealed partial class GatewaySettingsTests
     {
         using TempDataDir dir = new();
         IConfigurationRoot configuration = Config(
+            ("Team:Gateway:StrictLocal", "false"),
             ("Team:Gateway:Bind", "lan"),
             ("Team:Gateway:Port", "5101"),
             ("Team:Gateway:AutoApproveLocal", "false"),

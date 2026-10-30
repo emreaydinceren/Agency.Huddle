@@ -8,8 +8,12 @@ namespace Agency.Huddle.App.Gateway;
 /// <c>{origin}/auth?return=%2F#bootstrapToken={token}</c>: the token is in the fragment, so no server log sees it.
 /// </summary>
 /// <param name="store">The token store.</param>
-internal sealed class BootstrapLinks(BootstrapTokenStore store)
+/// <param name="settings">The running gateway settings; with strict local mode on, an admin URL is the plain app address. <see langword="null"/> means off.</param>
+internal sealed class BootstrapLinks(BootstrapTokenStore store, GatewaySettings? settings = null)
 {
+    /// <summary>Whether strict local mode is on: there is no sign-in, so an admin URL is the plain app address with no token.</summary>
+    internal bool IsStrictLocal => settings?.Options.StrictLocal ?? false;
+
     private static readonly string[] AnyAddressHosts = ["[::]", "[::0]", "0.0.0.0", "+", "*"];
 
     private readonly BootstrapTokenStore store = store;
@@ -23,7 +27,8 @@ internal sealed class BootstrapLinks(BootstrapTokenStore store)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(baseUrl);
 
-        return NormalizeListenAddress(baseUrl) + Suffix + this.store.Issue(BootstrapTokenStore.Kind.Admin);
+        string address = NormalizeListenAddress(baseUrl);
+        return this.IsStrictLocal ? address : address + Suffix + this.store.Issue(BootstrapTokenStore.Kind.Admin);
     }
 
     /// <summary>

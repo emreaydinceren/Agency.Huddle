@@ -8,6 +8,9 @@ namespace Agency.Huddle.App.Gateway;
 /// </summary>
 internal static class GatewayOverrides
 {
+    /// <summary>The key of <see cref="GatewayOptions.StrictLocal"/>.</summary>
+    public const string StrictLocal = "StrictLocal";
+
     /// <summary>The key of <see cref="GatewayOptions.Bind"/>.</summary>
     public const string Bind = "Bind";
 
@@ -73,6 +76,7 @@ internal static class GatewayOverrides
 
         GatewayOptions copy = new()
         {
+            StrictLocal = source.StrictLocal,
             Bind = source.Bind,
             Port = source.Port,
             CustomBindHost = source.CustomBindHost,
@@ -91,6 +95,9 @@ internal static class GatewayOverrides
     {
         switch (key)
         {
+            case StrictLocal when value.ValueKind is JsonValueKind.True or JsonValueKind.False:
+                options.StrictLocal = value.GetBoolean();
+                break;
             case Bind when Text(value) is { } bind:
                 options.Bind = bind;
                 break;

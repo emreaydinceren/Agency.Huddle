@@ -1190,6 +1190,8 @@ Remote access: the connect page, pairing, Tailscale Serve and Funnel, the LAN bi
 | [REMOTE-11](remote-access.md#remote-11--with-remote-access-configured-the-open-action-and-library-open-and-reveal-are-gone) |  | Active |  | not yet run by a person |
 | [REMOTE-12](remote-access.md#remote-12--a-huddle-crash-kills-the-tailscale-child-job-object) |  | Active |  | not yet run by a person; needs Tailscale |
 | [REMOTE-13](remote-access.md#remote-13--killing-the-tailscale-child-removes-the-serve-route) |  | Active |  | not yet run by a person; needs Tailscale |
+| [REMOTE-14](remote-access.md#remote-14--strict-local-default) |  | Active |  | not yet run by a person |
+| [REMOTE-15](remote-access.md#remote-15--turning-strict-local-on-disconnects-remote-devices) |  | Active |  | not yet run by a person; needs a second device |
 
 ---
 

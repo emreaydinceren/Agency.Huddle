@@ -87,7 +87,7 @@ public sealed class GatewayReviewFixHostedTests
         bool before = view.BareNameHostInUse;
         using HttpResponseMessage bare = await host.Client.SendAsync(new HttpRequestMessage(HttpMethod.Get, new Uri("https://huddlebox/auth/status")), ct);
         IReadOnlyList<GatewaySecurityCheck.Item> items = GatewaySecurityCheck.Evaluate(new GatewaySecurityCheck.Input(
-            new GatewayOptions { Bind = "lan" },
+            new GatewayOptions { Bind = "lan", StrictLocal = false },
             TokenLength: 48,
             PasswordLength: null,
             TailscaleState.Missing,

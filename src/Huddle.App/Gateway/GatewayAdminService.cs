@@ -16,6 +16,7 @@ internal sealed class GatewayAdminService
 
     private static readonly Setting[] Settings =
     [
+        new("Strict local", GatewayOverrides.StrictLocal, false, static v => v.StrictLocal ? "on" : "off", static v => JsonValue.Create(v.StrictLocal)),
         new("Bind", GatewayOverrides.Bind, false, static v => v.Bind, static v => JsonValue.Create(v.Bind)),
         new("Auth mode", GatewayOverrides.AuthMode, false, static v => v.AuthMode, static v => JsonValue.Create(v.AuthMode)),
         new("Port", GatewayOverrides.Port, false, static v => NumberText(v.Port), static v => JsonValue.Create(v.Port)),
@@ -36,6 +37,8 @@ internal sealed class GatewayAdminService
     private readonly IQrPngEncoder qr;
     private readonly IGatewayRuntimeView view;
     private readonly TimeProvider timeProvider;
+    private readonly SessionRegistry? sessions;
+    private readonly GatewayConnectionGuard? guard;
     private readonly Lock gate = new();
 
     /// <summary>Creates the service over the gateway's parts.</summary>
@@ -47,6 +50,8 @@ internal sealed class GatewayAdminService
     /// <param name="qr">The QR encoder.</param>
     /// <param name="view">What the running gateway looks like.</param>
     /// <param name="timeProvider">Defaults to <see cref="TimeProvider.System"/>.</param>
+    /// <param name="sessions">The sessions; switching strict local on ends them all.</param>
+    /// <param name="guard">The open Blazor connections; switching strict local on aborts those of devices.</param>
     public GatewayAdminService(
         GatewaySettingsStore store,
         GatewaySettings running,
@@ -55,7 +60,9 @@ internal sealed class GatewayAdminService
         BootstrapLinks links,
         IQrPngEncoder qr,
         IGatewayRuntimeView view,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        SessionRegistry? sessions = null,
+        GatewayConnectionGuard? guard = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(running);
@@ -73,6 +80,8 @@ internal sealed class GatewayAdminService
         this.qr = qr;
         this.view = view;
         this.timeProvider = timeProvider ?? TimeProvider.System;
+        this.sessions = sessions;
+        this.guard = guard;
     }
 
     /// <summary>The editable gateway settings, as stored or as running.</summary>
@@ -86,6 +95,7 @@ internal sealed class GatewayAdminService
     /// <param name="TrustedProxies">The trusted proxy addresses.</param>
     /// <param name="AllowedOrigins">The allowed origins.</param>
     /// <param name="PublicOrigin">The public origin.</param>
+    /// <param name="StrictLocal">Whether strict local mode is on.</param>
     internal sealed record Values(
         string Bind,
         string AuthMode,
@@ -96,7 +106,8 @@ internal sealed class GatewayAdminService
         bool AllowTailscale,
         IReadOnlyList<string> TrustedProxies,
         IReadOnlyList<string> AllowedOrigins,
-        string? PublicOrigin)
+        string? PublicOrigin,
+        bool StrictLocal)
     {
         /// <summary>Equal when every setting is equal; the two lists compare by their items.</summary>
         /// <param name="other">The other values.</param>
@@ -111,7 +122,8 @@ internal sealed class GatewayAdminService
             && this.AllowTailscale == other.AllowTailscale
             && this.TrustedProxies.SequenceEqual(other.TrustedProxies, StringComparer.Ordinal)
             && this.AllowedOrigins.SequenceEqual(other.AllowedOrigins, StringComparer.Ordinal)
-            && string.Equals(this.PublicOrigin, other.PublicOrigin, StringComparison.Ordinal);
+            && string.Equals(this.PublicOrigin, other.PublicOrigin, StringComparison.Ordinal)
+            && this.StrictLocal == other.StrictLocal;
 
         /// <inheritdoc />
         public override int GetHashCode() => HashCode.Combine(this.Bind, this.AuthMode, this.Port, this.TailscaleMode, this.AllowTailscale, this.AllowedOrigins.Count, this.PublicOrigin);
@@ -194,16 +206,32 @@ internal sealed class GatewayAdminService
                 }
             }
 
+            // Switching strict local on is the one non-startup setting that applies now: the gate refuses at once.
+            bool switchedOn = values.StrictLocal && !this.running.Options.StrictLocal;
             if (changed.Count > 0)
             {
                 this.store.SetOverrides(overrides.ToJsonString());
                 GatewayOverrides.Apply(this.running.Options, applyNow.ToJsonString());
             }
 
+            if (switchedOn)
+            {
+                this.EnforceStrictLocal();
+            }
+
+            bool Now(Setting setting) => setting.AppliesNow || (switchedOn && string.Equals(setting.Key, GatewayOverrides.StrictLocal, StringComparison.Ordinal));
             return new SaveResult(
-                [.. changed.Where(static setting => setting.AppliesNow).Select(static setting => setting.Name)],
-                [.. changed.Where(static setting => !setting.AppliesNow).Select(static setting => setting.Name)]);
+                [.. changed.Where(Now).Select(static setting => setting.Name)],
+                [.. changed.Where(setting => !Now(setting)).Select(static setting => setting.Name)]);
         }
+    }
+
+    /// <summary>Makes strict local run now: the gate refuses non-loopback requests, every session ends and every device's Blazor connection is aborted.</summary>
+    private void EnforceStrictLocal()
+    {
+        this.running.Options.StrictLocal = true;
+        this.sessions?.EndAll();
+        this.guard?.AbortDeviceConnections();
     }
 
     /// <summary>Replaces the stored token; the running token changes at once and sessions stay.</summary>
@@ -410,7 +438,8 @@ internal sealed class GatewayAdminService
         options.Auth.AllowTailscale,
         [.. options.TrustedProxies],
         [.. options.AllowedOrigins],
-        options.PublicOrigin);
+        options.PublicOrigin,
+        options.StrictLocal);
 
     private static bool Same(Setting setting, Values left, Values right) =>
         string.Equals(setting.Json(left)?.ToJsonString(), setting.Json(right)?.ToJsonString(), StringComparison.Ordinal);

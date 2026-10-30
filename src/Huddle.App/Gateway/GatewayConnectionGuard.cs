@@ -93,6 +93,21 @@ internal sealed class GatewayConnectionGuard : IHubFilter
         return await next(invocationContext).ConfigureAwait(false);
     }
 
+    /// <summary>Aborts every connection that belongs to a signed-in device, leaving the host's own connections (they carry no session) open.</summary>
+    public void AbortDeviceConnections()
+    {
+        List<HubCallerContext> toAbort;
+        lock (this.gate)
+        {
+            toAbort = [.. this.connections.Values.Where(static connection => connection.SessionHash.Length > 0).Select(static connection => connection.Context)];
+        }
+
+        foreach (HubCallerContext context in toAbort)
+        {
+            context.Abort();
+        }
+    }
+
     private void AbortDevice(string deviceId)
     {
         List<HubCallerContext> toAbort;

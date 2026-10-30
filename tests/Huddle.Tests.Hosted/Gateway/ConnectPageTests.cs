@@ -11,7 +11,8 @@ public sealed class ConnectPageTests
     public async Task Get_Auth_ServesTheConnectPage()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using TeamWebApplicationFactory factory = new();
+        using TeamWebApplicationFactory root = new();
+        using Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program> factory = root.WithWebHostBuilder(builder => builder.UseSetting("Team:Gateway:StrictLocal", "false"));
         using HttpClient client = factory.CreateClient();
 
         using HttpResponseMessage response = await client.GetAsync(new Uri("/auth", UriKind.Relative), ct);

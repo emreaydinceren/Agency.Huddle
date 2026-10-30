@@ -31,6 +31,7 @@ internal sealed class ManagedIngressHost : IDisposable
             builder.UseSetting("Team:Gateway:Auth:Token", "0123456789abcdef0123456789abcdef0123456789abcdef");
             builder.UseSetting("Team:Gateway:Auth:Mode", "token");
             builder.UseSetting("AllowedHosts", "*");
+            builder.UseSetting("Team:Gateway:StrictLocal", "false");
             foreach ((string key, string value) in settings ?? new Dictionary<string, string>())
             {
                 builder.UseSetting(key, value);

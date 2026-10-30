@@ -21,7 +21,9 @@ internal sealed class GatewayAdminHarness : IDisposable
     public GatewayAdminHarness(Dictionary<string, string?>? config = null)
     {
         this.Clock = new FakeTimeProvider(Start);
-        IConfiguration configuration = new ConfigurationBuilder().AddInMemoryCollection(config ?? new Dictionary<string, string?>(StringComparer.Ordinal)).Build();
+        Dictionary<string, string?> keys = new(config ?? new Dictionary<string, string?>(StringComparer.Ordinal), StringComparer.Ordinal);
+        _ = keys.TryAdd("Team:Gateway:StrictLocal", "false");
+        IConfiguration configuration = new ConfigurationBuilder().AddInMemoryCollection(keys).Build();
         this.Running = GatewaySettings.ReadForStartup(this.dir.Path, configuration, new FakeGatewayEnvironment(), this.Clock);
         this.Store = new GatewaySettingsStore(this.dir.Path, this.Clock);
         this.Devices = new DeviceRegistry(this.dir.Path, this.Clock);

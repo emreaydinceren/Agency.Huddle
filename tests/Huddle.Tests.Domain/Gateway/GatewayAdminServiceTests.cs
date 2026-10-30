@@ -165,7 +165,7 @@ public sealed class GatewayAdminServiceTests : IDisposable
         GatewayAdminService.Values running = this.Service.GetSettings(this.admin).Running;
         _ = this.Service.SaveSettings(this.admin, running with { Bind = "tailnet", TailscaleMode = "serve", TailscaleHttpsPort = 5101 });
 
-        GatewaySettings next = GatewaySettings.ReadForStartup(this.harness.DataDir, new ConfigurationBuilder().Build(), new FakeGatewayEnvironment());
+        GatewaySettings next = GatewaySettings.ReadForStartup(this.harness.DataDir, new ConfigurationBuilder().AddInMemoryCollection([new("Team:Gateway:StrictLocal", "false")]).Build(), new FakeGatewayEnvironment());
 
         Assert.Equal("tailnet", next.Options.Bind);
         Assert.Equal("serve", next.Options.Tailscale.Mode);

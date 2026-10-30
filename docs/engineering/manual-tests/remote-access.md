@@ -2,7 +2,7 @@
 
 Prove, in a real browser and on real second devices, that the Gateway admits only connections that present the shared secret and a device key; that the desktop launcher opens signed in; that Tailscale Serve, the downgraded LAN bind and Funnel behave as the design says; that a phone is paired, limited, asked to become admin and revoked; that the rate limit and the Origin rules hold; and that the Open action disappears while remote access is configured.
 
-**13 tests** · 13 free · about 2.6 hours. Written 2026-10-30; **not yet run by a person**. REMOTE-03, REMOTE-04, REMOTE-09, REMOTE-10, REMOTE-12 and REMOTE-13 need Tailscale; REMOTE-03, REMOTE-04, REMOTE-05, REMOTE-09 and REMOTE-10 also need a second device (a phone). None spends money.
+**15 tests** · 15 free · about 3.0 hours. Written 2026-10-30; **not yet run by a person**. REMOTE-03, REMOTE-04, REMOTE-09, REMOTE-10, REMOTE-12 and REMOTE-13 need Tailscale; REMOTE-03, REMOTE-04, REMOTE-05, REMOTE-09 and REMOTE-10 also need a second device (a phone). None spends money.
 
 Read [the manual test script](../manual-tests.md) first, then [Common procedures](common.md), which defines the terminals, procedures and oracles this page names. Both are assumed below.
 
@@ -15,6 +15,7 @@ Run [`P-BUILD`](common.md#p-build). This area adds:
 3. Tests marked **needs Tailscale** need the Tailscale client installed and signed in on this computer. Tests that also need a second device use a phone or another computer; run them last, together.
 4. The first non-loopback bind makes Windows ask about the firewall. Allow **Private networks** only.
 5. Restarting means `P-STOP`, then the same launch command, so the data stays.
+6. Huddle starts in **Strict local** (on by default): only this computer, no sign-in. REMOTE-01 to REMOTE-13 test the sign-in and remote flows, so the lane must turn it off: add `--Team:Gateway:StrictLocal=false` to the launch command, or, for the installed app, turn **Strict local** off in **Settings › Remote access** and restart. REMOTE-14 and REMOTE-15 are the ones that use the default.
 
 ## Tests
 
@@ -323,6 +324,58 @@ Run [`P-BUILD`](common.md#p-build). This area adds:
 
 - At step 1 a route points at Huddle's managed listener.
 - At step 3 the route is gone. If it remains, report it: the Security check would show a stray route.
+
+### REMOTE-14 — Strict local default
+
+**Free** · about 15 min
+
+*Proves a fresh install runs in Strict local: the host browser needs no sign-in, any other address is refused, Settings shows the remote controls disabled, and turning it off brings the connect flow back after a restart. Needs this computer's LAN address (`ipconfig`), from the computer itself or a phone.*
+
+**Before you start**
+
+- A fresh data folder (`--Team:DataDir=C:\seeds\huddle\remote\strict\data`) and the launch command **without** `--Team:Gateway:StrictLocal=false`.
+- This computer's LAN address, such as `192.168.1.20`.
+
+**Steps**
+
+1. Start Huddle and wait for the browser to open. Look at the address bar and the page.
+2. Open `http://<LAN address>:<port>` in a browser (on the phone if you have one).
+3. Open **Settings › Remote access** and read the Gateway card.
+4. Read the Security check at the bottom.
+5. Turn **Strict local** off, save, and restart Huddle.
+6. Open `http://127.0.0.1:<port>` in a private window.
+
+**Pass if — all of these**
+
+- At step 1 the page is Huddle, not the connect page, and the address bar shows the plain address with no `#bootstrapToken`.
+- At step 2 the page is refused with 403 and `strict_local`.
+- At step 3 the **Strict local** switch is on with the text "Only this computer can use Huddle, with no sign-in. Turn off to let other devices connect."; Bind, Auth mode, Tailscale, ports, trusted proxies and origins are disabled; **Pair a device** and **Waiting for approval** are not drawn; the line "Turn off Strict local to set up remote access." is shown.
+- At step 4 the Security check lists "Strict local: no sign-in; only this computer can use Huddle." and none of the remote-exposure items.
+- At step 5 the card says **Restart Huddle to apply** until the restart.
+- At step 6 the connect page asks for the gateway token, as in REMOTE-02.
+
+### REMOTE-15 — Turning Strict local on disconnects remote devices
+
+**Free** · about 12 min
+
+*Proves that switching Strict local on ends remote access at once, not at the next start. Needs a phone or another computer paired over the LAN.*
+
+**Before you start**
+
+- The LAN setup from REMOTE-05 is running with Strict local off, and a phone is paired and showing Huddle.
+
+**Steps**
+
+1. On the phone open a Room and leave it showing.
+2. On the computer open **Settings › Remote access**, turn **Strict local** on and save.
+3. Watch the phone for ten seconds, then reload it.
+4. Read the Gateway card on the computer.
+
+**Pass if — all of these**
+
+- At step 2 the save applies at once, with no restart prompt for the switch itself.
+- At step 3 the phone loses its connection within a few seconds, and the reload shows 403 and `strict_local`.
+- At step 4 the card says "Restart Huddle to close the network listeners." while the LAN listener still runs, and the computer's own browser keeps working with no sign-in.
 
 ---
 

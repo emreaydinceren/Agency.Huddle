@@ -6,6 +6,12 @@ internal sealed class GatewayOptions
     /// <summary>The configuration section path.</summary>
     public const string SectionName = "Team:Gateway";
 
+    /// <summary>
+    /// Strict local mode (default on): no sign-in, and only the loopback ingress is served. At startup it forces the bind to loopback, Tailscale off
+    /// and the trusted proxies away; the gate refuses every other ingress with <c>strict_local</c>.
+    /// </summary>
+    public bool StrictLocal { get; set; } = true;
+
     /// <summary>The bind mode (<c>loopback</c>, <c>tailnet</c>, <c>lan</c>, <c>auto</c>, <c>custom</c>).</summary>
     public string Bind { get; set; } = "loopback";
 

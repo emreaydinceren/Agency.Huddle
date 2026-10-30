@@ -80,13 +80,16 @@ kept wherever Huddle has no clash.
 
 ## 1. Goal
 
-1. **The same protection as OpenClaw.** A shared secret, a per-device key and pairing approval protect every
-   connection, local ones included, with OpenClaw's rate limits, origin rules and revocation.
+1. **The same protection as OpenClaw once remote access is on.** A shared secret, a per-device key and pairing
+   approval protect every connection, with OpenClaw's rate limits, origin rules and revocation. By default Huddle runs
+   in **Strict local** (§6.5a): only this computer can use it, with no sign-in. The owner chose this over OpenClaw's
+   token on loopback.
 2. **The same ways in as OpenClaw.** Loopback by default; Tailscale Serve as the recommended remote path; Funnel only
    with password auth; tailnet and LAN binds as downgraded options; trusted-proxy auth for people who already run a
    proxy.
-3. **No friction on the host.** The desktop launcher opens the browser already authenticated (OpenClaw's dashboard
-   handoff), so a Human who never leaves the host never types a token.
+3. **No friction on the host.** By default the host browser needs no token at all (Strict local). With Strict local
+   off, the desktop launcher opens the browser already authenticated (OpenClaw's dashboard handoff), so a Human who
+   never leaves the host never types a token.
 4. **Side-by-side copies keep working.** Copies started with different `--urls` ports have separate secrets, devices,
    sessions, cookies and Tailscale ports. Browser storage is per origin, and origins include the port, so device keys
    separate on their own; cookies do not, and carry the Instance id.
@@ -97,8 +100,8 @@ kept wherever Huddle has no clash.
 
 | # | Who | What they do | What must be true |
 | --- | --- | --- | --- |
-| U-1 | Human on the host | Starts the installed app | The browser opens on Huddle, authenticated as admin, nothing typed (bootstrap token, §6.9) |
-| U-2 | Human on the host, second browser | Opens `http://127.0.0.1:5101` in Firefox | The connect page asks for the gateway token; `Agency.Huddle.App.exe dashboard` (or the token from `auth-token --show`) gets in; loopback auto-approves |
+| U-1 | Human on the host | Starts the installed app | The browser opens on Huddle, admin, nothing typed. Strict local (default): the plain address, no sign-in. Strict local off: authenticated by a bootstrap token (§6.9) |
+| U-2 | Human on the host, second browser | Opens `http://127.0.0.1:5101` in Firefox | Strict local (default): Huddle opens, no sign-in. Strict local off: the connect page asks for the gateway token; `Agency.Huddle.App.exe dashboard` (or the token from `auth-token --show`) gets in; loopback auto-approves |
 | U-3 | Human with Tailscale | Chooses Tailscale Serve, restarts, opens `https://desktop-a.tail1234.ts.net:5101` on the phone | No token, no approval: verified Tailscale identity stands in for gateway auth and pairs automatically with limited access |
 | U-4 | Human without Tailscale | Chooses LAN (downgraded), restarts, shows **Pair a device** QR, scans it with the iPad | The iPad's connect page redeems the setup link, waits; the host's Feed shows the request; **Approve**; the iPad is in with limited access |
 | U-5 | Phone with limited access | Opens Settings | "Settings need admin access." **Request admin** → an approval on the host → admin |
@@ -127,7 +130,7 @@ kept wherever Huddle has no clash.
 
 | # | Principle | OpenClaw source |
 | --- | --- | --- |
-| P-1 | **Every connection presents gateway auth and a device signature**, loopback included | Gateway auth runs first; a loopback connection still needs the token |
+| P-1 | **Every connection presents gateway auth and a device signature**, loopback included, unless Strict local is on (§6.5a) | Gateway auth runs first; a loopback connection still needs the token. Strict local is not in OpenClaw |
 | P-2 | **No switch turns device identity off** | `dangerouslyDisableDeviceAuth` is retired and inert |
 | P-3 | **Loopback means a direct socket with no forwarded headers**, and earns only auto-approval, never a skip of the secret | `proxy_attribution_required`; auto-approval for direct `127.0.0.1` with no forwarded headers |
 | P-4 | **Tailscale identity is believed only on the managed listener**, only when `whois` agrees | `allowTailscale`, managed-listener provenance |
@@ -141,10 +144,11 @@ kept wherever Huddle has no clash.
 | Threat | Covered? | How |
 | --- | --- | --- |
 | A stranger on the network | Yes | No gateway secret, no session; lockout after 10 failures in 60 s |
-| A leaked gateway token | Partly | A new device still needs approval (except on loopback, which needs a local account). Rotate the token (§6.5) |
+| Any program or other user account on this computer | **No, with Strict local on (default)** | It can use Huddle with no secret, as before remote access existed. With Strict local off, it needs the token (§6.5) |
+| A leaked gateway token | Partly | A new device still needs approval (except on loopback, which needs a local account). Rotate the token (§6.5). With Strict local on there is no remote path to attack |
 | A stolen phone | Yes | Revoke disconnects it; its device token and key are dead |
 | A malicious web page in the Human's browser | Yes | Origin check (§8.7); no token in reach (sessionStorage and HttpOnly cookies are per origin); `SameSite` |
-| DNS rebinding | Yes | Origin check plus host filtering; the attacker has no token |
+| DNS rebinding | Yes | Origin check plus host filtering, also with Strict local on (where there is no token to lack) |
 | A proxy someone set up on the host | Yes | Forwarded headers on a loopback socket → 403 `proxy_attribution_required` |
 | Forged Tailscale headers | Yes | Read only on the managed listener and confirmed with `whois` |
 | Sniffing on a downgraded bind | **No** | The token and session travel in clear on the LAN or tailnet IP. Serve is the answer; the UI says so |
@@ -334,6 +338,43 @@ tokenless auth (OpenClaw: "`allowTailscale` is ignored on externally managed Ser
   proxy's.
 - **Pre-auth connections:** at most 128 concurrent unauthenticated requests per address; more get 503. Loopback is not
   exempt.
+
+### 6.5a Strict local (default)
+
+**Purpose.** A switch that turns sign-in off and serves only this computer. **Not in OpenClaw**: the owner decided it
+on 2026-10-30, and it is on by default (`Team:Gateway:StrictLocal`, default `true`; an admin-saved override wins).
+
+While it is on:
+
+- **The gate admits only the Loopback ingress** (§8.6): a direct loopback socket with no forwarding headers. Every other
+  request gets 403 `strict_local`, whatever Bind, Tailscale or trusted proxies say. Host filtering and the Origin check
+  stay as they are, so DNS rebinding is still stopped.
+- **No sign-in.** A loopback request gets the host principal with no session: `huddle:viewer=host`,
+  `huddle:ingress=loopback`, every scope including `operator.admin`, `NameIdentifier` `local`. There is no `/auth`
+  redirect and no device identity. The hub guard does not abort host-principal connections.
+- **`/auth`** redirects to `/` (or the safe `return` path). `/auth/connect` and `/auth/challenge` answer 403
+  `strict_local` for non-loopback callers. `/auth/status` reports `authenticated: true` for a loopback caller.
+- **Remote options are forced off at startup:** Bind is loopback, Tailscale mode is off, trusted proxies are ignored.
+  The listener plan behaves as for loopback, and `IRemoteAccessState.IsConfigured` is false, so Open and Browse stay
+  available (D-5).
+- **The launcher, the second-launch hand-off, `dashboard` and the dev console** open or print the plain address with no
+  `#bootstrapToken`. `/_desktop/*` and `/_gateway/*` keep their own loopback and token checks; `devices` and
+  `auth-token` still work.
+- **The Security check** raises one Info item, `gateway.strict_local`, and none of the remote-exposure items (§8.9).
+
+**Switching it on** (admin, from Settings) takes effect at once: the gate refuses non-loopback requests, every session
+ends and every device's Blazor connection aborts. Listeners stay bound until the next start but serve nothing; the
+section says "Restart Huddle to close the network listeners." while one is still running.
+
+**Switching it off** is saved and applies at the next start, because the bind and the auth model change. Only the host
+browser can do it, because it is the only browser Strict local lets in.
+
+**Settings.** The **Strict local** switch sits at the top of the Gateway card (§6.12). While it is on, the other
+Gateway controls are disabled, Pair a device and Waiting for approval are not drawn, and one line says "Turn off Strict
+local to set up remote access." The Devices list stays.
+
+**Cost.** Any program or other user account on this computer can use Huddle with no secret. That is the trust Huddle had
+before remote access existed.
 
 ### 6.6 Device identity and the connect handshake
 
@@ -775,6 +816,7 @@ OpenClaw's `openclaw security audit` items that apply to Huddle, computed on dem
 | `gateway.trusted_proxy_loopback` | Warning | `TrustedProxies` contains a loopback address |
 | `gateway.downgraded_transport` | Warning | A tailnet, LAN or custom bind is active |
 | `gateway.stray_serve_route` | Warning | A Serve route points at the app port (Huddle's addition) |
+| `gateway.strict_local` | Info | Strict local is on: no sign-in, only this computer (Huddle's addition, §6.5a). While it is on, the items about remote exposure are not raised |
 
 ### 8.10 Error handling
 
@@ -875,7 +917,8 @@ Host: Feed bell "iPad wants to use Huddle" → Approve (Limited) → iPad's poll
 | Port 18789 | The app's own `--urls` port | Adapted: copies run side by side |
 | `gateway.auth.mode` token, password, trusted-proxy, none | `Auth:Mode`, same values; `none` is loopback-only | Same |
 | Token generated at onboarding, 48 hex; `auth-token --show` needs a TTY; `doctor --generate-gateway-token` | Generated at first start, same format; `auth-token --show` and `--rotate` | Same |
-| Loopback still needs the token | Same | Same |
+| Loopback still needs the token | Same when Strict local is off | Same |
+| (none) | `Team:Gateway:StrictLocal`, default `true`: no sign-in, only this computer (§6.5a) | **Not in OpenClaw — owner decision.** OpenClaw keeps its token on loopback; Huddle trades that for no sign-in on this computer, and only this computer |
 | Ed25519 device identity in pure JS, in localStorage; id = SHA-256 of the public key | Same, `@noble/ed25519` | Same |
 | Challenge, v3 signed payload, `DEVICE_AUTH_*` errors | Same payload with client id `huddle-web` | Same |
 | Credential order: device token, shared token, password | Same, plus bootstrap token | Same |
@@ -959,6 +1002,9 @@ change and where it lives.
 - **Funnel password (D-13).** Mandatory for Funnel ingress; a refused claim does not stop the app. §6.11.
 - **Bootstrap in password mode.** Accepted, because the launcher always uses one. §6.9.
 - **Case.** Tailscale logins compare ignoring case everywhere, §8.6 included.
+- **Strict local (SL, 2026-10-30).** On by default: no sign-in, only the Loopback ingress, remote options forced off at
+  startup. Switching it on applies at once; off, at the next start. The Settings page can show Bind and Tailscale as
+  pending while it is on, because the running options are forced and the stored ones keep their values. §6.5a.
 - **Project setting.** `Huddle.App.csproj` gained `AllowUnsafeBlocks` for the Job object imports (SYSLIB1062).
 
 D-5 (Kestrel writes the bound port back) and D-7 (`PostConfigure` host filtering follows live updates) were marked
@@ -971,6 +1017,7 @@ All under `Team:Gateway` (`GatewayOptions`). Values an admin saves in Settings w
 
 | Key | Default | OpenClaw |
 | --- | --- | --- |
+| `StrictLocal` | `true` | — (owner decision; §6.5a) |
 | `Bind` | `loopback` | `gateway.bind` |
 | `CustomBindHost` | none | `gateway.customBindHost` |
 | `Port` | the app's own fixed port | `gateway.port` |

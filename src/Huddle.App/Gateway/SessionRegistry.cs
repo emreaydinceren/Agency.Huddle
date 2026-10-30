@@ -118,6 +118,15 @@ internal sealed class SessionRegistry
         }
     }
 
+    /// <summary>Ends every session at once (strict local was switched on: nothing but the host may use Huddle).</summary>
+    public void EndAll()
+    {
+        lock (this.gate)
+        {
+            this.sessions.Clear();
+        }
+    }
+
     /// <summary>Issues a session and returns its cookie value (32 random bytes as base64url); only its hash is kept.</summary>
     /// <param name="deviceId">The device.</param>
     /// <param name="scopes">The scopes.</param>

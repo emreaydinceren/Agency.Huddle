@@ -45,6 +45,11 @@ internal static class GatewaySecurityCheck
         ArgumentNullException.ThrowIfNull(input);
 
         GatewayOptions options = input.Options;
+        if (options.StrictLocal)
+        {
+            return StrictLocalItems(input);
+        }
+
         bool network = IsNetworkBind(options.Bind);
         bool signInOff = options.Auth.Mode == GatewayAuthMode.None;
         bool tailscaleUp = input.Tailscale == TailscaleState.Running;
@@ -65,6 +70,19 @@ internal static class GatewaySecurityCheck
         Add(items, input.StrayRoutes.Count > 0, "gateway.stray_serve_route", Severity.Warning, "A Tailscale Serve route sends traffic straight to Huddle's app port, around the sign-in check.", "Remove that route with tailscale serve reset, and let Huddle manage Serve.");
 
         // OrderBy is stable, so each severity keeps the Spec order above.
+        return [.. items.OrderByDescending(static item => item.Level)];
+    }
+
+    /// <summary>
+    /// Under strict local mode nothing is exposed and there is no sign-in by design: the Info item says so, the items about remote exposure
+    /// (bind, Funnel, downgraded transport, trusted proxy, origins, stray routes, no sign-in) are not raised, and the secret-strength items stay.
+    /// </summary>
+    private static List<Item> StrictLocalItems(Input input)
+    {
+        List<Item> items = [];
+        Add(items, true, "gateway.strict_local", Severity.Info, "Strict local: no sign-in; only this computer can use Huddle.", "Nothing to fix. Turn Strict local off in Settings to let other devices connect.");
+        Add(items, input.TokenLength < MinTokenLength, "gateway.token_too_short", Severity.Warning, "The gateway token is shorter than 24 characters.", "Rotate the token to get a new random one.");
+        Add(items, input.Options.Auth.Mode == GatewayAuthMode.Password && input.PasswordLength is < MinPasswordLength, "gateway.password_too_short", Severity.Warning, "The gateway password is shorter than 12 characters.", "Set a longer password.");
         return [.. items.OrderByDescending(static item => item.Level)];
     }
 

@@ -51,3 +51,12 @@ always need approval, since Huddle has no native app for OpenClaw's setup codes.
 - `AllowedHosts` stops being `*` now, before any of this ships.
 - Deferred items are in [backlog.md](../engineering/backlog.md#hardening-remote-access).
 - Built 2026-10-30 on `feat/remote-access`, not merged: the commits from `fd5739c7` on (`git log origin/main..feat/remote-access`).
+
+**Amendment 2026-10-30: Strict local, on by default.** The owner decided that Huddle runs in **Strict local** unless
+told otherwise (`Team:Gateway:StrictLocal`, default `true`). It admits only a direct loopback connection, with no
+sign-in and no device identity, and forces Bind to loopback and Tailscale off at startup. This departs from OpenClaw,
+which keeps its token on loopback, and from consequence 1 above: the host browser no longer meets a connect page, and
+the launcher opens the plain address. The remote model in this ADR is unchanged, and applies once Strict local is
+turned off in Settings and Huddle is restarted. The cost: any program or other user account on this computer can use
+Huddle with no secret, which is the trust Huddle had before remote access existed. Host filtering and the Origin check
+still stop DNS rebinding. See [the Spec](../Huddle.RemoteAccess-Specifications.md) §6.5a.

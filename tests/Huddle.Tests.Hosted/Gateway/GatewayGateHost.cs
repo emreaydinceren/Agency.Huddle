@@ -34,6 +34,7 @@ internal sealed class GatewayGateHost : IDisposable
         {
             builder.UseSetting("Team:Gateway:Auth:Token", Token);
             builder.UseSetting("Team:Gateway:Auth:Mode", mode);
+            builder.UseSetting("Team:Gateway:StrictLocal", "false");
             builder.UseSetting("Team:Desktop:Enabled", "true");
             builder.UseSetting("Team:Desktop:OpenBrowser", "false");
             builder.ConfigureTestServices(services =>

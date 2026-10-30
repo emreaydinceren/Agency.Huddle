@@ -28,6 +28,7 @@ internal sealed class KestrelAppHost : IDisposable
             builder.UseSetting("urls", "http://127.0.0.1:0");
             builder.UseSetting("Team:Gateway:Auth:Mode", "token");
             builder.UseSetting("Team:Gateway:Auth:Token", Token);
+            builder.UseSetting("Team:Gateway:StrictLocal", "false");
             foreach ((string key, string? value) in settings ?? new Dictionary<string, string?>())
             {
                 if (value is not null)

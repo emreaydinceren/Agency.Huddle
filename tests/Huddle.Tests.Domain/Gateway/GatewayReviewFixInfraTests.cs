@@ -12,7 +12,7 @@ public sealed class GatewayReviewFixInfraTests
 
     private static RemoteAccessState State(Action<GatewayOptions>? configure = null, IReadOnlyList<IPEndPoint>? endpoints = null)
     {
-        GatewayOptions options = new();
+        GatewayOptions options = new() { StrictLocal = false };
         configure?.Invoke(options);
         return new RemoteAccessState(options, () => endpoints ?? []);
     }

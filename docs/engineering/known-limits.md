@@ -798,6 +798,11 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
 - **A file linked into a Task is not tracked.** The Task keeps only the path line in its description. If the file is renamed or moved in the Library, the Preview dims the link, and nothing updates the Task. Deleting a path line leaves the uploaded file in `Uploads/Tasks/<ID>/`. See [TaskAttachments](../Huddle.TaskAttachments-Specifications.md).
 - **A bind beyond loopback is plain HTTP.** `tailnet`, `lan`, `auto` in a container and `custom` serve `http`, which Huddle
   labels downgraded: nothing is encrypted and the page can be altered in transit. Tailscale Serve is the encrypted route.
+- **Strict local means no secret on this computer.** It is on by default. Any program or other user account on the
+  computer can use Huddle without signing in, which is the trust Huddle had before remote access existed. OpenClaw keeps
+  a token on loopback; Huddle chose not to. Host filtering and the Origin check still stop DNS rebinding. Turn Strict
+  local off in Settings › Remote access to require the token again. While it is on, Settings can show a pending Bind or
+  Tailscale change, because the running options are forced to loopback and off.
 - **There is no read-only device.** A device is Limited (`operator.read` and `operator.write`) or Admin. Read-only is
   backlog H-2 ([backlog.md](backlog.md#hardening-remote-access)).
 - **Bind and Tailscale changes need a restart.** Settings › Remote access shows "Restart Huddle to apply" until then.

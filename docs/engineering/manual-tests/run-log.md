@@ -5894,6 +5894,20 @@ File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+### REMOTE-14 — Strict local default
+
+File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-14--strict-local-default)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REMOTE-15 — Turning Strict local on disconnects remote devices
+
+File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-15--turning-strict-local-on-disconnects-remote-devices)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ---
 
 Back to [the manual test script](../manual-tests.md).

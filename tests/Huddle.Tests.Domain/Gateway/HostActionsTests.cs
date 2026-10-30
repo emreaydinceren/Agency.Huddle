@@ -27,7 +27,7 @@ public sealed class HostActionsTests
     [InlineData("custom")]
     public void IsConfigured_NonLoopbackBind_IsTrue(string bind)
     {
-        RemoteAccessState state = new(new GatewayOptions { Bind = bind });
+        RemoteAccessState state = new(new GatewayOptions { Bind = bind, StrictLocal = false });
 
         Assert.True(state.IsConfigured);
     }
@@ -38,7 +38,7 @@ public sealed class HostActionsTests
     [InlineData("funnel")]
     public void IsConfigured_TailscaleOn_IsTrue(string mode)
     {
-        RemoteAccessState state = new(new GatewayOptions { Bind = "loopback", Tailscale = new GatewayOptions.TailscaleOptions { Mode = mode } });
+        RemoteAccessState state = new(new GatewayOptions { Bind = "loopback", StrictLocal = false, Tailscale = new GatewayOptions.TailscaleOptions { Mode = mode } });
 
         Assert.True(state.IsConfigured);
     }
