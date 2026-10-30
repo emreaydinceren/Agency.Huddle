@@ -142,6 +142,29 @@ properties may hold URLs, but not whether a URL inside longer text is clickable.
 
 **Risk:** the attribute rule (D-11). The `href` must come only from a matched, scheme-checked run.
 
+## Hardening remote access
+
+**Raised:** 2026-10-30, while designing [Remote access](../Huddle.RemoteAccess-Specifications.md), a faithful port of
+OpenClaw's gateway model. Instant revoke, rate limiting, trusted-proxy auth and admin scopes are in V1 now. These four
+are what is left, each with its own design here; the **V1** column says where the spec stops. Ship them after V1, in
+any order.
+
+| # | Item | V1 | Design |
+| --- | --- | --- | --- |
+| H-1 | **Huddle's own TLS for the direct binds** | Plain HTTP, labelled downgraded; Tailscale Serve is the HTTPS path (spec §3) | Huddle as its own certificate authority, as `mkcert` does: a root CA created once, its key encrypted with Data Protection, **with X.509 name constraints** limiting it to `10/8`, `172.16/12`, `192.168/16`, `.local` and the machine name (written with `AsnWriter`; .NET has no built-in extension), so a stolen key cannot impersonate other sites. A leaf certificate for the bound addresses and names, at most 825 days (Apple's limit), renewed and re-issued through `ServerCertificateSelector`. HTTPS on the LAN address and plain HTTP on `127.0.0.1`, same port number, different addresses. A **Download certificate** link and per-OS install steps (iOS: install the profile, then turn on full trust under About › Certificate Trust Settings; Android: install as a CA certificate; Windows and macOS: trusted root). Session cookies gain `Secure`. About 1-1.5 weeks with device testing. **Not** a plain self-signed certificate: permanent warnings teach people to click through certificate errors. OpenClaw builds no browser TLS either |
+| H-2 | **Read-only devices** | `operator.read` and `operator.write` are always granted together, because Huddle's UI has no read-only mode (spec §6.7) | Grant `operator.read` alone, as OpenClaw allows. Every action that changes something (post, edit, create, move, delete, run) checks `operator.write` in its service, and the UI hides those controls for a read-only session. Start with an inventory of the write paths; the size of that list decides whether this is worth it |
+| H-3 | **Live address change** | A direct bind's new IP address needs a restart for the host list and the setup-link QR (spec §6.4) | On `NetworkChange.NetworkAddressChanged`, recompute the host list and the setup-link addresses and signal the same `IOptionsChangeTokenSource<HostFilteringOptions>` that V1 already uses for the Tailscale name. The LAN bind already listens on all interfaces, so only the lists change |
+| H-4 | **Theme Lab copy over plain HTTP** | `theme-lab.js` calls `navigator.clipboard` directly, which browsers refuse on the downgraded binds | Route its copy through `huddleClipboard.copy` in `app.js`, which already falls back to `execCommand("copy")` outside a secure context |
+
+**Change:** for each item, write its test first, as the spec's Appendix C does for V1, then the code. When an item
+ships, update the spec where its **V1** column points, and delete its row here.
+
+**Done when:** each shipped item's tests pass, `dotnet build Huddle.slnx` and `dotnet test Huddle.slnx --` pass, the
+spec says what changed, and [known-limits.md](known-limits.md) no longer lists what the item fixed.
+
+**Risk:** H-1 is mostly device work: the ASN.1 for name constraints and the per-OS install steps are where it goes
+wrong, and each OS needs a hand test. H-2 may turn out larger than its benefit.
+
 ## Packages evaluated and declined
 
 These were checked against the code they would supposedly replace, and rejected. Read
