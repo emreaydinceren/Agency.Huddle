@@ -426,6 +426,46 @@ b {
     display: none;
 }
 
+/* ---- Field furniture (side-by-side audit, 2026-10-30, G07) ---------------------------------------------------------
+   Every Theme's mockup draws a field 30-32px tall, where MudBlazor's dense outlined field is 38px. border-box keeps a
+   surface's own padding (paper's 8px) inside the 32px. Fields with their own height (the compact toolbar, the Task
+   edit strip, inline titles) set it with more specific rules further down. */
+.mud-input.mud-input-outlined > input.mud-input-root-outlined.mud-input-root-margin-dense,
+.mud-input.mud-input-outlined > div.mud-input-slot.mud-input-root-outlined.mud-input-root-margin-dense {
+    box-sizing: border-box;
+    height: 32px;
+    padding-block: 0;
+}
+
+/* Helper text starts on the field's own left edge. MudBlazor's px-2 on the container is an !important utility, so the
+   container is pulled back by the same 8px rather than fighting it; the overline letter-spacing goes too. */
+.mud-input-control-helper-container {
+    margin-inline-start: -8px;
+}
+
+.mud-input-helper-text {
+    letter-spacing: 0;
+}
+
+/* A select's and an autocomplete's arrow is a thin line chevron, not MudBlazor's filled triangle: the same path,
+   reshaped and stroked. A browser without the CSS d property keeps the triangle, drawn as a thin outline. */
+.mud-select .mud-input-adornment-end .mud-icon-root,
+.mud-autocomplete .mud-input-adornment-end .mud-icon-root {
+    width: 16px;
+    height: 16px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.mud-select .mud-input-adornment-end path[d="M7 10l5 5 5-5z"],
+.mud-autocomplete .mud-input-adornment-end path[d="M7 10l5 5 5-5z"] {
+    d: path("M7 10l5 5 5-5");
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
 /* ---- Measure: prose never runs wider than 75 characters (ADR-0056) --------------------------------
    An intro, a lead, helper text and an empty state are blocks of sentences; the pane may be wider, the line is not. */
 .settings-intro,
@@ -8101,6 +8141,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 
 .task-edit-page .task-detail-strip .task-detail-prop-value .mud-input.mud-input-outlined .mud-input-slot,
 .task-edit-page .task-detail-strip .task-detail-prop-value .mud-input.mud-input-outlined > input.mud-input-root {
+    height: auto;
     padding-block: 0;
     font-size: var(--mud-typography-caption-size);
 }
@@ -9949,6 +9990,12 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 
 :root:has([data-hu-surface="hairline"]) .mud-input-control > .mud-input-control-input-container > label.mud-input-label.mud-input-label-inputcontrol.mud-input-label-outlined:not(.mud-disabled) {
     color: var(--hu-text-subtle);
+}
+
+/* Lumen's field labels are 500, not the 600 the other surfaces keep (side-by-side audit, 2026-10-30, LL-S02). The
+   :not(.mud-disabled) is there for specificity: it matches the base label rule's (0,8,1), and this rule comes later. */
+:root:has([data-hu-surface="hairline"]) .mud-input-control > .mud-input-control-input-container > label.mud-input-label.mud-input-label-inputcontrol.mud-input-label-outlined:not(.mud-disabled) {
+    font-weight: 500;
 }
 
 :root:has([data-hu-surface="hairline"]) .mud-input-helper-text {

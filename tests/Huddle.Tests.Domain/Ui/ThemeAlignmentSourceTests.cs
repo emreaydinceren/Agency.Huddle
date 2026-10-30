@@ -41,6 +41,24 @@ public sealed class ThemeAlignmentSourceTests
         Assert.All(HueSelectors, selector => Assert.Contains("background: var(--mud-palette-", CssText.RuleBody(css, selector, RuleMatch.Last), StringComparison.Ordinal)); // contains-ok: stylesheet source text, not markup
     }
 
+    /// <summary>
+    /// A dense outlined field is 32px with its padding inside, its helper text starts on the field's edge, and a select's
+    /// filled triangle is redrawn as a stroked line chevron (G07, LL-E02, LL-S02).
+    /// </summary>
+    [Fact]
+    public void AppCss_FieldFurniture_MatchesTheMockups()
+    {
+        string css = CssText.AppCss();
+        string field = CssText.RuleBody(css, ".mud-input.mud-input-outlined > input.mud-input-root-outlined.mud-input-root-margin-dense,\n.mud-input.mud-input-outlined > div.mud-input-slot.mud-input-root-outlined.mud-input-root-margin-dense", RuleMatch.First);
+        string chevron = CssText.RuleBody(css, ".mud-select .mud-input-adornment-end path[d=\"M7 10l5 5 5-5z\"],\n.mud-autocomplete .mud-input-adornment-end path[d=\"M7 10l5 5 5-5z\"]", RuleMatch.Last);
+
+        Assert.Contains("height: 32px;", field, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("box-sizing: border-box;", field, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("margin-inline-start: -8px;", CssText.RuleBody(css, ".mud-input-control-helper-container", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("d: path(\"M7 10l5 5 5-5\");", chevron, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("fill: none;", chevron, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
     /// <summary>One dot rule per entry of <c>TaskFieldView.TagClasses</c>.</summary>
     private static readonly string[] HueSelectors =
     [
