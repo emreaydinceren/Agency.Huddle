@@ -26,11 +26,29 @@ internal sealed partial class ProcessTailscaleCli(string? configuredCommand = nu
         }
         catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            process.Kill(entireProcessTree: true);
             throw new TimeoutException($"tailscale did not finish within {timeout}.", ex);
+        }
+        finally
+        {
+            KillIfRunning(process);
         }
 
         return (process.ExitCode, await stdout.ConfigureAwait(false), await stderr.ConfigureAwait(false));
+    }
+
+    private static void KillIfRunning(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // Exited or disposed between the check and the kill: nothing left to release.
+        }
     }
 
     /// <inheritdoc />
@@ -173,7 +191,9 @@ internal sealed partial class ProcessTailscaleCli(string? configuredCommand = nu
             {
                 await process.WaitForExitAsync().ConfigureAwait(false);
                 lines.Writer.TryComplete();
-                return process.ExitCode;
+                int exitCode = process.ExitCode;
+                process.Dispose();
+                return exitCode;
             });
         }
 

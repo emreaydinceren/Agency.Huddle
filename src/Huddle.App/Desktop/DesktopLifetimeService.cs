@@ -77,7 +77,7 @@ internal sealed class DesktopLifetimeService(
 
         if (options.Value.OpenBrowser)
         {
-            this.TryOpen(this.bootstrap?.AdminUrl(address) ?? address);
+            this.TryOpen(this.bootstrap?.AdminUrl(address) ?? address, address);
         }
     }
 
@@ -93,24 +93,21 @@ internal sealed class DesktopLifetimeService(
     /// Opens <paramref name="url"/>, logging instead of throwing when the opener rejects it or cannot launch a
     /// browser, so an unopenable address never fails startup.
     /// </summary>
-    /// <param name="url">The instance URL.</param>
-    private void TryOpen(string url)
+    /// <remarks>
+    /// <paramref name="url"/> carries the bootstrap token in its fragment (R-3), and an opener's exception message may
+    /// repeat it, so only the bare <paramref name="address"/> and the exception type are logged, never the exception itself.
+    /// </remarks>
+    /// <param name="url">The URL to open, possibly with the bootstrap fragment.</param>
+    /// <param name="address">The bare instance address, safe to log.</param>
+    private void TryOpen(string url, string address)
     {
         try
         {
             opener.Open(url);
         }
-        catch (ArgumentException ex)
+        catch (Exception ex) when (ex is ArgumentException or UriFormatException or Win32Exception)
         {
-            logger.LogWarning(ex, "The browser was not opened for {Url}.", url);
-        }
-        catch (UriFormatException ex)
-        {
-            logger.LogWarning(ex, "The browser was not opened for {Url}.", url);
-        }
-        catch (Win32Exception ex)
-        {
-            logger.LogWarning(ex, "The browser was not opened for {Url}.", url);
+            logger.LogWarning("The browser was not opened for {Url} ({Reason}).", address, ex.GetType().Name);
         }
     }
 }

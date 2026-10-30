@@ -22,6 +22,12 @@ internal static class CliDevices
             return await CliVerbs.PrintUsageAsync(context).ConfigureAwait(false);
         }
 
+        if (parsed.Url is not null && !IsLoopbackHttp(parsed.Url))
+        {
+            await context.Console.Error.WriteLineAsync("--url must be a loopback http URL (http://127.0.0.1:PORT, http://[::1]:PORT or http://localhost:PORT); nothing was sent.").ConfigureAwait(false);
+            return 2;
+        }
+
         string? baseUrl = parsed.Url ?? CliVerbs.RunningCopy(context.DataDir)?.Url;
         if (baseUrl is null)
         {
@@ -53,6 +59,13 @@ internal static class CliDevices
             return 1;
         }
     }
+
+    private static bool IsLoopbackHttp(string url)
+        => Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) && uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback;
+
+    /// <summary>Drops C0, DEL and C1 control characters (ESC included) so a device-supplied string cannot drive the terminal.</summary>
+    private static string Clean(string? value)
+        => string.Concat((value ?? string.Empty).Where(c => !char.IsControl(c)));
 
     private static Parsed? Parse(string[] args)
     {
@@ -194,14 +207,14 @@ internal static class CliDevices
             string id = Text(row, idName);
             string name = Text(row, "name");
             string scopes = row.TryGetProperty("scopes", out JsonElement list) && list.ValueKind == JsonValueKind.Array
-                ? string.Join(',', list.EnumerateArray().Select(item => item.GetString()))
+                ? string.Join(',', list.EnumerateArray().Select(item => Clean(item.GetString())))
                 : string.Empty;
             await context.Console.Out.WriteLineAsync($"  {id}  {name}  [{scopes}]  {Text(row, extraName)}").ConfigureAwait(false);
         }
     }
 
     private static string Text(JsonElement row, string name)
-        => row.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String ? value.GetString() ?? string.Empty : string.Empty;
+        => row.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String ? Clean(value.GetString()) : string.Empty;
 
     private sealed record Parsed(string Verb, string? Url, string? Device, string? Id, IReadOnlyList<string> Scopes);
 }
