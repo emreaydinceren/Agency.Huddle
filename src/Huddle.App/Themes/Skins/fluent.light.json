@@ -34,6 +34,7 @@
     "ids": "mono"
   },
   "tokens": {
+    "note.h1.size": "1.75em",
     "detail.background": "alpha(palette.surface 78%)",
     "detail.blur": "30px",
     "detail.edge": "ref(line.region)",
@@ -65,8 +66,9 @@
     "list.needs.bar": "#c43e00",
     "list.blocked.bar": "mix(palette.error 30%, palette.surface)",
     "list.title.weight": "600",
-    "board.count.background": "ref(ground.raised)",
-    "board.count.line": "ref(line.region)",
+    "board.column.background": "palette.backgroundGray",
+    "board.column.line": "transparent",
+    "board.count.background": "ref(ink.wash)",
     "board.needs.background": "ref(tone.warning.soft)",
     "board.needs.line": "ref(tone.warning.line)",
     "board.needs.bar": "#c43e00",

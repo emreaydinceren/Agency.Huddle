@@ -14,7 +14,9 @@
     "25": "0 0 8px rgba(0,0,0,.24), 0 32px 64px rgba(0,0,0,.28)"
   },
   "tokens": {
+    "note.prose.ink": "#d6d6d6",
     "detail.background": "rgba(36,36,36,.78)",
+    "board.column.background": "mix(palette.textPrimary 3%, palette.surface)",
     "board.card.hover.shadow": "0 0 2px rgba(0,0,0,.24), 0 4px 8px rgba(0,0,0,.28)",
     "chip.set.line": "#1f5f99",
     "feed.card.hover.shadow": "0 0 2px rgba(0,0,0,.24), 0 2px 4px rgba(0,0,0,.28)",

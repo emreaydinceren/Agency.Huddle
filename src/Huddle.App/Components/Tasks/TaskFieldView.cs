@@ -42,7 +42,7 @@ internal static class TaskFieldView
     public static string? OriginText(string? originRoomId, IReadOnlyDictionary<string, string>? roomNames) =>
         originRoomId is not null && roomNames is not null && roomNames.TryGetValue(originRoomId, out string? name) ? name : null;
 
-    /// <summary>One Small tag chip (the quiet <c>tag-chip</c> look) per tag.</summary>
+    /// <summary>One Small tag chip (the quiet <c>tag-chip</c> look) per tag, with a <c>task-tag-hue-N</c> class that colours its dot.</summary>
     /// <param name="tags">The tags.</param>
     public static RenderFragment Tags(IReadOnlyList<string> tags) => builder =>
     {
@@ -51,9 +51,40 @@ internal static class TaskFieldView
             builder.OpenComponent<MudChip<string>>(0);
             builder.AddAttribute(1, nameof(MudChip<string>.Variant), TextVariant);
             builder.AddAttribute(2, nameof(MudChip<string>.Size), SmallSize);
-            builder.AddAttribute(3, nameof(MudChip<string>.Class), "task-tag tag-chip");
+            builder.AddAttribute(3, nameof(MudChip<string>.Class), TagClasses[TagHue(tag)]);
             builder.AddAttribute(4, nameof(MudChip<string>.ChildContent), (RenderFragment)(content => content.AddContent(0, tag)));
             builder.CloseComponent();
         }
     };
+
+    /// <summary>
+    /// A tag chip's classes, one entry per dot colour; <c>app.css</c> has one <c>.task-tag-hue-N</c> rule for each. Spelled
+    /// out rather than formatted, so the dead-selector guard finds every class in the source.
+    /// </summary>
+    internal static readonly string[] TagClasses =
+    [
+        "task-tag tag-chip task-tag-hue-0",
+        "task-tag tag-chip task-tag-hue-1",
+        "task-tag tag-chip task-tag-hue-2",
+        "task-tag tag-chip task-tag-hue-3",
+        "task-tag tag-chip task-tag-hue-4",
+        "task-tag tag-chip task-tag-hue-5",
+    ];
+
+    /// <summary>
+    /// Which of the <see cref="TagClasses"/> a tag wears: an FNV-1a hash of its text, so the same tag has the same dot on
+    /// every card and in every process (<see cref="string.GetHashCode()"/> is randomised per process).
+    /// </summary>
+    /// <param name="tag">The tag's text.</param>
+    /// <returns>An index into <see cref="TagClasses"/>.</returns>
+    internal static int TagHue(string tag)
+    {
+        uint hash = 2166136261;
+        foreach (char letter in tag)
+        {
+            hash = unchecked((hash ^ letter) * 16777619);
+        }
+
+        return (int)(hash % (uint)TagClasses.Length);
+    }
 }

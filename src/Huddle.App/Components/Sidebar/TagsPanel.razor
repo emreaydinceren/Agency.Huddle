@@ -45,7 +45,7 @@ else if (this.unavailable)
 else if (this.loaded)
 {
     <div class="sidebar-row tags-header">
-        <MudText Typo="Typo.overline">This note</MudText>
+        <MudText Typo="Typo.overline" Class="tags-caption">This note</MudText>
         <MudTooltip Text="Refresh tags">
             <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" aria-label="Refresh tags" OnClick="@this.Refresh" />
         </MudTooltip>
@@ -66,7 +66,7 @@ else if (this.loaded)
         </div>
     }
 
-    <MudText Typo="Typo.overline">All tags in this folder</MudText>
+    <MudText Typo="Typo.overline" Class="tags-caption">All tags in this folder</MudText>
     @if (this.topItems.Count == 0)
     {
         <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">No tags in this folder.</MudText>

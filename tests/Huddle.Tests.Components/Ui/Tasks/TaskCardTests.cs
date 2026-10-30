@@ -272,6 +272,38 @@ public sealed class TaskCardTests : IDisposable
         Assert.Empty(unblocked.FindAll(".task-card-blocked-by"));
     }
 
+    /// <summary>
+    /// A tag wears the dot colour its text hashes to, so the same tag has the same dot on two cards, and tags whose hashes
+    /// differ wear different dots (side-by-side audit, LL-K01).
+    /// </summary>
+    [Fact]
+    public async Task Tags_WearTheDotColourTheirTextHashesTo()
+    {
+        string[] tags = ["infra", "design", "billing", "ops", "research", "ux", "api"];
+        TaskItem first = TestTasks.Make(id: "PLAT-0001", title: "T", status: TaskState.ToDo, tags: tags);
+        TaskItem second = TestTasks.Make(id: "PLAT-0002", title: "T", status: TaskState.ToDo, tags: [.. tags.Reverse()]);
+
+        await using MudBunitContext firstCtx = new();
+        IRenderedComponent<ContainerFragment> firstCard = this.Render(firstCtx, first);
+        await using MudBunitContext secondCtx = new();
+        IRenderedComponent<ContainerFragment> secondCard = this.Render(secondCtx, second);
+
+        Dictionary<string, string> firstHues = HuesByTag(firstCard);
+        Assert.Equal(tags.Length, firstHues.Count);
+        Assert.Equal(firstHues, HuesByTag(secondCard));
+        Assert.True(firstHues.Values.Distinct(StringComparer.Ordinal).Count() > 1, "every tag hashed to one dot colour");
+        Assert.All(tags, tag => Assert.Equal(TaskFieldView.TagClasses[TaskFieldView.TagHue(tag)].Split(' ')[^1], firstHues[tag]));
+    }
+
+    /// <summary>Each rendered tag's text, mapped to the <c>task-tag-hue-N</c> class it wears.</summary>
+    /// <param name="card">The rendered card.</param>
+    /// <returns>The hue class by tag text.</returns>
+    private static Dictionary<string, string> HuesByTag(IRenderedComponent<ContainerFragment> card) =>
+        card.FindAll(".task-tag").ToDictionary(
+            chip => chip.TextContent.Trim(),
+            chip => chip.ClassList.Single(name => name.StartsWith("task-tag-hue-", StringComparison.Ordinal)),
+            StringComparer.Ordinal);
+
     /// <summary>Spec §13.4 Cards ("The View's extra fields"): a field named in <see cref="TaskCard.Fields"/> shows its value, formatted the same way every Tasks surface formats a date (<see cref="HumanDate"/>, with the full date as the tooltip).</summary>
     [Fact]
     public async Task Fields_DueDateShownWhenInFields()
