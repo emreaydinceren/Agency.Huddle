@@ -189,7 +189,7 @@ public sealed class ConnectEndpointsTests
         for (int attempt = 0; attempt < 10; attempt++)
         {
             using HttpResponseMessage wrong = await lan.ConnectAsync(new ConnectAuth(Token: "wrong"), ct);
-            Assert.Equal(HttpStatusCode.Unauthorized, wrong.StatusCode);
+            Assert.Equal(attempt < 9 ? HttpStatusCode.Unauthorized : HttpStatusCode.TooManyRequests, wrong.StatusCode);
         }
 
         using HttpResponseMessage locked = await lan.ConnectAsync(new ConnectAuth(Token: Token), ct);

@@ -88,7 +88,7 @@ internal static class GatewayAdminEndpoints
     {
         return Results.Json(new Listing(
             [.. devices.List().Select(device => new DeviceView(
-                device.DeviceId, device.Name, device.Scopes, device.HasToken, device.PairedVia, device.PairedAt, device.LastSeenAt, device.LastSeenFrom, device.UserAgent))],
+                device.DeviceId, device.Name, device.Scopes, device.HasToken, device.PairedVia, device.PairedAt, device.LastSeenAt, device.LastSeenFrom, device.UserAgent, !device.HasToken))],
             [.. pairing.Pending().Select(request => new RequestView(
                 request.RequestId, request.DeviceId, request.Name, request.Scopes, request.Address, request.Ingress, request.UserAgent, request.CreatedAt, request.ExpiresAt))]));
     }
@@ -126,7 +126,8 @@ internal static class GatewayAdminEndpoints
         DateTimeOffset PairedAt,
         DateTimeOffset LastSeenAt,
         string LastSeenFrom,
-        string? UserAgent);
+        string? UserAgent,
+        bool Revoked);
 
     private sealed record RequestView(
         string RequestId,

@@ -10,6 +10,7 @@
 @using System.Globalization
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Gateway
 @using Agency.Huddle.App.Library
 
 @inject LibraryFileService FileService
@@ -18,6 +19,7 @@
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
+@inject HostActions Host
 
 @if (this.failedNotes.Count > 0)
 {
@@ -83,10 +85,27 @@
                 await LibraryClipboard.CopyPathAsync(this.JS, this.Snackbar, action.Path.FullPath);
                 return;
             case LibraryTreeActionKind.OpenInDefaultApp:
-                throw new NotSupportedException("12.5b");
+                this.OpenInDefaultApp(action.Path);
+                return;
             default:
                 throw new NotSupportedException("12.5b");
         }
+    }
+
+    /// <summary>Opens the file with the host's registered application through <see cref="HostActions"/>, the one place that starts a process
+    /// for the Human; while remote access is configured it refuses, and the refusal or a failed launch shows as a snackbar.</summary>
+    private void OpenInDefaultApp(LibraryPath item)
+    {
+        HostActionResult result = this.Host.OpenFile(item.FullPath);
+        if (result.Done)
+        {
+            return;
+        }
+
+        string message = string.Equals(result.Error, HostActions.RefusedMessage, StringComparison.Ordinal)
+            ? HostActions.RefusedMessage
+            : $"Could not open '{Path.GetFileName(item.FullPath)}': {result.Error}";
+        this.Snackbar.Add(message, Severity.Error, configure: null, key: "library-error");
     }
 
     /// <summary>Asks <see cref="BeforeChangeAsync"/>, then the settled Delete confirm text through

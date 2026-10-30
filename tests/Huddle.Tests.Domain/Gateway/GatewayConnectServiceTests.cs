@@ -303,15 +303,17 @@ public sealed class GatewayConnectServiceTests
         AssertFailed(outcome, 401, DeviceAuth.SignatureExpired);
     }
 
-    /// <summary>Ten wrong tokens from one address lock it out: the eleventh handshake, even with the right token, is 429 <c>AUTH_RATE_LIMITED</c> with a retry time.</summary>
+    /// <summary>Ten wrong tokens from one address lock it out: the tenth already answers the lockout, and the next handshake, even with the right token, is 429 <c>AUTH_RATE_LIMITED</c> with a retry time.</summary>
     [Fact]
     public void Connect_TenWrongTokens_LockTheAddressOut()
     {
         using GatewayConnectHarness harness = new();
-        for (int attempt = 0; attempt < 10; attempt++)
+        for (int attempt = 0; attempt < 9; attempt++)
         {
             AssertFailed(harness.Connect(new TestDevice(), Token("wrong"), GatewayConnectHarness.Direct()), 401, ConnectOutcome.TokenMismatch);
         }
+
+        AssertFailed(harness.Connect(new TestDevice(), Token("wrong"), GatewayConnectHarness.Direct()), 429, AuthRateLimiter.ErrorCode);
 
         ConnectOutcome locked = harness.Connect(new TestDevice(), Token(), GatewayConnectHarness.Direct());
         ConnectOutcome elsewhere = harness.Connect(new TestDevice(), Token(), GatewayConnectHarness.Direct("203.0.113.77"));
@@ -374,7 +376,8 @@ public sealed class GatewayConnectServiceTests
         {
             ChallengeNonceStore.Challenge challenge = harness.Nonces.Issue();
             ConnectRequest forged = new TestDevice().Build(challenge.Nonce, challenge.Ts, [GatewayScopes.Read], Token()) with { Signature = "c2hvcnQ" };
-            AssertFailed(harness.Service.Connect(forged, context), 401, DeviceAuth.SignatureInvalid);
+            bool locking = attempt == 9;
+            AssertFailed(harness.Service.Connect(forged, context), locking ? 429 : 401, locking ? AuthRateLimiter.ErrorCode : DeviceAuth.SignatureInvalid);
         }
 
         ConnectOutcome valid = harness.Connect(new TestDevice(), Token(), GatewayConnectHarness.Direct());

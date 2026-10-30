@@ -36,6 +36,9 @@ internal static class RemoteAccessCopy
     /// <summary>The next step when Tailscale is chosen and not running.</summary>
     public const string TailscaleNotRunning = "Tailscale is not running. Start Tailscale, then restart Huddle.";
 
+    /// <summary>The warning on the Gateway card while plain HTTP is offered to other devices (Spec Appendix B).</summary>
+    public const string DowngradedNotice = "Plain HTTP: anyone on this network can read what Huddle sends.";
+
     /// <summary>The style that lets a long link wrap inside the card.</summary>
     public const string WrapStyle = "overflow-wrap: anywhere;";
 
@@ -70,18 +73,37 @@ internal static class RemoteAccessCopy
 
     /// <summary>The ingress of a request as a word; only a direct connection is "downgraded".</summary>
     /// <param name="ingress">The ingress kind as text.</param>
-    public static string IngressLabel(string ingress)
+    /// <param name="bind">The running bind.</param>
+    /// <param name="tailscaleMode">The running Tailscale mode.</param>
+    public static string IngressLabel(string ingress, string bind = "", string tailscaleMode = "")
     {
         ArgumentNullException.ThrowIfNull(ingress);
 
         return ingress switch
         {
-            "Loopback" => "Loopback",
-            "Direct" => "Direct (downgraded)",
-            "Managed" => "Tailscale",
-            "TrustedProxy" => "Trusted proxy",
+            "Loopback" => "This computer",
+            "Direct" => DirectLabel(bind),
+            "Managed" => string.Equals(tailscaleMode, "funnel", StringComparison.OrdinalIgnoreCase) ? "Tailscale Funnel" : "Tailscale",
+            "TrustedProxy" => "Proxy",
             _ => ingress,
         };
+    }
+
+    /// <summary>Whether a running bind sends plain HTTP to other devices, which the Gateway card calls downgraded.</summary>
+    /// <param name="bind">The running bind.</param>
+    public static bool IsDowngradedBind(string bind) =>
+        string.Equals(bind, "lan", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(bind, "tailnet", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(bind, "custom", StringComparison.OrdinalIgnoreCase);
+
+    private static string DirectLabel(string bind)
+    {
+        if (string.Equals(bind, "lan", StringComparison.OrdinalIgnoreCase))
+        {
+            return "LAN (downgraded)";
+        }
+
+        return string.Equals(bind, "tailnet", StringComparison.OrdinalIgnoreCase) ? "Tailscale address (downgraded)" : "Network (downgraded)";
     }
 
     /// <summary>Time left as <c>m:ss</c>, never negative.</summary>

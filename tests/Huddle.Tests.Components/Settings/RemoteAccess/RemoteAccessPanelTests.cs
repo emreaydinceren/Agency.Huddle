@@ -282,7 +282,7 @@ public sealed class RemoteAccessPanelTests : IAsyncDisposable
         Assert.Contains("Waiting for approval (1)", Part(cut, "requests").TextContent, StringComparison.Ordinal);
         Assert.Equal("iPad · Safari", TextOf(row, "name"));
         Assert.Equal("192.168.1.34", TextOf(row, "address"));
-        Assert.Equal("Direct (downgraded)", TextOf(row, "ingress"));
+        Assert.Equal("Network (downgraded)", TextOf(row, "ingress"));
         Assert.Equal("asks Limited", TextOf(row, "scopes"));
         Assert.Equal("5:00", TextOf(row, "countdown"));
     }
@@ -298,12 +298,12 @@ public sealed class RemoteAccessPanelTests : IAsyncDisposable
         Assert.Equal("4:31", TextOf(RequestRow(cut, request.RequestId), "countdown"));
     }
 
-    /// <summary>Ingress names read as words: loopback, Tailscale, trusted proxy; only Direct is "downgraded".</summary>
+    /// <summary>Ingress names read as words: this computer, Tailscale, proxy; only Direct is "downgraded" (the loopback harness bind reads as a plain network).</summary>
     [Theory]
-    [InlineData("Loopback", "Loopback")]
-    [InlineData("Direct", "Direct (downgraded)")]
+    [InlineData("Loopback", "This computer")]
+    [InlineData("Direct", "Network (downgraded)")]
     [InlineData("Managed", "Tailscale")]
-    [InlineData("TrustedProxy", "Trusted proxy")]
+    [InlineData("TrustedProxy", "Proxy")]
     public void Requests_IngressLabel_ReadsAsWords(string ingress, string label)
     {
         PairingRequest request = this.H.OpenRequest("iPad", ingress);

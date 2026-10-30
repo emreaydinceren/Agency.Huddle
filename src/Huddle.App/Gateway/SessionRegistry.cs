@@ -10,6 +10,9 @@ internal sealed class SessionRegistry
     /// <summary>The server-side lifetime of a session.</summary>
     public static readonly TimeSpan Lifetime = TimeSpan.FromHours(12);
 
+    private static readonly TimeSpan SeenWriteInterval = TimeSpan.FromMinutes(1);
+
+    private readonly Dictionary<string, DateTimeOffset> lastSeenWritten = new(StringComparer.Ordinal);
     private readonly DeviceRegistry devices;
     private readonly TimeProvider timeProvider;
     private readonly Dictionary<string, Session> sessions = new(StringComparer.Ordinal);
@@ -41,14 +44,20 @@ internal sealed class SessionRegistry
             return null;
         }
 
-        GatewaySession? session = this.TryGetByHash(Hash(cookieValue));
+        GatewaySession? session = this.Lookup(Hash(cookieValue));
         if (session is null || this.devices.Find(session.DeviceId) is not { HasToken: true })
         {
             return null;
         }
 
         bool bound = session.TailscaleLogin is not null && string.Equals(session.Ingress, IngressKindText.Of(IngressKind.Managed), StringComparison.Ordinal);
-        return bound && !string.Equals(session.TailscaleLogin, currentTailscaleLogin, StringComparison.OrdinalIgnoreCase) ? null : session;
+        if (bound && !string.Equals(session.TailscaleLogin, currentTailscaleLogin, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        this.NoteSeen(session.DeviceId);
+        return session;
     }
 
     /// <summary>
@@ -56,6 +65,41 @@ internal sealed class SessionRegistry
     /// </summary>
     /// <param name="sessionHash">The <see cref="GatewayClaims.Session"/> claim.</param>
     public GatewaySession? TryGetByHash(string? sessionHash)
+    {
+        GatewaySession? session = this.Lookup(sessionHash);
+        if (session is not null)
+        {
+            this.NoteSeen(session.DeviceId);
+        }
+
+        return session;
+    }
+
+    /// <summary>
+    /// Marks the device as seen now: in memory every time, and in <c>team.db</c> at most once a minute per device, so an active device reads
+    /// "seen now" without a write per request.
+    /// </summary>
+    /// <param name="deviceId">The device whose session was just used.</param>
+    private void NoteSeen(string deviceId)
+    {
+        DateTimeOffset now = this.timeProvider.GetUtcNow();
+        bool due;
+        lock (this.gate)
+        {
+            due = !this.lastSeenWritten.TryGetValue(deviceId, out DateTimeOffset written) || now - written >= SeenWriteInterval;
+            if (due)
+            {
+                this.lastSeenWritten[deviceId] = now;
+            }
+        }
+
+        if (due)
+        {
+            this.devices.MarkSeen(deviceId);
+        }
+    }
+
+    private GatewaySession? Lookup(string? sessionHash)
     {
         if (string.IsNullOrEmpty(sessionHash))
         {

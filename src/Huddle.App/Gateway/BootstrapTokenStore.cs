@@ -74,6 +74,19 @@ internal sealed class BootstrapTokenStore
         }
     }
 
+    /// <summary>Whether a token can no longer start a pairing: unknown, burned, expired, or already redeemed by a device.</summary>
+    /// <param name="token">The token.</param>
+    public bool IsSpent(string token)
+    {
+        ArgumentNullException.ThrowIfNull(token);
+
+        DateTimeOffset now = this.timeProvider.GetUtcNow();
+        lock (this.gate)
+        {
+            return !this.tokens.TryGetValue(Hash(token), out Entry? entry) || entry.Burned || entry.BoundDevice is not null || now >= entry.Expires;
+        }
+    }
+
     /// <summary>Makes a token unusable by anyone (the <c>/auth/bootstrap/burn</c> endpoint, C-9).</summary>
     /// <param name="token">The token.</param>
     public void Burn(string token)

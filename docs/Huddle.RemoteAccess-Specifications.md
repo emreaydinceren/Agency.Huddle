@@ -1022,7 +1022,7 @@ row also holds `desktop_port` (§6.2). The gateway and the CLI also read `HUDDLE
 | --- | --- | --- |
 | `G10` | `RemoteAccessPanel` | Admin only; limited sessions see the **Request admin** notice instead of every Settings section |
 | `G10a` | Gateway card | The settings of §6.12 with stored and running values, the state chip with an icon, URLs with **Copy link**, Tailscale's messages and links |
-| `G10e` | Waiting for approval | One row per request: name, address, ingress (with **downgraded** where it applies), Tailscale login with **You** or **Shared user**, requested scopes, countdown, **Approve** with a scope menu capped at the approver's, **Reject** |
+| `G10e` | Waiting for approval | One row per request: name, address, ingress in words (**LAN (downgraded)**, **Tailscale address (downgraded)** or **Network (downgraded)** for a direct connection on a lan, tailnet or custom bind; **Tailscale**, **Tailscale Funnel**, **This computer**, **Proxy**), Tailscale login with **You** or **Shared user**, requested scopes, countdown, **Approve** with a scope menu capped at the approver's, **Reject** |
 | `G10b` | Pair a device | QR at 160px on a white plate, the link, **New link**, the sentence that approval still follows |
 | `G10d` | Devices | Name (rename), Limited or Admin, how paired, last address, last seen, **This device**, **Rotate**, **Revoke**, **Remove** with inline confirm |
 | `G10f` | Security check | §8.9 items with severity icon, the condition and the fix |

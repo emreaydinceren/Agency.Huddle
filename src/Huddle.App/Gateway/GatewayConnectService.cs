@@ -152,7 +152,11 @@ internal sealed class GatewayConnectService
     private ConnectOutcome Fail(string scope, string client, bool loopback, string code)
     {
         AuthRateLimitFailure failure = this.limiter.RecordFailure(AuthRateLimiter.Key(scope, client), loopback);
-        return Failed(401, code) with { Delay = failure.Delay };
+
+        // The failure that starts the lockout is answered with the lockout, so the Human is told how long to wait at once.
+        return failure.LockedOut
+            ? Failed(429, AuthRateLimiter.ErrorCode) with { RetryAfterMs = failure.RetryAfterMs }
+            : Failed(401, code) with { Delay = failure.Delay };
     }
 
     /// <summary>Spec 6.6 steps 1 to 4: the nonce, then the device signature. Each failure is counted.</summary>

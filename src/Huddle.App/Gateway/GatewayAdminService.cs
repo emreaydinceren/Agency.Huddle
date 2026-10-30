@@ -341,6 +341,16 @@ internal sealed class GatewayAdminService
         return this.devices.Remove(deviceId);
     }
 
+    /// <summary>Whether a setup link shown earlier can no longer be used: it was redeemed, burned or has expired.</summary>
+    /// <param name="caller">The caller.</param>
+    /// <param name="url">The link's address.</param>
+    public bool IsSetupLinkSpent(ClaimsPrincipal caller, string url)
+    {
+        RequireAdmin(caller);
+
+        return this.links.IsSpent(url);
+    }
+
     /// <summary>Mints a limited setup link for the gateway's public address, with its QR code.</summary>
     /// <param name="caller">The caller.</param>
     public SetupLinkOffer MintSetupLink(ClaimsPrincipal caller)

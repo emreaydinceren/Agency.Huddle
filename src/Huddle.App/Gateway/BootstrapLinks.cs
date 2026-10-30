@@ -41,6 +41,16 @@ internal sealed class BootstrapLinks(BootstrapTokenStore store)
             : new SetupLinkResult(false, null, "A setup link over plain http is allowed only for a private network address, a .local name or a .ts.net name; use https.");
     }
 
+    /// <summary>Whether the token in a link made by this class is spent (see <see cref="BootstrapTokenStore.IsSpent"/>); a link with no token is spent.</summary>
+    /// <param name="url">The link.</param>
+    public bool IsSpent(string url)
+    {
+        ArgumentNullException.ThrowIfNull(url);
+
+        int at = url.IndexOf("bootstrapToken=", StringComparison.Ordinal);
+        return at < 0 || this.store.IsSpent(url[(at + "bootstrapToken=".Length)..]);
+    }
+
     /// <summary>Maps <c>0.0.0.0</c>, <c>[::]</c>, <c>+</c> and <c>*</c> hosts to <c>127.0.0.1</c>, keeps the scheme and port, and drops a trailing slash.</summary>
     /// <param name="listenUrl">A Kestrel address.</param>
     public static string NormalizeListenAddress(string listenUrl)

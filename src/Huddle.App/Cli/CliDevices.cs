@@ -209,7 +209,8 @@ internal static class CliDevices
             string scopes = row.TryGetProperty("scopes", out JsonElement list) && list.ValueKind == JsonValueKind.Array
                 ? string.Join(',', list.EnumerateArray().Select(item => Clean(item.GetString())))
                 : string.Empty;
-            await context.Console.Out.WriteLineAsync($"  {id}  {name}  [{scopes}]  {Text(row, extraName)}").ConfigureAwait(false);
+            bool revoked = row.TryGetProperty("revoked", out JsonElement flag) && flag.ValueKind == JsonValueKind.True;
+            await context.Console.Out.WriteLineAsync($"  {id}  {name}  [{scopes}]  {Text(row, extraName)}{(revoked ? "  revoked" : string.Empty)}").ConfigureAwait(false);
         }
     }
 

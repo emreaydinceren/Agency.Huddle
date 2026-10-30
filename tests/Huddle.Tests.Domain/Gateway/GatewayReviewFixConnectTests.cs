@@ -251,7 +251,7 @@ public sealed class GatewayReviewFixConnectTests
         ConnectAuth wrong = new(Token: "wrong");
         for (int attempt = 0; attempt < 3; attempt++)
         {
-            Assert.Equal(401, harness.Connect(new TestDevice(), wrong, GatewayConnectHarness.Direct("2001:db8:1:2::1")).HttpStatus);
+            Assert.Equal(attempt < 2 ? 401 : 429, harness.Connect(new TestDevice(), wrong, GatewayConnectHarness.Direct("2001:db8:1:2::1")).HttpStatus);
         }
 
         ConnectOutcome sameNetwork = harness.Connect(new TestDevice(), wrong, GatewayConnectHarness.Direct("2001:db8:1:2:aaaa:bbbb:cccc:dddd"));

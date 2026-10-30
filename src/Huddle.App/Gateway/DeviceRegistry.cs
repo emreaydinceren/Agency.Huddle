@@ -213,6 +213,17 @@ internal sealed class DeviceRegistry
             });
     }
 
+    /// <summary>Records that a device was in use just now, leaving its address and user agent as the last handshake set them.</summary>
+    /// <param name="deviceId">The device id.</param>
+    public void MarkSeen(string deviceId)
+    {
+        ArgumentNullException.ThrowIfNull(deviceId);
+
+        _ = this.Execute(
+            "UPDATE gateway_devices SET last_seen_at = $now WHERE device_id = $id;",
+            new Dictionary<string, object?>(StringComparer.Ordinal) { ["$id"] = deviceId });
+    }
+
     /// <summary>Issues a new token within the approved scopes; the old one stops working.</summary>
     /// <param name="deviceId">The device id.</param>
     /// <returns>The new token, or <see langword="null"/> when the device is unknown.</returns>

@@ -30,9 +30,14 @@
             <MudText Typo="Typo.subtitle1" HtmlTag="h2">Gateway</MudText>
             <span data-testid="status">
                 <StatusChip Color="@(this.NeedsAttention ? Color.Warning : Color.Success)"
-                            Icon="@(this.NeedsAttention ? Icons.Material.Outlined.WarningAmber : Icons.Material.Outlined.CheckCircleOutline)">@(this.NeedsAttention ? "Needs attention" : "Running")</StatusChip>
+                            Icon="@(this.NeedsAttention ? Icons.Material.Outlined.WarningAmber : Icons.Material.Outlined.CheckCircleOutline)">@(this.NeedsAttention ? "Needs attention" : "Running")@(this.Downgraded ? " (downgraded)" : string.Empty)</StatusChip>
             </span>
         </div>
+
+        @if (this.Downgraded)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2" role="status" data-testid="downgraded-notice">@RemoteAccessCopy.DowngradedNotice</MudAlert>
+        }
 
         @if (this.RuntimeView.ListenerReason is { } reason)
         {
@@ -135,7 +140,7 @@
                 <div class="d-flex align-center gap-3 flex-wrap mb-2" data-testid="request-row" data-request-id="@request.RequestId" @key="request.RequestId">
                     <strong data-part="name">@request.Name</strong>
                     <span data-part="address">@request.Address</span>
-                    <span data-part="ingress">@RemoteAccessCopy.IngressLabel(request.Ingress)</span>
+                    <span data-part="ingress">@RemoteAccessCopy.IngressLabel(request.Ingress, this.settingsView.Running.Bind, this.settingsView.Running.TailscaleMode)</span>
                     <span data-part="scopes">@(request.IsAdminRequest ? "asks Admin" : "asks Limited")</span>
                     @if (!string.IsNullOrEmpty(request.TailscaleLogin))
                     {
@@ -282,6 +287,8 @@
 
     private bool IsLoopbackSession => this.user.HasClaim(GatewayClaims.Ingress, IngressKindText.Of(IngressKind.Loopback));
 
+    private bool Downgraded => RemoteAccessCopy.IsDowngradedBind(this.settingsView.Running.Bind);
+
     private bool TailscaleChosen => this.settingsView.Running.TailscaleMode is "serve" or "funnel";
 
     private bool NeedsAttention => this.RuntimeView.ListenerReason is not null || (this.TailscaleChosen && this.RuntimeView.TailscaleState != TailscaleState.Running);
@@ -333,6 +340,12 @@
         this.requests = this.Admin.PendingRequests(this.user);
         this.devices = this.Admin.Devices(this.user);
         this.items = this.Admin.SecurityCheck(this.user);
+
+        // A setup link works once: when the shown one was redeemed (or lapsed) the card moves on to a fresh one.
+        if (this.offer is { Allowed: true, Url: { } shown } && this.Admin.IsSetupLinkSpent(this.user, shown))
+        {
+            this.offer = this.Admin.MintSetupLink(this.user);
+        }
     }
 
     private void LoadDraft(GatewayAdminService.Values values)

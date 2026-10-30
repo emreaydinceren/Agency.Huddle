@@ -40,8 +40,10 @@ internal static class CliVerbs
         ArgumentNullException.ThrowIfNull(args);
         ArgumentNullException.ThrowIfNull(context);
 
-        string verb = args.Length > 0 ? args[0] : string.Empty;
-        string[] rest = [.. args.Skip(1)];
+        (string[] arguments, CliContext applied) = ApplySwitches(args, context);
+        context = applied;
+        string verb = arguments.Length > 0 ? arguments[0] : string.Empty;
+        string[] rest = [.. arguments.Skip(1)];
         return verb switch
         {
             "auth-token" => await AuthTokenAsync(rest, context).ConfigureAwait(false),
@@ -49,6 +51,34 @@ internal static class CliVerbs
             "devices" => await CliDevices.RunAsync(rest, context, ct).ConfigureAwait(false),
             _ => await PrintUsageAsync(context).ConfigureAwait(false),
         };
+    }
+
+    /// <summary>
+    /// Takes the <c>--Section:Key=value</c> arguments out of the verb's arguments and applies them like the app's command-line configuration:
+    /// they join the configuration (so <c>--Team:Gateway:Auth:Token=…</c> is the token) and <c>--Team:DataDir=…</c> picks the data folder.
+    /// </summary>
+    /// <param name="args">The command-line arguments.</param>
+    /// <param name="context">The seams built from the environment.</param>
+    private static (string[] Arguments, CliContext Context) ApplySwitches(string[] args, CliContext context)
+    {
+        string[] switches = [.. args.Where(IsConfigurationSwitch)];
+        if (switches.Length == 0)
+        {
+            return (args, context);
+        }
+
+        IConfiguration given = new ConfigurationBuilder().AddCommandLine(switches).Build();
+        IConfiguration merged = new ConfigurationBuilder().AddConfiguration(context.Configuration).AddConfiguration(given).Build();
+        string dataDir = given["Team:DataDir"] is { Length: > 0 } chosen ? Path.GetFullPath(chosen) : context.DataDir;
+        return ([.. args.Where(static arg => !IsConfigurationSwitch(arg))], context with { Configuration = merged, DataDir = dataDir });
+    }
+
+    /// <summary>Whether an argument is <c>--Section:Key=value</c>: a double dash, a key with a colon, then <c>=</c>.</summary>
+    /// <param name="argument">The argument.</param>
+    private static bool IsConfigurationSwitch(string argument)
+    {
+        int equals = argument.IndexOf('=', StringComparison.Ordinal);
+        return argument.StartsWith("--", StringComparison.Ordinal) && equals > 2 && argument.AsSpan(2, equals - 2).Contains(':');
     }
 
     /// <summary>Prints the usage to standard error.</summary>
