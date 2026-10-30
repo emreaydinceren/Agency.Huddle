@@ -49,7 +49,7 @@ internal static class DesktopStopEndpoint
     /// request is not. A request that never went through the gate (a direct call) falls back to the socket address, where a null address is allowed.
     /// </summary>
     /// <param name="context">The request.</param>
-    private static bool IsLoopbackCaller(HttpContext context)
+    internal static bool IsLoopbackCaller(HttpContext context)
     {
         if (GatewayHttpItems.GetIngress(context) is { } ingress)
         {
@@ -67,7 +67,7 @@ internal static class DesktopStopEndpoint
     /// <param name="presented">The token the caller sent.</param>
     /// <param name="expected">The instance's real token.</param>
     /// <returns><see langword="true"/> when the tokens are identical.</returns>
-    private static bool TokensMatch(string presented, string expected)
+    internal static bool TokensMatch(string presented, string expected)
     {
         byte[] presentedHash = SHA256.HashData(Encoding.UTF8.GetBytes(presented));
         byte[] expectedHash = SHA256.HashData(Encoding.UTF8.GetBytes(expected));

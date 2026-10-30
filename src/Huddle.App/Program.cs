@@ -1,6 +1,7 @@
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
+using Agency.Huddle.App.Cli;
 using Agency.Huddle.App.Components;
 using Agency.Huddle.App.Desktop;
 using Agency.Huddle.App.Gateway;
@@ -21,6 +22,23 @@ if (args is ["stop"])
         stopDataDir, null, Console.Out, TimeSpan.FromSeconds(45), CancellationToken.None).ConfigureAwait(false);
 }
 
+// Any other bare first word is a CLI verb (auth-token, dashboard, devices) or a mistake: either way it never
+// starts the server, and an unknown one prints the usage and exits 2 (C-14). Options such as --urls=... and
+// Team:Key=value start with a dash or contain "=", so a normal launch is untouched.
+if (CliVerbs.Handles(args))
+{
+    string verbDataDir = Path.GetFullPath(
+        Environment.GetEnvironmentVariable("Team__DataDir") is { Length: > 0 } verbDir ? verbDir : "App_Data");
+    IConfiguration verbConfiguration = new ConfigurationBuilder()
+        .SetBasePath(AppContext.BaseDirectory)
+        .AddJsonFile("appsettings.json", optional: true)
+        .AddEnvironmentVariables()
+        .Build();
+    CliContext verbContext = new(
+        verbDataDir, new SystemCliConsole(), new SystemBrowserOpener(), verbConfiguration, new ProcessGatewayEnvironment(), null);
+    return await CliVerbs.RunAsync(args, verbContext, CancellationToken.None).ConfigureAwait(false);
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Desktop mode: one instance per data dir. The lock is held until the process ends. A second launch
@@ -31,7 +49,7 @@ string desktopDataDir = Path.GetFullPath(builder.Configuration["Team:DataDir"] ?
 IBrowserOpener handOffOpener = desktop.OpenBrowser ? new SystemBrowserOpener() : new NoopBrowserOpener();
 HandOffResult handOff = desktop.Enabled
     ? await DesktopHandOff.AcquireOrHandOffAsync(
-        desktopDataDir, handOffOpener, TimeSpan.FromSeconds(15), TimeSpan.FromMilliseconds(200), CancellationToken.None).ConfigureAwait(false)
+        desktopDataDir, handOffOpener, null, TimeSpan.FromSeconds(15), TimeSpan.FromMilliseconds(200), CancellationToken.None).ConfigureAwait(false)
     : new HandOffResult(null, false);
 using InstanceLock? instanceLock = handOff.Lock;
 if (desktop.Enabled)
@@ -61,6 +79,11 @@ builder.Services.AddTeamServices(builder.Configuration);
 builder.Services.AddDesktopHost(builder.Configuration);
 
 builder.Services.AddGateway();
+
+// The development ready line (C-14): written through this writer, never ILogger, and only when the server
+// reports an address, so a TestServer run stays quiet. Tests replace the writer.
+builder.Services.AddSingleton(new DevConsoleOutput(Console.Out));
+builder.Services.AddHostedService<DevConsoleAnnouncer>();
 
 // Liveness only, and deliberately with zero registered checks: 200 here means the process is
 // up, Kestrel is bound and the endpoint pipeline is built - nothing more. That is exactly what
@@ -162,6 +185,9 @@ app.MapGet("/library-files/{rootId}/{**path}", LibraryFilesEndpoint.HandleAsync)
 app.MapHealthChecks("/health");
 
 app.MapDesktopEndpoints();
+
+// Loopback only and bearer-authenticated by the gateway token: the devices CLI verbs call these.
+app.MapGatewayAdminEndpoints();
 
 // Mapping only: the gate that makes every other route require a session is Stage C.
 app.MapGatewayAuthEndpoints();

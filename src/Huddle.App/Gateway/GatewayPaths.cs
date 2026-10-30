@@ -23,7 +23,8 @@ internal static class GatewayPaths
     /// <param name="path">The request path.</param>
     public static Kind Of(PathString path)
     {
-        if (path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase) || path.StartsWithSegments("/_desktop", StringComparison.OrdinalIgnoreCase))
+        if (path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase) || path.StartsWithSegments("/_desktop", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWithSegments("/_gateway", StringComparison.OrdinalIgnoreCase))
         {
             return Kind.LoopbackOnly;
         }

@@ -56,6 +56,20 @@ internal sealed class GatewaySettingsStore
     /// <summary>The stored password as salt followed by hash, or <see langword="null"/>.</summary>
     public byte[]? StoredPasswordHash => this.Scalar("SELECT password_hash FROM gateway_settings WHERE id = 1") as byte[];
 
+    /// <summary>The port desktop mode bound last time (C-11), or <see langword="null"/> when none was stored.</summary>
+    public int? DesktopPort => this.Scalar("SELECT desktop_port FROM gateway_settings WHERE id = 1") is long port ? (int)port : null;
+
+    /// <summary>Stores the port desktop mode bound (C-11).</summary>
+    /// <param name="port">The port, 1 to 65535.</param>
+    public void SetDesktopPort(int port)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(port, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(port, 65535);
+
+        // Passed as text: the INTEGER column converts it, and it avoids boxing the number at this call site.
+        this.Update("UPDATE gateway_settings SET desktop_port = $value, updated_at = $now WHERE id = 1", port.ToString(CultureInfo.InvariantCulture));
+    }
+
     /// <summary>Returns the stored token, generating and storing one first when there is none.</summary>
     public string EnsureToken()
     {

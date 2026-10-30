@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Agency.Huddle.App.Gateway;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Options;
@@ -17,6 +18,7 @@ namespace Agency.Huddle.App.Desktop;
 /// <param name="session">The per-instance session holding the stop token.</param>
 /// <param name="opener">Opens the instance URL in the browser.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="bootstrap">Mints the bootstrap token the opened URL carries (Spec 6.9, C-9); <see langword="null"/> opens the bare address.</param>
 internal sealed class DesktopLifetimeService(
     IServer server,
     IHostApplicationLifetime lifetime,
@@ -24,8 +26,11 @@ internal sealed class DesktopLifetimeService(
     IOptions<TeamOptions> team,
     DesktopSession session,
     IBrowserOpener opener,
-    ILogger<DesktopLifetimeService> logger) : IHostedService
+    ILogger<DesktopLifetimeService> logger,
+    BootstrapLinks? bootstrap = null) : IHostedService
 {
+    private readonly BootstrapLinks? bootstrap = bootstrap;
+
     private CancellationTokenRegistration startedRegistration;
 
     /// <summary>
@@ -65,11 +70,12 @@ internal sealed class DesktopLifetimeService(
             return;
         }
 
-        InstanceFile.Write(team.Value.DataDir, new InstanceInfo(url, session.StopToken, Environment.ProcessId));
+        string address = this.bootstrap is null ? url : BootstrapLinks.NormalizeListenAddress(url);
+        InstanceFile.Write(team.Value.DataDir, new InstanceInfo(address, session.StopToken, Environment.ProcessId));
 
         if (options.Value.OpenBrowser)
         {
-            this.TryOpen(url);
+            this.TryOpen(this.bootstrap?.AdminUrl(address) ?? address);
         }
     }
 

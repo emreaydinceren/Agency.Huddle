@@ -24,6 +24,7 @@ internal static class GatewayServiceCollectionExtensions
         services.AddSingleton(static provider => new DeviceRegistry(provider.GetRequiredService<IOptions<TeamOptions>>().Value.DataDir));
         services.AddSingleton<ChallengeNonceStore>();
         services.AddSingleton<BootstrapTokenStore>();
+        services.AddSingleton<BootstrapLinks>();
         services.AddSingleton<SessionRegistry>();
         services.AddSingleton<PairingService>();
         services.AddSingleton<GatewayConnectService>();

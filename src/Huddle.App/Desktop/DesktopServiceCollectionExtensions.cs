@@ -33,7 +33,7 @@ internal static class DesktopServiceCollectionExtensions
         return services;
     }
 
-    /// <summary>Maps <c>POST /_desktop/stop</c> when desktop mode is enabled.</summary>
+    /// <summary>Maps <c>POST /_desktop/stop</c> and <c>POST /_desktop/bootstrap</c> when desktop mode is enabled.</summary>
     /// <param name="app">The application whose endpoint table is extended.</param>
     /// <returns>The same <paramref name="app"/>, for chaining.</returns>
     internal static WebApplication MapDesktopEndpoints(this WebApplication app)
@@ -44,6 +44,7 @@ internal static class DesktopServiceCollectionExtensions
         }
 
         app.MapPost(DesktopStopEndpoint.Route, DesktopStopEndpoint.HandleAsync).DisableAntiforgery();
+        app.MapPost(DesktopBootstrapEndpoint.Route, DesktopBootstrapEndpoint.HandleAsync).DisableAntiforgery();
         return app;
     }
 
