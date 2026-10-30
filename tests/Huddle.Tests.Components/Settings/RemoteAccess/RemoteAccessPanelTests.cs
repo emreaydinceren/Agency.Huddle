@@ -65,6 +65,7 @@ public sealed class RemoteAccessPanelTests : IAsyncDisposable
     [Fact]
     public void Panel_ShowsTheIntroAndItsParts()
     {
+        _ = this.Start(new Dictionary<string, string?>(StringComparer.Ordinal) { ["Team:Gateway:StrictLocal"] = "false" });
         IRenderedComponent<ContainerFragment> cut = this.Render();
 
         Assert.Equal("Reach Huddle from other devices. Every device needs the gateway secret and your approval.", cut.TextOf(".settings-intro"));

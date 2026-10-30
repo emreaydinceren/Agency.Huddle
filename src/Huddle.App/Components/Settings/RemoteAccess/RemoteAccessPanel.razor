@@ -15,7 +15,7 @@
 @inject AuthenticationStateProvider AuthProvider
 @inject IJSRuntime Js
 
-<SettingsIntro>@RemoteAccessCopy.Intro</SettingsIntro>
+<SettingsIntro>@(this.StrictRunning ? RemoteAccessCopy.IntroStrictLocal : RemoteAccessCopy.Intro)</SettingsIntro>
 
 @if (this.error is not null)
 {

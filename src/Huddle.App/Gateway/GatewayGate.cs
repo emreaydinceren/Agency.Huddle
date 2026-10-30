@@ -41,7 +41,7 @@ internal sealed class GatewayGate(RequestDelegate next)
         GatewayHttpItems.SetIngress(http, ingress);
         if (settings.Options.StrictLocal && ingress.Kind != IngressKind.Loopback)
         {
-            await RefuseAsync(http, StatusCodes.Status403Forbidden, StrictLocal).ConfigureAwait(false);
+            await RefuseStrictLocalAsync(http).ConfigureAwait(false);
             return;
         }
 
@@ -92,6 +92,23 @@ internal sealed class GatewayGate(RequestDelegate next)
     {
         http.Response.StatusCode = status;
         await http.Response.WriteAsJsonAsync(new ErrorBody(code), http.RequestAborted).ConfigureAwait(false);
+    }
+
+    private static async Task RefuseStrictLocalAsync(HttpContext http)
+    {
+        if (!StrictLocalPage.Suits(http.Request))
+        {
+            await RefuseAsync(http, StatusCodes.Status403Forbidden, StrictLocal).ConfigureAwait(false);
+            return;
+        }
+
+        http.Response.StatusCode = StatusCodes.Status403Forbidden;
+        http.Response.ContentType = "text/html; charset=utf-8";
+        http.Response.Headers.XContentTypeOptions = "nosniff";
+        if (!HttpMethods.IsHead(http.Request.Method))
+        {
+            await http.Response.WriteAsync(StrictLocalPage.Html, http.RequestAborted).ConfigureAwait(false);
+        }
     }
 
     private static async Task RefusePlainHttpAsync(HttpContext http)

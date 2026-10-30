@@ -119,7 +119,7 @@ public sealed class StrictLocalGateTests : IDisposable
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using HttpClient client = this.Client();
-        using HttpRequestMessage request = GatewayGateHost.Request(post ? HttpMethod.Post : HttpMethod.Get, path, null, GatewayGateHost.LanAddress, html: true);
+        using HttpRequestMessage request = GatewayGateHost.Request(post ? HttpMethod.Post : HttpMethod.Get, path, null, GatewayGateHost.LanAddress, html: false);
 
         using HttpResponseMessage response = await client.SendAsync(request, ct);
 

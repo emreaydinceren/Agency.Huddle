@@ -348,8 +348,8 @@ Run [`P-BUILD`](common.md#p-build). This area adds:
 **Pass if — all of these**
 
 - At step 1 the page is Huddle, not the connect page, and the address bar shows the plain address with no `#bootstrapToken`.
-- At step 2 the page is refused with 403 and `strict_local`.
-- At step 3 the **Strict local** switch is on with the text "Only this computer can use Huddle, with no sign-in. Turn off to let other devices connect."; Bind, Auth mode, Tailscale, ports, trusted proxies and origins are disabled; **Pair a device** and **Waiting for approval** are not drawn; the line "Turn off Strict local to set up remote access." is shown.
+- At step 2 the browser shows a page titled "Huddle is local only" with the text "This Huddle only accepts connections from the computer it runs on. To use it from this device, turn off Strict local in Settings › Remote access on that computer, then restart Huddle." (status 403).
+- At step 3 the intro reads "Only this computer can use Huddle right now. Turn off Strict local to reach it from a phone, tablet or another computer." and the **Strict local** switch is on with the text "Only this computer can use Huddle, with no sign-in. Turn off to let other devices connect."; Bind, Auth mode, Tailscale, ports, trusted proxies and origins are disabled; **Pair a device** and **Waiting for approval** are not drawn; the line "Turn off Strict local to set up remote access." is shown.
 - At step 4 the Security check lists "Strict local: no sign-in; only this computer can use Huddle." and none of the remote-exposure items.
 - At step 5 the card says **Restart Huddle to apply** until the restart.
 - At step 6 the connect page asks for the gateway token, as in REMOTE-02.

@@ -9,6 +9,9 @@ internal static class RemoteAccessCopy
     /// <summary>The intro under the section menu.</summary>
     public const string Intro = "Reach Huddle from other devices. Every device needs the gateway secret and your approval.";
 
+    /// <summary>The intro while Strict local is on.</summary>
+    public const string IntroStrictLocal = "Only this computer can use Huddle right now. Turn off Strict local to reach it from a phone, tablet or another computer.";
+
     /// <summary>What the token shows until Show is pressed.</summary>
     public const string TokenMask = "••••••••";
 
