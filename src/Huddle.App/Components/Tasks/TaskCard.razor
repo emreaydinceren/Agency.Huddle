@@ -39,6 +39,15 @@
             <MudHighlighter Text="@this.Task.Title" HighlightedText="@this.Search" />
         </div>
 
+        @if (this.Task.BlockedBy.Count > 0 && !this.Fields.Contains("blocked_by", StringComparer.Ordinal))
+        {
+            @* A blocked Task says so and names its blockers, in every Theme; a tint or an edge alone left the reader guessing why. *@
+            <span class="task-card-blocked-by">
+                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" aria-hidden="true" />
+                Blocked by @string.Join(", ", this.Task.BlockedBy)
+            </span>
+        }
+
         @if (this.Task.Tags.Count > 0)
         {
             @* Row 3: the Task's tags, always shown (not only when the View lists the tags field). *@

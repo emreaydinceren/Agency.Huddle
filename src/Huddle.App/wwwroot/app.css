@@ -33,6 +33,23 @@ html {
     box-sizing: border-box;
 }
 
+/* Native controls and scrollbars follow the Theme's mode. A dark Theme left at the default scheme drew light scrollbars,
+   date pickers and autofill on a dark page; MainLayout renders .theme-mode-dark for a dark Theme. */
+:root {
+    color-scheme: light;
+}
+
+:root:has(.theme-mode-dark) {
+    color-scheme: dark;
+}
+
+/* Every scroller shows a thin thumb in the edge colour on no track, as the mockups do, not the platform bar with arrow
+   buttons. A rule further down may still hide a thumb until hover (the hiring pool grid). */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ink-edge) transparent;
+}
+
 code, kbd, samp, pre {
     font-family: var(--font-mono);
 }
@@ -407,6 +424,46 @@ b {
 /* With the label above, the border is drawn whole: no notch is cut for a floated label. */
 .mud-input.mud-input-outlined > .mud-input-outlined-border legend {
     display: none;
+}
+
+/* ---- Field furniture (side-by-side audit, 2026-10-30, G07) ---------------------------------------------------------
+   Every Theme's mockup draws a field 30-32px tall, where MudBlazor's dense outlined field is 38px. border-box keeps a
+   surface's own padding (paper's 8px) inside the 32px. Fields with their own height (the compact toolbar, the Task
+   edit strip, inline titles) set it with more specific rules further down. */
+.mud-input.mud-input-outlined > input.mud-input-root-outlined.mud-input-root-margin-dense,
+.mud-input.mud-input-outlined > div.mud-input-slot.mud-input-root-outlined.mud-input-root-margin-dense {
+    box-sizing: border-box;
+    height: 32px;
+    padding-block: 0;
+}
+
+/* Helper text starts on the field's own left edge. MudBlazor's px-2 on the container is an !important utility, so the
+   container is pulled back by the same 8px rather than fighting it; the overline letter-spacing goes too. */
+.mud-input-control-helper-container {
+    margin-inline-start: -8px;
+}
+
+.mud-input-helper-text {
+    letter-spacing: 0;
+}
+
+/* A select's and an autocomplete's arrow is a thin line chevron, not MudBlazor's filled triangle: the same path,
+   reshaped and stroked. A browser without the CSS d property keeps the triangle, drawn as a thin outline. */
+.mud-select .mud-input-adornment-end .mud-icon-root,
+.mud-autocomplete .mud-input-adornment-end .mud-icon-root {
+    width: 16px;
+    height: 16px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.mud-select .mud-input-adornment-end path[d="M7 10l5 5 5-5z"],
+.mud-autocomplete .mud-input-adornment-end path[d="M7 10l5 5 5-5z"] {
+    d: path("M7 10l5 5 5-5");
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 /* ---- Measure: prose never runs wider than 75 characters (ADR-0056) --------------------------------
@@ -974,6 +1031,25 @@ emoji-picker {
     max-width: 45ch;
 }
 
+/* The Right sidebar with nothing for the page says so quietly, like a panel's own "Nothing links here.": left at the
+   panel's padding, body2 in the secondary colour. A bold centred sentence was the loudest thing in an empty panel. */
+.right-sidebar .mud-drawer-content > .empty-state {
+    align-items: flex-start;
+    margin-inline: 0;
+    padding: 16px;
+    text-align: start;
+}
+
+.right-sidebar .mud-drawer-content > .empty-state .empty-state-title {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
+}
+
+.right-sidebar .mud-drawer-content > .empty-state .empty-state-text:empty {
+    display: none;
+}
+
 .tab-empty.empty-state-centered {
     display: flex;
     flex-direction: column;
@@ -1031,16 +1107,68 @@ emoji-picker {
     margin-bottom: 0;
 }
 
+/* The Room's title is the h6 role at 600 in every Theme: each Theme's mockup sets it at 15-18px semibold, and the page
+   h5 it inherited (20px) was the outlier (side-by-side audit, 2026-10-30, LL-C01, FL-06, CL-03). */
+.room-header .page-header-h1.mud-typography {
+    font-size: var(--mud-typography-h6-size);
+    line-height: var(--mud-typography-h6-lineheight);
+    font-weight: 600;
+}
+
+/* Rename and Copy link are revealed on hover or focus, like a card's ⋮: they stay in the DOM and the tab order, and
+   show at once on a device with no hover. */
+.room-header .page-header-title .mud-icon-button {
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+.room-header .page-header-title:hover .mud-icon-button,
+.room-header .page-header-title:focus-within .mud-icon-button {
+    opacity: 1;
+}
+
+@media (hover: none) {
+    .room-header .page-header-title .mud-icon-button {
+        opacity: 1;
+    }
+}
+
 /* The Room's kind ("Group", "1:1", "Team") beside its title is for a style pack that draws it as a chip (ADR-0057);
    every Theme without one leaves the member count to say it. */
 .room-kind-chip {
     display: none;
 }
 
-/* The Top bar's "N Tasks need you" pill is for a style pack that draws it (ADR-0057); every Theme without one leaves
-   the count to the Tasks page and My Tasks. */
+/* The Top bar's "N Tasks need you" pill: every Theme's mockup shows it, so it is drawn in the needs hue unless a surface
+   trait below draws it its own way (paper, hairline). It used to be hidden for the flat surface, which left Fluent and
+   Cobalt Soft without it (side-by-side audit, 2026-10-30, FL-05 and CL-02). */
 .tasks-need-you-pill {
-    display: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 28px;
+    padding: 0 12px;
+    margin-inline-end: 4px;
+    border: 1px solid var(--hu-tone-warning-line);
+    border-radius: 999px;
+    background: var(--hu-tone-warning-soft);
+    color: var(--hu-tone-warning-ink);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: border-color 0.12s;
+}
+
+.tasks-need-you-pill:hover {
+    border-color: var(--hu-needs);
+}
+
+.tasks-need-you-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--hu-needs);
 }
 
 /* The groups of Tabs side by side. Each takes an equal share of the width; min-width: 0 lets a pane
@@ -1350,14 +1478,15 @@ emoji-picker {
     display: none;
 }
 
-/* A strip straddling the Sidebar's right (workspace-facing) edge, the mirror of .resizable-drawer-handle: the 8px width is
-   the pointer target and the 3px line (::before) is what reads as draggable once it is hovered or focused. It is hidden
+/* A strip along the Sidebar's right (workspace-facing) edge, the mirror of .resizable-drawer-handle: the 8px width is
+   the pointer target and the 2px line (::before) is what reads as draggable once it is hovered or focused. It is hidden
    while the Sidebar is collapsed. While a drag runs the cursor stays ew-resize over whatever the pointer crosses, and
-   text is not selected. */
+   text is not selected. It sits inside the edge, not across it: the drawer scrolls (overflow auto), so a strip reaching
+   4px past it gave the whole navigation panel a permanent horizontal scrollbar. */
 .sidebar-resize-handle {
     position: absolute;
     top: 0;
-    right: -4px;
+    right: 0;
     z-index: 2;
     width: 8px;
     height: 100%;
@@ -1369,7 +1498,7 @@ emoji-picker {
     content: "";
     position: absolute;
     top: 0;
-    left: 3px;
+    left: 6px;
     width: 2px;
     height: 100%;
     background-color: transparent;
@@ -1455,6 +1584,20 @@ body.sidebar-resizing {
 
 .sidebar-panel-body {
     padding: 0 0 8px 0;
+}
+
+/* The Tags panel's tree: 28px rows, and each tag's label starts on one line whether or not its row has a chevron.
+   MudBlazor's button centres its text in a 64px minimum, which pushed short labels right (side-by-side audit,
+   2026-10-30, LL-L03). */
+.tags-tree .mud-treeview-item-content {
+    padding-block: 0;
+}
+
+.tags-tree .tags-tree-row.mud-button-root {
+    min-width: 0;
+    height: 28px;
+    justify-content: flex-start;
+    padding-inline: 4px;
 }
 
 /* A row is one line: 32px (28px in the Outline), the text in Ink and ellipsised, its full text in the title (B11a-b).
@@ -2905,7 +3048,9 @@ body.sidebar-resizing {
     text-decoration: underline dotted;
 }
 
-/* A Task reference is an info chip with a mono id; Room and Team references are the same chip in the accent. */
+/* A Task, Room or Team reference is a chip in the accent, a Task's with a mono id and its status dot. The Theme's accent,
+   not Info: every mockup draws these chips in its own accent, and Info read as a foreign teal in Cobalt Soft and a blue in
+   Lumen (side-by-side audit, 2026-10-30, LL-C02 and CL-01). */
 :root:has([data-hu-marks="chip"]) .task-ref,
 :root:has([data-hu-marks="chip"]) a.room-ref,
 :root:has([data-hu-marks="chip"]) a.team-ref {
@@ -2914,26 +3059,19 @@ body.sidebar-resizing {
     gap: 4px;
     padding: 0 8px 0 4px;
     border-radius: calc(var(--mud-default-borderradius) * .75);
-    border: 1px solid color-mix(in srgb, var(--mud-palette-info) 30%, var(--hu-line-region));
-    background: var(--hu-tone-info-soft);
-    color: var(--hu-tone-info-ink);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 28%, var(--hu-line-region));
+    background: var(--hu-tone-primary-tint);
+    color: var(--hu-accent-ink);
     font-size: var(--mud-typography-body2-size);
     font-weight: 500;
     text-decoration: none;
     line-height: 20px;
 }
 
-:root:has([data-hu-marks="chip"]) a.room-ref,
-:root:has([data-hu-marks="chip"]) a.team-ref {
-    border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, var(--hu-line-region));
-    background: var(--hu-tone-primary-tint);
-    color: var(--hu-accent-ink);
-}
-
-/* A Mention is an info pill; a Mention of the Human is the warning "needs you" pill. */
+/* A Mention is an accent pill, the same family as the reference chips; a Mention of the Human is the warning "needs you" pill. */
 :root:has([data-hu-marks="chip"]) .mention {
-    color: var(--hu-tone-info-ink);
-    background: var(--hu-tone-info-soft);
+    color: var(--hu-accent-ink);
+    background: var(--hu-tone-primary-tint);
     padding: 0 4px;
     border-radius: calc(var(--mud-default-borderradius) * .5);
     font-weight: 500;
@@ -3839,6 +3977,13 @@ body.sidebar-resizing {
     font-size: var(--mud-typography-caption-size);
 }
 
+/* The open section's title over its intro: every Theme's mockup opens a Settings section with one (side-by-side audit,
+   2026-10-30, LL-S01). */
+.settings-section-title.mud-typography {
+    margin: 0 0 4px 0;
+    font-weight: 600;
+}
+
 .settings-stored-at code {
     font-family: var(--font-mono);
     font-size: var(--mud-typography-caption-size);
@@ -4203,6 +4348,55 @@ body.sidebar-resizing {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
+}
+
+/* A Task's tag: an outlined pill led by a 6px dot whose hue TaskFieldView.TagHue picks from the tag's text, so a tag
+   reads the same on every card. A status=pill Theme keeps its own shape below and gains only the dot. The extra
+   .tag-chip outranks the quiet tag rule further down, which has the same two classes. */
+.mud-chip.tag-chip.task-tag {
+    gap: 4px;
+    border-radius: 999px;
+    background-color: transparent;
+    border: 1px solid var(--hu-line-region);
+    color: var(--hu-text-subtle);
+}
+
+.mud-chip.task-tag::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--mud-palette-text-secondary);
+}
+
+.mud-chip.task-tag-hue-0::before { background: var(--mud-palette-primary); }
+.mud-chip.task-tag-hue-1::before { background: var(--mud-palette-secondary); }
+.mud-chip.task-tag-hue-2::before { background: var(--mud-palette-tertiary); }
+.mud-chip.task-tag-hue-3::before { background: var(--mud-palette-info); }
+.mud-chip.task-tag-hue-4::before { background: var(--mud-palette-success); }
+.mud-chip.task-tag-hue-5::before { background: var(--mud-palette-warning); }
+
+/* "Blocked by PLAT-0001" on a blocked card: an error chip with a lock, the one blocked cue every Theme shares. A Theme's
+   tint or edge on .task-card-blocked only adds to it. */
+.task-card-blocked-by {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 4px;
+    padding: 0 8px 0 4px;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-error) 35%, transparent);
+    border-radius: calc(var(--mud-default-borderradius) * .75);
+    background: var(--hu-tone-error-soft);
+    color: var(--hu-tone-error-ink);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    line-height: 20px;
+}
+
+.task-card-blocked-by .mud-icon-root {
+    width: 14px;
+    height: 14px;
 }
 
 /* The card is the positioning context for its ⋮ menu, which sits outside the open button (it cannot nest in it) but is drawn as the last element of the first row. */
@@ -5119,18 +5313,24 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     gap: 8px;
 }
 
-/* The header row's counts ("14 open  3 need you  52 all"): quiet text, the numbers in the body weight, "need you" in the warning colour. */
+/* The header row's counts ("14 open · 3 need you · 52 all"): one quiet secondary line, the counts dot-separated and the
+   numbers only a step heavier, "need you" in the warning colour (side-by-side audit, 2026-10-30, LL-T02). */
 .tasks-counts {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 16px;
+    gap: 4px 8px;
     font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);
 }
 
+.tasks-counts > * + *::before {
+    content: "·";
+    margin-inline-end: 8px;
+    color: var(--mud-palette-text-secondary);
+}
+
 .tasks-counts strong {
-    color: var(--mud-palette-text-primary);
-    font-weight: 600;
+    font-weight: 500;
 }
 
 /* "need you" is the warning colour mixed toward body text so it keeps 4.5:1 on the page; the number stays body colour.
@@ -5272,6 +5472,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
    (35em widened by 15% twice) is about 92 characters of Inter prose a line, centred in the pane. */
 .library-rendered {
     overflow-wrap: anywhere;
+    color: var(--hu-note-prose-ink);
     font-size: calc(var(--mud-typography-body1-size) * 8 / 7);
     line-height: 1.65;
 
@@ -5472,10 +5673,12 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     font-size: var(--mud-typography-body2-size);
 }
 
+/* A Theme sets how its headings read (the note.* tokens; the prose ink is on .library-rendered itself): Cobalt Soft's
+   tight, heavy h1, Lumen's and Fluent's larger one (side-by-side audit, 2026-10-30, LL-L01, LD-03, FD-01, CL-04). */
 .library-rendered :is(h1, h2, h3, h4, h5, h6) {
     margin: 32px 0 12px;
     font-family: inherit;
-    font-weight: 600;
+    font-weight: var(--hu-note-heading-weight);
     line-height: 1.3;
     letter-spacing: normal;
     color: var(--mud-palette-text-primary);
@@ -5483,7 +5686,8 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 
 .library-rendered h1 {
     margin-bottom: 16px;
-    font-size: 1.5em;
+    font-size: var(--hu-note-h1-size);
+    letter-spacing: var(--hu-note-h1-tracking);
 }
 
 .library-rendered h2 {
@@ -6578,9 +6782,13 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     padding: 4px 0;
 }
 
-/* Outlined in Edge, not MudBlazor's Chrome line (audit B3e); the doubled class outranks .mud-paper-outlined. */
+/* Flat rows on the sidebar's ground, not a white bordered card (side-by-side audit, 2026-10-30, G03). The border stays,
+   transparent, because --needs-you-offset counts its 1px; the doubled class outranks .mud-paper-outlined. Nordic's
+   paper surface draws its own tinted card below. */
 .needs-you-card.mud-paper-outlined {
-    border-color: var(--ink-edge);
+    border-color: transparent;
+    background-color: transparent;
+    box-shadow: none;
 }
 
 .needs-you-card[hidden] {
@@ -7957,6 +8165,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 
 .task-edit-page .task-detail-strip .task-detail-prop-value .mud-input.mud-input-outlined .mud-input-slot,
 .task-edit-page .task-detail-strip .task-detail-prop-value .mud-input.mud-input-outlined > input.mud-input-root {
+    height: auto;
     padding-block: 0;
     font-size: var(--mud-typography-caption-size);
 }
@@ -8040,6 +8249,30 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 .task-detail-description-toggle .huddle-segmented-indicator,
 .task-toolbar-kind .huddle-segmented-indicator {
     border-color: var(--hu-control-selected-line);
+}
+
+/* List | Kanban is a light toolbar control, as in every Theme's mockup: a 2px track around 24px items at 12px with 14px
+   icons, about 30px in all (side-by-side audit, 2026-10-30, LL-T02). The indicator moves to the same 2px inset; the
+   doubled class outranks the component's scoped 3px. */
+.huddle-segmented-control.task-toolbar-kind {
+    padding: 2px;
+}
+
+.huddle-segmented-control.task-toolbar-kind .huddle-segmented-indicator {
+    top: 2px;
+    bottom: 2px;
+    left: 2px;
+}
+
+.huddle-segmented-control.task-toolbar-kind .huddle-segmented-group .mud-toggle-item {
+    height: 24px;
+    padding-block: 0;
+    font-size: var(--mud-typography-caption-size);
+}
+
+.huddle-segmented-control.task-toolbar-kind .task-toolbar-kind-icon.mud-icon-root {
+    width: 14px;
+    height: 14px;
 }
 
 /* K3 and K3a: the Description editor is one card holding the toolbar and the writing surface (Huddle-DescriptionEditor-Theming.md),
@@ -8235,7 +8468,8 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     color: var(--hu-chip-set-ink);
 }
 
-:root:has([data-hu-surface="flat"]) .task-filter-chip-unset {
+:root:has([data-hu-surface="flat"]) .task-filter-chip-unset,
+:root:has([data-hu-surface="card"]) .task-filter-chip-unset {
     border-style: solid;
     border-color: var(--hu-line-control);
 }
@@ -9027,8 +9261,10 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     border-top: 1px solid var(--hu-line-region);
 }
 
+/* 32px like every sidebar row: at 44px a one-line row spent the height without showing anything more (side-by-side
+   audit, 2026-10-30, NL-02). */
 :root:has([data-hu-surface="paper"]) .members-row.sidebar-row {
-    min-height: 44px;
+    min-height: 32px;
     padding: 4px;
     gap: 8px;
     border-radius: var(--mud-default-borderradius);
@@ -9663,6 +9899,34 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     font-weight: 500;
 }
 
+/* The Tags panel's captions ("This note", "All tags in this folder") follow the labels trait: a sentence-case Theme
+   does not draw them in the overline's capitals (side-by-side audit, 2026-10-30, LL-L03). */
+:root:has([data-hu-labels="sentence"]) .tags-caption.mud-typography {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* Lumen's Settings intro is a quiet 13px line under the section title, and its menu icons are 16px (LL-S01, LL-S03). */
+:root:has([data-hu-surface="hairline"]) .settings-intro {
+    max-width: 60ch;
+    font-size: var(--mud-typography-body2-size);
+}
+
+:root:has([data-hu-surface="hairline"]) .settings-nav .mud-nav-link .mud-nav-link-icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* Lumen's panel labels are quiet captions, not 13px/600 headings in Ink (side-by-side audit, 2026-10-30, LL-C04). */
+:root:has([data-hu-surface="hairline"]) .sidebar-panel-title {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    color: var(--mud-palette-text-secondary);
+}
+
 :root:has([data-hu-surface="hairline"]) .sidebar-row:hover {
     background: var(--hu-hover);
 }
@@ -9701,8 +9965,8 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 :root:has([data-hu-surface="hairline"]) .task-card-title {
-    font-size: var(--mud-typography-body2-size);
-    font-weight: 500;
+    font-size: var(--mud-typography-subtitle1-size);
+    font-weight: 600;
     line-height: 1.4;
 }
 
@@ -9775,6 +10039,12 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 
 :root:has([data-hu-surface="hairline"]) .mud-input-control > .mud-input-control-input-container > label.mud-input-label.mud-input-label-inputcontrol.mud-input-label-outlined:not(.mud-disabled) {
     color: var(--hu-text-subtle);
+}
+
+/* Lumen's field labels are 500, not the 600 the other surfaces keep (side-by-side audit, 2026-10-30, LL-S02). The
+   :not(.mud-disabled) is there for specificity: it matches the base label rule's (0,8,1), and this rule comes later. */
+:root:has([data-hu-surface="hairline"]) .mud-input-control > .mud-input-control-input-container > label.mud-input-label.mud-input-label-inputcontrol.mud-input-label-outlined:not(.mud-disabled) {
+    font-weight: 500;
 }
 
 :root:has([data-hu-surface="hairline"]) .mud-input-helper-text {
@@ -9903,6 +10173,43 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 :root:has([data-hu-surface="hairline"]) .mud-checkbox .mud-checked,
 :root:has([data-hu-surface="hairline"]) .mud-radio .mud-checked {
     color: var(--mud-palette-primary);
+}
+
+/* -- surface=card: content on raised cards over the page ground (Fluent; side-by-side audit, 2026-10-30, FL-01, FL-02,
+   FL-07, FD-01, FD-02). The card is the field group's: its radius, the raised ground, the region line and the card
+   shadow, as on the Task edit page. -------------------------------------------------------------------------------- */
+:root:has([data-hu-surface="card"]) .library-rendered,
+:root:has([data-hu-surface="card"]) .right-sidebar .sidebar-panel,
+:root:has([data-hu-surface="card"]) .settings-section {
+    background: var(--hu-ground-raised);
+    border: 1px solid var(--hu-line-region);
+    border-radius: var(--hu-form-group-radius);
+    box-shadow: var(--hu-shadow-card);
+}
+
+/* The note's sheet: the reader's measure plus 32px of padding a side (so the measure is unchanged), centred, and kept
+   16px in from the pane's edges when the pane is narrower than that. */
+:root:has([data-hu-surface="card"]) .library-rendered {
+    box-sizing: border-box;
+    width: min(calc(100% - 32px), calc(calc(var(--mud-typography-body1-size) * 8 / 7 * 46.29) + 64px));
+    max-width: none;
+    margin-block: 16px;
+    padding: 24px 32px;
+}
+
+/* Each Right sidebar panel is its own card, so the cards' gap replaces the Edge line between panels. */
+:root:has([data-hu-surface="card"]) .right-sidebar .sidebar-panel {
+    padding: 4px 12px;
+}
+
+:root:has([data-hu-surface="card"]) .right-sidebar .sidebar-panel + .sidebar-panel {
+    margin-top: 8px;
+    padding-top: 4px;
+    border-top: 1px solid var(--hu-line-region);
+}
+
+:root:has([data-hu-surface="card"]) .settings-section {
+    padding: 16px 24px 24px;
 }
 
 /* -- nav=bar: the top bar reads the rail ground, so the chrome is one frame ------------------------------------------------- */

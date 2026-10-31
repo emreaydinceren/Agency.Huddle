@@ -30,7 +30,21 @@ internal static class SkinTokens
         AddEditTokens(tokens);
         AddTaskListTokens(tokens);
         AddEditorTokens(tokens);
+        AddReadingTokens(tokens);
         return tokens;
+    }
+
+    /// <summary>
+    /// Registers the Library note's reading tokens: the heading setting and the prose ink. The body size stays the one
+    /// derived from the scale (design-system.md "Typography"); a Theme varies only how its headings and prose read.
+    /// </summary>
+    /// <param name="tokens">The registry being built.</param>
+    private static void AddReadingTokens(List<Token> tokens)
+    {
+        Add(tokens, "note.prose.ink", "palette.textPrimary", "The text colour of a note's body prose; headings keep the primary text colour.");
+        Add(tokens, "note.heading.weight", "600", "The weight of a note's headings.");
+        Add(tokens, "note.h1.size", "1.5em", "A note's h1, relative to its body size.");
+        Add(tokens, "note.h1.tracking", "normal", "The letter-spacing of a note's h1.");
     }
 
     /// <summary>Registers the Feed Tab tokens. Each default is the Feed's look before Themes differed, so a skin lists only what it changes.</summary>

@@ -166,6 +166,10 @@
     --hu-editor-text-size: var(--mud-typography-body2-size);
     --hu-editor-text-leading: 1.75;
     --hu-editor-text-ink: var(--mud-palette-text-primary);
+    --hu-note-prose-ink: var(--mud-palette-text-primary);
+    --hu-note-heading-weight: 600;
+    --hu-note-h1-size: 1.5em;
+    --hu-note-h1-tracking: normal;
 }
 
 /* ---- The ink ladder (audit round 3, A1) ------------------------------------------------------

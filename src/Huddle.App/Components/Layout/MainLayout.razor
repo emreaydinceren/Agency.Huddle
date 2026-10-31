@@ -14,8 +14,11 @@
 @* IsDarkMode is one-way and ObserveSystemDarkModeChange is off on purpose: the selected theme
    carries exactly one palette and its own ThemeMode, so the mode is derived from the theme and
    nothing else may set it. Letting MudBlazor write IsDarkMode back on an OS change would select
-   the palette slot the theme does not fill. See docs/adr/0017-a-theme-is-a-palette-not-a-pair.md. *@
-<MudThemeProvider Theme="@this.theme" IsDarkMode="@this.isDarkMode" ObserveSystemDarkModeChange="false" />
+   the palette slot the theme does not fill. See docs/adr/0017-a-theme-is-a-palette-not-a-pair.md.
+   DefaultScrollbar is true ("use the browser's scrollbar, not MudBlazor's") because MudBlazor's own scrollbar is a fixed
+   light grey (#c4c4c4) in every Theme, the brightest thing on a dark page; app.css draws a thin thumb in the Theme's
+   edge colour instead. *@
+<MudThemeProvider Theme="@this.theme" IsDarkMode="@this.isDarkMode" ObserveSystemDarkModeChange="false" DefaultScrollbar="true" />
 @* The one CSS-visible fact that the Theme is a Dark one (app.css reads it as ":root:has(.theme-mode-dark)"): MudBlazor
    emits only palette variables, and the avatar recipe needs a different fill strength on a dark Surface. *@
 @if (this.isDarkMode)

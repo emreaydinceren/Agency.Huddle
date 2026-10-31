@@ -87,6 +87,28 @@ public sealed class SettingsPageTests
         Assert.Single(cut.FindComponents<ProfilePanel>());
     }
 
+    /// <summary>
+    /// The open section is titled with its menu label, as an h2 that names the section for assistive technology; an unknown
+    /// segment falls back to Profile's title (side-by-side audit, LL-S01).
+    /// </summary>
+    /// <param name="tab">The route segment.</param>
+    /// <param name="title">The title the section should carry.</param>
+    [Theory]
+    [InlineData("prompts", "Prompts")]
+    [InlineData("library", "Library")]
+    [InlineData("nonsense", "Profile")]
+    public async Task SettingsPage_OpenSection_IsTitledWithItsMenuLabel(string tab, string title)
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+
+        var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, tab));
+
+        var heading = cut.Find("section.settings-section > h2.settings-section-title");
+        Assert.Equal(title, heading.TextContent.Trim());
+        Assert.Equal(heading.Id, cut.Find("section.settings-section").GetAttribute("aria-labelledby"));
+    }
+
     /// <summary>The <c>/settings/remoteaccess</c> route highlights the ninth row, "Remote access", after Library, and renders the Remote access panel (Spec 6.12, E1).</summary>
     [Fact]
     public async Task SettingsPage_RemoteAccessRoute_RendersRemoteAccessPanelAfterLibrary()

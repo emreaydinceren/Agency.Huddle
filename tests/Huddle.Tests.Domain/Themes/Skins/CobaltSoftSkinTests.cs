@@ -85,4 +85,15 @@ public sealed class CobaltSoftSkinTests
         Assert.Equal("0 1px 2px rgba(12,19,37,.06)", light.Shadows[1]);
         Assert.Equal("0 1px 2px rgba(0,0,0,.4)", Load("cobalt-soft-dark").Shadows[1]);
     }
+
+    /// <summary>Cobalt Soft's note headings are its tight, heavy setting: 650 weight, a 30px h1 at -0.025em (side-by-side audit, CL-04).</summary>
+    [Fact]
+    public void CobaltSoft_NoteHeadingsAreTightAndHeavy()
+    {
+        Skin light = Load("cobalt-soft-light");
+
+        Assert.Equal("650", light.Tokens["note.heading.weight"]);
+        Assert.Equal("1.875em", light.Tokens["note.h1.size"]);
+        Assert.Equal("-0.025em", light.Tokens["note.h1.tracking"]);
+    }
 }

@@ -26,6 +26,7 @@ internal static class SkinContrastPairs
 
         pairs.Add(new SkinContrastPair("ref(current.foreground)", "ref(current.background)", TextMinimum));
         pairs.Add(new SkinContrastPair("ref(accent.ink)", "ref(selected.background)", TextMinimum));
+        pairs.Add(new SkinContrastPair("ref(note.prose.ink)", "ref(ground.page)", TextMinimum));
         pairs.Add(new SkinContrastPair("palette.primaryContrastText", "palette.primary", TextMinimum));
         pairs.Add(new SkinContrastPair("ref(focus)", "ref(ground.page)", FocusMinimum));
         pairs.Add(new SkinContrastPair("ref(focus)", "ref(ground.raised)", FocusMinimum));

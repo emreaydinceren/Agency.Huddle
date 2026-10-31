@@ -1,7 +1,7 @@
 # Remote access
 
 **Status:** built 2026-10-30 on `feat/remote-access`, not merged; a faithful port of OpenClaw's gateway model. Where the build differs from the first design, the text below is already corrected and [Deviations from the first design](#deviations-from-the-first-design) lists each change · **Decision:**
-[ADR-0070](adr/0070-huddle-copies-openclaws-gateway-auth-device-pairing-and-tailscale-model.md) · **Extends:** Settings
+[ADR-0072](adr/0072-huddle-copies-openclaws-gateway-auth-device-pairing-and-tailscale-model.md) · **Extends:** Settings
 (`G`, [wireframes.md](engineering/wireframes.md) Figure 6), the desktop host, the Feed
 ([Huddle.Feed-Specifications.md](Huddle.Feed-Specifications.md)) · **Deferred:** [backlog.md](engineering/backlog.md#hardening-remote-access)
 · **Vocabulary:** [language.md](engineering/language.md)

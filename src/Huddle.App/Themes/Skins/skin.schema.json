@@ -917,6 +917,22 @@
         "editor.text.ink": {
           "type": "string",
           "description": "The text colour of the Description\u0027s writing surface."
+        },
+        "note.prose.ink": {
+          "type": "string",
+          "description": "The text colour of a note\u0027s body prose; headings keep the primary text colour."
+        },
+        "note.heading.weight": {
+          "type": "string",
+          "description": "The weight of a note\u0027s headings."
+        },
+        "note.h1.size": {
+          "type": "string",
+          "description": "A note\u0027s h1, relative to its body size."
+        },
+        "note.h1.tracking": {
+          "type": "string",
+          "description": "The letter-spacing of a note\u0027s h1."
         }
       }
     },
@@ -968,7 +984,8 @@
           "enum": [
             "flat",
             "paper",
-            "hairline"
+            "hairline",
+            "card"
           ]
         },
         "marks": {

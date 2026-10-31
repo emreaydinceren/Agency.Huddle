@@ -128,12 +128,15 @@ public sealed partial class ContentTraitsTests
         Has("var(--hu-tone-primary-soft)", link);
 
         string chip = Rule("[data-hu-marks=\"chip\"]) .task-ref");
-        Has("var(--hu-tone-info-soft)", chip);
-        Has("var(--hu-tone-info-ink)", chip);
-        Has("var(--mud-palette-info)", chip);
+        Has("var(--hu-tone-primary-tint)", chip);
+        Has("var(--hu-accent-ink)", chip);
+        Has("var(--mud-palette-primary)", chip);
         Has("var(--hu-line-region)", chip);
+        Assert.DoesNotContain("tone-info", chip, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
 
-        Has("var(--hu-tone-primary-tint)", Rule("[data-hu-marks=\"chip\"]) a.room-ref"));
+        string mention = Rule("[data-hu-marks=\"chip\"]) .mention");
+        Has("var(--hu-accent-ink)", mention);
+        Has("var(--hu-tone-primary-tint)", mention);
 
         string me = Rule(".mention.mention--me");
         Has("var(--hu-tone-warning-soft)", me);

@@ -265,7 +265,7 @@ Run [`P-BUILD`](common.md#p-build). This area adds:
 
 **Free** · about 8 min
 
-*Proves ADR-0070: an action that opens a file on the host is not offered once the host is reachable from elsewhere.*
+*Proves ADR-0072: an action that opens a file on the host is not offered once the host is reachable from elsewhere.*
 
 **Before you start**
 
