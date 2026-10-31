@@ -167,8 +167,9 @@ The gateway puts every request behind a session, so the hosted tests need a way 
   signing with BouncyCastle, and keeps the session cookie.
 - **`KestrelAppHost`** (same folder) starts the app on real sockets for binds, the managed listener and the WebSocket
   abort. It binds port 0 through the `urls` setting, never `UseKestrel(port)`, and builds its client from
-  `GatewayListener.AppUrl`. The test that binds an any-address socket carries the `FirewallPrompt` trait, because
-  Windows asks about the firewall on the first one; skip that trait on a machine where the prompt would block a run.
+  `GatewayListener.AppUrl`. The one test that listens on an any-address socket carries the `FirewallPrompt` trait and
+  is skipped on Windows unless `HUDDLE_FIREWALL_TESTS=1`, because the first such listen opens a Windows firewall prompt
+  that an unattended run (an agent, the CI runner) cannot answer. CI runs it on Linux, where there is no prompt.
 - **`AuthScriptParityTests`** runs the browser's `auth-core.js` under `node` against the C# payload builder, so it
   needs `node` on `PATH`; without it the test fails rather than skips.
 - **`Run-Tests.ps1 -FilterClass` needs a wildcard**: `-FilterClass '*GatewayGateTests'`. A bare class name matches

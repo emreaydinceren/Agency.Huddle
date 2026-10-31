@@ -1094,7 +1094,8 @@ with BouncyCastle), simulate addresses and the managed listener with a test star
 need real sockets (binds, the managed listener, the WebSocket abort) use `KestrelAppHost` in
 `tests/Huddle.Tests.Common/Gateway/`, which calls `UseKestrel()` with `UseSetting("urls", "http://127.0.0.1:0")` so the
 listener plan is the only source of endpoints (never `UseKestrel(port)`) and builds its own `HttpClient` from
-`GatewayListener.AppUrl`. All ports are 0; the lan socket test carries the `FirewallPrompt` trait so it can be skipped.
+`GatewayListener.AppUrl`. All ports are 0; the lan socket test carries the `FirewallPrompt` trait and is skipped on Windows unless
+`HUDDLE_FIREWALL_TESTS=1`, so a default run never opens the firewall prompt.
 
 | Slice | Test task first | Then |
 | --- | --- | --- |

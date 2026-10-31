@@ -8,7 +8,7 @@ namespace Agency.Huddle.Tests.Gateway;
 /// <summary>
 /// The listener plan on real sockets (Spec 6.2; D-4, D-5, D-6): the app answers on the bound URL, the managed listener has a recorded port of its own,
 /// the desktop record uses the app URL, a busy or refused bind starts the app loopback-only, and the desktop port is stable. Every port is 0 or
-/// freshly probed; only the lan bind test (trait <c>FirewallPrompt</c>) opens an any-address socket.
+/// freshly probed; only the lan bind test (trait <c>FirewallPrompt</c>) opens an any-address socket, and it is skipped on Windows by default.
 /// </summary>
 public sealed class GatewayListenerSocketTests
 {
@@ -117,10 +117,17 @@ public sealed class GatewayListenerSocketTests
     }
 
     /// <summary>
-    /// A lan bind opens one any-address endpoint on the configured port, reachable through 127.0.0.1. Skippable: the first any-address bind makes
-    /// Windows show its firewall prompt.
+    /// Whether the any-address socket test runs: always off Windows (CI), and on Windows only with <c>HUDDLE_FIREWALL_TESTS=1</c>, because the first
+    /// any-address listen there opens a firewall prompt that an unattended run cannot answer.
     /// </summary>
-    [Fact]
+    public static bool AnyAddressAllowed =>
+        !OperatingSystem.IsWindows() || string.Equals(Environment.GetEnvironmentVariable("HUDDLE_FIREWALL_TESTS"), "1", StringComparison.Ordinal);
+
+    /// <summary>
+    /// A lan bind opens one any-address endpoint on the configured port, reachable through 127.0.0.1. Skipped on Windows by default, where the first
+    /// any-address listen makes Windows show its firewall prompt (see <see cref="AnyAddressAllowed"/>).
+    /// </summary>
+    [Fact(SkipUnless = nameof(AnyAddressAllowed), Skip = "Opens the Windows firewall prompt; set HUDDLE_FIREWALL_TESTS=1 to run")]
     [Trait("Category", "FirewallPrompt")]
     public async Task Start_Lan_BindsOneAnyAddressEndpointAndAnswersOnLoopback()
     {
