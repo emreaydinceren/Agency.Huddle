@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.App.Data;
@@ -21,43 +20,32 @@ namespace Agency.Huddle.App.Data;
 /// </remarks>
 public sealed class PersonaModelStore
 {
-    private const string DdlCreatePersonaModels = """
-        CREATE TABLE IF NOT EXISTS persona_models (
-            persona_name TEXT PRIMARY KEY COLLATE NOCASE,
-            model        TEXT NOT NULL
-        );
-        """;
+    private static readonly PersonaOverrideSql Sql = new(
+        Create: """
+            CREATE TABLE IF NOT EXISTS persona_models (
+                persona_name TEXT PRIMARY KEY COLLATE NOCASE,
+                model        TEXT NOT NULL
+            );
+            """,
+        Select: "SELECT model FROM persona_models WHERE persona_name = $name;",
+        Upsert: """
+            INSERT INTO persona_models(persona_name, model) VALUES($name, $value)
+            ON CONFLICT(persona_name) DO UPDATE SET model = excluded.model;
+            """,
+        Delete: "DELETE FROM persona_models WHERE persona_name = $name;");
 
-    private readonly string connectionString;
+    private readonly PersonaOverrideTable table;
 
     public PersonaModelStore(IOptions<TeamOptions> options)
     {
         ArgumentNullException.ThrowIfNull(options);
-
-        var dbPath = Path.Combine(options.Value.DataDir, "team.db");
-        this.connectionString = $"Data Source={dbPath}";
-
-        var directory = Path.GetDirectoryName(dbPath);
-        if (!string.IsNullOrEmpty(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        using var connection = this.OpenConnection();
-        using var command = connection.CreateCommand();
-        command.CommandText = DdlCreatePersonaModels;
-        command.ExecuteNonQuery();
+        this.table = new PersonaOverrideTable(options.Value, Sql);
     }
 
     /// <summary>Returns the stored model for a Persona, or <c>null</c> if none is set (agent default).</summary>
     public string? Get(string personaName)
     {
-        using var connection = this.OpenConnection();
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT model FROM persona_models WHERE persona_name = $name;";
-        command.Parameters.AddWithValue("$name", personaName);
-
-        return command.ExecuteScalar() as string;
+        return this.table.Get(personaName);
     }
 
     /// <summary>
@@ -68,37 +56,12 @@ public sealed class PersonaModelStore
     /// </summary>
     public void Set(string personaName, string? model)
     {
-        if (string.IsNullOrWhiteSpace(model))
-        {
-            this.Remove(personaName);
-            return;
-        }
-
-        using var connection = this.OpenConnection();
-        using var command = connection.CreateCommand();
-        command.CommandText = """
-            INSERT INTO persona_models(persona_name, model) VALUES($name, $model)
-            ON CONFLICT(persona_name) DO UPDATE SET model = excluded.model;
-            """;
-        command.Parameters.AddWithValue("$name", personaName);
-        command.Parameters.AddWithValue("$model", model);
-        command.ExecuteNonQuery();
+        this.table.Set(personaName, model);
     }
 
     /// <summary>Removes any stored model for a Persona, leaving no row behind.</summary>
     public void Remove(string personaName)
     {
-        using var connection = this.OpenConnection();
-        using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM persona_models WHERE persona_name = $name;";
-        command.Parameters.AddWithValue("$name", personaName);
-        command.ExecuteNonQuery();
-    }
-
-    private SqliteConnection OpenConnection()
-    {
-        var connection = new SqliteConnection(this.connectionString);
-        connection.Open();
-        return connection;
+        this.table.Remove(personaName);
     }
 }

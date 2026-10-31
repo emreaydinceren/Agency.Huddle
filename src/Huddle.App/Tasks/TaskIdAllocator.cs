@@ -1,4 +1,5 @@
 using System.Globalization;
+using Agency.Huddle.App.Data;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Options;
 
@@ -29,20 +30,7 @@ internal sealed class TaskIdAllocator
     public TaskIdAllocator(IOptions<TeamOptions> options)
     {
         ArgumentNullException.ThrowIfNull(options);
-
-        string dbPath = Path.Combine(options.Value.DataDir, "team.db");
-        this.connectionString = $"Data Source={dbPath}";
-
-        string? directory = Path.GetDirectoryName(dbPath);
-        if (!string.IsNullOrEmpty(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        using SqliteConnection connection = OpenConnection(this.connectionString);
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = DdlCreateTaskPrefixes;
-        _ = command.ExecuteNonQuery();
+        this.connectionString = SqliteTable.Open(options.Value, DdlCreateTaskPrefixes);
     }
 
     /// <summary>
