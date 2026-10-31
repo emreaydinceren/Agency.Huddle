@@ -69,6 +69,12 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     // Context meter: the latest context-window fill of this session, shown in the Members panel.
     // Null for a caller that predates it, the same "absent means off" reasoning as turnActivity.
     private readonly ContextFill? contextFill;
+    private readonly ISessionSettings? sessionSettings;
+    private readonly LastCatchUpStore? lastCatchUp;
+
+    // The note the current Turn owes after a fresh start; set by AddTranscriptCatchUpAsync and
+    // cleared by SendFreshStartNoteAsync. Touched only from the single consumer thread.
+    private FreshStartNote? noteOwed;
 
     // Spec §6.14: collects the Library documents mentioned in a Turn's Message and Catch-up. Null
     // means the Library is off (PersonaSupervisor is the only place that gate is applied) or this
@@ -88,6 +94,10 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     private readonly Lock gate = new();
     private readonly Queue<QueuedWork> queue = new();
     private readonly SemaphoreSlim itemAvailable = new(0);
+    private bool freshStartPending;
+    private bool freshStartNotePending;
+    private bool skipResumeOnNextOpen;
+    private Task? pendingFreshTeardown;
 
     // Per-Room Stop marks (finding P-6): the sequence value a Stop in that Room recorded most
     // recently. A missing key means that Room was never stopped. RS Appendix A's RS-I7 describes
@@ -162,6 +172,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <param name="elicitationBridge">Shows the Human the questions the agent asks through this session (E-3). <see langword="null"/> answers every one as cancelled, like every caller that predates it.</param>
     /// <param name="references">Builds the Referenced items header for a Message Turn (spec section 9.1). <see langword="null"/> adds no header, like every caller that predates it.</param>
     /// <param name="contextFill">Records how full this session's context window is, for the Members panel's context meter. <see langword="null"/> disables it, like every caller that predates it.</param>
+    /// <param name="sessionSettings">The resolved Session settings the first Turn's Transcript catch-up reads (the Message cap and the token budget). <see langword="null"/> uses the <see cref="AcpOptions"/> values, like every caller that predates it.</param>
+    /// <param name="lastCatchUp">Receives the whole prompt text of the first ordinary Turn after a fresh start. <see langword="null"/> writes no file, like every caller that predates it.</param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -184,7 +196,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         bool readsFiles = true,
         IElicitationBridge? elicitationBridge = null,
         ReferenceExpander? references = null,
-        ContextFill? contextFill = null)
+        ContextFill? contextFill = null,
+        ISessionSettings? sessionSettings = null,
+        LastCatchUpStore? lastCatchUp = null)
     {
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
@@ -213,6 +227,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         this.agentId = agentId;
         this.turnActivity = turnActivity;
         this.contextFill = contextFill;
+        this.sessionSettings = sessionSettings;
+        this.lastCatchUp = lastCatchUp;
         this.libraryDocs = libraryDocs;
         this.references = references;
         this.readsFiles = readsFiles;
@@ -379,6 +395,178 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         }
     }
 
+    /// <summary>Whether a start afresh has been requested and not yet acted on (LR-R15).</summary>
+    internal bool FreshStartPending
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return this.freshStartPending;
+            }
+        }
+    }
+
+    /// <summary>Whether this session's first ordinary Turn owes a fresh-start note, because a start afresh arrived before it existed (LR-R19).</summary>
+    internal bool FreshStartNotePending
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return this.freshStartNotePending;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Records that the Human asked this Room to start afresh (Spec 6.3). An idle session is torn down at once, in
+    /// the background, and forgotten; an evicted one only forgets what is stored; a busy or opening one
+    /// is marked and starts afresh before the next item is served. A shared session ignores it.
+    /// </summary>
+    /// <param name="cancellationToken">Checked on entry.</param>
+    /// <returns>A completed task; any teardown is handed to the consumer, never awaited here.</returns>
+    internal Task RequestFreshStartAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (this.RoomId is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        bool forgetNow = false;
+        TaskCompletionSource? teardownDone = null;
+        (IAgentSession? Session, CancellationTokenSource? ReaderCts, Task? ReaderTask) taken = default;
+        lock (this.gate)
+        {
+            if (this.state == RoomSessionState.Idle && !this.running && this.queue.Count == 0)
+            {
+                taken = this.TakeOpenLocked();
+                teardownDone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                this.pendingFreshTeardown = teardownDone.Task;
+                this.skipResumeOnNextOpen = true;
+                this.freshStartNotePending = true;
+            }
+            else if (this.state == RoomSessionState.Closed && !this.running)
+            {
+                // Evicted: nothing is open, so only the stored state is forgotten.
+                this.skipResumeOnNextOpen = true;
+                this.freshStartNotePending = true;
+                forgetNow = true;
+            }
+            else
+            {
+                this.freshStartPending = true;
+            }
+        }
+
+        if (forgetNow)
+        {
+            this.ForgetStoredState();
+        }
+
+        if (teardownDone is not null)
+        {
+            // Off the caller's and the read loop's thread: disposal never runs under the gate or on the reader.
+            _ = Task.Run(() => this.TeardownThenForgetAsync(taken, teardownDone), CancellationToken.None);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Disposes the taken session, then forgets the stored state (the consumer path's order), then completes the pending teardown.</summary>
+    /// <param name="taken">The session, reader token source and reader loop taken under the gate.</param>
+    /// <param name="done">Completed when the teardown and the forget are over.</param>
+    private async Task TeardownThenForgetAsync((IAgentSession? Session, CancellationTokenSource? ReaderCts, Task? ReaderTask) taken, TaskCompletionSource done)
+    {
+        try
+        {
+            await DisposeOpenAsync(taken.Session, taken.ReaderCts, taken.ReaderTask).ConfigureAwait(false);
+            this.ForgetStoredState();
+        }
+        finally
+        {
+            done.TrySetResult();
+        }
+    }
+
+    /// <summary>Forgets this Room's stored resume entry and context-fill reading.</summary>
+    private void ForgetStoredState()
+    {
+        if (this.RoomId is not { } roomId)
+        {
+            return;
+        }
+
+        this.roomSessionStore?.Forget(this.owner.PersonaName, roomId);
+        if (this.agentId is { } id)
+        {
+            this.contextFill?.Forget(id, roomId);
+        }
+    }
+
+    /// <summary>Takes the open session and its reader under <see cref="gate"/> (held by the caller) and marks the session Closed. Disposal is the caller's, outside the lock.</summary>
+    /// <returns>The taken session, reader token source and reader loop.</returns>
+    private (IAgentSession? Session, CancellationTokenSource? ReaderCts, Task? ReaderTask) TakeOpenLocked()
+    {
+        (IAgentSession? Session, CancellationTokenSource? ReaderCts, Task? ReaderTask) taken = (this.session, this.eventReaderCts, this.eventReaderTask);
+        this.session = null;
+        this.state = RoomSessionState.Closed;
+        return taken;
+    }
+
+    /// <summary>
+    /// Runs before an admitted item opens or prompts: waits for a teardown started while idle, then
+    /// applies a pending start afresh (close, forget, mark note-pending) so the lazy open that follows is fresh.
+    /// </summary>
+    /// <returns>A task that completes when the start afresh has been applied.</returns>
+    private async Task ApplyFreshStartAsync()
+    {
+        Task? teardown;
+        bool apply;
+        lock (this.gate)
+        {
+            teardown = this.pendingFreshTeardown;
+            apply = this.freshStartPending;
+            this.freshStartPending = false;
+        }
+
+        if (teardown is not null)
+        {
+            // Not bounded by the run token: the teardown does not depend on it, and DisposeAsync must still see it if this is abandoned.
+            await SafeAwaitAsync(teardown).ConfigureAwait(false);
+            lock (this.gate)
+            {
+                if (ReferenceEquals(this.pendingFreshTeardown, teardown))
+                {
+                    this.pendingFreshTeardown = null;
+                }
+            }
+        }
+
+        if (!apply)
+        {
+            return;
+        }
+
+        await this.TearDownAsync().ConfigureAwait(false);
+        this.ForgetStoredState();
+        lock (this.gate)
+        {
+            this.skipResumeOnNextOpen = true;
+            this.freshStartNotePending = true;
+        }
+    }
+
+    /// <summary>Tells a newly created session that its first ordinary Turn owes a fresh-start note. Called by the pool before the session serves anything.</summary>
+    internal void MarkFreshStartNotePending()
+    {
+        lock (this.gate)
+        {
+            this.freshStartNotePending = true;
+        }
+    }
+
     /// <summary>Ends this Room's live Turn and clears this Room's queue, and nothing else (finding P-6).</summary>
     /// <param name="roomId">The Room the Human asked to stop.</param>
     /// <param name="mark">The Persona-wide sequence value as of this Stop; every queued item at or below it, in this Room, is dropped without spending anything.</param>
@@ -484,20 +672,29 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// this <see cref="RoomSessionState.Closed"/> with no session): the guard below simply no-ops the
     /// teardown while still stamping <see cref="RoomSessionState.Closed"/>.
     /// </summary>
-    private async Task CloseAfterRepeatedFailureAsync()
+    private Task CloseAfterRepeatedFailureAsync() => this.TearDownAsync();
+
+    /// <summary>
+    /// The teardown shared by the repeated-failure close and a start afresh: moves the session to
+    /// <see cref="RoomSessionState.Closed"/> from any state and disposes the open agent session and its reader.
+    /// </summary>
+    private Task TearDownAsync()
     {
-        IAgentSession? closing;
-        CancellationTokenSource? readerCts;
-        Task? readerTask;
+        (IAgentSession? Session, CancellationTokenSource? ReaderCts, Task? ReaderTask) taken;
         lock (this.gate)
         {
-            closing = this.session;
-            readerCts = this.eventReaderCts;
-            readerTask = this.eventReaderTask;
-            this.session = null;
-            this.state = RoomSessionState.Closed;
+            taken = this.TakeOpenLocked();
         }
 
+        return DisposeOpenAsync(taken.Session, taken.ReaderCts, taken.ReaderTask);
+    }
+
+    /// <summary>Cancels the reader's own token, awaits it, then disposes the agent session. A no-op when nothing was open.</summary>
+    /// <param name="closing">The session to dispose, or <see langword="null"/>.</param>
+    /// <param name="readerCts">The reader's token source.</param>
+    /// <param name="readerTask">The reader loop.</param>
+    private static async Task DisposeOpenAsync(IAgentSession? closing, CancellationTokenSource? readerCts, Task? readerTask)
+    {
         if (closing is null)
         {
             return;
@@ -522,6 +719,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     {
         await SafeAwaitAsync(this.consumerTask).ConfigureAwait(false);
         await SafeAwaitAsync(this.eventReaderTask).ConfigureAwait(false);
+        await SafeAwaitAsync(this.pendingFreshTeardown).ConfigureAwait(false);
 
         if (this.session is not null)
         {
@@ -644,7 +842,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <returns>The opened session, whether it was resumed, and - only when resumed - the stored <see cref="RoomSessionEntry.LastMessageId"/> the Transcript Catch-up range starts after.</returns>
     private async Task<(IAgentSession Session, bool Resumed, string? ResumedAfterMessageId)> OpenOrResumeAsync(CancellationToken cancellationToken)
     {
-        if (this.RoomId is { } roomId && this.roomSessionStore is not null && this.host is not null && this.persona is not null)
+        bool skipResume;
+        lock (this.gate)
+        {
+            skipResume = this.skipResumeOnNextOpen;
+            this.skipResumeOnNextOpen = false;
+        }
+
+        if (!skipResume && this.RoomId is { } roomId && this.roomSessionStore is not null && this.host is not null && this.persona is not null)
         {
             var entry = this.roomSessionStore.Get(this.owner.PersonaName, roomId);
             if (entry is not null
@@ -753,6 +958,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         // comment. This must run even when nothing above was dropped: the very next item
         // after a Stop is exactly the case that races it.
         await this.AwaitPendingStopCancelAsync(ct).ConfigureAwait(false);
+        await this.ApplyFreshStartAsync().ConfigureAwait(false);
 
         if (this.State == RoomSessionState.Closed
             && !await this.TryLazyOpenAsync(head, ct).ConfigureAwait(false))
@@ -935,6 +1141,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         item = await this.AddLibraryDocumentsAsync(item, ct).ConfigureAwait(false);
         item = await this.AddReferencedItemsAsync(item, ct).ConfigureAwait(false);
 
+        // The file is written here, before the watchdog is armed (traps.md TRAP 1): BuildPrompt is pure.
+        this.WriteLastCatchUp(item);
         TurnRun? run = this.TryPublishTurn(item, collected, sequence, ct);
         if (run is null)
         {
@@ -952,6 +1160,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         {
             await this.FinishTurnAsync(run, ct).ConfigureAwait(false);
         }
+
+        await this.SendFreshStartNoteAsync(ct).ConfigureAwait(false);
 
         // D26, RS §6.8, finding P-14: a second consecutive failure closes and forgets THIS per-Room
         // session, so its next Turn opens fresh - checked here, after the block above, so a store
@@ -1019,8 +1229,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         if (this.firstTurnPending && item.Kind != WorkItemKind.Command)
         {
             this.firstTurnPending = false;
+            if (this.FreshStartNotePending)
+            {
+                this.noteOwed = new FreshStartNote(item.RoomId, "asked", 0, 0, false);
+            }
+
             if (this.RoomId is not null && item.Kind == WorkItemKind.Message && item.TriggerMessageId is { } triggerId)
             {
+                SessionSettings settings = this.sessionSettings?.Current ?? new SessionSettings(this.options.TranscriptCatchUpMessages, this.options.TranscriptCatchUpTokens);
                 TranscriptTail? tail = null;
                 try
                 {
@@ -1028,7 +1244,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
                         item.RoomId,
                         this.resumedOnLastOpen ? this.resumedAfterMessageId : null,
                         triggerId,
-                        this.options.TranscriptCatchUpMessages,
+                        settings.CatchUpMessages,
                         ct).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
@@ -1046,15 +1262,90 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
                     // through the ordinary catch-up path below.
                     item = item with
                     {
-                        Transcript = new TranscriptCatchUp(this.resumedOnLastOpen, tail.Messages, tail.Omitted),
+                        Transcript = this.BuildCatchUp(tail, settings),
                         OwnPostLines = null,
                     };
+                }
+                else if (this.noteOwed is not null)
+                {
+                    this.noteOwed = this.noteOwed with { ReadFailed = true };
                 }
             }
         }
 
         return item;
     }
+
+    /// <summary>Trims a Transcript tail to the token budget (LR-R11) and counts what the trim dropped on top of the tail's own omitted count.</summary>
+    /// <param name="tail">The tail the owner returned.</param>
+    /// <param name="settings">The settings snapshot that set the Message cap for this read.</param>
+    /// <returns>The catch-up for the Turn.</returns>
+    private TranscriptCatchUp BuildCatchUp(TranscriptTail tail, SessionSettings settings)
+    {
+        CatchUpTrimResult result = CatchUpTrim.Apply(tail.Messages, this.IsOwn, settings.CatchUpTokens, this.options.CatchUpKeepOwnMessages);
+        if (this.noteOwed is not null)
+        {
+            this.noteOwed = this.noteOwed with { MessageCount = result.Kept.Count, EstimatedTokens = result.EstimatedTokens };
+        }
+
+        return new TranscriptCatchUp(this.resumedOnLastOpen, result.Kept, tail.Omitted + result.Dropped, result.DroppedOwn);
+    }
+
+    /// <summary>Writes the whole prompt text of the first ordinary Turn after a fresh start to the last-catch-up file (C3). A failure is logged and never fails the Turn.</summary>
+    /// <param name="item">The item about to be prompted, fully enriched.</param>
+    private void WriteLastCatchUp(WorkItem item)
+    {
+        if (this.noteOwed is null || this.lastCatchUp is null)
+        {
+            return;
+        }
+
+        try
+        {
+            this.lastCatchUp.Write(this.owner.PersonaName, item.RoomId, RoomSession.BuildPrompt(item, this.prompts));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            this.logger.LogWarning(
+                ex, "Persona '{PersonaName}' could not write the last catch-up for room {RoomId}.", this.owner.PersonaName, item.RoomId);
+        }
+    }
+
+    /// <summary>Sends the fresh-start note the finished Turn owed, if any, and clears the owed flag. A failure is logged and never fails the Turn.</summary>
+    /// <param name="ct">The run's own cancellation token.</param>
+    /// <returns>A task that completes when the note has been handed to the owner.</returns>
+    private async Task SendFreshStartNoteAsync(CancellationToken ct)
+    {
+        FreshStartNote? note = this.noteOwed;
+        if (note is null)
+        {
+            return;
+        }
+
+        this.noteOwed = null;
+        lock (this.gate)
+        {
+            this.freshStartNotePending = false;
+        }
+
+        try
+        {
+            await this.owner.WriteAsync(note, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            this.logger.LogWarning(
+                ex, "Persona '{PersonaName}' could not send the fresh-start note for room {RoomId}.", this.owner.PersonaName, note.RoomId);
+        }
+    }
+
+    /// <summary>Whether <paramref name="message"/> is this Agent's own (C7): by sender id when the session has an agent id, otherwise by Persona name.</summary>
+    /// <param name="message">The Message to test.</param>
+    /// <returns><see langword="true"/> when the Agent posted it.</returns>
+    private bool IsOwn(ChatMessage message) =>
+        this.agentId is { } id
+            ? string.Equals(message.SenderId, id, StringComparison.Ordinal)
+            : string.Equals(message.SenderName, this.owner.PersonaName, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Spec §6.14, corrections-B6 item 7 / B5 item 28: collects the Library documents the Turn's
@@ -2282,6 +2573,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             builder.Append(prompts.Render(
                 "turn.transcriptOmitted",
                 new Dictionary<string, string> { ["{{count}}"] = transcript.Omitted.ToString(CultureInfo.InvariantCulture) }));
+            builder.Append('\n');
+        }
+
+        if (transcript.OmittedOwn > 0)
+        {
+            builder.Append(prompts.Render(
+                "turn.transcriptOmittedOwn",
+                new Dictionary<string, string> { ["{{count}}"] = transcript.OmittedOwn.ToString(CultureInfo.InvariantCulture) }));
             builder.Append('\n');
         }
 

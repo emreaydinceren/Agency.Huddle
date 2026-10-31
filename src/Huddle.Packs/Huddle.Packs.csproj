@@ -1,19 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\tests\Huddle.TestAssemblies.props" />
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <RootNamespace>Agency.Huddle.Packs</RootNamespace>
     <AssemblyName>huddle-packs</AssemblyName>
   </PropertyGroup>
-
-  <ItemGroup>
-    <InternalsVisibleTo Include="Huddle.Tests.Common" />
-    <InternalsVisibleTo Include="Huddle.Tests.Domain" />
-    <InternalsVisibleTo Include="Huddle.Tests.SkillPacks" />
-    <InternalsVisibleTo Include="Huddle.Tests.Components" />
-    <InternalsVisibleTo Include="Huddle.Tests.Agents" />
-    <InternalsVisibleTo Include="Huddle.Tests.Hosted" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Huddle.SkillPacks\Huddle.SkillPacks.csproj" />

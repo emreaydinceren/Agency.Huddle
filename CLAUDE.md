@@ -45,7 +45,7 @@ design: it **links** `FakeAcpAgent.cs`, `PromptContext.cs` and `FakeRpcError.cs`
 `tests/Huddle.Acp.Tests/Fakes/` with `<Compile Include=… Link=…>` rather than copying them, so
 there stays one implementation of what an ACP agent does and it is the ACP effort's. **Editing
 any of those three files changes two assemblies** — verify `Huddle.Acp.Tests` *and*
-the `MockAdapter/` folders of `tests/Huddle.Tests.Agents` and `tests/Huddle.Tests.Domain` before concluding.
+the `MockAdapter/` folders of `tests/Huddle.Tests.Agents` and `tests/Huddle.Tests.Personas` before concluding.
 
 ## C# code
 

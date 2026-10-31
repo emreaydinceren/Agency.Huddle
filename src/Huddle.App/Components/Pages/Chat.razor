@@ -25,6 +25,9 @@
 @inject IServiceProvider Services
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
+@inject FreshStartNotes Notes
+@inject Agency.Huddle.App.Acp.Sessions.LastCatchUpStore CatchUp
+@inject IDialogService Dialogs
 
 <PageSubjectSource Value="@this.Subject" />
 @if (this.room is null)
@@ -68,7 +71,7 @@ else
                         <MudAvatarGroup Spacing="2">
                             @foreach (var agent in agentMembers.Take(MembersShown))
                             {
-                                <ProfileAvatar Name="@agent.Name" Avatar="this.Avatars.Get(agent.Name)" Size="Size.Small" Team="@this.room.Team" />
+                                <ProfileAvatar Name="@agent.Name" Avatar="this.Avatars.Get(agent.Name)" Size="Size.Small" Team="@this.room.Team" StartAfreshRoomId="@this.room.Id" StartAfreshAgentId="@agent.Id" />
                             }
                             @if (agentMembers.Count > MembersShown)
                             {
@@ -164,6 +167,28 @@ else
            component with its own RoomEvents subscription, and the same leading-@ RoomId rule as
            ProposalCard and QuestionCard - a missing @ passes the literal text and fails only on screen. *@
         <ElicitationCard RoomId="@this.room.Id" />
+        @* One note per Agent that started this Room's session afresh (Spec LR-R21), kept by FreshStartNotes
+           and written through to disk (correction C12), so it outlives a restart. Rendered inline rather
+           than as a component for the same reason every other strip on this page is: a string Parameter
+           missing its leading @ passes the literal text, compiles clean and fails only on screen - see
+           docs/engineering/rules.md. MudAlert renders no role by default - verified against the rendered
+           markup, not assumed - so role="status" is added explicitly, per rules.md; status rather than
+           alert, as for the ContextOnly strip: it is a consequence of the Human's own click. The button
+           shows only when a reread file exists (LR-R22). *@
+        @foreach ((string noteAgent, FreshStartNote note) in this.Notes.For(this.room.Id))
+        {
+            string noteAgentName = noteAgent;
+            <MudAlert Severity="Severity.Info" Dense="true" Class="fresh-start-note room-notice-column" role="status">
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                    <span>@Agency.Huddle.App.Components.Chat.FreshStartNoteText.Format(noteAgentName, note)</span>
+                    @if (this.CatchUp.Has(noteAgentName, this.room.Id))
+                    {
+                        <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => this.ShowRereadAsync(noteAgentName))">See what it reread</MudButton>
+                    }
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Dismiss" OnClick="@(() => this.DismissFreshStartNote(noteAgentName))" />
+                </MudStack>
+            </MudAlert>
+        }
         @* Between the transcript and the composer on purpose: the exchange that spent the Budget is
            the thing you need to read before deciding whether to grant another one. Rendered inline
            rather than as a component because a string Parameter missing its leading @ passes the
@@ -354,6 +379,7 @@ else
         this.Events.MessagePosted += this.OnMessagePosted;
         this.Events.RoomsChanged += this.OnRoomsChanged;
         this.Events.DraftChanged += this.OnDraftChanged;
+        this.Events.FreshStartNotesChanged += this.OnFreshStartNotesChanged;
 
         // Health and pipe liveness are the two facts PersonaStatusResolver combines, so either one
         // changing must repaint the member-health strip - the same reasoning rules.md gives for
@@ -428,6 +454,7 @@ else
         this.Events.MessagePosted -= this.OnMessagePosted;
         this.Events.RoomsChanged -= this.OnRoomsChanged;
         this.Events.DraftChanged -= this.OnDraftChanged;
+        this.Events.FreshStartNotesChanged -= this.OnFreshStartNotesChanged;
         this.Health.Changed -= this.OnHealthOrPresenceChanged;
         this.Gateway.PresenceChanged -= this.OnHealthOrPresenceChanged;
         this.Avatars.AvatarsChanged -= this.OnAvatarsChanged;
@@ -622,6 +649,48 @@ else
 
             this.StateHasChanged();
         });
+    }
+
+    /// <summary>Repaints when a fresh-start note of the loaded Room is set or dismissed; the notes are read live on every render.</summary>
+    /// <param name="roomId">The Room whose notes changed.</param>
+    private void OnFreshStartNotesChanged(string roomId)
+    {
+        if (string.Equals(roomId, this.room?.Id, StringComparison.Ordinal))
+        {
+            _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+        }
+    }
+
+    /// <summary>Forgets the note of <paramref name="agentName"/> in this Room (the reread text stays) and tells every open view.</summary>
+    /// <param name="agentName">The Agent's Name.</param>
+    private void DismissFreshStartNote(string agentName)
+    {
+        if (this.room is null)
+        {
+            return;
+        }
+
+        this.Notes.Dismiss(this.room.Id, agentName);
+        this.Events.PublishFreshStartNotesChanged(this.room.Id);
+    }
+
+    /// <summary>Opens <see cref="Agency.Huddle.App.Components.Chat.LastCatchUpDialog"/> with the text <paramref name="agentName"/> reread in this Room.</summary>
+    /// <param name="agentName">The Agent's Name.</param>
+    private async Task ShowRereadAsync(string agentName)
+    {
+        string? text = this.room is null ? null : this.CatchUp.Read(agentName, this.room.Id);
+        if (text is null)
+        {
+            return;
+        }
+
+        DialogParameters<Agency.Huddle.App.Components.Chat.LastCatchUpDialog> parameters = new()
+        {
+            { dialog => dialog.AgentName, agentName },
+            { dialog => dialog.Text, text },
+        };
+        await this.Dialogs.ShowAsync<Agency.Huddle.App.Components.Chat.LastCatchUpDialog>(
+            $"What {agentName} reread", parameters, Agency.Huddle.App.Components.Chat.LastCatchUpDialog.Options);
     }
 
     /// <summary>

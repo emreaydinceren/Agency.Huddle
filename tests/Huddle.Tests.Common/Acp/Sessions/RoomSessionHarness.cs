@@ -41,6 +41,18 @@ internal sealed record RoomSessionHarnessOptions
 
     /// <summary>Whether the agent may read files. <see langword="true"/> unless a test says otherwise.</summary>
     public bool ReadsFiles { get; init; } = true;
+
+    /// <summary>The Session settings the first Turn's catch-up reads, or <see langword="null"/> for none (the <see cref="AcpOptions"/> values apply).</summary>
+    public ISessionSettings? SessionSettings { get; init; }
+
+    /// <summary>The store of resumable session entries, or <see langword="null"/> for none (the session then never stores or resumes).</summary>
+    public RoomSessionStore? RoomSessions { get; init; }
+
+    /// <summary>The Persona host the session consults for resume, or <see langword="null"/> for none.</summary>
+    public IPersonaHost? Host { get; init; }
+
+    /// <summary>The store the first Turn after a fresh start writes its whole prompt text to, or <see langword="null"/> for none (no file is written).</summary>
+    public LastCatchUpStore? LastCatchUp { get; init; }
 }
 
 /// <summary>
@@ -98,7 +110,11 @@ internal sealed class RoomSessionHarness : IAsyncDisposable
             turnActivity: settings.TurnActivity,
             contextFill: settings.ContextFill,
             libraryDocs: settings.LibraryDocs,
-            readsFiles: settings.ReadsFiles);
+            readsFiles: settings.ReadsFiles,
+            roomSessions: settings.RoomSessions,
+            host: settings.Host,
+            sessionSettings: settings.SessionSettings,
+            lastCatchUp: settings.LastCatchUp);
         return new RoomSessionHarness(session, runCts);
     }
 

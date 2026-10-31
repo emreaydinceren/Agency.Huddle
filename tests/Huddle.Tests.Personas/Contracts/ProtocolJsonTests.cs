@@ -1,0 +1,346 @@
+using System.Globalization;
+using System.Text.Json;
+using Agency.Huddle.Contracts;
+
+namespace Agency.Huddle.Tests.Contracts;
+
+public sealed class ProtocolJsonTests
+{
+    [Fact]
+    public void Serialize_UsesCamelCase_AndStringEnums()
+    {
+        var post = new PostMessage("room-1", "msg-1", "hi");
+        var postJson = ProtocolJson.Serialize(post);
+        Assert.Contains("\"roomId\"", postJson, StringComparison.Ordinal);
+
+        var member = new MemberInfo("agent-1", "echo", UserKind.Agent);
+        var welcome = new Welcome("agent-1", "echo", new List<RoomInfo> { new("room-1", "echo", new List<MemberInfo> { member }) });
+        var welcomeJson = ProtocolJson.Serialize(welcome);
+
+        Assert.Contains("\"kind\":\"agent\"", welcomeJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"Kind\"", welcomeJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Deserialize_TypePropertyNotFirst_Succeeds()
+    {
+        var version = ProtocolVersion.Current.ToString(CultureInfo.InvariantCulture);
+        var result = ProtocolJson.Deserialize("{\"name\":\"x\",\"type\":\"hello\",\"version\":" + version + "}");
+
+        var hello = Assert.IsType<Hello>(result);
+        Assert.Equal("x", hello.Name);
+    }
+
+    [Fact]
+    public void Serialize_OmitsNulls()
+    {
+        var json = ProtocolJson.Serialize(new Hello("x", null));
+
+        Assert.DoesNotContain("description", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MessagePosted_RoundTrips_Members()
+    {
+        var chatMessage = new ChatMessage("m1", DateTimeOffset.UtcNow, "human", "You", "hi @echo");
+        var mentioned = new MemberInfo("agent-1", "echo", UserKind.Agent);
+        var human = new MemberInfo("human", "You", UserKind.Human);
+        var posted = new MessagePosted(
+            "room-1", "echo", chatMessage, true, new List<MemberInfo> { mentioned }, new List<MemberInfo> { human, mentioned },
+            AgentMessagesSinceHuman: 3, Budget: 40);
+
+        var json = ProtocolJson.Serialize(posted);
+        var result = Assert.IsType<MessagePosted>(ProtocolJson.Deserialize(json));
+
+        Assert.Equal(2, result.Members.Count);
+        Assert.Contains(result.Members, m => m.Id == "human" && m.Kind == UserKind.Human);
+        Assert.Contains(result.Members, m => m.Id == "agent-1" && m.Kind == UserKind.Agent);
+        Assert.Equal(3, result.AgentMessagesSinceHuman);
+        Assert.Equal(40, result.Budget);
+    }
+
+    /// <summary>
+    /// A <see cref="RoomInfo"/> for a Room that has Messages serialises <c>isEmpty</c> as a literal
+    /// <c>true</c> on the wire, per Spec §7.2.
+    /// </summary>
+    [Fact]
+    public void Welcome_RoomInfoIsEmpty_SerialisesAsLiteralJson()
+    {
+        MemberInfo member = new("agent-1", "echo", UserKind.Agent);
+        RoomInfo room = new("room-1", "echo", new List<MemberInfo> { member }, IsEmpty: true);
+        Welcome welcome = new("agent-1", "echo", new List<RoomInfo> { room });
+
+        string json = ProtocolJson.Serialize(welcome);
+
+        Assert.Contains("\"isEmpty\":true", json, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A <see cref="Welcome"/> line with no <c>isEmpty</c> field — as an older server would send —
+    /// deserialises <see cref="RoomInfo.IsEmpty"/> as <see langword="false"/>, so an older server can
+    /// never cause a Greeting.
+    /// </summary>
+    [Fact]
+    public void Welcome_IsEmptyAbsent_DeserialisesFalse()
+    {
+        string json = """
+            {"type":"welcome","version":3,"agentId":"agent-1","name":"echo",
+             "rooms":[{"id":"room-1","name":"echo","members":[]}]}
+            """.ReplaceLineEndings(string.Empty);
+
+        Welcome result = Assert.IsType<Welcome>(ProtocolJson.Deserialize(json));
+
+        Assert.False(result.Rooms[0].IsEmpty);
+    }
+
+    /// <summary>
+    /// Adding <see cref="RoomInfo.IsEmpty"/> is additive on a server-to-client record, so it costs no
+    /// <see cref="ProtocolVersion"/> bump.
+    /// </summary>
+    [Fact]
+    public void ProtocolVersion_StillThree()
+    {
+        Assert.Equal(3, ProtocolVersion.Current);
+    }
+
+    // The reason a new field on a server-to-client record costs no ProtocolVersion bump: a client
+    // built before it still parses the line and ignores what it does not know. traps.md records the
+    // opposite case - renaming a property silently changes the protocol with no signal at all.
+    [Fact]
+    public void MessagePosted_WithUnknownProperties_StillDeserialises()
+    {
+        var json = """
+            {"type":"messagePosted","version":3,"roomId":"room-1","roomName":"echo",
+             "message":{"id":"m1","timestamp":"2026-09-12T00:00:00+00:00","senderId":"human","senderName":"You","text":"hi"},
+             "mentioned":false,"mentions":[],"members":[],
+             "agentMessagesSinceHuman":2,"budget":40,"somethingFromALaterVersion":"ignored"}
+            """.ReplaceLineEndings(string.Empty);
+
+        var result = Assert.IsType<MessagePosted>(ProtocolJson.Deserialize(json));
+
+        Assert.Equal("room-1", result.RoomId);
+        Assert.Equal(2, result.AgentMessagesSinceHuman);
+        Assert.Equal(40, result.Budget);
+    }
+
+    /// <summary>A V3 <see cref="ToolActivity"/> pins the exact wire shape and round-trips through <see cref="ProtocolJson"/>.</summary>
+    [Fact]
+    public void ProtocolJson_RoundTripsToolActivity()
+    {
+        ToolActivity activity = new("room-1", "m-7", "tc-1", "Reading file.cs", ToolActivityStatus.InProgress);
+
+        string json = ProtocolJson.Serialize(activity);
+
+        Assert.Equal(
+            "{\"type\":\"toolActivity\",\"roomId\":\"room-1\",\"messageId\":\"m-7\",\"toolCallId\":\"tc-1\"," +
+            "\"title\":\"Reading file.cs\",\"status\":\"inProgress\",\"version\":3}",
+            json);
+
+        ToolActivity result = Assert.IsType<ToolActivity>(ProtocolJson.Deserialize(json));
+        Assert.Equal(activity, result);
+    }
+
+    /// <summary>An activity that carries none of the Turn detail members serialises exactly as a version 3 activity always did, so an older reader sees no change.</summary>
+    [Fact]
+    public void ToolActivity_WithoutNewFields_SerialisesExactlyAsBefore()
+    {
+        ToolActivity activity = new("room-1", "m-7", "tc-1", "Reading file.cs", ToolActivityStatus.InProgress);
+
+        string json = ProtocolJson.Serialize(activity);
+
+        Assert.Equal(
+            "{\"type\":\"toolActivity\",\"roomId\":\"room-1\",\"messageId\":\"m-7\",\"toolCallId\":\"tc-1\"," +
+            "\"title\":\"Reading file.cs\",\"status\":\"inProgress\",\"version\":3}",
+            json);
+    }
+
+    /// <summary>An activity with a path, a line and an Edit pins the exact wire shape.</summary>
+    [Fact]
+    public void ToolActivity_WithEdit_SerialisesToLiteralJson()
+    {
+        ToolActivity activity = new(
+            "room-1", "m-7", "tc-1", "Edit notes.md", ToolActivityStatus.Completed, "E:\\Data\\notes.md", 1, new EditChange("one", "two"));
+
+        string json = ProtocolJson.Serialize(activity);
+
+        Assert.Equal(
+            "{\"type\":\"toolActivity\",\"roomId\":\"room-1\",\"messageId\":\"m-7\",\"toolCallId\":\"tc-1\"," +
+            "\"title\":\"Edit notes.md\",\"status\":\"completed\",\"path\":\"E:\\\\Data\\\\notes.md\",\"line\":1," +
+            "\"edit\":{\"oldText\":\"one\",\"newText\":\"two\",\"truncated\":false,\"omittedChanges\":0},\"version\":3}",
+            json);
+    }
+
+    /// <summary>An activity with an Edit, including a new-file edit with no old side, round-trips unchanged.</summary>
+    [Fact]
+    public void ToolActivity_WithEdit_RoundTrips()
+    {
+        ToolActivity activity = new(
+            "room-1", "m-7", "tc-1", "Write a.txt", ToolActivityStatus.InProgress, "a.txt", null, new EditChange(null, "hello", true, 2));
+
+        ToolActivity result = Assert.IsType<ToolActivity>(ProtocolJson.Deserialize(ProtocolJson.Serialize(activity)));
+
+        Assert.Equal(activity, result);
+    }
+
+    /// <summary>A line from a newer runner with a member this reader does not know still deserialises, so a rolling upgrade never drops an activity.</summary>
+    [Fact]
+    public void ToolActivity_WithAnUnknownProperty_StillDeserialises()
+    {
+        string json =
+            "{\"type\":\"toolActivity\",\"roomId\":\"room-1\",\"messageId\":\"m-7\",\"toolCallId\":\"tc-1\"," +
+            "\"title\":\"Edit x\",\"status\":\"pending\",\"kind\":\"edit\",\"version\":3}";
+
+        ToolActivity result = Assert.IsType<ToolActivity>(ProtocolJson.Deserialize(json));
+
+        Assert.Equal(new ToolActivity("room-1", "m-7", "tc-1", "Edit x", ToolActivityStatus.Pending), result);
+    }
+
+    /// <summary>A V3 <see cref="StopTurn"/> pins the exact wire shape and round-trips through <see cref="ProtocolJson"/>.</summary>
+    [Fact]
+    public void ProtocolJson_RoundTripsStopTurn()
+    {
+        StopTurn stopTurn = new("room-1");
+
+        string json = ProtocolJson.Serialize(stopTurn);
+
+        Assert.Equal("{\"type\":\"stopTurn\",\"roomId\":\"room-1\",\"version\":3}", json);
+
+        StopTurn result = Assert.IsType<StopTurn>(ProtocolJson.Deserialize(json));
+        Assert.Equal(stopTurn, result);
+    }
+
+    /// <summary>A <c>StartAfresh</c> (Spec §6.1, correction C2) pins the exact wire shape and round-trips through <see cref="ProtocolJson"/>.</summary>
+    [Fact]
+    public void ProtocolJson_RoundTripsStartAfresh()
+    {
+        Agency.Huddle.Contracts.StartAfresh startAfresh = new("room-1");
+
+        string json = ProtocolJson.Serialize(startAfresh);
+
+        Assert.Equal("{\"type\":\"startAfresh\",\"roomId\":\"room-1\",\"version\":3}", json);
+
+        Agency.Huddle.Contracts.StartAfresh result = Assert.IsType<Agency.Huddle.Contracts.StartAfresh>(ProtocolJson.Deserialize(json));
+        Assert.Equal(startAfresh, result);
+    }
+
+    /// <summary>A <c>FreshStartNote</c> (Spec §6.3, correction C2) pins the exact wire shape and round-trips through <see cref="ProtocolJson"/>.</summary>
+    [Fact]
+    public void ProtocolJson_RoundTripsFreshStartNote()
+    {
+        Agency.Huddle.Contracts.FreshStartNote note = new("room-1", "asked", 38, 31000, false);
+
+        string json = ProtocolJson.Serialize(note);
+
+        Assert.Equal("{\"type\":\"freshStartNote\",\"roomId\":\"room-1\",\"reason\":\"asked\",\"messageCount\":38,\"estimatedTokens\":31000,\"readFailed\":false,\"version\":3}", json);
+
+        Agency.Huddle.Contracts.FreshStartNote result = Assert.IsType<Agency.Huddle.Contracts.FreshStartNote>(ProtocolJson.Deserialize(json));
+        Assert.Equal(note, result);
+    }
+
+    /// <summary>A hand-written line carrying the retired V2 version number is rejected by the strict version check.</summary>
+    [Fact]
+    public void ProtocolJson_RejectsAVersionTwoLine()
+    {
+        const string json = "{\"type\":\"hello\",\"version\":2,\"name\":\"x\"}";
+
+        Assert.Throws<JsonException>(() => ProtocolJson.Deserialize(json));
+    }
+
+    /// <summary>
+    /// A <see cref="ReadTranscript"/> with no <see cref="ReadTranscript.AfterMessageId"/> pins the
+    /// exact wire shape (RS §6.5): no <c>afterMessageId</c> key at all, since
+    /// <see cref="ProtocolJson.Options"/> sets <c>DefaultIgnoreCondition = WhenWritingNull</c>
+    /// (correction item 24: property order, version last, matches what <see cref="ProtocolJson"/>
+    /// really emits).
+    /// </summary>
+    [Fact]
+    public void ReadTranscript_SerialisesToLiteralJson()
+    {
+        ReadTranscript read = new("r1", "room1", null, "m9", 20);
+
+        string json = ProtocolJson.Serialize(read);
+
+        Assert.Equal(
+            "{\"type\":\"readTranscript\",\"requestId\":\"r1\",\"roomId\":\"room1\",\"beforeMessageId\":\"m9\",\"max\":20,\"version\":3}",
+            json);
+
+        ReadTranscript result = Assert.IsType<ReadTranscript>(ProtocolJson.Deserialize(json));
+        Assert.Equal(read, result);
+    }
+
+    /// <summary>A <see cref="ReadTranscript"/> with <see cref="ReadTranscript.AfterMessageId"/> set carries it on the wire, between <c>roomId</c> and <c>beforeMessageId</c>.</summary>
+    [Fact]
+    public void ReadTranscript_WithAfter_SerialisesIt()
+    {
+        ReadTranscript read = new("r1", "room1", "m2", "m9", 20);
+
+        string json = ProtocolJson.Serialize(read);
+
+        Assert.Equal(
+            "{\"type\":\"readTranscript\",\"requestId\":\"r1\",\"roomId\":\"room1\",\"afterMessageId\":\"m2\",\"beforeMessageId\":\"m9\",\"max\":20,\"version\":3}",
+            json);
+
+        ReadTranscript result = Assert.IsType<ReadTranscript>(ProtocolJson.Deserialize(json));
+        Assert.Equal(read, result);
+    }
+
+    /// <summary>A <see cref="TranscriptTail"/> with one <see cref="ChatMessage"/> pins the exact wire shape (RS §6.5).</summary>
+    [Fact]
+    public void TranscriptTail_SerialisesToLiteralJson()
+    {
+        ChatMessage message = new("m5", new DateTimeOffset(2026, 9, 22, 16, 2, 11, TimeSpan.Zero), "human", "You", "go with option 2");
+        TranscriptTail tail = new("r1", "room1", new List<ChatMessage> { message }, 12);
+
+        string json = ProtocolJson.Serialize(tail);
+
+        Assert.Equal(
+            "{\"type\":\"transcriptTail\",\"requestId\":\"r1\",\"roomId\":\"room1\"," +
+            "\"messages\":[{\"id\":\"m5\",\"timestamp\":\"2026-09-22T16:02:11+00:00\",\"senderId\":\"human\",\"senderName\":\"You\",\"text\":\"go with option 2\"}]," +
+            "\"omitted\":12,\"version\":3}",
+            json);
+
+        TranscriptTail result = Assert.IsType<TranscriptTail>(ProtocolJson.Deserialize(json));
+
+        // Not Assert.Equal(tail, result): Messages is a List<ChatMessage>, which has no value
+        // equality of its own, so record equality would compare list references, not content.
+        Assert.Equal(tail.RequestId, result.RequestId);
+        Assert.Equal(tail.RoomId, result.RoomId);
+        Assert.Equal(tail.Omitted, result.Omitted);
+        Assert.Equal(tail.Messages, result.Messages);
+    }
+
+    /// <summary>Adding the two RS §6.5 Envelopes is additive, so it costs no <see cref="ProtocolVersion"/> bump.</summary>
+    [Fact]
+    public void ProtocolVersion_IsStill3()
+    {
+        Assert.Equal(3, ProtocolVersion.Current);
+    }
+
+    /// <summary>The optional Team on <see cref="MessagePosted"/> and <see cref="RoomInfo"/> round-trips when set.</summary>
+    [Fact]
+    public void Team_OnMessagePostedAndRoomInfo_RoundTrips()
+    {
+        ChatMessage chatMessage = new("m1", DateTimeOffset.UtcNow, "human", "You", "hi");
+        MessagePosted posted = new("room-1", "echo", chatMessage, true, [], [], 0, 0, Team: "Marketing");
+        Welcome welcome = new("agent-1", "echo", [new RoomInfo("room-1", "echo", [], Team: "Marketing")]);
+
+        MessagePosted postedResult = Assert.IsType<MessagePosted>(ProtocolJson.Deserialize(ProtocolJson.Serialize(posted)));
+        Welcome welcomeResult = Assert.IsType<Welcome>(ProtocolJson.Deserialize(ProtocolJson.Serialize(welcome)));
+
+        Assert.Equal("Marketing", postedResult.Team);
+        Assert.Equal("Marketing", Assert.Single(welcomeResult.Rooms).Team);
+    }
+
+    /// <summary>A root Room writes no <c>team</c> on the wire, and a message from a server built before the field reads as root.</summary>
+    [Fact]
+    public void Team_Absent_DeserialisesAsNullAndIsNotWritten()
+    {
+        ChatMessage chatMessage = new("m1", DateTimeOffset.UtcNow, "human", "You", "hi");
+        string json = ProtocolJson.Serialize(new MessagePosted("room-1", "echo", chatMessage, true, [], [], 0, 0));
+
+        MessagePosted result = Assert.IsType<MessagePosted>(ProtocolJson.Deserialize(json));
+
+        Assert.DoesNotContain("\"team\"", json, StringComparison.Ordinal);
+        Assert.Null(result.Team);
+    }
+}

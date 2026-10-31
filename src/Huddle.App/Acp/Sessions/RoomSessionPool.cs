@@ -35,6 +35,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     private readonly LibraryDocumentCollector? libraryDocs;
     private readonly ReferenceExpander? references;
     private readonly ContextFill? contextFill;
+    private readonly ISessionSettings? sessionSettings;
+    private readonly LastCatchUpStore? lastCatchUp;
     private readonly bool readsFiles;
     private readonly IElicitationBridge? elicitationBridge;
     private readonly bool sessionPerRoom;
@@ -45,6 +47,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     // inside a RoomSession's own gate (lock order: pool -> session -> gate; D23 correction 12).
     private readonly Lock poolLock = new();
     private readonly Dictionary<string, RoomSession> sessionsByRoom = new(StringComparer.Ordinal);
+    private readonly HashSet<string> notePendingRooms = new(StringComparer.Ordinal);
 
     private readonly RoomSession? sharedSession;
     private readonly ITimer? sweepTimer;
@@ -74,6 +77,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// <param name="elicitationBridge">Shows the Human the questions the agent asks (E-3), passed to every Room Session this pool creates. <see langword="null"/> answers every one as cancelled, like every caller that predates it.</param>
     /// <param name="references">Builds the Referenced items header, passed to every Room Session this pool creates. <see langword="null"/> adds no header, like every caller that predates it.</param>
     /// <param name="contextFill">Records each Room Session's context-window fill, passed to every Room Session this pool creates. <see langword="null"/> disables it, like every caller that predates it.</param>
+    /// <param name="sessionSettings">The resolved Session settings passed to every Room Session, for the first Turn's Transcript catch-up. <see langword="null"/> uses the <see cref="AcpOptions"/> values, like every caller that predates it.</param>
+    /// <param name="lastCatchUp">The store every Room Session writes its first post-fresh-start prompt to. <see langword="null"/> writes no file.</param>
     public RoomSessionPool(
         IPersonaHost host,
         IRoomSessionOwner owner,
@@ -93,7 +98,9 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         bool readsFiles = true,
         IElicitationBridge? elicitationBridge = null,
         ReferenceExpander? references = null,
-        ContextFill? contextFill = null)
+        ContextFill? contextFill = null,
+        ISessionSettings? sessionSettings = null,
+        LastCatchUpStore? lastCatchUp = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(owner);
@@ -121,6 +128,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         this.libraryDocs = libraryDocs;
         this.references = references;
         this.contextFill = contextFill;
+        this.sessionSettings = sessionSettings;
+        this.lastCatchUp = lastCatchUp;
         this.readsFiles = readsFiles;
         this.elicitationBridge = elicitationBridge;
         this.sessionPerRoom = host.Profile.SessionPerRoom;
@@ -359,7 +368,71 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// <param name="state">Unused; the timer carries no state.</param>
     private void OnSweepTimerFired(object? state) => _ = this.SweepIdleAsync();
 
-    private RoomSession CreateSession(string? roomId) =>
+    /// <summary>Routes a start afresh to that Room's session; a Room with no session forgets what is stored and is remembered as note-pending. A no-op in shared mode (LR-E5).</summary>
+    /// <param name="roomId">The Room the Human asked to start afresh.</param>
+    /// <param name="cancellationToken">Passed to the session.</param>
+    internal Task StartAfreshAsync(string roomId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+
+        if (!this.sessionPerRoom)
+        {
+            return Task.CompletedTask;
+        }
+
+        RoomSession? session;
+        lock (this.poolLock)
+        {
+            if (!this.sessionsByRoom.TryGetValue(roomId, out session))
+            {
+                this.roomSessions?.Forget(this.persona.Name, roomId);
+                if (this.agentId is not null)
+                {
+                    this.contextFill?.Forget(this.agentId, roomId);
+                }
+
+                this.notePendingRooms.Add(roomId);
+            }
+        }
+
+        return session is null ? Task.CompletedTask : session.RequestFreshStartAsync(cancellationToken);
+    }
+
+    /// <summary>The Room's session, or the shared one in shared mode; <see langword="null"/> when a per-Room Room has none yet.</summary>
+    /// <param name="roomId">The Room.</param>
+    internal RoomSession? SessionFor(string roomId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+
+        if (!this.sessionPerRoom)
+        {
+            return this.sharedSession;
+        }
+
+        lock (this.poolLock)
+        {
+            return this.sessionsByRoom.GetValueOrDefault(roomId);
+        }
+    }
+
+    private RoomSession CreateSession(string? roomId)
+    {
+        RoomSession session = this.NewSession(roomId);
+        if (roomId is not null)
+        {
+            lock (this.poolLock)
+            {
+                if (this.notePendingRooms.Remove(roomId))
+                {
+                    session.MarkFreshStartNotePending();
+                }
+            }
+        }
+
+        return session;
+    }
+
+    private RoomSession NewSession(string? roomId) =>
         new(
             roomId,
             open: this.host.OpenAsync,
@@ -382,7 +455,9 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             readsFiles: this.readsFiles,
             elicitationBridge: this.elicitationBridge,
             references: this.references,
-            contextFill: this.contextFill);
+            contextFill: this.contextFill,
+            sessionSettings: this.sessionSettings,
+            lastCatchUp: this.lastCatchUp);
 
     private RoomSession GetOrCreateSession(string roomId)
     {

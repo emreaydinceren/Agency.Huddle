@@ -23,6 +23,9 @@
 @inject ChatService Chat
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject Agency.Huddle.App.Pipes.IAgentGateway Gateway
+@inject Agency.Huddle.App.Acp.PersonaStore Personas
+@inject Agency.Huddle.App.Acp.AdapterCatalog Adapters
 
 @* 1190 sits just under MudBlazor's popover layer (1200): the overlay is beneath the panel but above the page. *@
 <MudOverlay Visible="true" AutoClose="true" OnClosed="this.CloseAsync" LockScroll="false" ZIndex="1190" />
@@ -42,6 +45,18 @@
                 <Actions>
                     <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(shown.IsHuman ? this.EditHumanAsync : this.EditAsync)"
                                aria-label="@($"Edit {shown.Profile.Name}")" Class="roster-edit">Edit</MudButton>
+                    @if (this.CanStartAfresh(shown))
+                    {
+                        @if (this.confirmingAfresh)
+                        {
+                            <InlineConfirm Prompt="@($"Start afresh? {shown.Profile.Name} keeps every Message but forgets its working notes for this Room.")" ConfirmText="Start afresh" OnConfirm="this.StartAfreshAsync" OnCancel="this.CancelAfresh" />
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.RestartAlt" OnClick="this.BeginAfresh"
+                                       aria-label="@($"Start {shown.Profile.Name} afresh in this Room")" Class="roster-start-afresh">Start afresh</MudButton>
+                        }
+                    }
                     @if (shown.Agent is not null)
                     {
                         <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ChatBubbleOutline" OnClick="this.MessageAsync"
@@ -59,6 +74,7 @@
     private AgentProfileView? view;
     private bool loading = true;
     private bool focusPending;
+    private bool confirmingAfresh;
 
     /// <summary>The Agent's Name, in any letter case.</summary>
     [Parameter]
@@ -68,6 +84,14 @@
     /// <summary>The Team the avatar was seen in, or <see langword="null"/> outside any Team; it picks the one-to-one Message opens.</summary>
     [Parameter]
     public string? Team { get; set; }
+
+    /// <summary>The Room whose header drew the avatar, or <see langword="null"/> on any other page (no Start afresh).</summary>
+    [Parameter]
+    public string? StartAfreshRoomId { get; set; }
+
+    /// <summary>The Agent's agent-user id for Start afresh, or <see langword="null"/> on any other page.</summary>
+    [Parameter]
+    public string? StartAfreshAgentId { get; set; }
 
     /// <summary>Raised when the popover should close: Escape, a click away, or an action chosen.</summary>
     [Parameter]
@@ -105,6 +129,41 @@
             this.focusPending = false;
             await this.panel.FocusAsync();
         }
+    }
+
+    /// <summary>Whether Start afresh is offered: from a Room header, for an Agent (not the Human) whose Adapter keeps one session per Room.</summary>
+    /// <param name="shown">The profile on show.</param>
+    private bool CanStartAfresh(AgentProfileView shown) =>
+        this.StartAfreshRoomId is not null
+        && this.StartAfreshAgentId is not null
+        && !shown.IsHuman
+        && shown.Agent is not null
+        && (this.Adapters.Find(this.Personas.Get(shown.Profile.Name)?.Adapter) ?? this.Adapters.Default).SessionPerRoom;
+
+    /// <summary>Swaps the button for the inline confirm.</summary>
+    private void BeginAfresh() => this.confirmingAfresh = true;
+
+    /// <summary>Puts the button back.</summary>
+    private void CancelAfresh() => this.confirmingAfresh = false;
+
+    /// <summary>Sends Start afresh for the Agent and Room, then closes; a refusal goes to the snackbar.</summary>
+    private async Task StartAfreshAsync()
+    {
+        if (this.StartAfreshAgentId is not { } agentId || this.StartAfreshRoomId is not { } roomId)
+        {
+            return;
+        }
+
+        try
+        {
+            await this.Gateway.StartAfreshAsync(agentId, roomId, this.cts.Token);
+        }
+        catch (InvalidOperationException ex)
+        {
+            this.Snackbar.Add(ex.Message, Severity.Error, key: "profile-avatar");
+        }
+
+        await this.CloseAsync();
     }
 
     /// <summary>Asks the parent to close.</summary>

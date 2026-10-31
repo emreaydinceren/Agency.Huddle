@@ -626,7 +626,8 @@ public sealed class PromptGoldenTests
     /// Pins <see cref="RoomSession.BuildPrompt"/> for a fresh Room Session's first Turn (RS §6.5):
     /// the Transcript header, the omitted-count line, two Transcript lines, a blank line, then the
     /// triggering Message line. The golden file was written by hand from RS §6.5's sample, not
-    /// seeded from this test's own output.
+    /// seeded from this test's own output. It also guards LR-R2: at the catch-up defaults
+    /// (<c>OmittedOwn</c> zero) the golden is unchanged, so a later change that alters it fails here.
     /// </summary>
     [Fact]
     public void BuildPrompt_FreshTranscript_MatchesGolden()
@@ -649,7 +650,8 @@ public sealed class PromptGoldenTests
     /// <summary>
     /// Pins <see cref="RoomSession.BuildPrompt"/> for a resumed Room Session's first Turn (RS §6.5):
     /// the resumed header, no omitted-count line (<c>Omitted</c> is zero), the Messages posted while
-    /// closed, then the triggering Message line.
+    /// closed, then the triggering Message line. It also guards LR-R2: at the catch-up defaults the
+    /// golden is unchanged, so a later change that alters it fails here.
     /// </summary>
     [Fact]
     public void BuildPrompt_ResumedTranscript_MatchesGolden()

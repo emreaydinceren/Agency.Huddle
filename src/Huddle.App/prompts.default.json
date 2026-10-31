@@ -25,6 +25,7 @@
   "turn.transcriptHeader": "{{roomLabel}} This is a new session for this Room. Its recent Messages, oldest first, including your own:",
   "turn.transcriptResumedHeader": "{{roomLabel}} While this session was closed, these Messages were posted here:",
   "turn.transcriptOmitted": "…{{count}} earlier Messages are not shown.",
+  "turn.transcriptOmittedOwn": "…{{count}} of those are your own.",
   "turn.ownPostLine": "You, from another Room: {{text}}",
   "turn.fileChangesHeader": "Since your last Turn in this Room, these files changed. Read one only if it matters to what you are doing now:",
   "turn.fileAdded": "added {{path}}",

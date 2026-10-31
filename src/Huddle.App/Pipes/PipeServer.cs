@@ -27,6 +27,7 @@ internal sealed class PipeServer : BackgroundService
     private readonly AgentGateway gateway;
     private readonly Drafts drafts;
     private readonly RoomEvents roomEvents;
+    private readonly FreshStartNotes freshStartNotes;
     private readonly ILoggerFactory loggerFactory;
     private readonly ILogger<PipeServer> logger;
 
@@ -38,8 +39,11 @@ internal sealed class PipeServer : BackgroundService
         AgentGateway gateway,
         Drafts drafts,
         RoomEvents roomEvents,
+        FreshStartNotes freshStartNotes,
         ILoggerFactory loggerFactory)
     {
+        ArgumentNullException.ThrowIfNull(freshStartNotes);
+        this.freshStartNotes = freshStartNotes;
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(teamDirectory);
         ArgumentNullException.ThrowIfNull(chat);
@@ -113,6 +117,7 @@ internal sealed class PipeServer : BackgroundService
                 this.gateway,
                 this.drafts,
                 this.roomEvents,
+                this.freshStartNotes,
                 this.loggerFactory.CreateLogger<AgentConnection>());
             _ = connection.RunAsync(stoppingToken);
 

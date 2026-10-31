@@ -697,6 +697,90 @@ public sealed class PipeEndToEndTests
         Assert.False(gateway.IsOnline("no-such-agent"));
     }
 
+    /// <summary>
+    /// <c>StartAfreshAsync</c> writes exactly one <see cref="StartAfresh"/> Envelope to the named Agent's own connection,
+    /// and none to another Agent's connection.
+    /// </summary>
+    [Fact]
+    public async Task StartAfreshAsync_ReachesOnlyTheNamedAgentsConnection()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
+
+        await using var alpha = await fixture.ConnectClientAsync(ct);
+        await alpha.WriteAsync(new Hello("alpha", null), ct);
+        var alphaWelcome = Assert.IsType<Welcome>(await alpha.ReadAsync(ct));
+        var roomId = Assert.Single(alphaWelcome.Rooms).Id;
+
+        await using var beta = await fixture.ConnectClientAsync(ct);
+        await beta.WriteAsync(new Hello("beta", null), ct);
+        var betaWelcome = Assert.IsType<Welcome>(await beta.ReadAsync(ct));
+
+        // The read is started BEFORE the call, for the same named-pipe flush reason as StopTurnAsync_ReachesTheAgentsConnection.
+        var alphaReading = alpha.ReadAsync(ct);
+        await gateway.StartAfreshAsync(alphaWelcome.AgentId, roomId, ct);
+        var afresh = Assert.IsType<StartAfresh>(await alphaReading);
+        Assert.Equal(roomId, afresh.RoomId);
+
+        // Sentinels: the next envelope on each connection must be the StopTurn sent after the call.
+        // A second StartAfresh to alpha, or any StartAfresh to beta, would arrive first and fail the type check.
+        var alphaSentinel = alpha.ReadAsync(ct);
+        await gateway.StopTurnAsync(alphaWelcome.AgentId, roomId, ct);
+        _ = Assert.IsType<StopTurn>(await alphaSentinel);
+
+        var betaSentinel = beta.ReadAsync(ct);
+        await gateway.StopTurnAsync(betaWelcome.AgentId, roomId, ct);
+        _ = Assert.IsType<StopTurn>(await betaSentinel);
+    }
+
+    /// <summary>Starting afresh for an Agent that is not connected is a silent no-op, not an error.</summary>
+    [Fact]
+    public async Task StartAfreshAsync_ForAnOfflineAgent_IsHarmless()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
+
+        await gateway.StartAfreshAsync("no-such-agent", "no-such-room", ct);
+
+        Assert.False(gateway.IsOnline("no-such-agent"));
+    }
+
+    /// <summary>A blank agent id is refused with an <see cref="ArgumentException"/> before any connection is looked up.</summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task StartAfreshAsync_BlankAgentId_Throws(string agentId)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => gateway.StartAfreshAsync(agentId, "some-room", ct));
+    }
+
+    /// <summary>A blank room id is refused with an <see cref="ArgumentException"/> before any connection is looked up.</summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task StartAfreshAsync_BlankRoomId_Throws(string roomId)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => gateway.StartAfreshAsync("some-agent", roomId, ct));
+    }
+
     /// <summary>A Member's <see cref="ToolActivity"/> updates that Message id's Draft and publishes <see cref="RoomEvents.DraftChanged"/>.</summary>
     [Fact]
     public async Task ToolActivity_FromAMember_IsAccepted()

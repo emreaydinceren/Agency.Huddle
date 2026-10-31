@@ -13,15 +13,49 @@ internal sealed class AdapterCatalog
 {
     /// <summary>Builds the catalog from configuration, throwing on a misconfigured profile.</summary>
     /// <param name="options">The bound <see cref="TeamOptions"/>, read once at construction.</param>
-    public AdapterCatalog(IOptions<TeamOptions> options)
+    /// <param name="logger">Receives the un-isolated Claude Warning; optional, so callers without a logger still construct.</param>
+    public AdapterCatalog(IOptions<TeamOptions> options, ILogger<AdapterCatalog>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(options);
 
         AcpOptions acp = options.Value.Acp;
         List<AdapterProfile> profiles = AdapterCatalog.BuildProfiles(acp);
         AdapterCatalog.Validate(profiles);
+        AdapterCatalog.WarnUnisolatedClaude(profiles, logger);
         this.Profiles = profiles;
     }
+
+    /// <summary>
+    /// Logs one Warning for each profile that runs Claude without isolating the Human's user settings.
+    /// </summary>
+    /// <param name="profiles">The built profiles, in configuration order.</param>
+    /// <param name="logger">The logger to write to, or <see langword="null"/> to log nothing.</param>
+    private static void WarnUnisolatedClaude(List<AdapterProfile> profiles, ILogger<AdapterCatalog>? logger)
+    {
+        foreach (AdapterProfile profile in profiles)
+        {
+            if (!profile.IsolateUserSettings && AdapterCatalog.RunsClaude(profile))
+            {
+                logger?.LogWarning(
+                    "Adapter '{AdapterId}' prefixes tool names but does not isolate user settings, so the Human's Claude settings and memory may load into its sessions.",
+                    profile.Id);
+            }
+        }
+    }
+
+    /// <summary>Whether a profile launches Claude, judged by its Command, AdapterPath or any Args entry.</summary>
+    /// <param name="profile">The profile to inspect.</param>
+    /// <returns><see langword="true"/> when one of those names <c>claude-agent-acp</c>.</returns>
+    private static bool RunsClaude(AdapterProfile profile) =>
+        AdapterCatalog.IsClaudeAgent(profile.Command)
+        || AdapterCatalog.IsClaudeAgent(profile.AdapterPath)
+        || (profile.Args is not null && profile.Args.Any(AdapterCatalog.IsClaudeAgent));
+
+    /// <summary>Whether a value names the <c>claude-agent-acp</c> adapter, ignoring case.</summary>
+    /// <param name="value">The text to inspect, or <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> when <paramref name="value"/> contains the adapter name.</returns>
+    private static bool IsClaudeAgent(string? value) =>
+        value is not null && value.Contains("claude-agent-acp", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Every configured Adapter, in configuration order.</summary>
     internal IReadOnlyList<AdapterProfile> Profiles { get; }

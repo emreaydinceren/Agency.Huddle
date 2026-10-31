@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\tests\Huddle.TestAssemblies.props" />
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,15 +7,6 @@
     <AssemblyName>huddle-seed</AssemblyName>
     <NoWarn>$(NoWarn);CA1303</NoWarn>
   </PropertyGroup>
-
-  <ItemGroup>
-    <InternalsVisibleTo Include="Huddle.Tests.Common" />
-    <InternalsVisibleTo Include="Huddle.Tests.Domain" />
-    <InternalsVisibleTo Include="Huddle.Tests.SkillPacks" />
-    <InternalsVisibleTo Include="Huddle.Tests.Components" />
-    <InternalsVisibleTo Include="Huddle.Tests.Agents" />
-    <InternalsVisibleTo Include="Huddle.Tests.Hosted" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Huddle.App\Huddle.App.csproj" />

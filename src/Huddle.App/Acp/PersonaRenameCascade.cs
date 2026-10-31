@@ -55,6 +55,7 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="views">Rewrites a renamed Persona's assignee filter in every saved View — Spec §9.6.</param>
 /// <param name="folderMoves">Signals an Agent-folder move as pending before it starts and settled once it finishes, so <c>DotAcpAgentHostFactory</c> can wait for it instead of racing it — corrections-B2 item 20.</param>
 /// <param name="spend">Moves a renamed Persona's display-only Spend, and forgets a removed Persona's — the Turn detail spec, section 6.6.</param>
+/// <param name="lastCatchUp">Moves a renamed Persona's catch-up records and notes, and deletes a removed Persona's.</param>
 /// <param name="commands">Moves a renamed Persona's offered Adapter commands, and forgets a removed Persona's — the Commands spec, section 6.3.</param>
 internal sealed partial class PersonaRenameCascade(
     ITeamDirectory teamDirectory,
@@ -70,7 +71,8 @@ internal sealed partial class PersonaRenameCascade(
     ViewStore views,
     AgentFolderMoves folderMoves,
     PersonaSpend spend,
-    PersonaCommands commands) : IHostedService, IDisposable
+    PersonaCommands commands,
+    LastCatchUpStore lastCatchUp) : IHostedService, IDisposable
 {
     // The runner it raced against restarts within milliseconds and inherits the Work Dir as its cwd,
     // so a handful of short retries covers the ordinary case (the old process has not yet exited)
@@ -207,6 +209,15 @@ internal sealed partial class PersonaRenameCascade(
         // race-critical Team Directory rename below.
         try
         {
+            lastCatchUp.Rename(renamed.OldName, renamed.NewName);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            LogLastCatchUpMoveFailed(logger, renamed.OldName, renamed.NewName, ex);
+        }
+
+        try
+        {
             roomSessions.Rename(renamed.OldName, renamed.NewName);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -272,6 +283,15 @@ internal sealed partial class PersonaRenameCascade(
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             LogFileStateRemoveFailed(logger, removed.Name, ex);
+        }
+
+        try
+        {
+            lastCatchUp.Remove(removed.Name);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            LogLastCatchUpRemoveFailed(logger, removed.Name, ex);
         }
 
         try
@@ -521,6 +541,14 @@ internal sealed partial class PersonaRenameCascade(
     /// <summary>Logs that deleting a removed Persona's Room Session state failed.</summary>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not remove Room Session state for '{Name}'.")]
     private static partial void LogRoomSessionsRemoveFailed(ILogger logger, string name, Exception exception);
+
+    /// <summary>Logs that moving a renamed Persona's catch-up records failed. The rename proceeds regardless.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not move catch-up records for '{OldName}' to '{NewName}'.")]
+    private static partial void LogLastCatchUpMoveFailed(ILogger logger, string oldName, string newName, Exception exception);
+
+    /// <summary>Logs that deleting a removed Persona's catch-up records failed. The removal proceeds regardless.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not delete catch-up records for '{Name}'.")]
+    private static partial void LogLastCatchUpRemoveFailed(ILogger logger, string name, Exception exception);
 
     /// <summary>Logs that renaming an Agent's Task files failed (Spec §9.6). The Team Directory rename proceeds regardless.</summary>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not rename Task files for '{OldName}' to '{NewName}'.")]
