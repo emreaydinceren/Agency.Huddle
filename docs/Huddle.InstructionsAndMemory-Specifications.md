@@ -481,6 +481,15 @@ The placeholders:
 
 The sentence "Do not claim to remember…" is kept word for word; FC §6.15 says why it is there.
 
+**Writes through the tool are the Agent's own for File Changes.** A `write`, `append`, `replace`
+or `delete` through the `memory` tool is recorded from the tool-call event, as an `Edit`, `Delete`
+or `Move` is (FC §6.8 item 2): the Room Session that saw the call resolves its `folder` and `file`
+with the tool's own rule (`MemoryPaths`) and adds the path to the Turn's touched set. So the Room
+it was saved in does not list it back, and the Agent's other Rooms list it with
+`turn.fileByYouSuffix`. The tool cannot record this itself, because one tool server serves every
+Room Session of the Agent. `claude-agent-acp` reports the call with kind `other` and the prefixed
+tool name as its title, which is what the Room Session matches.
+
 ### 6.2 The Team Memory block: one frame, two role paragraphs
 
 Today `systemPrompt.teamMemory` renders one block from pre-rendered `{{teamMemoryPaths}}` and

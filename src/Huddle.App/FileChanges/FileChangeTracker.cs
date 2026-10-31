@@ -1,6 +1,7 @@
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Teams;
 using Microsoft.Extensions.Options;
 
@@ -18,8 +19,16 @@ internal sealed class FileChangeTracker(
     WatchedFolderResolver resolver,
     IOptions<TeamOptions> options,
     AgentPaths agentPaths,
-    ILogger<FileChangeTracker> logger)
+    ILogger<FileChangeTracker> logger,
+    MemoryPaths? memoryPaths = null)
 {
+    /// <summary>
+    /// Resolves a <c>memory</c> call's <c>folder</c> and <c>file</c> as the tool does, so a Room Session can record the file
+    /// such a call changed as the Agent's own (FC §6.8 item 2, Instructions spec §6.1). The container always supplies it;
+    /// <see langword="null"/> only for a tracker built by hand, where a memory-tool write is then listed back like any other change.
+    /// </summary>
+    internal MemoryPaths? MemoryPaths => memoryPaths;
+
     /// <summary>
     /// Turn start. Scans every Watched Folder and compares each with this Room's baseline. Saves
     /// nothing. With no baseline for <paramref name="roomId"/> yet, the report is empty (F7): this

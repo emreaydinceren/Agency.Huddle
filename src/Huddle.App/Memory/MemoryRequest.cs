@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Agency.Huddle.App.Memory;
@@ -46,6 +47,28 @@ internal sealed record MemoryRequest(
             Read(arguments, "old"),
             Read(arguments, "new"),
             Read(arguments, "version"));
+    }
+
+    /// <summary>Reads a call's arguments from its raw JSON, as an Adapter reports them on a tool-call event.</summary>
+    /// <param name="json">The raw input, or <see langword="null"/>.</param>
+    /// <returns>The request, or <see langword="null"/> when the text is absent, not JSON, or not a JSON object.</returns>
+    public static MemoryRequest? FromJson(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonNode.Parse(json) is JsonObject arguments ? From(arguments) : null;
+        }
+        catch (Exception ex) when (ex is JsonException or ArgumentException)
+        {
+            // Not JSON, or an object with a repeated property (JsonObject rejects it with an ArgumentException when first read):
+            // either way there is no call to read.
+            return null;
+        }
     }
 
     /// <summary>Checks that the command is known and that it has the arguments it cannot do without.</summary>

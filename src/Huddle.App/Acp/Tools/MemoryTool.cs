@@ -45,12 +45,23 @@ internal sealed class MemoryTool(
     /// <summary>The tool's name, without any Adapter prefix.</summary>
     public const string ToolName = "memory";
 
-    private const string OwnFolder = "me";
-
     private static readonly UTF8Encoding Utf8 = new(encoderShouldEmitUTF8Identifier: false);
+
+    private readonly MemoryPaths paths = new(agentPaths, access, options);
 
     /// <inheritdoc />
     public string Name => ToolName;
+
+    /// <summary>Whether <paramref name="name"/> is this tool as offered: the bare name, or the name behind an Adapter's <c>mcp__{server}__</c> prefix.</summary>
+    /// <param name="name">A tool name as offered or as an Adapter reported it.</param>
+    /// <returns><see langword="true"/> for <c>memory</c> and for any name ending <c>__memory</c>.</returns>
+    public static bool IsToolName(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+
+        return string.Equals(name, ToolName, StringComparison.Ordinal)
+            || name.EndsWith("__" + ToolName, StringComparison.Ordinal);
+    }
 
     /// <inheritdoc />
     public string Description => prompts.Render("tool.memory.description");
@@ -84,7 +95,7 @@ internal sealed class MemoryTool(
             return this.Say("systemPrompt.memoryBadCommand", ("problem", problem));
         }
 
-        MemoryFolder? folder = this.ResolveFolder(request.Folder);
+        MemoryFolder? folder = this.paths.ResolveFolder(personaName, request.Folder);
         if (folder is null)
         {
             logger.LogWarning("Refused a memory call from '{Caller}': '{Folder}' is not a folder it may use.", personaName, request.Folder);
@@ -106,7 +117,7 @@ internal sealed class MemoryTool(
     private async Task<string> RunFileCommandAsync(MemoryRequest request, MemoryFolder folder, CancellationToken cancellationToken)
     {
         string file = request.File ?? string.Empty;
-        string? path = MemoryFileRules.IsValidFileName(file) ? SafePath(folder, file) : null;
+        string? path = MemoryPaths.FilePath(folder, file);
         if (path is null)
         {
             logger.LogWarning("Refused a memory call from '{Caller}': '{File}' is not a memory file name.", personaName, file);
@@ -128,49 +139,10 @@ internal sealed class MemoryTool(
         };
     }
 
-    /// <summary>The Teams root folder.</summary>
-    private string TeamsRoot() => Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Teams.Dir));
-
-    /// <summary>
-    /// Resolves the <c>folder</c> argument to exactly one directory, or <see langword="null"/>. A Team and a Project are matched
-    /// ignoring case against the catalog and the path is built from the catalog's spelling, never from the argument.
-    /// </summary>
-    /// <param name="argument">The argument as passed.</param>
-    private MemoryFolder? ResolveFolder(string? argument)
-    {
-        string name = string.IsNullOrWhiteSpace(argument) ? OwnFolder : argument.Trim();
-        if (string.Equals(name, OwnFolder, StringComparison.OrdinalIgnoreCase))
-        {
-            return new MemoryFolder(Path.Combine(agentPaths.WorkDir(personaName), "memory"), OwnFolder, null);
-        }
-
-        string[] parts = name.Split('/');
-        if (parts.Length > 2 || Array.Exists(parts, static part => string.IsNullOrWhiteSpace(part)))
-        {
-            return null;
-        }
-
-        TeamSummary? team = access.Find(parts[0]);
-        if (team is null || !team.HasFolder || !access.CanRead(personaName, team))
-        {
-            return null;
-        }
-
-        if (parts.Length == 1)
-        {
-            return new MemoryFolder(Path.Combine(this.TeamsRoot(), team.Name, "memory"), team.Name, team);
-        }
-
-        string? project = team.Projects.FirstOrDefault(candidate => string.Equals(candidate, parts[1], StringComparison.OrdinalIgnoreCase));
-        return project is null
-            ? null
-            : new MemoryFolder(Path.Combine(this.TeamsRoot(), team.Name, project, "memory"), $"{team.Name}/{project}", team);
-    }
-
     /// <summary>The <c>folder</c> values the caller may use: its own, then each readable Team and each of that Team's Projects.</summary>
     private List<string> UsableFolders()
     {
-        List<string> folders = [OwnFolder];
+        List<string> folders = [MemoryPaths.OwnFolder];
         foreach (TeamSummary team in access.Readable(personaName))
         {
             folders.Add(team.Name);
@@ -178,21 +150,6 @@ internal sealed class MemoryTool(
         }
 
         return folders;
-    }
-
-    /// <summary>
-    /// The full path of <paramref name="file"/> in the folder, or <see langword="null"/> unless it sits directly inside it. A second
-    /// check on top of the file-name rules, not the only one.
-    /// </summary>
-    /// <param name="folder">The resolved folder.</param>
-    /// <param name="file">A file name that passed <see cref="MemoryFileRules.IsValidFileName"/>.</param>
-    private static string? SafePath(MemoryFolder folder, string file)
-    {
-        string full = Path.GetFullPath(Path.Combine(folder.Path, file));
-        string? parent = Path.GetDirectoryName(full);
-        return parent is not null && string.Equals(Path.TrimEndingDirectorySeparator(parent), Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder.Path)), StringComparison.OrdinalIgnoreCase)
-            ? full
-            : null;
     }
 
     /// <summary>The refusal for a change to a Team's Memory by anyone but its manager or the Chief of Staff, else <see langword="null"/>.</summary>

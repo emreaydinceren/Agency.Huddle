@@ -218,7 +218,8 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   [ADR-0023](../adr/0023-an-agent-learns-of-file-changes-on-its-next-turn.md), and FC §8. Six
   gaps are deliberate:
   - **A change made through `Bash`, or any tool call not reported as `Edit`, `Delete` or
-    `Move`, is not attributed to the Agent.** It comes back as an ordinary listed line on the
+    `Move` (other than a `write`, `append`, `replace` or `delete` through the `memory` App Tool,
+    which is attributed), is not attributed to the Agent.** It comes back as an ordinary listed line on the
     Agent's own next Turn, in every Room including the one it was made in. An extra line, never
     a missed change — parsing shell commands for paths risks wrongly claiming another
     Agent's change instead.

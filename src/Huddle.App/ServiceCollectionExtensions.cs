@@ -603,6 +603,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<MemoryFolderGate>();
         services.AddSingleton<MemoryWarnings>();
 
+        // How a memory call's folder and file become a path: File Changes resolves with it to record a memory-tool write as the
+        // Agent's own (Instructions and Memory §6.1).
+        services.AddSingleton<MemoryPaths>();
+
         // Task 4.2.i: stateless apart from its own lock; it reads and writes Personas through the
         // PersonaStore registered earlier and resolves Team spellings from the catalog above.
         services.AddSingleton<ITeamMembership, TeamMembership>();

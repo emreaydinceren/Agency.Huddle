@@ -62,6 +62,9 @@ internal sealed class MemoryToolHarness : IDisposable
     public string TeamMemoryDir(string team, string? project = null) =>
         project is null ? Path.Combine(this.TeamsRoot, team, "memory") : Path.Combine(this.TeamsRoot, team, project, "memory");
 
+    /// <summary>The path resolver over this harness's folders and access rules, the one the tool resolves with.</summary>
+    public MemoryPaths Paths() => new(this.paths, this.Access, this.options);
+
     /// <summary>Builds the tool for a caller.</summary>
     /// <param name="persona">The calling Persona's name.</param>
     public MemoryTool ToolFor(string persona = "Nova") =>

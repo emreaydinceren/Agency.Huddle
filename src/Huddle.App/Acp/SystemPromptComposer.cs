@@ -279,10 +279,7 @@ internal static class SystemPromptComposer
     internal static string FindMemoryTool(IReadOnlyList<string> toolNames)
     {
         ArgumentNullException.ThrowIfNull(toolNames);
-        return toolNames.FirstOrDefault(static name =>
-            string.Equals(name, MemoryTool.ToolName, StringComparison.Ordinal)
-            || name.EndsWith("__" + MemoryTool.ToolName, StringComparison.Ordinal))
-            ?? MemoryTool.ToolName;
+        return toolNames.FirstOrDefault(MemoryTool.IsToolName) ?? MemoryTool.ToolName;
     }
 
     /// <summary>Adds the Memory block, then the Team Memory block, when their snapshots exist.</summary>
