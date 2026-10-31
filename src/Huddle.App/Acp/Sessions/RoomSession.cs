@@ -2285,6 +2285,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             builder.Append('\n');
         }
 
+        if (transcript.OmittedOwn > 0)
+        {
+            builder.Append(prompts.Render(
+                "turn.transcriptOmittedOwn",
+                new Dictionary<string, string> { ["{{count}}"] = transcript.OmittedOwn.ToString(CultureInfo.InvariantCulture) }));
+            builder.Append('\n');
+        }
+
         foreach (var message in transcript.Messages)
         {
             builder.Append(prompts.Render(
