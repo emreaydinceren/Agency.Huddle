@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 1.2 and 1.3 are live checks that need the Human; 1.5.t and 1.5.i run only if 1.3 finds a working route.
 
-**Status:** 33 of 59 tasks Done · 1 of 3 retrospectives done · last updated 2026-10-30.
+**Status:** 33 of 59 tasks Done · 2 of 3 retrospectives done · last updated 2026-10-30.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -51,7 +51,7 @@ never by hand, so the status line stays true.
 | 4.2.i #28 Build the panel [Sonnet] | | | ✔ |
 | 4.3 #29 Configuration docs [Haiku] | | | ✔ |
 | 4.4 #30 The experiment's test page, phase 1 part [Haiku] | | | ✔ |
-| 🔁 R2 Retrospective 2 (tasks 16–30): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
+| 🔁 R2 Retrospective 2 (tasks 16–30): token tally, top-3 agents grepped, plan updated [Opus] | | | ✔ |
 | **D5. Phase 2a: the wire and the runner** | | | |
 | 5.0.t #31 End-to-end: *Start afresh* over the pipe [Sonnet] | | ✔ | |
 | 5.1.t #32 The two Envelopes [Haiku] | | | ✔ |

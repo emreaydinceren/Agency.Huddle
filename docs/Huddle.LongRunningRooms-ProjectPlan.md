@@ -163,6 +163,10 @@ The manager keeps this section; retrospectives add to it.
 | Test helpers | `RecordingLogger<T>` (`AtExactly`) in namespace `Agency.Huddle.Tests.Elicitation`, `tests/Huddle.Tests.Common/Logging/RecordingLogger.cs`; `Eventually.UntilAsync` in `Agency.Huddle.Tests.Waiting`; `TempDataDir.Options(...)`. Retrospective 1 |
 | File-backed stores | `RetryingFileRead.Run` and `RereadKeepingPrevious` in `src/Huddle.App/Watching/RetryingFileRead.cs`; `DebouncedFileWatcher` (fixed 500 ms debounce). Retrospective 1 |
 | CRLF | `agents/scripts/Check-Eol.ps1 -Fix` repairs every changed file at once. Retrospective 1 |
+| Reds hide analyzer errors | Analyzers don't run while a compile error exists, so three frozen reds later failed on CA1859 (twice) and xUnit2029. Before recording a compile-error red, build once against throwaway stubs and fix the test file's analyzer errors. Retrospective 2 |
+| Test namespaces | `TempDataDir` in `Agency.Huddle.Tests`; `MudBunitContext` in `Agency.Huddle.Tests.Ui`; `RoomSessionHarness` in `Agency.Huddle.Tests.Acp.Sessions`; `IAgentSession` in `Agency.Huddle.Acp.Abstractions`. Retrospective 2 |
+| bUnit | Write `Xunit.TestContext.Current` (Bunit has its own `TestContext`); a service a Settings panel injects must be added to `tests/Huddle.Tests.Common/Ui/ServicePresets.cs` or the page tests fail; MudBlazor clears a field's `Error` on blur unless it has `Validation`. Retrospective 2 |
+| Test runs | `-FilterClass` takes several classes in one call (one mutex wait); `.i` tasks run the touched and neighbouring classes, and the full suite runs at batch boundaries, unless the task edits shared test infrastructure or DI. Retrospective 2 |
 
 ---
 
@@ -782,5 +786,5 @@ separator (`N0`).
 | # | Date | Tasks covered | Top findings | What changed |
 | --- | --- | --- | --- | --- |
 | 1 | 2026-10-30 | 1–16 | Agents rediscovered the `-FilterClass` wildcard, implicit usings, helper namespaces and store helpers; a frozen 2.3.t row hid CA1859 behind the compile red and blocked 2.3.i; every agent starts at about 69K from inherited tools; the manager is most of the cost | Six front-load facts added to Delivery facts; 4.4 retagged Haiku; 5.1.t reads the wire rows of `traps.md`; `Check-Eol.ps1 -Fix` named for CRLF instead of a new script |
-| 2 | | 16–30 | | |
+| 2 | 2026-10-30 | 16–30 | Three frozen reds hid analyzer errors behind the compile error and blocked their `.i`; bUnit facts (`TestContext` ambiguity, `ServicePresets`, MudBlazor `Validation`) cost 4.2 eight compile rounds; full-suite runs in every `.i` caused 10–15 minute mutex waits and found nothing new; the manager is still most of the cost | Stub check before a compile-error red; bUnit and namespace facts added; `.i` tasks run touched and neighbouring classes in one call, and the full suite moves to batch boundaries |
 | 3 | | 31–45 | | |
