@@ -368,6 +368,8 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `References:MaxPromptChars` | `2000` | The most characters of item lines in one header. Below `200` is raised to `200`. See [the design](Huddle.AtTagging-Specifications.md) §9.3. |
 | `Acp:Adapters:*:PromptBlocks` | `true` | Whether to send Prompt blocks to an Adapter that advertises it can take them. A kill switch only: `false` for an Adapter that advertises a capability it does not honour; it can never turn blocks on for one that did not advertise. The synthesised legacy profile is `true`. Read at startup. See [ADR-0036](adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md) and [the design](Huddle.PromptBlocks-Specifications.md). |
 
+`{DataDir}/session-settings.json` holds only the Settings › Sessions overrides of `Acp:TranscriptCatchUpMessages` and `Acp:TranscriptCatchUpTokens`. Absent is normal, and Settings › Sessions writes it. It is hand-editable and watched, so an edit applies from the next fresh session without a restart (Spec §5.2, LR-R9, LR-R10).
+
 An installation running `agency-acp`, unverified for resume or for several sessions per process
 (RS Appendix B V-5), sets that Adapter's `SessionPerRoom` to `false` until V-5 passes:
 
