@@ -58,6 +58,8 @@ internal static class ChatPageContext
         ctx.Services.AddSingleton(source.GetRequiredService<ElicitationStore>());
         ctx.Services.AddSingleton(source.GetRequiredService<ElicitationService>());
         ctx.Services.AddSingleton(source.GetRequiredService<Agency.Huddle.App.Teams.ITeamCatalog>());
+        ctx.Services.AddSingleton(source.GetRequiredService<FreshStartNotes>());
+        ctx.Services.AddSingleton(source.GetRequiredService<Agency.Huddle.App.Acp.Sessions.LastCatchUpStore>());
         ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
         ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver());
         ctx.Services.AddSingleton(new TabService());
