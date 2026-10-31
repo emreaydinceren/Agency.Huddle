@@ -115,6 +115,25 @@ public sealed class PersonaRunnerMemoryToolFileChangesTests
         Assert.DoesNotContain(scenario.NotesPath, nextInA, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Every memory call, a <c>read</c> as well as a <c>write</c>, carries the file it names into the lasting tool-call log. The
+    /// Adapter reports no location for an App Tool, so the log used to show the call with empty arguments.
+    /// </summary>
+    /// <param name="command">The memory command.</param>
+    [Theory]
+    [InlineData("read")]
+    [InlineData("write")]
+    public async Task MemoryToolCall_LogsTheFileItNames(string command)
+    {
+        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(30));
+
+        await using Scenario scenario = await Scenario.StartAsync(alsoRoomB: false, cts.Token);
+        await scenario.RunMemoryTurnInRoomAAsync(PrefixedName, MemoryInput(command), mutate: static () => { }, cts.Token);
+
+        Assert.NotNull(scenario.Services.GetRequiredService<ToolCallLogWriter>().FindLatest("nova", scenario.NotesPath));
+    }
+
     /// <summary>A memory call's raw input for <paramref name="command"/> on <c>notes.md</c> in the caller's own folder.</summary>
     /// <param name="command">The command.</param>
     private static string MemoryInput(string command) =>

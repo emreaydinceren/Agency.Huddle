@@ -70,6 +70,7 @@ internal static class PromptCatalog
         ..BuildPart25(),
         ..BuildPart26(),
         ..BuildPart27(),
+        ..BuildPart49(),
         ..BuildPart28(),
         ..BuildPart29(),
         ..BuildPart30(),
@@ -1366,7 +1367,7 @@ internal static class PromptCatalog
             Timing: PromptTiming.Live),
     ];
 
-    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.memory</c> to <c>systemPrompt.memoryEmpty</c>.</summary>
+    /// <summary>Builds one slice of the catalog: <c>systemPrompt.memory</c> alone.</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>
     private static PromptDefinition[] BuildPart27() =>
     [
@@ -1390,7 +1391,10 @@ internal static class PromptCatalog
 
                 Save as you go. When you learn something durable (a decision, a correction, a preference, a fact
                 about the people or work you support), write it to the right topic file at once, not at the end.
-                Assume your context can reset at any moment: what is not written down is lost.
+                Assume your context can reset at any moment: what is not written down is lost. When you
+                propose something (an idea, a plan, an option) and the Human takes it, turns it down or puts it
+                off, note the proposal and their answer in one topic file, and read that file before you
+                propose anything: a proposal you have forgotten making reads as new, and you will make it again.
 
                 One topic per file. Update a fact rather than adding a duplicate, and fix or replace what is no
                 longer true. Delete a file only when the Human asks you to. Give each file a description that
@@ -1398,8 +1402,10 @@ internal static class PromptCatalog
                 for…", "Check before…"), in about 100 to 150 characters, with no facts and nothing sensitive in
                 it. When a file outgrows its description, update the description in the same step.
 
-                Do not save what is true only for this conversation, or what you can easily look up again. If you
-                are unsure, if a conversation runs long, or after a restart, read the relevant files again: your
+                Do not save what is true only for this conversation, or what you can easily look up again. Never
+                save that something is missing, unknown or was never discussed: when you cannot find a fact, say
+                so in your reply and leave your memory as it is, because a later read would take the gap for the
+                truth. If you are unsure, if a conversation runs long, or after a restart, read the relevant files again: your
                 memory is the source of truth over what you think you remember.{{memoryChanges}} Do not claim to
                 remember what is not in your memory or in this conversation. Your memory now holds:
                 {{memoryIndex}}
@@ -1407,7 +1413,12 @@ internal static class PromptCatalog
             Placeholders: ["{{memoryPath}}", "{{memoryIndex}}", "{{memoryTool}}", "{{memoryChanges}}"],
             RequiredPlaceholders: ["{{memoryPath}}", "{{memoryIndex}}"],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.memoryEntry</c> to <c>systemPrompt.memoryEmpty</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart49() =>
+    [
         new PromptDefinition(
             Key: "systemPrompt.memoryEntry",
             Label: "Memory index entry",
