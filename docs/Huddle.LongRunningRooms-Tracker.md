@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 1.2 and 1.3 are live checks that need the Human; 1.5.t and 1.5.i run only if 1.3 finds a working route.
 
-**Status:** 44 of 59 tasks Done · 2 of 3 retrospectives done · last updated 2026-10-31.
+**Status:** 46 of 59 tasks Done · 2 of 3 retrospectives done · last updated 2026-10-31.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -27,7 +27,7 @@ never by hand, so the status line stays true.
 | 1.5.i #8 Apply session retention (conditional on 1.3) [Sonnet] | ✔ | | |
 | **D2. Phase 1: the session settings** | | | |
 | 2.1.t #9 New Catch-up options [Haiku] | | | ✔ |
-| 2.1.i #10 Add the options [Haiku] | | ✔ | |
+| 2.1.i #10 Add the options [Haiku] | | | ✔ |
 | 2.2.t #11 Settings rules [Haiku] | | | ✔ |
 | 2.2.i #12 Implement the rules [Haiku] | | | ✔ |
 | 2.3.t #13 `SessionSettingsStore` [Sonnet] | | | ✔ |
@@ -60,7 +60,7 @@ never by hand, so the status line stays true.
 | 5.2.i #35 Add the gateway call [Haiku] | | | ✔ |
 | 5.3.t #36 The runner routes `StartAfresh` [Sonnet] | | | ✔ |
 | 5.3.i #37 Route it [Sonnet] | | | ✔ |
-| 5.4.t #38 `RoomSession` starts afresh between Turns [Sonnet] | ✔ | | |
+| 5.4.t #38 `RoomSession` starts afresh between Turns [Sonnet] | | ✔ | |
 | 5.4.i #39 Implement the fresh start [Sonnet] | ✔ | | |
 | 5.5.t #40 `LastCatchUpStore` [Sonnet] | | | ✔ |
 | 5.5.i #41 Implement `LastCatchUpStore` [Sonnet] | | | ✔ |
@@ -78,7 +78,7 @@ never by hand, so the status line stays true.
 | 6.3.i #51 Render the note [Sonnet] | | | ✔ |
 | 6.4.t #52 *Start afresh* in the Teammate's popover [Sonnet] | | | ✔ |
 | 6.4.i #53 Build the button [Sonnet] | | | ✔ |
-| 6.5 #54 UI docs [Haiku] | ✔ | | |
+| 6.5 #54 UI docs [Haiku] | | | ✔ |
 | **D7. Close** | | | |
 | 7.1 #55 Reconcile the Spec [Sonnet] | ✔ | | |
 | 7.2 #56 Finish the experiment page [Haiku] | ✔ | | |
