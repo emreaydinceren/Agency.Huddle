@@ -334,7 +334,7 @@ Run [`P-BUILD`](common.md#p-build). This area adds:
 **Before you start**
 
 - A fresh data folder (`--Team:DataDir=C:\seeds\huddle\remote\strict\data`) and the launch command **without** `--Team:Gateway:StrictLocal=false`.
-- This computer's LAN address, such as `192.168.1.20`.
+- This computer's LAN address, such as `192.0.2.20`.
 
 **Steps**
 

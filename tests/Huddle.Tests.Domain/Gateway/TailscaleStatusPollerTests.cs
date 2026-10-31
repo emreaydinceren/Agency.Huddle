@@ -64,7 +64,7 @@ public sealed class TailscaleStatusPollerTests
         Assert.NotNull(snapshot);
         Assert.Equal(TailscaleState.Running, snapshot.Status.State);
         Assert.Equal(TailscaleSamples.DnsName, snapshot.Status.DnsName);
-        Assert.Equal("Emre@Example.com", snapshot.Status.OwnerLogin);
+        Assert.Equal("Ada@example.com", snapshot.Status.OwnerLogin);
         TailscaleServeStatus.Route stray = Assert.Single(snapshot.StrayRoutes);
         Assert.Equal(443, stray.Port);
     }

@@ -1,6 +1,5 @@
 using Agency.Huddle.App.Gateway;
 using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
 
 namespace Agency.Huddle.App.Cli;
 
@@ -46,11 +45,10 @@ internal sealed class DevConsoleAnnouncer(
 
     private void Announce()
     {
-        IServerAddressesFeature? feature = server.Features.Get<IServerAddressesFeature>();
         int? managedPort = gateway?.ManagedEndpoint?.Port;
         IEnumerable<string>? addresses = gateway?.AppUrl is { } appUrl
             ? [appUrl]
-            : feature?.Addresses.Where(address => managedPort is null || !Uri.TryCreate(address, UriKind.Absolute, out Uri? uri) || uri.Port != managedPort);
+            : BoundServerAddresses.Of(server).Where(address => managedPort is null || !Uri.TryCreate(address, UriKind.Absolute, out Uri? uri) || uri.Port != managedPort);
         _ = DevConsole.Announce(addresses, links, output.Writer);
     }
 }

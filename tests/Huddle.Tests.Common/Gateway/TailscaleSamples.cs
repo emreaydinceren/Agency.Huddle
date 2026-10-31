@@ -17,7 +17,7 @@ internal static class TailscaleSamples
                  "TailscaleIPs":["100.101.102.103","fd7a:115c:a1e0::6a01:6667"],"Online":true},
          "MagicDNSSuffix":"tail1234.ts.net",
          "Peer":{},
-         "User":{"1234":{"ID":1234,"LoginName":"Emre@Example.com","DisplayName":"Emre","ProfilePicURL":""}}}
+         "User":{"1234":{"ID":1234,"LoginName":"Ada@example.com","DisplayName":"Ada","ProfilePicURL":""}}}
         """;
 
     /// <summary>A node that has not logged in.</summary>
@@ -29,7 +29,7 @@ internal static class TailscaleSamples
     public const string StatusStopped = """
         {"Version":"1.78.1-t1a2b3c","BackendState":"Stopped","AuthURL":"","TailscaleIPs":null,
          "Self":{"ID":"nABCD1CNTRL","HostName":"desktop-a","DNSName":"desktop-a.tail1234.ts.net.","UserID":1234,"TailscaleIPs":["100.101.102.103"],"Online":false},
-         "Peer":{},"User":{"1234":{"ID":1234,"LoginName":"Emre@Example.com","DisplayName":"Emre"}}}
+         "Peer":{},"User":{"1234":{"ID":1234,"LoginName":"Ada@example.com","DisplayName":"Ada"}}}
         """;
 
     /// <summary>The route Huddle's claim creates: tsPort 5101 to the managed listener on 41233.</summary>

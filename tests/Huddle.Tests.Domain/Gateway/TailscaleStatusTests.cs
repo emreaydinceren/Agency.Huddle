@@ -19,7 +19,7 @@ public sealed class TailscaleStatusTests
         Assert.Equal(TailscaleState.Running, status.State);
         Assert.Equal(TailscaleSamples.DnsName, status.DnsName);
         Assert.Contains(IPAddress.Parse("100.101.102.103"), status.Addresses);
-        Assert.Equal("Emre@Example.com", status.OwnerLogin);
+        Assert.Equal("Ada@example.com", status.OwnerLogin);
     }
 
     /// <summary><c>NeedsLogin</c> is its own state and carries no name.</summary>

@@ -317,7 +317,7 @@ public sealed class RemoteAccessPanelTests : IAsyncDisposable
     [Fact]
     public void Requests_OwnerLogin_IsMarkedYou()
     {
-        this.H.View.TailscaleOwnerLogin = "Ada@Example.com";
+        this.H.View.TailscaleOwnerLogin = "ADA@example.com";
         PairingRequest request = this.H.OpenRequest("iPad", "Managed", "ada@example.com");
         IRenderedComponent<ContainerFragment> cut = this.Render();
 

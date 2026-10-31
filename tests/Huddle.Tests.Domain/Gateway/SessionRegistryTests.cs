@@ -119,7 +119,7 @@ public sealed class SessionRegistryTests : IDisposable
         string cookie = registry.Issue(this.PairDevice().DeviceId, ReadWrite, IngressKindText.Of(IngressKind.Managed), "ada@example.com");
 
         Assert.NotNull(registry.TryGet(cookie, "ada@example.com"));
-        Assert.NotNull(registry.TryGet(cookie, "ADA@Example.com"));
+        Assert.NotNull(registry.TryGet(cookie, "ADA@example.com"));
         Assert.Null(registry.TryGet(cookie, "grace@example.com"));
         Assert.Null(registry.TryGet(cookie, null));
         Assert.Null(registry.TryGet(cookie));

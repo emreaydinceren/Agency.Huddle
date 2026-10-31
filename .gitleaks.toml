@@ -105,4 +105,10 @@ paths = [
   # kind of dummy value (a fake API key, a private IP) in earlier revisions, and the sync's history
   # scan still sees those. Paths, not commits: the sync rewrites every hash before it scans.
   '''(^|/)tests/Huddle\.AnalyzerProbes/Probes/(Secrets|Security|Hazards)\.cs$''',
+  # The remote-access tests exercise the private-address, .local-name and token-shaped inputs the gateway
+  # classifies, so their fixtures must contain such values; every one is a fake. Narrow to the folders that
+  # hold them (plus the one desktop hand-off test that carries a fake bootstrap token). Never docs/ or src/.
+  '''(^|/)tests/Huddle\.Tests\.(Common|Domain|Hosted)/Gateway/.*''',
+  '''(^|/)tests/Huddle\.Tests\.Components/Settings/RemoteAccess/.*''',
+  '''(^|/)tests/Huddle\.Tests\.Domain/Desktop/DesktopHandOffBootstrapTests\.cs$''',
 ]

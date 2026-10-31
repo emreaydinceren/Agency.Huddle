@@ -159,7 +159,7 @@ kept wherever Huddle has no clash.
 
 ```text
  Host browser            Phone on the tailnet                  Phone on the Wi-Fi                Internet (Funnel)
- http://127.0.0.1:5101   https://desktop-a.tail1234.ts.net:5101 http://192.168.1.20:5101          https://…ts.net:443
+ http://127.0.0.1:5101   https://desktop-a.tail1234.ts.net:5101 http://192.0.2.20:5101          https://…ts.net:443
        │                        │                                     │                                 │
        │                 ┌──────▼──────────────┐                      │                 ┌───────────────▼─────────┐
        │                 │ tailscaled (Serve)  │ TLS, identity hdrs,  │                 │ tailscaled (Funnel)     │
@@ -547,7 +547,7 @@ session is Huddle's equivalent of OpenClaw's authenticated socket.
   to the console with `Console.Out`, never through `ILogger`, so the file log never holds it.
 - **Setup links** are Huddle's browser version of OpenClaw's setup codes. **Pair a device** in Settings (admin) mints a
   **limited** bootstrap token and shows it as a QR code and a link for the current address:
-  `https://desktop-a…ts.net:5101/auth#bootstrapToken=…` over Serve, or `http://192.168.1.20:5101/auth#…` on a LAN
+  `https://desktop-a…ts.net:5101/auth#bootstrapToken=…` over Serve, or `http://192.0.2.20:5101/auth#…` on a LAN
   bind. As with OpenClaw's setup codes, a setup link to a non-loopback address must be `https` unless the host is a
   private IP literal, `.local` or `.ts.net`. Redeeming it **opens a pairing request**; it never auto-approves. QR codes
   are rendered with **QRCoder** (MIT) as a PNG data URI.
@@ -864,7 +864,7 @@ OpenClaw's `openclaw security audit` items that apply to Huddle, computed on dem
 | E-2 | Two copies want one Tailscale port | The second reports the ownership conflict and does not take it |
 | E-3 | Browser storage cleared or a private window | A new device: loopback re-pairs automatically; elsewhere it needs approval again; the old device row stays until removed |
 | E-4 | Storage blocked | A page-lifetime identity; every reload is a new device (OpenClaw does the same) |
-| E-5 | The host browser opens `http://192.168.1.20:5101` or the Serve URL | Not loopback: needs approval (OpenClaw: same-host LAN or tailnet counts as remote) |
+| E-5 | The host browser opens `http://192.0.2.20:5101` or the Serve URL | Not loopback: needs approval (OpenClaw: same-host LAN or tailnet counts as remote) |
 | E-6 | A bootstrap URL opened in a second browser after the first redeemed it | Refused; that browser uses the token or `dashboard` |
 | E-7 | A bootstrap URL opened after 10 minutes | Refused; `dashboard` mints another |
 | E-8 | Device approved while its page is closed | Next visit connects with the gateway credential and finds the device paired |
@@ -902,7 +902,7 @@ Phone: https://desktop-a.tail1234.ts.net:5101 → tailscaled TLS, Tailscale-User
 
 ```text
 Settings: Bind lan, port 5101 → restart → firewall prompt → allow Private
-Settings › Pair a device → QR http://192.168.1.20:5101/auth#bootstrapToken=… (limited)
+Settings › Pair a device → QR http://192.0.2.20:5101/auth#bootstrapToken=… (limited)
 iPad scans → handshake with the setup link's bootstrap → PAIRING_REQUIRED → waiting page
 Host: Feed bell "iPad wants to use Huddle" → Approve (Limited) → iPad's poll sees approved → handshake again → in
 ```
@@ -1054,7 +1054,7 @@ row also holds `desktop_port` (§6.2). The gateway and the CLI also read `HUDDLE
 │ │ Restart Huddle to apply: Bind lan → loopback                                           │  │
 │ └────────────────────────────────────────────────────────────────────────────────────────┘  │
 │ Waiting for approval (1)                                                          G10e      │
-│  iPad · Safari  192.168.1.34  LAN (downgraded)  asks Limited  4:31  [Approve ▾] [Reject]    │
+│  iPad · Safari  192.0.2.34  LAN (downgraded)  asks Limited  4:31  [Approve ▾] [Reject]    │
 │ Pair a device                                                                     G10b      │
 │  ██ QR ██  Scan to pair. Works once, for 10 minutes. You will still approve it.  [New link] │
 │ Devices (3)                                                                       G10d      │

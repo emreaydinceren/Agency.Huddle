@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using Agency.Huddle.App.Gateway;
 using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.App.Desktop;
@@ -85,7 +84,7 @@ internal sealed class DesktopLifetimeService(
     private string? FirstUnmanagedAddress()
     {
         int? managedPort = gateway?.ManagedEndpoint?.Port;
-        return server.Features.Get<IServerAddressesFeature>()?.Addresses.FirstOrDefault(
+        return BoundServerAddresses.Of(server).FirstOrDefault(
             address => managedPort is null || !Uri.TryCreate(address, UriKind.Absolute, out Uri? uri) || uri.Port != managedPort);
     }
 

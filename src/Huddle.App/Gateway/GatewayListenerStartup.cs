@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.App.Gateway;
@@ -46,7 +45,8 @@ internal sealed class GatewayListenerStartup(
         listener.ReadBoundEndpoints();
         if (listener.AppUrl is null)
         {
-            string? first = server.Features.Get<IServerAddressesFeature>()?.Addresses.FirstOrDefault(static address => !string.IsNullOrWhiteSpace(address));
+            IReadOnlyList<string> reported = BoundServerAddresses.Of(server);
+            string? first = reported.Count > 0 ? reported[0] : null;
             if (first is not null)
             {
                 listener.RecordApp(first);
