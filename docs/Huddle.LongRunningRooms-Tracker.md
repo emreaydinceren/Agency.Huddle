@@ -11,35 +11,35 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 1.2 and 1.3 are live checks that need the Human; 1.5.t and 1.5.i run only if 1.3 finds a working route.
 
-**Status:** 0 of 59 tasks Done · 0 of 3 retrospectives done · last updated 2026-10-30.
+**Status:** 7 of 59 tasks Done · 0 of 3 retrospectives done · last updated 2026-10-30.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
 | **D0. Setup** | | | |
-| 0.1 #1 Baseline build and test [Haiku] | ✔ | | |
+| 0.1 #1 Baseline build and test [Haiku] | | | ✔ |
 | **D1. Phase 0: retention and isolation** | | | |
-| 1.1.t #2 Warning for an un-isolated prefixed profile [Haiku] | ✔ | | |
-| 1.1.i #3 Log the Warning [Haiku] | ✔ | | |
+| 1.1.t #2 Warning for an un-isolated prefixed profile [Haiku] | | | ✔ |
+| 1.1.i #3 Log the Warning [Haiku] | | ✔ | |
 | 1.2 #4 Live check V0-1: is isolation real? [manual, manager with the Human] | ✔ | | |
 | 1.3 #5 Live check V0-2: can retention be set? [manual, manager with the Human] | ✔ | | |
 | 1.4 #6 Record the phase 0 findings [Haiku] | ✔ | | |
 | 1.5.t #7 Session retention setting (conditional on 1.3) [Sonnet] | ✔ | | |
 | 1.5.i #8 Apply session retention (conditional on 1.3) [Sonnet] | ✔ | | |
 | **D2. Phase 1: the session settings** | | | |
-| 2.1.t #9 New Catch-up options [Haiku] | ✔ | | |
-| 2.1.i #10 Add the options [Haiku] | ✔ | | |
-| 2.2.t #11 Settings rules [Haiku] | ✔ | | |
-| 2.2.i #12 Implement the rules [Haiku] | ✔ | | |
-| 2.3.t #13 `SessionSettingsStore` [Sonnet] | ✔ | | |
+| 2.1.t #9 New Catch-up options [Haiku] | | | ✔ |
+| 2.1.i #10 Add the options [Haiku] | | ✔ | |
+| 2.2.t #11 Settings rules [Haiku] | | | ✔ |
+| 2.2.i #12 Implement the rules [Haiku] | | | ✔ |
+| 2.3.t #13 `SessionSettingsStore` [Sonnet] | | ✔ | |
 | 2.3.i #14 Implement `SessionSettingsStore` [Sonnet] | ✔ | | |
 | **D3. Phase 1: the Catch-up trim** | | | |
-| 3.1.t #15 Token estimate [Haiku] | ✔ | | |
-| 3.1.i #16 Implement the estimate [Haiku] | ✔ | | |
+| 3.1.t #15 Token estimate [Haiku] | | | ✔ |
+| 3.1.i #16 Implement the estimate [Haiku] | | ✔ | |
 | 🔁 R1 Retrospective 1 (tasks 1–15): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
 | 3.2.t #17 The trim [Haiku] | ✔ | | |
 | 3.2.i #18 Implement the trim [Haiku] | ✔ | | |
-| 3.3.t #19 The `turn.transcriptOmittedOwn` prompt [Haiku] | ✔ | | |
-| 3.3.i #20 Add the prompt [Haiku] | ✔ | | |
+| 3.3.t #19 The `turn.transcriptOmittedOwn` prompt [Haiku] | | | ✔ |
+| 3.3.i #20 Add the prompt [Haiku] | | ✔ | |
 | 3.4.t #21 Render the own-omitted line [Sonnet] | ✔ | | |
 | 3.4.i #22 Render it [Sonnet] | ✔ | | |
 | 3.5.t #23 Catch-up reads the settings and trims [Sonnet] | ✔ | | |
