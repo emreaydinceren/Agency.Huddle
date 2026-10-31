@@ -89,8 +89,7 @@ public sealed class TeamMemoryFlowTests
         harness.PassTheWait();
         await harness.CallsAsync(1);
         await Eventually.UntilAsync(() => harness.Status.Get(TeamMemoryHelper.HelperId).LastResult is not null, TestContext.Current.CancellationToken, TestBudgets.Standard);
-        harness.PassTheWait();
-        await harness.CallsAsync(2);
+        await harness.PassTheWaitUntilCallsAsync(2);
         await Eventually.UntilAsync(
             () => harness.Status.Get(TeamMemoryHelper.HelperId).LastResult == "Updated Research/interview-consent.md",
             TestContext.Current.CancellationToken,
