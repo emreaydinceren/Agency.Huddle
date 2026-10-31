@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 1.2 and 1.3 are live checks that need the Human; 1.5.t and 1.5.i run only if 1.3 finds a working route.
 
-**Status:** 16 of 59 tasks Done · 1 of 3 retrospectives done · last updated 2026-10-30.
+**Status:** 17 of 59 tasks Done · 1 of 3 retrospectives done · last updated 2026-10-30.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -41,7 +41,7 @@ never by hand, so the status line stays true.
 | 3.3.t #19 The `turn.transcriptOmittedOwn` prompt [Haiku] | | | ✔ |
 | 3.3.i #20 Add the prompt [Haiku] | | | ✔ |
 | 3.4.t #21 Render the own-omitted line [Sonnet] | | | ✔ |
-| 3.4.i #22 Render it [Sonnet] | | ✔ | |
+| 3.4.i #22 Render it [Sonnet] | | | ✔ |
 | 3.5.t #23 Catch-up reads the settings and trims [Sonnet] | ✔ | | |
 | 3.5.i #24 Wire the settings and the trim [Sonnet] | ✔ | | |
 | **D4. Phase 1: Settings › Sessions** | | | |
@@ -54,7 +54,7 @@ never by hand, so the status line stays true.
 | 🔁 R2 Retrospective 2 (tasks 16–30): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
 | **D5. Phase 2a: the wire and the runner** | | | |
 | 5.0.t #31 End-to-end: *Start afresh* over the pipe [Sonnet] | ✔ | | |
-| 5.1.t #32 The two Envelopes [Haiku] | ✔ | | |
+| 5.1.t #32 The two Envelopes [Haiku] | | ✔ | |
 | 5.1.i #33 Add the Envelopes [Haiku] | ✔ | | |
 | 5.2.t #34 `IAgentGateway.StartAfreshAsync` [Haiku] | ✔ | | |
 | 5.2.i #35 Add the gateway call [Haiku] | ✔ | | |
