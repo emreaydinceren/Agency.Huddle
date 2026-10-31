@@ -69,6 +69,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     // Context meter: the latest context-window fill of this session, shown in the Members panel.
     // Null for a caller that predates it, the same "absent means off" reasoning as turnActivity.
     private readonly ContextFill? contextFill;
+    private readonly ISessionSettings? sessionSettings;
 
     // Spec §6.14: collects the Library documents mentioned in a Turn's Message and Catch-up. Null
     // means the Library is off (PersonaSupervisor is the only place that gate is applied) or this
@@ -162,6 +163,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <param name="elicitationBridge">Shows the Human the questions the agent asks through this session (E-3). <see langword="null"/> answers every one as cancelled, like every caller that predates it.</param>
     /// <param name="references">Builds the Referenced items header for a Message Turn (spec section 9.1). <see langword="null"/> adds no header, like every caller that predates it.</param>
     /// <param name="contextFill">Records how full this session's context window is, for the Members panel's context meter. <see langword="null"/> disables it, like every caller that predates it.</param>
+    /// <param name="sessionSettings">The resolved Session settings the first Turn's Transcript catch-up reads (the Message cap and the token budget). <see langword="null"/> uses the <see cref="AcpOptions"/> values, like every caller that predates it.</param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -184,7 +186,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         bool readsFiles = true,
         IElicitationBridge? elicitationBridge = null,
         ReferenceExpander? references = null,
-        ContextFill? contextFill = null)
+        ContextFill? contextFill = null,
+        ISessionSettings? sessionSettings = null)
     {
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
@@ -213,6 +216,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         this.agentId = agentId;
         this.turnActivity = turnActivity;
         this.contextFill = contextFill;
+        this.sessionSettings = sessionSettings;
         this.libraryDocs = libraryDocs;
         this.references = references;
         this.readsFiles = readsFiles;
@@ -1021,6 +1025,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             this.firstTurnPending = false;
             if (this.RoomId is not null && item.Kind == WorkItemKind.Message && item.TriggerMessageId is { } triggerId)
             {
+                SessionSettings settings = this.sessionSettings?.Current ?? new SessionSettings(this.options.TranscriptCatchUpMessages, this.options.TranscriptCatchUpTokens);
                 TranscriptTail? tail = null;
                 try
                 {
@@ -1028,7 +1033,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
                         item.RoomId,
                         this.resumedOnLastOpen ? this.resumedAfterMessageId : null,
                         triggerId,
-                        this.options.TranscriptCatchUpMessages,
+                        settings.CatchUpMessages,
                         ct).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
@@ -1046,7 +1051,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
                     // through the ordinary catch-up path below.
                     item = item with
                     {
-                        Transcript = new TranscriptCatchUp(this.resumedOnLastOpen, tail.Messages, tail.Omitted),
+                        Transcript = this.BuildCatchUp(tail, settings),
                         OwnPostLines = null,
                     };
                 }
@@ -1055,6 +1060,24 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
 
         return item;
     }
+
+    /// <summary>Trims a Transcript tail to the token budget (LR-R11) and counts what the trim dropped on top of the tail's own omitted count.</summary>
+    /// <param name="tail">The tail the owner returned.</param>
+    /// <param name="settings">The settings snapshot that set the Message cap for this read.</param>
+    /// <returns>The catch-up for the Turn.</returns>
+    private TranscriptCatchUp BuildCatchUp(TranscriptTail tail, SessionSettings settings)
+    {
+        CatchUpTrimResult result = CatchUpTrim.Apply(tail.Messages, this.IsOwn, settings.CatchUpTokens, this.options.CatchUpKeepOwnMessages);
+        return new TranscriptCatchUp(this.resumedOnLastOpen, result.Kept, tail.Omitted + result.Dropped, result.DroppedOwn);
+    }
+
+    /// <summary>Whether <paramref name="message"/> is this Agent's own (C7): by sender id when the session has an agent id, otherwise by Persona name.</summary>
+    /// <param name="message">The Message to test.</param>
+    /// <returns><see langword="true"/> when the Agent posted it.</returns>
+    private bool IsOwn(ChatMessage message) =>
+        this.agentId is { } id
+            ? string.Equals(message.SenderId, id, StringComparison.Ordinal)
+            : string.Equals(message.SenderName, this.owner.PersonaName, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Spec §6.14, corrections-B6 item 7 / B5 item 28: collects the Library documents the Turn's

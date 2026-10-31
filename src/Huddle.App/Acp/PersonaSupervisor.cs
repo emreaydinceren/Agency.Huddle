@@ -41,6 +41,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
     private readonly OwnPosts? ownPosts;
     private readonly TurnActivity? turnActivity;
     private readonly ContextFill? contextFill;
+    private readonly ISessionSettings? sessionSettings;
     private readonly LibraryDocumentCollector? libraryDocs;
     private readonly ReferenceExpander? references;
 
@@ -104,7 +105,8 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
         PersonaCommands? commands = null,
         IElicitationBridge? elicitationBridge = null,
         ReferenceExpander? references = null,
-        ContextFill? contextFill = null)
+        ContextFill? contextFill = null,
+        ISessionSettings? sessionSettings = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(personaStore);
@@ -132,6 +134,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
         this.ownPosts = ownPosts;
         this.turnActivity = turnActivity;
         this.contextFill = contextFill;
+        this.sessionSettings = sessionSettings;
         this.libraryDocs = libraryDocs;
         this.references = references;
         this.spend = spend;
@@ -736,7 +739,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
         // Library reaches every runner as a null collector, the same "absent means off" shape
         // File Changes and every other optional collaborator here already use.
         return new PersonaRunner(
-            persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), plan.Tracker, roomSessions: this.roomSessions, ownPosts: this.ownPosts, turnActivity: this.turnActivity, libraryDocs: this.options.Library.Enabled ? this.libraryDocs : null, readsFiles: plan.ReadsFiles, spend: this.spend, commands: this.commands, elicitationBridge: this.elicitationBridge, references: this.references, contextFill: this.contextFill);
+            persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), plan.Tracker, roomSessions: this.roomSessions, ownPosts: this.ownPosts, turnActivity: this.turnActivity, libraryDocs: this.options.Library.Enabled ? this.libraryDocs : null, readsFiles: plan.ReadsFiles, spend: this.spend, commands: this.commands, elicitationBridge: this.elicitationBridge, references: this.references, contextFill: this.contextFill, sessionSettings: this.sessionSettings);
     }
 
     /// <summary>Reports Starting, then any Degraded warnings, then starts the runner; a start failure is reported Offline and the runner disposed.</summary>

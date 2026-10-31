@@ -41,6 +41,9 @@ internal sealed record RoomSessionHarnessOptions
 
     /// <summary>Whether the agent may read files. <see langword="true"/> unless a test says otherwise.</summary>
     public bool ReadsFiles { get; init; } = true;
+
+    /// <summary>The Session settings the first Turn's catch-up reads, or <see langword="null"/> for none (the <see cref="AcpOptions"/> values apply).</summary>
+    public ISessionSettings? SessionSettings { get; init; }
 }
 
 /// <summary>
@@ -98,7 +101,8 @@ internal sealed class RoomSessionHarness : IAsyncDisposable
             turnActivity: settings.TurnActivity,
             contextFill: settings.ContextFill,
             libraryDocs: settings.LibraryDocs,
-            readsFiles: settings.ReadsFiles);
+            readsFiles: settings.ReadsFiles,
+            sessionSettings: settings.SessionSettings);
         return new RoomSessionHarness(session, runCts);
     }
 

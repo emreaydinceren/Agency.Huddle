@@ -98,6 +98,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     private readonly OwnPosts? ownPosts;
     private readonly TurnActivity? turnActivity;
     private readonly ContextFill? contextFill;
+    private readonly ISessionSettings? sessionSettings;
     private readonly LibraryDocumentCollector? libraryDocs;
     private readonly ReferenceExpander? references;
     private readonly bool readsFiles;
@@ -152,7 +153,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         PersonaCommands? commands = null,
         IElicitationBridge? elicitationBridge = null,
         ReferenceExpander? references = null,
-        ContextFill? contextFill = null)
+        ContextFill? contextFill = null,
+        ISessionSettings? sessionSettings = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(options);
@@ -173,6 +175,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.ownPosts = ownPosts;
         this.turnActivity = turnActivity;
         this.contextFill = contextFill;
+        this.sessionSettings = sessionSettings;
         this.libraryDocs = libraryDocs;
         this.references = references;
         this.readsFiles = readsFiles;
@@ -545,7 +548,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             this.readsFiles,
             this.elicitationBridge,
             this.references,
-            this.contextFill);
+            this.contextFill,
+            this.sessionSettings);
     }
 
     /// <summary>Queues the Greeting for a Chief of Staff with an empty Human Room, at most once per runner lifetime.</summary>

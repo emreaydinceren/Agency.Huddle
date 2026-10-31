@@ -35,6 +35,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     private readonly LibraryDocumentCollector? libraryDocs;
     private readonly ReferenceExpander? references;
     private readonly ContextFill? contextFill;
+    private readonly ISessionSettings? sessionSettings;
     private readonly bool readsFiles;
     private readonly IElicitationBridge? elicitationBridge;
     private readonly bool sessionPerRoom;
@@ -74,6 +75,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// <param name="elicitationBridge">Shows the Human the questions the agent asks (E-3), passed to every Room Session this pool creates. <see langword="null"/> answers every one as cancelled, like every caller that predates it.</param>
     /// <param name="references">Builds the Referenced items header, passed to every Room Session this pool creates. <see langword="null"/> adds no header, like every caller that predates it.</param>
     /// <param name="contextFill">Records each Room Session's context-window fill, passed to every Room Session this pool creates. <see langword="null"/> disables it, like every caller that predates it.</param>
+    /// <param name="sessionSettings">The resolved Session settings passed to every Room Session, for the first Turn's Transcript catch-up. <see langword="null"/> uses the <see cref="AcpOptions"/> values, like every caller that predates it.</param>
     public RoomSessionPool(
         IPersonaHost host,
         IRoomSessionOwner owner,
@@ -93,7 +95,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         bool readsFiles = true,
         IElicitationBridge? elicitationBridge = null,
         ReferenceExpander? references = null,
-        ContextFill? contextFill = null)
+        ContextFill? contextFill = null,
+        ISessionSettings? sessionSettings = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(owner);
@@ -121,6 +124,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         this.libraryDocs = libraryDocs;
         this.references = references;
         this.contextFill = contextFill;
+        this.sessionSettings = sessionSettings;
         this.readsFiles = readsFiles;
         this.elicitationBridge = elicitationBridge;
         this.sessionPerRoom = host.Profile.SessionPerRoom;
@@ -382,7 +386,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             readsFiles: this.readsFiles,
             elicitationBridge: this.elicitationBridge,
             references: this.references,
-            contextFill: this.contextFill);
+            contextFill: this.contextFill,
+            sessionSettings: this.sessionSettings);
 
     private RoomSession GetOrCreateSession(string roomId)
     {
