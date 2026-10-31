@@ -108,8 +108,7 @@ public sealed class RoomSessionConformanceTests
         await PostAndAwaitReplyAsync(chat, roomEvents, room.Id, nova.Id, "hello nova", ct);
         await WaitForStoredEntryAsync(roomSessions, "nova", room.Id, ct);
 
-        time.Advance(TimeSpan.FromMinutes(2));
-        await fixture.Runner.SweepIdleSessionsAsync();
+        await SweepUntilClosedAsync(fixture, time, ct);
 
         JsonObject closeRequest = await fixture.Agent.WaitForAsync("session/close", TimeSpan.FromSeconds(5));
         ct.ThrowIfCancellationRequested();
@@ -142,8 +141,7 @@ public sealed class RoomSessionConformanceTests
         await PostAndAwaitReplyAsync(chat, roomEvents, room.Id, nova.Id, "hello nova", ct);
         RoomSessionEntry firstEntry = await WaitForStoredEntryAsync(roomSessions, "nova", room.Id, ct);
 
-        time.Advance(TimeSpan.FromMinutes(2));
-        await fixture.Runner.SweepIdleSessionsAsync();
+        await SweepUntilClosedAsync(fixture, time, ct);
         await fixture.Agent.WaitForAsync("session/close", TimeSpan.FromSeconds(5));
 
         await PostAndAwaitReplyAsync(chat, roomEvents, room.Id, nova.Id, "still there?", ct);
@@ -178,6 +176,26 @@ public sealed class RoomSessionConformanceTests
         finally
         {
             roomEvents.MessagePosted -= OnMessagePosted;
+        }
+    }
+
+    /// <summary>
+    /// Moves the clock past the idle threshold and sweeps, again and again, until the agent has received <c>session/close</c>,
+    /// as the real 30-second sweep would. The Turn stores its entry before it releases its slot, and the release is what makes
+    /// the session Idle and stamps its last activity; a single sweep made in that gap, or a release stamped after the clock
+    /// moved, closes nothing.
+    /// </summary>
+    private static async Task SweepUntilClosedAsync(MockAdapterFixture fixture, ManualTimeProvider time, CancellationToken ct)
+    {
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
+
+        while (!fixture.Agent.Received.Any(static message => string.Equals((string?)message["method"], "session/close", StringComparison.Ordinal)))
+        {
+            time.Advance(TimeSpan.FromMinutes(2));
+            await fixture.Runner.SweepIdleSessionsAsync();
+            linked.Token.ThrowIfCancellationRequested();
+            await Task.Delay(20, linked.Token);
         }
     }
 

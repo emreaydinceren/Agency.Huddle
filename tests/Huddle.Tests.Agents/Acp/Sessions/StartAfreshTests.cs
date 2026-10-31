@@ -47,7 +47,11 @@ public sealed class StartAfreshTests
         Assert.NotNull(store.Get("nova", "B"));
     }
 
-    /// <summary>A Room with no live session yet has no session created, but its stored entry and context reading are forgotten and the Room is remembered as note-pending (correction D5 row 2).</summary>
+    /// <summary>
+    /// A Room with no live session yet has no session created, but its stored entry and context reading are forgotten and
+    /// the Room is remembered as note-pending (correction D5 row 2). The open is held, so the first Turn cannot send the
+    /// note, and so clear the flag, before it is read.
+    /// </summary>
     [Fact]
     public async Task StartAfreshAsync_RoomWithNoSession_ForgetsStoredStateAndRemembersNotePending()
     {
@@ -58,7 +62,8 @@ public sealed class StartAfreshTests
         store.Put("nova", "C", Entry());
         contextFill.Report(AgentId, "C", used: 500, size: 1000);
         using CancellationTokenSource runCts = new();
-        await using RoomSessionPool pool = CreatePool(sessionPerRoom: true, store, contextFill, runCts.Token);
+        TaskCompletionSource openGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using RoomSessionPool pool = CreatePool(sessionPerRoom: true, store, contextFill, runCts.Token, openGate);
         using CancelOnDispose cancelRun = new(runCts);
 
         await pool.StartAfreshAsync("C", ct);
@@ -127,7 +132,11 @@ public sealed class StartAfreshTests
         Assert.Null(store.Get(TestPersonas.Nova.Name, "room-b"));
     }
 
-    /// <summary>An idle session asked to start afresh disposes its agent session, forgets the stored entry and the context reading, and the next item opens a NEW session (no resume) whose first Turn carries Catch-up (LR-R19, LR-R20).</summary>
+    /// <summary>
+    /// An idle session asked to start afresh disposes its agent session, forgets the stored entry and the context reading,
+    /// and the next item opens a NEW session (no resume) whose first Turn carries Catch-up (LR-R19, LR-R20). The teardown
+    /// runs in the background and forgets only after the dispose, so the wait covers all three.
+    /// </summary>
     [Fact]
     public async Task RequestFreshStart_IdleSession_TearsDownForgetsAndOpensNewWithCatchUp()
     {
@@ -138,7 +147,11 @@ public sealed class StartAfreshTests
 
         await rig.Room.RequestFreshStartAsync(ct);
 
-        await Eventually.UntilAsync(() => rig.First.Disposed, ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(
+            () => rig.First.Disposed && rig.Store.Get("nova", "room-1") is null && rig.ContextFill.Get(AgentId, "room-1") is null,
+            ct,
+            timeout: TestBudgets.Standard);
+        Assert.True(rig.First.Disposed);
         Assert.Null(rig.Store.Get("nova", "room-1"));
         Assert.Null(rig.ContextFill.Get(AgentId, "room-1"));
 
