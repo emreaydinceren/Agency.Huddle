@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 1.2 and 1.3 are live checks that need the Human; 1.5.t and 1.5.i run only if 1.3 finds a working route.
 
-**Status:** 17 of 59 tasks Done · 1 of 3 retrospectives done · last updated 2026-10-30.
+**Status:** 18 of 59 tasks Done · 1 of 3 retrospectives done · last updated 2026-10-30.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -31,7 +31,7 @@ never by hand, so the status line stays true.
 | 2.2.t #11 Settings rules [Haiku] | | | ✔ |
 | 2.2.i #12 Implement the rules [Haiku] | | | ✔ |
 | 2.3.t #13 `SessionSettingsStore` [Sonnet] | | | ✔ |
-| 2.3.i #14 Implement `SessionSettingsStore` [Sonnet] | | ✔ | |
+| 2.3.i #14 Implement `SessionSettingsStore` [Sonnet] | | | ✔ |
 | **D3. Phase 1: the Catch-up trim** | | | |
 | 3.1.t #15 Token estimate [Haiku] | | | ✔ |
 | 3.1.i #16 Implement the estimate [Haiku] | | | ✔ |
