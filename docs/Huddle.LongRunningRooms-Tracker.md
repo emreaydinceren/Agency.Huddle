@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 1.2 and 1.3 are live checks that need the Human; 1.5.t and 1.5.i run only if 1.3 finds a working route.
 
-**Status:** 35 of 59 tasks Done · 2 of 3 retrospectives done · last updated 2026-10-30.
+**Status:** 37 of 59 tasks Done · 2 of 3 retrospectives done · last updated 2026-10-30.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -58,25 +58,25 @@ never by hand, so the status line stays true.
 | 5.1.i #33 Add the Envelopes [Haiku] | | | ✔ |
 | 5.2.t #34 `IAgentGateway.StartAfreshAsync` [Haiku] | | | ✔ |
 | 5.2.i #35 Add the gateway call [Haiku] | | | ✔ |
-| 5.3.t #36 The runner routes `StartAfresh` [Sonnet] | | ✔ | |
-| 5.3.i #37 Route it [Sonnet] | ✔ | | |
+| 5.3.t #36 The runner routes `StartAfresh` [Sonnet] | | | ✔ |
+| 5.3.i #37 Route it [Sonnet] | | ✔ | |
 | 5.4.t #38 `RoomSession` starts afresh between Turns [Sonnet] | ✔ | | |
 | 5.4.i #39 Implement the fresh start [Sonnet] | ✔ | | |
 | 5.5.t #40 `LastCatchUpStore` [Sonnet] | | | ✔ |
 | 5.5.i #41 Implement `LastCatchUpStore` [Sonnet] | | | ✔ |
 | 5.6.t #42 The note and the file after the fresh session's first Turn [Sonnet] | ✔ | | |
 | 5.6.i #43 Send the note, write the file [Sonnet] | ✔ | | |
-| 5.7.t #44 Cleanup on rename, removal and Room delete [Sonnet] | ✔ | | |
+| 5.7.t #44 Cleanup on rename, removal and Room delete [Sonnet] | | ✔ | |
 | 5.7.i #45 Wire the cleanup [Sonnet] | ✔ | | |
 | 🔁 R3 Retrospective 3 (tasks 31–45): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
 | **D6. Phase 2a: server and UI** | | | |
 | 6.1.t #46 The server keeps the note [Sonnet] | | | ✔ |
-| 6.1.i #47 Handle the note [Sonnet] | | ✔ | |
+| 6.1.i #47 Handle the note [Sonnet] | | | ✔ |
 | 6.2.t #48 The note's wording [Haiku] | | | ✔ |
 | 6.2.i #49 Implement the wording [Haiku] | | | ✔ |
 | 6.3.t #50 The note in the Room, and what it reread [Sonnet] | ✔ | | |
 | 6.3.i #51 Render the note [Sonnet] | ✔ | | |
-| 6.4.t #52 *Start afresh* in the Teammate's popover [Sonnet] | ✔ | | |
+| 6.4.t #52 *Start afresh* in the Teammate's popover [Sonnet] | | ✔ | |
 | 6.4.i #53 Build the button [Sonnet] | ✔ | | |
 | 6.5 #54 UI docs [Haiku] | ✔ | | |
 | **D7. Close** | | | |
