@@ -297,7 +297,7 @@ written now so the design is whole, not as a commitment to build them.
 | LR-R23 | Automatic fresh starts MUST be limited to `FreshStarts:MaxPerDay` (default 3) per Room and Agent per local day, counted in the records of §6.7, so a fresh start, which replaces the Room Session, does not reset the count. A trigger past the limit is logged and skipped, never queued. | 2b |
 | LR-R24 | A Turn that is a Human-run Adapter command (`@Nova /compact`) MUST NOT trigger a fresh start: the Human chose compaction. | 2b |
 | LR-R25 | With automatic fresh starts Off, no trigger MUST be evaluated for that Room, so its behaviour is exactly today's. | 2b |
-| LR-R26 | Before a fresh start of a **live** session (the Size, Observed compaction and Turn-count triggers, and *Start afresh*), the session MUST get one memory flush (§6.6) when the `memory` App Tool is offered to the Agent and `FreshStarts:FlushToMemory` is true. At most one flush per fresh start. Its text MUST never be posted, and it MUST NOT count as a Turn failure. | 2b |
+| LR-R26 | Before a fresh start of a **live** session (the Size, Observed compaction and Turn-count triggers and, from phase 2b, *Start afresh*; phase 2a's *Start afresh* has no flush), the session MUST get one memory flush (§6.6) when the `memory` App Tool is offered to the Agent and `FreshStarts:FlushToMemory` is true. At most one flush per fresh start. Its text MUST never be posted, and it MUST NOT count as a Turn failure. | 2b |
 | LR-R27 | A flush that fails, is refused or passes `FreshStarts:FlushTimeoutSeconds` MUST NOT block the fresh start: it is logged, and the Room note says the Teammate could not save first. | 2b |
 | LR-R28 | With automatic fresh starts on, a Room Session MUST be started afresh, not resumed and not flushed, when its next item arrives after `FreshStarts:IdleMinutes` without a Turn **and** its last reported context use was at least `FreshStarts:IdleAboveTokens` above its baseline (LR-R31). | 2b |
 | LR-R29 | Each Room Session's fresh-start count, last reason, the context use at that moment and its time MUST be recorded (§6.7), and the Room note MUST show the count. | 2b |
@@ -834,7 +834,8 @@ it repeating itself or losing track of what you decided.
   choose.
 
 **What a fresh start does:** first the Teammate gets a quiet moment to write anything worth keeping
-into its notebook (nothing is posted in the Room). Then it starts a new session and rereads the
+into its notebook (nothing is posted in the Room; *Start afresh* gains this moment with automatic
+fresh starts, and until then you can ask the Teammate to save to memory first). Then it starts a new session and rereads the
 Room, up to the size set in Settings, skipping most of its own older suggestions. The Room shows a
 note each time, saying why, how many notebook pages were saved and how many fresh starts there have
 been, and you can open it to see exactly what was reread. If a big conversation has sat unused for
