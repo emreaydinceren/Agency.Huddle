@@ -168,9 +168,21 @@ public sealed class AcpOptions
     /// <summary>
     /// The most Messages a Room Session's first Turn carries as Transcript Catch-up (RS §6.5, §6.14):
     /// the latest ones when the session opens fresh, or the ones after its stored <c>LastMessageId</c>
-    /// when it resumes.
+    /// when it resumes. Now the Message cap; Settings may override (LR-R7).
     /// </summary>
     public int TranscriptCatchUpMessages { get; set; } = 20;
+
+    /// <summary>
+    /// The most estimated tokens (3 characters each) a Room Session's first Turn rereads as Transcript
+    /// Catch-up (LR-R7). Settings › Sessions may override it.
+    /// </summary>
+    public int TranscriptCatchUpTokens { get; set; } = 100_000;
+
+    /// <summary>
+    /// The newest own Messages of the Agent that a Catch-up trim keeps (LR-R11), even when older turns are
+    /// dropped to fit the token budget.
+    /// </summary>
+    public int CatchUpKeepOwnMessages { get; set; } = 5;
 
     /// <summary>
     /// The Work Mode ids (ADR-0033) that are never offered in the Agent card and never sent to an
