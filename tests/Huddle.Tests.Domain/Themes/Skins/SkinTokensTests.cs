@@ -246,6 +246,10 @@ public sealed class SkinTokensTests
         Add("editor.text.size", "var(--mud-typography-body2-size)");
         Add("editor.text.leading", "1.75");
         Add("editor.text.ink", "var(--mud-palette-text-primary)");
+        Add("note.prose.ink", "var(--mud-palette-text-primary)");
+        Add("note.heading.weight", "600");
+        Add("note.h1.size", "1.5em");
+        Add("note.h1.tracking", "normal");
         return list;
     }
 }

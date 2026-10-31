@@ -56,7 +56,8 @@
             </MudNavMenu>
         </nav>
 
-        <section class="settings-section">
+        <section class="settings-section" aria-labelledby="settings-section-title">
+            <MudText Typo="Typo.h6" HtmlTag="h2" Class="settings-section-title" id="settings-section-title">@this.CurrentLabel</MudText>
             @switch (this.CurrentTab)
             {
                 case SettingsTab.Prompts:
@@ -142,6 +143,9 @@
     // tab, not just this one. IsDefined turns away a number TryParse would accept, such as "99".
     private SettingsTab CurrentTab =>
         Enum.TryParse<SettingsTab>(this.Tab, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed) ? parsed : SettingsTab.Profile;
+
+    /// <summary>The open section's menu label, which also titles the section.</summary>
+    private string CurrentLabel => Sections.First(section => section.Tab == this.CurrentTab).Label;
 
     /// <summary>The menu's rows, in the order they show: one per <see cref="SettingsTab"/>.</summary>
     private static readonly SettingsSection[] Sections =

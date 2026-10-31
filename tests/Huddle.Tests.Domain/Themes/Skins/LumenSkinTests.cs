@@ -86,4 +86,21 @@ public sealed class LumenSkinTests
             Assert.False(string.Equals(entry.Value, inherited, StringComparison.Ordinal), $"lumen.dark.json repeats the light value of {entry.Key}.");
         }
     }
+
+    /// <summary>
+    /// Lumen's Board lanes are tinted columns with no border, its note h1 is the mockup's 26px over the 16px body, and its
+    /// dark prose sits a step below the heading white (side-by-side audit, 2026-10-30, LL-K02, LL-L01, LD-03).
+    /// </summary>
+    [Fact]
+    public void Lumen_LanesAndNoteReadingMatchTheMockup()
+    {
+        Skin light = Load("lumen-light");
+        Skin dark = Load("lumen-dark");
+
+        Assert.Equal("transparent", light.Tokens["board.column.line"]);
+        Assert.Equal("1.625em", light.Tokens["note.h1.size"]);
+        Assert.Equal("-0.01em", light.Tokens["note.h1.tracking"]);
+        Assert.Equal("#d4d4dc", dark.Tokens["note.prose.ink"]);
+        Assert.Equal("#ececf1", dark.Palette["textPrimary"]);
+    }
 }

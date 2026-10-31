@@ -47,6 +47,9 @@
     "overlayDark": "rgba(0,0,0,0.4)"
   },
   "tokens": {
+    "note.prose.ink": "mix(palette.textPrimary 88%, palette.textSecondary)",
+    "note.h1.size": "1.625em",
+    "note.h1.tracking": "-0.01em",
     "detail.background": "ref(ground.page)",
     "detail.head.line": "ref(line.region)",
     "detail.row.line": "transparent",
@@ -66,6 +69,7 @@
     "list.needs.background": "ref(tone.primary.soft)",
     "list.needs.bar": "palette.primary",
     "list.title.weight": "500",
+    "board.column.line": "transparent",
     "board.needs.background": "ref(tone.primary.tint)",
     "board.needs.line": "mix(palette.primary 28%, palette.surface)",
     "board.needs.halo": "0 0 0 3px ref(tone.primary.soft)",

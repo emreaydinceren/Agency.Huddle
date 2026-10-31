@@ -46,6 +46,9 @@
     "overlayDark": "rgba(6,10,22,0.46)"
   },
   "tokens": {
+    "note.heading.weight": "650",
+    "note.h1.size": "1.875em",
+    "note.h1.tracking": "-0.025em",
     "detail.background": "ref(ground.raised)",
     "detail.edge": "ref(line.control)",
     "detail.head.line": "ref(ink.rule)",

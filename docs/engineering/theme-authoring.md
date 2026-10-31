@@ -103,6 +103,8 @@ The Task pages (the detail panel, the edit page, the Tasks List and Board) read 
 
 The Feed Tab and its filter bar read 27 of them (`feed.*` and `control.*`: card radius, hover and open lines and shadows, the unseen fill, dot, weight and bar, the Cobalt kind bar and detail panel, the Live chip, the read-only note, and the segmented control and select states). Each defaults to the Feed's plain look, so a skin lists only what it changes; `SkinTokens` has the full list and descriptions.
 
+The Library note reads 4 (`note.prose.ink`, `note.heading.weight`, `note.h1.size`, `note.h1.tracking`): how a Theme's headings and prose read. The body size stays the one derived from the scale; Lumen and Fluent set a larger h1, Cobalt Soft a tight heavy one, and the dark Lumen and Fluent skins set their prose a step below the heading white. `SkinContrastPairs` holds the prose ink to 4.5:1 on the page ground.
+
 A token is added to the registry only when two Themes genuinely differ there. A difference that only one Theme wants,
 at some sites, is a [trait](#traits), not a split token.
 
@@ -119,7 +121,7 @@ layout renders it as a `data-hu-<trait>` attribute on `.theme-marker`.
 | `labels` | `sentence`, `upper` |
 | `composer` | `box`, `card`, `underlined` |
 | `nav` | `tint`, `tile`, `bar` |
-| `surface` | `flat`, `paper`, `hairline` |
+| `surface` | `flat`, `paper`, `hairline`, `card` |
 | `marks` | `plain`, `chip` |
 | `reading` | `plain`, `book` |
 | `ids` | `plain`, `mono` |

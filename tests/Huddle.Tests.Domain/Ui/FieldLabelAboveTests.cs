@@ -56,11 +56,11 @@ public sealed partial class FieldLabelAboveTests
         Assert.Equal(value, Declaration(CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), selector, false), property));
     }
 
-    /// <summary>The Top bar's "Tasks need you" pill is markup a style pack shows; app.css hides it for every other Theme.</summary>
+    /// <summary>The Top bar's "Tasks need you" pill shows in every Theme, including the flat-surface ones (Fluent, Cobalt Soft), which used to hide it.</summary>
     [Fact]
-    public void AppCss_TasksNeedYouPill_IsHiddenWithoutAPack()
+    public void AppCss_TasksNeedYouPill_ShowsInEveryTheme()
     {
-        Assert.Equal("none", Declaration(CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), ".tasks-need-you-pill", false), "display"));
+        Assert.Equal("inline-flex", Declaration(CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), ".tasks-need-you-pill", false), "display"));
     }
 
     /// <summary>The value of <paramref name="property"/> in a rule body, or an empty string when it is not declared.</summary>
