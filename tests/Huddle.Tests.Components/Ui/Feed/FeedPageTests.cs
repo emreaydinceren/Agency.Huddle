@@ -117,7 +117,7 @@ public sealed partial class FeedPageTests
 
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
-        Assert.Equal(["All 3", "Needs you 1", "Tasks 2", "Documents 0", "Rooms 0", "Gates 1", "Helpers 0"], Segments(cut));
+        Assert.Equal(["All 3", "Needs you 1", "Tasks 2", "Documents 0", "Rooms 0", "Gates 1", "Helpers 0", "Devices 0"], Segments(cut));
     }
 
     /// <summary>Choosing a Category navigates the Tab to it and keeps the Agent and Team in the address.</summary>
@@ -366,7 +366,7 @@ public sealed partial class FeedPageTests
         Assert.Equal(title, Text(cut.Find(".empty-state-title")));
         Assert.Equal(text, Text(cut.Find(".empty-state-text")));
         Assert.Equal("Feed", Text(cut.Find("h1")));
-        Assert.Equal(7, cut.FindAll(".mud-toggle-item").Count);
+        Assert.Equal(8, cut.FindAll(".mud-toggle-item").Count);
     }
 
     /// <summary>With the Feed turned off the page draws only a plain empty state.</summary>

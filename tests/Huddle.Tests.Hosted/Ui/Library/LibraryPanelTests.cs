@@ -38,7 +38,7 @@ public sealed class LibraryPanelTests
         var cut = ctx.Render<Settings>();
 
         List<string> tabLabels = [.. cut.FindAll(".settings-nav a.mud-nav-link").Select(e => e.TextContent.Trim())];
-        Assert.Equal(["Profile", "Prompts", "Helpers", "Appearance", "Personas", "Skills", "Team types", "Library"], tabLabels);
+        Assert.Equal(["Profile", "Prompts", "Helpers", "Appearance", "Personas", "Skills", "Team types", "Library", "Remote access"], tabLabels);
     }
 
     /// <summary>The roots table lists the two built-ins first, then any pinned root, in

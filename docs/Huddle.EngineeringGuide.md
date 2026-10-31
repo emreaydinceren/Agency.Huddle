@@ -335,6 +335,22 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `Team:Library:MaxUploadBytes` | `26214400` | The largest file attached in the chat (25 MiB), enforced while the bytes stream in. Over it, the chip is refused and the partial file removed. See [ADR-0053](adr/0053-an-upload-is-saved-to-the-library-and-sent-as-its-path.md). |
 | `Team:Library:MaxUploadsPerMessage` | `10` | The most files attached to one Message, matching `MaxReferencedDocuments`. |
 | `Team:Library:Uploads:Dir` | `Uploads` | The Uploads Library Root's folder, a relative name under `DataDir`; an absolute value is not supported (nothing validates it, and it would leave `DataDir`). Created on the first upload, not at start-up. |
+| `AllowedHosts` (root, not under `Team:`) | `localhost;127.0.0.1;[::1]` | ASP.NET Core host filtering. It was `*`; the Phase 0 commit of [Remote access](Huddle.RemoteAccess-Specifications.md) narrowed it. Requests with another `Host` get 400. While Huddle is bound beyond loopback or runs Tailscale Serve, the gateway adds the bound addresses, `{name}.local`, the MagicDNS name, `CustomBindHost` and `Team:Gateway:ExtraHosts` on top (Spec §6.4). The installer sets `localhost;127.0.0.1`. |
+| `Team:Gateway:StrictLocal` | `true` | Only this computer, no sign-in. While on, the gate admits only the loopback ingress (other requests get 403 `strict_local`), the host gets every scope without a session, and Bind, Tailscale and trusted proxies are forced off at startup. A choice saved in Settings › Remote access wins. Turning it on applies at once; turning it off applies after a restart. Tests that exercise sign-in or remote ingress set it to `false`. (Spec §6.5a) |
+| `Team:Gateway:Bind` | `loopback` | `loopback`, `tailnet`, `lan`, `auto` (any address inside a container, loopback elsewhere) or `custom`. Anything but `loopback` is plain HTTP, called downgraded. A choice saved in Settings › Remote access wins; a change applies after a restart. |
+| `Team:Gateway:CustomBindHost` | none | The IP literal `Bind = custom` listens on. |
+| `Team:Gateway:Port` | the app's own port | The port a non-loopback bind uses. An installed copy binds `127.0.0.1:0`, so a non-loopback bind there needs this key; without it Huddle starts loopback-only and says why. |
+| `Team:Gateway:Auth:Mode` | `token` | `token`, `password`, `none` (loopback only; a non-loopback bind with `none` is refused) or `trusted-proxy`. |
+| `Team:Gateway:Auth:Token`, `Auth:Password` | generated token; no password | Environment `HUDDLE_GATEWAY_TOKEN` and `HUDDLE_GATEWAY_PASSWORD` apply when the key is unset; a value saved in Settings applies last. A blank or placeholder value throws at start. |
+| `Team:Gateway:Auth:AllowTailscale` | `true` | Verified Tailscale Serve identity satisfies gateway auth, on routes Huddle created only. |
+| `Team:Gateway:Auth:RateLimit:MaxAttempts`, `WindowSeconds`, `LockoutSeconds`, `ExemptLoopback` | `10`, `60`, `300`, `true` | Failed gateway auth: 10 failures in 60 seconds lock the address out for 5 minutes. Loopback is slowed, not locked out. |
+| `Team:Gateway:AutoApproveLocal` | `true` | A device on loopback pairs without approval. |
+| `Team:Gateway:Tailscale:Mode` | `off` | `off`, `serve` or `funnel`. Funnel is refused unless `Auth:Mode` is `password`. |
+| `Team:Gateway:Tailscale:HttpsPort` | the app's port | The port the `ts.net` address uses. Funnel accepts only 443, 8443 and 10000. |
+| `Team:Gateway:Tailscale:Command` | `tailscale` | The executable, used when `tailscale` is neither on `PATH` nor at the platform default. |
+| `Team:Gateway:TrustedProxies`, `TrustedProxy:UserHeader` | none | Source addresses of an identity-aware proxy and the header carrying its user, for `Auth:Mode = trusted-proxy`. |
+| `Team:Gateway:PublicOrigin`, `AllowedOrigins`, `DangerouslyAllowHostHeaderOriginFallback` | none, none, `false` | The Origin check (Spec §8.7). `AllowedOrigins` defaults to `PublicOrigin`; `*` allows any. The Security check flags the fallback. |
+| `Team:Gateway:ExtraHosts` | none | Further names the host filter and the plain-HTTP rule accept. |
 | `Library:MaxInlineBytes` | `16384` | Per document, the most text inlined for an Adapter without file tools. |
 | `Library:MaxImageBytes` | `3145728` | The most bytes of one image sent to an Adapter as a Prompt block (3 MiB, 4 MiB once base64-encoded). Over it, the image is a path line. Zero or less sends none. |
 | `Library:MaxImagesPerTurn` | `4` | The most image Prompt blocks in one Turn's prompt; the rest stay path lines. |
@@ -423,6 +439,21 @@ and does not. Its keys are log-category prefixes, and a category comes from
 `typeof(T).FullName` — so those read `"Agency.Huddle"`, the namespace root, while
 everything in the table above stays under `Team:`. See
 [Traps](engineering/traps.md) for what a stale `"Team"` key there does silently.
+
+## Remote access command line
+
+The `huddle` verbs run before the web host is built, so they never start the server. An unknown first word (no `-`, no
+`=`) prints the usage and exits 2. The launcher sets `Team__DataDir`; the bare exe does not, so user-facing text says
+`huddle …`. Design: [Remote access](Huddle.RemoteAccess-Specifications.md) §6.13.
+
+- `huddle auth-token --show` prints the effective gateway token; it refuses when standard output is redirected (also
+  true under mintty and Git Bash). `--rotate` replaces the stored token; restart Huddle for it to take effect.
+- `huddle dashboard [--json]` opens the running desktop copy already signed in, or prints the link with `--json`. With
+  no desktop copy running it prints "No desktop copy is running." and exits 1.
+- `huddle devices list`, `approve [REQUEST_ID] [--scope SCOPE …]`, `reject REQUEST_ID`, and
+  `revoke|remove|rotate --device DEVICE_ID`. They read `instance.json` in the data directory, or take
+  `--url http://127.0.0.1:PORT` for a `dotnet run` copy, and authenticate to `/_gateway/*` with the gateway token.
+- `huddle stop` asks the running copy to shut down.
 
 ## Build, test, run
 

@@ -177,7 +177,7 @@ internal sealed class FeedStore
 
         using SqliteDataReader reader = command.ExecuteReader();
         _ = reader.Read();
-        return new FeedCounts(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetInt32(3), reader.GetInt32(4), reader.GetInt32(5), reader.GetInt32(6));
+        return new FeedCounts(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetInt32(3), reader.GetInt32(4), reader.GetInt32(5), reader.GetInt32(6), reader.GetInt32(7));
     }
 
     /// <summary>Applies a batch of commands in order, in one transaction. Called only by <see cref="FeedWriter"/>.</summary>

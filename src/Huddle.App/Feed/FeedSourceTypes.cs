@@ -26,6 +26,10 @@ internal static class FeedSourceTypes
         FeedSourceType.DocumentChanged => "document-changed",
         FeedSourceType.HelperPaused => "helper-paused",
         FeedSourceType.HelperFailing => "helper-failing",
+        FeedSourceType.PairingRequested => "pairing-requested",
+        FeedSourceType.AdminRequested => "admin-requested",
+        FeedSourceType.DevicePaired => "device-paired",
+        FeedSourceType.DeviceRevoked => "device-revoked",
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 

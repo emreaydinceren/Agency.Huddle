@@ -150,6 +150,7 @@ the per-area tables below.
 | [Human gate: the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page](human-gate.md) | [below](#human-gate) |
 | [Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the override, the daily cap and a failing Adapter](helpers.md) | [below](#helpers) |
 | [Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart](feed.md) | [below](#feed) |
+| [Remote access: the connect page, pairing, Tailscale Serve and Funnel, the LAN bind, revocation and the Open action](remote-access.md) | [below](#remote-access) |
 ---
 
 ## at-tagging
@@ -1169,6 +1170,28 @@ Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-it
 | [FEED-15](feed.md#feed-15--a-helpers-gate-change-is-a-notification-with-its-reason-and-the-wake-up-is-huddles) | 💰 | Active |  | not yet run by a person |
 | [FEED-16](feed.md#feed-16--a-helper-that-keeps-failing-reaches-the-feed-and-turning-it-off-clears-it) |  | Active |  | not yet run by a person |
 | [FEED-17](feed.md#feed-17--a-helper-at-its-cap-reaches-the-feed-once-and-continue-clears-it) | 💰 | Active |  | not yet run by a person |
+
+## remote-access
+
+Remote access: the connect page, pairing, Tailscale Serve and Funnel, the LAN bind, revocation and the Open action — [area file](remote-access.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [REMOTE-01](remote-access.md#remote-01--the-installed-app-opens-signed-in-and-a-second-launch-opens-another-signed-in-tab) |  | Active |  | not yet run by a person |
+| [REMOTE-02](remote-access.md#remote-02--a-second-browser-on-the-host-sees-the-connect-page-and-dashboard-and-auth-token-work-as-documented) |  | Active |  | not yet run by a person |
+| [REMOTE-03](remote-access.md#remote-03--tailscale-serve-a-phone-gets-in-with-no-token-and-no-approval-limited-then-asks-for-admin) |  | Active |  | not yet run by a person; needs Tailscale |
+| [REMOTE-04](remote-access.md#remote-04--tailscale-serve-a-shared-tailnet-user-is-marked-and-revoking-disconnects-them) |  | Active |  | not yet run by a person; needs Tailscale |
+| [REMOTE-05](remote-access.md#remote-05--lan-the-qr-setup-link-on-iphone-and-android-with-approval-and-the-downgraded-warnings) |  | Active |  | not yet run by a person |
+| [REMOTE-06](remote-access.md#remote-06--rate-limit-ten-wrong-tokens-lock-a-phone-out-for-five-minutes-and-loopback-is-only-slowed) |  | Active |  | not yet run by a person |
+| [REMOTE-07](remote-access.md#remote-07--revoking-a-phone-with-a-room-streaming-disconnects-it-at-once) |  | Active |  | not yet run by a person |
+| [REMOTE-08](remote-access.md#remote-08--two-copies-on-ports-5101-and-5102-keep-separate-devices-and-no-sign-outs) |  | Active |  | not yet run by a person |
+| [REMOTE-09](remote-access.md#remote-09--a-hand-made-serve-route-is-refused-and-shown-in-the-security-check) |  | Active |  | not yet run by a person; needs Tailscale |
+| [REMOTE-10](remote-access.md#remote-10--funnel-refused-in-token-mode-and-in-password-mode-a-phone-off-the-tailnet-needs-the-password-and-approval) |  | Active |  | not yet run by a person; needs Tailscale |
+| [REMOTE-11](remote-access.md#remote-11--with-remote-access-configured-the-open-action-and-library-open-and-reveal-are-gone) |  | Active |  | not yet run by a person |
+| [REMOTE-12](remote-access.md#remote-12--a-huddle-crash-kills-the-tailscale-child-job-object) |  | Active |  | not yet run by a person; needs Tailscale |
+| [REMOTE-13](remote-access.md#remote-13--killing-the-tailscale-child-removes-the-serve-route) |  | Active |  | not yet run by a person; needs Tailscale |
+| [REMOTE-14](remote-access.md#remote-14--strict-local-default) |  | Active |  | not yet run by a person |
+| [REMOTE-15](remote-access.md#remote-15--turning-strict-local-on-disconnects-remote-devices) |  | Active |  | not yet run by a person; needs a second device |
 
 ---
 

@@ -44,7 +44,7 @@
         </div>
 
         <div class="feed-filter-bar">
-            <HuddleSegmentedControl T="FeedCategory" Value="@this.category" ValueChanged="this.OnCategoryChosen" Class="feed-category-control" ItemCount="7">
+            <HuddleSegmentedControl T="FeedCategory" Value="@this.category" ValueChanged="this.OnCategoryChosen" Class="feed-category-control" ItemCount="8">
                 @foreach (FeedCategory entry in FeedCategories.Order)
                 {
                     <MudToggleItem Value="@entry">@FeedCategories.Label(entry) <span class="@("feed-count" + (entry == FeedCategory.NeedsYou ? " feed-count-needsyou" : string.Empty))">@FeedCategories.CountOf(this.counts, entry)</span></MudToggleItem>

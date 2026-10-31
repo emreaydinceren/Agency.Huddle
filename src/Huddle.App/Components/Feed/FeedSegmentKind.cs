@@ -20,4 +20,7 @@ internal enum FeedSegmentKind
 
     /// <summary>A Helper reference chip, which opens its card on Settings > Helpers.</summary>
     Helper,
+
+    /// <summary>A device reference chip, which opens Settings > Remote access.</summary>
+    Device,
 }

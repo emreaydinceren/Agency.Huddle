@@ -37,6 +37,7 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | See a Room's members, Tasks and files, or a note's outline and links | [The Right sidebar](#the-right-sidebar) |
 | Teach Agents a procedure | [Giving Agents Skills](#giving-agents-skills) |
 | See what Agents remember and which files they changed | [Memory and file changes](#memory-and-file-changes) |
+| Use Huddle from a phone, a tablet or another computer | [Using Huddle from another device](#using-huddle-from-another-device) |
 | Change prompts, Themes, Personas, Skills or Library roots | [Settings](#settings) |
 | Turn a Helper on or off, or change what it may spend | [Helpers](#helpers) |
 | Fix something that went wrong | [Troubleshooting](#troubleshooting) |
@@ -110,6 +111,7 @@ give the page more room. The sidebar opens on **Chats**.
 | **Agents** | A link to the page listing every Agent, grouped by Team. |
 | **Tasks** | Your saved Views of Tasks: **All Tasks**, **My Tasks**, any you saved, and **New view**. Not shown when Tasks are turned off. |
 | **Library** | One **Library** link. The Library's roots (**Teams**, **Agents**, and any folders you pinned) and **Add folder** are on the Library page. Not shown when the Library is turned off. |
+| **Remote access** | Who may reach Huddle from other devices. **Strict local** (on by default) means only this computer, no sign-in; turn it off to use the rest: Bind, Auth and Tailscale, the gateway token, pairing, the Devices list and the Security check. Admin only; a change to Bind or Tailscale applies after a restart. See [Using Huddle from another device](#using-huddle-from-another-device). | `team.db` |
 
 The two buttons at the bottom of the Activity bar are **Archived chats** and **Settings**.
 
@@ -2033,6 +2035,97 @@ A card marked **New** appeared since you last left this tab. **Check for updates
 A Source is one place Skills come from: a GitHub repository, another Git server or a folder on this computer. Your AI tool keeps notes for each Source on how it found and fetched it, so the next update starts from what it learned. Everything here lives in the Skill Sources folder, which you can share with another Huddle. Removing a Source removes its notes and rows, but never the clone itself. Your AI tool reads the install file first; Copy path copies its location.
 
 The tab shows the install file and this computer's name, the Skill Sources folder with **Change…** to choose another, one row per Source and one row per catalog. A Source its owner deprecated, withdrew or moved says so on its row, in words. Withdrawn Skills cannot be given to new hires; Agents who already have them keep working and are flagged.
+## Using Huddle from another device
+
+By default Huddle runs in **Strict local**: only this computer can use it, and there is no sign-in. To use Huddle from
+another device, open **Settings › Remote access**, turn **Strict local** off, save and restart Huddle. Until you do,
+every other device is refused (a browser shows a page titled **Huddle is local only** that says how to allow it), and
+the sections below stay disabled.
+
+Once Strict local is off, you can reach Huddle from a phone, a tablet or another computer in two ways. Tailscale is the
+one to use if you can. The other works on your home network without installing anything.
+
+Every device has to do two things before it gets in: present Huddle's secret (the **gateway token**), and be approved by
+you. Huddle remembers each approved device, so you do this once per device. With Strict local off, the browser on this
+computer is also a device: Huddle's launcher signs it in for you, and another browser on this computer asks for the
+token.
+
+### With Tailscale (recommended)
+
+Tailscale is a free service that links your own devices into a private network, and gives each one an encrypted
+address. Nobody outside your Tailscale account can reach it.
+
+1. Install Tailscale on the computer that runs Huddle and on the phone. Sign in to the same account on both.
+2. In the Tailscale admin page, turn on **MagicDNS** and **HTTPS Certificates** for your network (Tailscale's own
+   documentation shows where).
+3. In Huddle open **Settings › Remote access**. Make sure **Strict local** is off, set **Tailscale** to **Serve** and save.
+4. Restart Huddle. The Gateway card shows a green **Running** chip and a link that ends in `ts.net`. Press **Copy link**.
+5. Open that link on the phone.
+
+Because Tailscale has already checked who you are, the phone gets in without the token and without a prompt. It joins as
+**Limited**: it can read and write in Rooms and Tasks, but **Settings** shows "Settings need admin access" instead of
+its sections.
+
+### Without Tailscale: the local network
+
+You do not need Tailscale when your devices share one network. This costs you three things:
+
+- It works on that network only, not from outside your home.
+- The traffic is **not encrypted**. That is fine at home. Do not use it on shared office or café Wi-Fi. Huddle labels it
+  **downgraded** everywhere it matters.
+- The computer's address can change. Reserve it on your router (a DHCP reservation), or use
+  `http://<computer-name>.local:<port>`.
+
+1. In **Settings › Remote access** make sure **Strict local** is off, set **Bind** to **lan** and save.
+2. Restart Huddle. When Windows or macOS asks about the firewall, allow **Private networks**.
+3. Under **Pair a device** a QR code appears, with a link beneath it. Scan it with the phone's camera, or type the link.
+4. The phone shows "Waiting for approval". On the computer, the request appears under **Waiting for approval**. Press
+   **Approve**. Choose how much access in the menu beside it. You can never grant more than you have.
+5. The phone opens Huddle.
+
+A setup link works once, for 10 minutes, and approval still follows it. Press **New link** for another.
+
+An installed copy of Huddle picks its own port, so before choosing a bind other than loopback, set
+`Team:Gateway:Port` to a fixed port such as `5101`. Without it Huddle starts on this computer only and says why.
+
+### Approving and revoking devices
+
+The **Devices** list shows every approved device: its name, whether it is **Limited** or **Admin**, how it was paired,
+where it last connected from, and when it was last seen. This computer is marked **This device**.
+
+- **Rotate** gives a device a new credential. **Revoke** ends its access at once, even in a Room that is streaming.
+  **Remove** forgets it.
+- A request that arrives through Tailscale from somebody else's account is marked **Shared user**. Check it before you
+  approve it.
+- A request waits 5 minutes. Rejecting one does not ban the device.
+
+### Request admin
+
+A **Limited** device cannot change Settings. Press **Request admin** on the Settings page. The request appears under
+**Waiting for approval** on a device that is already an admin, and the Settings sections open once you approve it.
+
+### The Security check
+
+At the bottom of **Remote access**, the **Security check** lists what is risky about the current setup, each with the
+fix. A **lan** bind is flagged as unencrypted, and **Funnel** (Tailscale's public internet link, which needs a password)
+is flagged as critical. Aim for an empty list.
+
+While remote access is on, **Open** actions and the Library's **Open** and **Reveal** are hidden: they would run on the
+computer from a distant screen.
+
+### If you are locked out
+
+Run these on the computer that runs Huddle, in a plain PowerShell window. `huddle` is the Huddle program.
+
+| To | Run |
+| --- | --- |
+| Read the gateway token | `huddle auth-token --show` (it will not print into a file or pipe) |
+| Replace the token | `huddle auth-token --rotate`, then restart Huddle |
+| Open Huddle on this computer, already signed in | `huddle dashboard` |
+| List devices and waiting requests | `huddle devices list` |
+| Approve or reject a request | `huddle devices approve <request id>` or `huddle devices reject <request id>` |
+| Revoke a device | `huddle devices revoke --device <device id>` |
+
 ## Settings
 
 | Tab | What it changes | Saved to |

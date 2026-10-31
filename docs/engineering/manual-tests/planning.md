@@ -58,6 +58,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 33 | [Human gate: the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page](human-gate.md) | 9 | — | 1.3h |
 | 34 | [Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the override, the daily cap and a failing Adapter](helpers.md) | 8 | 5 | 1.4h |
 | 35 | [Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart](feed.md) | 17 | 4 | 3.1h |
+| 36 | [Remote access: the connect page, pairing, Tailscale Serve and Funnel, the LAN bind, revocation and the Open action](remote-access.md) | 15 | — | 3.0h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.

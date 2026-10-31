@@ -42,7 +42,7 @@
 @using Agency.Huddle.App.Skills
 @using Agency.Huddle.App.TeamTypes
 @using Agency.Huddle.App.Agents
-@using System.Diagnostics
+@using Agency.Huddle.App.Gateway
 @using System.Diagnostics.CodeAnalysis
 @using System.Globalization
 @implements IDisposable
@@ -59,6 +59,8 @@
 @inject AvatarStore Avatars
 @inject SkillStore Skills
 @inject BuiltinAgentReset Reset
+@inject IRemoteAccessState RemoteAccess
+@inject HostActions Host
 @* The avatar editor (AvatarEditorDialog) opens over this card as a second dialog when the avatar is pressed;
    the Avatar Library picker opens over that, from the editor itself. *@
 @inject IDialogService DialogService
@@ -178,7 +180,11 @@
                     <MudButton Href="@($"/rooms/{this.roomId}")" Variant="Variant.Outlined" Size="Size.Small">Message</MudButton>
                 }
                 <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.BeginEditAsync">Edit</MudButton>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.OpenInEditor">Open</MudButton>
+                @* Open launches a process on the machine Huddle runs on, so it is not drawn while remote access is configured (rules.md). *@
+                @if (!this.RemoteAccess.IsConfigured)
+                {
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.OpenInEditor">Open</MudButton>
+                }
                 @* Offered in every state, including Online. It was once offered only while there was
                    "something to fix", on the grounds that a healthy agent needs no button that
                    would restart a session for nothing - but a session is exactly what a NextSession
@@ -2244,31 +2250,30 @@
 
     // Opens a Persona's file in whatever the OS has registered for .md. This launches a process on
     // the SERVER, not the browser (a browser cannot open a local file from an http:// page). It is
-    // deliberately ungated: this app is expected to run on the user's own machine, where "open the
-    // file I'm looking at" on the same machine is unsurprising. If this app were ever hosted for
-    // remote users, this action would need to be removed rather than gated.
+    // While remote access is configured the button is not drawn and HostActions refuses, so a request
+    // reached some other way still launches nothing. The launch itself lives in HostActions, the one
+    // place that starts a process for the Human.
     private void OpenInEditor()
     {
         try
         {
             var path = this.Personas.PathFor(this.name);
-            using var process = Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+            HostActionResult result = this.Host.OpenFile(path);
 
-            // Process.Start returns null - rather than throwing - whenever no new process was
-            // started, which is exactly what happens with UseShellExecute when no application is
-            // registered for the extension. Without this check, that failure is invisible: no
-            // exception, no dialog, no log line, and the line below would even clear a prior error.
-            this.error = process is null
-                ? $"Could not open '{this.name}': no application is registered for .md on this machine."
-                : null;
+            // A failed launch must stay visible: HostActions reports it, and the line below would
+            // otherwise even clear a prior error.
+            if (result.Done)
+            {
+                this.error = null;
+            }
+            else
+            {
+                this.error = result.Error == HostActions.RefusedMessage ? result.Error : $"Could not open '{this.name}': {result.Error}";
+            }
         }
         catch (ChatException ex)
         {
             this.error = ex.Message;
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
-        {
-            this.error = $"Could not open '{this.name}': {ex.Message}";
         }
     }
 

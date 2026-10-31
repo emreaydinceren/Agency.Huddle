@@ -29,6 +29,7 @@
         FeedSegmentKind.Room => this.LinkChip("feed-chip-room", "/rooms/" + segment.TargetId, segment.Text, Icons.Material.Filled.ChatBubbleOutline),
         FeedSegmentKind.Document => this.DocumentChip(segment),
         FeedSegmentKind.Helper => this.LinkChip("feed-chip-helper", FeedTarget.HelperAddress(segment.TargetId ?? string.Empty), segment.Text, Icons.Material.Outlined.Psychology),
+        FeedSegmentKind.Device => this.LinkChip("feed-chip-device", FeedTarget.DevicesAddress, segment.Text, Icons.Material.Outlined.Devices),
         _ => @<text>@segment.Text</text>,
     };
 

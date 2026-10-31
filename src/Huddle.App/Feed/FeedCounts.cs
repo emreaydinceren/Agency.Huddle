@@ -8,4 +8,5 @@ namespace Agency.Huddle.App.Feed;
 /// <param name="Rooms">Items in the Rooms segment.</param>
 /// <param name="Gates">Items in the Gates segment.</param>
 /// <param name="Helpers">Items in the Helpers segment.</param>
-internal sealed record FeedCounts(int All, int NeedsYou, int Tasks, int Documents, int Rooms, int Gates, int Helpers);
+/// <param name="Devices">Items in the Devices segment (zero when a caller builds the counts without it).</param>
+internal sealed record FeedCounts(int All, int NeedsYou, int Tasks, int Documents, int Rooms, int Gates, int Helpers, int Devices = 0);

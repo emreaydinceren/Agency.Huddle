@@ -222,6 +222,7 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Model and Effort](manual-tests/model-effort.md): the pickers, the catalog probe and the runner restart.
 - [Needs You](manual-tests/needs-you.md): the sidebar card of Rooms waiting on the Human.
 - [Feed](manual-tests/feed.md): the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart.
+- [Remote access](manual-tests/remote-access.md): the connect page, pairing, Tailscale Serve and Funnel, the LAN bind, revocation and the Open action.
 - [Right sidebar](manual-tests/right-sidebar.md): the panels by Subject, Outline scrolling, collapse and focus.
 - [Persona lifecycle](manual-tests/persona-lifecycle.md): supervisor, work folders, health and restarts.
 - [The named pipe](manual-tests/pipe-external.md): external agents and the wire.

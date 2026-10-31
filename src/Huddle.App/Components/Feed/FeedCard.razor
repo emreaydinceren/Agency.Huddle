@@ -144,7 +144,8 @@
 
             <FeedRelated Item="this.Group.Lead" ExtraTargets="this.ExtraTargets" />
 
-            @if (this.target.Kind != FeedTargetKind.None)
+            @* A device item has no Open button: its chip already opens Settings > Remote access. *@
+            @if (this.target.Kind is not (FeedTargetKind.None or FeedTargetKind.Device))
             {
                 <div class="feed-card-buttons">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="feed-btn feed-btn-open" OnClick="this.OpenTarget">@this.OpenLabel</MudButton>

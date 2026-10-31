@@ -154,6 +154,26 @@ announced rather than dropped in silence (#45), and that the discard itself stil
 happens. The manual steps are still worth running, because only a real adapter can
 show that the *advertised ladder* changed; what the suite now covers is the wiring.
 
+### Remote access test helpers
+
+The gateway puts every request behind a session, so the hosted tests need a way in
+([Spec](../Huddle.RemoteAccess-Specifications.md) Appendix C).
+
+- **`ConnectedAsAdmin`.** `TeamWebApplicationFactory.ConnectedAsAdmin` defaults to `true` and swaps the internal
+  `IGatewaySessionResolver` for `LoopbackAdminSessionResolver`, a fixed paired loopback admin session for every
+  request, on every client path. Existing hosted tests need no change. A gateway test sets `ConnectedAsAdmin = false`,
+  which uses the real resolver. No configuration key reaches the seam.
+- **`GatewayTestClient`** (`tests/Huddle.Tests.Common/Gateway/`) runs the real connect handshake with a test device key,
+  signing with BouncyCastle, and keeps the session cookie.
+- **`KestrelAppHost`** (same folder) starts the app on real sockets for binds, the managed listener and the WebSocket
+  abort. It binds port 0 through the `urls` setting, never `UseKestrel(port)`, and builds its client from
+  `GatewayListener.AppUrl`. The test that binds an any-address socket carries the `FirewallPrompt` trait, because
+  Windows asks about the firewall on the first one; skip that trait on a machine where the prompt would block a run.
+- **`AuthScriptParityTests`** runs the browser's `auth-core.js` under `node` against the C# payload builder, so it
+  needs `node` on `PATH`; without it the test fails rather than skips.
+- **`Run-Tests.ps1 -FilterClass` needs a wildcard**: `-FilterClass '*GatewayGateTests'`. A bare class name matches
+  nothing and the run reports a pass with zero tests.
+
 ## Manual checklist
 
 The suite covers the agent path end to end through `FakeAgentHostFactory`, so it

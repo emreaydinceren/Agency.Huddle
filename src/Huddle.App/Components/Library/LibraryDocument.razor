@@ -25,6 +25,7 @@
 @inject ISnackbar Snackbar
 @inject DocHistoryStore HistoryStore
 @inject IServiceProvider Services
+@inject Agency.Huddle.App.Gateway.IRemoteAccessState RemoteAccess
 
 <div class="library-document" @ref="this.rootElement">
     <PageSubjectSource Value="@this.Subject" />
@@ -133,7 +134,11 @@
             <div class="library-document-other">
                 <div class="library-document-other-name">@this.FileName()</div>
                 <div class="library-document-other-size">@ByteSize.Format(this.content.Length)</div>
-                <MudButton Size="Size.Small" Class="library-document-open-default" OnClick="@this.OpenInDefaultAppAsync">Open in default app</MudButton>
+                @* Starts a process on the host, so it is not drawn while remote access is configured (Spec 6.15). *@
+                @if (!this.RemoteAccess.IsConfigured)
+                {
+                    <MudButton Size="Size.Small" Class="library-document-open-default" OnClick="@this.OpenInDefaultAppAsync">Open in default app</MudButton>
+                }
             </div>
         }
     }

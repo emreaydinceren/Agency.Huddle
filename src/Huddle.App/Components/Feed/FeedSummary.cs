@@ -38,6 +38,10 @@ internal static class FeedSummary
             HelperFailingPayload p => new(
                 [HelperChip(p.HelperId, p.Name), Text(string.Create(CultureInfo.InvariantCulture, $" failed {p.Failures} times in a row"))],
                 p.LastError.Length > 0 ? p.LastError : null),
+            PairingRequestedPayload p => new([DeviceChip(p.DeviceName), Text(" wants to use Huddle")], null, OmitActor: true),
+            AdminRequestedPayload p => new([DeviceChip(p.DeviceName), Text(" asks for admin access")], null, OmitActor: true),
+            DevicePairedPayload p => new([DeviceChip(p.DeviceName), Text(" was paired")], null, OmitActor: true),
+            DeviceRevokedPayload p => new([DeviceChip(p.DeviceName), Text(DeviceEnded(p.Action))], null, OmitActor: true),
             _ => new([Text("Something happened")], null, OmitActor: true),
         };
     }
@@ -106,10 +110,20 @@ internal static class FeedSummary
             or FeedSourceType.TaskAssignedToYou or FeedSourceType.RequestAwaitsYou or FeedSourceType.GateDecisionDue => "Tasks",
         FeedSourceType.DocumentChanged => "documents",
         FeedSourceType.HelperPaused or FeedSourceType.HelperFailing => "Helpers",
+        FeedSourceType.PairingRequested or FeedSourceType.AdminRequested or FeedSourceType.DevicePaired or FeedSourceType.DeviceRevoked => "devices",
         FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget
             or FeedSourceType.RoomCreated or FeedSourceType.RoomJoined or FeedSourceType.RoomArchived => "Rooms",
         _ => "items",
     };
+
+    private static string DeviceEnded(string action) => action switch
+    {
+        "removed" => " was removed",
+        "rotated" => " got a new token",
+        _ => " was revoked",
+    };
+
+    private static FeedSegment DeviceChip(string name) => new(FeedSegmentKind.Device, name);
 
     private static FeedSummaryLine TaskGate(TaskGatePayload p)
     {

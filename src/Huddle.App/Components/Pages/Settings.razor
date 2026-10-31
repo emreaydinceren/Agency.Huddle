@@ -1,9 +1,12 @@
 @page "/settings"
 @page "/settings/{Tab}"
 @implements IDisposable
+@using Agency.Huddle.App.Gateway
 @using Agency.Huddle.App.Prompts
+@using Microsoft.AspNetCore.Components.Authorization
 @using Agency.Huddle.App.Components.Settings
 @using Agency.Huddle.App.Components.Settings.Helpers
+@using Agency.Huddle.App.Components.Settings.RemoteAccess
 @using Agency.Huddle.App.Skills
 @using Agency.Huddle.App.Skills.Ui
 @using Agency.Huddle.App.SkillSources
@@ -23,6 +26,18 @@
     same Tab.
 *@
 
+@if (this.isAdmin == false)
+{
+    @* Spec 6.8, C-13/C-14: Settings changes what every agent is told and what the gateway allows, so it needs operator.admin. *@
+    <MudContainer MaxWidth="MaxWidth.Large" Class="page-reading settings-page pa-4">
+        <PageHeader Title="Settings" />
+        <MudAlert Severity="Severity.Warning" Dense="true" role="alert">Settings need admin access.</MudAlert>
+        <p class="mt-2">This browser is paired without the admin scope. Ask for it and approve the request from a device that already has it.</p>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Medium" OnClick="this.RequestAdmin">Request admin</MudButton>
+    </MudContainer>
+}
+else if (this.isAdmin == true)
+{
 <MudContainer MaxWidth="MaxWidth.Large" Class="page-reading settings-page pa-4">
     <PageHeader Title="Settings" />
 
@@ -106,6 +121,9 @@
                 case SettingsTab.Library:
                     <LibraryPanel />
                     break;
+                case SettingsTab.RemoteAccess:
+                    <RemoteAccessPanel />
+                    break;
                 default:
                     <ProfilePanel />
                     break;
@@ -113,8 +131,16 @@
         </section>
     </div>
 </MudContainer>
+}
 
 @code {
+    /// <summary>The viewer's authentication state; <see langword="null"/> (no cascading provider) means not admin, so the page fails closed (C-13).</summary>
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    // Null until the authentication state is known, so nothing flashes before the answer.
+    private bool? isAdmin;
+
     // The parent owns all state, the same split Agents.razor uses with AgentProfileCard: PromptsPanel
     // itself holds nothing. pendingEdits is every uncommitted keystroke, keyed by prompt key; groups is
     // rebuilt from it (and from the store) whenever either changes, so a render never has to
@@ -158,6 +184,7 @@
         new(SettingsTab.Skills, "Skills", Icons.Material.Outlined.AutoAwesome),
         new(SettingsTab.TeamTypes, "Team types", Icons.Material.Outlined.AccountTree),
         new(SettingsTab.Library, "Library", Icons.Material.Outlined.FolderOpen),
+        new(SettingsTab.RemoteAccess, "Remote access", Icons.Material.Outlined.Devices),
     ];
 
     // Drives the Save button: nothing to commit means nothing to submit. Recomputed from groups
@@ -177,6 +204,20 @@
         {
             this.Navigation.NavigateTo(SectionHref(SettingsTab.TeamTypes), replace: true);
         }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // No ConfigureAwait(false): the continuation sets component state (rules.md).
+        AuthenticationState? state = this.AuthState is null ? null : await this.AuthState;
+        this.isAdmin = state is not null && state.User.HasClaim(GatewayClaims.Scope, GatewayScopes.Admin);
+    }
+
+    /// <summary>Opens the connect page asking for the admin scope, then returns here (C-14).</summary>
+    private void RequestAdmin()
+    {
+        string back = string.IsNullOrEmpty(this.Tab) ? "/settings" : $"/settings/{this.Tab}";
+        this.Navigation.NavigateTo($"/auth?request=admin&return={back}", forceLoad: true);
     }
 
     protected override void OnInitialized()

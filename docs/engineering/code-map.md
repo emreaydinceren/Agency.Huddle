@@ -595,6 +595,39 @@ Tabs — the open pages in the strip above the content, `docs/Huddle.Tabs-Specif
 | `Circuits/ServerNavigator.cs` | Navigates for a handler that a server event started and skips the call once the browser is gone; `TabSync` and `Chat` use it. |
 | `Circuits/CircuitServiceCollectionExtensions.cs` | `AddCircuitConnection`: registers one scoped tracker as both the handler and the connection. |
 
+`src/Huddle.App/Gateway` — remote access ([Spec](../Huddle.RemoteAccess-Specifications.md)). All types are `internal sealed`:
+
+| Path | Responsibility |
+| --- | --- |
+| `GatewayOptions.cs`, `GatewayAuthOptions.cs`, `AuthRateLimitOptions.cs` | `Team:Gateway:*` (Appendix A) and its defaults. |
+| `GatewaySettings.cs`, `GatewaySettingsStore.cs`, `GatewaySecrets.cs`, `GatewayOverrides.cs` | The token, password and Instance id, the `gateway_settings` row in `team.db` (including `desktop_port`), and the order configuration, environment and stored values win in. |
+| `AuthRateLimiter.cs`, `PreAuthConnectionLimiter.cs` | Failed-auth limits per address and scope, and the cap on unauthenticated connections. |
+| `IngressClassifier.cs`, `IngressResult.cs`, `IngressKind.cs`, `ProxyAttribution.cs` | The one decision of how a request arrived (loopback, managed, direct, trusted proxy). See [Rules](rules.md). |
+| `GatewayGate.cs`, `GatewayApplicationBuilderExtensions.cs`, `GatewayHttpItems.cs`, `GatewaySessionRequirement.cs` | The middleware: origin check, classifier, pre-auth limit, then the session requirement (302 `/auth` or 401). Order is fixed in `Program.cs`. |
+| `GatewayOrigin.cs`, `GatewayPlainHttp.cs` | Spec §8.7 origin rules and §8.8 plain-HTTP rule. |
+| `ConnectEndpoints.cs`, `GatewayConnectService.cs`, `ConnectAuth.cs`, `DeviceAuth.cs`, `ChallengeNonceStore.cs`, `ConnectPage.cs` | `/auth` and the connect handshake: challenge, v3 payload, Ed25519 verify (BouncyCastle), outcome codes. |
+| `DeviceRegistry.cs`, `PairingService.cs`, `PairingPolicy.cs`, `PairingRequest.cs`, `GatewayScopes.cs` | Paired devices, pairing requests, auto-approve rules and scopes. |
+| `SessionRegistry.cs`, `CookieSessionResolver.cs`, `IGatewaySessionResolver.cs`, `GatewayAuthenticationHandler.cs`, `GatewayPrincipal.cs`, `GatewayConnectionGuard.cs` | Sessions, the `HuddleGateway` authentication scheme, and the hub filter that aborts a revoked device's open `/_blazor` connections. |
+| `BootstrapTokenStore.cs`, `BootstrapLinks.cs`, `DesktopPortChoice.cs`, `QrCoderPngEncoder.cs` | Single-use bootstrap tokens, setup links and their QR codes, and the stable desktop port. |
+| `GatewayListener.cs`, `GatewayListenerPlan.cs`, `GatewayKestrelConfigurator.cs`, `GatewayListenerStartup.cs`, `SocketProbe.cs`, `GatewayDynamicHosts.cs` | Which endpoints Kestrel binds, the managed listener, busy-port probing, and the host-filter list. |
+| `TailscaleRuntime.cs`, `TailscaleServeClaim.cs`, `TailscaleStatusPoller.cs`, `TailscaleWhois.cs`, `ProcessTailscaleCli.cs`, `ITailscaleCli.cs`, `ITailscaleChild.cs` | The Tailscale controller: status, the foreground `serve` or `funnel` child (Job object on Windows), whois, stray routes. |
+| `GatewayAdminService.cs`, `GatewayAdminEndpoints.cs`, `GatewayRuntimeView.cs`, `GatewaySecurityCheck.cs` | What Settings and the `devices` verbs call, `/_gateway/*` for the CLI, and the Security check items. |
+
+`src/Huddle.App/Cli` — the `huddle` verbs, run before the web host is built:
+
+| Path | Responsibility |
+| --- | --- |
+| `CliVerbs.cs`, `CliContext.cs`, `ICliConsole.cs`, `SystemCliConsole.cs` | `auth-token`, `dashboard` and the usage text; the seams a test replaces. |
+| `CliDevices.cs` | `devices list`, `approve`, `reject`, `revoke`, `remove`, `rotate` against `/_gateway/*`. |
+| `DevConsole.cs`, `DevConsoleAnnouncer.cs`, `DevConsoleOutput.cs` | The `Huddle is ready: …#bootstrapToken=…` line a development run writes to the console. |
+
+`src/Huddle.App/Components/Settings/RemoteAccess` — Settings › Remote access, `G10` in [wireframes.md](wireframes.md):
+
+| Path | Responsibility |
+| --- | --- |
+| `RemoteAccessPanel.razor` | The section: Gateway card, Waiting for approval, Pair a device, Devices and Security check. Admin only. |
+| `RemoteAccessCopy.cs` | The words the panel shows, kept apart from the markup so tests can pin them. |
+
 `src/Huddle.MockAdapter` — an Adapter this solution builds, assembly `mock-acp`:
 
 Test infrastructure, not a stand-in. It exists so every Huddle-side path has an automated test

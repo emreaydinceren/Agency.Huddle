@@ -55,6 +55,7 @@ internal static class FeedCardText
         FeedSourceType.RoomJoined => new("joined", Icons.Material.Filled.GroupAdd),
         FeedSourceType.RoomArchived => new("archived", Icons.Material.Filled.Archive),
         FeedSourceType.RequestAwaitsYou => new("request", Icons.Material.Filled.Inbox),
+        FeedSourceType.PairingRequested or FeedSourceType.AdminRequested or FeedSourceType.DevicePaired or FeedSourceType.DeviceRevoked => new("device", Icons.Material.Outlined.Devices),
         _ => new("other", Icons.Material.Filled.Circle),
     };
 
@@ -67,6 +68,7 @@ internal static class FeedCardText
         FeedTargetKind.Room => "Rooms",
         FeedTargetKind.Document => "Library",
         FeedTargetKind.Helper => "Helpers",
+        FeedTargetKind.Device => "Devices",
         _ => string.Empty,
     };
 }

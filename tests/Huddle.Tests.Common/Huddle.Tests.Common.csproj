@@ -13,6 +13,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="bunit" />
     <PackageReference Include="Nerdbank.Streams" />
+    <PackageReference Include="BouncyCastle.Cryptography" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
   </ItemGroup>
 
