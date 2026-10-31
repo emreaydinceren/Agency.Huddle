@@ -209,6 +209,34 @@ public sealed class ProtocolJsonTests
         Assert.Equal(stopTurn, result);
     }
 
+    /// <summary>A <c>StartAfresh</c> (Spec §6.1, correction C2) pins the exact wire shape and round-trips through <see cref="ProtocolJson"/>.</summary>
+    [Fact]
+    public void ProtocolJson_RoundTripsStartAfresh()
+    {
+        Agency.Huddle.Contracts.StartAfresh startAfresh = new("room-1");
+
+        string json = ProtocolJson.Serialize(startAfresh);
+
+        Assert.Equal("{\"type\":\"startAfresh\",\"roomId\":\"room-1\",\"version\":3}", json);
+
+        Agency.Huddle.Contracts.StartAfresh result = Assert.IsType<Agency.Huddle.Contracts.StartAfresh>(ProtocolJson.Deserialize(json));
+        Assert.Equal(startAfresh, result);
+    }
+
+    /// <summary>A <c>FreshStartNote</c> (Spec §6.3, correction C2) pins the exact wire shape and round-trips through <see cref="ProtocolJson"/>.</summary>
+    [Fact]
+    public void ProtocolJson_RoundTripsFreshStartNote()
+    {
+        Agency.Huddle.Contracts.FreshStartNote note = new("room-1", "asked", 38, 31000, false);
+
+        string json = ProtocolJson.Serialize(note);
+
+        Assert.Equal("{\"type\":\"freshStartNote\",\"roomId\":\"room-1\",\"reason\":\"asked\",\"messageCount\":38,\"estimatedTokens\":31000,\"readFailed\":false,\"version\":3}", json);
+
+        Agency.Huddle.Contracts.FreshStartNote result = Assert.IsType<Agency.Huddle.Contracts.FreshStartNote>(ProtocolJson.Deserialize(json));
+        Assert.Equal(note, result);
+    }
+
     /// <summary>A hand-written line carrying the retired V2 version number is rejected by the strict version check.</summary>
     [Fact]
     public void ProtocolJson_RejectsAVersionTwoLine()
