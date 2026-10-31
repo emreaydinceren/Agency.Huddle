@@ -28,7 +28,7 @@ entity means to a user, read [the user guide](../docs/Huddle.UserGuide.md).
 > starts Huddle on the seed data and changes nothing else, so Agents use whatever adapter your
 > normal configuration names (add `-NoAcp` to keep paid models from running). `-SeedRoot` points it
 > at a different seed root.
-> `tests/Huddle.Tests.Domain/Seeder/` loads the result through Huddle's own loaders, so it goes red when
+> `tests/Huddle.Tests.Teams/Seeder/` loads the result through Huddle's own loaders, so it goes red when
 > this guide and the app drift apart. A second scenario, `--scenario uat`, builds only two mock-adapter
 > Agents (Ada and Bo) with an empty Room each; the manual-test lane `P-LAUNCH-UAT` uses it, and it exists only
 > when someone asks for it. Use the manual procedure below for a scenario the tool
@@ -72,7 +72,7 @@ the Task ids in the text.
 | `{{team:Growth}}` | `[Growth](/teams/Growth)` | `Team`, key the Team name |
 
 The formats are mirrored from the app's `ReferenceText`, `ReferenceSnapshotter` and
-`ChatUploadService`. `tests/Huddle.Tests.Domain/Seeder/SeedRefreshTests.cs` compares them with the app's own
+`ChatUploadService`. `tests/Huddle.Tests.Teams/Seeder/SeedRefreshTests.cs` compares them with the app's own
 functions and with its snapshotter, so a change in the app turns those tests red.
 
 ## The rules

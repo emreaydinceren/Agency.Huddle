@@ -1,17 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\tests\Huddle.TestAssemblies.props" />
 
   <PropertyGroup>
     <RootNamespace>Agency.Huddle.Contracts</RootNamespace>
     <NoWarn>$(NoWarn);CA1031;CA1848</NoWarn>
   </PropertyGroup>
-
-  <ItemGroup>
-    <InternalsVisibleTo Include="Huddle.Tests.Common" />
-    <InternalsVisibleTo Include="Huddle.Tests.Domain" />
-    <InternalsVisibleTo Include="Huddle.Tests.SkillPacks" />
-    <InternalsVisibleTo Include="Huddle.Tests.Components" />
-    <InternalsVisibleTo Include="Huddle.Tests.Agents" />
-    <InternalsVisibleTo Include="Huddle.Tests.Hosted" />
-  </ItemGroup>
 
 </Project>

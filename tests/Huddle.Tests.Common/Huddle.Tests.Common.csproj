@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\Huddle.TestAssemblies.props" />
 
   <PropertyGroup>
     <RootNamespace>Agency.Huddle.Tests</RootNamespace>
@@ -24,14 +25,6 @@
     <ProjectReference Include="..\..\src\Huddle.Seeder\Huddle.Seeder.csproj" />
     <ProjectReference Include="..\..\src\Huddle.SkillPacks\Huddle.SkillPacks.csproj" />
     <ProjectReference Include="..\..\src\Huddle.Packs\Huddle.Packs.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <InternalsVisibleTo Include="Huddle.Tests.Domain" />
-    <InternalsVisibleTo Include="Huddle.Tests.SkillPacks" />
-    <InternalsVisibleTo Include="Huddle.Tests.Components" />
-    <InternalsVisibleTo Include="Huddle.Tests.Agents" />
-    <InternalsVisibleTo Include="Huddle.Tests.Hosted" />
   </ItemGroup>
 
   <ItemGroup>

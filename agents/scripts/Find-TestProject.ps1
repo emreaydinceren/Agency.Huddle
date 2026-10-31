@@ -51,7 +51,8 @@ $found = [System.Collections.Generic.SortedSet[string]]::new([StringComparer]::O
 if ((Test-Path -LiteralPath $testsDir) -and ($classRegex -or $methodRegex)) {
     foreach ($dir in Get-ChildItem -LiteralPath $testsDir -Directory) {
         foreach ($proj in Get-ChildItem -LiteralPath $dir.FullName -Filter '*.csproj' -File) {
-            if ((Get-Content -LiteralPath $proj.FullName -Raw) -notmatch '<IsTestProject>\s*true\s*</IsTestProject>') {
+            $projText = Get-Content -LiteralPath $proj.FullName -Raw
+            if (($projText -notmatch '<IsTestProject>\s*true\s*</IsTestProject>') -and ($projText -notmatch 'Huddle\.Tests\.Feature\.props')) {
                 continue
             }
             $prefix = $dir.FullName.TrimEnd('\', '/')

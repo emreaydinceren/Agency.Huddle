@@ -79,7 +79,14 @@ public sealed class FooTestsHelper
 }
 '@
 
-    Assert-Case 'class exact' @('-Class', 'FooTests') @('Huddle.Tests.A')
+    # A project that only imports the shared props (no literal IsTestProject) is still a test project.
+    $propsDir = Join-Path $fixtureRoot 'tests/Huddle.Tests.C'
+    New-Item -ItemType Directory -Force -Path $propsDir | Out-Null
+    Set-Content -LiteralPath (Join-Path $propsDir 'Huddle.Tests.C.csproj') -Value '<Project><Import Project="$(MSBuildThisFileDirectory)..\Huddle.Tests.Feature.props" /></Project>'
+    Set-Content -LiteralPath (Join-Path $propsDir 'GammaCheck.cs') -Value 'public sealed class GammaCheck { [Fact] public void G() { } }'
+
+    Assert-Case 'class in props-importing project' @('-Class', 'GammaCheck') @('Huddle.Tests.C')
+    Assert-Case 'class exact'@('-Class', 'FooTests') @('Huddle.Tests.A')
     Assert-Case 'class wildcard prefix' @('-Class', '*FooTests') @('Huddle.Tests.A')
     Assert-Case 'class namespace-qualified' @('-Class', 'Agency.Huddle.Tests.FooTests') @('Huddle.Tests.A')
     Assert-Case 'class wildcard both projects' @('-Class', '*Tests') @('Huddle.Tests.A', 'Huddle.Tests.B')
