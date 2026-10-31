@@ -1,233 +1,271 @@
 # Long-running Rooms: the experiment
 
-**6 tests** · 2 free · 4 paid 💰 · about 5.5 hours. Written 2026-10-30; **not yet run by a person**.
+Run the experiment in [the Long-running Rooms spec §9.1](../../Huddle.LongRunningRooms-Specifications.md#91-the-experiment) on the Chief of Staff's real Room, and record its result here. It answers one question before anything automatic is built: after a fresh start, does the Chief of Staff still know what the Room decided, from its Memory and a reread of the latest Messages, and is it less stuck in a rut than after `/compact`? The result decides phase 2b, the single-session mode (spec §7.3, Q-13) and phase 4 (spec §9 phase table).
 
-Read [the manual test script](../manual-tests.md) first, then [Common procedures](common.md), which defines the procedures this page names. Read [Planning](planning.md) to see where this area sits.
+**5 tests** · 0 free · 5 paid 💰 · about 3.3 hours of hands-on time, spread over at least a week. Written 2026-10-31; **not yet run**. Phases 1 and 2a are not built, so this page uses two stand-ins, set out in [Setup](#setup): a hand edit for *Start afresh*, and a Message cap for the token budget.
 
-## Purpose
-
-Decide, on a real long-running Room, whether the Teammate keeps what matters across a long Transcript, what a fresh start or `/compact` costs in repeats and recall, and whether the memory flush earns its Turn. The answer is the decision in §9.1 step 6 of the spec, and it settles whether phase 2b is built and whether phase 4 is built. The design is [the Long-running Rooms spec §9.1](../../Huddle.LongRunningRooms-Specifications.md#91-the-experiment) and the task is 4.4 of [the project plan](../../Huddle.LongRunningRooms-ProjectPlan.md).
+Read [the manual test script](../manual-tests.md) first, then [Common procedures](common.md), which defines the terminals, procedures and oracles this page names. Both are assumed below.
 
 ## Setup
 
-1. **Scratch install.** Run a scratch install of the app with its own data directory, launched as [Common procedures](common.md) describes for a normal install. The data directory holds a copy of the Chief of Staff's Room, so the Turns below never change the everyday Room.
-2. **Phase 0 V0-1 is not yet run.** V0-1, which keeps Claude Code's own memory out of play, is deferred to user acceptance. Until it passes, note in the Notes column of each result table whether Claude Code's own memory was visible to the Teammate during the test.
-3. **The `memory` App Tool is live.** Confirm it before LRR-02: ask the Teammate to save one fact in a Turn, and check that a topic file is written under its Memory. This is how the Room will really run.
-4. **Default Catch-up.** Unless a step says otherwise, the Catch-up is at its default, `Acp:TranscriptCatchUpTokens` of 100000 estimated tokens, with no override in Settings › Sessions.
-5. **Start afresh, step by step.** Open the Room and click the Teammate's avatar in the Room header. In the popover, click **Start afresh**. The inline confirm asks "Start afresh? {Name} keeps every Message but forgets its working notes for this Room." Click **Start afresh** to confirm, or **Cancel** to stop. The Room then shows the note "{Name} started afresh, as you asked. It reread the last {count} Messages (about {tokens} tokens)." Write down the count and the tokens. Click **See what it reread** and check whether it went past 20 Messages (§9.1 step 3). It can only go past 20 when the Message cap is raised, as LRR-03 does, so record the answer in the Notes column. If the note says "There were no earlier Messages to reread." or "It could not reread the Room." instead, record that text and mark the test Inconclusive.
+These tests deliberately break two habits of the other pages, because they measure the real Room rather than a feature:
 
-## Conventions used in the result tables
+- **They run on the Chief of Staff's own Model and Effort, not Haiku at `low`** ([§0.3](../manual-tests.md#03-the-model-and-effort-convention)). A cheaper model would measure a different Teammate. Expect each first Turn to cost dollars rather than cents.
+- **They run on a copy of your everyday data folder, never on it.** Asking the questions writes their answers into the Room, so a second round in the same Room would reread them. Each round starts from a fresh copy of the same snapshot, so every round sees the same Room and the same Memory, and your real Room is never touched.
 
-- **Recall score**: correct answers out of 10. A correct answer scores 1, a wrong or missing one 0.
-- **Source of each answer**: `memory` when the Teammate read a memory file, or the fact is in the memory index; `reread` when the answer came from the Catch-up reread of the Transcript; `neither` when it came from neither.
-- **First-Turn cost**: the cost shown on the Teammate card after the first Turn that follows a *Start afresh*.
-- **Repeats**: a suggestion counts as a repeat when the Teammate has already made the same suggestion in this Room's Transcript.
+### P-SNAPSHOT
+
+1. Stop your everyday Huddle, so nothing is half-written.
+2. Copy its data folder (call it `<live>`) to a dated snapshot that you never launch:
+
+   ```powershell
+   $snap = "C:\seeds\huddle\lrr\snap-$(Get-Date -Format yyyy-MM-dd)"
+   robocopy <live> $snap /E /NFL /NDL /NJH /NJS
+   ```
+
+3. Restart your everyday Huddle if you want it back. The snapshot is fixed from now on.
+
+### P-ROUND
+
+Run this at the start of every round. It gives the round its own copy of the snapshot.
+
+```powershell
+$run = "C:\seeds\huddle\lrr\run"
+if (Test-Path $run) { Remove-Item -Recurse -Force $run }
+robocopy $snap $run /E /NFL /NDL /NJH /NJS
+```
+
+`<data>` on this page is `$run`.
+
+### P-FRESH-START
+
+The stand-in for *Start afresh* (spec §6.1, phase 2a): the Chief of Staff forgets its session in **this Room only**. Don't use the card's **Restart**, which forgets its sessions in every Room.
+
+1. With the app stopped, open `<data>\room-sessions\<Name>.json`, where `<Name>` is the Chief of Staff's Name (`Chief of Staff` unless you renamed it).
+2. Under `rooms`, delete the one entry whose key is this Room's id, and save. Leave every other entry alone. The Room id is the 32 hex characters after `/rooms/` in the address bar.
+3. Launch with [P-LAUNCH-LRR](#p-launch-lrr-).
+
+The next Message in the Room opens a new session, and its first Turn rereads the latest Messages (the Catch-up), exactly as *Start afresh* will. There is no Room note yet, so use the oracles below to see what was reread.
+
+### P-LAUNCH-LRR 💰
+
+Like [`P-LAUNCH-PAID`](common.md#p-launch-paid-) but on `$run`, with the Chief of Staff's own Model, and with an optional Catch-up cap (`$cap`, default 20):
+
+```powershell
+Remove-Item Env:ANTHROPIC_API_KEY -ErrorAction SilentlyContinue
+Remove-Item Env:TEAM_E2E -ErrorAction SilentlyContinue
+$env:Team__Acp__Enabled     = 'true'
+$env:Team__Acp__TokenBudget = '2000000'   # a ceiling, so a long reread is not cut off mid-round
+dotnet run --project src/Huddle.App --urls http://localhost:5100 `
+  "--Team:DataDir=$run" `
+  "--Team:Acp:TranscriptCatchUpMessages=$(if ($cap) { $cap } else { 20 })"
+```
+
+Post nothing in any other Room while a round runs, so the Spend on the Chief of Staff's card is this Room's alone.
+
+### Oracles for what a fresh start reread
+
+| Oracle | What it tells you |
+| --- | --- |
+| **Spend** on the Chief of Staff's card, read right after its first answer | The first Turn's cost. Spend starts at zero at every launch ([TURNDETAIL-02](turn-detail.md#turndetail-02--spend-is-the-adapters-running-total-across-two-turns)), and P-FRESH-START always relaunches |
+| `contextUsed` in `<data>\room-sessions\<Name>.json`, this Room's entry, after the first answer | How many tokens the new session holds. A bigger reread shows up here |
+| [`O-TOOLCALLS`](common.md#o-toolcalls) for `<Name>` | Whether an answer came from Memory: a `memory` view or a read of a file under `<data>\Agents\<Name>\work\memory\` |
+| The `systemPrompt.memory` index | A fact listed in the index at session start counts as "from Memory" even without a read |
+
+### The 40,000-token cap
+
+Phase 1's token budget does not exist yet. Stand in for it with the Message cap that 40,000 tokens buys in this Room, counted the way phase 1 will count (spec §5, plan correction C5: `ceil((SenderName.Length + 2 + Text.Length) / 3)` per Message, newest first):
+
+```powershell
+$lines = Get-Content "$snap\rooms\<RoomId>.jsonl"
+$sum = 0; $cap = 0
+for ($i = $lines.Count - 1; $i -ge 0; $i--) {
+    $m = $lines[$i] | ConvertFrom-Json
+    $sum += [math]::Ceiling(($m.senderName.Length + 2 + $m.text.Length) / 3)
+    if ($sum -gt 40000) { break }
+    $cap++
+}
+"Cap for 40,000 tokens: $cap Messages"
+```
+
+If `$cap` comes out at 20 or below, this Room's latest Messages are already over 40,000 tokens and LONGROOMS-03 measures nothing new: record that and skip it.
 
 ## Tests
 
-### LRR-01 — Ten recall facts are picked from the Transcript
+### LONGROOMS-01 — Claude Code's own memory stays off for the Chief of Staff
 
-**Free** · about 20 min
+**Paid 💰** · about 10 min
 
-*Fixes the ten questions and their correct answers before any scoring, so the score cannot be chosen after the answers are known.*
-
-**Before you start**
-
-- The Room has more than 20 Messages.
-
-**Steps**
-
-1. Open the Transcript and count back 20 Messages from the newest.
-2. Pick 10 facts or decisions from Messages older than those 20.
-3. For each, write the question and the correct answer, quoting the answer from its Message.
-4. Record the Message id of each in the table below.
-
-**Pass if — all of these**
-
-- The table has 10 rows, each with a question, a quoted answer and a Message id.
-- No Message id is among the 20 newest Messages.
-
-| # | Question | Correct answer (quoted) | Message id |
-| --- | --- | --- | --- |
-| 1 |  |  |  |
-| 2 |  |  |  |
-| 3 |  |  |  |
-| 4 |  |  |  |
-| 5 |  |  |  |
-| 6 |  |  |  |
-| 7 |  |  |  |
-| 8 |  |  |  |
-| 9 |  |  |  |
-| 10 |  |  |  |
-
-### LRR-02 — The default Catch-up after a fresh start is scored
-
-**Paid** 💰 · about 45 min
-
-*Proves the recall score at the default Catch-up, which is the baseline for LRR-03.*
+*The part of check V0-1 (spec §4.2) that this experiment depends on. Claude Code keeps an auto memory of its own per Work Dir that survives a fresh start. If it is on, the recall scores below measure Claude Code's memory rather than Huddle's. Huddle sends `autoMemoryEnabled: false` (`DotAcpAgentHostFactory.cs:493`); this proves it holds. Whether repository `CLAUDE.md` files reach a Persona is [INSTRMEM-07](instructions-memory.md#instrmem-07--spike-s-1-whether-claude-code-loads-the-repository-claude-files-into-a-persona), not this test.*
 
 **Before you start**
 
-- LRR-01 is done and the `memory` App Tool is live (Setup, steps 1 to 3).
-- This test needs *Start afresh*, done as Setup, step 5 describes.
+- P-SNAPSHOT, P-ROUND, P-LAUNCH-LRR. The Chief of Staff is **Online**.
+- List `%USERPROFILE%\.claude\projects\`. Claude Code names each folder after a working folder, with every character that is not a letter or digit turned into `-`. Note whether a folder for `<data>\Agents\<Name>\work` exists, and whether it holds `memory\`.
 
 **Steps**
 
-1. *Start afresh* the Teammate in this Room, at the default Catch-up. Do not use the card's Restart, which forgets its sessions in every other Room too.
-2. Ask the ten questions from LRR-01, one per Turn, and note the cost of the first Turn on the Teammate card.
-3. Score each answer 1 or 0 against the quoted answer.
-4. For each answer, note its source: `memory`, `reread` or `neither`.
+1. In the Chief of Staff's Room, post: `Remember for good: the experiment's code word is "heron".`
+2. Wait for the answer. Read `O-TOOLCALLS` for `<Name>`.
+3. List the Claude Code project folder for the Work Dir again.
 
 **Pass if — all of these**
 
-- All ten answers are scored and each has a source.
-- The first-Turn cost is noted from the Teammate card.
+- The fact was saved through the `memory` tool or into `<data>\Agents\<Name>\work\memory\`.
+- No `memory\` folder appeared in, or gained a file in, Claude Code's project folder for the Work Dir.
 
-| # | Score (1 or 0) | Source (`memory`, `reread`, `neither`) | Notes |
-| --- | --- | --- | --- |
-| 1 |  |  |  |
-| 2 |  |  |  |
-| 3 |  |  |  |
-| 4 |  |  |  |
-| 5 |  |  |  |
-| 6 |  |  |  |
-| 7 |  |  |  |
-| 8 |  |  |  |
-| 9 |  |  |  |
-| 10 |  |  |  |
+**Fail if — any of these**
 
-Recall score: ___ of 10. First-Turn cost: ___ (from the card). Repeats: not counted here.
+- Claude Code's own `memory\` folder gained a file: auto memory is on. **Stop:** the experiment cannot run until it is off. Record it in [known-limits.md](../known-limits.md).
 
-### LRR-03 — The 40,000-token Catch-up is scored
+### LONGROOMS-02 — Recall after a fresh start at the default Catch-up
 
-**Paid** 💰 · about 45 min
+**Paid 💰** · about 40 min
 
-*Proves the budget is the bound that is reached: the Catch-up ends at whichever comes first, 40,000 tokens or 400 Messages (LR-R7). At a cap of 20 Messages neither bound binds, so the Message cap is raised to 400 here.*
+*§9.1 steps 1 and 2: the score to beat. The Chief of Staff rereads the default 20 Messages and has its Memory.*
 
 **Before you start**
 
-- LRR-02 is done.
-- This test needs *Start afresh*, done as Setup, step 5 describes.
+- LONGROOMS-01 passed.
+- From the snapshot's Transcript, pick **10 facts or decisions older than the latest 20 Messages**. Write each one, its Message id and its expected answer in [the recall table](#recall). Mix durable facts (a preference, a standing decision) with conversation (what was being worked on, an open question, why a choice was made). That split decides which way the result points.
+- P-ROUND, then P-FRESH-START with no `$cap`.
 
 **Steps**
 
-1. In Settings › Sessions, set the Catch-up budget to 40,000 tokens and the Message cap to 400.
-2. *Start afresh* the Teammate in this Room. Do not use the card's Restart.
-3. Ask the same ten questions from LRR-01, one per Turn, and note the cost of the first Turn on the Teammate card.
-4. Score each answer and note its source.
-5. In the Room note, check whether the reread went past 20 Messages. If it did not, the step measured the default a second time: mark the test Inconclusive and say so in the run log.
-6. Set the Catch-up back to the default before LRR-04.
+1. In the Room, post the 10 questions as **one** numbered Message, worded so that no question gives away an answer.
+2. When the answer arrives, read the Spend on the card and this Room's `contextUsed`.
+3. Read `O-TOOLCALLS`.
+4. Score each answer: 1 if correct, 0 if not. For each one, note where it came from: **M** (Memory, read or in the index), **R** (the reread), or **?** (neither, so a guess).
+5. Stop the app.
 
 **Pass if — all of these**
 
-- All ten answers are scored and each has a source.
-- The Room note says whether the reread went past 20 Messages.
+- Every row of the recall table's *default* columns is filled in, plus the first Turn's cost and `contextUsed`.
 
-| # | Score (1 or 0) | Source (`memory`, `reread`, `neither`) | Notes |
-| --- | --- | --- | --- |
-| 1 |  |  |  |
-| 2 |  |  |  |
-| 3 |  |  |  |
-| 4 |  |  |  |
-| 5 |  |  |  |
-| 6 |  |  |  |
-| 7 |  |  |  |
-| 8 |  |  |  |
-| 9 |  |  |  |
-| 10 |  |  |  |
+### LONGROOMS-03 — Recall after a fresh start with a 40000-token Catch-up
 
-Recall score: ___ of 10. First-Turn cost: ___. Reread went past 20 Messages: yes / no.
+**Paid 💰** · about 30 min
 
-### LRR-04 — The rut is counted after three Turns, /compact and a fresh start
-
-**Paid** 💰 · about 90 min
-
-*Proves whether repeats fall after a fresh start, after `/compact`, or not at all. Its result is the rut claim for this Room (Q-6).*
+*§9.1 step 3: the same questions with a longer reread. Phase 1 will bound it by tokens; here the Message cap stands in for that.*
 
 **Before you start**
 
-- A live session in this Room.
-- The `/compact` and the live-session counts need no *Start afresh*. The fresh-start count needs it, done as Setup, step 5 describes.
+- LONGROOMS-02 is done. Work out `$cap` with [the 40,000-token cap](#the-40000-token-cap).
+- P-ROUND (a fresh copy, so round 1's answers are not in the Room), then P-FRESH-START with `$cap` set.
 
 **Steps**
 
-1. In the live session, ask "suggest three things we haven't tried yet". Then do five Turns of other work. Ask again. Do this three times, and count the repeats in each ask.
-2. Run `@Teammate /compact keep the decisions and open questions`. Repeat step 1's three asks, with five Turns between them, and count the repeats.
-3. *Start afresh* the Teammate (Setup, step 5). Repeat step 1's three asks, with five Turns between them, and count the repeats.
+1. Post the same numbered Message as in LONGROOMS-02.
+2. Read the Spend and `contextUsed`, then `O-TOOLCALLS`.
+3. Score and mark the source as in LONGROOMS-02.
+4. Stop the app.
 
 **Pass if — all of these**
 
-- Each condition has three counts.
-- Each count follows the definition of a repeat in the Conventions above.
+- The *40,000* columns of the recall table are filled in.
+- `contextUsed` is clearly above LONGROOMS-02's. If it is not, the larger cap never reached the session: the step has measured the default twice, so find out why before you score it.
 
-| Condition | Ask 1 repeats | Ask 2 repeats | Ask 3 repeats | Total repeats |
-| --- | --- | --- | --- | --- |
-| Live session, no compaction |  |  |  |  |
-| After `/compact` |  |  |  |  |
-| After *Start afresh* |  |  |  |  |
+### LONGROOMS-04 — Repeats in a live session, after compact and after a fresh start
 
-### LRR-05 — The flush is played by hand, with and without the save request
+**Paid 💰** · about 60 min
 
-**Paid** 💰 · about 120 min active time, over two occasions a few days apart
-
-*Proves whether the flush earns its Turn, or whether the `memory` tool's own Prompt ("save as you go") already does the job. It replaces the first draft's Q-9.*
+*§9.1 step 4: the rut score. Does a fresh start, unlike `/compact`, stop the Chief of Staff from repeating itself?*
 
 **Before you start**
 
-- Both occasions need *Start afresh*, done as Setup, step 5 describes.
-- Let new facts accrue for a few days between the two occasions, so the second has something new to recall.
-- Choose five questions about decisions from the last week for each occasion, and write their correct answers down before you start.
+- P-ROUND, then P-LAUNCH-LRR **without** P-FRESH-START, so the Chief of Staff resumes its live session.
 
 **Steps**
 
-1. **Occasion A, no warning.** *Start afresh* the Teammate with no warning. Ask the five questions, score each answer and note its source.
-2. **Occasion B, with the save request.** A few days after occasion A, first ask the Teammate "save anything worth keeping to memory before I start you afresh". Note the files it saved and that Turn's cost on the Teammate card.
-3. Then *Start afresh* the Teammate. Ask five fresh questions about decisions from the last week, score each answer and note its source.
-4. Record both scores in the table below.
+1. **Live:** post `Suggest three things we haven't tried yet.` Then talk about other things for five Turns, and ask again. Do this three times in all. Count the suggestions that repeat an earlier one, in this round or from before the snapshot.
+2. **After compact:** post `@<Name> /compact keep the decisions and open questions`, then run step 1's three asks again and count.
+3. **After a fresh start:** stop the app, P-FRESH-START (no `$cap`), then run step 1's three asks again and count.
+4. Stop the app.
 
 **Pass if — all of these**
 
-- Both occasions have five scored answers, each with a source.
-- Occasion B has the files saved and the cost of its save Turn.
+- [The repeats table](#repeats) has a count for all three rounds, with the suggestions you counted as repeats.
 
-| Occasion | Recall (of 5) | Source of each answer | Files saved | Save Turn cost |
-| --- | --- | --- | --- | --- |
-| A, no warning |  |  | not applicable |  |
-| B, with the save request |  |  |  |  |
+### LONGROOMS-05 — A fresh start with and without a save request first
 
-### LRR-06 — The decision follows from the numbers
+**Paid 💰** · about 60 min, run twice a few days apart
 
-**Free** · about 10 min
-
-*Proves that the decision is read from the recorded numbers, not from how the runs felt.*
+*§9.1 step 5: the memory flush (spec §6.6) played by hand. Phase 2b would spend a Turn asking the Chief of Staff to save what matters before a fresh start; this shows whether that Turn earns its cost, or whether the `memory` tool's own "save as you go" already does the job.*
 
 **Before you start**
 
-- LRR-02 to LRR-05 are recorded. Any test that is Blocked or Inconclusive says why.
+- Your everyday Huddle has been used in the Chief of Staff's Room for a few days since the last snapshot, so new decisions exist. Take a new P-SNAPSHOT.
+- Pick **5 decisions from the last week**, all older than the latest 20 Messages, and write them in [the flush table](#flush).
 
 **Steps**
 
-1. Compare the recall at 40,000 tokens (LRR-03) with 7 of 10.
-2. Compare the repeats after a fresh start (LRR-04) with the repeats after `/compact`.
-3. Find the row of the decision table below that matches, and record it in the Notes column of the tracker and in the run log.
-4. If no row matches, record that, with the reason, and do not choose a row by hand.
+1. **Without the request (A):** P-ROUND, P-FRESH-START (no `$cap`). Post the 5 questions as one Message. Score them. Stop the app.
+2. **With the request (B):** P-ROUND, then P-LAUNCH-LRR without a fresh start, and post `Save anything worth keeping to memory before I start you afresh.` Note the files it wrote (`O-TOOLCALLS`) and that Turn's Spend. Stop the app, P-FRESH-START, post the same 5 questions, and score them. Stop the app.
+3. Repeat steps 1 and 2 a few days later with a new snapshot and 5 new decisions.
+
+Because both rounds start from the same snapshot, A and B answer the **same** questions about the same Room: a fairer comparison than the spec's fresh questions per round.
 
 **Pass if — all of these**
 
-- The Notes column names one row of the decision table, or says that none matched and why.
+- Both runs of [the flush table](#flush) are filled in, including what the save Turn wrote and cost.
 
-## Decision table
+## Results
 
-Read the rows against the numbers from LRR-02 to LRR-05. The rows are §9.1 step 6 of [the spec](../../Huddle.LongRunningRooms-Specifications.md#91-the-experiment).
+Fill these in as you run. Keep the snapshots until the decision is recorded.
 
-| If | Then |
-| --- | --- |
-| Recall at 40,000 tokens is 7 of 10 or better, **and** repeats are fewer after a fresh start than after compaction | Phases 0 to 2a meet the goal. Build phase 2b with thresholds from these numbers and the cost of each fresh start, so automatic fresh starts can be turned on where wanted. Do not build phase 4. |
-| Repeats after `/compact` are fewer than, or as few as, repeats after a fresh start | The rut does not need a fresh start in this Room. Take the single-session mode (§7.3, Q-13) instead of phase 2b's trigger set, not both. |
-| Recall is below 7 of 10, and the missed answers are durable facts the Teammate should have saved | The fix is the Memory Prompt (`systemPrompt.memory`), not this spec. Tune it and repeat the experiment. |
-| Recall is below 7 of 10, and the missed answers are conversation (what was being worked on, open questions, the reasoning behind a choice) | Build phase 4, then repeat the experiment with it. |
-| There is no difference in repeats | Record it. The rut claim is unproven for this Room (Q-6). |
-| The flush scores no better than no flush (LRR-05) | Leave it out of phase 2b, or ship `FlushToMemory` false. Tune the `memory` Prompt if facts were missed, and record why. |
+### Recall
+
+LONGROOMS-02 and LONGROOMS-03. Snapshot: ______ · Room id: ______ · `$cap` for 40,000 tokens: ______
+
+| # | Fact or decision | Message id | Kind (durable / conversation) | Default: score | Default: source | 40,000: score | 40,000: source |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 |  |  |  |  |  |  |  |
+| 2 |  |  |  |  |  |  |  |
+| 3 |  |  |  |  |  |  |  |
+| 4 |  |  |  |  |  |  |  |
+| 5 |  |  |  |  |  |  |  |
+| 6 |  |  |  |  |  |  |  |
+| 7 |  |  |  |  |  |  |  |
+| 8 |  |  |  |  |  |  |  |
+| 9 |  |  |  |  |  |  |  |
+| 10 |  |  |  |  |  |  |  |
+| **Total** |  |  |  | **/10** |  | **/10** |  |
+| **First Turn** | Spend | | | $ |  | $ |  |
+| | `contextUsed` | | |  |  |  |  |
+
+### Repeats
+
+LONGROOMS-04.
+
+| Round | Repeats out of 9 suggestions | The repeats |
+| --- | --- | --- |
+| Live session |  |  |
+| After `/compact` |  |  |
+| After a fresh start |  |  |
+
+### Flush
+
+LONGROOMS-05.
+
+| Run | Snapshot | A: score without the request | B: score with it | B: files saved | B: save Turn's Spend |
+| --- | --- | --- | --- | --- | --- |
+| 1 |  | /5 | /5 |  | $ |
+| 2 |  | /5 | /5 |  | $ |
+
+### Decision
+
+Apply [§9.1 step 6](../../Huddle.LongRunningRooms-Specifications.md#91-the-experiment) to the tables above. Tick every row that holds. Then record the result in the spec's Appendix A and update roadmap row 26.
+
+| Holds? | Finding | Then |
+| --- | --- | --- |
+|  | Recall at 40,000 is 7/10 or better, **and** fewer repeats after a fresh start than after `/compact` | Build phase 2b, with thresholds from these numbers; no phase 4 |
+|  | As few repeats after `/compact` as after a fresh start, or fewer | Take the single-session mode (§7.3, Q-13) instead of phase 2b |
+|  | Recall below 7/10, and the misses are durable facts | Tune the Memory Prompt (`systemPrompt.memory`) and run again |
+|  | Recall below 7/10, and the misses are conversation | Build phase 4 (the handoff note), then run again |
+|  | No difference in repeats | Record that the rut is unproven for this Room (Q-6) |
+|  | B scores no better than A | Leave the flush out of phase 2b, or ship `FlushToMemory` false |
+
+**Decided:** ______ on ______.
 
 ---
 

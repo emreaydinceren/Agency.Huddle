@@ -153,6 +153,7 @@ the per-area tables below.
 | [Remote access: the connect page, pairing, Tailscale Serve and Funnel, the LAN bind, revocation and the Open action](remote-access.md) | [below](#remote-access) |
 | [Instructions and Memory: the Instructions files, the memory tool, Team Memory and the Memory protocol](instructions-memory.md) | [below](#instructions-memory) |
 | [Team Memory Helper: proposals filed by a Helper, the History, the Feed record, the membership check and the daily cap](team-memory-helper.md) | [below](#team-memory-helper) |
+| [Long-running Rooms: the experiment on the Chief of Staff's Room, recall after a fresh start, repeats and the hand-played flush](long-running-rooms.md) | [below](#long-running-rooms) |
 ---
 
 ## at-tagging
@@ -1231,13 +1232,12 @@ Team Memory Helper: proposals filed by a Helper, the History, the Feed record, t
 
 ## long-running-rooms
 
-Long-running Rooms: the experiment on a real Room that decides phase 2b and phase 4 — [area file](long-running-rooms.md)
+Long-running Rooms: the experiment on the Chief of Staff's Room, recall after a fresh start, repeats and the hand-played flush — [area file](long-running-rooms.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [LRR-01](long-running-rooms.md#lrr-01--ten-recall-facts-are-picked-from-the-transcript) |  | Active |  | not yet run by a person |
-| [LRR-02](long-running-rooms.md#lrr-02--the-default-catch-up-after-a-fresh-start-is-scored) | 💰 | Active |  | not yet run by a person; available from phase 2a |
-| [LRR-03](long-running-rooms.md#lrr-03--the-40000-token-catch-up-is-scored) | 💰 | Active |  | not yet run by a person; available from phase 2a |
-| [LRR-04](long-running-rooms.md#lrr-04--the-rut-is-counted-after-three-turns-compact-and-a-fresh-start) | 💰 | Active |  | not yet run by a person; fresh-start count available from phase 2a |
-| [LRR-05](long-running-rooms.md#lrr-05--the-flush-is-played-by-hand-with-and-without-the-save-request) | 💰 | Active |  | not yet run by a person; available from phase 2a |
-| [LRR-06](long-running-rooms.md#lrr-06--the-decision-follows-from-the-numbers) |  | Active |  | not yet run by a person |
+| [LONGROOMS-01](long-running-rooms.md#longrooms-01--claude-codes-own-memory-stays-off-for-the-chief-of-staff) | 💰 | Active |  | not yet run; runs on a copy of the everyday data folder |
+| [LONGROOMS-02](long-running-rooms.md#longrooms-02--recall-after-a-fresh-start-at-the-default-catch-up) | 💰 | Active |  | not yet run; runs on a copy of the everyday data folder |
+| [LONGROOMS-03](long-running-rooms.md#longrooms-03--recall-after-a-fresh-start-with-a-40000-token-catch-up) | 💰 | Active |  | not yet run; runs on a copy of the everyday data folder |
+| [LONGROOMS-04](long-running-rooms.md#longrooms-04--repeats-in-a-live-session-after-compact-and-after-a-fresh-start) | 💰 | Active |  | not yet run; runs on a copy of the everyday data folder |
+| [LONGROOMS-05](long-running-rooms.md#longrooms-05--a-fresh-start-with-and-without-a-save-request-first) | 💰 | Active |  | not yet run; runs on a copy of the everyday data folder |
