@@ -47,13 +47,11 @@ internal sealed class MemoryPaths(AgentPaths agentPaths, TeamMemoryAccess access
 
         if (parts.Length == 1)
         {
-            return new MemoryFolder(Path.Combine(this.TeamsRoot(), team.Name, "memory"), team.Name, team);
+            return this.Scope(team, null);
         }
 
         string? project = team.Projects.FirstOrDefault(candidate => string.Equals(candidate, parts[1], StringComparison.OrdinalIgnoreCase));
-        return project is null
-            ? null
-            : new MemoryFolder(Path.Combine(this.TeamsRoot(), team.Name, project, "memory"), $"{team.Name}/{project}", team);
+        return project is null ? null : this.Scope(team, project);
     }
 
     /// <summary>
@@ -98,18 +96,13 @@ internal sealed class MemoryPaths(AgentPaths agentPaths, TeamMemoryAccess access
 
         if (parts.Length == 1)
         {
-            folder = new MemoryFolder(Path.Combine(this.TeamsRoot(), summary.Name, "memory"), summary.Name, summary);
-            return true;
+            folder = this.Scope(summary, null);
+            return folder is not null;
         }
 
         string? project = summary.Projects.FirstOrDefault(candidate => string.Equals(candidate, parts[1].Trim(), StringComparison.OrdinalIgnoreCase));
-        if (project is null)
-        {
-            return false;
-        }
-
-        folder = new MemoryFolder(Path.Combine(this.TeamsRoot(), summary.Name, project, "memory"), $"{summary.Name}/{project}", summary);
-        return true;
+        folder = project is null ? null : this.Scope(summary, project);
+        return folder is not null;
     }
 
     /// <summary>The folders Huddle may write for <paramref name="team"/>: the Team's own, then each Project's, in the catalog's order.</summary>
@@ -123,9 +116,8 @@ internal sealed class MemoryPaths(AgentPaths agentPaths, TeamMemoryAccess access
             return [];
         }
 
-        List<MemoryFolder> folders = [new MemoryFolder(Path.Combine(this.TeamsRoot(), team.Name, "memory"), team.Name, team)];
-        folders.AddRange(team.Projects.Select(project => new MemoryFolder(Path.Combine(this.TeamsRoot(), team.Name, project, "memory"), $"{team.Name}/{project}", team)));
-        return folders;
+        IEnumerable<string?> projects = [null, .. team.Projects];
+        return [.. projects.Select(project => this.Scope(team, project)).OfType<MemoryFolder>()];
     }
 
     /// <summary>Resolves a <c>folder</c> and <c>file</c> pair to the file's full path, as the <c>memory</c> tool would.</summary>
@@ -140,6 +132,26 @@ internal sealed class MemoryPaths(AgentPaths agentPaths, TeamMemoryAccess access
             ? FilePath(folder, file)
             : null;
         return fullPath is not null;
+    }
+
+    /// <summary>
+    /// The memory folder of a Team, or of one of its Projects, built from the catalog's spelling; <see langword="null"/> when the Team
+    /// folder, the Project folder or the memory folder is a junction or link. The Team Memory index skips such a folder
+    /// (<see cref="TeamMemoryIndex.IsSkipped"/>), so the tool and the Helper must not read or write through it either.
+    /// </summary>
+    /// <param name="team">The Team.</param>
+    /// <param name="project">The Project, or <see langword="null"/> for the Team-wide folder.</param>
+    private MemoryFolder? Scope(TeamSummary team, string? project)
+    {
+        string teamFolder = Path.Combine(this.TeamsRoot(), team.Name);
+        string scopeFolder = project is null ? teamFolder : Path.Combine(teamFolder, project);
+        string memory = Path.Combine(scopeFolder, "memory");
+        if (TeamMemoryIndex.IsSkipped(teamFolder) || TeamMemoryIndex.IsSkipped(scopeFolder) || TeamMemoryIndex.IsSkipped(memory))
+        {
+            return null;
+        }
+
+        return new MemoryFolder(memory, project is null ? team.Name : $"{team.Name}/{project}", team);
     }
 
     /// <summary>The Teams root folder.</summary>

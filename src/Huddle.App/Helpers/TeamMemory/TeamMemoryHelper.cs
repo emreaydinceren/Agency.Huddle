@@ -68,8 +68,10 @@ internal sealed class TeamMemoryHelper(
     {
         ArgumentNullException.ThrowIfNull(input);
 
+        // Everything the prompt shows, and the attempt: equal hashes get the same Verdict, and the Feed names the proposer.
         StringBuilder text = new();
-        _ = text.Append(input.Proposal.Team).Append('\n').Append(input.Proposal.Fact).Append('\n').Append(input.Proposal.Why).Append('\n');
+        _ = text.Append(input.Proposal.Team).Append('\n').Append(input.Proposal.Proposer).Append('\n').Append(input.Proposal.Fact).Append('\n').Append(input.Proposal.Why).Append('\n');
+        _ = text.Append(string.Join(", ", input.Folders)).Append('\n').Append(input.Attempt.ToString(CultureInfo.InvariantCulture)).Append('\n');
         foreach (string line in input.Index)
         {
             _ = text.Append(line).Append('\n');
@@ -172,7 +174,9 @@ internal sealed class TeamMemoryHelper(
             return new HelperApplied.Dropped("the Helper was turned off");
         }
 
-        MemoryWriteResult result = await writer.WriteAsync(folder, file, verdict.Description, verdict.Text, expectedVersion, cancellationToken).ConfigureAwait(false);
+        // The candidates are shown in full, frontmatter included, so a model may echo it: the writer adds the frontmatter itself.
+        string body = MemoryFileRules.WithoutFrontmatter(verdict.Text ?? string.Empty);
+        MemoryWriteResult result = await writer.WriteAsync(folder, file, verdict.Description, body, expectedVersion, cancellationToken).ConfigureAwait(false);
         return this.Settle(input, folder, file, reason, result);
     }
 

@@ -123,7 +123,7 @@ internal static class TeamMemoryIndex
     /// A path that does not exist is not skipped: the caller finds nothing there.
     /// </summary>
     /// <param name="path">The folder to check.</param>
-    private static bool IsSkipped(string path)
+    internal static bool IsSkipped(string path)
     {
         try
         {

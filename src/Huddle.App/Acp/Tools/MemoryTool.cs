@@ -57,13 +57,7 @@ internal sealed class MemoryTool(
     /// <summary>Whether <paramref name="name"/> is this tool as offered: the bare name, or the name behind an Adapter's <c>mcp__{server}__</c> prefix.</summary>
     /// <param name="name">A tool name as offered or as an Adapter reported it.</param>
     /// <returns><see langword="true"/> for <c>memory</c> and for any name ending <c>__memory</c>.</returns>
-    public static bool IsToolName(string name)
-    {
-        ArgumentNullException.ThrowIfNull(name);
-
-        return string.Equals(name, ToolName, StringComparison.Ordinal)
-            || name.EndsWith("__" + ToolName, StringComparison.Ordinal);
-    }
+    public static bool IsToolName(string name) => AppToolNames.Matches(name, ToolName);
 
     /// <inheritdoc />
     public string Description => prompts.Render("tool.memory.description");
@@ -164,9 +158,7 @@ internal sealed class MemoryTool(
         }
 
         logger.LogWarning("Refused a change to the Team Memory of '{Team}' by '{Caller}': only its manager writes it.", team.Name, personaName);
-        return team.Manager is { } manager
-            ? this.Say("systemPrompt.memoryManagerOnly", ("team", team.Name), ("manager", manager))
-            : this.Say("systemPrompt.memoryNoManager", ("team", team.Name));
+        return TeamMemoryRefusals.ManagerOnly(prompts, team);
     }
 
     /// <summary>Lists every top-level <c>*.md</c> file with its index line, uncapped, then the folder path.</summary>
@@ -210,7 +202,7 @@ internal sealed class MemoryTool(
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             logger.LogWarning(ex, "Could not read the memory file '{Path}'.", path);
-            return this.Say("systemPrompt.memoryWriteFailed", ("file", file));
+            return this.Say("systemPrompt.memoryReadFailed", ("file", file));
         }
     }
 
@@ -269,10 +261,11 @@ internal sealed class MemoryTool(
         string existing = Utf8.GetString(current);
         string separator = existing.Length == 0 || existing.EndsWith('\n') ? string.Empty : "\n";
         string text = request.Text ?? string.Empty;
-        byte[] bytes = Utf8.GetBytes(existing + separator + text + (text.EndsWith('\n') ? string.Empty : "\n"));
+        string result = existing + separator + text + (text.EndsWith('\n') ? string.Empty : "\n");
+        byte[] bytes = Utf8.GetBytes(result);
 
-        return this.TooLarge(file, bytes.Length) is { } tooLarge
-            ? tooLarge
+        return (this.TooLarge(file, bytes.Length) ?? this.DescriptionLost(file, existing, result)) is { } refusal
+            ? refusal
             : await this.CommitAsync(request, folder, path, bytes, "appended to", cancellationToken).ConfigureAwait(false);
     }
 
@@ -299,10 +292,11 @@ internal sealed class MemoryTool(
         }
 
         int at = text.IndexOf(match.Old, StringComparison.Ordinal);
-        byte[] bytes = Utf8.GetBytes(string.Concat(text.AsSpan(0, at), match.New, text.AsSpan(at + match.Old.Length)));
+        string result = string.Concat(text.AsSpan(0, at), match.New, text.AsSpan(at + match.Old.Length));
+        byte[] bytes = Utf8.GetBytes(result);
 
-        return this.TooLarge(file, bytes.Length) is { } tooLarge
-            ? tooLarge
+        return (this.TooLarge(file, bytes.Length) ?? this.DescriptionLost(file, text, result)) is { } refusal
+            ? refusal
             : await this.CommitAsync(request, folder, path, bytes, "replaced in", cancellationToken).ConfigureAwait(false);
     }
 
@@ -437,6 +431,27 @@ internal sealed class MemoryTool(
             ("size", size.ToString(CultureInfo.InvariantCulture)),
             ("max", max.ToString(CultureInfo.InvariantCulture)));
 
+    /// <summary>
+    /// The refusal for an <c>append</c> or <c>replace</c> that would break a file's description: one the file had is removed or changed
+    /// into one <c>write</c> would refuse. A file that had no description (an older one, indexed by its first line) is left alone.
+    /// </summary>
+    /// <param name="file">The file name.</param>
+    /// <param name="before">The file's text now.</param>
+    /// <param name="after">The file's text after the change.</param>
+    private string? DescriptionLost(string file, string before, string after)
+    {
+        string? had = MemoryFileRules.DescriptionOf(before);
+        string? has = MemoryFileRules.DescriptionOf(after);
+        if (had is null || string.Equals(had, has, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return MemoryFileRules.DescriptionProblem(has, file) is { } problem
+            ? this.Say("systemPrompt.memoryBadDescription", ("problem", problem))
+            : null;
+    }
+
     /// <summary>The text followed by a blank line and its version line.</summary>
     /// <param name="text">The file's text.</param>
     /// <param name="token">The file's version.</param>
@@ -488,14 +503,5 @@ internal sealed class MemoryTool(
     /// <summary>Renders a Prompt, naming each placeholder by its bare name.</summary>
     /// <param name="key">The Prompt's key.</param>
     /// <param name="values">The placeholder names (without braces) and their values.</param>
-    private string Say(string key, params (string Name, string Value)[] values)
-    {
-        Dictionary<string, string> map = new(StringComparer.Ordinal);
-        foreach ((string name, string value) in values)
-        {
-            map["{{" + name + "}}"] = value;
-        }
-
-        return prompts.Render(key, map);
-    }
+    private string Say(string key, params (string Name, string Value)[] values) => prompts.Say(key, values);
 }

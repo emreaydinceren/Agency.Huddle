@@ -137,5 +137,6 @@
   "tool.proposeTeamMemory.noFact": "Write the fact to propose: one to a few sentences.",
   "tool.proposeTeamMemory.tooLong": "The {{field}} is {{length}} characters; the most is {{max}}. Propose one fact at a time.",
   "tool.proposeTeamMemory.off": "Team Memory proposals are switched off. Note the fact in your own Memory, or tell the manager.",
-  "tool.proposeTeamMemory.paused": "The Team Memory Helper is paused for today. Note the fact in your own Memory, or tell the manager."
+  "tool.proposeTeamMemory.paused": "The Team Memory Helper is paused for today. Note the fact in your own Memory, or tell the manager.",
+  "systemPrompt.memoryReadFailed": "{{file}} could not be read because something else is using it. Nothing was changed; try again."
 }

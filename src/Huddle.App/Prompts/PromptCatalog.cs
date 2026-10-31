@@ -90,6 +90,7 @@ internal static class PromptCatalog
         ..BuildPart45(),
         ..BuildPart46(),
         ..BuildPart47(),
+        ..BuildPart48(),
     ];
 
     /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.orientation</c> to <c>systemPrompt.identity</c>.</summary>
@@ -2385,6 +2386,20 @@ internal static class PromptCatalog
             Placeholders: ["{{team}}", "{{teams}}"],
             RequiredPlaceholders: ["{{team}}"],
             Timing: PromptTiming.Live),
+    ];
+
+    /// <summary>Builds the <c>memory</c> tool's read failure, kept apart from its write failure so a failed read never invites a write.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart48() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.memoryReadFailed",
+            Label: "Memory file could not be read",
+            HelperText: "Said when a read could not open the file on disk. Must keep {{file}}.",
+            Default: "{{file}} could not be read because something else is using it. Nothing was changed; try again.",
+            Placeholders: ["{{file}}"],
+            RequiredPlaceholders: ["{{file}}"],
+            Timing: PromptTiming.NextSession),
     ];
 
     /// <summary>Builds the rest of the <c>propose_team_memory</c> tool's refusals (Team Memory Helper spec §6.1).</summary>

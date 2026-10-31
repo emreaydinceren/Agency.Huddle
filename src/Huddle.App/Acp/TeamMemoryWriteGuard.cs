@@ -122,10 +122,5 @@ internal sealed class TeamMemoryWriteGuard(string teamsRoot, string workDir, Tea
 
     /// <summary>The reason a write to the Team's Memory is refused: only its manager writes it, or it has no manager.</summary>
     /// <param name="team">The Team.</param>
-    private string Reason(TeamSummary team) =>
-        team.Manager is { } manager
-            ? prompts.Render(
-                "systemPrompt.memoryManagerOnly",
-                new Dictionary<string, string> { ["{{team}}"] = team.Name, ["{{manager}}"] = manager })
-            : prompts.Render("systemPrompt.memoryNoManager", new Dictionary<string, string> { ["{{team}}"] = team.Name });
+    private string Reason(TeamSummary team) => TeamMemoryRefusals.ManagerOnly(prompts, team);
 }

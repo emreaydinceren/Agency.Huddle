@@ -24,14 +24,16 @@ namespace Agency.Huddle.Tests.Helpers;
 /// </summary>
 internal sealed class TeamMemoryHarness : IDisposable
 {
-    private readonly TempDataDir dir = new();
+    private readonly TempDataDir dir;
     private readonly MemoryFolderGate gate = new();
     private readonly HelperDispatcher dispatcher;
 
     /// <summary>Wires the install.</summary>
     /// <param name="configure">Changes the options before anything is built, or <see langword="null"/>.</param>
-    public TeamMemoryHarness(Action<TeamOptions>? configure = null)
+    /// <param name="supportsReparsePoints"><see langword="true"/> for a test that creates a junction, so the data folder is on the system temp folder.</param>
+    public TeamMemoryHarness(Action<TeamOptions>? configure = null, bool supportsReparsePoints = false)
     {
+        this.dir = new TempDataDir(supportsReparsePoints);
         this.Options = this.dir.Options(team =>
         {
             team.Acp.Enabled = true;

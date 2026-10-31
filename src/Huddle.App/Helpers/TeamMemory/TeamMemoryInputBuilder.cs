@@ -161,7 +161,8 @@ internal sealed partial class TeamMemoryInputBuilder(TeamMemoryAccess access, Me
         try
         {
             byte[] bytes = File.ReadAllBytes(file.Path);
-            return new TeamMemoryCandidate(file.Folder.Label, file.File, MemoryVersion.Of(bytes), Encoding.UTF8.GetString(bytes));
+            // A Windows editor's byte-order mark would sit in front of the "---" and hide the frontmatter from the model.
+            return new TeamMemoryCandidate(file.Folder.Label, file.File, MemoryVersion.Of(bytes), Encoding.UTF8.GetString(bytes).TrimStart('\uFEFF'));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

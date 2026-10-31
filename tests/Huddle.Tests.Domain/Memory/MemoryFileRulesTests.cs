@@ -26,6 +26,46 @@ public sealed class MemoryFileRulesTests
         Assert.True(MemoryFileRules.IsValidFileName("memory-notes.md"));
     }
 
+    /// <summary>A leading frontmatter block and the blank lines after it are removed from a body; a body without one keeps its text, minus a byte-order mark.</summary>
+    /// <param name="text">The body as given.</param>
+    /// <param name="expected">The body to write.</param>
+    [Theory]
+    [InlineData("---\ndescription: Echoed\n---\n\nThe body.\n", "The body.\n")]
+    [InlineData("\uFEFF---\ndescription: Echoed\n---\nThe body.\n", "The body.\n")]
+    [InlineData("The body.\n---\nnot frontmatter\n---\n", "The body.\n---\nnot frontmatter\n---\n")]
+    [InlineData("\uFEFFThe body.", "The body.")]
+    public void WithoutFrontmatter_RemovesOnlyALeadingBlock(string text, string expected)
+    {
+        Assert.Equal(expected, MemoryFileRules.WithoutFrontmatter(text));
+    }
+
+    /// <summary>The description is read from the frontmatter when it is a non-blank single value; a body line is never a description.</summary>
+    /// <param name="text">A file's text.</param>
+    /// <param name="expected">The description, or <see langword="null"/>.</param>
+    [Theory]
+    [InlineData("---\ndescription: Consent rules for interviews\n---\n\nBody.\n", "Consent rules for interviews")]
+    [InlineData("---\nowner: Ana\n---\n\nBody.\n", null)]
+    [InlineData("---\ndescription:\n---\n\nBody.\n", null)]
+    [InlineData("description: Not frontmatter\n", null)]
+    public void DescriptionOf_ReadsTheFrontmatterKeyOnly(string text, string? expected)
+    {
+        Assert.Equal(expected, MemoryFileRules.DescriptionOf(text));
+    }
+
+    /// <summary>The kept keys are every line but the description and its continuation lines; the JSON form and a file without frontmatter give none.</summary>
+    /// <param name="text">A file's text.</param>
+    /// <param name="expected">The kept lines, or <see langword="null"/>.</param>
+    [Theory]
+    [InlineData("---\ndescription: D\nowner: Ana\n---\n\nBody.\n", "owner: Ana\n")]
+    [InlineData("---\nDescription: |\n  two\n  lines\nstatus: draft\n---\n", "status: draft\n")]
+    [InlineData("---\ndescription: D\n---\n", null)]
+    [InlineData("{\"description\": \"D\", \"owner\": \"Ana\"}\n\nBody.\n", null)]
+    [InlineData("No frontmatter.\n", null)]
+    public void OtherKeys_KeepsEveryKeyButTheDescription(string text, string? expected)
+    {
+        Assert.Equal(expected, MemoryFileRules.OtherKeys(text));
+    }
+
     /// <summary>The reserved index name is recognised ignoring case, and nothing else is.</summary>
     /// <param name="file">A file name.</param>
     /// <param name="expected">Whether it is the reserved index name.</param>

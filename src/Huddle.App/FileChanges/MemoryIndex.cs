@@ -20,9 +20,6 @@ internal static class MemoryIndex
     /// <summary>The most characters read from a file to find its summary.</summary>
     private const int MaxScannedCharacters = 16 * 1024;
 
-    /// <summary>The frontmatter key that holds the index line.</summary>
-    private const string DescriptionKey = "description";
-
     /// <summary>The marker line that opens and closes a frontmatter block.</summary>
     private const string FrontmatterMarker = "---";
 
@@ -95,12 +92,13 @@ internal static class MemoryIndex
             return FirstLine(text) ?? fileName;
         }
 
-        if (DescriptionOf(block) is { } description)
+        IReadOnlyList<NoteProperty> properties = NoteProperties.Read(block);
+        if (MemoryFileRules.DescriptionIn(properties) is { } description)
         {
             return Clip(description);
         }
 
-        if (HasDescriptionKey(block))
+        if (properties.Any(MemoryFileRules.IsDescriptionKey))
         {
             warnings?.Malformed(filePath, text, "its description is not a single line of text");
         }
@@ -141,6 +139,8 @@ internal static class MemoryIndex
             }
             else if (line.Trim().Length > 0 && (closed || !inFrontmatter) && !line.TrimStart().StartsWith('{'))
             {
+                // A line opening with "{" may start the JSON form of frontmatter (Library spec D-9), which has no marker line: keep
+                // reading so NoteFrontmatter.Locate sees the whole object and the summary comes from its description or the body after it.
                 break;
             }
         }
@@ -148,26 +148,6 @@ internal static class MemoryIndex
         bool tooLong = inFrontmatter && !closed && reader.Peek() >= 0;
         return (head.ToString(), tooLong);
     }
-
-    /// <summary>The block's <c>description</c> when it is a non-blank scalar, else <see langword="null"/>.</summary>
-    /// <param name="block">The located frontmatter.</param>
-    private static string? DescriptionOf(NoteFrontmatterBlock block)
-    {
-        NoteProperty? property = NoteProperties.Read(block).FirstOrDefault(IsDescription);
-        return property is { Shape: NotePropertyShape.Scalar, Value: { } value } && !string.IsNullOrWhiteSpace(value)
-            ? value.Trim()
-            : null;
-    }
-
-    /// <summary>Whether the block names a <c>description</c> key at all, usable or not.</summary>
-    /// <param name="block">The located frontmatter.</param>
-    private static bool HasDescriptionKey(NoteFrontmatterBlock block) =>
-        NoteProperties.Read(block).Any(IsDescription);
-
-    /// <summary>Whether the property is the <c>description</c> key.</summary>
-    /// <param name="property">The property.</param>
-    private static bool IsDescription(NoteProperty property) =>
-        string.Equals(property.Key, DescriptionKey, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The first non-blank line of <paramref name="text"/>, minus a leading <c>#</c> and spaces and a stray marker line, cut to the summary length.</summary>
     /// <param name="text">The text to read.</param>

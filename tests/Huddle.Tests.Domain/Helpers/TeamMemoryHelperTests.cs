@@ -134,6 +134,40 @@ public sealed class TeamMemoryHelperTests
         Assert.Equal(DocChangeKind.Edited, Assert.Single(harness.History.Read(file)).Kind);
     }
 
+    /// <summary>
+    /// An update whose text echoes the file it was shown, frontmatter included, writes one frontmatter block, not two, and keeps the
+    /// other keys the file had.
+    /// </summary>
+    [Fact]
+    public async Task Apply_UpdateEchoingTheFrontmatter_WritesOneBlock()
+    {
+        using TeamMemoryHarness harness = new();
+        string path = Path.Combine(harness.Folder(), "interview-consent.md");
+        Directory.CreateDirectory(harness.Folder());
+        File.WriteAllText(path, $"---\ndescription: {Description}\nowner: Ana\n---\n\nWritten consent only.\n");
+        TeamMemoryInput input = harness.Builder.Build(TeamMemoryHarness.Proposal("Interview recording consent can be verbal."));
+        string echoed = input.Candidates[0].Text.Replace("Written consent only.", "Recorded verbal consent is enough.", StringComparison.Ordinal);
+
+        HelperApplied applied = await harness.ApplyAsync(input, new("update", "Research", "interview-consent.md", Description, echoed, "consent rule relaxed"));
+
+        Assert.IsType<HelperApplied.Changed>(applied);
+        Assert.Equal($"---\ndescription: {Description}\nowner: Ana\n---\n\nRecorded verbal consent is enough.\n", File.ReadAllText(path));
+    }
+
+    /// <summary>The fingerprint covers the proposer, the folders and the attempt, so one member's cached Verdict is never reported against another's proposal.</summary>
+    [Fact]
+    public void Fingerprint_CoversProposerFoldersAndAttempt()
+    {
+        using TeamMemoryHarness harness = new();
+        TeamMemoryInput leo = new(TeamMemoryHarness.Proposal(), ["Research"], [], []);
+
+        string original = harness.Helper.Fingerprint(leo);
+
+        Assert.NotEqual(original, harness.Helper.Fingerprint(leo with { Proposal = leo.Proposal with { Proposer = "Miriam" } }));
+        Assert.NotEqual(original, harness.Helper.Fingerprint(leo with { Folders = ["Research", "Research/Atlas"] }));
+        Assert.NotEqual(original, harness.Helper.Fingerprint(leo with { Attempt = 2 }));
+    }
+
     /// <summary>A "none" writes nothing and leaves a Feed record with the reason, not a Notification (U-3).</summary>
     [Fact]
     public async Task Apply_None_WritesNothingAndRecordsWhy()

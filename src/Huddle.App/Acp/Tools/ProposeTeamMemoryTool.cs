@@ -58,13 +58,7 @@ internal sealed class ProposeTeamMemoryTool(
     /// <summary>Whether <paramref name="name"/> is this tool as offered: the bare name, or the name behind an Adapter's <c>mcp__{server}__</c> prefix.</summary>
     /// <param name="name">A tool name as offered or as an Adapter reported it.</param>
     /// <returns><see langword="true"/> for <c>propose_team_memory</c> and for any name ending <c>__propose_team_memory</c>.</returns>
-    public static bool IsToolName(string name)
-    {
-        ArgumentNullException.ThrowIfNull(name);
-
-        return string.Equals(name, ToolName, StringComparison.Ordinal)
-            || name.EndsWith("__" + ToolName, StringComparison.Ordinal);
-    }
+    public static bool IsToolName(string name) => AppToolNames.Matches(name, ToolName);
 
     /// <inheritdoc />
     public Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
@@ -138,14 +132,5 @@ internal sealed class ProposeTeamMemoryTool(
     /// <summary>Renders a Prompt, naming each placeholder by its bare name.</summary>
     /// <param name="key">The Prompt's key.</param>
     /// <param name="values">The placeholder names (without braces) and their values.</param>
-    private string Say(string key, params (string Name, string Value)[] values)
-    {
-        Dictionary<string, string> map = new(StringComparer.Ordinal);
-        foreach ((string name, string value) in values)
-        {
-            map["{{" + name + "}}"] = value;
-        }
-
-        return prompts.Render(key, map);
-    }
+    private string Say(string key, params (string Name, string Value)[] values) => prompts.Say(key, values);
 }

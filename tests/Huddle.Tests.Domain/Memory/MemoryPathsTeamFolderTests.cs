@@ -46,6 +46,54 @@ public sealed class MemoryPathsTeamFolderTests
         Assert.Null(folder);
     }
 
+    /// <summary>
+    /// A memory folder that is a junction or link resolves to nothing, for Huddle's writes and for the tool, as the Team Memory index
+    /// already skips it: the prompt would show it empty while a write went through to the target.
+    /// </summary>
+    [Fact]
+    public void Resolve_JunctionedMemoryFolder_DoesNotResolve()
+    {
+        using TeamMemoryHarness harness = new(supportsReparsePoints: true);
+        string target = Path.Combine(Path.GetDirectoryName(harness.Folder()) ?? string.Empty, "elsewhere");
+        Directory.CreateDirectory(target);
+        Directory.CreateDirectory(Path.GetDirectoryName(harness.Folder()) ?? string.Empty);
+        CreateLink(harness.Folder(), target);
+        try
+        {
+            Assert.False(harness.Paths.TryResolveTeamFolder("Research", "Research", out _));
+            Assert.Null(harness.Paths.ResolveFolder("Leo", "Research"));
+            Assert.Equal(["Research/Atlas"], harness.Paths.TeamFolders(harness.Catalog.Teams[0]).Select(static folder => folder.Label));
+            Assert.True(harness.Paths.TryResolveTeamFolder("Research", "Research/Atlas", out _));
+        }
+        finally
+        {
+            Directory.Delete(harness.Folder(), recursive: false);
+        }
+    }
+
+    /// <summary>Creates a directory junction on Windows, or a symbolic link elsewhere, from <paramref name="link"/> to <paramref name="target"/>.</summary>
+    /// <param name="link">The link to create.</param>
+    /// <param name="target">The existing folder it points at.</param>
+    private static void CreateLink(string link, string target)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            System.Diagnostics.ProcessStartInfo startInfo = new("cmd")
+            {
+                ArgumentList = { "/c", "mklink", "/J", link, target },
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            using System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo) ?? throw new InvalidOperationException("mklink did not start.");
+            process.WaitForExit();
+            Assert.Equal(0, process.ExitCode);
+        }
+        else
+        {
+            _ = Directory.CreateSymbolicLink(link, target);
+        }
+    }
+
     /// <summary>The Team's folders are its own, then each Project's, in the catalog's order.</summary>
     [Fact]
     public void TeamFolders_ListsTheTeamThenItsProjects()

@@ -92,6 +92,20 @@ public sealed class TeamMemoryInputBuilderTests
         Assert.Equal(MemoryVersion.Of(File.ReadAllBytes(consent)), best.Version);
     }
 
+    /// <summary>A candidate saved with a byte-order mark reaches the Helper without it, so its text starts at the frontmatter marker.</summary>
+    [Fact]
+    public void Build_CandidateWithAByteOrderMark_IsShownWithoutIt()
+    {
+        using TeamMemoryHarness harness = new();
+        string path = harness.Put("interview-consent.md", "Interview recording consent rules; read before recording an interview", "Written consent only.");
+        File.WriteAllText(path, File.ReadAllText(path), new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+
+        TeamMemoryInput input = harness.Builder.Build(TeamMemoryHarness.Proposal("Interview recording consent."));
+
+        Assert.StartsWith("---\ndescription:", input.Candidates[0].Text, StringComparison.Ordinal); // contains-ok: file text; its first bytes are the assertion
+        Assert.Equal(MemoryVersion.Of(File.ReadAllBytes(path)), input.Candidates[0].Version);
+    }
+
     /// <summary>A file sharing no word with the proposal is never a candidate.</summary>
     [Fact]
     public void Build_NoSharedWords_NoCandidates()

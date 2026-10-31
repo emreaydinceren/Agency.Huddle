@@ -4,6 +4,8 @@ using System.Text;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 using Agency.Huddle.App.Memory;
+using Agency.Huddle.App.Prompts;
+using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Elicitation;
 
 /// <summary>
@@ -394,6 +396,36 @@ public sealed class MemoryToolTests
         Assert.EndsWith("description: The Human prefers F# for all code.", result, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
     }
 
+    /// <summary>
+    /// A <c>replace</c> that removes the description, or turns it into one <c>write</c> would refuse, is refused with the same reason,
+    /// and the file is left as it was; changing it into another good description is allowed.
+    /// </summary>
+    /// <param name="old">The text to replace.</param>
+    /// <param name="replacement">Its replacement.</param>
+    /// <param name="problem">The description problem, or <see langword="null"/> when the change is allowed.</param>
+    [Theory]
+    [InlineData($"description: {GoodDescription}\n", "", "it is missing.")]
+    [InlineData(GoodDescription, "Short", "it is shorter than 20 characters.")]
+    [InlineData("Read for school mail.", "Read before writing to the school.", null)]
+    public async Task Replace_TouchingTheDescription_KeepsItUsable(string old, string replacement, string? problem)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using MemoryToolHarness harness = new();
+        string original = MemoryFileRules.Compose(GoodDescription, "Ms Patel teaches maths.");
+        string path = MemoryToolHarness.Put(harness.MemoryDir(), "school.md", original);
+
+        string result = await harness.RunAsync(MemoryToolHarness.Args("replace", ("file", "school.md"), ("old", old), ("new", replacement)), ct);
+
+        if (problem is null)
+        {
+            Assert.Equal(original.Replace(old, replacement, StringComparison.Ordinal), await File.ReadAllTextAsync(path, ct));
+            return;
+        }
+
+        Assert.Equal(new FakePromptSource().Say("systemPrompt.memoryBadDescription", ("problem", problem)), result);
+        Assert.Equal(original, await File.ReadAllTextAsync(path, ct));
+    }
+
     /// <summary>A file the Human saved with Windows line breaks is still matched by an <c>old</c> written with plain ones.</summary>
     [Fact]
     public async Task Replace_FileWithWindowsLineBreaks_StillMatches()
@@ -501,7 +533,7 @@ public sealed class MemoryToolTests
         using FileStream held = new(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         string result = await harness.RunAsync(MemoryToolHarness.Args("read", ("file", "locked.md")), ct);
 
-        Assert.Equal("locked.md could not be read or changed because something else is using it. Nothing was lost; try again.", result);
+        Assert.Equal("locked.md could not be read because something else is using it. Nothing was changed; try again.", result);
         LogEntry warning = Assert.Single(harness.Logger.AtExactly(LogLevel.Warning));
         Assert.Equal($"Could not read the memory file '{path}'.", warning.Message);
     }

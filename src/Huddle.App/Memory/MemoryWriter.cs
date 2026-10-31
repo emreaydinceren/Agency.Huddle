@@ -6,7 +6,8 @@ namespace Agency.Huddle.App.Memory;
 
 /// <summary>
 /// The one write path for a whole memory file (Team Memory Helper spec §6.6): checks the name and the description, composes the
-/// frontmatter, checks the size cap and the version, and writes atomically, all under the folder's <see cref="MemoryFolderGate"/>.
+/// frontmatter (keeping the other keys a replaced file had), checks the size cap and the version, and writes atomically, all under
+/// the folder's <see cref="MemoryFolderGate"/>.
 /// The <c>memory</c> tool's <c>write</c> and the Team Memory Helper's applier both call it, so no rule exists twice. It logs nothing:
 /// each caller reports the result in its own words.
 /// </summary>
@@ -67,14 +68,16 @@ internal sealed class MemoryWriter(MemoryFolderGate gate, IOptions<TeamOptions> 
             return new MemoryWriteResult.BadDescription(problem);
         }
 
-        byte[] bytes = Utf8.GetBytes(MemoryFileRules.Compose((description ?? string.Empty).Trim(), text ?? string.Empty));
+        // Read first, so a replaced file keeps the frontmatter keys other than its description that it already had.
+        byte[]? current = File.Exists(path) ? await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false) : null;
+        string? otherKeys = current is null ? null : MemoryFileRules.OtherKeys(Utf8.GetString(current));
+        byte[] bytes = Utf8.GetBytes(MemoryFileRules.Compose((description ?? string.Empty).Trim(), text ?? string.Empty, otherKeys));
         int max = options.Value.Memory.MaxFileBytes;
         if (max > 0 && bytes.Length > max)
         {
             return new MemoryWriteResult.TooLarge(bytes.Length, max);
         }
 
-        byte[]? current = File.Exists(path) ? await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false) : null;
         if (current is null && expectedVersion is not null)
         {
             return new MemoryWriteResult.Missing();

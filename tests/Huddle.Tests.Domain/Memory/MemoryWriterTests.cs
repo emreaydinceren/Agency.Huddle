@@ -54,6 +54,26 @@ public sealed class MemoryWriterTests : IDisposable
         Assert.Equal(MemoryFileRules.Compose(Description, "Recorded verbal consent is enough."), await File.ReadAllTextAsync(first.Path, TestContext.Current.CancellationToken));
     }
 
+    /// <summary>
+    /// Replacing a file keeps the frontmatter keys other than <c>description</c> that a Human or the Library added, list values
+    /// included, and drops the old description with its continuation lines.
+    /// </summary>
+    [Fact]
+    public async Task WriteAsync_ReplacingAFile_KeepsItsOtherFrontmatterKeys()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        string path = Path.Combine(this.folder.Path, "consent.md");
+        Directory.CreateDirectory(this.folder.Path);
+        await File.WriteAllTextAsync(path, "---\nowner: Ana\ndescription: >\n  Old folded\n  description\ntags:\n  - interviews\n  - legal\n---\n\nOld body.\n", ct);
+
+        MemoryWriteResult result = await this.writer.WriteAsync(this.folder, "consent.md", Description, "New body.", MemoryVersion.Of(await File.ReadAllBytesAsync(path, ct)), ct);
+
+        Assert.IsType<MemoryWriteResult.Written>(result);
+        Assert.Equal(
+            $"---\ndescription: {Description}\nowner: Ana\ntags:\n  - interviews\n  - legal\n---\n\nNew body.\n",
+            await File.ReadAllTextAsync(path, ct));
+    }
+
     /// <summary>No version for a file that exists is <see cref="MemoryWriteResult.Exists"/>, and the file is left as it was.</summary>
     [Fact]
     public async Task WriteAsync_ExistingFileWithoutVersion_IsExistsAndWritesNothing()
