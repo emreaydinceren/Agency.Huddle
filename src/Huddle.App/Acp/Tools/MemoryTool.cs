@@ -214,7 +214,10 @@ internal sealed class MemoryTool(
     /// <param name="folder">The resolved folder.</param>
     private string List(MemoryFolder folder)
     {
-        List<string> files = Directory.Exists(folder.Path) ? [.. Directory.EnumerateFiles(folder.Path, "*.md", SearchOption.TopDirectoryOnly)] : [];
+        List<string> files = Directory.Exists(folder.Path)
+            ? [.. Directory.EnumerateFiles(folder.Path, "*.md", SearchOption.TopDirectoryOnly)
+                .Where(static file => !MemoryFileRules.IsIndexFileName(Path.GetFileName(file)))]
+            : [];
         files.Sort(StringComparer.Ordinal);
 
         string body = files.Count == 0

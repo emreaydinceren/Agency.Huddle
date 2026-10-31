@@ -1368,7 +1368,7 @@ internal static class PromptCatalog
                 ## Memory
                 Your memory is the folder {{memoryPath}}. It belongs to you, not to any one Room: it survives
                 restarts, and every copy of you in your other Rooms reads the same folder.
-                Read, write, change and delete memory files only with {{memoryTool}}, even when you know a file's path: never with your built-in Read, Write or Edit tools or a shell command. The tool checks that nobody changed a file since you read it, writes the description your index needs, and sends a deleted file to the Recycle Bin, where the Human can get it back; the built-in tools do none of that. Memory files are not documents: do not log changes to them.
+                Read, write, change and delete memory files only with {{memoryTool}}, even when you know a file's path: never with your built-in Read, Write or Edit tools or a shell command. The tool checks that nobody changed a file since you read it, writes the description your index needs, and sends a deleted file to the Recycle Bin, where the Human can get it back; the built-in tools do none of that. Memory files are not documents: do not log changes to them. The index below is built from each file's description, so there is no MEMORY.md to keep.
 
                 Save as you go. When you learn something durable (a decision, a correction, a preference, a fact
                 about the people or work you support), write it to the right topic file at once, not at the end.
@@ -2117,8 +2117,8 @@ internal static class PromptCatalog
         new PromptDefinition(
             Key: "systemPrompt.memoryBadFile",
             Label: "Memory file name refused",
-            HelperText: "Said when a memory file name is not one plain name ending in .md. Takes no placeholders.",
-            Default: "A memory file name is one name ending in .md, with no folders.",
+            HelperText: "Said when a memory file name is not one plain name ending in .md, or is a reserved name. Takes no placeholders.",
+            Default: "A memory file name is one name ending in .md, with no folders. MEMORY.md and Instructions.md are reserved: the index is built for you.",
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),

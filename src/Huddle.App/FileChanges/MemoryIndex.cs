@@ -44,7 +44,8 @@ internal static class MemoryIndex
             return ([], 0);
         }
 
-        List<string> files = [.. Directory.EnumerateFiles(memoryDir, "*.md", SearchOption.TopDirectoryOnly)];
+        List<string> files = [.. Directory.EnumerateFiles(memoryDir, "*.md", SearchOption.TopDirectoryOnly)
+            .Where(static file => !MemoryFileRules.IsIndexFileName(Path.GetFileName(file)))];
         files.Sort(StringComparer.Ordinal);
 
         List<string> listedFiles = files.Count > maxEntries ? files[..maxEntries] : files;

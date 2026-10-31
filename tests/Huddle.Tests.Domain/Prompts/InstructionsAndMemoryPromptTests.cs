@@ -130,8 +130,24 @@ public sealed class InstructionsAndMemoryPromptTests
             "{{team}} has no manager, so its Team Memory is written by the Human.",
             PromptCatalog.Get("systemPrompt.memoryNoManager").Default);
         Assert.Equal(
-            "A memory file name is one name ending in .md, with no folders.",
+            "A memory file name is one name ending in .md, with no folders. MEMORY.md and Instructions.md are reserved: the index is built for you.",
             PromptCatalog.Get("systemPrompt.memoryBadFile").Default);
+    }
+
+    /// <summary>
+    /// The Memory block tells the Agent there is no hand-kept index, because a model used to Claude Code's convention
+    /// otherwise starts a MEMORY.md of its own.
+    /// </summary>
+    [Fact]
+    public void Memory_SaysThereIsNoIndexFileToKeep()
+    {
+        string memory = PromptCatalog.Get("systemPrompt.memory").Default.Replace("\r\n", "\n", StringComparison.Ordinal);
+
+        Assert.Contains( // contains-ok: prompt or tool-result text, not markup
+            "Memory files are not documents: do not log changes to them. The index below is built from each file's " +
+            "description, so there is no MEMORY.md to keep.\n",
+            memory,
+            StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -147,7 +163,7 @@ public sealed class InstructionsAndMemoryPromptTests
             "\nRead, write, change and delete memory files only with {{memoryTool}}, even when you know a file's path: never with " +
             "your built-in Read, Write or Edit tools or a shell command. The tool checks that nobody changed a file since you read " +
             "it, writes the description your index needs, and sends a deleted file to the Recycle Bin, where the Human can get it " +
-            "back; the built-in tools do none of that. Memory files are not documents: do not log changes to them.\n",
+            "back; the built-in tools do none of that. Memory files are not documents: do not log changes to them.",
             memory,
             StringComparison.Ordinal);
     }

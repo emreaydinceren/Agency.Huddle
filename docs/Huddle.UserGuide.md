@@ -1534,6 +1534,10 @@ Use the template in Business/templates/invoice.md.
 
 An older file with no `description` still works: its first line is used instead.
 
+There is no `MEMORY.md` to keep: Huddle builds the index from the descriptions. The name is
+reserved in every memory folder. An Agent cannot create a file called `MEMORY.md`, and one you
+leave there is kept on disk but never listed in the index.
+
 Agents write memory with the `memory` tool. It lists, reads, writes, appends to,
 replaces text in and deletes memory files, and it enforces what a prompt can only
 ask: a file must have a description, an Agent must read a file before it writes over

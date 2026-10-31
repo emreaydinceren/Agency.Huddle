@@ -17,6 +17,12 @@ internal static class MemoryFileRules
     /// <summary>The most characters a description may have.</summary>
     internal const int MaxDescriptionLength = 200;
 
+    /// <summary>
+    /// The hand-kept index name some Adapters use. Huddle builds the index from each file's description (ADR-0071, D-6),
+    /// so this name is reserved: the tool refuses it and the index skips it, leaving any such file on disk untouched.
+    /// </summary>
+    internal const string IndexFileName = "MEMORY.md";
+
     /// <summary>The extension every memory file has.</summary>
     private const string Extension = ".md";
 
@@ -50,7 +56,17 @@ internal static class MemoryFileRules
             && !stem.StartsWith('_')
             && !DeviceNames.Contains(stem, StringComparer.OrdinalIgnoreCase)
             && !string.Equals(file, TeamPaths.InstructionsFileName, StringComparison.OrdinalIgnoreCase)
+            && !IsIndexFileName(file)
             && !TeamNames.IsReservedProjectName(stem);
+    }
+
+    /// <summary>Whether <paramref name="file"/> is <see cref="IndexFileName"/>, ignoring case.</summary>
+    /// <param name="file">A file name, without a folder.</param>
+    /// <returns><see langword="true"/> when it is the reserved index name, which is never written and never listed.</returns>
+    public static bool IsIndexFileName(string file)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        return string.Equals(file, IndexFileName, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Checks a description against the mechanical rules of §4.4.</summary>

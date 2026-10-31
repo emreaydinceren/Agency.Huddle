@@ -14,6 +14,9 @@ public sealed class MemoryToolTests
 {
     private const string GoodDescription = "Teachers, the front office, and who to email about what. Read for school mail.";
 
+    private const string BadFileRefusal =
+        "A memory file name is one name ending in .md, with no folders. MEMORY.md and Instructions.md are reserved: the index is built for you.";
+
     private const string DescriptionAdvice = "Give one line of 20 to 200 characters (about 100 to 150 is best) that names the specific people, projects, places or events inside and says when to read the file, such as \"Read for...\" or \"Check before...\". Put no facts and nothing sensitive in it.";
 
     /// <summary>An empty folder lists as nothing yet, with the folder path and the folders this caller may use.</summary>
@@ -143,6 +146,8 @@ public sealed class MemoryToolTests
     [InlineData("instructions.MD")]
     [InlineData("_hidden.md")]
     [InlineData("memory.md")]
+    [InlineData("MEMORY.md")]
+    [InlineData("Memory.MD")]
     [InlineData("")]
     public async Task AnyCommand_BadFileName_IsRefused(string file)
     {
@@ -155,10 +160,29 @@ public sealed class MemoryToolTests
                 MemoryToolHarness.Args(command, ("file", file), ("description", GoodDescription), ("text", "x"), ("old", "a"), ("new", "b"), ("version", "abc")),
                 ct);
 
-            Assert.Equal("A memory file name is one name ending in .md, with no folders.", result);
+            Assert.Equal(BadFileRefusal, result);
         }
 
         Assert.False(Directory.Exists(harness.MemoryDir()) && Directory.EnumerateFiles(harness.MemoryDir()).Any());
+    }
+
+    /// <summary>
+    /// A <c>MEMORY.md</c> the Human left in the folder is never listed, because the index is built for the Agent; the file
+    /// itself is left on disk untouched.
+    /// </summary>
+    [Fact]
+    public async Task List_SkipsTheIndexFileName_AndLeavesItOnDisk()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using MemoryToolHarness harness = new();
+        string folder = harness.MemoryDir();
+        string index = MemoryToolHarness.Put(folder, "MEMORY.md", "- dentist.md - Dentist visits.");
+        MemoryToolHarness.Put(folder, "dentist.md", "---\ndescription: Dentist visits and insurance. Read before booking.\n---\n\nBody.");
+
+        string result = await harness.RunAsync(MemoryToolHarness.Args("list"), ct);
+
+        Assert.Equal($"dentist.md - Dentist visits and insurance. Read before booking.\nfolder: {folder}\nfolders you may use: me", result);
+        Assert.Equal("- dentist.md - Dentist visits.", await File.ReadAllTextAsync(index, ct));
     }
 
     /// <summary>A read returns the whole file, frontmatter included, then its version.</summary>

@@ -261,6 +261,18 @@ A Human override that uses `{{path}}` keeps working.
 **There is no `MEMORY.md`.** The index is built, so it can never drift from the files, and no
 shared file is rewritten on every save (§7.1). The `list` command (§5.2) is the index on demand.
 
+The name is reserved, ignoring case, in every memory folder (an Agent's own, a Team's and a
+Project's), because a model used to Claude Code's convention may start one out of habit:
+
+- **The tool refuses it.** Every command that names a file returns `systemPrompt.memoryBadFile`,
+  which says that `MEMORY.md` and `Instructions.md` are reserved because the index is built.
+- **The index skips it.** `MemoryIndex.Build` and the `list` command leave it out, and it does not
+  count toward `NotListed`.
+- **A file already there is left alone.** Huddle never deletes or renames it; the Human can open it
+  in the Library like any other file.
+
+The Memory Prompt (§6.1) also tells the Agent there is no `MEMORY.md` to keep.
+
 ### 4.3 Frontmatter parsing
 
 The Library's own frontmatter reader is reused: `NoteFrontmatter.Split` to separate the block,
