@@ -14,7 +14,7 @@ Decide, on a real long-running Room, whether the Teammate keeps what matters acr
 2. **Phase 0 V0-1 is not yet run.** V0-1, which keeps Claude Code's own memory out of play, is deferred to user acceptance. Until it passes, note in the Notes column of each result table whether Claude Code's own memory was visible to the Teammate during the test.
 3. **The `memory` App Tool is live.** Confirm it before LRR-02: ask the Teammate to save one fact in a Turn, and check that a topic file is written under its Memory. This is how the Room will really run.
 4. **Default Catch-up.** Unless a step says otherwise, the Catch-up is at its default, `Acp:TranscriptCatchUpTokens` of 100000 estimated tokens, with no override in Settings › Sessions.
-5. **Steps that need *Start afresh* are available from phase 2a.** Until phase 2a is built, those steps cannot run. Mark them Blocked in the tracker with that reason, and run the rest.
+5. **Start afresh, step by step.** Open the Room and click the Teammate's avatar in the Room header. In the popover, click **Start afresh**. The inline confirm asks "Start afresh? {Name} keeps every Message but forgets its working notes for this Room." Click **Start afresh** to confirm, or **Cancel** to stop. The Room then shows the note "{Name} started afresh, as you asked. It reread the last {count} Messages (about {tokens} tokens)." Write down the count and the tokens. Click **See what it reread** and check whether it went past 20 Messages (§9.1 step 3). It can only go past 20 when the Message cap is raised, as LRR-03 does, so record the answer in the Notes column. If the note says "There were no earlier Messages to reread." or "It could not reread the Room." instead, record that text and mark the test Inconclusive.
 
 ## Conventions used in the result tables
 
@@ -69,7 +69,7 @@ Decide, on a real long-running Room, whether the Teammate keeps what matters acr
 **Before you start**
 
 - LRR-01 is done and the `memory` App Tool is live (Setup, steps 1 to 3).
-- Available from phase 2a: this test needs *Start afresh*.
+- This test needs *Start afresh*, done as Setup, step 5 describes.
 
 **Steps**
 
@@ -107,7 +107,7 @@ Recall score: ___ of 10. First-Turn cost: ___ (from the card). Repeats: not coun
 **Before you start**
 
 - LRR-02 is done.
-- Available from phase 2a: this test needs *Start afresh*.
+- This test needs *Start afresh*, done as Setup, step 5 describes.
 
 **Steps**
 
@@ -147,13 +147,13 @@ Recall score: ___ of 10. First-Turn cost: ___. Reread went past 20 Messages: yes
 **Before you start**
 
 - A live session in this Room.
-- The `/compact` and the live-session counts run without phase 2a. The fresh-start count is available from phase 2a.
+- The `/compact` and the live-session counts need no *Start afresh*. The fresh-start count needs it, done as Setup, step 5 describes.
 
 **Steps**
 
 1. In the live session, ask "suggest three things we haven't tried yet". Then do five Turns of other work. Ask again. Do this three times, and count the repeats in each ask.
 2. Run `@Teammate /compact keep the decisions and open questions`. Repeat step 1's three asks, with five Turns between them, and count the repeats.
-3. *Start afresh* the Teammate (phase 2a). Repeat step 1's three asks, with five Turns between them, and count the repeats.
+3. *Start afresh* the Teammate (Setup, step 5). Repeat step 1's three asks, with five Turns between them, and count the repeats.
 
 **Pass if — all of these**
 
@@ -164,7 +164,7 @@ Recall score: ___ of 10. First-Turn cost: ___. Reread went past 20 Messages: yes
 | --- | --- | --- | --- | --- |
 | Live session, no compaction |  |  |  |  |
 | After `/compact` |  |  |  |  |
-| After *Start afresh* (phase 2a) |  |  |  |  |
+| After *Start afresh* |  |  |  |  |
 
 ### LRR-05 — The flush is played by hand, with and without the save request
 
@@ -174,7 +174,7 @@ Recall score: ___ of 10. First-Turn cost: ___. Reread went past 20 Messages: yes
 
 **Before you start**
 
-- Available from phase 2a: both occasions need *Start afresh*.
+- Both occasions need *Start afresh*, done as Setup, step 5 describes.
 - Let new facts accrue for a few days between the two occasions, so the second has something new to recall.
 - Choose five questions about decisions from the last week for each occasion, and write their correct answers down before you start.
 
