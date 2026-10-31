@@ -1,13 +1,17 @@
 @*
     The Pack bar (Skill Packs spec §6.9.5, G4b): Add with your AI tool, Check for updates, Reload, the Show hidden switch, and
     the status line "3 Sources · 1 new · 1 problem · SKILLS.md read 1 minute ago", whose zero counts are left out. Reload
-    re-reads everything now, ignoring the two-second grace; the button spins and is disabled while it runs.
+    re-reads everything now, ignoring the two-second grace; the button spins and is disabled while it runs. The status
+    line counts only the Packs tab's own problems; the Reload snackbar reports everything Reload re-read, through
+    SkillProblemCount, so it says the same as the Skills tab's Reload.
 *@
+@using Agency.Huddle.App.Skills
 @using Agency.Huddle.App.Skills.Ui
 @using Agency.Huddle.App.SkillSources
 @using Agency.Huddle.SkillPacks.Resolving
 
 @inject SkillRegistry Registry
+@inject SkillStore Store
 @inject ISnackbar Snackbar
 @inject TimeProvider Clock
 
@@ -90,7 +94,7 @@
         }
     }
 
-    /// <summary>The Packs and catalogs shown Broken.</summary>
+    /// <summary>The Packs and catalogs shown Broken: the status line's count, scoped to this tab like its "new" count.</summary>
     private int Problems
     {
         get
@@ -114,7 +118,7 @@
             this.reloading = false;
         }
 
-        int problems = this.Problems;
+        int problems = SkillProblemCount.Of(this.Registry, this.Store);
         this.Snackbar.Add(problems == 0 ? "Reloaded. No problems." : $"Reloaded. {Plural.Of(problems, "problem", "problems")} found.", Severity.Success, configure: null, key: "skills-reload");
     }
 }

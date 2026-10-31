@@ -1,4 +1,7 @@
 using Agency.Huddle.App.Components.Settings.Skills;
+using Agency.Huddle.App.Components.Shared;
+using Agency.Huddle.App.Skills.Ui;
+using Agency.Huddle.Tests.Waiting;
 using Bunit;
 using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
@@ -70,6 +73,33 @@ public sealed class PackBarTests : IDisposable
         Assert.True(this.fixture.Host.Registry.Current.Version > before);
         Assert.Equal("Reloaded. No problems.", Assert.Single(ctx.Services.GetRequiredService<ISnackbar>().ShownSnackbars).Message);
         Assert.False(cut.Find(".pack-bar-reload").HasAttribute("disabled"));
+    }
+
+    /// <summary>
+    /// Reload reports every problem it re-read, as the Skills tab's Reload does: a Skill store issue, which the Packs-scoped
+    /// status line leaves out, still makes the snackbar say a problem was found.
+    /// </summary>
+    [Fact]
+    public async Task Reload_StoreIssue_ReportsTheSameCountAsTheSkillsTab()
+    {
+        await this.fixture.SeedAsync();
+        string invalid = Path.Combine(this.fixture.Host.Settings.SkillsDir, "not-a-skill");
+        Directory.CreateDirectory(invalid);
+        File.WriteAllText(Path.Combine(invalid, "SKILL.md"), "No frontmatter here.");
+        await Eventually.UntilAsync(
+            () => this.fixture.Host.Skills.Issues.Count != 0,
+            Xunit.TestContext.Current.CancellationToken,
+            timeout: TestBudgets.Slow,
+            interval: TimeSpan.FromMilliseconds(50));
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        await cut.InvokeAsync(() => cut.Find(".pack-bar-reload").ClickAsync());
+
+        int problems = SkillProblemCount.Of(this.fixture.Host.Registry, this.fixture.Host.Skills);
+        Assert.NotEqual(0, problems);
+        Assert.Equal($"Reloaded. {Plural.Of(problems, "problem", "problems")} found.", Assert.Single(ctx.Services.GetRequiredService<ISnackbar>().ShownSnackbars).Message);
+        Assert.DoesNotContain("problem", cut.Find(".pack-bar-status").TextContent, StringComparison.Ordinal);
     }
 
     /// <summary>Renders the bar.</summary>
