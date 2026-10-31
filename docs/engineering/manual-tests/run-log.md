@@ -6030,6 +6030,7 @@ File: [`docs/engineering/manual-tests/long-running-rooms.md`](long-running-rooms
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-10-31 | Pass | 79f84a16 |  | Seeded Room, by an agent. "heron" saved through `memory`; no Claude Code memory written. Checked the snapshot's project folder too (page fixed since) |
 
 ### LONGROOMS-02 — Recall after a fresh start at the default Catch-up
 
@@ -6037,6 +6038,7 @@ File: [`docs/engineering/manual-tests/long-running-rooms.md`](long-running-rooms
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-10-31 | Ran | 79f84a16 |  | Seeded Room, stand-in fresh start. 8/10 and 10/10; one run wrote a false "never discussed" note to Memory. Spec §9.3 |
 
 ### LONGROOMS-03 — Recall after a fresh start with a 40000-token Catch-up
 
@@ -6044,6 +6046,7 @@ File: [`docs/engineering/manual-tests/long-running-rooms.md`](long-running-rooms
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-10-31 | Ran | 79f84a16 |  | Seeded Room, 82-Message cap standing in for 40,000 tokens. 9/10 twice. Spec §9.3 |
 
 ### LONGROOMS-04 — Repeats in a live session, after compact and after a fresh start
 
@@ -6051,6 +6054,7 @@ File: [`docs/engineering/manual-tests/long-running-rooms.md`](long-running-rooms
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-10-31 | Ran | 79f84a16 |  | Seeded Room. Repeats 1 / 2 / 7 (live / after /compact / after a fresh start). /compact was cancelled at the 180 s idle bound; took 203 s at 1200. Live round not fully isolated. Spec §9.3 |
 
 ### LONGROOMS-05 — A fresh start with and without a save request first
 
@@ -6058,6 +6062,7 @@ File: [`docs/engineering/manual-tests/long-running-rooms.md`](long-running-rooms
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-10-31 | Ran | 79f84a16 |  | Seeded Room; the week simulated. A/B 5/5 vs 5/5, then 4/5 vs 5/5; save Turn $0.83, $1.49. Spec §9.3 |
 
 ---
 
