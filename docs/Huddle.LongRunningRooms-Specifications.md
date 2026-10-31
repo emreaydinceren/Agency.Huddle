@@ -32,6 +32,10 @@ The decisions to hold on to while reading:
 - **Save before forgetting.** Before a live session is retired, it gets one silent Turn to save what
   matters through the `memory` tool: a **memory flush**, the technique OpenClaw runs before every
   compaction (§6.6).
+- **Measure before automating.** Phases 0 and 1 and the Human's *Start afresh* (phase 2a) ship
+  first: they fix a certain failure, the lost session. The automatic triggers, the flush and the
+  records (phase 2b) wait for the experiment, because the rut they treat has not yet been observed
+  in a Huddle Room.
 - **Automatic fresh starts are Off for every Room until the Human turns them on.**
 - **Facts live in Memory; the conversation lives in the Transcript.** Durable facts (a decision, a
   preference, a correction) belong to the `memory` App Tool of the
@@ -69,8 +73,8 @@ Teammate forgetting what you decided or falling into a rut.
 | **The record** | A stenographer's full record | Every Message is kept forever, word for word. Nothing here ever changes it | Exists today |
 | **Keep the notepad longer** | Not shredding last month's notes | Claude Code throws a session away after about 30 days unused. Huddle would keep it for a year, so a quiet Room picks up where it left off | Step 0, after a check that it works |
 | **Reread more** | How many pages of the minutes a colleague rereads before a meeting | When a Teammate does start afresh, it rereads as much of the Room as fits a size you choose, not just 20 Messages. Its own old suggestions are skipped first, so it does not repeat itself | Step 1 |
-| **Fresh start** | A clean notebook page, with the recent pages clipped to the front | When a session has gone stale, Huddle retires it and starts a new one that rereads the Room. You can ask for one in a Room at any time; automatic fresh starts are off until you turn them on for a Room. Then they happen when the notepad gets too big, when the AI has just squeezed it, or when a big notepad has sat unused for an hour (reopening it would cost as much as starting afresh) | Step 2 |
-| **Save before forgetting** | Writing down what matters before you clear your desk | Just before a Teammate's notepad is retired, it gets a quiet moment to write anything worth keeping into its notebook (the `memory` tool). Nothing is posted in the Room; the Room's note says how many notebook pages it saved | Step 2 |
+| **Fresh start** | A clean notebook page, with the recent pages clipped to the front | When a session has gone stale, Huddle retires it and starts a new one that rereads the Room. You can ask for one in a Room at any time; automatic fresh starts are off until you turn them on for a Room. Then they happen when the notepad gets too big, when the AI has just squeezed it, or when a big notepad has sat unused for an hour (reopening it would cost as much as starting afresh) | Asking for one: step 2. Automatic: only after step 3, if it earns its place |
+| **Save before forgetting** | Writing down what matters before you clear your desk | Just before a Teammate's notepad is retired, it gets a quiet moment to write anything worth keeping into its notebook (the `memory` tool). Nothing is posted in the Room; the Room's note says how many notebook pages it saved | Tried by hand in step 3; built afterwards only if it beats "save as you go" |
 | **Squeeze** (`@Nova /compact`) | Asking someone to boil their notes down to one page | Already built. You can tell a Teammate to compress its notepad, even saying what to keep. Huddle never does this on its own, because you cannot read or check the squeezed version | Exists today |
 | **The experiment** | Testing a new routine for a month before buying equipment | Before anything bigger is built, you ask a long-running Teammate ten questions about old decisions, and count repeated suggestions, before and after each step. The scores decide whether more is needed | Step 3 |
 | **Handoff note** (only if the experiment says so) | A colleague's handover note before leave | Decisions and preferences are already saved in step 2. If the experiment shows the Teammate still loses track of its open work, it also writes a short note of what it was doing and what is still open. The new session reads it. You can read and edit it | Step 4, conditional |
@@ -96,8 +100,9 @@ of the problem:
 - **It is Claude-only.** A Teammate on a local model has no compaction at all.
 
 If the experiment (step 3) shows that Claude's squeeze plus your own occasional `@Nova /compact`
-is good enough, automatic fresh starts stay off and nothing bigger is built. Steps 0 and 1 are worth doing either way: they fix the lost
-notepad, which compaction can never touch.
+is good enough, automatic fresh starts are never built and nothing bigger is. Steps 0 and 1, and
+asking for a fresh start yourself, are worth doing either way: they fix the lost notepad, which
+compaction can never touch.
 
 ### What it costs, and what can go wrong
 
@@ -246,15 +251,15 @@ unless a recorded reason says otherwise.
 
 | Id | Requirement | Phase |
 | --- | --- | --- |
-| LR-R1 | Nothing in this feature MUST edit, reorder or delete a Transcript line. | all |
+| LR-R1 | This feature MUST NOT edit, reorder or delete a Transcript line. | all |
 | LR-R2 | With every setting at its default, the system prompt and every Turn prompt MUST be byte-identical to today's, and the existing goldens MUST stay unchanged. | all |
-| LR-R3 | Nothing in this feature MUST make a model call other than an Agent's own Turns, the memory flush of LR-R26 and, in phase 4, the handoff Turn. | all |
+| LR-R3 | This feature MUST NOT make a model call other than an Agent's own Turns, the memory flush of LR-R26 and, in phase 4, the handoff Turn. | all |
 
 ### 3.2 Retention and isolation (phase 0)
 
 | Id | Requirement | Phase |
 | --- | --- | --- |
-| LR-R4 | Before phase 2 ships, the isolation of a Claude-profile session from the Human's `~/.claude` settings and auto memory MUST be verified live (Task 14.3.m), and the result recorded in [known-limits.md](engineering/known-limits.md). | 0 |
+| LR-R4 | Before phase 2a ships, the isolation of a Claude-profile session from the Human's `~/.claude` settings and auto memory MUST be verified live (Task 14.3.m), and the result recorded in [known-limits.md](engineering/known-limits.md). | 0 |
 | LR-R5 | A configured Adapter entry whose `UsesToolNamePrefix` is true and whose `IsolateUserSettings` is false SHOULD log one Warning at start-up naming the entry. | 0 |
 | LR-R6 | If V0-2 (§4.1) shows session retention can be set for an isolated session, Huddle MUST set it to `Team:Acp:SessionRetentionDays` (default 365) for every Claude-profile session. If it cannot, the finding MUST be recorded and nothing else in this spec changes. | 0 |
 
@@ -271,27 +276,33 @@ unless a recorded reason says otherwise.
 | LR-R13 | The Message cap MUST accept 1 to 2000 and the token budget 1000 to 150000. A value outside the range MUST be refused with a message, never clamped silently. (A value of 0 is not offered: `HandleReadTranscriptAsync` refuses `Max < 1`.) | 1 |
 | LR-R14 | The defaults MUST stay `20` Messages and a token budget large enough not to bind at 20 Messages, so LR-R2 holds until the Human changes them. | 1 |
 
-### 3.4 Fresh starts (phase 2)
+### 3.4 Fresh starts (phases 2a and 2b)
+
+Phase 2 is split by the evidence it needs. **2a** is the Human's *Start afresh* and the Room note:
+small, certain, and needed by the experiment (§9.1). **2b** is everything automatic (the per-Room
+setting, the triggers, the memory flush, the records and the fallback note) and is built only on
+a "go" from the experiment, with thresholds taken from its measurements. The 2b requirements are
+written now so the design is whole, not as a commitment to build them.
 
 | Id | Requirement | Phase |
 | --- | --- | --- |
-| LR-R15 | The Human MUST be able to ask for a fresh start of one Teammate's session in one Room, from the Room, without affecting that Teammate's other Rooms. | 2 |
-| LR-R16 | Automatic fresh starts MUST be a per-Room setting, **Off** for every Room, existing and new, the Chief of Staff's included. Only the Human can turn it on; no App Tool, Persona field, Team type or Agent can. | 2 |
-| LR-R17 | With automatic fresh starts on, a Room Session MUST be marked **degraded** at the end of a Turn when any trigger of §6.2 fires. | 2 |
-| LR-R18 | A fresh start MUST happen only between Turns, immediately before the next item starts, and never while a Question or Form waits in that Room. | 2 |
-| LR-R19 | A fresh start MUST close the old session, forget its `RoomSessionStore` entry, and open a new session through the existing lazy-open path, so its first Turn carries Catch-up at the configured budget. | 2 |
-| LR-R20 | A fresh start MUST NOT count as a Turn failure, touch the failure streak or post a Transcript Message. | 2 |
-| LR-R21 | Every fresh start MUST be shown in the Room as a Room-level note (ADR-0012's slot), naming the Teammate, the reason and what the new session reread, for example *Nova started afresh after its conversation was compacted. It reread the last 38 Messages (about 31,000 tokens).* | 2 |
-| LR-R22 | The text a fresh session's first Turn carried MUST be viewable from that note, as sent. | 2 |
-| LR-R23 | Automatic fresh starts MUST be limited to `FreshStarts:MaxPerDay` (default 3) per Room Session per local day. A trigger past the limit is logged and skipped, never queued. | 2 |
-| LR-R24 | A Turn that is a Human-run Adapter command (`@Nova /compact`) MUST NOT trigger a fresh start: the Human chose compaction. | 2 |
-| LR-R25 | With automatic fresh starts Off, no trigger MUST be evaluated for that Room, so its behaviour is exactly today's. | 2 |
-| LR-R26 | Before a fresh start of a **live** session (the Size, Observed compaction and Turn-count triggers, and *Start afresh*), the session MUST get one memory flush (§6.6) when the `memory` App Tool is offered to the Agent and `FreshStarts:FlushToMemory` is true. At most one flush per fresh start. Its text MUST never be posted, and it MUST NOT count as a Turn failure. | 2 |
-| LR-R27 | A flush that fails, is refused or passes `FreshStarts:FlushTimeoutSeconds` MUST NOT block the fresh start: it is logged, and the Room note says the Teammate could not save first. | 2 |
-| LR-R28 | With automatic fresh starts on, a Room Session MUST be started afresh, not resumed and not flushed, when its next item arrives after `FreshStarts:IdleMinutes` without a Turn **and** its last reported context use was at least `FreshStarts:IdleAboveTokens`. | 2 |
-| LR-R29 | Each Room Session's fresh-start count, last reason, the context use at that moment and its time MUST be recorded (§6.7), and the Room note MUST show the count. | 2 |
-| LR-R30 | When a degraded Room Session cannot be started afresh (the daily limit is reached, or a Question or Form keeps it waiting past one item), the Room MUST say so once per degraded mark and suggest `@Name /compact` or *Start afresh*. | 2 |
-| LR-R31 | The Size and Idle-and-large triggers MUST measure a session's **growth** above its baseline, the context use reported at the end of its first Turn, not its absolute context use. A session with no recorded baseline MUST use a baseline of zero, so it behaves as an absolute threshold. A fresh start MUST therefore never mark the new session degraded for the size of its own Catch-up. | 2 |
+| LR-R15 | The Human MUST be able to ask for a fresh start of one Teammate's session in one Room, from the Room, without affecting that Teammate's other Rooms. | 2a |
+| LR-R16 | Automatic fresh starts MUST be a per-Room setting, **Off** for every Room, existing and new, the Chief of Staff's included. Only the Human can turn it on; no App Tool, Persona field, Team type or Agent can. | 2b |
+| LR-R17 | With automatic fresh starts on, a Room Session MUST be marked **degraded** at the end of a Turn when any trigger of §6.2 fires. | 2b |
+| LR-R18 | A fresh start MUST happen only between Turns, immediately before the next item starts, and never while a Question or Form waits in that Room. | 2a |
+| LR-R19 | A fresh start MUST close the old session, forget its `RoomSessionStore` entry, and open a new session through the existing lazy-open path, so its first Turn carries Catch-up at the configured budget. | 2a |
+| LR-R20 | A fresh start MUST NOT count as a Turn failure, touch the failure streak or post a Transcript Message. | 2a |
+| LR-R21 | Every fresh start MUST be shown in the Room as a Room-level note (ADR-0012's slot), naming the Teammate, the reason and what the new session reread, for example *Nova started afresh after its conversation was compacted. It reread the last 38 Messages (about 31,000 tokens).* | 2a |
+| LR-R22 | The text a fresh session's first Turn carried MUST be viewable from that note, as sent. | 2a |
+| LR-R23 | Automatic fresh starts MUST be limited to `FreshStarts:MaxPerDay` (default 3) per Room and Agent per local day, counted in the records of §6.7, so a fresh start, which replaces the Room Session, does not reset the count. A trigger past the limit is logged and skipped, never queued. | 2b |
+| LR-R24 | A Turn that is a Human-run Adapter command (`@Nova /compact`) MUST NOT trigger a fresh start: the Human chose compaction. | 2b |
+| LR-R25 | With automatic fresh starts Off, no trigger MUST be evaluated for that Room, so its behaviour is exactly today's. | 2b |
+| LR-R26 | Before a fresh start of a **live** session (the Size, Observed compaction and Turn-count triggers, and *Start afresh*), the session MUST get one memory flush (§6.6) when the `memory` App Tool is offered to the Agent and `FreshStarts:FlushToMemory` is true. At most one flush per fresh start. Its text MUST never be posted, and it MUST NOT count as a Turn failure. | 2b |
+| LR-R27 | A flush that fails, is refused or passes `FreshStarts:FlushTimeoutSeconds` MUST NOT block the fresh start: it is logged, and the Room note says the Teammate could not save first. | 2b |
+| LR-R28 | With automatic fresh starts on, a Room Session MUST be started afresh, not resumed and not flushed, when its next item arrives after `FreshStarts:IdleMinutes` without a Turn **and** its last reported context use was at least `FreshStarts:IdleAboveTokens` above its baseline (LR-R31). | 2b |
+| LR-R29 | Each Room Session's fresh-start count, last reason, the context use at that moment and its time MUST be recorded (§6.7), and the Room note MUST show the count. | 2b |
+| LR-R30 | When a degraded Room Session cannot be started afresh (the daily limit is reached, or a Question or Form keeps it waiting past one item), the Room MUST say so once per degraded mark and suggest `@Name /compact` or *Start afresh*. | 2b |
+| LR-R31 | The Size and Idle-and-large triggers MUST measure a session's **growth** above its baseline, the context use reported at the end of its first Turn, not its absolute context use. A session with no recorded baseline MUST use a baseline of zero, so it behaves as an absolute threshold. A fresh start MUST therefore never mark the new session degraded for the size of its own Catch-up. | 2b |
 
 ### 3.5 Handoff note (phase 4, conditional)
 
@@ -378,6 +389,10 @@ follows [language.md](engineering/language.md): "you" for the Human, never "user
 
 ## 6. Fresh starts (phase 2)
 
+*Start afresh* (§6.1) and its Room note (LR-R21, LR-R22) are phase 2a. The triggers (§6.2), the
+Room setting (§6.5), the flush (§6.6) and the records and fallback note (§6.7) are phase 2b, built only on a "go" from the experiment
+(§9). In phase 2a, §6.3 runs without steps 2 and 3.
+
 ### 6.1 Two ways in
 
 | Way | Who | Available |
@@ -416,8 +431,9 @@ Only with automatic fresh starts on. The first three are evaluated at the end of
   an API key. Resuming a large session after that reloads its whole context cold, which costs about
   as much as a fresh start and keeps the stale context. Both conditions are required, so a small
   session is always resumed, however long it was idle (principle 2). The idle trigger needs the last
-  context use to survive an app restart, so `RoomSessionEntry` gains a trailing optional
-  `LastUsedTokens`, written at Turn end beside `LastTurnUtc`, the same way it gained `WorkMode`.
+  context use to survive an app restart, and `RoomSessionEntry` already keeps it: its trailing
+  optional `ContextUsed`, written at Turn end beside `LastTurnUtc` for the context meter, is read
+  by the idle trigger as is. No new field is needed for it.
   There is no flush: the session is not live, and resuming it only to flush would pay the cold
   reload this trigger avoids.
 - A degraded mark set by one trigger is cleared by the fresh start; triggers are not re-evaluated
@@ -430,7 +446,7 @@ Only with automatic fresh starts on. The first three are evaluated at the end of
   degrades the session is what accumulated after its start. For Idle and large, a fresh start
   costs roughly the baseline anyway, so rotating saves only the growth above it. The baseline is
   the `Used` reported at the end of the first Turn, kept on `RoomSessionEntry` as a trailing
-  optional `BaselineTokens` beside `LastUsedTokens`. A session opened before this change has
+  optional `BaselineTokens` beside `ContextUsed`. A session opened before this change has
   none and keeps the absolute behaviour. The Catch-up budget and the trigger thresholds therefore
   stay independent settings, and no combination of them can make fresh starts loop.
 
@@ -530,7 +546,7 @@ session loss is outside compaction's reach.
 | --- | --- | --- |
 | The Human runs `@Nova /compact keep the decisions and open questions` | **Keep, and document it** in the Settings › Sessions tab and §13 | Already built, costs nothing new, and the Human can steer what is kept. But the summary is the Adapter's, invisible, Claude-only and not in the Transcript: a tool, not the strategy |
 | Huddle compacts automatically | **No** | It would reverse ADR-0035 ("only the Human") for a worse result than a fresh start: an unreviewable summary with no link back to the Messages, on one Adapter only |
-| An observed compaction triggers a fresh start | **Yes**, the main trigger (§6.2) | The Adapter has already thrown detail away; replacing its summary with the Room's own words costs one cold Turn and makes the trade visible |
+| An observed compaction triggers a fresh start | **Yes**, the safety-net trigger (§6.2): Size normally fires first, and this catches a compaction that comes earlier | The Adapter has already thrown detail away; replacing its summary with the Room's own words costs one cold Turn and makes the trade visible |
 | A fresh start instead of compaction | **Yes**, by default where it is on | Reviewable, adapter-agnostic, and it moves the model off the path it was stuck on, which compaction does not |
 
 A Human who runs `/compact` keeps the compacted session: LR-R24 makes sure Huddle does not undo the
@@ -633,22 +649,26 @@ is what decides whether this mode is safe to recommend.
 | LR-E16 | The Human clicks Stop during a flush | The flush and the pending item are cancelled as any Stop; the degraded mark stays, so the next item tries again |
 | LR-E17 | The Agent's Adapter does not offer the `memory` tool | No flush; the fresh start runs as before (§6.6) |
 | LR-E18 | The flush writes nothing | Normal: there was nothing new to save. The note omits the count |
-| LR-E19 | The app restarts while a large Room Session is idle | `LastUsedTokens` and `LastTurnUtc` on the stored entry let the idle trigger fire on the next item, opening fresh instead of resuming (LR-R28) |
+| LR-E19 | The app restarts while a large Room Session is idle | `ContextUsed` and `LastTurnUtc` on the stored entry let the idle trigger fire on the next item, opening fresh instead of resuming (LR-R28) |
 | LR-E20 | A fresh session's Catch-up is close to, or above, a trigger threshold | No trigger fires for it: the threshold counts growth above the baseline (LR-R31). A later fresh start happens only once the session has grown by the threshold since it opened |
-| LR-E20 | A stored entry written before this feature has no `LastUsedTokens` | The idle trigger does not fire for it; it resumes as today |
+| LR-E21 | A stored entry has no `ContextUsed`, because its Adapter reported no usage | The idle trigger does not fire for it; it resumes as today |
 
 ---
 
 ## 9. Phasing and the experiment
 
-Each phase ships on its own and leaves the app coherent if the next never comes.
+Each phase ships on its own and leaves the app coherent if the next never comes. They ship in the
+order of the table: phase 2b comes **after** the experiment, because its triggers are built for a
+rut the literature describes but no Room in this install has yet shown (Q-6), and the experiment is
+what would show it.
 
 | Phase | Ships | Acceptance |
 | --- | --- | --- |
 | **0. Retention and isolation** | Live checks V0-1 and V0-2; `SessionRetentionDays` if V0-2 passes; LR-R5's Warning | LR-R4 to LR-R6. Findings recorded in known-limits.md |
 | **1. Catch-up by budget** | `ISessionSettings`, the token trim, `turn.transcriptOmittedOwn`, Settings › Sessions | LR-R7 to LR-R14. Goldens unchanged at the defaults; a changed value reaches the next first Turn, fresh or resumed, without a restart |
-| **2. Fresh starts** | *Start afresh*, the per-Room setting, the four triggers, the memory flush, the records and the fallback note, the Room note, `last-catch-up`, `LastUsedTokens` and `BaselineTokens` on `RoomSessionEntry` | LR-R15 to LR-R31. A Room with the setting Off behaves exactly as phase 1, except that *Start afresh* is offered and flushes |
-| **3. The experiment** | A manual test page and a recorded result (§9.1); no code | A result recorded, with the go or no-go for phase 4 |
+| **2a. Start afresh** | *Start afresh* in the Room menu, the Room note, `last-catch-up` | LR-R15 and LR-R18 to LR-R22. Every Room behaves exactly as phase 1 until the Human presses *Start afresh*; it forgets one Room Session, with no flush |
+| **3. The experiment** | A manual test page and a recorded result (§9.1); no code | A result recorded, with the go or no-go for phase 2b, the single-session question (Q-13) and phase 4 |
+| **2b. Automatic fresh starts** | Only on a "go" from phase 3: the per-Room setting, the four triggers, the memory flush, the records and the fallback note, `BaselineTokens` on `RoomSessionEntry` | LR-R16, LR-R17 and LR-R23 to LR-R31, with thresholds set from phase 3's numbers. A Room with the setting Off behaves exactly as phase 2a, except that *Start afresh* flushes |
 | **4. Handoff note** | Only on a "go" from phase 3; specified then | To be written |
 
 ### 9.1 The experiment
@@ -661,28 +681,39 @@ in the same change).
 
 1. **Recall score.** From the Transcript, pick 10 facts or decisions older than the last 20
    Messages; note their Message ids.
-2. Restart the Teammate at the default Catch-up; ask the 10 questions; score 1 for each correct
+2. *Start afresh* the Teammate in this Room (phase 2a) at the default Catch-up; not the card's
+   Restart, which forgets its sessions in every other Room too. Ask the 10 questions; score 1 for each correct
    answer, and note for each whether the answer came from a memory file (the Teammate read one, or
    it is in the index) or from the reread. Note the first Turn's cost from the Teammate card.
-3. Set the budget to 40,000 tokens; Restart; ask again; score and cost.
+3. Set the budget to 40,000 tokens **and** the Message cap to 400, so the budget is the bound that
+   is reached (LR-R7: the Catch-up ends at whichever comes first, and at a cap of 20 neither the
+   default nor 40,000 tokens binds). *Start afresh*; ask again; score and cost. Check in the Room
+   note that the reread went past 20 Messages, or the step has measured the default twice.
 4. **Rut score.** In a live session, ask "suggest three things we haven't tried yet" five Turns
    apart, three times; count suggestions that repeat. Then run `@Teammate /compact keep the
    decisions and open questions` and repeat the count. Then *Start afresh* and repeat it.
-5. **The flush, A/B.** Twice, a few days apart so new facts have accrued: *Start afresh* with
-   `FreshStarts:FlushToMemory` false, ask five questions about decisions from the last week, and
-   score; then the same with it true, on fresh questions. Note the files the flush saved and the
-   flush Turn's cost. This settles whether the flush earns its Turn (it replaces the first draft's
-   Q-9).
+5. **The flush, A/B, by hand.** The flush is not built yet (phase 2b), so play it: twice, a few
+   days apart so new facts have accrued, *Start afresh* with no warning, ask five questions about
+   decisions from the last week, and score; then the same, on fresh questions, after first asking
+   the Teammate "save anything worth keeping to memory before I start you afresh". Note the files
+   it saved and that Turn's cost. This settles whether the flush earns its Turn, or whether the
+   `memory` tool's own Prompt ("save as you go") already does the job (it replaces the first
+   draft's Q-9).
 6. **Decision.**
    - Recall at 40,000 tokens 7 of 10 or better **and** fewer repeats after a fresh start than after
-     compaction: phases 0 to 2 meet the goal; turn automatic fresh starts on where wanted, and do not
-     build phase 4.
+     compaction: phases 0 to 2a meet the goal; build phase 2b with thresholds from these numbers
+     and the cost of each fresh start, so automatic fresh starts can be turned on where wanted, and
+     do not build phase 4.
+   - Fewer repeats after `/compact` than, or as few as, after a fresh start: the rut does not need a
+     fresh start in this Room; take the single-session mode (§7.3, Q-13) instead of phase 2b's
+     trigger set, not both.
    - Recall below 7 of 10, and the missed answers are durable facts the Teammate should have saved:
      the fix is the Memory Prompt (`systemPrompt.memory`), not this spec. Tune it and repeat.
    - Recall below 7 of 10, and the missed answers are conversation (what was being worked on, open
      questions, the reasoning behind a choice): build phase 4, then repeat the experiment with it.
    - No difference in repeats: record it; the rut claim is unproven for this Room (Q-6).
-   - The flush scores no better than no flush: set `FlushToMemory` false by default and record why.
+   - The flush scores no better than no flush: leave it out of phase 2b (or ship `FlushToMemory`
+     false), tune the `memory` Prompt if facts were missed, and record why.
 
 ### 9.2 Phase 4 candidate: the handoff note
 
@@ -717,7 +748,7 @@ user-facing text is asserted exactly, and a test that passes on arrival gets a m
 | `SessionSettingsStoreTests` | Absent file means configuration defaults; a save writes overrides only; out-of-range refused with its text; a hand edit is picked up; a corrupt file is ignored with a Warning |
 | `CatchUpBudgetTests` | The first Turn asks for the Message cap and trims to the budget; own Messages dropped first except the newest five; Transcript order kept; both omitted lines exact; applies to fresh and resumed first Turns; no `ForgetAll` |
 | `CatchUpDefaultsTests` | **LR-R2's proof:** at the defaults, `turnPromptTranscript.txt` and `turnPromptTranscriptResumed.txt` are unchanged |
-| `FreshStartTriggerTests` | Each trigger fires at its threshold and not below; a resumed session's baseline update is not a fall; a Command Turn never triggers; Off evaluates nothing; `MaxPerDay` per local day; idle fires only when both idle time and size are met, survives an app restart through `LastUsedTokens`, and never fires for an entry without it; Size and idle count growth above `BaselineTokens`, so a fresh session whose Catch-up exceeds a threshold is not marked, and an entry without a baseline uses zero |
+| `FreshStartTriggerTests` | Each trigger fires at its threshold and not below; a resumed session's baseline update is not a fall; a Command Turn never triggers; Off evaluates nothing; `MaxPerDay` per local day; idle fires only when both idle time and size are met, survives an app restart through `ContextUsed`, and never fires for an entry without a reading; Size and idle count growth above `BaselineTokens`, so a fresh session whose Catch-up exceeds a threshold is not marked, and an entry without a baseline uses zero |
 | `MemoryFlushTests` | The flush runs once before a live fresh start and never for Idle and large; its text is never posted; skipped without the `memory` tool or with `FlushToMemory` false; a timeout, failure or refusal never blocks the fresh start; Stop cancels it and keeps the mark; the Prompt carries no tool-name prefix; files saved are counted in the note |
 | `FreshStartRecordTests` | Count, reason, context use and time recorded per Room and Name; moved on rename; the fallback note posted once per degraded mark, with its exact text |
 | `FreshStartTests` | The old entry is forgotten and the next Turn carries Catch-up; never mid-Turn; waits while a Question waits; not a failure; no Transcript Message; the note Envelope's fields; `last-catch-up` written as sent |
@@ -739,7 +770,7 @@ user-facing text is asserted exactly, and a test that passes on arrival gets a m
 | `Team:Acp:FreshStarts:CompactionDropPercent` | `50` | Proposed |
 | `Team:Acp:FreshStarts:AboveTokens` | `200000` | Proposed. Growth above the session's baseline (LR-R31). Zero disables |
 | `Team:Acp:FreshStarts:AfterTurns` | `80` | Proposed. Only for a session that reports no usage. Zero disables |
-| `Team:Acp:FreshStarts:MaxPerDay` | `3` | Proposed. Automatic fresh starts per Room Session per local day |
+| `Team:Acp:FreshStarts:MaxPerDay` | `3` | Proposed. Automatic fresh starts per Room and Agent per local day (LR-R23) |
 | `Team:Acp:FreshStarts:IdleMinutes` | `60` | Proposed. Matches the subscription prompt cache's lifetime. Zero disables the idle trigger |
 | `Team:Acp:FreshStarts:IdleAboveTokens` | `50000` | Proposed. Growth above the baseline (LR-R31); a session that grew less is always resumed |
 | `Team:Acp:FreshStarts:FlushToMemory` | `true` | Proposed (LR-R26); the experiment's A/B may change the default |
@@ -764,10 +795,10 @@ The Engineering Guide's configuration table gains each row in the change that bu
 | Q-7 | Should observing compaction use ACP `compaction_update` instead of the `Used` fall? | No | Later; it needs a mapping in `SessionUpdateMapper` (ACP effort) and a client capability Huddle does not advertise yet |
 | Q-8 | Should the Room setting be on by default once the experiment passes? | No | No; keep it the Human's choice (§13) |
 | Q-9 | Does the memory flush earn its Turn? | No | Decided to build it, after OpenClaw (§6.6); the experiment's A/B (§9.1 step 5) decides whether it stays on by default |
-| Q-10 | Does this spec depend on PR #287 merging first? | Phase 2's flush | No for phases 0 and 1, or for fresh starts themselves. The memory flush needs the `memory` tool, and the experiment (§9.1) should run after it, so it measures the Room as it will really run |
+| Q-10 | Does this spec depend on PR #287 merging first? | Phase 2b's flush | No for phases 0 and 1, or for fresh starts themselves. The memory flush needs the `memory` tool, and the experiment (§9.1) should run after it, so it measures the Room as it will really run |
 | Q-11 | Should a daily reset be offered after all, as OpenClaw does? | No | No (§7.2); revisit only if the experiment shows the idle and size triggers miss stale sessions |
 | Q-12 | Should the flush also run after an observed compaction, when the Adapter's summary has already dropped detail? | No | Yes, as specified: it is cheap and can still save what survived. The records of §6.7 will show how often compaction fires before the Size trigger |
-| Q-13 | Should a Room offer a single-session mode (§7.3): Adapter compaction allowed, a threshold-driven memory flush, fresh starts only as an escape hatch? | No | Lean yes for the Chief of Staff, the stated goal. Decide after the experiment's rut score (§9.1); if adopted it becomes requirements in phase 2 |
+| Q-13 | Should a Room offer a single-session mode (§7.3): Adapter compaction allowed, a threshold-driven memory flush, fresh starts only as an escape hatch? | No | Lean yes for the Chief of Staff, the stated goal. Decide after the experiment's rut score (§9.1), as an alternative to phase 2b's trigger set, not in addition to it; if adopted it becomes requirements in phase 2b |
 
 ### 12.2 ADR candidates
 
@@ -783,7 +814,7 @@ The Engineering Guide's configuration table gains each row in the change that bu
 ## 13. Choosing automatic fresh starts
 
 This section is written for the Human and moves into the [User Guide](Huddle.UserGuide.md) when
-phase 2 ships.
+phase 2b ships; until then only *Start afresh* exists.
 
 Every Room keeps everything that was said, and you can always start a Teammate afresh in a Room
 from the Room menu. Automatic fresh starts let Huddle do it for you when a Teammate's conversation
@@ -831,7 +862,7 @@ Room tells you, and suggests `@Teammate /compact` or *Start afresh*.
 | Compaction mentioned only as the problem | §7 decides its role | `/compact` already exists; compaction is observable through `Used` |
 | Auto memory "not used" | Phase 0 verifies isolation | Auto memory loads unless switched off; isolation is built but unverified |
 | No retention lever | Phase 0 checks `cleanupPeriodDays` | The commonest cause of lost sessions may be one setting |
-| 59 requirements | 30 (25 after review, then 5 from OpenClaw's prior art) | Scope cut to what the goal needs |
+| 59 requirements | 31 (25 after review, then 6 from OpenClaw's prior art) | Scope cut to what the goal needs |
 
 The first draft is in git history (commit `139d3696`) for anyone who builds phase 4 or a later
 memory feature.
@@ -848,6 +879,18 @@ memory feature.
 | Settings tab renamed from *Memory* to *Sessions* | Avoids the clash with the `memory` tool |
 | Daily reset considered and not taken (Q-11) | A clock alone retires healthy sessions |
 | Single-session mode proposed (§7.3, Q-13) | The goal is a Chief of Staff that works like OpenClaw's never-ending session; states plainly where the spec differs and how to close the gap |
+
+**Changed 2026-10-30, after the review of PR 289:**
+
+| Change | Why |
+| --- | --- |
+| Phase 2 split: 2a (*Start afresh* and the Room note) ships before the experiment; 2b (setting, triggers, flush, records, fallback note) only on its "go", with thresholds from its numbers | "Measure, then build" was applied to phase 4 but not to phase 2, whose triggers treat a rut no Huddle Room has shown, at defaults that would rarely fire |
+| The experiment uses *Start afresh*, raises the Message cap with the budget, and plays the flush by hand | The card's Restart forgets every Room; a 40,000-token budget under a 20-Message cap measured the default twice; the flush is not built before the experiment |
+| Single-session mode and phase 2b are alternatives, chosen by the rut score (Q-13) | The spec held both philosophies; picking one halves the trigger logic |
+| `LastUsedTokens` dropped for the existing `RoomSessionEntry.ContextUsed` | The field already exists and is persisted for the context meter |
+| `MaxPerDay` counted per Room and Agent, not per Room Session (LR-R23) | A fresh start replaces the Room Session, so a per-session count never reached the limit |
+| LR-R28 measures growth above the baseline; Observed compaction called the safety-net trigger | Both contradicted §6.2 |
+| LR-R1 and LR-R3 say MUST NOT; the second LR-E20 is LR-E21; the requirement count is 31 | Wording and numbering |
 
 ---
 
