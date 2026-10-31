@@ -35,20 +35,7 @@ public sealed class PersonaSpendStore
     public PersonaSpendStore(IOptions<TeamOptions> options)
     {
         ArgumentNullException.ThrowIfNull(options);
-
-        string dbPath = Path.Combine(options.Value.DataDir, "team.db");
-        this.connectionString = $"Data Source={dbPath}";
-
-        string? directory = Path.GetDirectoryName(dbPath);
-        if (!string.IsNullOrEmpty(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        using SqliteConnection connection = this.OpenConnection();
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = DdlCreatePersonaSpend;
-        command.ExecuteNonQuery();
+        this.connectionString = SqliteTable.Open(options.Value, DdlCreatePersonaSpend);
     }
 
     /// <summary>
