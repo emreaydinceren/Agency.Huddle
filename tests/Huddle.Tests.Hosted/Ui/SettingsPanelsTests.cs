@@ -49,7 +49,7 @@ public sealed partial class SettingsPanelsTests
         var cut = ctx.Render<Settings>();
 
         var rows = cut.FindAll(".settings-nav a.mud-nav-link");
-        Assert.Equal(9, rows.Count);
+        Assert.Equal(10, rows.Count);
         Assert.All(rows, static row => Assert.NotEmpty(row.QuerySelectorAll("svg")));
     }
 

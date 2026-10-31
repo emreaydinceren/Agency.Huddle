@@ -10,4 +10,5 @@ namespace Agency.Huddle.App.Acp.Sessions;
 /// <param name="Resumed">Whether this session was resumed (renders <c>turn.transcriptResumedHeader</c>) rather than opened fresh (<c>turn.transcriptHeader</c>).</param>
 /// <param name="Messages">The Messages in range, oldest first, ending before the triggering Message (RS principle 4).</param>
 /// <param name="Omitted">How many earlier Messages in the requested range were left out, per <see cref="Agency.Huddle.Contracts.TranscriptTail.Omitted"/>.</param>
-internal sealed record TranscriptCatchUp(bool Resumed, IReadOnlyList<ChatMessage> Messages, int Omitted);
+/// <param name="OmittedOwn">How many of the <paramref name="Omitted"/> Messages were the Agent's own (LR-R12); zero renders no extra line.</param>
+internal sealed record TranscriptCatchUp(bool Resumed, IReadOnlyList<ChatMessage> Messages, int Omitted, int OmittedOwn = 0);

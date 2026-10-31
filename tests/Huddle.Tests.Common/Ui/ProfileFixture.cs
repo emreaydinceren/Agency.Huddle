@@ -144,6 +144,7 @@ internal sealed class ProfileFixture : IDisposable
         ctx.Services.AddSingleton(this.ContextFill);
         ctx.Services.AddSingleton(this.Chat);
         ctx.Services.AddSingleton(this.Avatars);
+        ctx.Services.AddSingleton(AgentProfileCardTestSupport.BuildAdapterCatalog(("claude", "Claude Code"), ("codex", "Codex")));
         ctx.Services.AddScoped<AgentProfileCardOpener>();
         return ctx;
     }

@@ -151,6 +151,9 @@ with the reason, and audit every transcript for them:
 | In Bash, write `/e/Repos/...`; never `cd E:\...` | A Windows path ending `\"` breaks the command |
 | Visibility changes and new packages are stop-and-ask | An agent made a service public on false reasoning |
 | A failing test is the spec. Never edit, skip, loosen or delete a frozen test to get green; if you think the test is wrong, stop and file a **test change request** (the failing line, your evidence, the change you would make) | Agents under pressure to reach green relax the assert instead of fixing the code; the freeze hook enforces it |
+| Before recording a compile-error red, build once against throwaway stubs of the missing names and fix the test file's analyzer errors, then delete the stubs | Analyzers do not run while a compile error exists: three frozen reds in the Long-Running Rooms delivery later failed on CA1859 and xUnit2029 and each blocked its implementation |
+| A test that builds a RoomSession or RoomSessionPool cancels its run token before disposing it | The session consumer ends only when the run token is cancelled; a test on CancellationToken.None hung the Agents assembly for 22 minutes while holding the machine-wide test mutex |
+| Never stop every dotnet process to clear a hung run; stop only your own test process | Killing every run abandoned the test mutex, and Run-Tests.ps1 then failed the next caller instead of taking ownership |
 | Never run `python3` (the Windows Store stub blocks until the call times out), and never leave a server or `run.ps1` running in a tool call; use `-DryRun`, or `preview_start` for a dev server | A hung call ties up the agent and looks like a stuck delivery |
 
 Three hooks in `.claude/settings.json` enforce the worst of these: one blocks disk-wide `find` and

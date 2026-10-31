@@ -23,6 +23,7 @@ internal sealed class AgentConnection
     private readonly AgentGateway gateway;
     private readonly Drafts drafts;
     private readonly RoomEvents roomEvents;
+    private readonly FreshStartNotes freshStartNotes;
     private readonly ILogger<AgentConnection> logger;
 
     private JsonLineStream? stream;
@@ -51,9 +52,12 @@ internal sealed class AgentConnection
         AgentGateway gateway,
         Drafts drafts,
         RoomEvents roomEvents,
+        FreshStartNotes freshStartNotes,
         ILogger<AgentConnection> logger,
         TimeProvider? timeProvider = null)
     {
+        ArgumentNullException.ThrowIfNull(freshStartNotes);
+        this.freshStartNotes = freshStartNotes;
         ArgumentNullException.ThrowIfNull(pipe);
         ArgumentNullException.ThrowIfNull(teamDirectory);
         ArgumentNullException.ThrowIfNull(chat);
@@ -276,6 +280,9 @@ internal sealed class AgentConnection
                 case ToolActivity activity:
                 await this.HandleToolActivityAsync(lineStream, activity, ct).ConfigureAwait(false);
                 break;
+                case FreshStartNote note:
+                await this.HandleFreshStartNoteAsync(lineStream, note, ct).ConfigureAwait(false);
+                break;
                 case Hello:
                 await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "already registered"), ct).ConfigureAwait(false);
                 break;
@@ -342,6 +349,37 @@ internal sealed class AgentConnection
         }
 
         this.roomEvents.PublishDraftChanged(delta.RoomId);
+    }
+
+    private async Task HandleFreshStartNoteAsync(JsonLineStream lineStream, FreshStartNote note, CancellationToken ct)
+    {
+        if (!NameRules.IsValidId(note.RoomId))
+        {
+            await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "Invalid room id."), ct).ConfigureAwait(false);
+            return;
+        }
+
+        // The note has no Message id; the Room id stands in for it in the membership check and its error.
+        var membershipError = await this.CheckMembershipAsync(note.RoomId, note.RoomId, ct).ConfigureAwait(false);
+        if (membershipError is not null)
+        {
+            await lineStream.WriteAsync(membershipError, ct).ConfigureAwait(false);
+            return;
+        }
+
+        if (this.Agent is not { } agent)
+        {
+            return;
+        }
+
+        // Counts are display data: clamp rather than refuse, as a ToolActivity is sanitised.
+        FreshStartNote clean = note with
+        {
+            MessageCount = Math.Max(0, note.MessageCount),
+            EstimatedTokens = Math.Max(0, note.EstimatedTokens),
+        };
+        this.freshStartNotes.Set(clean.RoomId, agent.Name, clean);
+        this.roomEvents.PublishFreshStartNotesChanged(clean.RoomId);
     }
 
     private async Task HandleToolActivityAsync(JsonLineStream lineStream, ToolActivity activity, CancellationToken ct)

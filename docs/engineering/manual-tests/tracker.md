@@ -1228,3 +1228,16 @@ Team Memory Helper: proposals filed by a Helper, the History, the Feed record, t
 | [TMHELP-05](team-memory-helper.md#tmhelp-05--a-proposal-to-a-team-the-member-is-not-in-is-refused) | 💰 | Active |  | not yet run by a person |
 | [TMHELP-06](team-memory-helper.md#tmhelp-06--instructions-inside-a-proposal-do-not-move-the-write-outside-the-team) | 💰 | Active |  | not yet run by a person |
 | [TMHELP-07](team-memory-helper.md#tmhelp-07--the-daily-cap-pauses-the-helper-and-the-tool-says-so) | 💰 | Active |  | not yet run by a person |
+
+## long-running-rooms
+
+Long-running Rooms: the experiment on a real Room that decides phase 2b and phase 4 — [area file](long-running-rooms.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [LRR-01](long-running-rooms.md#lrr-01--ten-recall-facts-are-picked-from-the-transcript) |  | Active |  | not yet run by a person |
+| [LRR-02](long-running-rooms.md#lrr-02--the-default-catch-up-after-a-fresh-start-is-scored) | 💰 | Active |  | not yet run by a person; available from phase 2a |
+| [LRR-03](long-running-rooms.md#lrr-03--the-40000-token-catch-up-is-scored) | 💰 | Active |  | not yet run by a person; available from phase 2a |
+| [LRR-04](long-running-rooms.md#lrr-04--the-rut-is-counted-after-three-turns-compact-and-a-fresh-start) | 💰 | Active |  | not yet run by a person; fresh-start count available from phase 2a |
+| [LRR-05](long-running-rooms.md#lrr-05--the-flush-is-played-by-hand-with-and-without-the-save-request) | 💰 | Active |  | not yet run by a person; available from phase 2a |
+| [LRR-06](long-running-rooms.md#lrr-06--the-decision-follows-from-the-numbers) |  | Active |  | not yet run by a person |

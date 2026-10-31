@@ -95,6 +95,22 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
     private Task CallsAsync(int count) =>
         Eventually.UntilAsync(() => this.process.Calls >= count, TestContext.Current.CancellationToken, TestBudgets.Standard);
 
+    /// <summary>
+    /// Lets the wait pass, again and again, until the process runner has been called <paramref name="count"/> times. A save made
+    /// while a run is ending is held until that run has recorded its result, and only then starts its wait, so a single advance can
+    /// land before the timer exists and never fire it.
+    /// </summary>
+    /// <param name="count">The number of calls.</param>
+    private Task PassTheWaitUntilCallsAsync(int count) =>
+        Eventually.UntilAsync(
+            () =>
+            {
+                this.PassTheWait();
+                return this.process.Calls >= count;
+            },
+            TestContext.Current.CancellationToken,
+            TestBudgets.Standard);
+
     /// <summary>Waits until the Helper has recorded a result or an error.</summary>
     private Task RecordedAsync() =>
         Eventually.UntilAsync(
@@ -218,8 +234,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
         await this.RecordedAsync();
 
         _ = this.harness.Service.Update(task.Id, new TaskPatch { Title = "Send Acme the new contract" }, null, Leo);
-        this.PassTheWait();
-        await this.CallsAsync(2);
+        await this.PassTheWaitUntilCallsAsync(2);
 
         Assert.Equal(2, this.process.Calls);
     }
