@@ -208,7 +208,7 @@ internal sealed class SessionSettingsStore : ISessionSettings, IDisposable
 
     private State CorruptState(Exception ex)
     {
-        string error = $"Could not read '{this.path}': {ex.Message} The defaults are used instead.";
+        string error = ex.Message;
         this.logger.LogWarning(ex, "Could not parse session settings file '{Path}'; falling back to the configured defaults.", this.path);
         return new State(new SessionSettings(this.defaultMessages, this.defaultTokens), null, null, error);
     }
