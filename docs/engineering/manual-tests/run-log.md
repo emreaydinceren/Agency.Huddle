@@ -6022,6 +6022,50 @@ File: [`docs/engineering/manual-tests/team-memory-helper.md`](team-memory-helper
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+## Long-running Rooms: the experiment on a real Room that decides phase 2b and phase 4
+
+### LRR-01 — Ten recall facts are picked from the Transcript
+
+File: [`docs/engineering/manual-tests/long-running-rooms.md`](long-running-rooms.md#lrr-01--ten-recall-facts-are-picked-from-the-transcript)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### LRR-02 — The default Catch-up after a fresh start is scored
+
+File: [`docs/engineering/manual-tests/long-running-rooms.md`](long-running-rooms.md#lrr-02--the-default-catch-up-after-a-fresh-start-is-scored)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### LRR-03 — The 40,000-token Catch-up is scored
+
+File: [`docs/engineering/manual-tests/long-running-rooms.md`](long-running-rooms.md#lrr-03--the-40000-token-catch-up-is-scored)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### LRR-04 — The rut is counted after three Turns, /compact and a fresh start
+
+File: [`docs/engineering/manual-tests/long-running-rooms.md`](long-running-rooms.md#lrr-04--the-rut-is-counted-after-three-turns-compact-and-a-fresh-start)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### LRR-05 — The flush is played by hand, with and without the save request
+
+File: [`docs/engineering/manual-tests/long-running-rooms.md`](long-running-rooms.md#lrr-05--the-flush-is-played-by-hand-with-and-without-the-save-request)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### LRR-06 — The decision follows from the numbers
+
+File: [`docs/engineering/manual-tests/long-running-rooms.md`](long-running-rooms.md#lrr-06--the-decision-follows-from-the-numbers)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ---
 
 Back to [the manual test script](../manual-tests.md).

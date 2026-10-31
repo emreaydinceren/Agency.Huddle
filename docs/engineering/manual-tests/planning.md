@@ -61,6 +61,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 36 | [Remote access: the connect page, pairing, Tailscale Serve and Funnel, the LAN bind, revocation and the Open action](remote-access.md) | 15 | — | 3.0h |
 | 37 | [Instructions and Memory: the Instructions files, the memory tool, Team Memory and the Memory protocol](instructions-memory.md) | 9 | 8 | 2.6h |
 | 38 | [Team Memory Helper: proposals filed by a Helper, the History, the Feed record, the membership check and the daily cap](team-memory-helper.md) | 7 | 6 | 1.5h |
+| — | [Long-running Rooms: the experiment on a real Room that decides phase 2b and phase 4](long-running-rooms.md) | 6 | 4 | 5.5h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.
