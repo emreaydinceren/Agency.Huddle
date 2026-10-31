@@ -248,6 +248,7 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Turn detail and Spend](manual-tests/turn-detail.md): the live preview, Spend and phone width.
 - [Work Mode](manual-tests/work-mode.md): the picker, hidden modes and the permission behaviour.
 - [Instructions and Memory](manual-tests/instructions-memory.md): the Instructions files, the memory tool, Team Memory and the Memory protocol.
+- [Long-running Rooms](manual-tests/long-running-rooms.md): the §9.1 experiment on the Chief of Staff's Room — recall after a fresh start, repeats after `/compact` and after a fresh start, and the memory flush played by hand.
 - [Team Memory Helper](manual-tests/team-memory-helper.md): proposals filed by a Helper into Team Memory, the History, the Feed record, the membership check and the daily cap.
 
 Two pages exist for the run around the run, and neither is needed while executing:
