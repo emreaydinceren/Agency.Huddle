@@ -215,6 +215,7 @@ public static class ServiceCollectionExtensions
             ChatService service = ActivatorUtilities.CreateInstance<ChatService>(sp);
             service.TeamCatalog = sp.GetRequiredService<ITeamCatalog>();
             service.UploadFolders = sp.GetRequiredService<Uploads.IRoomUploadFolders>();
+            service.LastCatchUp = sp.GetRequiredService<LastCatchUpStore>();
             service.FeedPublisher = sp.GetService<Feed.IFeedPublisher>();
             return service;
         });

@@ -8,10 +8,19 @@ namespace Agency.Huddle.App.Pipes;
 /// written through <see cref="LastCatchUpStore"/>, so a note survives an app restart; a Room is loaded from
 /// the store on its first read and cached after that.
 /// </summary>
-internal sealed class FreshStartNotes(LastCatchUpStore store)
+internal sealed class FreshStartNotes
 {
+    private readonly LastCatchUpStore store;
     private readonly Lock gate = new();
     private readonly Dictionary<string, Dictionary<string, FreshStartNote>> byRoom = new(StringComparer.Ordinal);
+
+    /// <summary>Starts empty and drops the whole cache whenever <paramref name="store"/> renames or removes anything.</summary>
+    /// <param name="store">The store every change is written through.</param>
+    public FreshStartNotes(LastCatchUpStore store)
+    {
+        this.store = store;
+        store.Changed += this.Clear;
+    }
 
     /// <summary>Keeps <paramref name="note"/> as the latest note of <paramref name="agentName"/> in <paramref name="roomId"/>, replacing any earlier one.</summary>
     /// <param name="roomId">The Room id.</param>
@@ -23,7 +32,7 @@ internal sealed class FreshStartNotes(LastCatchUpStore store)
         lock (this.gate)
         {
             Dictionary<string, FreshStartNote> room = this.LoadRoom(roomId);
-            store.WriteNote(agentName, note);
+            this.store.WriteNote(agentName, note);
             room[agentName] = note;
         }
     }
@@ -46,8 +55,16 @@ internal sealed class FreshStartNotes(LastCatchUpStore store)
         lock (this.gate)
         {
             Dictionary<string, FreshStartNote> room = this.LoadRoom(roomId);
-            store.RemoveNote(agentName, roomId);
+            this.store.RemoveNote(agentName, roomId);
             room.Remove(agentName);
+        }
+    }
+
+    private void Clear()
+    {
+        lock (this.gate)
+        {
+            this.byRoom.Clear();
         }
     }
 
@@ -56,7 +73,7 @@ internal sealed class FreshStartNotes(LastCatchUpStore store)
         if (!this.byRoom.TryGetValue(roomId, out Dictionary<string, FreshStartNote>? room))
         {
             room = new(StringComparer.Ordinal);
-            foreach ((string name, FreshStartNote note) in store.ReadNotes(roomId))
+            foreach ((string name, FreshStartNote note) in this.store.ReadNotes(roomId))
             {
                 room[name] = note;
             }

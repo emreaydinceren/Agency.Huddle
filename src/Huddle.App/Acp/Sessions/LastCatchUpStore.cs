@@ -15,6 +15,9 @@ internal sealed class LastCatchUpStore(IOptions<TeamOptions> options, ILogger<La
 {
     private readonly Lock gate = new();
 
+    /// <summary>Raised after <see cref="Rename"/>, <see cref="Remove"/> or <see cref="RemoveRoom"/>, outside the store's gate, so a cache built on the store can drop what it holds.</summary>
+    internal event Action? Changed;
+
     /// <summary>The folder holding one sub-folder per Agent Name.</summary>
     private string Root => Path.Combine(options.Value.DataDir, "room-sessions", "last-catch-up");
 
@@ -94,6 +97,12 @@ internal sealed class LastCatchUpStore(IOptions<TeamOptions> options, ILogger<La
     /// <param name="newName">The Agent's new Name.</param>
     internal void Rename(string oldName, string newName)
     {
+        this.RenameCore(oldName, newName);
+        this.Changed?.Invoke();
+    }
+
+    private void RenameCore(string oldName, string newName)
+    {
         RequireName(oldName);
         RequireName(newName);
         string from = Path.Combine(this.Root, oldName);
@@ -127,6 +136,12 @@ internal sealed class LastCatchUpStore(IOptions<TeamOptions> options, ILogger<La
     /// <param name="name">The Agent's Name.</param>
     internal void Remove(string name)
     {
+        this.RemoveCore(name);
+        this.Changed?.Invoke();
+    }
+
+    private void RemoveCore(string name)
+    {
         RequireName(name);
         string folder = Path.Combine(this.Root, name);
 
@@ -142,6 +157,12 @@ internal sealed class LastCatchUpStore(IOptions<TeamOptions> options, ILogger<La
     /// <summary>Deletes <paramref name="roomId"/>'s <c>.md</c> and <c>.json</c> under every Name, leaving other Rooms' files.</summary>
     /// <param name="roomId">The Room id.</param>
     internal void RemoveRoom(string roomId)
+    {
+        this.RemoveRoomCore(roomId);
+        this.Changed?.Invoke();
+    }
+
+    private void RemoveRoomCore(string roomId)
     {
         RequireId(roomId);
 
