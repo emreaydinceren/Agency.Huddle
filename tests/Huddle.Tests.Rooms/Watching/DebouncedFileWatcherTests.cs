@@ -66,12 +66,39 @@ public sealed class DebouncedFileWatcherTests
 
     /// <summary>
     /// Disposing the watcher right after a write means its callback never fires, while a second, live
-    /// watcher on the same file does - so the silence is the Dispose, not an absent event.
+    /// watcher on the same file does - so the silence is the Dispose, not an absent event. The claim only
+    /// holds when the Dispose lands inside the debounce window: a callback that settled before it is
+    /// correct behaviour. So the window from the write to the end of Dispose is timed, and an attempt the
+    /// machine stalled past the window (a 100 ms delay resumed ~400 ms late on a starved CI runner) is
+    /// re-run rather than asserted on.
     /// </summary>
     [Fact]
     public async Task Dispose_AfterAWrite_NeverCallsBack()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
+        TimeSpan window = TimeSpan.FromMilliseconds(DebouncedFileWatcher.DebounceMilliseconds);
+        for (int attempt = 0; attempt < 5; attempt++)
+        {
+            (TimeSpan elapsed, int disposedCalls, int controlCalls) = await DisposeAfterAWriteAsync(ct);
+            if (elapsed < window)
+            {
+                Assert.Equal(0, disposedCalls);
+                Assert.Equal(1, controlCalls);
+                return;
+            }
+        }
+
+        Assert.Fail($"No attempt disposed the watcher within {window.TotalMilliseconds} ms of its write, so the race was never arranged.");
+    }
+
+    /// <summary>
+    /// One attempt of <see cref="Dispose_AfterAWrite_NeverCallsBack"/>: writes the file, disposes the watcher
+    /// (twice, for idempotence) about 100 ms later, then waits for the control watcher to settle and a quiet period.
+    /// </summary>
+    /// <param name="ct">The test's token.</param>
+    /// <returns>The time from just before the write to just after the Dispose, and each watcher's callback count.</returns>
+    private static async Task<(TimeSpan Elapsed, int DisposedCalls, int ControlCalls)> DisposeAfterAWriteAsync(CancellationToken ct)
+    {
         using TempDataDir dir = new();
         string file = Path.Combine(dir.Path, "watched.json");
         Probe disposed = new();
@@ -80,16 +107,17 @@ public sealed class DebouncedFileWatcherTests
         DebouncedFileWatcher watcher = new(dir.Path, "watched.json", disposed.OnSettled, logger, "Test");
         using DebouncedFileWatcher controlWatcher = new(dir.Path, "watched.json", control.OnSettled, logger, "Control");
 
+        // Started before the write: the watcher can see the file's creation before WriteAllText returns.
+        long start = Stopwatch.GetTimestamp();
         File.WriteAllText(file, "x");
         await Task.Delay(100, ct);
         watcher.Dispose();
         watcher.Dispose();
+        TimeSpan elapsed = Stopwatch.GetElapsedTime(start);
 
         await control.FirstCall.WaitAsync(WaitTimeout, ct);
         await Task.Delay(QuietPeriod, ct);
-
-        Assert.Equal(0, disposed.Calls);
-        Assert.Equal(1, control.Calls);
+        return (elapsed, disposed.Calls, control.Calls);
     }
 
     /// <summary>
