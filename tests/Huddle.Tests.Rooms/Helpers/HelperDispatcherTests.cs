@@ -139,6 +139,10 @@ public sealed class HelperDispatcherTests : IDisposable
         release.SetResult();
         await this.AppliedAsync(1);
         await Eventually.UntilAsync(() => this.process.Calls == 1 && this.helper.Applied.Count == 1, TestContext.Current.CancellationToken, TestBudgets.Standard);
+
+        // The dispatcher arms the held input's wait after the first run's Apply returns, on the run's own thread. Advancing
+        // before that timer exists leaves it due past every later advance, so wait for it first.
+        await Eventually.UntilAsync(() => this.clock.ScheduledTimerCount == 1, TestContext.Current.CancellationToken, TestBudgets.Standard);
         this.clock.Advance(TimeSpan.FromSeconds(11));
         await this.AppliedAsync(2);
 
