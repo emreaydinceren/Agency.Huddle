@@ -157,6 +157,12 @@ The manager keeps this section; retrospectives add to it.
 | Room events | `src/Huddle.App/Services/RoomEvents.cs`: `event Action<string>? QuestionsChanged` (line 54) is the per-Room pattern |
 | Adapter profiles | `src/Huddle.App/Acp/AdapterCatalog.cs` lines 78–98 build configured entries; the class has no logger today |
 | Config table | `docs/Huddle.EngineeringGuide.md` line 285, the `Acp:TranscriptCatchUpMessages` row |
+| `-FilterClass` | Needs a leading `*` (`-FilterClass "*FooTests"`); without it zero tests run and a `-RedTask` still writes an invalid red file (rerun with `-Force`). Retrospective 1 |
+| Reds for a missing type | Fully qualify the missing type; an unused `using` pollutes the red with IDE0005. Make sure no other analyzer error (for example CA1859 on `IFoo x = concrete;`) hides behind it, or the frozen test blocks the `.i`. Retrospective 1 |
+| Implicit usings | `Huddle.App` is a web SDK project: `Microsoft.Extensions.Logging`, `.DependencyInjection` and `.Options` are implicit. Retrospective 1 |
+| Test helpers | `RecordingLogger<T>` (`AtExactly`) in namespace `Agency.Huddle.Tests.Elicitation`, `tests/Huddle.Tests.Common/Logging/RecordingLogger.cs`; `Eventually.UntilAsync` in `Agency.Huddle.Tests.Waiting`; `TempDataDir.Options(...)`. Retrospective 1 |
+| File-backed stores | `RetryingFileRead.Run` and `RereadKeepingPrevious` in `src/Huddle.App/Watching/RetryingFileRead.cs`; `DebouncedFileWatcher` (fixed 500 ms debounce). Retrospective 1 |
+| CRLF | `agents/scripts/Check-Eol.ps1 -Fix` repairs every changed file at once. Retrospective 1 |
 
 ---
 
@@ -485,7 +491,7 @@ separator (`N0`).
 - **Deliverable:** Check that the rows added in 2.1.i read: `Acp:TranscriptCatchUpTokens | 100000 | LR-R7. The most estimated tokens (3 characters each) a first Turn rereads; Settings › Sessions may override.` and `Acp:CatchUpKeepOwnMessages | 5 | LR-R11. The Agent's newest own Messages a trim keeps.` Add one line under the table on `{DataDir}/session-settings.json`: overrides only, absent is normal, written by Settings › Sessions, hand-editable and watched.
 - **Acceptance:** Rows and line present; `Check-DocIndex.ps1` passes.
 
-### Task 30 — 4.4 The experiment's test page, phase 1 part [Sonnet]
+### Task 30 — 4.4 The experiment's test page, phase 1 part [Haiku]
 
 - **Goal:** Write `docs/engineering/manual-tests/long-running-rooms.md`, which Spec §9.1 says ships with phase 1.
 - **Read first:** Spec §9.1 (lines 674–716); `docs/engineering/manual-tests/planning.md`, the test-page format section only; one existing page in `docs/engineering/manual-tests/` for its layout.
@@ -513,7 +519,7 @@ separator (`N0`).
 ### Task 32 — 5.1.t The two Envelopes [Haiku]
 
 - **Goal:** Pin the literal JSON of `StartAfresh` and `FreshStartNote`, and that `ProtocolVersion.Current` stays 3 (Spec §6.1, §6.3, §10 `ProtocolJsonTests`; correction C2).
-- **Read first:** `src/Huddle.Contracts/StopTurn.cs`; `src/Huddle.Contracts/ProtocolMessage.cs` lines 1–20; `tests/Huddle.Tests.Domain/Contracts/ProtocolJsonTests.cs` lines 195–210.
+- **Read first:** `src/Huddle.Contracts/StopTurn.cs`; `src/Huddle.Contracts/ProtocolMessage.cs` lines 1–20; `tests/Huddle.Tests.Domain/Contracts/ProtocolJsonTests.cs` lines 195–210; the Envelope and versioning rows of `docs/engineering/traps.md` (`grep -n "Envelope\|ProtocolVersion\|JsonDerivedType" docs/engineering/traps.md`), binding for the wire.
 - **Risk:** `data`.
 - **Deliverable:** Add to `tests/Huddle.Tests.Domain/Contracts/ProtocolJsonTests.cs`, beside `ProtocolJson_RoundTripsStopTurn` (line ~201; copy its shape: `ProtocolJson.Serialize`, then `ProtocolJson.Deserialize`). Rows: `ProtocolJson.Serialize(new StartAfresh("room-1"))` equals exactly `{"type":"startAfresh","roomId":"room-1","version":3}`; `new FreshStartNote("room-1", "asked", 38, 31000, false)` equals `{"type":"freshStartNote","roomId":"room-1","reason":"asked","messageCount":38,"estimatedTokens":31000,"readFailed":false,"version":3}` (every `ProtocolMessage` carries `version`); both round-trip to an equal record; `ProtocolVersion.Current == 3`.
 - **Acceptance:** Red: the types don't exist.
@@ -775,6 +781,6 @@ separator (`N0`).
 
 | # | Date | Tasks covered | Top findings | What changed |
 | --- | --- | --- | --- | --- |
-| 1 | | 1–15 | | |
+| 1 | 2026-10-30 | 1–16 | Agents rediscovered the `-FilterClass` wildcard, implicit usings, helper namespaces and store helpers; a frozen 2.3.t row hid CA1859 behind the compile red and blocked 2.3.i; every agent starts at about 69K from inherited tools; the manager is most of the cost | Six front-load facts added to Delivery facts; 4.4 retagged Haiku; 5.1.t reads the wire rows of `traps.md`; `Check-Eol.ps1 -Fix` named for CRLF instead of a new script |
 | 2 | | 16–30 | | |
 | 3 | | 31–45 | | |

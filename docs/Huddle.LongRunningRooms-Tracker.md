@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 1.2 and 1.3 are live checks that need the Human; 1.5.t and 1.5.i run only if 1.3 finds a working route.
 
-**Status:** 12 of 59 tasks Done · 0 of 3 retrospectives done · last updated 2026-10-30.
+**Status:** 14 of 59 tasks Done · 1 of 3 retrospectives done · last updated 2026-10-30.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -35,22 +35,22 @@ never by hand, so the status line stays true.
 | **D3. Phase 1: the Catch-up trim** | | | |
 | 3.1.t #15 Token estimate [Haiku] | | | ✔ |
 | 3.1.i #16 Implement the estimate [Haiku] | | | ✔ |
-| 🔁 R1 Retrospective 1 (tasks 1–15): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
-| 3.2.t #17 The trim [Haiku] | | ✔ | |
-| 3.2.i #18 Implement the trim [Haiku] | ✔ | | |
+| 🔁 R1 Retrospective 1 (tasks 1–15): token tally, top-3 agents grepped, plan updated [Opus] | | | ✔ |
+| 3.2.t #17 The trim [Haiku] | | | ✔ |
+| 3.2.i #18 Implement the trim [Haiku] | | ✔ | |
 | 3.3.t #19 The `turn.transcriptOmittedOwn` prompt [Haiku] | | | ✔ |
 | 3.3.i #20 Add the prompt [Haiku] | | | ✔ |
-| 3.4.t #21 Render the own-omitted line [Sonnet] | | ✔ | |
-| 3.4.i #22 Render it [Sonnet] | ✔ | | |
+| 3.4.t #21 Render the own-omitted line [Sonnet] | | | ✔ |
+| 3.4.i #22 Render it [Sonnet] | | ✔ | |
 | 3.5.t #23 Catch-up reads the settings and trims [Sonnet] | ✔ | | |
 | 3.5.i #24 Wire the settings and the trim [Sonnet] | ✔ | | |
 | **D4. Phase 1: Settings › Sessions** | | | |
-| 4.1.t #25 The Sessions tab entry [Haiku] | ✔ | | |
+| 4.1.t #25 The Sessions tab entry [Haiku] | | ✔ | |
 | 4.1.i #26 Add the tab [Haiku] | ✔ | | |
 | 4.2.t #27 `SessionsPanel` [Sonnet] | ✔ | | |
 | 4.2.i #28 Build the panel [Sonnet] | ✔ | | |
 | 4.3 #29 Configuration docs [Haiku] | ✔ | | |
-| 4.4 #30 The experiment's test page, phase 1 part [Sonnet] | ✔ | | |
+| 4.4 #30 The experiment's test page, phase 1 part [Haiku] | ✔ | | |
 | 🔁 R2 Retrospective 2 (tasks 16–30): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
 | **D5. Phase 2a: the wire and the runner** | | | |
 | 5.0.t #31 End-to-end: *Start afresh* over the pipe [Sonnet] | ✔ | | |
