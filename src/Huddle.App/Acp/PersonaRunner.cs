@@ -672,6 +672,13 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                 {
                     this.OnProtocolError(error);
                 }
+                else if (message is StartAfresh afresh)
+                {
+                    if (this.pool is not null)
+                    {
+                        await this.pool.StartAfreshAsync(afresh.RoomId, ct).ConfigureAwait(false);
+                    }
+                }
                 else if (message is StopTurn stop)
                 {
                     // The mark is the runner's own sequence counter as of right now (D22 correction

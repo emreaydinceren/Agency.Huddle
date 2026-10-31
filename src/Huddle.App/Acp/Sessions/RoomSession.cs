@@ -89,6 +89,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     private readonly Lock gate = new();
     private readonly Queue<QueuedWork> queue = new();
     private readonly SemaphoreSlim itemAvailable = new(0);
+    private bool freshStartPending;
+    private bool freshStartNotePending;
 
     // Per-Room Stop marks (finding P-6): the sequence value a Stop in that Room recorded most
     // recently. A missing key means that Room was never stopped. RS Appendix A's RS-I7 describes
@@ -380,6 +382,53 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
 
             this.state = RoomSessionState.Opening;
             return true;
+        }
+    }
+
+    /// <summary>Whether a start afresh has been requested and not yet acted on (LR-R15).</summary>
+    internal bool FreshStartPending
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return this.freshStartPending;
+            }
+        }
+    }
+
+    /// <summary>Whether this session's first ordinary Turn owes a fresh-start note, because a start afresh arrived before it existed (LR-R19).</summary>
+    internal bool FreshStartNotePending
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return this.freshStartNotePending;
+            }
+        }
+    }
+
+    /// <summary>Records that the Human asked this Room to start afresh. Only sets the flag; the behaviour follows in 5.4.</summary>
+    /// <param name="cancellationToken">Reserved for the behaviour 5.4 adds.</param>
+    /// <returns>A completed task.</returns>
+    internal Task RequestFreshStartAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (this.gate)
+        {
+            this.freshStartPending = true;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Tells a newly created session that its first ordinary Turn owes a fresh-start note. Called by the pool before the session serves anything.</summary>
+    internal void MarkFreshStartNotePending()
+    {
+        lock (this.gate)
+        {
+            this.freshStartNotePending = true;
         }
     }
 

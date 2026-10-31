@@ -46,6 +46,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     // inside a RoomSession's own gate (lock order: pool -> session -> gate; D23 correction 12).
     private readonly Lock poolLock = new();
     private readonly Dictionary<string, RoomSession> sessionsByRoom = new(StringComparer.Ordinal);
+    private readonly HashSet<string> notePendingRooms = new(StringComparer.Ordinal);
 
     private readonly RoomSession? sharedSession;
     private readonly ITimer? sweepTimer;
@@ -363,7 +364,71 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// <param name="state">Unused; the timer carries no state.</param>
     private void OnSweepTimerFired(object? state) => _ = this.SweepIdleAsync();
 
-    private RoomSession CreateSession(string? roomId) =>
+    /// <summary>Routes a start afresh to that Room's session; a Room with no session forgets what is stored and is remembered as note-pending. A no-op in shared mode (LR-E5).</summary>
+    /// <param name="roomId">The Room the Human asked to start afresh.</param>
+    /// <param name="cancellationToken">Passed to the session.</param>
+    internal Task StartAfreshAsync(string roomId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+
+        if (!this.sessionPerRoom)
+        {
+            return Task.CompletedTask;
+        }
+
+        RoomSession? session;
+        lock (this.poolLock)
+        {
+            if (!this.sessionsByRoom.TryGetValue(roomId, out session))
+            {
+                this.roomSessions?.Forget(this.persona.Name, roomId);
+                if (this.agentId is not null)
+                {
+                    this.contextFill?.Forget(this.agentId, roomId);
+                }
+
+                this.notePendingRooms.Add(roomId);
+            }
+        }
+
+        return session is null ? Task.CompletedTask : session.RequestFreshStartAsync(cancellationToken);
+    }
+
+    /// <summary>The Room's session, or the shared one in shared mode; <see langword="null"/> when a per-Room Room has none yet.</summary>
+    /// <param name="roomId">The Room.</param>
+    internal RoomSession? SessionFor(string roomId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+
+        if (!this.sessionPerRoom)
+        {
+            return this.sharedSession;
+        }
+
+        lock (this.poolLock)
+        {
+            return this.sessionsByRoom.GetValueOrDefault(roomId);
+        }
+    }
+
+    private RoomSession CreateSession(string? roomId)
+    {
+        RoomSession session = this.NewSession(roomId);
+        if (roomId is not null)
+        {
+            lock (this.poolLock)
+            {
+                if (this.notePendingRooms.Remove(roomId))
+                {
+                    session.MarkFreshStartNotePending();
+                }
+            }
+        }
+
+        return session;
+    }
+
+    private RoomSession NewSession(string? roomId) =>
         new(
             roomId,
             open: this.host.OpenAsync,
