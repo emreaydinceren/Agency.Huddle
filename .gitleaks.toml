@@ -59,9 +59,11 @@ description = "Private / RFC1918 IP address committed"
 regex = '''\b(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})\b'''
 
   [rules.allowlist]
-  description = "SonarAnalyzer.CSharp uses an unusual 4-segment version scheme (10.32.0.713), which coincidentally matches the 10.x.x.x private-IP shape. Update this alongside the pinned version in Directory.Packages.props when it changes."
+  description = "SonarAnalyzer.CSharp uses an unusual 4-segment version scheme (10.32.0.713), which coincidentally matches the 10.x.x.x private-IP shape. Update this alongside the pinned version in Directory.Packages.props when it changes. 192.168.1.20 and 192.168.1.34 are invented example addresses in old revisions of the remote-access spec and manual-test page (PR #283); the current docs use RFC 5737 addresses, but the GitHub mirror sync scans history."
   regexes = [
     '''10\.32\.0\.713''',
+    '''192\.168\.1\.20\b''',
+    '''192\.168\.1\.34\b''',
   ]
 
 [[rules]]
