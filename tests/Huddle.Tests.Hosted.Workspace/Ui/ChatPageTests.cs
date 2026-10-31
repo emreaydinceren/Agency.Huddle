@@ -22,7 +22,7 @@ namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
 /// Renders the Room page (<c>Chat.razor</c>) over a real, fully-composed application via
-/// <see cref="TeamWebApplicationFactory"/>, the same way <see cref="AppHostTests"/> does. Each test
+/// <see cref="TeamWebApplicationFactory"/>, the same way <c>AppHostTests</c> does. Each test
 /// writes straight into the <see cref="Drafts"/> singleton the running app resolves - the same store
 /// <c>AgentConnection</c> writes into off the pipe - so a Draft shows up exactly as it would for a
 /// real streaming Turn, without needing a live circuit or a real Agent connection.
@@ -970,7 +970,7 @@ public sealed class ChatPageTests
     /// Before the fix, <c>Composer.razor</c> only ever cleared <c>infoText</c>/<c>errorText</c> at the
     /// top of <c>SendAsync</c> - never on a Room change - so a confirmation from one Room stayed on
     /// screen in the next. Renders <see cref="Composer"/> directly through <see cref="MudBunitContext"/>
-    /// (the same split <see cref="AgentsPageTests"/> uses) and drives the Room switch the same way
+    /// (the same split <c>AgentsPageTests</c> uses) and drives the Room switch the same way
     /// <c>InviteAgentTests</c> drives its own state reset: a bUnit
     /// <c>SetParametersAndRender</c> with a new <c>RoomId</c>, exactly what Chat.razor does when the
     /// user navigates from one Room's page to another's.

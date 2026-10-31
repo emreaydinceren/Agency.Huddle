@@ -9,7 +9,7 @@ namespace Agency.Huddle.Tests.Library;
 /// <summary>
 /// Exercises the <c>/library-files/{rootId}/{**path}</c> endpoint (Task 12.8) over a real
 /// <see cref="System.Net.Http.HttpClient"/> hosted by <see cref="TeamWebApplicationFactory"/>,
-/// the same shape <see cref="Agency.Huddle.Tests.Ui.AvatarEndpointTests"/> uses for
+/// the same shape <c>Agency.Huddle.Tests.Ui.AvatarEndpointTests</c> uses for
 /// <c>/agent-avatars</c>. This endpoint is a stated exception to <c>UseStaticFiles</c> (rules.md):
 /// pinned roots can live anywhere on disk, so it re-runs <see cref="Agency.Huddle.App.Library.LibraryPathResolver.TryResolve"/>
 /// on every request instead (Spec §9 item 4).
