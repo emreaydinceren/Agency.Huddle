@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 1.2 and 1.3 are live checks that need the Human; 1.5.t and 1.5.i run only if 1.3 finds a working route.
 
-**Status:** 48 of 59 tasks Done · 3 of 3 retrospectives done · last updated 2026-10-31.
+**Status:** 50 of 59 tasks Done · 3 of 3 retrospectives done · last updated 2026-10-31.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -60,8 +60,8 @@ never by hand, so the status line stays true.
 | 5.2.i #35 Add the gateway call [Haiku] | | | ✔ |
 | 5.3.t #36 The runner routes `StartAfresh` [Sonnet] | | | ✔ |
 | 5.3.i #37 Route it [Sonnet] | | | ✔ |
-| 5.4.t #38 `RoomSession` starts afresh between Turns [Sonnet] | | ✔ | |
-| 5.4.i #39 Implement the fresh start [Sonnet] | ✔ | | |
+| 5.4.t #38 `RoomSession` starts afresh between Turns [Sonnet] | | | ✔ |
+| 5.4.i #39 Implement the fresh start [Sonnet] | | | ✔ |
 | 5.5.t #40 `LastCatchUpStore` [Sonnet] | | | ✔ |
 | 5.5.i #41 Implement `LastCatchUpStore` [Sonnet] | | | ✔ |
 | 5.6.t #42 The note and the file after the fresh session's first Turn [Sonnet] | ✔ | | |
