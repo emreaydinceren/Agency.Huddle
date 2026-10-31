@@ -139,6 +139,48 @@ public sealed class AgentProfilesTests
     }
 
     /// <summary>
+    /// A cold cache hands the warm-up back on the view, a second open while it runs joins the same one
+    /// rather than probing again, and once it ends the reread shows the names it filled.
+    /// </summary>
+    [Fact]
+    public async Task BuildAsync_CacheEmpty_HandsBackTheWarmUpAndRereadShowsFilledNames()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        await fixture.InitializeAsync(ct);
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.ModelCatalog.ModelsGate = gate;
+        fixture.AddAgent("Ada", "Lead");
+
+        AgentProfileView? first = await fixture.Profiles.BuildAsync("Ada", null, ct);
+        AgentProfileView? second = await fixture.Profiles.BuildAsync("Ada", null, ct);
+        fixture.ModelCatalog.Runtime = new RuntimeNames("Opus 5.5", "High");
+        gate.SetResult();
+        Assert.NotNull(first?.RuntimeWarmUp);
+        await first.RuntimeWarmUp.WaitAsync(TimeSpan.FromSeconds(10), ct);
+
+        Assert.Same(first.RuntimeWarmUp, second?.RuntimeWarmUp);
+        Assert.Equal(1, fixture.ModelCatalog.ProbeCount);
+        Assert.Equal(new ProfileRuntime("Claude Code", "Opus 5.5 (default)", "High (default)"), fixture.Profiles.RereadRuntime("Ada"));
+    }
+
+    /// <summary>Names that are already cached hand no warm-up back, so the popover has nothing to wait for.</summary>
+    [Fact]
+    public async Task BuildAsync_NamesCached_HandsBackNoWarmUp()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        await fixture.InitializeAsync(ct);
+        fixture.ModelCatalog.Runtime = new RuntimeNames("Opus 5.5", "High");
+        fixture.AddAgent("Ada", "Lead");
+
+        AgentProfileView? view = await fixture.Profiles.BuildAsync("Ada", null, ct);
+
+        Assert.NotNull(view);
+        Assert.Null(view.RuntimeWarmUp);
+    }
+
+    /// <summary>
     /// A warm-up that throws is caught and logged, so it can never surface as an unobserved task
     /// exception, and it frees its Adapter's slot so the next open warms again. The fake throws
     /// synchronously, so the catch and the finally have both run by the time the build returns.

@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
@@ -17,8 +16,8 @@ namespace Agency.Huddle.App.Components.Shared;
 /// type the Human has selected. It also reads out what the Agent runs on: its Adapter from the
 /// Persona file, and its Model and Effort from their stores, shown by display name when the model
 /// catalog already has them cached. Building a profile never waits on a probe: names that are not
-/// cached yet fall back to the raw id or the default wording, and a background warm-up fills the cache
-/// for the next open.
+/// cached yet fall back to the raw id or the default wording, and a background warm-up fills the cache.
+/// The warm-up rides on the view, so the popover open now can redraw when it ends.
 /// </summary>
 /// <param name="personas">The Agent directory and definitions.</param>
 /// <param name="types">The team types, to find the Persona's role.</param>
@@ -55,8 +54,11 @@ internal sealed class AgentProfiles(
     /// <summary>What the Agent card says for an Effort the Persona has not chosen.</summary>
     private const string DefaultEffortText = "Model default";
 
-    /// <summary>The Adapters a background warm-up is already running for, keyed on the requested Adapter id ("" for the default), so repeated card opens do not queue probes behind one another.</summary>
-    private readonly ConcurrentDictionary<string, bool> warming = new(StringComparer.Ordinal);
+    /// <summary>Guards <see cref="warming"/>.</summary>
+    private readonly Lock gate = new();
+
+    /// <summary>The latest background warm-up per Adapter, keyed on the requested Adapter id ("" for the default). One still running is shared by every card that opens meanwhile, so repeated opens neither queue probes nor miss the redraw; a finished one is replaced by the next warm-up.</summary>
+    private readonly Dictionary<string, Task> warming = new(StringComparer.Ordinal);
 
     /// <summary>Builds the profile of the Agent - or the Human - called <paramref name="name"/>.</summary>
     /// <param name="name">The Agent's Name or alias.</param>
@@ -94,14 +96,33 @@ internal sealed class AgentProfiles(
         bool manager = summary?.Manager is { } managerName && string.Equals(managerName, entry.Name, StringComparison.OrdinalIgnoreCase);
         bool member = summary is not null && summary.Members.Any(candidate => string.Equals(candidate, entry.Name, StringComparison.OrdinalIgnoreCase));
 
+        (ProfileRuntime runtime, Task? warm) = this.ReadRuntime(persona, warmIfMissing: true);
         AgentProfile profile = new(entry.Name, entry.Title, job?.Description ?? string.Empty, avatars.Get(entry.Name))
         {
             State = state,
-            Runtime = this.ReadRuntime(persona),
+            Runtime = runtime,
             Tier = job?.Model.Tier ?? role?.Model?.Tier,
             SkillNames = identity?.Skills ?? [],
         };
-        return new AgentProfileView(profile, manager, member ? ProfileMembership.Member : ProfileMembership.None, agent, team);
+        return new AgentProfileView(profile, manager, member ? ProfileMembership.Member : ProfileMembership.None, agent, team) { RuntimeWarmUp = warm };
+    }
+
+    /// <summary>
+    /// Reads out again what the Agent called <paramref name="name"/> runs on, from the cache only and
+    /// without starting a warm-up: the popover calls it once <see cref="AgentProfileView.RuntimeWarmUp"/>
+    /// has finished, to redraw the names that warm-up filled.
+    /// </summary>
+    /// <param name="name">The Agent's Name or alias.</param>
+    /// <returns>The three display strings, or <see langword="null"/> when no Persona resolves for <paramref name="name"/>.</returns>
+    public ProfileRuntime? RereadRuntime(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        if (personas.ResolveByNameOrAlias(name) is not { } entry || personas.Get(entry.Name) is not { } persona)
+        {
+            return null;
+        }
+
+        return this.ReadRuntime(persona, warmIfMissing: false).Runtime;
     }
 
     /// <summary>
@@ -110,22 +131,26 @@ internal sealed class AgentProfiles(
     /// same fallback). Model and Effort use the display names the model catalog has already cached,
     /// never probing from here: a chosen one falls back to its raw id, and one the Persona did not
     /// choose reads "{name} (default)", falling back to "Agent default" / "Model default". When a
-    /// name is missing from the cache a background warm-up is started, so the next open has it.
+    /// name is missing from the cache and <paramref name="warmIfMissing"/> is set, a background warm-up
+    /// is started (or the one already running joined) and handed back, so the caller can redraw when it ends.
     /// </summary>
     /// <param name="persona">The Persona with its stored Model and Effort joined in.</param>
-    /// <returns>The three display strings.</returns>
-    private ProfileRuntime ReadRuntime(Persona persona)
+    /// <param name="warmIfMissing">Whether a missing name starts a warm-up.</param>
+    /// <returns>The three display strings, and the warm-up filling the missing names or <see langword="null"/> when none was needed.</returns>
+    private (ProfileRuntime Runtime, Task? Warm) ReadRuntime(Persona persona, bool warmIfMissing)
     {
         RuntimeNames names = modelCatalog.PeekRuntime(persona.Adapter, persona.Model, persona.Effort);
-        if (names.Model is null || (persona.Effort is not null && names.Effort is null))
+        Task? warm = null;
+        if (warmIfMissing && (names.Model is null || (persona.Effort is not null && names.Effort is null)))
         {
-            this.StartWarm(persona.Adapter, persona.Model, persona.Effort);
+            warm = this.StartWarm(persona.Adapter, persona.Model, persona.Effort);
         }
 
-        return new ProfileRuntime(
+        ProfileRuntime runtime = new(
             (adapters.Find(persona.Adapter) ?? adapters.Default).DisplayName,
             AgentProfiles.Describe(persona.Model, names.Model, DefaultModelText),
             AgentProfiles.Describe(persona.Effort, names.Effort, DefaultEffortText));
+        return (runtime, warm);
     }
 
     /// <summary>The text for one Model or Effort: the chosen id's name (or the id), else the default's name marked as such, else <paramref name="fallback"/>.</summary>
@@ -144,16 +169,26 @@ internal sealed class AgentProfiles(
 
     /// <summary>
     /// Starts, without awaiting it, the probes that would fill the names this card could not show. At
-    /// most one warm-up per Adapter runs at a time; the catalog's own gate and cache deduplicate the rest.
+    /// most one warm-up per Adapter runs at a time: a card opened while one runs gets that one back. The
+    /// catalog's own gate and cache deduplicate the rest.
     /// </summary>
     /// <param name="adapterId">The Persona's Adapter id.</param>
     /// <param name="model">The Persona's chosen model id, or null.</param>
     /// <param name="effort">The Persona's chosen effort id, or null.</param>
-    private void StartWarm(string? adapterId, string? model, string? effort)
+    /// <returns>The warm-up; it never faults.</returns>
+    private Task StartWarm(string? adapterId, string? model, string? effort)
     {
-        if (this.warming.TryAdd(adapterId ?? string.Empty, true))
+        string key = adapterId ?? string.Empty;
+        lock (this.gate)
         {
-            _ = this.WarmAsync(adapterId, model, effort);
+            if (this.warming.TryGetValue(key, out Task? running) && !running.IsCompleted)
+            {
+                return running;
+            }
+
+            Task warm = this.WarmAsync(adapterId, model, effort);
+            this.warming[key] = warm;
+            return warm;
         }
     }
 
@@ -180,10 +215,6 @@ internal sealed class AgentProfiles(
             // been drawn with its fallback text, and the catalog caches nothing on failure so the
             // next open simply tries again.
             logger.LogWarning(ex, "Warming the model catalog for the profile card failed.");
-        }
-        finally
-        {
-            this.warming.TryRemove(adapterId ?? string.Empty, out _);
         }
     }
 }
