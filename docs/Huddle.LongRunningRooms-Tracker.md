@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 1.2 and 1.3 are live checks that need the Human; 1.5.t and 1.5.i run only if 1.3 finds a working route.
 
-**Status:** 11 of 59 tasks Done · 0 of 3 retrospectives done · last updated 2026-10-30.
+**Status:** 12 of 59 tasks Done · 0 of 3 retrospectives done · last updated 2026-10-30.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -22,7 +22,7 @@ never by hand, so the status line stays true.
 | 1.1.i #3 Log the Warning [Haiku] | | | ✔ |
 | 1.2 #4 Live check V0-1: is isolation real? [manual, manager with the Human] | ✔ | | |
 | 1.3 #5 Live check V0-2: can retention be set? [manual, manager with the Human] | ✔ | | |
-| 1.4 #6 Record the phase 0 findings [Haiku] | ✔ | | |
+| 1.4 #6 Record the phase 0 findings [Haiku] | | | ✔ |
 | 1.5.t #7 Session retention setting (conditional on 1.3) [Sonnet] | ✔ | | |
 | 1.5.i #8 Apply session retention (conditional on 1.3) [Sonnet] | ✔ | | |
 | **D2. Phase 1: the session settings** | | | |
@@ -40,7 +40,7 @@ never by hand, so the status line stays true.
 | 3.2.i #18 Implement the trim [Haiku] | ✔ | | |
 | 3.3.t #19 The `turn.transcriptOmittedOwn` prompt [Haiku] | | | ✔ |
 | 3.3.i #20 Add the prompt [Haiku] | | | ✔ |
-| 3.4.t #21 Render the own-omitted line [Sonnet] | ✔ | | |
+| 3.4.t #21 Render the own-omitted line [Sonnet] | | ✔ | |
 | 3.4.i #22 Render it [Sonnet] | ✔ | | |
 | 3.5.t #23 Catch-up reads the settings and trims [Sonnet] | ✔ | | |
 | 3.5.i #24 Wire the settings and the trim [Sonnet] | ✔ | | |
