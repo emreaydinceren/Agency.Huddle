@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 1.2 and 1.3 are live checks that need the Human; 1.5.t and 1.5.i run only if 1.3 finds a working route.
 
-**Status:** 33 of 59 tasks Done · 2 of 3 retrospectives done · last updated 2026-10-30.
+**Status:** 35 of 59 tasks Done · 2 of 3 retrospectives done · last updated 2026-10-30.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -53,7 +53,7 @@ never by hand, so the status line stays true.
 | 4.4 #30 The experiment's test page, phase 1 part [Haiku] | | | ✔ |
 | 🔁 R2 Retrospective 2 (tasks 16–30): token tally, top-3 agents grepped, plan updated [Opus] | | | ✔ |
 | **D5. Phase 2a: the wire and the runner** | | | |
-| 5.0.t #31 End-to-end: *Start afresh* over the pipe [Sonnet] | | ✔ | |
+| 5.0.t #31 End-to-end: *Start afresh* over the pipe [Sonnet] | | | ✔ |
 | 5.1.t #32 The two Envelopes [Haiku] | | | ✔ |
 | 5.1.i #33 Add the Envelopes [Haiku] | | | ✔ |
 | 5.2.t #34 `IAgentGateway.StartAfreshAsync` [Haiku] | | | ✔ |
@@ -70,8 +70,8 @@ never by hand, so the status line stays true.
 | 5.7.i #45 Wire the cleanup [Sonnet] | ✔ | | |
 | 🔁 R3 Retrospective 3 (tasks 31–45): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
 | **D6. Phase 2a: server and UI** | | | |
-| 6.1.t #46 The server keeps the note [Sonnet] | | ✔ | |
-| 6.1.i #47 Handle the note [Sonnet] | ✔ | | |
+| 6.1.t #46 The server keeps the note [Sonnet] | | | ✔ |
+| 6.1.i #47 Handle the note [Sonnet] | | ✔ | |
 | 6.2.t #48 The note's wording [Haiku] | | | ✔ |
 | 6.2.i #49 Implement the wording [Haiku] | | | ✔ |
 | 6.3.t #50 The note in the Room, and what it reread [Sonnet] | ✔ | | |
