@@ -585,6 +585,9 @@ Bound from `Team:FileChanges`:
 
 ### 6.15 Memory: what an Agent deliberately remembers
 
+> [!NOTE]
+> **Amended 2026-10-30 by [ADR-0071](adr/0071-memory-is-written-through-the-memory-tool-and-team-memory-by-its-manager.md).** A memory file is now a topic with an optional frontmatter `description` that the index prefers, an Agent writes it through the `memory` App Tool (the "not a tool" decision below no longer stands), and the Memory block is shown whenever that tool is offered, not only when File Changes runs. The format, index and protocol are in [the Instructions and Memory design](Huddle.InstructionsAndMemory-Specifications.md) §4 to §6. The rest of this section is unchanged.
+
 File Changes tells an Agent that something changed. Memory is where an Agent puts what it
 **chooses** to keep: a preference the Human stated, a decision that holds beyond one Room, a
 fact about ongoing work. Every copy of that Agent can see it: the same session in another Room

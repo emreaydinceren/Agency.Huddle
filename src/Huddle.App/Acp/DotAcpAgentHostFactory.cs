@@ -7,6 +7,7 @@ using Agency.Huddle.Acp.Tools;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Teams;
@@ -129,9 +130,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         IReadOnlyList<string> teamLabels = parsed?.Teams ?? [];
         SkillResolution skillResolution = this.skills.Resolve(skillNames);
 
-        ToolSet toolSet = this.BuildToolSet(persona, agentId, profile, skillResolution);
-
-        bool readsMemory = this.ReadsMemory(profile);
+        ToolSet toolSet = this.BuildToolSet(persona, agentId, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels));
 
         var toolServer = new AppToolServer(ToolServerName, toolSet.Tools, this.loggerFactory, 0, authToken);
         await toolServer.StartAsync(cancellationToken).ConfigureAwait(false);
@@ -157,7 +156,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             toolSet.ReadSkillToolName,
             toolSet.AskHumanToolName,
             memoryDir,
-            readsMemory,
+            this.ReadsMemory(profile),
             this.options.FileChanges.MaxMemoryEntries,
             teamLabels,
             this.teamCatalog,
@@ -169,7 +168,20 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.loggerFactory,
             this.workModePolicy,
             roleBlock,
+            this.CreatePromptSources(toolSet.Prompts),
             this.serviceProvider.GetService<IMergeGate>());
+    }
+
+    /// <summary>Builds the Instructions reader (capped by <c>Team:Instructions:MaxChars</c>) with the Team Memory access rules and the memory warnings.</summary>
+    /// <param name="prompts">The prompt source the reader renders its cut line from.</param>
+    /// <returns>The reader.</returns>
+    private SessionPromptSources CreatePromptSources(IPromptSource prompts)
+    {
+        return new SessionPromptSources(
+            new InstructionsReader(prompts, this.options.Instructions.MaxChars, this.loggerFactory.CreateLogger<InstructionsReader>()),
+            this.serviceProvider.GetRequiredService<TeamMemoryAccess>(),
+            this.serviceProvider.GetRequiredService<MemoryWarnings>(),
+            this.agentPaths);
     }
 
     /// <summary>What <see cref="BuildToolSet"/> built: the offered tools and the model-facing names the system prompt cites.</summary>
@@ -187,13 +199,25 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         string ReadSkillToolName,
         string AskHumanToolName);
 
+    /// <summary>
+    /// Whether the Persona is offered <c>propose_team_memory</c> (Team Memory Helper spec §6.1): when one of its Team labels names a
+    /// Team with a folder, the same rule that gives it a Team Memory block, or when it is the Chief of Staff. Decided as the session
+    /// starts; the tool checks membership again on every call, because it can change during the session.
+    /// </summary>
+    /// <param name="personaName">The Persona's Name.</param>
+    /// <param name="teamLabels">The Persona's Team labels.</param>
+    private bool ProposesTeamMemory(string personaName, IReadOnlyList<string> teamLabels) =>
+        teamLabels.Any(label => this.teamCatalog.Find(label) is { HasFolder: true })
+        || this.serviceProvider.GetRequiredService<TeamMemoryAccess>().IsChiefOfStaff(personaName);
+
     /// <summary>Builds, Skill-gates and prefixes the Persona's tools, ending with <c>get_help</c> over the offered list.</summary>
     /// <param name="persona">The Persona being started.</param>
     /// <param name="agentId">The Agent id the tools are bound to.</param>
     /// <param name="profile">The resolved Adapter Profile.</param>
     /// <param name="skillResolution">The Persona's resolved Skills.</param>
+    /// <param name="proposesTeamMemory">Whether to offer <c>propose_team_memory</c>.</param>
     /// <returns>The tool set.</returns>
-    private ToolSet BuildToolSet(Persona persona, string agentId, AdapterProfile profile, SkillResolution skillResolution)
+    private ToolSet BuildToolSet(Persona persona, string agentId, AdapterProfile profile, SkillResolution skillResolution, bool proposesTeamMemory)
     {
         // Built by our own service provider, bound to this Agent id, so each tool call runs the same
         // domain code the UI calls. AppToolServer's WebApplication.CreateBuilder() is a second,
@@ -202,7 +226,12 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         // retypes "read_skill" - the Compose call reads it off readSkillTool.Name.
         var readSkillTool = ActivatorUtilities.CreateInstance<ReadSkillTool>(this.serviceProvider, persona.Name);
         var askHumanTool = ActivatorUtilities.CreateInstance<AskHumanTool>(this.serviceProvider, agentId);
-        IReadOnlyList<IAppTool> chatTools = this.CreateChatTools(agentId, readSkillTool, askHumanTool);
+        IReadOnlyList<IAppTool> chatTools = this.CreateChatTools(persona.Name, agentId, readSkillTool, askHumanTool);
+        if (proposesTeamMemory)
+        {
+            chatTools = [.. chatTools, ActivatorUtilities.CreateInstance<ProposeTeamMemoryTool>(this.serviceProvider, persona.Name)];
+        }
+
         chatTools = this.OfferChatTools(chatTools, persona, profile, skillResolution);
 
         var prompts = this.serviceProvider.GetRequiredService<IPromptSource>();
@@ -350,11 +379,12 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     }
 
     /// <summary>Creates the chat tools every Persona is offered before Skill gating.</summary>
+    /// <param name="personaName">The Persona's Name, which the <c>memory</c> tool resolves the Persona's own folder and Team access from.</param>
     /// <param name="agentId">The Agent id the tools are bound to.</param>
     /// <param name="readSkillTool">The already-created <c>read_skill</c> tool.</param>
     /// <param name="askHumanTool">The already-created <c>ask_human</c> tool.</param>
     /// <returns>The chat tools, including the Task tools when Tasks is on.</returns>
-    private IReadOnlyList<IAppTool> CreateChatTools(string agentId, ReadSkillTool readSkillTool, AskHumanTool askHumanTool)
+    private IReadOnlyList<IAppTool> CreateChatTools(string personaName, string agentId, ReadSkillTool readSkillTool, AskHumanTool askHumanTool)
     {
         IReadOnlyList<IAppTool> chatTools =
         [
@@ -377,6 +407,10 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             ActivatorUtilities.CreateInstance<ReadRecordsTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<ProposeRetroChangesTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<MarkRetroRowTool>(this.serviceProvider, agentId),
+
+            // Memory is not optional know-how, so it is not gated by a Skill, and it is offered whether or not the
+            // Adapter reads files (Instructions spec §5.1).
+            ActivatorUtilities.CreateInstance<MemoryTool>(this.serviceProvider, personaName),
         ];
 
         // Spec §11.1: the six Task tools are not in SkillGrants.Grantable, so every Persona gets

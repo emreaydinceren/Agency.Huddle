@@ -1,6 +1,6 @@
 # Huddle.InstructionsAndMemory — Design Specification
 
-**Date:** 2026-10-30 · **Status:** Proposed 2026-10-30, reviewed once, not built · **Decision records:**
+**Date:** 2026-10-30 · **Status:** Built 2026-10-30 (see [Appendix B](#appendix-b-what-the-build-did-differently)); spike S-1 not run · **Decision records:**
 [ADR-0070](adr/0070-an-agent-reads-the-instructions-the-human-writes.md) (Instructions; accepts a
 weakening of [ADR-0031](adr/0031-agents-and-teams-are-sibling-folders.md)),
 [ADR-0071](adr/0071-memory-is-written-through-the-memory-tool-and-team-memory-by-its-manager.md)
@@ -261,6 +261,18 @@ A Human override that uses `{{path}}` keeps working.
 **There is no `MEMORY.md`.** The index is built, so it can never drift from the files, and no
 shared file is rewritten on every save (§7.1). The `list` command (§5.2) is the index on demand.
 
+The name is reserved, ignoring case, in every memory folder (an Agent's own, a Team's and a
+Project's), because a model used to Claude Code's convention may start one out of habit:
+
+- **The tool refuses it.** Every command that names a file returns `systemPrompt.memoryBadFile`,
+  which says that `MEMORY.md` and `Instructions.md` are reserved because the index is built.
+- **The index skips it.** `MemoryIndex.Build` and the `list` command leave it out, and it does not
+  count toward `NotListed`.
+- **A file already there is left alone.** Huddle never deletes or renames it; the Human can open it
+  in the Library like any other file.
+
+The Memory Prompt (§6.1) also tells the Agent there is no `MEMORY.md` to keep.
+
 ### 4.3 Frontmatter parsing
 
 The Library's own frontmatter reader is reused: `NoteFrontmatter.Split` to separate the block,
@@ -327,6 +339,13 @@ whether the index line still fits. That is the Human's index rule 8.
 The Agent never writes frontmatter by hand.
 
 ### 5.3 Folders and confinement
+
+> [!NOTE]
+> Since 2026-10-30 members no longer have to tell the manager: they propose a fact with
+> `propose_team_memory`, and the Team Memory Helper files it through the same write rules
+> ([Huddle.TeamMemoryHelper-Specifications.md](Huddle.TeamMemoryHelper-Specifications.md),
+> [ADR-0073](adr/0073-members-propose-team-memory-and-a-helper-files-it.md)). Who may write with
+> the `memory` tool, below, is unchanged.
 
 `folder` resolves to exactly one directory, or the call is refused:
 
@@ -468,6 +487,15 @@ The placeholders:
   at the start of your next Turn in each Room."
 
 The sentence "Do not claim to remember…" is kept word for word; FC §6.15 says why it is there.
+
+**Writes through the tool are the Agent's own for File Changes.** A `write`, `append`, `replace`
+or `delete` through the `memory` tool is recorded from the tool-call event, as an `Edit`, `Delete`
+or `Move` is (FC §6.8 item 2): the Room Session that saw the call resolves its `folder` and `file`
+with the tool's own rule (`MemoryPaths`) and adds the path to the Turn's touched set. So the Room
+it was saved in does not list it back, and the Agent's other Rooms list it with
+`turn.fileByYouSuffix`. The tool cannot record this itself, because one tool server serves every
+Room Session of the Agent. `claude-agent-acp` reports the call with kind `other` and the prefixed
+tool name as its title, which is what the Room Session matches.
 
 ### 6.2 The Team Memory block: one frame, two role paragraphs
 
@@ -636,3 +664,33 @@ Each task is test-first and leaves `dotnet build Huddle.slnx` and
 | B-5 | `TeamMemoryWriteGuard` in `WorkDirPermissionHandler`, with the `Kind` filter | B-4 |
 | B-6 | Memory blocks shown whenever the tool is offered (§6.1); Prompts §6.1 and §6.2 with the old-frame fallback; `{{memoryTool}}`; the tool description; registration in `CreateChatTools`; goldens | B-1, B-3, B-4 |
 | C-1 | Docs: the User Guide (Instructions, and Memory for the Human); **Instructions** in `language.md` and the changed **Memory**/**Team Memory** entries; `code-map.md`; FC §6.15 and TeamPages §6.4 marked as amended by ADR-0071; the manual test page; `docs/Index.md` | all |
+
+---
+
+## Appendix B. What the build did differently
+
+Written when the build landed, 2026-10-30. Everything not listed here was built as §3 to §6 describe. Spike S-1 (OP-5) was **not run**: it needs a live, paid Claude Code session. The finding is recorded as open in [known-limits.md](engineering/known-limits.md) and is manual test INSTRMEM-07.
+
+| # | Spec | What was built, and why |
+| --- | --- | --- |
+| B-1 | §3.3 "The refusal reason is `systemPrompt.instructionsRefusal`", and §5.6 the Team Memory refusal | The reason is **logged** (Warning), not returned. An ACP permission reply is a chosen option and carries no text, so the Agent sees only a rejected tool call. The Prompts are rendered for the log line, so a Human override still shows. |
+| B-2 | §6.3 lists the refusal Prompts by name | Three more were needed and added, each non-empty and `NextSession`: `systemPrompt.memoryBadFolder` (a folder the caller may not use, naming the folders it may), `systemPrompt.memoryBadCommand` (a missing or unknown command, or a missing argument) and `systemPrompt.memoryWriteFailed` (the atomic write, the Recycle Bin or a read failed). 23 Prompts are new in all (the two later ones are `systemPrompt.memoryDeleteNeedsVersion`, so a `delete` without a version is told to pass one rather than to "write" it, and `systemPrompt.pathAliasRefusal`); the catalog holds 130. |
+| B-3 | §6.3 `systemPrompt.memoryBadDescription` is "one sentence" | It carries `{{problem}}`, the specific rule the description broke ("it is missing.", "it is shorter than 20 characters.", "it only repeats the file name."), so the Agent does not have to guess. The restating check runs before the length check, so a short restatement is reported as a restatement. |
+| B-4 | §6.2 `RequiredPlaceholders` of `systemPrompt.teamMemory` become the roles and the index | `{{teamMemoryPaths}}` stays a **declared** placeholder (not required), so an old override that still uses it passes `PromptValidator` without an unknown-token warning while the composer renders it the old way and logs the Warning. |
+| B-5 | §3.2 `{{instructions}}` holds one section per level | Sections are joined by a blank line. A cut file ends with a line break and then the cut line, since the cut line begins with an ellipsis. `Team <Team>` uses the catalog's folder spelling of the Team, and a `Teams:` label that is not a valid folder name is skipped. |
+| B-6 | §5.6 a path "inside `Teams/<Team>/<Project>/memory/`" | The guard treats `Teams/<Team>/<X>/memory/` as Project Memory only when `<X>` is one of the Team's Projects in the catalog, and a first segment that is not a Team in the catalog is not Team Memory. Anything else is an ordinary folder and is approved as before. |
+| B-7 | §5.2 `write` composes `description: <d>` | A description that a plain YAML scalar would not read back whole (it contains `: ` or ` #`, ends in `:`, or starts with a YAML indicator) is written single-quoted, with a quote doubled. The Library's own reader and the index read both forms. |
+| B-8 | §5.2 `replace` swaps exact text | A file the Human saved with Windows line breaks is also matched by an `old` written with plain ones, and the swap then uses Windows line breaks. Otherwise a Library edit on Windows would make every multi-line `replace` fail. |
+| B-9 | §4.3 "a Warning is logged once per file and content hash" | "Malformed" means a `description` key that is not a usable one-line scalar, or a `---` block that never closes. The fallback skips a stray `---` line. The once-per-content memory is an injected singleton (see B-17). |
+| B-10 | §5.5 and §6.2 pick the manager paragraph from the Persona's Teams | They use the Persona's `Teams:` labels, as the Team Memory index always has. A manager whose own `Teams:` line does not carry the Team gets the tool (it can write that Team's folder) but no Team Memory block for it. Not changed: the labels are the Persona's membership. |
+| B-11 | §9 `DotAcpPersonaHost` test: a Profile with `ReadsFiles = false` gets the Memory block without `memoryChanges` or `roomSessionsCarry` | Pinned three ways, none constructing `DotAcpPersonaHost` directly (`BuildOptions` stays `private`): `SystemPromptComposer` with `memoryChangesListed: false` (`MemoryPromptComposerTests`); a mock-adapter session with `ReadsFiles` false (`MemoryConformanceTests`, `TeamMemorySessionTests`); and `InstructionsAndGuardsSessionTests`, which runs the real host and reads its appended prompt for the three `Instructions.md` levels and, through a `session/request_permission` the scripted peer sends, checks the permission handler the host builds: a member's edit of Team Memory and any edit of an Instructions file are rejected, reads and the manager's edit are allowed. |
+| B-12 | §9 manual cases IM-1 to IM-9 | Written as INSTRMEM-01 to INSTRMEM-09 in [instructions-memory.md](engineering/manual-tests/instructions-memory.md), registered in the tracker, the run log and the planning page. **None has been run by a person.** INSTRMEM-07 is the spike S-1. |
+| B-13 | §3.2 `Team:Instructions:MaxChars` and §5.7 `Team:Memory:MaxFileBytes` | `Team:Instructions:MaxChars` and `Team:Memory:MaxFileBytes` are nested option classes (`InstructionsOptions`, `MemoryOptions`) and have rows in the Engineering Guide's configuration table. |
+| B-14 | Appendix A task order | A-1 to A-4, B-1 to B-6 and C-1 were done in order. Two tests-first exceptions: the A-2 catalog entries were written before their tests (the shipped-defaults file test was seen red first), and the new-type tests (A-1, B-2 to B-4) were first seen failing as a compile error. |
+| B-15 | §3.3, §5.6 the guards compare a path argument by name | A write path is also refused when, on Windows, a segment is an 8.3 short name (`INSTRU~1.MD`; the extension is set aside, as the Library''s own alias check ignores it) or the path has a `:` after the drive (an alternate data stream, `Instructions.md:x`). The reason is `systemPrompt.pathAliasRefusal`, logged like the others. This also refuses a manager's write through such a name, but only **inside the place the guard guards**: the Teams root for both guards, and the Agent's own Work Dir and every other Agent's Work Dir for the Instructions guard (where only a last segment that can be a short name of `Instructions.md` counts, so `notes~2.md` is written as before). The same spelling elsewhere (`C:\Users\RUNNER~1\...`, `notes~2.md` outside the guarded places) is an ordinary path and is allowed. A short name in the part of the path that leads to the guarded place is not detected (the guard cannot tell it from an ordinary folder name). **Known soft-boundary gap, not resolved:** a junction or symbolic link that points into a guarded folder gets past both guards, because they compare the path as written. They are guards against honest mistakes, as the `~/.claude` guard is, not a jail. |
+| B-16 | §5.6 `WorkDirPermissionHandler` | The handler takes a null protected directory, so when the profile directory cannot be resolved the `~/.claude` refusal is off but both file guards still apply (previously the plain auto-approve replaced the handler and dropped them). A Team folder named with leading dots (`..x`) is a Team, not a climb out of the Teams root. |
+| B-17 | §4.3 "once per file and content hash" | The warn-once memory is an injected singleton (`MemoryWarnings`), bounded at 1024 file-and-content pairs and cleared when full, so a long run cannot grow it and a file may be warned about again after that. `MemoryIndex.SummaryFor` reads only the frontmatter block and the first body line, within 200 lines and 16 KiB, never the whole file; a first body line beyond that falls back to the file name. |
+| B-18 | §3.3, §5.6 the guards read `file_path`, `path` and `notebook_path` | The guards, and the `~/.claude` check, now read one list of path arguments in one place (`ToolCallPaths`): those three plus the names a move or copy gives its source and destination (`old_path`, `new_path`, `source`, `src`, `from`, `destination`, `dest`, `target`, `to` and their `_path` forms; `paths`, `file_paths` and `sources` as arrays). A relative path resolves against the Agent's Work Dir, its cwd, in every check. The `~/.claude` guard still ignores the tool kind. **Delete and move also refuse a folder that holds a guarded file**: for Instructions, the Teams root or anything above it, an existing folder directly under it (a Team folder), and the Agent's own Work Dir, any Agent's Work Dir, an Agent's folder or the Agents root; for Team Memory, the Teams root, a Team folder, a Project folder and a `memory` folder of a Team the caller does not write. An edit of a folder path is not a delete and is left alone. |
+| B-19 | §3.3 "an `Instructions.md` in the Agent's own Work Dir" | Guarded in **every** Agent's Work Dir (`Agents/<Name>/<Acp:WorkDir>/Instructions.md`, located with `AgentPaths`), since another Agent's file is that Agent's highest-precedence level. The Agent's other files, its `memory/` sub-folder and its definition file are not guarded. |
+| B-20 | §6.2 the `systemPrompt.teamMemory` old-frame Warning | Logged **once per override text** (through `MemoryWarnings`, like the malformed-frontmatter Warning), not at every session start; an edited override warns again. The placeholder names are log arguments, so a provider that reads the template's doubled braces as an escape still prints `{{teamMemoryPaths}}`. A frontmatter block that is still open at the 200-line / 16 KiB scan bound is **too long to read**, not unclosed: no Warning, and the summary is the file name (never one of the block's key lines). `Instructions.md` is cut at the cap without splitting a surrogate pair or a CR LF. |
+| B-21 | §4.2 index line `- {{file}} - {{summary}}` | **Decision: kept `file - description`; the folder is named once per group.** The memory protocol and the tool name files, and a Team's and a Project's Memory can hold the same file name, so the line stays short and `systemPrompt.teamMemoryHeading` says which folder the group is: `{{scope}} (folder: {{folder}}):`, e.g. `Business › Marketing (folder: Business/Marketing):`. `{{folder}}` is the value to pass to the `memory` tool and is a declared, not required, placeholder, so an override that only uses `{{scope}}` still works. The personal block already names its folder through `{{memoryPath}}`. |

@@ -49,19 +49,32 @@ namespace Agency.Huddle.App.Acp;
 /// by another tool (an IDE, <c>gh</c>), or a command in an Adapter work mode that never asks permission.
 /// The Human's own approval of a prompt is never intercepted: only the Agent's requests are answered here.
 /// </para>
+/// <para>
+/// Two further refusals protect files the Human owns, and both look at the tool call's kind, so a read is never refused
+/// (Instructions spec §3.3, §5.6): an edit, delete or move of an <c>Instructions.md</c> (<see cref="InstructionsWriteGuard"/>)
+/// and of a Team's Memory by anyone but its manager (<see cref="TeamMemoryWriteGuard"/>). The permission reply carries no
+/// reason text, so the reason is logged.
+/// </para>
 /// </remarks>
 /// <param name="protectedDirectory">
-/// The directory to refuse writes into, already absolute. Passed in rather than read from the
+/// The directory to refuse writes into, already absolute, or <see langword="null"/> when the profile directory cannot be resolved (the
+/// ~/.claude refusal is then off but the other guards still apply). Passed in rather than read from the
 /// environment here so a test can point it somewhere harmless.
 /// </param>
 /// <param name="logger">Records each refusal; without a line here the refusal is as invisible as the write was.</param>
 /// <param name="mergeGate">Decides <c>git merge</c> and <c>git push</c>; <see langword="null"/> leaves them approved.</param>
 /// <param name="personaName">The Persona this handler answers for, passed to <paramref name="mergeGate"/>.</param>
+/// <param name="instructionsGuard">Refuses an edit, delete or move of an <c>Instructions.md</c> (Instructions spec §3.3); <see langword="null"/> leaves them approved.</param>
+/// <param name="teamMemoryGuard">Refuses an edit, delete or move inside a Team's Memory by anyone but its manager or the Chief of Staff (Instructions spec §5.6); <see langword="null"/> leaves them approved.</param>
+/// <param name="workDir">The Agent's Work Dir, the Adapter's working directory, where a relative path in a tool call resolves (the <c>~/.claude</c> check resolves it the way the other guards do); the process's current directory when <see langword="null"/>.</param>
 internal sealed class WorkDirPermissionHandler(
-    string protectedDirectory,
+    string? protectedDirectory,
     ILogger<WorkDirPermissionHandler> logger,
     IMergeGate? mergeGate = null,
-    string personaName = "")
+    string personaName = "",
+    InstructionsWriteGuard? instructionsGuard = null,
+    TeamMemoryWriteGuard? teamMemoryGuard = null,
+    string? workDir = null)
     : IPermissionHandler
 {
     /// <summary>Argument names that carry a shell command in the tool calls this application sees.</summary>
@@ -141,12 +154,6 @@ internal sealed class WorkDirPermissionHandler(
     /// <summary>Git options that consume the next word.</summary>
     private static readonly string[] GitOptionsWithValue = ["-C", "-c", "--git-dir", "--work-tree", "--namespace"];
 
-    /// <summary>
-    /// Argument names that carry a filesystem path in the tool calls this application sees. Matched
-    /// case-insensitively against the tool call's raw input.
-    /// </summary>
-    private static readonly string[] PathArgumentNames = ["file_path", "path", "notebook_path"];
-
     /// <summary>The Agent's home configuration directory for the current user, or null when it cannot be resolved.</summary>
     /// <returns>The absolute path to <c>~/.claude</c>, or <see langword="null"/> when the profile directory is unknown.</returns>
     public static string? DefaultProtectedDirectory()
@@ -167,6 +174,14 @@ internal sealed class WorkDirPermissionHandler(
                 "Refused a tool call writing to '{Path}': it is inside the agent's own configuration directory '{ProtectedDirectory}'.",
                 path,
                 protectedDirectory);
+
+            return Task.FromResult(Refuse(context.Options));
+        }
+
+        string? guardReason = instructionsGuard?.RefusalFor(context.ToolCall) ?? teamMemoryGuard?.RefusalFor(context.ToolCall, personaName);
+        if (guardReason is not null)
+        {
+            logger.LogWarning("Refused a tool call for '{PersonaName}': {Reason}", personaName, guardReason);
 
             return Task.FromResult(Refuse(context.Options));
         }
@@ -316,75 +331,22 @@ internal sealed class WorkDirPermissionHandler(
     {
         path = null;
 
-        if (toolCall.RawInputJson is not { Length: > 0 } json)
+        if (protectedDirectory is null)
         {
             return false;
         }
 
-        JsonDocument document;
-        try
+        string root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(protectedDirectory));
+        foreach (string candidate in ToolCallPaths.From(toolCall, workDir ?? Directory.GetCurrentDirectory()))
         {
-            document = JsonDocument.Parse(json);
-        }
-        catch (JsonException)
-        {
-            // Not something this type can judge; approving matches the "identify positively" rule above.
-            return false;
-        }
-
-        using (document)
-        {
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            // The separator matters: without it "…\.claudex" would count as inside "…\.claude".
+            if (ToolCallPaths.IsInside(candidate, root))
             {
-                return false;
-            }
-
-            foreach (var name in PathArgumentNames)
-            {
-                if (document.RootElement.TryGetProperty(name, out var value) &&
-                    value.ValueKind == JsonValueKind.String &&
-                    value.GetString() is { Length: > 0 } candidate &&
-                    this.IsInsideProtectedDirectory(candidate))
-                {
-                    path = candidate;
-                    return true;
-                }
+                path = candidate;
+                return true;
             }
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// Whether <paramref name="candidate"/> resolves to something inside the protected directory.
-    /// Compared case-insensitively: Windows paths are, and rules.md already leans on that elsewhere.
-    /// </summary>
-    /// <param name="candidate">The path named by the tool call, absolute or relative.</param>
-    /// <returns><see langword="true"/> when it is inside the protected directory.</returns>
-    private bool IsInsideProtectedDirectory(string candidate)
-    {
-        string full;
-        try
-        {
-            full = Path.GetFullPath(candidate);
-        }
-        catch (ArgumentException)
-        {
-            return false;
-        }
-        catch (NotSupportedException)
-        {
-            return false;
-        }
-        catch (PathTooLongException)
-        {
-            return false;
-        }
-
-        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(protectedDirectory));
-
-        // The separator matters: without it "…\.claudex" would count as inside "…\.claude".
-        return full.Equals(root, StringComparison.OrdinalIgnoreCase) ||
-               full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 }

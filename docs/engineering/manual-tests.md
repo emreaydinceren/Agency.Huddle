@@ -247,6 +247,8 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Agents page](manual-tests/agents-library.md): tiles, Teams grouping, the filter and rejected files.
 - [Turn detail and Spend](manual-tests/turn-detail.md): the live preview, Spend and phone width.
 - [Work Mode](manual-tests/work-mode.md): the picker, hidden modes and the permission behaviour.
+- [Instructions and Memory](manual-tests/instructions-memory.md): the Instructions files, the memory tool, Team Memory and the Memory protocol.
+- [Team Memory Helper](manual-tests/team-memory-helper.md): proposals filed by a Helper into Team Memory, the History, the Feed record, the membership check and the daily cap.
 
 Two pages exist for the run around the run, and neither is needed while executing:
 [**Planning**](manual-tests/planning.md) to pick what to run — the areas with their estimates,

@@ -12,8 +12,10 @@ using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Helpers.NeedsHuman;
+using Agency.Huddle.App.Helpers.TeamMemory;
 using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.NeedsYou;
 using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Prompts;
@@ -82,6 +84,21 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<NeedsHumanHelper>(),
             sp.GetRequiredService<HelperRunner>(),
             sp.GetRequiredService<ILoggerFactory>().CreateLogger<HelperInvoker<NeedsHumanInput, NeedsHumanVerdict>>()));
+
+        // Team Memory Helper spec §6.2: the trigger reaches the dispatcher through a factory, because the dispatcher depends on
+        // this Helper's invoker and the Helper on the trigger.
+        services.AddSingleton<MemoryWriter>();
+        services.AddSingleton<TeamMemoryInputBuilder>();
+        services.AddSingleton(static sp => new TeamMemoryTrigger(
+            sp.GetRequiredService<TeamMemoryInputBuilder>(),
+            sp.GetRequiredService<HelperDispatcher>,
+            sp.GetRequiredService<ILogger<TeamMemoryTrigger>>()));
+        services.AddSingleton<TeamMemoryHelper>();
+        services.AddSingleton<IHelperAgent>(static sp => sp.GetRequiredService<TeamMemoryHelper>());
+        services.AddSingleton<IHelperInvoker>(static sp => new HelperInvoker<TeamMemoryInput, TeamMemoryVerdict>(
+            sp.GetRequiredService<TeamMemoryHelper>(),
+            sp.GetRequiredService<HelperRunner>(),
+            sp.GetRequiredService<ILoggerFactory>().CreateLogger<HelperInvoker<TeamMemoryInput, TeamMemoryVerdict>>()));
         services.AddSingleton<HelperRegistry>();
         services.AddSingleton<HelperFeed>();
 
@@ -595,6 +612,16 @@ public static class ServiceCollectionExtensions
         // pages and the container's Dispose see one catalog.
         services.AddSingleton<TeamCatalog>();
         services.AddSingleton<ITeamCatalog>(sp => sp.GetRequiredService<TeamCatalog>());
+
+        // The memory tool and the Team Memory write guard share these two: who writes which Team's Memory, and the one gate
+        // per memory folder that every writer through the tool takes (Instructions and Memory §5.4, §5.5).
+        services.AddSingleton(sp => TeamMemoryAccess.ForPersonas(sp.GetRequiredService<ITeamCatalog>(), sp.GetRequiredService<PersonaStore>()));
+        services.AddSingleton<MemoryFolderGate>();
+        services.AddSingleton<MemoryWarnings>();
+
+        // How a memory call's folder and file become a path: File Changes resolves with it to record a memory-tool write as the
+        // Agent's own (Instructions and Memory §6.1).
+        services.AddSingleton<MemoryPaths>();
 
         // Task 4.2.i: stateless apart from its own lock; it reads and writes Personas through the
         // PersonaStore registered earlier and resolves Team spellings from the catalog above.

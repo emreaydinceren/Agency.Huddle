@@ -8,6 +8,7 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
@@ -67,6 +68,7 @@ public sealed class PromptGoldenTests
         "mcp__team__follow_room",
         "mcp__team__unfollow_room",
         "mcp__team__ask_human",
+        "mcp__team__memory",
         "mcp__team__create_task",
         "mcp__team__get_task",
         "mcp__team__list_tasks",
@@ -89,6 +91,7 @@ public sealed class PromptGoldenTests
         "follow_room",
         "unfollow_room",
         "ask_human",
+        "memory",
         "create_task",
         "get_task",
         "list_tasks",
@@ -880,6 +883,7 @@ public sealed class PromptGoldenTests
         var checker = new CandidateChecker(personaStore, directory, gateway);
         var follows = new RoomFollows();
         using TaskToolHarness taskHarness = new();
+        using MemoryFolderGate memoryGate = new();
         IAppTool[] others =
         [
             new ListAgentsTool(directory, gateway, personaStore, new FakePromptSource()),
@@ -889,6 +893,16 @@ public sealed class PromptGoldenTests
             new FollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new AskHumanTool(new QuestionStore(events), chat, directory, TimeProvider.System, "caller-id", new FakePromptSource()),
+            new MemoryTool(
+                "Nova",
+                new AgentPaths(options),
+                new TeamMemoryAccess(new Agency.Huddle.Tests.Teams.FakeTeamCatalog(), static _ => false),
+                memoryGate,
+                new NotAvailableRecycleBin(),
+                new FakePromptSource(),
+                options,
+                new MemoryWarnings(NullLogger<MemoryWarnings>.Instance),
+                NullLogger<MemoryTool>.Instance),
             new ValidateAgentTool(checker, new FakePromptSource()),
             new ProposeAgentsTool(proposals, checker, directory, new HireLimitGuard(new Agency.Huddle.Tests.Teams.FakeTeamCatalog(), options, static () => 0), TimeProvider.System, "test-agent", new FakePromptSource()),
             new CreateTaskTool(taskHarness.Service, taskHarness.Triggers, taskHarness.Directory, taskHarness.Sprints, new FakePromptSource(), "caller-id"),

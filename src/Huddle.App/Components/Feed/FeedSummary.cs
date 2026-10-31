@@ -38,6 +38,10 @@ internal static class FeedSummary
             HelperFailingPayload p => new(
                 [HelperChip(p.HelperId, p.Name), Text(string.Create(CultureInfo.InvariantCulture, $" failed {p.Failures} times in a row"))],
                 p.LastError.Length > 0 ? p.LastError : null),
+            TeamMemoryNotFiledPayload p => new(
+                [HelperChip(p.HelperId, p.Name), Text(" didn't file "), Strong(p.Proposer), Text("'s proposal for "), Strong(p.Team), Text(": " + p.Reason)],
+                p.Fact,
+                OmitActor: true),
             PairingRequestedPayload p => new([DeviceChip(p.DeviceName), Text(" wants to use Huddle")], null, OmitActor: true),
             AdminRequestedPayload p => new([DeviceChip(p.DeviceName), Text(" asks for admin access")], null, OmitActor: true),
             DevicePairedPayload p => new([DeviceChip(p.DeviceName), Text(" was paired")], null, OmitActor: true),
@@ -98,6 +102,7 @@ internal static class FeedSummary
         RoomCreatedPayload p => p.Team,
         RoomJoinedPayload p => p.Team,
         RoomArchivedPayload p => p.Team,
+        TeamMemoryNotFiledPayload p => p.Team,
         _ => null,
     };
 
@@ -110,6 +115,7 @@ internal static class FeedSummary
             or FeedSourceType.TaskAssignedToYou or FeedSourceType.RequestAwaitsYou or FeedSourceType.GateDecisionDue => "Tasks",
         FeedSourceType.DocumentChanged => "documents",
         FeedSourceType.HelperPaused or FeedSourceType.HelperFailing => "Helpers",
+        FeedSourceType.TeamMemoryNotFiled => "proposals",
         FeedSourceType.PairingRequested or FeedSourceType.AdminRequested or FeedSourceType.DevicePaired or FeedSourceType.DeviceRevoked => "devices",
         FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget
             or FeedSourceType.RoomCreated or FeedSourceType.RoomJoined or FeedSourceType.RoomArchived => "Rooms",

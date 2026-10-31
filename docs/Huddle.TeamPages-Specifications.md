@@ -491,6 +491,9 @@ character rule too. It stays separate in V1 because it belongs to Tasks' test su
 
 ### 6.4 Team Memory
 
+> [!NOTE]
+> **Amended 2026-10-30 by [ADR-0071](adr/0071-memory-is-written-through-the-memory-tool-and-team-memory-by-its-manager.md).** Team Memory is no longer written by every member: only the Team's manager and the Chief of Staff write it, through the `memory` App Tool, and the same rule refuses a member's own file-tool edits in a `memory/` folder. Files are topics with a `description`, and the Team Memory block carries a manager paragraph and a member paragraph. See [the Instructions and Memory design](Huddle.InstructionsAndMemory-Specifications.md) §5 and §6.2. The rest of this section is unchanged.
+
 **Purpose.** Facts the whole Team keeps: decisions, dates, preferences and constraints for one
 Project or for the Team as a whole. They are visible to every member at every new session.
 
@@ -993,7 +996,7 @@ apply unchanged to their tabs.
 | --- | --- | --- |
 | `systemPrompt.teamMemory` | `## Team Memory`, the instruction paragraph from §6.4 with `{{teamMemoryPaths}}` where its two path lines go, the closing line *Keep private preferences in your own Memory.*, a blank line, then `{{teamMemoryIndex}}` | `{{teamMemoryPaths}}`, `{{teamMemoryIndex}}` |
 | `systemPrompt.teamMemoryPaths` | `- {{team}}, whole Team: {{teamMemoryPath}}` and `- {{team}}, one Project: {{projectMemoryPattern}}`, rendered once per Team and joined with a line break | `{{team}}`, `{{teamMemoryPath}}`, `{{projectMemoryPattern}}` (`<Team folder>\<Project>\memory\`) |
-| `systemPrompt.teamMemoryHeading` | `{{scope}}:` where the code composes `{{scope}}` as `Team` or `Team › Project` | `{{scope}}` |
+| `systemPrompt.teamMemoryHeading` | `{{scope}}:` where the code composes `{{scope}}` as `Team` or `Team › Project` (now `{{scope}} (folder: {{folder}}):`, see Instructions and Memory Appendix B, B-21) | `{{scope}}` |
 | `systemPrompt.teamMemoryMore` | `…and {{count}} more in the Teams' memory folders.` | `{{count}}` |
 
 Entries reuse `systemPrompt.memoryEntry` (`- {{summary}} ({{path}})`) and

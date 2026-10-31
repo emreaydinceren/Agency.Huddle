@@ -2,6 +2,8 @@ namespace Agency.Huddle.App.Acp;
 
 using System.Globalization;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Memory;
+using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Teams;
@@ -192,6 +194,20 @@ internal static class SystemPromptComposer
     /// <c>_role</c>; <see langword="null"/> leaves the output byte-identical to a call without it. When
     /// set, <c>systemPrompt.roleBlock</c> follows the tools paragraph and any asking-the-Human paragraph.
     /// </param>
+    /// <param name="instructions">
+    /// The Human's standing Instructions (Instructions spec §3.2), or <see langword="null"/> or an empty
+    /// snapshot for none; either leaves the output byte-identical to a call without it. When it holds
+    /// a section, <c>systemPrompt.instructions</c> follows the Persona's text and precedes the identity part.
+    /// </param>
+    /// <param name="memoryChangesListed">
+    /// Whether a memory file's change reaches the Agent as a File Change at the start of its next Turn, which
+    /// needs File Changes on and an Adapter that reads files. When <see langword="false"/> the Memory block leaves
+    /// out <c>systemPrompt.memoryChanges</c> and the per-Room closing leaves out <c>systemPrompt.roomSessionsCarry</c>,
+    /// since both name File Changes (Instructions and Memory §6.1). Defaults to <see langword="true"/>.
+    /// </param>
+    /// <param name="warnings">
+    /// Warns, once per override text, about a <c>systemPrompt.teamMemory</c> override that still uses the old frame; <see langword="null"/> warns of nothing.
+    /// </param>
     /// <returns>
     /// The five parts joined with a blank line, plus a sixth Skills block when <paramref name="skills"/>
     /// is non-empty, plus a seventh memory block when <paramref name="memory"/> is non-null, plus a
@@ -212,7 +228,10 @@ internal static class SystemPromptComposer
         SessionScope scope,
         TeamMemorySnapshot? teamMemory = null,
         string? askHumanToolName = null,
-        RoleBlockInput? roleBlock = null)
+        RoleBlockInput? roleBlock = null,
+        InstructionsSnapshot? instructions = null,
+        bool memoryChangesListed = true,
+        MemoryWarnings? warnings = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(prompts);
@@ -234,7 +253,9 @@ internal static class SystemPromptComposer
             "systemPrompt.tools",
             new Dictionary<string, string> { ["{{toolNames}}"] = WrapToolNames(toolNames) });
 
-        List<string> parts = [orientation, persona.Text, identity, chatRules, tools];
+        List<string> parts = [orientation, persona.Text];
+        AddInstructionsPart(parts, prompts, instructions);
+        parts.AddRange([identity, chatRules, tools]);
 
         AddToolParagraphs(parts, prompts, toolNames, askHumanToolName);
 
@@ -245,19 +266,81 @@ internal static class SystemPromptComposer
 
         AddSkillsPart(parts, prompts, skills, readSkillToolName);
 
+        AddMemoryParts(parts, prompts, memory, teamMemory, toolNames, memoryChangesListed, warnings);
+
+        AddClosingParts(parts, prompts, scope, memory is not null && memoryChangesListed);
+
+        return string.Join("\n\n", parts);
+    }
+
+    /// <summary>The offered <c>memory</c> tool's prefixed name, or the bare name when the session does not list it.</summary>
+    /// <param name="toolNames">The offered tools' names, already prefixed.</param>
+    /// <returns>The name as offered; <c>memory</c> when it is not in the list.</returns>
+    internal static string FindMemoryTool(IReadOnlyList<string> toolNames)
+    {
+        ArgumentNullException.ThrowIfNull(toolNames);
+        return toolNames.FirstOrDefault(MemoryTool.IsToolName) ?? MemoryTool.ToolName;
+    }
+
+    /// <summary>The offered <c>propose_team_memory</c> tool's prefixed name, or the bare name when the session does not list it.</summary>
+    /// <param name="toolNames">The offered tools' names, already prefixed.</param>
+    /// <returns>The name as offered; <c>propose_team_memory</c> when it is not in the list.</returns>
+    internal static string FindProposeTool(IReadOnlyList<string> toolNames)
+    {
+        ArgumentNullException.ThrowIfNull(toolNames);
+        return toolNames.FirstOrDefault(ProposeTeamMemoryTool.IsToolName) ?? ProposeTeamMemoryTool.ToolName;
+    }
+
+    /// <summary>Adds the Memory block, then the Team Memory block, when their snapshots exist.</summary>
+    /// <param name="parts">The prompt parts so far.</param>
+    /// <param name="prompts">Resolves each prompt's current text.</param>
+    /// <param name="memory">The Agent's Memory index, or <see langword="null"/> for none.</param>
+    /// <param name="teamMemory">The Persona's Team Memory snapshot, or <see langword="null"/> for none.</param>
+    /// <param name="toolNames">The offered tools' names, already prefixed: the memory and proposal tools are named from them.</param>
+    /// <param name="memoryChangesListed">Whether a memory file's change reaches the Agent as a File Change at its next Turn.</param>
+    /// <param name="warnings">Warns once about an old-style Team Memory override; <see langword="null"/> warns of nothing.</param>
+    private static void AddMemoryParts(
+        List<string> parts,
+        IPromptSource prompts,
+        MemorySnapshot? memory,
+        TeamMemorySnapshot? teamMemory,
+        IReadOnlyList<string> toolNames,
+        bool memoryChangesListed,
+        MemoryWarnings? warnings)
+    {
+        string memoryToolName = FindMemoryTool(toolNames);
         if (memory is not null)
         {
-            parts.Add(BuildMemoryBlock(prompts, memory));
+            parts.Add(BuildMemoryBlock(prompts, memory, memoryToolName, memoryChangesListed));
         }
 
         if (teamMemory is not null && teamMemory.Groups.Count > 0)
         {
-            parts.Add(BuildTeamMemoryBlock(prompts, teamMemory));
+            parts.Add(BuildTeamMemoryBlock(prompts, teamMemory, new TeamMemoryTools(memoryToolName, FindProposeTool(toolNames)), warnings));
+        }
+    }
+
+    /// <summary>
+    /// Adds the Instructions part, one section per level from general to specific, when the snapshot holds any.
+    /// Each section is rendered first and handed to the part as a value, so text containing <c>{{x}}</c> stays literal.
+    /// </summary>
+    /// <param name="parts">The prompt parts so far.</param>
+    /// <param name="prompts">Resolves each prompt's current text.</param>
+    /// <param name="instructions">The Instructions snapshot, or <see langword="null"/>.</param>
+    private static void AddInstructionsPart(List<string> parts, IPromptSource prompts, InstructionsSnapshot? instructions)
+    {
+        if (instructions is null || instructions.IsEmpty)
+        {
+            return;
         }
 
-        AddClosingParts(parts, prompts, scope, memory);
+        string sections = string.Join(
+            "\n\n",
+            instructions.Sections.Select(section => prompts.Render(
+                "systemPrompt.instructionsSection",
+                new Dictionary<string, string> { ["{{source}}"] = section.Source, ["{{text}}"] = section.Text })));
 
-        return string.Join("\n\n", parts);
+        parts.Add(prompts.Render("systemPrompt.instructions", new Dictionary<string, string> { ["{{instructions}}"] = sections }));
     }
 
     /// <summary>The offered <c>log_change</c> tool's prefixed name, or <see langword="null"/> when the session does not offer it.</summary>
@@ -350,13 +433,13 @@ internal static class SystemPromptComposer
     /// <param name="parts">The prompt parts so far.</param>
     /// <param name="prompts">Resolves each prompt's current text.</param>
     /// <param name="scope">Which of RS §6.9's two truthful texts this session gets.</param>
-    /// <param name="memory">The Memory snapshot; its presence adds the carry line in <see cref="SessionScope.PerRoom"/>.</param>
-    private static void AddClosingParts(List<string> parts, IPromptSource prompts, SessionScope scope, MemorySnapshot? memory)
+    /// <param name="carryLine">Whether to add the carry line in <see cref="SessionScope.PerRoom"/>: it names memory and File Changes, so it needs both.</param>
+    private static void AddClosingParts(List<string> parts, IPromptSource prompts, SessionScope scope, bool carryLine)
     {
         if (scope == SessionScope.PerRoom)
         {
             parts.Add(prompts.Render("systemPrompt.roomSessions", new Dictionary<string, string>()));
-            if (memory is not null)
+            if (carryLine)
             {
                 parts.Add(prompts.Render("systemPrompt.roomSessionsCarry", new Dictionary<string, string>()));
             }
@@ -400,18 +483,19 @@ internal static class SystemPromptComposer
             });
     }
 
-    /// <summary>Renders the <c>systemPrompt.memory</c> block, with its index built from <paramref name="memory"/>'s entries.</summary>
+    /// <summary>
+    /// Renders the <c>systemPrompt.memory</c> block, with its index built from <paramref name="memory"/>'s entries. The
+    /// tool's name and the sentence about changes are handed over as values, so a name or a path containing <c>{{x}}</c> stays literal.
+    /// </summary>
     /// <param name="prompts">Resolves each memory prompt's current text.</param>
     /// <param name="memory">The Agent's Memory index for this session.</param>
-    private static string BuildMemoryBlock(IPromptSource prompts, MemorySnapshot memory)
+    /// <param name="memoryToolName">The memory tool's name, already carrying the Adapter's prefix.</param>
+    /// <param name="memoryChangesListed">Whether to add <c>systemPrompt.memoryChanges</c>; it names File Changes, which only some Adapters get.</param>
+    private static string BuildMemoryBlock(IPromptSource prompts, MemorySnapshot memory, string memoryToolName, bool memoryChangesListed)
     {
         var index = memory.Entries.Count == 0
             ? prompts.Render("systemPrompt.memoryEmpty", new Dictionary<string, string>())
-            : string.Join(
-                '\n',
-                memory.Entries.Select(entry => prompts.Render(
-                    "systemPrompt.memoryEntry",
-                    new Dictionary<string, string> { ["{{summary}}"] = entry.Summary, ["{{path}}"] = entry.FullPath })));
+            : string.Join('\n', memory.Entries.Select(entry => RenderEntry(prompts, entry)));
 
         if (memory.NotListed > 0)
         {
@@ -428,46 +512,51 @@ internal static class SystemPromptComposer
 
         return prompts.Render(
             "systemPrompt.memory",
-            new Dictionary<string, string> { ["{{memoryPath}}"] = memory.MemoryPath, ["{{memoryIndex}}"] = index });
+            new Dictionary<string, string>
+            {
+                ["{{memoryPath}}"] = memory.MemoryPath,
+                ["{{memoryIndex}}"] = index,
+                ["{{memoryTool}}"] = memoryToolName,
+                ["{{memoryChanges}}"] = memoryChangesListed ? prompts.Render("systemPrompt.memoryChanges", new Dictionary<string, string>()) : string.Empty,
+            });
+    }
+
+    /// <summary>Renders one index line: the file's name, its description and its full path.</summary>
+    /// <param name="prompts">Resolves the entry prompt's current text.</param>
+    /// <param name="entry">The memory file's entry.</param>
+    private static string RenderEntry(IPromptSource prompts, MemoryEntry entry)
+    {
+        return prompts.Render(
+            "systemPrompt.memoryEntry",
+            new Dictionary<string, string>
+            {
+                ["{{file}}"] = entry.FileName,
+                ["{{summary}}"] = entry.Summary,
+                ["{{path}}"] = entry.FullPath,
+            });
     }
 
     /// <summary>
-    /// Renders the <c>systemPrompt.teamMemory</c> block (Spec §6.4). The paths part, each heading and each
-    /// entry are rendered first and only then handed to the block prompt as values: the renderer is one
-    /// pass and never re-scans a value, so a Team or Project name containing <c>{{x}}</c> stays literal.
+    /// Renders the <c>systemPrompt.teamMemory</c> block (Instructions and Memory §6.2): one frame with one heading, holding a
+    /// paragraph for the Teams the Persona manages and one for the Teams it only belongs to, then the index. Each part is rendered
+    /// first and only then handed to the frame as a value: the renderer is one pass and never re-scans a value, so a Team or
+    /// Project name containing <c>{{x}}</c> stays literal.
     /// </summary>
     /// <param name="prompts">Resolves each Team Memory prompt's current text.</param>
     /// <param name="teamMemory">The Persona's Team Memory snapshot; it holds at least one Group.</param>
-    private static string BuildTeamMemoryBlock(IPromptSource prompts, TeamMemorySnapshot teamMemory)
+    /// <param name="tools">The memory and proposal tools' names, already carrying the Adapter's prefix.</param>
+    /// <param name="warnings">Warns, once per override text, when a Human's override still uses the old frame; <see langword="null"/> warns of nothing.</param>
+    private static string BuildTeamMemoryBlock(IPromptSource prompts, TeamMemorySnapshot teamMemory, TeamMemoryTools tools, MemoryWarnings? warnings)
     {
-        var separator = Path.DirectorySeparatorChar.ToString();
-
-        var paths = string.Join(
-            '\n',
-            teamMemory.Groups.Select(group =>
-            {
-                var teamMemoryPath = Path.TrimEndingDirectorySeparator(group.TeamMemoryPath);
-                var teamFolder = Path.GetDirectoryName(teamMemoryPath) ?? string.Empty;
-
-                return prompts.Render(
-                    "systemPrompt.teamMemoryPaths",
-                    new Dictionary<string, string>
-                    {
-                        ["{{team}}"] = group.Team,
-                        ["{{teamMemoryPath}}"] = teamMemoryPath + separator,
-                        ["{{projectMemoryPattern}}"] = Path.Combine(teamFolder, "<Project>", "memory") + separator,
-                    });
-            }));
-
         List<string> lines = [];
         foreach (var group in teamMemory.Groups)
         {
-            AddScope(prompts, lines, group.Team, group.TeamWide, isProject: false, listWhenEmpty: true);
+            AddScope(prompts, lines, group.Team, group.Team, group.TeamWide, isProject: false, listWhenEmpty: true);
 
             var listEmptyProjects = group.Projects.Count <= MaxProjectsListedWhenEmpty;
             foreach (var (project, memory) in group.Projects)
             {
-                AddScope(prompts, lines, $"{group.Team} › {project}", memory, isProject: true, listWhenEmpty: listEmptyProjects);
+                AddScope(prompts, lines, $"{group.Team} › {project}", $"{group.Team}/{project}", memory, isProject: true, listWhenEmpty: listEmptyProjects);
             }
         }
 
@@ -478,13 +567,113 @@ internal static class SystemPromptComposer
                 new Dictionary<string, string> { ["{{count}}"] = teamMemory.NotListed.ToString(CultureInfo.InvariantCulture) }));
         }
 
+        string index = string.Join('\n', lines);
+
+        // A Human's override of the pre-roles frame names {{teamMemoryPaths}} and no {{teamMemoryRoles}}. It keeps
+        // working, rendered the old way with every Team's paths, and the Warning says what changed, so the custom text
+        // is never dropped silently.
+        string frame = prompts.Raw("systemPrompt.teamMemory");
+        if (frame.Contains("{{teamMemoryPaths}}", StringComparison.Ordinal) && !frame.Contains("{{teamMemoryRoles}}", StringComparison.Ordinal))
+        {
+            warnings?.OldTeamMemoryFrame(frame, "{{teamMemoryPaths}}", "{{teamMemoryRoles}}");
+
+            return prompts.Render(
+                "systemPrompt.teamMemory",
+                new Dictionary<string, string>
+                {
+                    ["{{teamMemoryPaths}}"] = RenderPaths(prompts, teamMemory.Groups),
+                    ["{{teamMemoryIndex}}"] = index,
+                });
+        }
+
         return prompts.Render(
             "systemPrompt.teamMemory",
             new Dictionary<string, string>
             {
-                ["{{teamMemoryPaths}}"] = paths,
-                ["{{teamMemoryIndex}}"] = string.Join('\n', lines),
+                ["{{teamMemoryRoles}}"] = RenderRoles(prompts, teamMemory.Groups, tools),
+                ["{{teamMemoryIndex}}"] = index,
             });
+    }
+
+    /// <summary>
+    /// Renders the role paragraphs: the Teams the Persona manages first, then the Teams it belongs to. A paragraph is included
+    /// only when the Persona has at least one Team in that role.
+    /// </summary>
+    /// <param name="prompts">Resolves each paragraph's current text.</param>
+    /// <param name="groups">The Persona's Team Memory groups.</param>
+    /// <param name="tools">The memory and proposal tools' names, already carrying the Adapter's prefix.</param>
+    private static string RenderRoles(IPromptSource prompts, IReadOnlyList<TeamMemoryGroup> groups, TeamMemoryTools tools)
+    {
+        List<TeamMemoryGroup> managed = [.. groups.Where(static group => group.IsManager)];
+        List<TeamMemoryGroup> member = [.. groups.Where(static group => !group.IsManager)];
+
+        List<string> paragraphs = [];
+        if (managed.Count > 0)
+        {
+            paragraphs.Add(prompts.Render(
+                "systemPrompt.teamMemoryManager",
+                new Dictionary<string, string>
+                {
+                    ["{{managedTeams}}"] = JoinNames(managed),
+                    ["{{managedPaths}}"] = RenderPaths(prompts, managed),
+                    ["{{memoryTool}}"] = tools.Memory,
+                    ["{{proposeTool}}"] = tools.Propose,
+                }));
+        }
+
+        if (member.Count > 0)
+        {
+            paragraphs.Add(prompts.Render(
+                "systemPrompt.teamMemoryMember",
+                new Dictionary<string, string>
+                {
+                    ["{{memberTeams}}"] = JoinNames(member),
+                    ["{{memberPaths}}"] = RenderPaths(prompts, member),
+                    ["{{memoryTool}}"] = tools.Memory,
+                    ["{{proposeTool}}"] = tools.Propose,
+                }));
+        }
+
+        return string.Join("\n\n", paragraphs);
+    }
+
+    /// <summary>Renders the two folder lines of each group: one for the whole Team and one pattern for a single Project.</summary>
+    /// <param name="prompts">Resolves the paths prompt's current text.</param>
+    /// <param name="groups">The groups to render.</param>
+    private static string RenderPaths(IPromptSource prompts, IReadOnlyList<TeamMemoryGroup> groups)
+    {
+        string separator = Path.DirectorySeparatorChar.ToString();
+
+        return string.Join(
+            '\n',
+            groups.Select(group =>
+            {
+                string teamMemoryPath = Path.TrimEndingDirectorySeparator(group.TeamMemoryPath);
+                string teamFolder = Path.GetDirectoryName(teamMemoryPath) ?? string.Empty;
+
+                return prompts.Render(
+                    "systemPrompt.teamMemoryPaths",
+                    new Dictionary<string, string>
+                    {
+                        ["{{team}}"] = group.Team,
+                        ["{{teamMemoryPath}}"] = teamMemoryPath + separator,
+                        ["{{projectMemoryPattern}}"] = Path.Combine(teamFolder, "<Project>", "memory") + separator,
+                    });
+            }));
+    }
+
+    /// <summary>Joins Team names as a sentence would: <c>A</c>, <c>A and B</c>, <c>A, B and C</c>.</summary>
+    /// <param name="groups">The groups whose Teams are named.</param>
+    private static string JoinNames(IReadOnlyList<TeamMemoryGroup> groups)
+    {
+        List<string> names = [.. groups.Select(static group => group.Team)];
+        if (names.Count <= 1)
+        {
+            return string.Concat(names);
+        }
+
+        string head = string.Join(", ", names[..^1]);
+        return $"{head} and {names[^1]}";
     }
 
     /// <summary>
@@ -497,6 +686,7 @@ internal static class SystemPromptComposer
     /// <param name="prompts">Resolves each prompt's current text.</param>
     /// <param name="lines">The index lines built so far.</param>
     /// <param name="scope">The heading's scope: the Team, or <c>Team › Project</c>.</param>
+    /// <param name="folder">The <c>folder</c> value that reaches the scope with the memory tool: the Team, or <c>Team/Project</c>.</param>
     /// <param name="memory">The scope's Memory snapshot.</param>
     /// <param name="isProject">Whether the scope is a Project rather than the Team-wide Memory.</param>
     /// <param name="listWhenEmpty">Whether a scope with neither entries nor unlisted files is listed.</param>
@@ -504,6 +694,7 @@ internal static class SystemPromptComposer
         IPromptSource prompts,
         List<string> lines,
         string scope,
+        string folder,
         MemorySnapshot memory,
         bool isProject,
         bool listWhenEmpty)
@@ -516,7 +707,9 @@ internal static class SystemPromptComposer
             return;
         }
 
-        lines.Add(prompts.Render("systemPrompt.teamMemoryHeading", new Dictionary<string, string> { ["{{scope}}"] = scope }));
+        lines.Add(prompts.Render(
+            "systemPrompt.teamMemoryHeading",
+            new Dictionary<string, string> { ["{{scope}}"] = scope, ["{{folder}}"] = folder }));
 
         if (isEmpty)
         {
@@ -525,9 +718,7 @@ internal static class SystemPromptComposer
 
         foreach (var entry in memory.Entries)
         {
-            lines.Add(prompts.Render(
-                "systemPrompt.memoryEntry",
-                new Dictionary<string, string> { ["{{summary}}"] = entry.Summary, ["{{path}}"] = entry.FullPath }));
+            lines.Add(RenderEntry(prompts, entry));
         }
     }
 

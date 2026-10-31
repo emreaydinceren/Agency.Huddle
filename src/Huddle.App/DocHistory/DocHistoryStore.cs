@@ -120,12 +120,15 @@ internal sealed class DocHistoryStore(IOptions<TeamOptions> options, ILogger<Doc
         PostToFeed(file, entry);
     }
 
-    /// <summary>Tells the Feed an Agent changed a document. The Human's own saves are not posted (Feed spec D-10): one editing session would be dozens of items.</summary>
+    /// <summary>
+    /// Tells the Feed an Agent or a Helper changed a document. The Human's own saves are not posted (Feed spec D-10): one editing
+    /// session would be dozens of items. A Helper's write is posted as Huddle's, under the Helper's name.
+    /// </summary>
     /// <param name="file">The document.</param>
     /// <param name="entry">The entry just appended.</param>
     private void PostToFeed(LibraryPath file, DocHistoryEntry entry)
     {
-        if (feed is null || entry.ActorKind != DocActorKind.Agent)
+        if (feed is null || entry.ActorKind == DocActorKind.Human)
         {
             return;
         }
@@ -140,7 +143,7 @@ internal sealed class DocHistoryStore(IOptions<TeamOptions> options, ILogger<Doc
         feed.Post(new FeedMessage(
             FeedSourceType.DocumentChanged,
             file.FullPath,
-            new FeedActor(FeedActorKind.Agent, entry.Actor),
+            new FeedActor(entry.ActorKind == DocActorKind.Helper ? FeedActorKind.Huddle : FeedActorKind.Agent, entry.Actor),
             false,
             new DocumentChangedPayload(file.FullPath, file.Root.DisplayName, file.RelativePath, kind, entry.Summary)));
     }

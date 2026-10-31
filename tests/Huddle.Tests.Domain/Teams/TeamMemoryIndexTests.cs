@@ -167,6 +167,27 @@ public sealed class TeamMemoryIndexTests
         AssertSnapshot(group.Projects[0].Memory, projectMemory, [new MemoryEntry("Project fact.", b)], 0);
     }
 
+    /// <summary>
+    /// A <c>MEMORY.md</c> in a Team's memory folder is skipped and not counted: with a cap of two and two topics beside it,
+    /// the Team-wide snapshot lists both topics and nothing is reported as not listed.
+    /// </summary>
+    [Fact]
+    public void Build_TeamFolderHoldingTheIndexFileName_SkipsItAndDoesNotCountIt()
+    {
+        using TempDataDir dir = new();
+        string root = Root(dir);
+        string teamMemory = Path.Combine(root, "Business", "memory");
+        _ = WriteFile(teamMemory, "MEMORY.md", "- a.md - Invoices.");
+        string a = WriteFile(teamMemory, "a.md", "Invoices go out on the 1st.");
+        string b = WriteFile(teamMemory, "b.md", "Payroll runs on the 25th.");
+
+        TeamMemorySnapshot snapshot = TeamMemoryIndex.Build(root, Labels("Business"), Teams(Summary("Business")), 2);
+
+        TeamMemoryGroup group = Assert.Single(snapshot.Groups);
+        AssertSnapshot(group.TeamWide, teamMemory, [new MemoryEntry("Invoices go out on the 1st.", a), new MemoryEntry("Payroll runs on the 25th.", b)], 0);
+        Assert.Equal(0, snapshot.NotListed);
+    }
+
     /// <summary>Cap 3 across two Teams with 2 + 2 files lists three in Team order; the second Team lists one and reports one not listed, and the whole snapshot reports one.</summary>
     [Fact]
     public void Build_CapAcrossTwoTeams_ListsInTeamOrderAndCountsTheRest()

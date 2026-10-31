@@ -38,12 +38,12 @@ public sealed partial class PromptCatalogTests
     /// blocks design §6.5 (count now 71), plus <c>tool.fileRequest.description</c>, <c>tool.confirmRequest.description</c> and
     /// <c>tool.triageRequest.description</c> added for the tool descriptions batch 2 (count now 84), plus
     /// <c>tool.proposeSprint.description</c>, <c>tool.markRetroRow.description</c> and <c>tool.proposeRetroChanges.description</c>
-    /// added for the tool descriptions batch 3 (count now 87), plus the eight Referenced items prompts (count now 95), plus the seven Skill Packs prompts (count now 102), plus <c>tool.logChange.description</c> added for DocHistory spec §6.3 (count now 103), plus <c>systemPrompt.docHistory</c> added for the same spec section 10 (count now 104), plus <c>helper.needsHuman.system</c> and <c>helper.needsHuman.task</c> added for Helpers spec §6.10 (count now 106), plus <c>tool.search.description</c> added for the Agent search tool (count now 107).
+    /// added for the tool descriptions batch 3 (count now 87), plus the eight Referenced items prompts (count now 95), plus the seven Skill Packs prompts (count now 102), plus <c>tool.logChange.description</c> added for DocHistory spec §6.3 (count now 103), plus <c>systemPrompt.docHistory</c> added for the same spec section 10 (count now 104), plus <c>helper.needsHuman.system</c> and <c>helper.needsHuman.task</c> added for Helpers spec §6.10 (count now 106), plus <c>tool.search.description</c> added for the Agent search tool (count now 107), plus the twenty-three Instructions and Memory prompts (four for Instructions, <c>systemPrompt.memoryChanges</c>, <c>tool.memory.description</c>, the two Team Memory role paragraphs, fourteen memory refusals and the path-alias refusal; count now 130), plus the nine Team Memory Helper prompts (<c>helper.teamMemory.system</c>, <c>helper.teamMemory.proposal</c>, <c>tool.proposeTeamMemory.description</c> and its six replies; count now 139), plus <c>systemPrompt.memoryReadFailed</c>, the memory tool's own read failure (count now 140), plus <c>systemPrompt.memoryOnlyFrontmatter</c> for a write whose text is only a header (count now 141).
     /// </summary>
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(107, PromptCatalog.All.Count);
+        Assert.Equal(141, PromptCatalog.All.Count);
     }
 
     /// <summary>Task 58 (PR-4, PR-5): the process blocks and the onboarding turn take and require their one placeholder and carry no tool prefix.</summary>
@@ -205,9 +205,9 @@ public sealed partial class PromptCatalogTests
     [Theory]
     [InlineData(
         "systemPrompt.teamMemory",
-        "## Team Memory\nYour Teams keep shared Memory. Write a fact here, one file per fact with the fact on the first line, when it matters to the whole Team or Project rather than only to you:\n{{teamMemoryPaths}}\nKeep private preferences in your own Memory.\n\n{{teamMemoryIndex}}",
-        new object[] { "{{teamMemoryPaths}}", "{{teamMemoryIndex}}" },
-        new object[] { "{{teamMemoryPaths}}", "{{teamMemoryIndex}}" })]
+        "## Team Memory\n{{teamMemoryRoles}}\n\n{{teamMemoryIndex}}",
+        new object[] { "{{teamMemoryRoles}}", "{{teamMemoryIndex}}", "{{teamMemoryPaths}}" },
+        new object[] { "{{teamMemoryRoles}}", "{{teamMemoryIndex}}" })]
     [InlineData(
         "systemPrompt.teamMemoryPaths",
         "- {{team}}, whole Team: {{teamMemoryPath}}\n- {{team}}, one Project: {{projectMemoryPattern}}",
@@ -215,8 +215,8 @@ public sealed partial class PromptCatalogTests
         new object[] { "{{teamMemoryPath}}", "{{projectMemoryPattern}}" })]
     [InlineData(
         "systemPrompt.teamMemoryHeading",
-        "{{scope}}:",
-        new object[] { "{{scope}}" },
+        "{{scope}} (folder: {{folder}}):",
+        new object[] { "{{scope}}", "{{folder}}" },
         new object[] { "{{scope}}" })]
     [InlineData(
         "systemPrompt.teamMemoryMore",

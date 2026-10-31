@@ -76,6 +76,35 @@ internal sealed class DocHistoryRecorder
         }
     }
 
+    /// <summary>
+    /// Records a write Huddle made on a Helper's Verdict (Team Memory Helper spec §6.6), when History is on and the file is Markdown.
+    /// A failure is logged and never undoes the write.
+    /// </summary>
+    /// <param name="file">The document.</param>
+    /// <param name="helperActor">The Helper's actor name, such as <c>Team Memory (Helper)</c>.</param>
+    /// <param name="kind">Whether the file was created or edited.</param>
+    /// <param name="summary">One line, cut here to <c>Team:DocHistory:MaxSummaryLength</c>.</param>
+    internal void HelperWrote(LibraryPath file, string helperActor, DocChangeKind kind, string summary)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        ArgumentNullException.ThrowIfNull(summary);
+        if (!this.Enabled || !HasHistory(file))
+        {
+            return;
+        }
+
+        int max = this.options.Value.DocHistory.MaxSummaryLength;
+        string line = max > 3 && summary.Length > max ? string.Concat(summary.AsSpan(0, max - 3), "...") : summary;
+        try
+        {
+            this.store.Append(file, new DocHistoryEntry(this.clock.GetUtcNow(), helperActor, DocActorKind.Helper, kind, line));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            this.logger.LogWarning(exception, "Could not record {Helper}'s change to {Path} in its history.", helperActor, file.FullPath);
+        }
+    }
+
     /// <summary>Carries the history of <paramref name="from"/> to <paramref name="to"/> after a Library rename or move.</summary>
     /// <param name="from">The item before the move.</param>
     /// <param name="to">The item after the move.</param>

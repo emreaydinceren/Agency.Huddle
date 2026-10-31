@@ -31,6 +31,7 @@ internal static class FeedPayloads
         FeedSourceType.DocumentChanged => typeof(DocumentChangedPayload),
         FeedSourceType.HelperPaused => typeof(HelperPausedPayload),
         FeedSourceType.HelperFailing => typeof(HelperFailingPayload),
+        FeedSourceType.TeamMemoryNotFiled => typeof(TeamMemoryNotFiledPayload),
         FeedSourceType.PairingRequested => typeof(PairingRequestedPayload),
         FeedSourceType.AdminRequested => typeof(AdminRequestedPayload),
         FeedSourceType.DevicePaired => typeof(DevicePairedPayload),

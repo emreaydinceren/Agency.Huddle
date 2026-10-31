@@ -1,6 +1,8 @@
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.References;
 using Agency.Huddle.App.Services;
@@ -1740,12 +1742,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         {
             this.RecordToolCallResult(started.ToolCallId, isStart: true, started.Status, null);
             this.RecordTouchedPaths(started.Kind, started.RawInputJson);
+            this.RecordMemoryToolPath(started.Kind, started.Title, started.RawInputJson);
             await this.WriteToolActivityAsync(started.ToolCallId, started.Title, MapToolCallStatus(started.Status), started.Location, started.Diff, ct).ConfigureAwait(false);
         }
         else if (agentEvent is ToolCallUpdated updated)
         {
             this.RecordToolCallResult(updated.ToolCallId, isStart: false, updated.Status, updated.RawOutputJson);
             this.RecordTouchedPaths(updated.Kind, updated.RawInputJson);
+            this.RecordMemoryToolPath(updated.Kind, updated.Title, updated.RawInputJson);
             await this.WriteToolActivityAsync(updated.ToolCallId, updated.Title, MapToolCallStatus(updated.Status), updated.Location, updated.Diff, ct).ConfigureAwait(false);
         }
         else if (agentEvent is TurnCompleted completed)
@@ -2049,6 +2053,39 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             {
                 turn.Touched.Add(path);
             }
+        }
+    }
+
+    /// <summary>
+    /// Adds the file a <c>memory</c> App Tool call changes to the active Turn's <see cref="ActiveTurn.Touched"/> set, so File
+    /// Changes counts a save through the tool as the Agent's own, like an <see cref="ToolKind.Edit"/> (Instructions spec §6.1).
+    /// The tool cannot record it itself: one tool server serves every Room Session of the Agent and never learns the Room.
+    /// <c>claude-agent-acp</c> 0.75.1 has no case for an MCP tool in <c>toolInfoFromToolUse</c> (<c>dist/tools.js</c>), so it
+    /// reports the call with <c>kind: "other"</c> and the tool's prefixed name, <c>mcp__team__memory</c>, as its <c>title</c>;
+    /// the name arrives nowhere else in a <see cref="ToolCallStarted"/> or <see cref="ToolCallUpdated"/>. A live run saw it there:
+    /// the tool-activity line, which shows the title, read <c>mcp__team__list_agents</c> (manual-tests run log, 2026-09-15). Only <c>write</c>,
+    /// <c>append</c>, <c>replace</c> and <c>delete</c> count. A call the tool then refuses is recorded too, harmlessly:
+    /// <c>FileChangeTracker.CommitAsync</c> stores a touched file's state as it is on disk, which a refusal left unchanged.
+    /// Input that does not parse, or names no file the Agent may use, records nothing; the scan still lists the change.
+    /// </summary>
+    /// <param name="kind">The tool call's category, as ACP reported it.</param>
+    /// <param name="title">The tool call's title, which carries the tool's name for an App Tool.</param>
+    /// <param name="rawInputJson">The tool call's raw input, if any.</param>
+    private void RecordMemoryToolPath(ToolKind kind, string? title, string? rawInputJson)
+    {
+        if (kind != ToolKind.Other
+            || title is null
+            || !MemoryTool.IsToolName(title)
+            || this.fileChanges?.MemoryPaths is not { } memoryPaths
+            || MemoryRequest.FromJson(rawInputJson) is not { Mutates: true } request
+            || !memoryPaths.TryResolve(this.owner.PersonaName, request.Folder, request.File, out string? path))
+        {
+            return;
+        }
+
+        lock (this.gate)
+        {
+            this.activeTurn?.Touched.Add(path);
         }
     }
 

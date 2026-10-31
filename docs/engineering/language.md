@@ -475,27 +475,48 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   memory in one Room is news in its others. **Delivered 2026-09-23.**
 : *Avoid*: notification, alert, event, diff.
 
+**Instructions**
+: The standing rules the Human writes once and every Agent in scope starts each session
+  with, in a plain file named `Instructions.md` at three levels: the Teams root (every
+  Agent), a Team folder (its members) and an Agent's Work Dir (that Agent). Spliced into
+  the system prompt right after the Persona's text, from general to specific, the more
+  specific level winning. The Human's, never the Agent's: an Agent may read them and its
+  edit, delete or move of one is refused. **Built 2026-10-30** — see
+  [ADR-0070](../adr/0070-an-agent-reads-the-instructions-the-human-writes.md).
+: Capitalised, it means only this. Not the Persona's own text, and never a file named
+  `AGENTS.md` or `CLAUDE.md`, which an Adapter loads on its own.
+: *Avoid*: house rules, system prompt, rules file.
+
 **Memory**
-: What an Agent deliberately keeps for itself going forward: one Markdown file per
-  fact in its Work Dir's `memory/` folder, written with its own tools, the fact on
-  the first line. It belongs to the Agent, not to a Room. Every new session, after a
-  restart or in another Room, starts with an index of it in the system prompt, and
-  File Changes carries later edits to its other Rooms, marked *by you, in Room 'X'*
-  when another copy of it wrote them. **Delivered 2026-09-23** — see
-  [ADR-0023](../adr/0023-an-agent-learns-of-file-changes-on-its-next-turn.md). Depends on
-  isolating a Persona's session from the Human's own Claude Code settings, which is
-  unverified live — see [Known limits](known-limits.md).
+: What an Agent deliberately keeps for itself going forward: Markdown topic files in
+  its Work Dir's `memory/` folder, one topic per file, each with a one-line
+  `description` in its frontmatter that says when to read it. Written through the
+  `memory` App Tool, which refuses a write over a file the Agent has not read. It
+  belongs to the Agent, not to a Room. Every new session, after a restart or in
+  another Room, starts with an index of it (`file - description`) in the system prompt,
+  and File Changes carries later edits to its other Rooms, marked *by you, in Room 'X'*
+  when another copy of it wrote them. **Delivered 2026-09-23; topic files and the
+  `memory` tool built 2026-10-30** — see
+  [ADR-0023](../adr/0023-an-agent-learns-of-file-changes-on-its-next-turn.md) and
+  [ADR-0071](../adr/0071-memory-is-written-through-the-memory-tool-and-team-memory-by-its-manager.md).
+  Depends on isolating a Persona's session from the Human's own Claude Code settings,
+  which is unverified live — see [Known limits](known-limits.md).
 : Capitalised, it means only this. Claude Code's own auto-memory is a different
   thing, and Personas should not use it.
 : *Avoid*: notes, knowledge base, scratchpad, context.
 
 **Team Memory**
-: What a Team keeps going forward, shared by every member: one Markdown file per
-  fact, the fact on the first line, in `Teams/<Team>/memory/` for the whole Team or
-  `Teams/<Team>/<Project>/memory/` for one Project. Every member's new session
-  starts with an index of it after its own Memory; later edits arrive as File
-  Changes. **Delivered 2026-09-29** — see
-  [ADR-0032](../adr/0032-a-team-and-each-project-share-a-memory-folder.md).
+: What a Team keeps going forward, shared by every member: topic files in
+  `Teams/<Team>/memory/` for the whole Team or `Teams/<Team>/<Project>/memory/` for one
+  Project, in the same format as an Agent's Memory. Members propose facts with
+  `propose_team_memory` and the **Team Memory Helper** files them; the Team's manager and
+  the Chief of Staff may also write it directly with `memory`. Every member's new session
+  starts with an index of it after its own Memory; later edits arrive as File Changes.
+  **Delivered 2026-09-29; manager-only writes built 2026-10-30; proposals built
+  2026-10-30** — see
+  [ADR-0032](../adr/0032-a-team-and-each-project-share-a-memory-folder.md),
+  [ADR-0071](../adr/0071-memory-is-written-through-the-memory-tool-and-team-memory-by-its-manager.md) and
+  [ADR-0073](../adr/0073-members-propose-team-memory-and-a-helper-files-it.md).
 : Never just *Memory*, which stays the Agent's own.
 : *Avoid*: shared memory, project memory, team notes.
 
@@ -657,6 +678,13 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   Human gate on when the work leaves the Team or can't be undone, writing as
   `Needs Human (Helper)` with its reason in the Change log. It never turns the gate
   off, and never judges a Task again once the Human has turned that Task's gate off.
+
+**Team Memory Helper**
+: The second Helper. It judges each fact a member proposes with `propose_team_memory`
+  against the Team's Memory index: file nothing, create a topic file, or update one it
+  was shown in full. Huddle writes the file through the `memory` tool's rules and records
+  `Team Memory (Helper)` with the proposer's Name in the file's History. See
+  [ADR-0073](../adr/0073-members-propose-team-memory-and-a-helper-files-it.md).
 
 **Huddle (as sender)**
 : The sender of a Message Huddle itself writes, such as a Helper's wake-up to the

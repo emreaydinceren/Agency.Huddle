@@ -28,8 +28,8 @@ public sealed class TeamMemorySessionTests
 
         string expected = TeamMemorySessionTests.ExpectedBlock(
             teamFolder,
-            "Business:",
-            $"- Business fact alpha ({Path.Combine(teamFolder, "memory", "a.md")})");
+            "Business (folder: Business):",
+            "- a.md - Business fact alpha");
         // contains-ok: composed system prompt text; the whole Team Memory block is the expected value.
         Assert.Contains(expected, prompt, StringComparison.Ordinal);
     }
@@ -48,17 +48,20 @@ public sealed class TeamMemorySessionTests
 
         string expected = TeamMemorySessionTests.ExpectedBlock(
             teamFolder,
-            "Business:",
+            "Business (folder: Business):",
             "Nothing yet.",
-            "Business › Marketing:",
-            $"- Marketing fact beta ({Path.Combine(projectFolder, "memory", "b.md")})");
+            "Business › Marketing (folder: Business/Marketing):",
+            "- b.md - Marketing fact beta");
         // contains-ok: composed system prompt text; the whole Team Memory block is the expected value.
         Assert.Contains(expected, prompt, StringComparison.Ordinal);
     }
 
-    /// <summary>With the resolved Adapter Profile's <c>ReadsFiles</c> false, no Team Memory block reaches the prompt, though the Team and its file exist. Guard: green before the change.</summary>
+    /// <summary>
+    /// With the resolved Adapter Profile's <c>ReadsFiles</c> false, the Team Memory and personal Memory blocks still reach the prompt, because
+    /// the memory tool is offered whatever the Adapter can read (Instructions spec §6.1, U-10); only the sentence that names File Changes is left out.
+    /// </summary>
     [Fact]
-    public async Task SessionStart_AdapterThatCannotReadFiles_HasNoTeamMemoryBlock()
+    public async Task SessionStart_AdapterThatCannotReadFiles_StillGetsTheTeamMemoryBlock()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dataDir = new();
@@ -67,9 +70,52 @@ public sealed class TeamMemorySessionTests
 
         string prompt = await TeamMemorySessionTests.ComposedPromptAsync(dataDir, teams: "Business", readsFiles: false, ct: ct);
 
-        Assert.DoesNotContain(TeamBlockHeading, prompt, StringComparison.Ordinal);
-        Assert.DoesNotContain("Business fact alpha", prompt, StringComparison.Ordinal);
-        Assert.DoesNotContain(PersonalBlockMarker, prompt, StringComparison.Ordinal);
+        // contains-ok: composed system prompt text; the blocks are present and the File Changes sentence is not.
+        Assert.Contains(TeamBlockHeading, prompt, StringComparison.Ordinal);
+        Assert.Contains("- a.md - Business fact alpha", prompt, StringComparison.Ordinal);
+        Assert.Contains(PersonalBlockMarker, prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("the change is listed at the start of your next Turn", prompt, StringComparison.Ordinal);
+    }
+
+    /// <summary>A Persona that manages one of its two Teams reads the manager paragraph for that Team only, and the member paragraph for the other (Instructions spec §6.2).</summary>
+    [Fact]
+    public async Task SessionStart_PersonaManagingOneOfTwoTeams_SeesTheManagerParagraphOnlyForThatTeam()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        string business = TeamMemorySessionTests.TeamFolder(dataDir, "Business");
+        TeamMemorySessionTests.TeamFolder(dataDir, "Ops");
+        File.WriteAllText(Path.Combine(business, "_team.md"), "---\nteamType: 'development@1.0.0'\nmanager: 'nova'\n---\n");
+
+        string prompt = await TeamMemorySessionTests.ComposedPromptAsync(dataDir, teams: "Business, Ops", ct: ct);
+
+        // contains-ok: composed system prompt text; the two paragraphs are the assertions.
+        Assert.Contains("You look after the shared Memory of Business:", prompt, StringComparison.Ordinal);
+        Assert.Contains("Ops keep shared Memory:", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("You look after the shared Memory of Ops", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Business keep shared Memory", prompt, StringComparison.Ordinal);
+        Assert.Equal(1, prompt.Split(TeamBlockHeading).Length - 1);
+    }
+
+    /// <summary>
+    /// A Persona in a Team is offered <c>propose_team_memory</c>, and one in no Team is not (Team Memory Helper spec §6.1): the
+    /// session's tool list names it only for the member.
+    /// </summary>
+    [Fact]
+    public async Task SessionStart_ProposeTool_IsOfferedOnlyToAPersonaInATeam()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir member = new();
+        TeamMemorySessionTests.TeamFolder(member, "Business");
+        using TempDataDir loner = new();
+        TeamMemorySessionTests.TeamFolder(loner, "Business");
+
+        string memberPrompt = await TeamMemorySessionTests.ComposedPromptAsync(member, teams: "Business", ct: ct);
+        string lonerPrompt = await TeamMemorySessionTests.ComposedPromptAsync(loner, teams: null, ct: ct);
+
+        // contains-ok: composed system prompt text; the tool list is the assertion.
+        Assert.Contains("mcp__team__propose_team_memory", memberPrompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("propose_team_memory", lonerPrompt, StringComparison.Ordinal);
     }
 
     /// <summary>A Persona with no Teams line is told no Team Memory, though a Team with a Memory file exists. Guard: green before the change.</summary>
@@ -142,7 +188,7 @@ public sealed class TeamMemorySessionTests
         File.WriteAllText(Path.Combine(memoryFolder, fileName), firstLine + "\n");
     }
 
-    /// <summary>The Team Memory block the default prompts render for Team <c>Business</c>, ending with the given index lines.</summary>
+    /// <summary>The Team Memory block the default prompts render for a member of Team <c>Business</c>, ending with the given index lines.</summary>
     /// <param name="teamFolder">The Team's folder, whose <c>memory</c> and <c>&lt;Project&gt;/memory</c> paths the two folder lines name.</param>
     /// <param name="indexLines">The index lines under the block's blank line, in order.</param>
     private static string ExpectedBlock(string teamFolder, params string[] indexLines)
@@ -151,10 +197,13 @@ public sealed class TeamMemorySessionTests
         string[] head =
         [
             TeamBlockHeading,
-            "Your Teams keep shared Memory. Write a fact here, one file per fact with the fact on the first line, when it matters to the whole Team or Project rather than only to you:",
+            "Business keep shared Memory:",
             $"- Business, whole Team: {Path.Combine(teamFolder, "memory")}{separator}",
             $"- Business, one Project: {Path.Combine(teamFolder, "<Project>", "memory")}{separator}",
-            "Keep private preferences in your own Memory.",
+            "Read it with the mcp__team__memory tool, passing the Team or Project as the folder. You do not write it.",
+            "When you learn something the whole Team should keep, such as a decision and its reason, an agreed way",
+            "of working or who owns what, propose it with mcp__team__propose_team_memory, one fact at a time; Huddle files it and",
+            "records that you proposed it. Keep your own notes in your own Memory.",
             string.Empty,
         ];
 

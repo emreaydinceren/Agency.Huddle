@@ -2,7 +2,7 @@ using Agency.Huddle.App.FileChanges;
 
 namespace Agency.Huddle.Tests.FileChanges;
 
-/// <summary>Pins <see cref="MemoryIndex.Build(string, int)"/>: FC §6.15's index rules.</summary>
+/// <summary>Pins <see cref="MemoryIndex.Build(string, int, Agency.Huddle.App.Memory.MemoryWarnings)"/>: FC §6.15's index rules.</summary>
 public sealed class MemoryIndexTests
 {
     /// <summary>The first non-blank line becomes the summary, with a leading <c>#</c> and spaces removed.</summary>
@@ -19,6 +19,31 @@ public sealed class MemoryIndexTests
         MemoryEntry entry = Assert.Single(entries);
         Assert.Equal("The Human prefers C#.", entry.Summary);
         Assert.Equal(0, notListed);
+    }
+
+    /// <summary>
+    /// A <c>MEMORY.md</c> in the folder is skipped, ignoring case, and does not count against the cap: with a cap of two and
+    /// two topics beside it, both topics are listed and nothing is reported as not listed. The file stays on disk.
+    /// </summary>
+    /// <param name="indexName">The spelling of the reserved name on disk.</param>
+    [Theory]
+    [InlineData("MEMORY.md")]
+    [InlineData("memory.md")]
+    public void Build_IndexFileName_IsSkippedAndNotCounted(string indexName)
+    {
+        using TempDataDir dataDir = new();
+        string memoryDir = Path.Combine(dataDir.Path, "memory");
+        Directory.CreateDirectory(memoryDir);
+        string index = Path.Combine(memoryDir, indexName);
+        File.WriteAllText(index, "- a.md - First topic.");
+        File.WriteAllText(Path.Combine(memoryDir, "a.md"), "First topic.");
+        File.WriteAllText(Path.Combine(memoryDir, "b.md"), "Second topic.");
+
+        (IReadOnlyList<MemoryEntry> entries, int notListed) = MemoryIndex.Build(memoryDir, 2);
+
+        Assert.Equal(["First topic.", "Second topic."], entries.Select(static e => e.Summary));
+        Assert.Equal(0, notListed);
+        Assert.True(File.Exists(index));
     }
 
     /// <summary>A blank first line, or an empty file, falls back to the file name without the extension (E-15).</summary>
@@ -70,7 +95,7 @@ public sealed class MemoryIndexTests
         Assert.Equal(["A fact.", "M fact.", "Z fact."], entries.Select(e => e.Summary));
     }
 
-    /// <summary>More than <c>maxEntries</c> files: the first by file name are listed, the rest counted in <see cref="MemoryIndex.Build(string, int)"/>'s <c>NotListed</c> (E-17).</summary>
+    /// <summary>More than <c>maxEntries</c> files: the first by file name are listed, the rest counted in <see cref="MemoryIndex.Build(string, int, Agency.Huddle.App.Memory.MemoryWarnings)"/>'s <c>NotListed</c> (E-17).</summary>
     [Fact]
     public void Build_OverMax_CountsNotListed()
     {

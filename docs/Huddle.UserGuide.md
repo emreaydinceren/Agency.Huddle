@@ -36,6 +36,7 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | Share notes and documents | [Keeping notes in the Library](#keeping-notes-in-the-library) |
 | See a Room's members, Tasks and files, or a note's outline and links | [The Right sidebar](#the-right-sidebar) |
 | Teach Agents a procedure | [Giving Agents Skills](#giving-agents-skills) |
+| Give every Agent, or one Team, standing rules | [Instructions](#instructions) |
 | See what Agents remember and which files they changed | [Memory and file changes](#memory-and-file-changes) |
 | Use Huddle from a phone, a tablet or another computer | [Using Huddle from another device](#using-huddle-from-another-device) |
 | Change prompts, Themes, Personas, Skills or Library roots | [Settings](#settings) |
@@ -1476,6 +1477,35 @@ when the list of Teams changes, so a Team made by hand, or from an Agent's
 `teams:` line, gets one as well. A Team Room that you archive stays archived;
 Huddle does not recreate it.
 
+## Instructions
+
+**Instructions** are standing rules you write once, in plain Markdown, and every Agent in
+scope starts each session with them: Huddle's version of what a `CLAUDE.md` does for a
+coding agent in a repository. Use them for how you want things done here, so you do not
+edit every Agent's file.
+
+| Level | File | Who reads it |
+| --- | --- | --- |
+| **Huddle-wide** | `Teams/Instructions.md` | Every Agent |
+| **Team** | `Teams/<Team>/Instructions.md` | Every member of that Team. An Agent in several Teams gets each one, in the order of its `Teams:` line. |
+| **Agent** | `Agents/<Name>/work/Instructions.md` | That Agent only |
+
+Create the files in the Library: the first two in the **Teams** root, the third in the
+**Agents** root. Any editor works too. The name is always `Instructions.md` (the capital
+does not matter). It is never `AGENTS.md` or `CLAUDE.md`, which an Adapter loads on its own.
+
+An Agent's prompt carries the levels from general to specific, and where they conflict
+the more specific one wins: the Agent's own over its Team's, its Team's over Huddle's.
+A level with no file, or an empty one, is left out. A file longer than 8,000 characters
+(`Team:Instructions:MaxChars`) is cut, and the cut line says where the rest is.
+
+**When an edit takes effect.** Instructions are read when a session starts. Edit a Team's
+or an Agent's file and a running Agent hears of it as a changed file at the start of its
+next Turn, but only a new session (**Restart** on its card) follows it. An edit to
+`Teams/Instructions.md` applies from each Agent's next session. Agents read their
+Instructions and can never write them: an attempt to edit, delete or move an
+`Instructions.md` is refused.
+
 ## Memory and file changes
 
 Agents do not keep conversations between restarts, so anything worth
@@ -1488,33 +1518,67 @@ folders.
 | **Team Memory** | `Teams/<Team>/memory/` | Every member of the Team. |
 | **Project memory** | `Teams/<Team>/<Project>/memory/` | Every member of the Team. |
 
-The convention is **one file per fact, with the fact on the first line**. For
-example, `Teams/Business/memory/invoice-day.md`:
+The convention is **one topic per file, with a description**. A memory file starts
+with a one-line `description` that says when to read it. For example,
+`Teams/Business/memory/invoicing.md`:
 
 ```markdown
+---
+description: When invoices go out and which template to use. Read before sending or chasing an invoice.
+---
+
 Invoices go out on the last working day of each month.
 
 Use the template in Business/templates/invoice.md.
 ```
 
-Agents write memory with their own file tools. You can write it too: open the
-Team's **Files** tab, select the `memory` folder, and select **New note**.
-Huddle creates the `memory/` folder the first time something is written there.
+An older file with no `description` still works: its first line is used instead.
+
+There is no `MEMORY.md` to keep: Huddle builds the index from the descriptions. The name is
+reserved in every memory folder. An Agent cannot create a file called `MEMORY.md`, and one you
+leave there is kept on disk but never listed in the index.
+
+Agents write memory with the `memory` tool. It lists, reads, writes, appends to,
+replaces text in and deletes memory files, and it enforces what a prompt can only
+ask: a file must have a description, an Agent must read a file before it writes over
+it, and a file may not be larger than 16 KB (`Team:Memory:MaxFileBytes`). If you edit
+a file in the Library while an Agent holds an older copy, the Agent's next write is
+refused and it is shown your version to merge into. An Agent deletes a memory file
+only when you ask it to, and the file goes to the Recycle Bin.
+
+**Members propose; a Helper files.** Every member reads its Team's Memory. A member who
+learns something the whole Team should keep, such as a decision and its reason, proposes
+it with `propose_team_memory`. The **Team Memory Helper** (one short call on your Adapter,
+counted on its card in **Settings › Helpers**, 30 a day by default) decides whether it is
+worth keeping and whether it belongs in an existing topic file, and Huddle writes the
+file. The file's **History** shows each such write as **Team Memory (Helper)**, with who
+proposed it and why. A proposal it does not file appears in the Feed's **Helpers** filter
+with the reason. It reads only what a member chose to propose, never your Rooms or Tasks.
+
+The Team's manager and the Chief of Staff can also write Team Memory directly, to fix or
+tidy it. You can write it too: open the Team's **Files** tab, select the `memory` folder,
+and select **New note**. Huddle creates the `memory/` folder the first time something is
+written there. To stop proposals, turn the Team Memory card off; members are then told to
+keep the fact in their own Memory or tell the manager.
 
 **How Agents learn about it:**
 
 - **When a session opens**, each Agent's system prompt includes an index of
   its personal memory and of the Team Memory of every Team it belongs to. Each
-  entry is the file's first line, cut at 200 characters. The Team index lists at
-  most 50 entries in total (`Team:Teams:MaxMemoryEntries`).
+  entry is the file's name and its description (or, for an older file, its first
+  line), cut at 200 characters. The personal index lists at most 100 entries
+  (`Team:FileChanges:MaxMemoryEntries`) and the Team index at most 50 in total
+  (`Team:Teams:MaxMemoryEntries`); the `memory` tool's `list` shows every file.
 - **At the start of each turn**, an Agent is told which files were added,
   changed or deleted in its **watched folders** since its last turn in that
   Room. Watched folders are its own `work/` folder, the folder of each of its
   Teams (excluding `_tasks`), and any folders it chose to watch. Huddle keeps
   what it last saw in `file-state/<Name>.json`.
 
-Memory and file changes require `Team:FileChanges:Enabled` (on by default) and an
-adapter that can read files. Without them, Agents get no memory index.
+The memory index and the `memory` tool do not depend on file changes: every Agent gets
+them, including one whose adapter cannot read files. Telling an Agent which files changed
+at the start of a turn requires `Team:FileChanges:Enabled` (on by default) and an adapter
+that can read files.
 
 > [!NOTE]
 > The `memory/` folder is not protected in the Library the way Team and Project

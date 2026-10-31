@@ -8,4 +8,7 @@ public enum DocActorKind
 
     /// <summary>The Human, through a save or a create in the Library.</summary>
     Human,
+
+    /// <summary>A Helper: Huddle wrote the document on a Helper's Verdict, such as <c>Team Memory (Helper)</c> filing a proposal.</summary>
+    Helper,
 }

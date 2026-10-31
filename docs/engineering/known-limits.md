@@ -27,6 +27,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   Opus Agent, or an Adapter that does not run Claude Code hooks, is unmeasured, and a Turn that changes a document with
   `Bash` rather than `Write` or `Edit` is not seen by the hook. The links Huddle rewrites in other notes when a note is renamed or moved are
   not recorded in those notes' Histories, on purpose: the Human did not edit them.
+- **Spike S-1 / OP-5 has not been run: whether Claude Code loads the repository's `CLAUDE.md` files into a Persona is unknown.** In development `DataDir` is inside the repository, so `E:\Repos\Huddle3\CLAUDE.md` and the one above it are ancestors of every Work Dir. If the Adapter loads them, a Persona's Instructions sit beside an unwanted second set. The check needs a live, paid Claude Code session and was not run when Instructions and the `memory` tool were built (INSTRMEM-07 in [instructions-memory.md](manual-tests/instructions-memory.md)). If the files do reach a Persona, the fix belongs to the isolation work (FC-V4), not to Instructions. Two soft boundaries are documented with the feature: the guards on `Instructions.md` and on a Team's Memory see a tool call's path arguments only, not shell redirects ([ADR-0070](../adr/0070-an-agent-reads-the-instructions-the-human-writes.md), [ADR-0071](../adr/0071-memory-is-written-through-the-memory-tool-and-team-memory-by-its-manager.md)).
 - **A bare address-bar URL is not a reference.** Pasting `http://localhost:5100/rooms/<id>` opens the Room, but it is not recognised as a reference: no reference chip, no snapshot, no Referenced items line. Recognising it needs the app's own origin, and is planned for a later version ([ADR-0055](../adr/0055-a-reference-is-text-with-a-stable-key.md), [the references design](../Huddle.AtTagging-Specifications.md) §6.1).
 - **A renamed or moved Library file shows as unavailable.** A reference is stored by path, so a Library file renamed or moved in the Library shows the unavailable chip in chat. It is not followed to its new place ([ADR-0055](../adr/0055-a-reference-is-text-with-a-stable-key.md), [the references design](../Huddle.AtTagging-Specifications.md) D-8). A Task's status change is not flagged, and a Team is linked by its Name: a Team folder renamed by hand makes its Team links unavailable.
 - **A label typed by hand still mentions.** A reference's label is text. A hand-edited `[@Nova](/rooms/…)` puts a real `@Nova` in the Message, and Nova is Mentioned exactly as if `@Nova` were typed. Picker labels never contain a live `@`, so only a typed one does ([the references design](../Huddle.AtTagging-Specifications.md) §6.1).
@@ -217,7 +218,8 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   [ADR-0023](../adr/0023-an-agent-learns-of-file-changes-on-its-next-turn.md), and FC §8. Six
   gaps are deliberate:
   - **A change made through `Bash`, or any tool call not reported as `Edit`, `Delete` or
-    `Move`, is not attributed to the Agent.** It comes back as an ordinary listed line on the
+    `Move` (other than a `write`, `append`, `replace` or `delete` through the `memory` App Tool,
+    which is attributed), is not attributed to the Agent.** It comes back as an ordinary listed line on the
     Agent's own next Turn, in every Room including the one it was made in. An extra line, never
     a missed change — parsing shell commands for paths risks wrongly claiming another
     Agent's change instead.

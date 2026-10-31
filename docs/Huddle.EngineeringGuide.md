@@ -312,6 +312,8 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `Feed:PageSize` | `50` | Items per Feed Tab page. |
 | `Feed:PanelLimit` | `50` | The most items the Notifications panel loads before "Show more". |
 | `FileChanges:MaxMemoryEntries` | `100` | The most Memory lines shown in a new session's system prompt; the rest are counted rather than listed. |
+| `Team:Instructions:MaxChars` | `8000` | The most characters one `Instructions.md` contributes to a session's system prompt; a longer file is cut and the cut line names the file. Zero or less means no cap. Instructions and Memory §3.2. |
+| `Team:Memory:MaxFileBytes` | `16384` | The most bytes a memory file may hold after a `write`, `append` or `replace` through the `memory` tool; a larger result is refused with "split it into topics". Zero or less means no cap. Instructions and Memory §5.7. |
 | `Tasks:Enabled` | `true` | `false` hides the UI, offers no tools and wakes no one. The Task files stay where they are. |
 | `Team:Teams:Dir` | `Teams` | Team folders, relative to `DataDir`. Shared with Tasks, and replaces `Tasks:Dir`. Must not overlap `Team:Acp:AgentsDir`; start-up refuses it otherwise (`LayoutGuard`). |
 | `Team:Teams:MaxMemoryEntries` | `50` | The cap on Team Memory entries indexed into a member's system prompt at session start, across all of a Persona's Teams; the rest are counted rather than listed. Spec §7.3. |
