@@ -506,14 +506,17 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : *Avoid*: notes, knowledge base, scratchpad, context.
 
 **Team Memory**
-: What a Team keeps going forward, shared by every member and written only by the
-  Team's manager (and the Chief of Staff): topic files in `Teams/<Team>/memory/` for
-  the whole Team or `Teams/<Team>/<Project>/memory/` for one Project, in the same format
-  as an Agent's Memory. Every member's new session starts with an index of it after its
-  own Memory; later edits arrive as File Changes. **Delivered 2026-09-29; manager-only
-  writes built 2026-10-30** — see
-  [ADR-0032](../adr/0032-a-team-and-each-project-share-a-memory-folder.md) and
-  [ADR-0071](../adr/0071-memory-is-written-through-the-memory-tool-and-team-memory-by-its-manager.md).
+: What a Team keeps going forward, shared by every member: topic files in
+  `Teams/<Team>/memory/` for the whole Team or `Teams/<Team>/<Project>/memory/` for one
+  Project, in the same format as an Agent's Memory. Members propose facts with
+  `propose_team_memory` and the **Team Memory Helper** files them; the Team's manager and
+  the Chief of Staff may also write it directly with `memory`. Every member's new session
+  starts with an index of it after its own Memory; later edits arrive as File Changes.
+  **Delivered 2026-09-29; manager-only writes built 2026-10-30; proposals built
+  2026-10-30** — see
+  [ADR-0032](../adr/0032-a-team-and-each-project-share-a-memory-folder.md),
+  [ADR-0071](../adr/0071-memory-is-written-through-the-memory-tool-and-team-memory-by-its-manager.md) and
+  [ADR-0073](../adr/0073-members-propose-team-memory-and-a-helper-files-it.md).
 : Never just *Memory*, which stays the Agent's own.
 : *Avoid*: shared memory, project memory, team notes.
 
@@ -675,6 +678,13 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   Human gate on when the work leaves the Team or can't be undone, writing as
   `Needs Human (Helper)` with its reason in the Change log. It never turns the gate
   off, and never judges a Task again once the Human has turned that Task's gate off.
+
+**Team Memory Helper**
+: The second Helper. It judges each fact a member proposes with `propose_team_memory`
+  against the Team's Memory index: file nothing, create a topic file, or update one it
+  was shown in full. Huddle writes the file through the `memory` tool's rules and records
+  `Team Memory (Helper)` with the proposer's Name in the file's History. See
+  [ADR-0073](../adr/0073-members-propose-team-memory-and-a-helper-files-it.md).
 
 **Huddle (as sender)**
 : The sender of a Message Huddle itself writes, such as a Helper's wake-up to the

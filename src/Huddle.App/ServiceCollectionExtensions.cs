@@ -12,6 +12,7 @@ using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Helpers.NeedsHuman;
+using Agency.Huddle.App.Helpers.TeamMemory;
 using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Memory;
@@ -83,6 +84,21 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<NeedsHumanHelper>(),
             sp.GetRequiredService<HelperRunner>(),
             sp.GetRequiredService<ILoggerFactory>().CreateLogger<HelperInvoker<NeedsHumanInput, NeedsHumanVerdict>>()));
+
+        // Team Memory Helper spec §6.2: the trigger reaches the dispatcher through a factory, because the dispatcher depends on
+        // this Helper's invoker and the Helper on the trigger.
+        services.AddSingleton<MemoryWriter>();
+        services.AddSingleton<TeamMemoryInputBuilder>();
+        services.AddSingleton(static sp => new TeamMemoryTrigger(
+            sp.GetRequiredService<TeamMemoryInputBuilder>(),
+            sp.GetRequiredService<HelperDispatcher>,
+            sp.GetRequiredService<ILogger<TeamMemoryTrigger>>()));
+        services.AddSingleton<TeamMemoryHelper>();
+        services.AddSingleton<IHelperAgent>(static sp => sp.GetRequiredService<TeamMemoryHelper>());
+        services.AddSingleton<IHelperInvoker>(static sp => new HelperInvoker<TeamMemoryInput, TeamMemoryVerdict>(
+            sp.GetRequiredService<TeamMemoryHelper>(),
+            sp.GetRequiredService<HelperRunner>(),
+            sp.GetRequiredService<ILoggerFactory>().CreateLogger<HelperInvoker<TeamMemoryInput, TeamMemoryVerdict>>()));
         services.AddSingleton<HelperRegistry>();
         services.AddSingleton<HelperFeed>();
 

@@ -1546,11 +1546,20 @@ a file in the Library while an Agent holds an older copy, the Agent's next write
 refused and it is shown your version to merge into. An Agent deletes a memory file
 only when you ask it to, and the file goes to the Recycle Bin.
 
-**Only a Team's manager writes its Team Memory.** Every member reads it. A member who
-learns something the whole Team should know tells the manager; the Chief of Staff may
-write any Team's. A Team with no manager is written by you. You can write it too: open
-the Team's **Files** tab, select the `memory` folder, and select **New note**. Huddle
-creates the `memory/` folder the first time something is written there.
+**Members propose; a Helper files.** Every member reads its Team's Memory. A member who
+learns something the whole Team should keep, such as a decision and its reason, proposes
+it with `propose_team_memory`. The **Team Memory Helper** (one short call on your Adapter,
+counted on its card in **Settings › Helpers**, 30 a day by default) decides whether it is
+worth keeping and whether it belongs in an existing topic file, and Huddle writes the
+file. The file's **History** shows each such write as **Team Memory (Helper)**, with who
+proposed it and why. A proposal it does not file appears in the Feed's **Helpers** filter
+with the reason. It reads only what a member chose to propose, never your Rooms or Tasks.
+
+The Team's manager and the Chief of Staff can also write Team Memory directly, to fix or
+tidy it. You can write it too: open the Team's **Files** tab, select the `memory` folder,
+and select **New note**. Huddle creates the `memory/` folder the first time something is
+written there. To stop proposals, turn the Team Memory card off; members are then told to
+keep the fact in their own Memory or tell the manager.
 
 **How Agents learn about it:**
 

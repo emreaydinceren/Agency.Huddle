@@ -1,0 +1,4 @@
+# "Accepted untested texts" for the Team Memory Helper delivery, for Check-Diff.ps1 -AcceptedUntestedPath (path|text|reason).
+# Each line was read against the flagged code. Do not add another feature's entries here.
+src/Huddle.App/Acp/Tools/MemoryTool.cs|, file))}\n\n{WithVersion(stale.CurrentText, stale.CurrentVersion)}|A code fragment, not a text: the conflict reply it builds is pinned whole by MemoryToolTests' write-conflict tests, unchanged by the move to MemoryWriter
+src/Huddle.App/Helpers/TeamMemory/TeamMemoryHelper.cs|{(written.Created ? |A code fragment, not a text: "Created Research/…" and "Updated Research/…" are pinned whole by TeamMemoryHelperTests and TeamMemoryFlowTests

@@ -87,7 +87,7 @@ public sealed class NeedsHumanPromptTests
         IReadOnlyList<PromptFieldGroup> groups = PromptFieldFactory.Build(new FakePromptSource(), new Dictionary<string, string>(StringComparer.Ordinal));
 
         PromptFieldGroup helpers = Assert.Single(groups, static group => string.Equals(group.Label, "Helpers", StringComparison.Ordinal));
-        Assert.Equal(["helper.needsHuman.system", "helper.needsHuman.task"], helpers.Fields.Select(static field => field.Key));
+        Assert.Equal(["helper.needsHuman.system", "helper.needsHuman.task", "helper.teamMemory.system", "helper.teamMemory.proposal"], helpers.Fields.Select(static field => field.Key));
         Assert.Equal("Helpers", groups[^1].Label);
     }
 }

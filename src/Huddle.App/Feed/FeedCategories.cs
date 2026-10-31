@@ -50,7 +50,7 @@ internal static class FeedCategories
         FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget
             or FeedSourceType.RoomCreated or FeedSourceType.RoomJoined or FeedSourceType.RoomArchived => FeedCategory.Rooms,
         FeedSourceType.DocumentChanged => FeedCategory.Documents,
-        FeedSourceType.HelperPaused or FeedSourceType.HelperFailing => FeedCategory.Helpers,
+        FeedSourceType.HelperPaused or FeedSourceType.HelperFailing or FeedSourceType.TeamMemoryNotFiled => FeedCategory.Helpers,
         FeedSourceType.PairingRequested or FeedSourceType.AdminRequested or FeedSourceType.DevicePaired or FeedSourceType.DeviceRevoked => FeedCategory.Devices,
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };

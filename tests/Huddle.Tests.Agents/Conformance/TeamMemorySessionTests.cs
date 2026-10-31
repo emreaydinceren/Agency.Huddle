@@ -90,11 +90,32 @@ public sealed class TeamMemorySessionTests
         string prompt = await TeamMemorySessionTests.ComposedPromptAsync(dataDir, teams: "Business, Ops", ct: ct);
 
         // contains-ok: composed system prompt text; the two paragraphs are the assertions.
-        Assert.Contains("You own the shared Memory of Business: other members read it, and only you write it,", prompt, StringComparison.Ordinal);
-        Assert.Contains("Ops keep shared Memory, written by each Team's manager:", prompt, StringComparison.Ordinal);
-        Assert.DoesNotContain("You own the shared Memory of Ops", prompt, StringComparison.Ordinal);
+        Assert.Contains("You look after the shared Memory of Business:", prompt, StringComparison.Ordinal);
+        Assert.Contains("Ops keep shared Memory:", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("You look after the shared Memory of Ops", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("Business keep shared Memory", prompt, StringComparison.Ordinal);
         Assert.Equal(1, prompt.Split(TeamBlockHeading).Length - 1);
+    }
+
+    /// <summary>
+    /// A Persona in a Team is offered <c>propose_team_memory</c>, and one in no Team is not (Team Memory Helper spec §6.1): the
+    /// session's tool list names it only for the member.
+    /// </summary>
+    [Fact]
+    public async Task SessionStart_ProposeTool_IsOfferedOnlyToAPersonaInATeam()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir member = new();
+        TeamMemorySessionTests.TeamFolder(member, "Business");
+        using TempDataDir loner = new();
+        TeamMemorySessionTests.TeamFolder(loner, "Business");
+
+        string memberPrompt = await TeamMemorySessionTests.ComposedPromptAsync(member, teams: "Business", ct: ct);
+        string lonerPrompt = await TeamMemorySessionTests.ComposedPromptAsync(loner, teams: null, ct: ct);
+
+        // contains-ok: composed system prompt text; the tool list is the assertion.
+        Assert.Contains("mcp__team__propose_team_memory", memberPrompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("propose_team_memory", lonerPrompt, StringComparison.Ordinal);
     }
 
     /// <summary>A Persona with no Teams line is told no Team Memory, though a Team with a Memory file exists. Guard: green before the change.</summary>
@@ -176,12 +197,13 @@ public sealed class TeamMemorySessionTests
         string[] head =
         [
             TeamBlockHeading,
-            "Business keep shared Memory, written by each Team's manager:",
+            "Business keep shared Memory:",
             $"- Business, whole Team: {Path.Combine(teamFolder, "memory")}{separator}",
             $"- Business, one Project: {Path.Combine(teamFolder, "<Project>", "memory")}{separator}",
-            "Read it with the mcp__team__memory tool, passing the Team or Project as the folder. You do not write",
-            "it: when you learn something the whole Team should know, tell its manager. Keep your own notes",
-            "in your own Memory.",
+            "Read it with the mcp__team__memory tool, passing the Team or Project as the folder. You do not write it.",
+            "When you learn something the whole Team should keep, such as a decision and its reason, an agreed way",
+            "of working or who owns what, propose it with mcp__team__propose_team_memory, one fact at a time; Huddle files it and",
+            "records that you proposed it. Keep your own notes in your own Memory.",
             string.Empty,
         ];
 

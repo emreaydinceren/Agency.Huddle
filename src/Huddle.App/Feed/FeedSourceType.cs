@@ -54,6 +54,9 @@ public enum FeedSourceType
     /// <summary>A Helper failed several times in a row.</summary>
     HelperFailing,
 
+    /// <summary>The Team Memory Helper did not file a member's proposal, or dropped it: a record, not a Notification.</summary>
+    TeamMemoryNotFiled,
+
     /// <summary>A device asked to pair and waits for approval.</summary>
     PairingRequested,
 

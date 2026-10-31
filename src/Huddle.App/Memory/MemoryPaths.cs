@@ -68,7 +68,64 @@ internal sealed class MemoryPaths(AgentPaths agentPaths, TeamMemoryAccess access
         ArgumentNullException.ThrowIfNull(folder);
         ArgumentNullException.ThrowIfNull(file);
 
-        return MemoryFileRules.IsValidFileName(file) ?SafePath(folder, file) : null;
+        return MemoryFileRules.IsValidFileName(file) ? SafePath(folder, file) : null;
+    }
+
+    /// <summary>
+    /// Resolves a folder label for Huddle itself, writing on behalf of <paramref name="team"/> (Team Memory Helper spec §6.6): only
+    /// the Team's own folder or one of its Projects', matched ignoring case against the catalog. No Persona's access is consulted, so
+    /// the label is the only thing that can widen the write, and it cannot: <c>me</c>, another Team, a path and <c>..</c> are refused.
+    /// </summary>
+    /// <param name="team">The Team the write is for, as the catalog spells it.</param>
+    /// <param name="label">The folder label as given, <c>Team</c> or <c>Team/Project</c>.</param>
+    /// <param name="folder">The folder when the label resolves.</param>
+    /// <returns>Whether the label names one of the Team's memory folders.</returns>
+    public bool TryResolveTeamFolder(string team, string? label, [NotNullWhen(true)] out MemoryFolder? folder)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+
+        folder = null;
+        string[] parts = (label ?? string.Empty).Trim().Split('/');
+        if (parts.Length > 2 || Array.Exists(parts, static part => string.IsNullOrWhiteSpace(part)) || !string.Equals(parts[0].Trim(), team, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (access.Find(team) is not { HasFolder: true } summary)
+        {
+            return false;
+        }
+
+        if (parts.Length == 1)
+        {
+            folder = new MemoryFolder(Path.Combine(this.TeamsRoot(), summary.Name, "memory"), summary.Name, summary);
+            return true;
+        }
+
+        string? project = summary.Projects.FirstOrDefault(candidate => string.Equals(candidate, parts[1].Trim(), StringComparison.OrdinalIgnoreCase));
+        if (project is null)
+        {
+            return false;
+        }
+
+        folder = new MemoryFolder(Path.Combine(this.TeamsRoot(), summary.Name, project, "memory"), $"{summary.Name}/{project}", summary);
+        return true;
+    }
+
+    /// <summary>The folders Huddle may write for <paramref name="team"/>: the Team's own, then each Project's, in the catalog's order.</summary>
+    /// <param name="team">The Team.</param>
+    /// <returns>The folders; empty when the Team has no folder.</returns>
+    public IReadOnlyList<MemoryFolder> TeamFolders(TeamSummary team)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+        if (!team.HasFolder)
+        {
+            return [];
+        }
+
+        List<MemoryFolder> folders = [new MemoryFolder(Path.Combine(this.TeamsRoot(), team.Name, "memory"), team.Name, team)];
+        folders.AddRange(team.Projects.Select(project => new MemoryFolder(Path.Combine(this.TeamsRoot(), team.Name, project, "memory"), $"{team.Name}/{project}", team)));
+        return folders;
     }
 
     /// <summary>Resolves a <c>folder</c> and <c>file</c> pair to the file's full path, as the <c>memory</c> tool would.</summary>

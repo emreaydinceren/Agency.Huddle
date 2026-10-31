@@ -5973,6 +5973,55 @@ File: [`docs/engineering/manual-tests/instructions-memory.md`](instructions-memo
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+### TMHELP-01 — The Helpers tab shows the Team Memory card
+
+File: [`docs/engineering/manual-tests/team-memory-helper.md`](team-memory-helper.md#tmhelp-01--the-helpers-tab-shows-the-team-memory-card)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TMHELP-02 — A member proposal is filed with its proposer in the History
+
+File: [`docs/engineering/manual-tests/team-memory-helper.md`](team-memory-helper.md#tmhelp-02--a-member-proposal-is-filed-with-its-proposer-in-the-history)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TMHELP-03 — A later proposal updates the same topic file
+
+File: [`docs/engineering/manual-tests/team-memory-helper.md`](team-memory-helper.md#tmhelp-03--a-later-proposal-updates-the-same-topic-file)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TMHELP-04 — A personal preference is not filed and the Feed says why
+
+File: [`docs/engineering/manual-tests/team-memory-helper.md`](team-memory-helper.md#tmhelp-04--a-personal-preference-is-not-filed-and-the-feed-says-why)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TMHELP-05 — A proposal to a Team the member is not in is refused
+
+File: [`docs/engineering/manual-tests/team-memory-helper.md`](team-memory-helper.md#tmhelp-05--a-proposal-to-a-team-the-member-is-not-in-is-refused)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TMHELP-06 — Instructions inside a proposal do not move the write outside the Team
+
+File: [`docs/engineering/manual-tests/team-memory-helper.md`](team-memory-helper.md#tmhelp-06--instructions-inside-a-proposal-do-not-move-the-write-outside-the-team)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TMHELP-07 — The daily cap pauses the Helper and the tool says so
+
+File: [`docs/engineering/manual-tests/team-memory-helper.md`](team-memory-helper.md#tmhelp-07--the-daily-cap-pauses-the-helper-and-the-tool-says-so)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ---
 
 Back to [the manual test script](../manual-tests.md).

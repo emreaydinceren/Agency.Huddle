@@ -78,10 +78,10 @@ public sealed class InstructionsAndMemoryPromptTests
         Assert.Equal("## Team Memory\n{{teamMemoryRoles}}\n\n{{teamMemoryIndex}}", frame.Default);
 
         PromptDefinition manager = PromptCatalog.Get("systemPrompt.teamMemoryManager");
-        Assert.Equal(["{{managedTeams}}", "{{managedPaths}}", "{{memoryTool}}"], manager.Placeholders);
+        Assert.Equal(["{{managedTeams}}", "{{managedPaths}}", "{{memoryTool}}", "{{proposeTool}}"], manager.Placeholders);
 
         PromptDefinition member = PromptCatalog.Get("systemPrompt.teamMemoryMember");
-        Assert.Equal(["{{memberTeams}}", "{{memberPaths}}", "{{memoryTool}}"], member.Placeholders);
+        Assert.Equal(["{{memberTeams}}", "{{memberPaths}}", "{{memoryTool}}", "{{proposeTool}}"], member.Placeholders);
     }
 
     /// <summary>Every refusal and tool Prompt exists, takes effect next session, has non-blank text and never names the tool prefix.</summary>

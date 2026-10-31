@@ -15,7 +15,7 @@ using Agency.Huddle.Tests.Elicitation;
 /// </summary>
 public sealed class TeamMemoryRolesTests
 {
-    private static readonly IReadOnlyList<string> ToolNames = ["mcp__team__get_help", "mcp__team__memory"];
+    private static readonly IReadOnlyList<string> ToolNames = ["mcp__team__get_help", "mcp__team__memory", "mcp__team__propose_team_memory"];
 
     private static readonly string Root = Path.Combine(Path.GetTempPath(), "huddle-roles-root");
 
@@ -77,20 +77,20 @@ public sealed class TeamMemoryRolesTests
 
         string expected = $"""
             ## Team Memory
-            You own the shared Memory of Dev: other members read it, and only you write it,
-            with the mcp__team__memory tool.
+            You look after the shared Memory of Dev:
             {Paths("Dev")}
-            You see the Team's chat, Tasks and decisions as they happen, so decide for yourself what is worth
-            filing: goals, decisions and the reasons behind them, agreed ways of working, who owns what, and
-            lessons learned. Do it as you go, at natural points such as the end of a Task or after a decision.
-            Only what the whole Team benefits from belongs here. When a decision is reversed, replace it and
-            note briefly that it changed. Descriptions follow the same rules as your own Memory.
+            Members propose facts, and Huddle files them through a Helper that decides whether each is worth
+            keeping and where it belongs, so you do not need to file what members tell you. You can still write it
+            yourself with the mcp__team__memory tool: do so for your own decisions, and to fix or tidy what is there.
+            When a decision is reversed, replace it and note briefly that it changed. Descriptions follow the same
+            rules as your own Memory. When you are unsure where a fact belongs, propose it with mcp__team__propose_team_memory
+            instead.
 
             Dev (folder: Dev):
             Nothing yet.
             """.ReplaceLineEndings("\n");
         Assert.Equal(expected, actual);
-        Assert.DoesNotContain("written by each Team's manager", actual, StringComparison.Ordinal);
+        Assert.DoesNotContain("keep shared Memory:", actual, StringComparison.Ordinal);
     }
 
     /// <summary>A Persona that manages one Team and belongs to another gets one heading, the manager paragraph first, then the member paragraph, each with only its own Teams.</summary>
@@ -100,8 +100,8 @@ public sealed class TeamMemoryRolesTests
         string actual = TeamBlock(new FakePromptSource(), null, ToolNames, Group("Dev", isManager: false), Group("Ops", isManager: true));
 
         Assert.Single(actual.Split("## Team Memory"), static part => part.Length > 0);
-        int managed = actual.IndexOf("You own the shared Memory of Ops:", StringComparison.Ordinal);
-        int member = actual.IndexOf("Dev keep shared Memory, written by each Team's manager:", StringComparison.Ordinal);
+        int managed = actual.IndexOf("You look after the shared Memory of Ops:", StringComparison.Ordinal);
+        int member = actual.IndexOf("Dev keep shared Memory:", StringComparison.Ordinal);
         Assert.True(managed > 0 && member > managed, "The manager paragraph comes first, then the member paragraph.");
         Assert.Contains(Paths("Ops"), actual[managed..member], StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
         Assert.DoesNotContain(Paths("Dev"), actual[managed..member], StringComparison.Ordinal);
@@ -114,17 +114,32 @@ public sealed class TeamMemoryRolesTests
     {
         string actual = TeamBlock(new FakePromptSource(), null, ToolNames, Group("A", true), Group("B", true), Group("C", true));
 
-        Assert.Contains("You own the shared Memory of A, B and C:", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.Contains("You look after the shared Memory of A, B and C:", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
     }
 
     /// <summary>An Adapter without the tool prefix is told the bare tool name.</summary>
     [Fact]
     public void ToolName_FollowsTheAdaptersPrefix()
     {
-        string actual = TeamBlock(new FakePromptSource(), null, ["get_help", "memory"], Group("Dev", isManager: true));
+        string actual = TeamBlock(new FakePromptSource(), null, ["get_help", "memory", "propose_team_memory"], Group("Dev", isManager: true));
 
-        Assert.Contains("with the memory tool.", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.Contains("yourself with the memory tool:", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.Contains("propose it with propose_team_memory\ninstead.", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
         Assert.DoesNotContain("mcp__", actual, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A member is told to propose with the proposal tool, by its offered name, and no longer to tell the manager; the manager is no
+    /// longer told it sees everything as it happens (Team Memory Helper spec §6.8).
+    /// </summary>
+    [Fact]
+    public void Member_IsToldToProposeWithTheTool_AndManagerIsNotToldItSeesEverything()
+    {
+        string actual = TeamBlock(new FakePromptSource(), null, ToolNames, Group("Dev", isManager: false), Group("Ops", isManager: true));
+
+        Assert.Contains("propose it with mcp__team__propose_team_memory, one fact at a time; Huddle files it", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.DoesNotContain("tell its manager", actual, StringComparison.Ordinal);
+        Assert.DoesNotContain("as they happen", actual, StringComparison.Ordinal);
     }
 
     /// <summary>An override of the old frame, which names the paths and not the roles, is rendered the old way with every Team's paths, and a Warning names the new placeholder.</summary>
@@ -138,7 +153,7 @@ public sealed class TeamMemoryRolesTests
         string actual = Compose(prompts, new MemoryWarnings(logger), ToolNames, Group("Dev", isManager: true), Group("Ops", isManager: false));
 
         Assert.Contains($"OLD FRAME\n{Paths("Dev")}\n{Paths("Ops")}\nDev (folder: Dev):\nNothing yet.\nOps (folder: Ops):\nNothing yet.", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
-        Assert.DoesNotContain("You own the shared Memory", actual, StringComparison.Ordinal);
+        Assert.DoesNotContain("You look after the shared Memory", actual, StringComparison.Ordinal);
         LogEntry warning = Assert.Single(logger.AtExactly(LogLevel.Warning));
         Assert.Equal("The 'systemPrompt.teamMemory' override still uses {{teamMemoryPaths}}; it is rendered the old way. Use {{teamMemoryRoles}} to say who writes Team Memory.", warning.Message);
     }

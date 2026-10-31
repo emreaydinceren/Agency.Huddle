@@ -26,6 +26,7 @@ internal static class FeedSourceTypes
         FeedSourceType.DocumentChanged => "document-changed",
         FeedSourceType.HelperPaused => "helper-paused",
         FeedSourceType.HelperFailing => "helper-failing",
+        FeedSourceType.TeamMemoryNotFiled => "team-memory-not-filed",
         FeedSourceType.PairingRequested => "pairing-requested",
         FeedSourceType.AdminRequested => "admin-requested",
         FeedSourceType.DevicePaired => "device-paired",

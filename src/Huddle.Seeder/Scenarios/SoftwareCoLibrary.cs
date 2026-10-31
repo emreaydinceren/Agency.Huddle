@@ -156,6 +156,7 @@ internal static class SoftwareCoLibrary
         new(Incident, 8, "09:30", "Dana", DocActorKind.Agent, DocChangeKind.Reviewed, "Customer impact matches the support tickets"),
         new("Agents/Alan/work/Postmortem-Draft-0412.md", 8, "17:10", "Alan", DocActorKind.Agent, DocChangeKind.Created, "Timeline drafted from the alert log"),
         new("Teams/Growth/Lifecycle Emails/Email-Ideas.md", 7, "08:45", "You", DocActorKind.Human, DocChangeKind.Created),
+        new("Teams/Platform/memory/deploy-freeze-fridays.md", 3, "12:10", "Team Memory (Helper)", DocActorKind.Helper, DocChangeKind.Created, "Proposed by Alan: a new rule for Friday deploys"),
     ];
 
     /// <summary>Every note, memory fact and working file.</summary>

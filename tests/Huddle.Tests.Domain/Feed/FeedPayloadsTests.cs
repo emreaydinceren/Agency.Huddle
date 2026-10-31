@@ -46,6 +46,7 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.DocumentChanged, "document-changed"),
             (FeedSourceType.HelperPaused, "helper-paused"),
             (FeedSourceType.HelperFailing, "helper-failing"),
+            (FeedSourceType.TeamMemoryNotFiled, "team-memory-not-filed"),
             (FeedSourceType.PairingRequested, "pairing-requested"),
             (FeedSourceType.AdminRequested, "admin-requested"),
             (FeedSourceType.DevicePaired, "device-paired"),
@@ -202,6 +203,7 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.DocumentChanged, FeedCategory.Documents),
             (FeedSourceType.HelperPaused, FeedCategory.Helpers),
             (FeedSourceType.HelperFailing, FeedCategory.Helpers),
+            (FeedSourceType.TeamMemoryNotFiled, FeedCategory.Helpers),
         ];
 
         Assert.All(expected, row => Assert.Equal(row.Category, FeedCategories.Of(row.Type)));

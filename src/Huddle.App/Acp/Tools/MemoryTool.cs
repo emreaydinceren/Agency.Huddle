@@ -49,6 +49,8 @@ internal sealed class MemoryTool(
 
     private readonly MemoryPaths paths = new(agentPaths, access, options);
 
+    private readonly MemoryWriter writer = new(gate, options);
+
     /// <inheritdoc />
     public string Name => ToolName;
 
@@ -132,7 +134,7 @@ internal sealed class MemoryTool(
         return request.Command switch
         {
             "read" => await this.ReadAsync(file, path, cancellationToken).ConfigureAwait(false),
-            "write" => await this.MutateAsync(folder, file, () => this.WriteAsync(request, folder, path, cancellationToken), cancellationToken).ConfigureAwait(false),
+            "write" => await this.WriteAsync(request, folder, cancellationToken).ConfigureAwait(false),
             "append" => await this.MutateAsync(folder, file, () => this.AppendAsync(request, folder, path, cancellationToken), cancellationToken).ConfigureAwait(false),
             "replace" => await this.MutateAsync(folder, file, () => this.ReplaceAsync(request, folder, path, cancellationToken), cancellationToken).ConfigureAwait(false),
             _ => await this.MutateAsync(folder, file, () => this.DeleteAsync(request, folder, path, cancellationToken), cancellationToken).ConfigureAwait(false),
@@ -212,34 +214,42 @@ internal sealed class MemoryTool(
         }
     }
 
-    /// <summary>Creates a file, or replaces one given the version the Agent read, composing the frontmatter itself.</summary>
+    /// <summary>
+    /// Creates a file, or replaces one given the version the Agent read, through <see cref="MemoryWriter"/>, which composes the
+    /// frontmatter; then says what happened in the words this tool has always used.
+    /// </summary>
     /// <param name="request">The call.</param>
     /// <param name="folder">The resolved folder.</param>
-    /// <param name="path">The file's full path.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
-    private async Task<string> WriteAsync(MemoryRequest request, MemoryFolder folder, string path, CancellationToken cancellationToken)
+    private async Task<string> WriteAsync(MemoryRequest request, MemoryFolder folder, CancellationToken cancellationToken)
     {
         string file = request.File ?? string.Empty;
-        if (MemoryFileRules.DescriptionProblem(request.Description, file) is { } problem)
+        MemoryWriteResult result = await this.writer.WriteAsync(folder, file, request.Description, request.Text, request.Version, cancellationToken).ConfigureAwait(false);
+        switch (result)
         {
-            return this.Say("systemPrompt.memoryBadDescription", ("problem", problem));
+            case MemoryWriteResult.Written written:
+                this.LogCommitted(request, folder, written.Version);
+                return $"written {file} (version {written.Version})";
+            case MemoryWriteResult.BadDescription bad:
+                return this.Say("systemPrompt.memoryBadDescription", ("problem", bad.Problem));
+            case MemoryWriteResult.TooLarge tooLarge:
+                return this.SayTooLarge(file, tooLarge.Size, tooLarge.Max);
+            case MemoryWriteResult.Missing:
+                return this.Say("systemPrompt.memoryDeleted", ("file", file));
+            case MemoryWriteResult.Exists:
+                return this.Say("systemPrompt.memoryReadFirst", ("file", file));
+            case MemoryWriteResult.Stale stale:
+                return $"{this.Say("systemPrompt.memoryConflict", ("file", file))}\n\n{WithVersion(stale.CurrentText, stale.CurrentVersion)}";
+            case MemoryWriteResult.Failed { Error: { } error }:
+                logger.LogWarning(error, "A memory change to '{File}' in '{Folder}' failed.", file, folder.Label);
+                return this.Say("systemPrompt.memoryWriteFailed", ("file", file));
+            case MemoryWriteResult.Failed failed:
+                logger.LogWarning("The memory file '{Path}' could not be replaced; it is held by another process.", failed.Path);
+                return this.Say("systemPrompt.memoryWriteFailed", ("file", file));
+            default:
+                // BadName: the file name was checked before the call, so this is only reachable if the two checks ever disagree.
+                return this.Say("systemPrompt.memoryBadFile");
         }
-
-        byte[] bytes = Utf8.GetBytes(MemoryFileRules.Compose((request.Description ?? string.Empty).Trim(), request.Text ?? string.Empty));
-        if (this.TooLarge(file, bytes.Length) is { } tooLarge)
-        {
-            return tooLarge;
-        }
-
-        byte[]? current = await ReadIfExistsAsync(path, cancellationToken).ConfigureAwait(false);
-        if (current is null && request.Version is not null)
-        {
-            return this.Say("systemPrompt.memoryDeleted", ("file", file));
-        }
-
-        return this.VersionRefusal(file, request.Version, current, "systemPrompt.memoryReadFirst") is { } refusal
-            ? refusal
-            : await this.CommitAsync(request, folder, path, bytes, "written", cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Adds <c>text</c> as a new line at the end of an existing file. No version: appending cannot lose an update.</summary>
@@ -347,13 +357,20 @@ internal sealed class MemoryTool(
         }
 
         string version = MemoryVersion.Of(bytes);
+        this.LogCommitted(request, folder, version);
+        return $"{verb} {file} (version {version}); description: {MemoryIndex.SummaryFor(path, warnings)}";
+    }
+
+    /// <summary>Logs a committed change at Information, with the caller, folder, file, command and the new version.</summary>
+    /// <param name="request">The call.</param>
+    /// <param name="folder">The resolved folder.</param>
+    /// <param name="version">The file's new version.</param>
+    private void LogCommitted(MemoryRequest request, MemoryFolder folder, string version)
+    {
         if (logger.IsEnabled(LogLevel.Information))
         {
-            logger.LogInformation("Memory {Command} by '{Caller}' in '{Folder}' on '{File}', now version {Version}.", request.Command, personaName, folder.Label, file, version);
+            logger.LogInformation("Memory {Command} by '{Caller}' in '{Folder}' on '{File}', now version {Version}.", request.Command, personaName, folder.Label, request.File ?? string.Empty, version);
         }
-
-        string result = $"{verb} {file} (version {version})";
-        return request.Command == "write" ? result : $"{result}; description: {MemoryIndex.SummaryFor(path, warnings)}";
     }
 
     /// <summary>Runs a mutating command under the folder's gate, turning an IO failure into a refusal.</summary>
@@ -406,14 +423,19 @@ internal sealed class MemoryTool(
     private string? TooLarge(string file, int size)
     {
         int max = options.Value.Memory.MaxFileBytes;
-        return max > 0 && size > max
-            ? this.Say(
-                "systemPrompt.memoryTooLarge",
-                ("file", file),
-                ("size", size.ToString(CultureInfo.InvariantCulture)),
-                ("max", max.ToString(CultureInfo.InvariantCulture)))
-            : null;
+        return max > 0 && size > max ? this.SayTooLarge(file, size, max) : null;
     }
+
+    /// <summary>The refusal for a file of <paramref name="size"/> bytes over the cap of <paramref name="max"/>.</summary>
+    /// <param name="file">The file name.</param>
+    /// <param name="size">The size the file would have.</param>
+    /// <param name="max">The cap.</param>
+    private string SayTooLarge(string file, int size, int max) =>
+        this.Say(
+            "systemPrompt.memoryTooLarge",
+            ("file", file),
+            ("size", size.ToString(CultureInfo.InvariantCulture)),
+            ("max", max.ToString(CultureInfo.InvariantCulture)));
 
     /// <summary>The text followed by a blank line and its version line.</summary>
     /// <param name="text">The file's text.</param>

@@ -13,7 +13,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 /// </summary>
 public sealed class TeamMemoryPromptTests
 {
-    private static readonly IReadOnlyList<string> ToolNames = ["mcp__team__get_help", "mcp__team__memory"];
+    private static readonly IReadOnlyList<string> ToolNames = ["mcp__team__get_help", "mcp__team__memory", "mcp__team__propose_team_memory"];
 
     private static readonly string Root = Path.Combine(Path.GetTempPath(), "huddle-teams-root");
 
@@ -509,11 +509,12 @@ public sealed class TeamMemoryPromptTests
     private static string Block(string paths, string index, string teams = "Business") =>
         $"""
         ## Team Memory
-        {teams} keep shared Memory, written by each Team's manager:
+        {teams} keep shared Memory:
         {paths}
-        Read it with the mcp__team__memory tool, passing the Team or Project as the folder. You do not write
-        it: when you learn something the whole Team should know, tell its manager. Keep your own notes
-        in your own Memory.
+        Read it with the mcp__team__memory tool, passing the Team or Project as the folder. You do not write it.
+        When you learn something the whole Team should keep, such as a decision and its reason, an agreed way
+        of working or who owns what, propose it with mcp__team__propose_team_memory, one fact at a time; Huddle files it and
+        records that you proposed it. Keep your own notes in your own Memory.
 
         {index}
         """.ReplaceLineEndings("\n");

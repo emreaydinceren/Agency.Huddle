@@ -152,6 +152,7 @@ the per-area tables below.
 | [Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart](feed.md) | [below](#feed) |
 | [Remote access: the connect page, pairing, Tailscale Serve and Funnel, the LAN bind, revocation and the Open action](remote-access.md) | [below](#remote-access) |
 | [Instructions and Memory: the Instructions files, the memory tool, Team Memory and the Memory protocol](instructions-memory.md) | [below](#instructions-memory) |
+| [Team Memory Helper: proposals filed by a Helper, the History, the Feed record, the membership check and the daily cap](team-memory-helper.md) | [below](#team-memory-helper) |
 ---
 
 ## at-tagging
@@ -1213,3 +1214,17 @@ Instructions and Memory: the Instructions files, the memory tool, Team Memory an
 | [INSTRMEM-07](instructions-memory.md#instrmem-07--spike-s-1-whether-claude-code-loads-the-repository-claude-files-into-a-persona) | 💰 | Active |  | not yet run; this is spike S-1 and needs a live, paid Claude Code session |
 | [INSTRMEM-08](instructions-memory.md#instrmem-08--a-restart-recalls-a-memory-from-the-index-and-the-files) | 💰 | Active |  | not yet run by a person |
 | [INSTRMEM-09](instructions-memory.md#instrmem-09--an-adapter-with-no-file-tools-still-gets-the-memory-tool-and-the-memory-block) |  | Active |  | not yet run by a person |
+
+## team-memory-helper
+
+Team Memory Helper: proposals filed by a Helper, the History, the Feed record, the membership check and the daily cap — [area file](team-memory-helper.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [TMHELP-01](team-memory-helper.md#tmhelp-01--the-helpers-tab-shows-the-team-memory-card) |  | Active |  | not yet run by a person |
+| [TMHELP-02](team-memory-helper.md#tmhelp-02--a-member-proposal-is-filed-with-its-proposer-in-the-history) | 💰 | Active |  | not yet run by a person |
+| [TMHELP-03](team-memory-helper.md#tmhelp-03--a-later-proposal-updates-the-same-topic-file) | 💰 | Active |  | not yet run by a person |
+| [TMHELP-04](team-memory-helper.md#tmhelp-04--a-personal-preference-is-not-filed-and-the-feed-says-why) | 💰 | Active |  | not yet run by a person |
+| [TMHELP-05](team-memory-helper.md#tmhelp-05--a-proposal-to-a-team-the-member-is-not-in-is-refused) | 💰 | Active |  | not yet run by a person |
+| [TMHELP-06](team-memory-helper.md#tmhelp-06--instructions-inside-a-proposal-do-not-move-the-write-outside-the-team) | 💰 | Active |  | not yet run by a person |
+| [TMHELP-07](team-memory-helper.md#tmhelp-07--the-daily-cap-pauses-the-helper-and-the-tool-says-so) | 💰 | Active |  | not yet run by a person |

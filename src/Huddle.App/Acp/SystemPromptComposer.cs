@@ -266,7 +266,7 @@ internal static class SystemPromptComposer
 
         AddSkillsPart(parts, prompts, skills, readSkillToolName);
 
-        AddMemoryParts(parts, prompts, memory, teamMemory, FindMemoryTool(toolNames), memoryChangesListed, warnings);
+        AddMemoryParts(parts, prompts, memory, teamMemory, toolNames, memoryChangesListed, warnings);
 
         AddClosingParts(parts, prompts, scope, memory is not null && memoryChangesListed);
 
@@ -282,12 +282,21 @@ internal static class SystemPromptComposer
         return toolNames.FirstOrDefault(MemoryTool.IsToolName) ?? MemoryTool.ToolName;
     }
 
+    /// <summary>The offered <c>propose_team_memory</c> tool's prefixed name, or the bare name when the session does not list it.</summary>
+    /// <param name="toolNames">The offered tools' names, already prefixed.</param>
+    /// <returns>The name as offered; <c>propose_team_memory</c> when it is not in the list.</returns>
+    internal static string FindProposeTool(IReadOnlyList<string> toolNames)
+    {
+        ArgumentNullException.ThrowIfNull(toolNames);
+        return toolNames.FirstOrDefault(ProposeTeamMemoryTool.IsToolName) ?? ProposeTeamMemoryTool.ToolName;
+    }
+
     /// <summary>Adds the Memory block, then the Team Memory block, when their snapshots exist.</summary>
     /// <param name="parts">The prompt parts so far.</param>
     /// <param name="prompts">Resolves each prompt's current text.</param>
     /// <param name="memory">The Agent's Memory index, or <see langword="null"/> for none.</param>
     /// <param name="teamMemory">The Persona's Team Memory snapshot, or <see langword="null"/> for none.</param>
-    /// <param name="memoryToolName">The memory tool's name, already carrying the Adapter's prefix.</param>
+    /// <param name="toolNames">The offered tools' names, already prefixed: the memory and proposal tools are named from them.</param>
     /// <param name="memoryChangesListed">Whether a memory file's change reaches the Agent as a File Change at its next Turn.</param>
     /// <param name="warnings">Warns once about an old-style Team Memory override; <see langword="null"/> warns of nothing.</param>
     private static void AddMemoryParts(
@@ -295,10 +304,11 @@ internal static class SystemPromptComposer
         IPromptSource prompts,
         MemorySnapshot? memory,
         TeamMemorySnapshot? teamMemory,
-        string memoryToolName,
+        IReadOnlyList<string> toolNames,
         bool memoryChangesListed,
         MemoryWarnings? warnings)
     {
+        string memoryToolName = FindMemoryTool(toolNames);
         if (memory is not null)
         {
             parts.Add(BuildMemoryBlock(prompts, memory, memoryToolName, memoryChangesListed));
@@ -306,7 +316,7 @@ internal static class SystemPromptComposer
 
         if (teamMemory is not null && teamMemory.Groups.Count > 0)
         {
-            parts.Add(BuildTeamMemoryBlock(prompts, teamMemory, memoryToolName, warnings));
+            parts.Add(BuildTeamMemoryBlock(prompts, teamMemory, new TeamMemoryTools(memoryToolName, FindProposeTool(toolNames)), warnings));
         }
     }
 
@@ -534,9 +544,9 @@ internal static class SystemPromptComposer
     /// </summary>
     /// <param name="prompts">Resolves each Team Memory prompt's current text.</param>
     /// <param name="teamMemory">The Persona's Team Memory snapshot; it holds at least one Group.</param>
-    /// <param name="memoryToolName">The memory tool's name, already carrying the Adapter's prefix.</param>
+    /// <param name="tools">The memory and proposal tools' names, already carrying the Adapter's prefix.</param>
     /// <param name="warnings">Warns, once per override text, when a Human's override still uses the old frame; <see langword="null"/> warns of nothing.</param>
-    private static string BuildTeamMemoryBlock(IPromptSource prompts, TeamMemorySnapshot teamMemory, string memoryToolName, MemoryWarnings? warnings)
+    private static string BuildTeamMemoryBlock(IPromptSource prompts, TeamMemorySnapshot teamMemory, TeamMemoryTools tools, MemoryWarnings? warnings)
     {
         List<string> lines = [];
         foreach (var group in teamMemory.Groups)
@@ -580,7 +590,7 @@ internal static class SystemPromptComposer
             "systemPrompt.teamMemory",
             new Dictionary<string, string>
             {
-                ["{{teamMemoryRoles}}"] = RenderRoles(prompts, teamMemory.Groups, memoryToolName),
+                ["{{teamMemoryRoles}}"] = RenderRoles(prompts, teamMemory.Groups, tools),
                 ["{{teamMemoryIndex}}"] = index,
             });
     }
@@ -591,8 +601,8 @@ internal static class SystemPromptComposer
     /// </summary>
     /// <param name="prompts">Resolves each paragraph's current text.</param>
     /// <param name="groups">The Persona's Team Memory groups.</param>
-    /// <param name="memoryToolName">The memory tool's name, already carrying the Adapter's prefix.</param>
-    private static string RenderRoles(IPromptSource prompts, IReadOnlyList<TeamMemoryGroup> groups, string memoryToolName)
+    /// <param name="tools">The memory and proposal tools' names, already carrying the Adapter's prefix.</param>
+    private static string RenderRoles(IPromptSource prompts, IReadOnlyList<TeamMemoryGroup> groups, TeamMemoryTools tools)
     {
         List<TeamMemoryGroup> managed = [.. groups.Where(static group => group.IsManager)];
         List<TeamMemoryGroup> member = [.. groups.Where(static group => !group.IsManager)];
@@ -606,7 +616,8 @@ internal static class SystemPromptComposer
                 {
                     ["{{managedTeams}}"] = JoinNames(managed),
                     ["{{managedPaths}}"] = RenderPaths(prompts, managed),
-                    ["{{memoryTool}}"] = memoryToolName,
+                    ["{{memoryTool}}"] = tools.Memory,
+                    ["{{proposeTool}}"] = tools.Propose,
                 }));
         }
 
@@ -618,7 +629,8 @@ internal static class SystemPromptComposer
                 {
                     ["{{memberTeams}}"] = JoinNames(member),
                     ["{{memberPaths}}"] = RenderPaths(prompts, member),
-                    ["{{memoryTool}}"] = memoryToolName,
+                    ["{{memoryTool}}"] = tools.Memory,
+                    ["{{proposeTool}}"] = tools.Propose,
                 }));
         }
 

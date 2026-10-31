@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-10-30
 ---
 
@@ -41,8 +41,10 @@ through the manager. That is slower, and it is the point", turned out to mean th
   `Proposed by <Name>: <reason>`. A proposal that is not filed becomes a Feed record with the reason.
 - **Members learn of a write through File Changes**, as for any other change to a Team folder.
 
-Who else writes Team Memory directly (the manager, the Chief of Staff) is the specification's open decision OD-1. Its
-recommendation is that both keep the `memory` tool beside the Helper, because version tokens make two writers safe.
+**The manager and the Chief of Staff keep the `memory` tool** beside the Helper, because version tokens make two
+writers safe and someone must be able to fix a bad filing while the Helper is paused or off. The owner accepted this
+and the specification's other recommendations on 2026-10-30: a Task reaching Done is a later slice, the Human approves
+nothing before it is filed, a proposal not filed is told only through the Feed, and the cap is 30 calls a day.
 
 ## Rejected
 

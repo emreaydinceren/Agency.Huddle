@@ -340,6 +340,13 @@ The Agent never writes frontmatter by hand.
 
 ### 5.3 Folders and confinement
 
+> [!NOTE]
+> Since 2026-10-30 members no longer have to tell the manager: they propose a fact with
+> `propose_team_memory`, and the Team Memory Helper files it through the same write rules
+> ([Huddle.TeamMemoryHelper-Specifications.md](Huddle.TeamMemoryHelper-Specifications.md),
+> [ADR-0073](adr/0073-members-propose-team-memory-and-a-helper-files-it.md)). Who may write with
+> the `memory` tool, below, is unchanged.
+
 `folder` resolves to exactly one directory, or the call is refused:
 
 - `me` resolves to `AgentPaths.WorkDir(name)/memory/`, created if missing (it already is, at

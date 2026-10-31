@@ -1,6 +1,6 @@
 # Huddle.TeamMemoryHelper — Design Specification
 
-**Date:** 2026-10-30 · **Status:** Proposed, awaiting the owner's answers to §10 · **Decision record:**
+**Date:** 2026-10-30 · **Status:** Built 2026-10-30 (see [Appendix B](#appendix-b-what-the-build-did-differently)); the owner took every recommendation in §10 · **Decision record:**
 [ADR-0073](adr/0073-members-propose-team-memory-and-a-helper-files-it.md), which amends
 [ADR-0071](adr/0071-memory-is-written-through-the-memory-tool-and-team-memory-by-its-manager.md); builds on
 [ADR-0064](adr/0064-a-helper-judges-an-event-and-the-app-applies-its-verdict.md) and the
@@ -363,20 +363,18 @@ The memory rules (§6.6) are checked by the applier, so that their refusal texts
 /// <param name="file">The file name, not yet checked.</param>
 /// <param name="description">The description, not yet checked.</param>
 /// <param name="text">The body, without frontmatter.</param>
-/// <param name="expected">The version the writer last saw, or <see cref="MemoryExpectation.Absent"/> for a new file.</param>
+/// <param name="expectedVersion">The version the writer last read, or <see langword="null"/> when the file must not exist yet.</param>
+/// <param name="actor">Who is writing, for the log only.</param>
 /// <returns>What happened, with the new version on success.</returns>
-public Task<MemoryWriteResult> WriteAsync(MemoryFolder folder, string file, string description, string text, MemoryExpectation expected, CancellationToken cancellationToken);
+public Task<MemoryWriteResult> WriteAsync(MemoryFolder folder, string file, string? description, string? text, string? expectedVersion, string actor, CancellationToken cancellationToken);
 ```
 
 `MemoryWriteResult` is a closed record hierarchy: `Written(string Version)`, `BadName`, `BadDescription(string Problem)`,
-`TooLarge(int Bytes, int Max)`, `Exists(string CurrentVersion)`, `Stale(string CurrentVersion, string CurrentText)`,
-`Missing` and `Failed`. `MemoryTool`'s `write` command maps each result to the Prompt it uses today, so **its behaviour
-and every text it returns stay byte-identical**: the existing `MemoryToolTests` are the proof and change in no line.
-`append`, `replace` and `delete` keep their own code in `MemoryTool`, because the Helper never uses them; only the gate,
-the size check and the atomic commit they share move into `MemoryWriter` as internal members.
-
-`MemoryExpectation` is `Absent`, `Version(string)` or, for the tool's existing contract, `AnyIfNew`: a `write` without a
-version to a file that does not exist. The tool keeps its rules; the applier passes only `Absent` or `Version`.
+`TooLarge(int Size, int Max)`, `Exists` (no version given, and the file exists), `Missing` (a version given, and the
+file is gone), `Stale(string CurrentVersion, string CurrentText)` and `Failed`. These are exactly the cases the tool's
+`write` already distinguishes, so `MemoryTool`'s `write` command maps each result to the Prompt it uses today, and **its
+behaviour and every text it returns stay byte-identical**: the existing `MemoryToolTests` are the proof and change in no
+line. `append`, `replace` and `delete` keep their own code in `MemoryTool`, because the Helper never uses them.
 
 **Resolving the folder.** The applier does not act as a Persona. `MemoryPaths` gains
 `TryResolveTeamFolder(string team, string label, out MemoryFolder folder)`, which accepts only `team` itself or
@@ -551,7 +549,7 @@ in the tracker. They include a paid run against the real Claude adapter for U-1 
 
 ## 10. Open decisions
 
-The owner decides each. The recommendation is the spec's.
+The owner accepted every recommendation on 2026-10-30. The table keeps the options for the record.
 
 | # | Question | Options | Recommendation |
 | --- | --- | --- | --- |
@@ -604,3 +602,20 @@ Each task is one commit: a failing test, the code, a green `dotnet build Huddle.
 | TM-11 | Access per OD-1 | `TeamMemoryAccess` and guard tests |
 | TM-12 | End to end with a fake Helper process | §8 row |
 | TM-13 | User Guide, language.md, code-map, Instructions spec note, manual tests page and tracker row | `Check-All.ps1` |
+
+---
+
+## Appendix B. What the build did differently
+
+Written when the build landed, 2026-10-30. Everything not listed here was built as §6 describes.
+
+| # | Spec | What was built, and why |
+| --- | --- | --- |
+| B-1 | §6.1 offers the tool by Team membership in the catalog | It is offered when one of the Persona's Team labels names a Team with a folder, or to the Chief of Staff: the same rule that gives the Persona its Team Memory block (`TeamMemoryIndex.Build`). The catalog's member lists were not yet filled when a session started in the conformance tests, so a rule on them left members without the tool while their prompt told them to use it. The tool still checks the catalog on every call |
+| B-2 | §6.6 `DocHistoryStore` "already posts a `DocumentChanged` Feed item for each entry" | It posted only Agent entries. It now posts Agent and Helper entries; a Helper's is posted with `FeedActorKind.Huddle` under the Helper's name, `Team Memory (Helper)`. The Human's own saves are still not posted (Feed spec D-10) |
+| B-3 | §6.6 `MemoryWriter` takes an actor for the log | It logs nothing and takes no actor: each caller reports the result in its own words, so `MemoryTool`'s log lines, which `MemoryToolTests` pin on its own logger, stay as they were |
+| B-4 | §6.8 and §8 "goldens regenerated" | No golden changed. The goldens pin a Persona in no Team, which is not offered the tool and has no Team Memory block. The new paragraphs are pinned by `TeamMemoryPromptTests`, `TeamMemoryRolesTests` and the conformance `TeamMemorySessionTests`, which were updated, and `prompts.default.json` was regenerated |
+| B-5 | §6.4 system prompt | Two lines were added: a "none" names the file it would have updated (OD-7), and the text is the body only, because Huddle adds the description |
+| B-6 | TM-11 access per OD-1 | Nothing changed: with OD-1 (a) the manager and the Chief of Staff keep the `memory` tool, so `TeamMemoryAccess`, `TeamMemoryWriteGuard` and their tests stand as they are |
+| B-7 | — | The seeded demo data gains one History entry by `Team Memory (Helper)` on a Platform memory file, because `SeedRefreshTests` requires the seed to show every History actor kind |
+| B-8 | §6.6 the Feed record | `TeamMemoryNotFiled` wears the document badge, links to the Helper's card, and is grouped under the Team in the Feed |
