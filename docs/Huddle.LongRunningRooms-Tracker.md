@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 1.2 and 1.3 are live checks that need the Human; 1.5.t and 1.5.i run only if 1.3 finds a working route.
 
-**Status:** 37 of 59 tasks Done · 2 of 3 retrospectives done · last updated 2026-10-30.
+**Status:** 39 of 59 tasks Done · 2 of 3 retrospectives done · last updated 2026-10-31.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -74,10 +74,10 @@ never by hand, so the status line stays true.
 | 6.1.i #47 Handle the note [Sonnet] | | | ✔ |
 | 6.2.t #48 The note's wording [Haiku] | | | ✔ |
 | 6.2.i #49 Implement the wording [Haiku] | | | ✔ |
-| 6.3.t #50 The note in the Room, and what it reread [Sonnet] | ✔ | | |
+| 6.3.t #50 The note in the Room, and what it reread [Sonnet] | | ✔ | |
 | 6.3.i #51 Render the note [Sonnet] | ✔ | | |
-| 6.4.t #52 *Start afresh* in the Teammate's popover [Sonnet] | | ✔ | |
-| 6.4.i #53 Build the button [Sonnet] | ✔ | | |
+| 6.4.t #52 *Start afresh* in the Teammate's popover [Sonnet] | | | ✔ |
+| 6.4.i #53 Build the button [Sonnet] | | | ✔ |
 | 6.5 #54 UI docs [Haiku] | ✔ | | |
 | **D7. Close** | | | |
 | 7.1 #55 Reconcile the Spec [Sonnet] | ✔ | | |
