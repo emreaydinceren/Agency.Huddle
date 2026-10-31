@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 1.2 and 1.3 are live checks that need the Human; 1.5.t and 1.5.i run only if 1.3 finds a working route.
 
-**Status:** 52 of 59 tasks Done · 3 of 3 retrospectives done · last updated 2026-10-31.
+**Status:** 55 of 59 tasks Done · 3 of 3 retrospectives done · last updated 2026-10-31.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -82,6 +82,6 @@ never by hand, so the status line stays true.
 | **D7. Close** | | | |
 | 7.1 #55 Reconcile the Spec [Sonnet] | | | ✔ |
 | 7.2 #56 Finish the experiment page [Haiku] | | | ✔ |
-| 7.3 #57 Final verification [Haiku] | ✔ | | |
-| 7.4 #58 Delivery note for the Human [manager] | ✔ | | |
-| 7.5 #59 Plan housekeeping [Haiku] | ✔ | | |
+| 7.3 #57 Final verification [Haiku] | | | ✔ |
+| 7.4 #58 Delivery note for the Human [manager] | | | ✔ |
+| 7.5 #59 Plan housekeeping [Haiku] | | | ✔ |
