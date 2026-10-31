@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.App.Data;
@@ -16,34 +15,28 @@ namespace Agency.Huddle.App.Data;
 /// </remarks>
 public sealed class PersonaWorkModeStore
 {
-    private const string DdlCreatePersonaWorkModes = """
-        CREATE TABLE IF NOT EXISTS persona_work_modes (
-            persona_name TEXT PRIMARY KEY COLLATE NOCASE,
-            work_mode    TEXT NOT NULL
-        );
-        """;
+    private static readonly PersonaOverrideSql Sql = new(
+        Create: """
+            CREATE TABLE IF NOT EXISTS persona_work_modes (
+                persona_name TEXT PRIMARY KEY COLLATE NOCASE,
+                work_mode    TEXT NOT NULL
+            );
+            """,
+        Select: "SELECT work_mode FROM persona_work_modes WHERE persona_name = $name;",
+        Upsert: """
+            INSERT INTO persona_work_modes(persona_name, work_mode) VALUES($name, $value)
+            ON CONFLICT(persona_name) DO UPDATE SET work_mode = excluded.work_mode;
+            """,
+        Delete: "DELETE FROM persona_work_modes WHERE persona_name = $name;");
 
-    private readonly string connectionString;
+    private readonly PersonaOverrideTable table;
 
     /// <summary>Opens the store and creates its table when the database does not have it yet.</summary>
     /// <param name="options">The Team options, which name the data directory.</param>
     public PersonaWorkModeStore(IOptions<TeamOptions> options)
     {
         ArgumentNullException.ThrowIfNull(options);
-
-        string dbPath = Path.Combine(options.Value.DataDir, "team.db");
-        this.connectionString = $"Data Source={dbPath}";
-
-        string? directory = Path.GetDirectoryName(dbPath);
-        if (!string.IsNullOrEmpty(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        using SqliteConnection connection = this.OpenConnection();
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = DdlCreatePersonaWorkModes;
-        command.ExecuteNonQuery();
+        this.table = new PersonaOverrideTable(options.Value, Sql);
     }
 
     /// <summary>Returns the stored Work Mode for a Persona, or <c>null</c> if none is set (the Adapter's default).</summary>
@@ -51,12 +44,7 @@ public sealed class PersonaWorkModeStore
     /// <returns>The mode id, or <c>null</c>.</returns>
     public string? Get(string personaName)
     {
-        using SqliteConnection connection = this.OpenConnection();
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "SELECT work_mode FROM persona_work_modes WHERE persona_name = $name;";
-        command.Parameters.AddWithValue("$name", personaName);
-
-        return command.ExecuteScalar() as string;
+        return this.table.Get(personaName);
     }
 
     /// <summary>
@@ -68,38 +56,13 @@ public sealed class PersonaWorkModeStore
     /// <param name="workMode">The mode id to store, or <c>null</c> to clear it.</param>
     public void Set(string personaName, string? workMode)
     {
-        if (string.IsNullOrWhiteSpace(workMode))
-        {
-            this.Remove(personaName);
-            return;
-        }
-
-        using SqliteConnection connection = this.OpenConnection();
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = """
-            INSERT INTO persona_work_modes(persona_name, work_mode) VALUES($name, $workMode)
-            ON CONFLICT(persona_name) DO UPDATE SET work_mode = excluded.work_mode;
-            """;
-        command.Parameters.AddWithValue("$name", personaName);
-        command.Parameters.AddWithValue("$workMode", workMode);
-        command.ExecuteNonQuery();
+        this.table.Set(personaName, workMode);
     }
 
     /// <summary>Removes any stored Work Mode for a Persona, leaving no row behind.</summary>
     /// <param name="personaName">The Persona's name.</param>
     public void Remove(string personaName)
     {
-        using SqliteConnection connection = this.OpenConnection();
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM persona_work_modes WHERE persona_name = $name;";
-        command.Parameters.AddWithValue("$name", personaName);
-        command.ExecuteNonQuery();
-    }
-
-    private SqliteConnection OpenConnection()
-    {
-        SqliteConnection connection = new(this.connectionString);
-        connection.Open();
-        return connection;
+        this.table.Remove(personaName);
     }
 }
